@@ -284,16 +284,6 @@ a.card .mas{
   .flip-card{ aspect-ratio: 4/3; }
 }
 
-/* menú de niños: uno solo, no una variante por experiencia */
-.ninos{
-  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:20px;
-  margin-top:34px; padding:26px; border:1px solid var(--gold-soft); border-radius:3px;
-  background: var(--bg-panel);
-}
-.ninos p{ font-size:0.9rem; color: var(--ink-dim); margin-top:6px; max-width:52ch; }
-.etiqueta-ninos{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color: var(--gold); }
-.precio-ninos{ font-family: var(--serif); font-style:italic; font-size:2rem; color: var(--gold); line-height:1; }
-
 /* ---------- menú completo desplegable ---------- */
 details.menu-details{ margin-top:38px; border-top:1px solid var(--line); padding-top:22px; }
 details.menu-details summary{ cursor:pointer; list-style:none; }
