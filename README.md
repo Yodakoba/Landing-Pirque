@@ -1,86 +1,103 @@
-# Brasas de Lo Pirque — Landing page programa de afiliados
+# Brasas de Lo Pirque — sitio web
 
-Landing page B2B (agencias de turismo, municipalidades, empresas) para el
-programa de socios comerciales de un restaurante campestre / centro de
-eventos en Chile.
+Sitio de **Brasas de Lo Pirque** (brasasdelopirque.cl), restaurante campestre
+y centro de eventos en Chile.
 
-## Archivo principal
-`landing-afiliados.html` — HTML autocontenido (CSS inline, imágenes
-embebidas en base64). Se puede abrir directo en cualquier navegador sin
-servidor. Este es el archivo que hay que seguir editando.
+El repositorio contiene **dos entregables distintos**, dirigidos a públicos
+distintos y armados de forma distinta a propósito.
+
+## 1. Sitio público
+
+Para clientes finales: gente que quiere pasar el día en familia o celebrar
+algo. Cinco páginas, sin los niveles de comisión.
+
+| Archivo | Contenido |
+|---|---|
+| `index.html` | Bienvenida, tres accesos, show ecuestre y galería de 27 fotos |
+| `experiencias.html` | Los cuatro niveles culinarios con precios, menú completo, desayuno y once |
+| `actividades.html` | Las seis actividades incluidas en el recinto y las cuatro con costo adicional |
+| `eventos.html` | Eventos a medida, arriendo exclusivo del recinto y sus valores |
+| `contacto.html` | WhatsApp, lista de novedades y accesos al resto del sitio |
+| `404.html` | Página de error con la identidad del sitio |
+
+Todas comparten `assets/css/site.css` y apuntan a las fotos reales de
+`assets/`. Las cinco páginas más el CSS suman unos 66 KB; las imágenes se
+cachean entre páginas.
+
+**Para verlo:** abre `index.html` directo en el navegador — las rutas son
+relativas y funciona sin servidor. Para probar los enlaces como en producción
+conviene servirlo: `python3 -m http.server` y entrar a `localhost:8000`.
+
+## 2. Landing de socios comerciales
+
+`landing-afiliados.html` — landing B2B para agencias de turismo,
+municipalidades y empresas que revenden el lugar. Está enlazado desde el menú
+y el pie de las cinco páginas del sitio público, y **los niveles de comisión
+viven solo acá**.
+
+Es un archivo único y autocontenido: CSS inline, 40 imágenes embebidas en
+base64, cero dependencias. Pesa 4,5 MB y se abre con doble clic, sin servidor.
+
+**Ojo:** que esté armado distinto al sitio público es deliberado, no una
+inconsistencia pendiente de arreglar. Repetir el criterio autocontenido en
+cinco páginas habría duplicado el hero y las fotos comunes en cada archivo
+(del orden de 15-25 MB).
 
 ## Carpeta `assets/`
-Fotos originales ya procesadas (redimensionadas/comprimidas) que están
-embebidas en el HTML, organizadas por origen:
-- `assets/imgs/` — fotos extraídas del PDF de presentación original
-  (`EMPRESAbrasas26.pdf`, ya no se tiene el PDF, solo estas imágenes).
-- `assets/imgs2/` — fotos adicionales sacadas de Google Drive (comida,
-  show ecuestre alternativo).
-- `assets/gallery/` — las 27 fotos de la sección "Date una vuelta por
-  el lugar" (galería swipe horizontal).
 
-Si se necesitan MÁS fotos del lugar, están en Google Drive del cliente
-(no accesible desde este entorno) — hay que pedírselas o conectar Drive
-si Claude Code tiene esa integración disponible.
+Fotos originales ya procesadas, organizadas por origen:
 
-## Estilo / marca
-- Nombre real: **Brasas de Lo Pirque** (brasasdelopirque.cl)
-- Estética: fondo negro/casi negro, tipografía sans-serif en mayúsculas
-  con tracking (bold), acentos en dorado (`--gold: #C9A227`), fotografía
-  real como protagonista. Fuente: Fraunces (serif, para números/precios
-  en itálica) + Work Sans (sans, todo lo demás). Ambas via Google Fonts
-  `<link>` con fallback a system fonts.
-- Todo el sistema de diseño (variables CSS) está en el `:root{}` al
-  inicio del `<style>`.
+- `assets/imgs/` — extraídas del PDF de presentación original.
+- `assets/imgs2/` — sacadas del Google Drive del cliente.
+- `assets/gallery/` — las 27 fotos del carrusel del lugar.
+- `assets/css/` — la hoja compartida del sitio público.
 
-## Estructura de la página (orden actual de secciones)
-1. Foto principal a pantalla completa ("Trabaja con nosotros / Únete a
-   nuestro programa de afiliados") + botón WhatsApp
-2. 3 paneles de comisión (5% / 10% / 15%) — **con placeholders**, faltan
-   las condiciones reales de cada nivel
-3. "Una experiencia chilena auténtica, ideal para tus clientes" + 2do
-   botón WhatsApp
-4. Cuatro niveles de experiencias culinarias (Tradiciones $44.000 / Lo
-   Pirque $50.000 / Brasas $70.000 / Sommelier $90.000) — tarjetas con
-   efecto flip 3D (CSS puro, checkbox + label, sin JS): toca la foto y
-   gira mostrando precio/bebestibles/nota. Menú compartido en un
-   `<details>` colapsable debajo.
-5. Galería "Date una vuelta por el lugar" — 27 fotos en carrusel swipe
-   horizontal (CSS `scroll-snap`, sin JS)
-6. Foto + texto del show ecuestre ("Una experiencia para todas las
-   edades")
-7. 6 tarjetas de actividades familiares dentro del recinto (show
-   ecuestre, cabalgatas, castillo inflable, pintacaritas, ping-pong y
-   tacataca, cancha de beach tenis)
-8. Experiencias externas para empresas (coaching con caballos, taller
-   de queso, karting, taller de asado)
-9. Servicios adicionales (desayuno de campo / once campesina)
-10. Precio del recinto (arriendo)
-11. "Eventos a medida" (foto full-bleed con overlay)
-12. Segmentos (agencias / municipalidades / empresas)
-13. Por qué sumarte como socio (beneficios)
-14. Cómo funciona (3 pasos)
-15. Contacto: botón WhatsApp + formulario de email (solo captura, no
-    envía — falta conectar a una plataforma de newsletter)
-16. Footer
+Si hacen falta más fotos, están en el Google Drive del cliente.
 
-## Pendientes / placeholders que el cliente todavía tiene que confirmar
-- Número real de WhatsApp (hoy dice `+56 9 0000 0000` en dos botones)
-- Condición de cada nivel de comisión (5% / 10% / 15%) — hoy dice
-  `[Placeholder: condición]`
-- Ubicación, teléfono y email de contacto en el footer (placeholders
-  entre corchetes)
-- Plataforma de envío de newsletter (el cliente dijo que por ahora solo
-  quiere juntar emails, conectar después)
-- Fotos de castillo inflable, ping-pong/tacataca y cancha de beach
-  tenis: **no se han encontrado fotos usables** — las que existen en el
-  Drive del cliente muestran caras de niños de clientes reales,
-  identificables, sin autorización de imagen confirmada. No usar esas
-  fotos hasta que el cliente confirme que tiene permiso de esas
-  familias, o consiga fotos alternativas sin caras identificables.
+## Sin build step
 
-## Restricciones de contenido a mantener
-- No usar fotos con niños de clientes identificables sin autorización
-  confirmada (ver arriba).
-- Todas las fotos usadas son del propio negocio (staff, fotógrafo
-  contratado por el cliente) — no son stock ni de terceros.
+No hay npm, bundler, linter ni tests, y no hace falta ninguno: son archivos
+estáticos que el navegador abre tal cual. Tampoco hay JavaScript propio — el
+menú de celular, las tarjetas que giran y los carruseles son CSS puro
+(checkbox + label y `scroll-snap`).
+
+Como no hay build, **la cabecera y el pie están duplicados en cada página**.
+Si tocas el menú, hay que tocarlo en las cinco.
+
+## Estilo
+
+Fondo negro, acentos dorados y fotografía real como protagonista. Fuentes
+Fraunces (serif itálica, para cifras y precios) y Work Sans, vía Google Fonts
+con fallback a system fonts. Las variables del sistema de diseño están en el
+`:root{}` de `assets/css/site.css` y en el `<style>` del landing.
+
+## Restricciones de contenido
+
+- **No usar fotos con niños de clientes identificables sin autorización
+  confirmada.** Las que existen en el Drive para castillo inflable,
+  ping-pong/tacataca y beach tenis muestran caras de niños de clientes reales
+  sin autorización de imagen. Por eso esas tres actividades van sin foto.
+- Todas las fotos son del propio negocio. No hay stock ni imágenes de
+  terceros, y no se deben agregar.
+
+## Pendientes
+
+- **Número real de WhatsApp** — hoy todos los enlaces apuntan a
+  `wa.me/56900000000`, un número falso. Hay que reemplazarlo antes de
+  publicar el sitio de cara al público.
+- **Condiciones de cada nivel de comisión** — tres `[Placeholder: condición]`
+  en el landing de socios.
+- **Ubicación y teléfono** — aparecen como `[Ubicación] · [teléfono]` en el
+  pie de todas las páginas.
+- **Plataforma de newsletter** — el formulario de email no tiene handler, así
+  que hoy no captura nada. Falta conectarlo (Formspree, Google Forms o un
+  endpoint propio).
+- **Fotos de castillo inflable, ping-pong/tacataca y beach tenis** —
+  bloqueadas por la restricción de arriba.
+
+## Publicación
+
+El sitio está listo para GitHub Pages: incluye `.nojekyll`, todas las rutas
+son relativas (funcionan bajo el subdirectorio del repo) y no hay desajustes
+de mayúsculas. Para activarlo: *Settings* → *Pages* → *Deploy from a branch*,
+rama `main`, carpeta `/ (root)`.
