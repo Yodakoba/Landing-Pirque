@@ -342,6 +342,21 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   letter-spacing:0.04em; cursor:pointer;
 }
 
+/* ---------- cómo llegar ---------- */
+.mapa-grid{ display:grid; grid-template-columns: 1.5fr 1fr; gap: 34px; align-items:start; }
+@media (max-width: 860px){ .mapa-grid{ grid-template-columns:1fr; } }
+/* la razón va en el contenedor y el iframe se posiciona absoluto: si el
+   iframe aportara altura volveríamos al problema circular de las fotos */
+.mapa{ position:relative; aspect-ratio: 4/3; border:1px solid var(--line); border-radius:3px; overflow:hidden; }
+.mapa iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+@media (max-width: 860px){ .mapa{ aspect-ratio: 3/2; } }
+.mapa-datos .dato{ padding: 16px 0; border-top:1px solid var(--line); }
+.mapa-datos .dato:first-child{ border-top:none; padding-top:0; }
+.mapa-datos .etiqueta{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color: var(--ink-faint); }
+.mapa-datos .valor{ font-size:0.95rem; margin-top:5px; }
+.mapa-datos a{ text-decoration:none; }
+.mapa-datos a:hover{ color: var(--gold); }
+
 /* ---------- franja de cierre ---------- */
 .cierre{ background: var(--bg-panel); border-top:1px solid var(--line); }
 .cierre .wrap{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:24px; padding-top:56px; padding-bottom:56px; }
@@ -352,6 +367,7 @@ footer{ border-top:1px solid var(--line); padding: 46px 0; font-size:0.84rem; co
 footer .wrap{ display:flex; flex-wrap:wrap; gap:18px; justify-content:space-between; align-items:flex-start; }
 footer nav{ display:flex; flex-wrap:wrap; gap:18px; }
 footer a{ text-decoration:none; }
+footer p.fine a{ text-decoration: underline; text-underline-offset: 2px; }
 footer a:hover{ color: var(--ink); }
 
 /* ---------- WhatsApp flotante ---------- */
