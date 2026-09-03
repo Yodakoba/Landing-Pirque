@@ -241,6 +241,25 @@ with sync_playwright() as p:
 "
 ```
 
+## Cómo trabajar con este proyecto
+
+**Propone antes de aplicar.** El cliente pidió explícitamente revisar los
+cambios antes de que se hagan. En la práctica:
+
+- **Sin preguntar**: leer archivos, buscar, medir con Playwright, generar
+  capturas en una carpeta temporal. Nada de eso altera el proyecto y es lo
+  que permite proponer con fundamento en vez de opinar al aire.
+- **Con confirmación previa**: editar archivos, commits, push, PRs y
+  cualquier cosa que toque GitHub.
+
+Al proponer, di qué archivos toca y qué efecto tiene, para que se pueda
+decidir con la información a mano.
+
+**No inventes datos del negocio.** Precios, horarios, direcciones,
+distancias y capacidades salen del cliente o de material que él entregó. Si
+falta un dato, pídelo: es preferible dejar un placeholder visible antes que
+publicar algo plausible pero falso.
+
 ## Git
 
 Trabajar en la rama `claude/migrate-project-claude-code-hfqsyc`. Rama por
