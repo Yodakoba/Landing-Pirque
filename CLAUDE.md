@@ -23,7 +23,10 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 - **No hay build step.** Cabecera y pie están duplicados en cada página, que es
   lo normal en un sitio estático sin toolchain. Si tocas el menú, tócalo en
-  las cinco.
+  las seis (las cinco más `404.html`).
+- El menú son 5 ítems: **Reserva** (botón dorado relleno, la acción principal)
+  · Experiencias · Actividades · Eventos · **Socios comerciales** (delineado,
+  porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
 - **Sin JavaScript**, igual que el landing: el menú de celular es checkbox +
   label, y las tarjetas que giran y los carruseles son CSS.
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
@@ -146,23 +149,76 @@ Mantenlo así salvo que el cliente pida lo contrario.
 - Todas las fotos usadas son del propio negocio (staff o fotógrafo contratado
   por el cliente). No hay stock ni imágenes de terceros, y no se deben agregar.
 
-## Pendientes (el cliente todavía tiene que confirmar)
+## Datos del negocio (confirmados)
 
-Búscalos por texto, no por número de línea:
+- **WhatsApp Reservas** `+56 9 4009 6228` — el del sitio público, para el
+  cliente final.
+- **WhatsApp Eventos** `+56 9 3385 8575` — el del landing de socios, para
+  agencias y empresas. Son distintos a propósito: no los unifiques.
+- **Dirección**: Casas de San Vicente, lote 4, Pirque, Región Metropolitana.
+  Mapa: `https://maps.app.goo.gl/NPkmd1foma1Uc8nB8`
+- **Email**: `contacto@lopirque.cl` (ojo: dominio distinto al del sitio).
+- **Menú de niños**: $19.000, de 4 a 12 años. Es **uno solo**, no una
+  variante por experiencia: se suma a cualquiera de las cuatro. Por eso va
+  en un bloque propio en `experiencias.html` y no repetido en cada tarjeta.
+- **Precios de experiencias**: los mismos en ambos entregables. La diferencia
+  es la condición, no el monto (ver abajo).
 
-- **Número real de WhatsApp** — hoy hay 4 enlaces a `wa.me/56900000000`
-  (hero, sección de experiencias, contacto y el botón flotante `.wa-float`)
-  y una nota `[reemplazar por el número real de WhatsApp]`.
+## Diferencia entre los dos entregables
+
+El sitio público vende a familias y grupos chicos; el landing de socios, a
+agencias que compran por grupo. Por eso:
+
+- El landing dice **"sobre 25 personas"** en las cuatro tarjetas. Correcto ahí.
+- El sitio público **no** lo dice, y dice "por adulto". Tenerlo era un error:
+  le decía a una familia de seis que no podía reservar.
+
+**Supuesto sin confirmar:** que el mínimo de 25 no rige para venta directa.
+Se dedujo de que el producto en Shopify no muestra ningún mínimo. Si resulta
+que sí rige, hay que devolverlo a cinco lugares del sitio público.
+
+## En pausa (esperando datos del cliente)
+
+- **Video del hero.** El sitio antiguo tiene uno a pantalla completa en la
+  portada, servido desde el CDN de Shopify:
+  `https://brasasdelopirque.cl/cdn/shop/videos/c/vp/efd6188a5bea4563a815d15436811b3a/efd6188a5bea4563a815d15436811b3a.HD-1080p-7.2Mbps-81471494.mp4`
+  Se puede montar con `<video autoplay muted loop playsinline>` y la foto
+  actual como `poster`, sin JavaScript. Dos reparos: es 1080p a 7,2 Mbps
+  (conviene cargarlo solo sobre 900px de ancho y dejar la foto en móvil), y
+  depende de que Shopify siga ahí.
+- **Shopify.** El sitio antiguo vende con un Buy Button embebido: selector de
+  fecha, cantidad de adultos y niños, y carrito. No es un botón simple, es un
+  sistema de reservas — mandar al cliente fuera del sitio sería un retroceso.
+  Faltan el dominio `*.myshopify.com` y los IDs de producto, o el snippet que
+  ya usan. **Ojo: integrarlo rompe la regla de cero JavaScript**, y eso hay
+  que decidirlo explícitamente antes de hacerlo.
+- **Logo.** El del sitio antiguo es negro sobre blanco y tiene una A invertida
+  como rasgo distintivo. Nuestro fondo es negro, así que hace falta una
+  versión clara o un SVG recoloreable. Hoy la marca se compone con tipografía.
+
+## Decisiones abiertas
+
+- **El nombre del negocio no calza.** Google Maps lo lista como "Lo Pirque
+  Restaurant" y el email es `@lopirque.cl`, pero el sitio se llama "Brasas de
+  Lo Pirque" y el dominio es `brasasdelopirque.cl`. Si alguien busca la marca
+  del sitio en Maps, puede no encontrarla. El cliente lo está aclarando.
+- **`contacto.html` podría renombrarse a `reserva.html`.** La página ya se
+  llama "Reserva" en el menú y en su contenido; solo falta el archivo. No se
+  hizo para no romper enlaces que el cliente pueda haber compartido.
+
+## Pendientes de contenido
+
 - **Condición de cada nivel de comisión** — 3 apariciones de
-  `[Placeholder: condición]` en los paneles de 5% / 10% / 15%.
-- **Ubicación y teléfono del footer** — `[Ubicación] · [teléfono]`.
+  `[Placeholder: condición]` en los paneles de 5% / 10% / 15% del landing.
 - **Plataforma de newsletter** — el formulario de email tiene
   `onsubmit="return false;"` y ningún handler, así que **el email se descarta
-  al enviar: hoy no captura nada**. El cliente dijo que por ahora solo quiere
-  juntar correos y conectar la plataforma de envío después; hay que resolver al
-  menos la captura (Formspree, Google Forms o un endpoint propio).
-- **Fotos de castillo inflable, ping-pong/tacataca y beach tenis** — bloqueadas
-  por la restricción de arriba.
+  al enviar: hoy no captura nada**. Hay que resolver al menos la captura
+  (Formspree, Google Forms o un endpoint propio).
+- **Fotos de castillo inflable, ping-pong/tacataca y beach tenis** —
+  bloqueadas por la restricción de imagen de arriba.
+- **Copy nuevo sin revisar por el cliente** — los titulares y bajadas del
+  sitio público los redactó Claude, no vienen del cliente. El contenido
+  factual (precios, menú, actividades) sí es textual del landing.
 
 ## Previsualizar el sitio público
 
