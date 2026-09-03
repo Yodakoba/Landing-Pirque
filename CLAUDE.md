@@ -114,9 +114,9 @@ Mantenlo así salvo que el cliente pida lo contrario.
 
 Búscalos por texto, no por número de línea:
 
-- **Número real de WhatsApp** — hoy hay 3 enlaces a `wa.me/56900000000`
-  (hero, sección de experiencias, contacto) y una nota
-  `[reemplazar por el número real de WhatsApp]`.
+- **Número real de WhatsApp** — hoy hay 4 enlaces a `wa.me/56900000000`
+  (hero, sección de experiencias, contacto y el botón flotante `.wa-float`)
+  y una nota `[reemplazar por el número real de WhatsApp]`.
 - **Condición de cada nivel de comisión** — 3 apariciones de
   `[Placeholder: condición]` en los paneles de 5% / 10% / 15%.
 - **Ubicación y teléfono del footer** — `[Ubicación] · [teléfono]`.
