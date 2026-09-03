@@ -104,15 +104,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
   max-width: var(--ancho); margin:0 auto; padding: 18px var(--pad-x);
   display:flex; align-items:center; justify-content:space-between; gap:20px;
 }
-.brand{
-  font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-  font-size:1.05rem; text-decoration:none; line-height:1.1;
-}
-.brand small{
-  display:block; font-family:var(--serif); font-style:italic;
-  text-transform:none; letter-spacing:0; font-size:0.6rem;
-  color: var(--gold); margin-top:2px;
-}
+/* La marca es el logo real. En la cabecera va el recorte "BRASAS": el
+   lockup completo necesitaria 68px de alto para que "DE LO PIRQUE" se lea
+   (mide 19px de los 161 del archivo), y eso no cabe en una barra pegajosa.
+   El lockup entero va en el pie, donde si hay espacio. */
+.brand{ display:block; text-decoration:none; line-height:0; }
+.brand img{ height:30px; width:auto; }
+@media (max-width: 700px){ .brand img{ height:26px; } }
+.brand-pie{ display:inline-block; line-height:0; }
+.brand-pie img{ height:90px; width:auto; }
+@media (max-width: 700px){ .brand-pie img{ height:70px; } }
 .nav{ display:flex; align-items:center; gap:26px; }
 .nav a{
   text-decoration:none; font-size:0.82rem; text-transform:uppercase;
