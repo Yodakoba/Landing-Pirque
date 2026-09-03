@@ -1,13 +1,49 @@
-# Brasas de Lo Pirque — landing del programa de afiliados
+# Brasas de Lo Pirque — sitio web
 
-Landing page B2B (agencias de turismo, municipalidades y empresas) para el
-programa de socios comerciales de **Brasas de Lo Pirque**
-(brasasdelopirque.cl), un restaurante campestre y centro de eventos en Chile.
+Dos entregables para **Brasas de Lo Pirque** (brasasdelopirque.cl), un
+restaurante campestre y centro de eventos en Chile:
 
-## Cómo está armado el proyecto
+1. **Sitio público** (`index.html` y compañía) — para clientes finales que
+   quieren pasar el día o celebrar algo. Cinco páginas.
+2. **Landing de socios comerciales** (`landing-afiliados.html`) — B2B, para
+   agencias de turismo, municipalidades y empresas que revenden el lugar.
+   Enlazado desde el menú del sitio público; los niveles de comisión viven
+   solo acá.
 
-- **`landing-afiliados.html`** es el único entregable y el archivo que hay que
-  editar. Es HTML autocontenido: CSS inline en un solo `<style>`, 40 imágenes
+**Ojo: los dos están armados de forma distinta a propósito.** El landing es un
+archivo suelto y autocontenido; el sitio público es un sitio estático normal
+con carpeta de assets. No unifiques los dos criterios sin hablarlo.
+
+## Sitio público
+
+Archivos: `index.html`, `experiencias.html`, `actividades.html`,
+`eventos.html`, `contacto.html`, todos apuntando a la hoja compartida
+`assets/css/site.css` y a las fotos reales de `assets/`. Cada página pesa
+unos pocos KB; las imágenes se cachean entre páginas.
+
+- **No hay build step.** Cabecera y pie están duplicados en cada página, que es
+  lo normal en un sitio estático sin toolchain. Si tocas el menú, tócalo en
+  las cinco.
+- **Sin JavaScript**, igual que el landing: el menú de celular es checkbox +
+  label, y las tarjetas que giran y los carruseles son CSS.
+- El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
+  socios no tiene: ahí el menú simplemente desaparece bajo 900px.
+- Los precios de las experiencias y del arriendo son los mismos que el
+  landing. Si cambian, hay que cambiarlos en ambos lados.
+
+### Trampas de layout ya resueltas (no las reintroduzcas)
+
+- `aspect-ratio` en un contenedor flex **no** fija la altura si adentro hay una
+  `<img>` con `height:100%`: la referencia es circular y gana el alto natural
+  de la foto. Por eso la razón va en la propia `<img>` (`.card-photo img`).
+- En un `.split`, una foto vertical arrastra el alto de toda la fila (llegó a
+  1138px). Por eso la `<img>` va `position:absolute` y no aporta altura.
+- `calc(18px + env(safe-area-inset-bottom))` no parsea en todos los motores y
+  tumba la declaración entera. Va detrás de un `@supports`.
+
+## Landing de socios (`landing-afiliados.html`)
+
+- Es **el único archivo** de ese entregable y el que hay que editar. Es HTML autocontenido: CSS inline en un solo `<style>`, 40 imágenes
   embebidas en base64, cero JavaScript de terceros. Se abre directo en el
   navegador, sin servidor ni build step.
 - **No hay toolchain**: no hay npm, bundler, linter ni tests. No agregues uno
@@ -127,6 +163,27 @@ Búscalos por texto, no por número de línea:
   menos la captura (Formspree, Google Forms o un endpoint propio).
 - **Fotos de castillo inflable, ping-pong/tacataca y beach tenis** — bloqueadas
   por la restricción de arriba.
+
+## Previsualizar el sitio público
+
+Se abre `index.html` directo en el navegador (las rutas son relativas). Para
+ver los cinco enlaces funcionando conviene servirlo:
+`python3 -m http.server` y entrar a `localhost:8000`.
+
+Para verificar cambios, Playwright está instalado y es mucho más fiable que
+`--screenshot` de Chromium, que **posiciona mal los `position:fixed`** y
+reporta como rotas las imágenes `loading="lazy"` que aún no entran en pantalla:
+
+```
+python3 -c "
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args=['--no-sandbox'])
+    pg=b.new_context(viewport={'width':393,'height':852},is_mobile=True).new_page()
+    pg.goto('file://\$PWD/index.html'); pg.wait_for_timeout(2000)
+    print(pg.evaluate('({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth})'))
+"
+```
 
 ## Git
 
