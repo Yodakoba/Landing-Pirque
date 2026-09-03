@@ -166,6 +166,11 @@
   details.menu-details{ margin-top: 34px; border-top: 1px solid var(--line); padding-top: 18px; }
   details.menu-details summary{ cursor:pointer; font-size: 1.02rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold); list-style: none; }
   details.menu-details summary::-webkit-details-marker{ display:none; }
+  details.menu-details summary .menu-sub{
+    display:block; margin-top: 5px; font-size: 0.8rem;
+    text-transform: none; letter-spacing: 0; color: var(--ink-faint);
+  }
+
   details.menu-details summary::before{ content: "+ "; }
   details.menu-details[open] summary::before{ content: "– "; }
   .menu-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap: 16px 30px; margin-top: 18px; }
@@ -447,7 +452,7 @@
         </div>
 
         <details class="menu-details">
-          <summary>Ver el menú completo (igual en las cuatro experiencias)</summary>
+          <summary>Ver el menú completo<span class="menu-sub">Igual en las cuatro experiencias</span></summary>
           <div class="menu-grid">
             <div>
               <h4>Entrada</h4>
