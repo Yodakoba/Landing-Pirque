@@ -164,6 +164,26 @@ Mantenlo así salvo que el cliente pida lo contrario.
 - **Precios de experiencias**: los mismos en ambos entregables. La diferencia
   es la condición, no el monto (ver abajo).
 
+## Objetivo comercial del sitio público — importante
+
+**La visita particular debe reservar y pagar por Shopify, no por WhatsApp.**
+Quien llega por iniciativa propia (no por una agencia) tiene que poder cerrar
+la reserva pagada en el sitio. No queremos que ese público nos escriba por
+WhatsApp para coordinar: eso consume tiempo del equipo y no deja la reserva
+tomada.
+
+- El plan es **contratar o instalar un sistema de reservas pronto**. Todavía
+  no existe, pero se da por venir, así que el diseño ya apunta a eso.
+- Por eso `contacto.html` abre con el formulario de reserva y no con
+  WhatsApp. La maqueta de esa sección está en el sitio esperando conexión.
+- **WhatsApp sigue siendo el canal del landing de socios** (agencias,
+  municipalidades, empresas), donde sí se cotiza conversando. Los dos números
+  son distintos y esa separación es justamente esta: público general al
+  formulario, socios comerciales a WhatsApp.
+- Mientras el pago no funcione, WhatsApp queda como salida de emergencia en
+  el sitio público, pero **en letra chica y sin protagonismo**. Al conectar el
+  sistema de reservas hay que revisar cuánto espacio conserva.
+
 ## Diferencia entre los dos entregables
 
 El sitio público vende a familias y grupos chicos; el landing de socios, a
