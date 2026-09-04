@@ -290,7 +290,8 @@ details.menu-details{ margin-top:38px; border-top:1px solid var(--line); padding
 details.menu-details summary{ cursor:pointer; list-style:none; }
 details.menu-details summary::-webkit-details-marker{ display:none; }
 .menu-cta{
-  display:inline-flex; align-items:center; gap:9px;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  width:100%; max-width:360px;
   font-size:1.1rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
   color: var(--gold); padding:14px 26px; border-radius:2px;
   border:1px solid var(--gold-soft);
