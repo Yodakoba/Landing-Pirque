@@ -408,6 +408,9 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   padding: 28px; max-width: 620px;
 }
 .reserva-widget .campo{ margin-bottom: 4px; }
+/* el sitio publico vende un solo menu, asi que el widget lo nombra en vez
+   de ofrecer un selector de experiencia */
+.reserva-titulo{ font-size:1.15rem; margin-bottom:22px; }
 .reserva-widget .etiqueta{
   display:block; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em;
   color: var(--ink-faint); margin-bottom:8px;
