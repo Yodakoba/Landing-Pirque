@@ -58,8 +58,14 @@ unos pocos KB; las imágenes se cachean entre páginas.
   - `assets/imgs2/` — sacadas del Google Drive del cliente (comida, show
     ecuestre alternativo).
   - `assets/gallery/` — las 27 fotos del carrusel "Date una vuelta por el lugar".
-- Si hacen falta **más fotos del lugar**, están en el Google Drive del cliente.
-  Hay que pedírselas o usar la integración de Drive si está disponible.
+- Si hacen falta **más fotos del lugar**, están en el Google Drive del cliente,
+  bajo `BRASAS fotos`: `LOPIRQUE clientes`, `LOPIRQUE publico`, `LOPIRQUE
+  entorno`, `LOPIRQUE show`, `LOPIRQUE parrilla`, `LOPIRQUE Folcklore`.
+  **Ojo: desde este entorno se pueden listar pero no descargar.** El proxy
+  bloquea `drive.google.com` y `googleusercontent.com` con 403, y la
+  herramienta de descarga del conector devuelve la foto en base64 dentro de la
+  conversación, que para archivos de 1 a 3 MB no es viable. Hay que pedirle al
+  cliente que las suba al repo (GitHub → Add file → Upload files).
 
 ### Editar el HTML sin romperlo
 
@@ -139,13 +145,13 @@ Mantenlo así salvo que el cliente pida lo contrario.
 
 ## Restricciones de contenido — importante
 
-- **No usar fotos con niños de clientes identificables sin autorización
-  confirmada.** Las fotos que existen en el Drive del cliente para castillo
-  inflable, ping-pong/tacataca y cancha de beach tenis muestran caras de niños
-  de clientes reales, identificables, sin autorización de imagen. Por eso esas
-  tres actividades hoy van **sin foto**. No las ilustres con esas imágenes hasta
-  que el cliente confirme que tiene permiso de esas familias o consiga fotos
-  alternativas sin caras identificables.
+- **Las fotos con niños están autorizadas** (confirmado por el cliente el
+  2026-09-04). Los niños que aparecen son los suyos, los de su hermano y otros
+  familiares, así que hay permiso de imagen. La restricción anterior —que dejó
+  castillo inflable, ping-pong/tacataca y beach tenis **sin foto**— ya no rige:
+  esas tres se pueden ilustrar en cuanto las imágenes estén en `assets/`.
+- Esto vale para las fotos del propio negocio. Si algún día aparece una con
+  clientes que no son de la familia, vuelve a preguntar antes de publicarla.
 - Todas las fotos usadas son del propio negocio (staff o fotógrafo contratado
   por el cliente). No hay stock ni imágenes de terceros, y no se deben agregar.
 
