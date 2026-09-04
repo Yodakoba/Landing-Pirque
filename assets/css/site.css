@@ -354,11 +354,13 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 }
 
 /* ---------- reserva en línea (maqueta, sin Shopify todavía) ----------
-   Reproduce los campos del widget actual de Shopify para poder verlos en
-   nuestro diseño. Los <select> y los <input type=number> son nativos a
-   propósito: funcionan sin JavaScript, que es la regla del resto del sitio.
-   Los totales y los dos botones quedan inertes porque calcularlos y crear
-   el carrito exige la Storefront API, que todavía no está conectada. */
+   Reproduce los campos del widget actual de Shopify en nuestro diseño.
+   Está montada para mostrarle al cliente cómo va a verse terminada, así
+   que las fechas, las cantidades y el total son de ejemplo, y los dos
+   botones no hacen nada al apretarlos: calcular y crear el carrito exige
+   la Storefront API, que todavía no está conectada.
+   Los <select> y los <input type=number> son nativos a propósito:
+   funcionan sin JavaScript, que es la regla del resto del sitio. */
 .reserva-widget{
   border:1px solid var(--line); border-radius:3px; background: var(--bg-panel);
   padding: 28px; max-width: 620px;
@@ -384,8 +386,6 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .reserva-fila .quien{ font-size:0.95rem; }
 .reserva-fila .quien small{ display:block; color: var(--ink-faint); font-size:0.78rem; margin-top:3px; }
 .reserva-fila .valor{ text-align:right; font-family:var(--serif); font-style:italic; font-size:1.15rem; }
-/* no es un monto: se distingue del precio real para no leerse como cifra */
-.reserva-fila .valor-nota{ font-family:var(--sans); font-style:normal; font-size:0.8rem; color: var(--ink-faint); }
 @media (max-width: 560px){
   .reserva-fila{ grid-template-columns: 1fr 104px; }
   .reserva-fila .valor{ grid-column:1 / -1; text-align:left; margin-top:4px; }
@@ -398,9 +398,6 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .reserva-total b{ font-family:var(--serif); font-style:italic; font-size:1.2rem;
   text-transform:none; letter-spacing:0; color: var(--ink); font-weight:400; margin-left:8px; }
 button.btn{ font-family: var(--sans); cursor:pointer; }
-.btn:disabled{ opacity:0.4; cursor:not-allowed; }
-.btn:disabled:hover{ background: var(--gold); border-color: var(--gold); }
-.btn-ghost:disabled:hover{ background:transparent; border-color: var(--line); }
 
 /* ---------- cómo llegar ---------- */
 .mapa-grid{ display:grid; grid-template-columns: 1.5fr 1fr; gap: 34px; align-items:start; }
