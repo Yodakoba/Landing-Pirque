@@ -343,7 +343,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 /* qué incluye la reserva: va bajo el formulario, con el mismo ancho, para
    que se lea como una sola columna. Sin recuadro propio: dos cajas con
    borde una sobre otra pesan mas de lo que la informacion necesita. */
-.incluye{ max-width:620px; margin-top:44px; }
+.incluye{ max-width:620px; margin-top:72px; }
 .incluye h3{ font-size:1.15rem; }
 .incluye .etiqueta{
   display:block; margin-top:30px; font-size:0.72rem; text-transform:uppercase;
@@ -360,7 +360,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .incluye-lista h4{ font-size:0.95rem; }
 .incluye-lista p{ font-size:0.88rem; color: var(--ink-dim); margin-top:5px; }
 
-.alternativa{ margin-top:30px; max-width:620px; font-size:0.85rem; color: var(--ink-faint); }
+.alternativa{ margin-top:44px; max-width:620px; font-size:0.85rem; color: var(--ink-faint); }
 .alternativa a{ color: var(--ink-dim); text-underline-offset:3px; }
 .alternativa a:hover{ color: var(--ink); }
 @media (max-width: 860px){ .contact-grid{ grid-template-columns:1fr; } }
