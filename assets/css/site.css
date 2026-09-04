@@ -341,24 +341,40 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
    el formulario, no como bloque con boton verde compitiendo con el */
 .contact-solo{ max-width:620px; }
 /* qué incluye la reserva: va bajo el formulario, con el mismo ancho, para
-   que se lea como una sola columna. Sin recuadro propio: dos cajas con
-   borde una sobre otra pesan mas de lo que la informacion necesita. */
+   que se lea como una sola columna. Las fotos hacen el trabajo: la lista
+   de texto que habia antes era correcta pero se leia como un contrato. */
 .incluye{ max-width:620px; margin-top:72px; }
-.incluye h3{ font-size:1.15rem; }
+.incluye h3{ font-size:1.3rem; }
 .incluye .etiqueta{
-  display:block; margin-top:30px; font-size:0.72rem; text-transform:uppercase;
+  display:block; margin-top:34px; font-size:0.72rem; text-transform:uppercase;
   letter-spacing:0.06em; color: var(--ink-faint);
 }
-.incluye-horario{ margin-top:20px; border-left:2px solid var(--gold); padding-left:20px; }
+
+.incluye-horario{
+  display:flex; flex-wrap:wrap; gap:10px 34px; align-items:baseline;
+  margin-top:20px; padding:22px 24px; border-radius:3px;
+  background: var(--bg-raise); border-left:3px solid var(--gold);
+}
 .incluye-horario .etiqueta{ margin-top:0; }
-.incluye-horario .rango{ font-family:var(--serif); font-style:italic; font-size:1.7rem; margin-top:4px; }
-.incluye-horario p{ font-size:0.9rem; color: var(--ink-dim); margin-top:8px; }
-.incluye-horario .fine{ margin-top:10px; }
-.incluye-lista{ list-style:none; padding:0; margin:16px 0 0; }
-.incluye-lista li{ padding:16px 0; border-top:1px solid var(--line); }
-.incluye-lista li:first-child{ border-top:none; }
-.incluye-lista h4{ font-size:0.95rem; }
-.incluye-lista p{ font-size:0.88rem; color: var(--ink-dim); margin-top:5px; }
+.incluye-horario .rango{ font-family:var(--serif); font-style:italic; font-size:2rem; margin-top:2px; }
+.incluye-horario .horario-nota{ flex:1 1 240px; }
+.incluye-horario p{ font-size:0.9rem; color: var(--ink-dim); }
+.incluye-horario .fine{ margin-top:8px; }
+
+.incluye-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:22px; margin-top:16px; }
+@media (max-width: 560px){ .incluye-grid{ grid-template-columns:1fr; } }
+.incluye-item{ margin:0; }
+/* la razon va en la <img>, no en el contenedor: adentro de un contenedor
+   con aspect-ratio la referencia se vuelve circular y gana el alto de la foto */
+.incluye-item img{
+  display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover;
+  border-radius:3px; border:1px solid var(--line);
+}
+/* el pasto de esta foto esta abajo: centrado, el recorte 4:3 solo agarra
+   el edificio y el item deja de ilustrar lo que dice */
+.incluye-item img.foco-bajo{ object-position:50% 72%; }
+.incluye-item h4{ margin-top:12px; font-size:0.95rem; color: var(--gold); }
+.incluye-item p{ margin-top:5px; font-size:0.86rem; color: var(--ink-dim); }
 
 .alternativa{ margin-top:44px; max-width:620px; font-size:0.85rem; color: var(--ink-faint); }
 .alternativa a{ color: var(--ink-dim); text-underline-offset:3px; }
