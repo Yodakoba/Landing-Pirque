@@ -284,3 +284,15 @@ publicar algo plausible pero falso.
 
 Trabajar en la rama `claude/migrate-project-claude-code-hfqsyc`. Rama por
 defecto: `main`.
+
+**Junta los cambios; el PR lo pide el cliente.** Commitea y empuja a la rama
+a medida que avanzas, para que nada se pierda si se cae el contenedor, pero
+**no abras un PR hasta que te lo pidan**. Cuando haya un lote que valga la
+pena mergear, avisa y deja que decidan.
+
+Ojo con el orden: el cliente suele mergear el PR abierto antes de que llegue
+el commit siguiente. Si el PR de esta rama ya está mergeado, lo que quede
+pendiente va rebasado sobre el `main` nuevo y en un PR propio —
+`git fetch origin main && git rebase origin/main`, y empujar con
+`--force-with-lease`. Nunca apiles commits nuevos sobre historia ya
+mergeada.
