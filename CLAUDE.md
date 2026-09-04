@@ -69,7 +69,7 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ### Editar el HTML sin romperlo
 
-El archivo pesa ~4.7 MB porque los payloads base64 ocupan casi todo. Para
+El archivo pesa ~5.1 MB porque los payloads base64 ocupan casi todo. Para
 trabajarlo:
 
 - **Nunca lo leas entero.** Filtra los payloads primero:
@@ -78,8 +78,8 @@ trabajarlo:
   (parte el archivo con `re.split` sobre el patrón `data:image/...;base64,...`),
   porque una cadena corta puede aparecer por casualidad dentro del base64.
 - Después de cualquier edición, verifica integridad:
-  `wc -l landing-afiliados.html` debe seguir dando 812 líneas y
-  `grep -c 'data:image/jpeg;base64' landing-afiliados.html` debe dar 40.
+  `wc -l landing-afiliados.html` debe seguir dando 828 líneas y
+  `grep -c 'data:image/jpeg;base64' landing-afiliados.html` debe dar 44.
 
 ### Previsualizar
 

@@ -223,8 +223,15 @@ a.card .mas{
 /* lista sin foto, con ícono (actividades del recinto) */
 .tiles{ display:grid; grid-template-columns: repeat(3,1fr); gap:1px; background: var(--line); border:1px solid var(--line); }
 @media (max-width: 760px){ .tiles{ grid-template-columns:1fr; } }
-.tile{ background: var(--bg); padding: 30px 26px; }
-.tile .icon{ width:28px; height:28px; color: var(--gold); margin-bottom:14px; }
+.tile{ background: var(--bg); display:flex; flex-direction:column; }
+/* la razon va en la <img>, no en el contenedor: adentro de un contenedor
+   con aspect-ratio la referencia se vuelve circular y gana el alto de la foto */
+.tile-media img{ display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; }
+/* las actividades que todavia no tienen foto conservan su icono, pero en una
+   caja de la misma razon: si no, la grilla queda despareja */
+.tile-icono{ aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; background: var(--bg-panel); }
+.tile-icono svg{ width:34px; height:34px; color: var(--gold); opacity:0.65; }
+.tile-cuerpo{ padding: 22px 26px 28px; }
 .tile h3{ font-size:0.95rem; }
 .tile p{ font-size:0.9rem; color: var(--ink-dim); margin-top:8px; }
 
@@ -370,9 +377,6 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover;
   border-radius:3px; border:1px solid var(--line);
 }
-/* el pasto de esta foto esta abajo: centrado, el recorte 4:3 solo agarra
-   el edificio y el item deja de ilustrar lo que dice */
-.incluye-item img.foco-bajo{ object-position:50% 72%; }
 .incluye-item h4{ margin-top:12px; font-size:0.95rem; color: var(--gold); }
 .incluye-item p{ margin-top:5px; font-size:0.86rem; color: var(--ink-dim); }
 
