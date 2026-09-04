@@ -39,9 +39,9 @@
 <section class="pad" id="reserva-en-linea">
   <div class="wrap">
     <div class="section-head">
-      <span class="badge">Maqueta — todavía no reserva</span>
-      <h2 style="margin-top:14px;">Reserva en línea</h2>
-      <p class="lede">Así se va a ver la reserva cuando conectemos el sistema de pago. Por ahora los campos no calculan ni cobran: para reservar hoy, escríbenos por WhatsApp más abajo.</p>
+      <p class="kicker">Reserva directa</p>
+      <h2>Reserva en línea</h2>
+      <p class="lede">Elige la experiencia, el día y cuántos van. El precio de los niños de 4 a 12 años ya viene incluido en el total.</p>
     </div>
 
     <div class="reserva-widget">
@@ -59,7 +59,11 @@
       <div class="campo" style="margin-top:20px;">
         <label class="etiqueta" for="r-fecha">Elegir fecha</label>
         <select id="r-fecha">
-          <option>Las fechas disponibles se cargan desde el sistema de reservas</option>
+          <option>Sábado 5 de septiembre</option>
+          <option>Domingo 6 de septiembre</option>
+          <option>Sábado 12 de septiembre</option>
+          <option>Domingo 13 de septiembre</option>
+          <option>Sábado 19 de septiembre</option>
         </select>
       </div>
       <p class="aviso">Elige la fecha correcta antes de continuar.</p>
@@ -68,31 +72,31 @@
         <div class="quien">Adultos</div>
         <div>
           <label class="etiqueta" for="r-adultos">Cantidad</label>
-          <input id="r-adultos" type="number" min="0" step="1" value="0">
+          <input id="r-adultos" type="number" min="0" step="1" value="4">
         </div>
-        <div class="valor valor-nota">Según la experiencia elegida</div>
+        <div class="valor">$44.000</div>
       </div>
 
       <div class="reserva-fila">
         <div class="quien">Niños <small>De 4 a 12 años</small></div>
         <div>
           <label class="etiqueta" for="r-ninos">Cantidad</label>
-          <input id="r-ninos" type="number" min="0" step="1" value="0">
+          <input id="r-ninos" type="number" min="0" step="1" value="2">
         </div>
         <div class="valor">$19.000</div>
       </div>
 
       <div class="reserva-total">
-        <span>Personas <b>—</b></span>
-        <span>Total <b>—</b></span>
+        <span>Personas <b>6</b></span>
+        <span>Total <b>$214.000</b></span>
       </div>
 
       <div class="btn-row">
-        <button class="btn btn-ghost" type="button" disabled>Agregar al carro</button>
-        <button class="btn" type="button" disabled>Terminar reserva</button>
+        <button class="btn btn-ghost" type="button">Agregar al carro</button>
+        <button class="btn" type="button">Terminar reserva</button>
       </div>
 
-      <p class="fine" style="margin-top:20px;">Los totales y los dos botones quedan inactivos hasta que se conecte el sistema de pago.</p>
+      <p class="fine" style="margin-top:20px;">Vista previa del sistema de reserva. Para reservar hoy, escríbenos por WhatsApp.</p>
 
     </div>
   </div>
