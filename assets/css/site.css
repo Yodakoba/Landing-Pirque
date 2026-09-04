@@ -340,7 +340,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 /* la reserva es la via principal: WhatsApp queda como salida discreta bajo
    el formulario, no como bloque con boton verde compitiendo con el */
 .contact-solo{ max-width:620px; }
-.alternativa{ margin-top:18px; max-width:620px; font-size:0.85rem; color: var(--ink-faint); }
+.alternativa{ margin-top:30px; max-width:620px; font-size:0.85rem; color: var(--ink-faint); }
 .alternativa a{ color: var(--ink-dim); text-underline-offset:3px; }
 .alternativa a:hover{ color: var(--ink); }
 @media (max-width: 860px){ .contact-grid{ grid-template-columns:1fr; } }
