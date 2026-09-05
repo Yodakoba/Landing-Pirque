@@ -444,6 +444,13 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   padding: 18px 0 4px; border-top:1px solid var(--gold-soft);
   font-size:0.82rem; text-transform:uppercase; letter-spacing:0.05em; color: var(--ink-faint);
 }
+/* el boton nace disabled en el HTML: si reserva.js no carga, nadie
+   aprieta un boton muerto. El JS lo habilita y marca .reserva-viva */
+.reserva-widget .btn:disabled{ opacity:0.45; cursor:not-allowed; }
+.reserva-mensaje{ margin-top:18px; font-size:0.85rem; color: var(--ink-faint); }
+.reserva-mensaje:empty{ display:none; }
+.reserva-mensaje.error{ color:#E08C7A; }
+.reserva-mensaje.aviso{ color: var(--gold); }
 .reserva-total b{ font-family:var(--serif); font-style:italic; font-size:1.2rem;
   text-transform:none; letter-spacing:0; color: var(--ink); font-weight:400; margin-left:8px; }
 button.btn{ font-family: var(--sans); cursor:pointer; }
