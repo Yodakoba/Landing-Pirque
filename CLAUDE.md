@@ -27,8 +27,11 @@ unos pocos KB; las imágenes se cachean entre páginas.
 - El menú son 5 ítems: **Reserva** (botón dorado relleno, la acción principal)
   · Experiencias · Actividades · Eventos · **Socios comerciales** (delineado,
   porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
-- **Sin JavaScript**, igual que el landing: el menú de celular es checkbox +
-  label, y las tarjetas que giran y los carruseles son CSS.
+- **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
+  tarjetas que giran y los carruseles son CSS. La única excepción es
+  `assets/js/reserva.js`, que solo carga en `contacto.html`: la integración
+  con Shopify no se puede hacer sin JS y esa excepción se decidió
+  explícitamente. No la uses como precedente para nada más.
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
 - Los precios de las experiencias y del arriendo son los mismos que el
@@ -94,6 +97,44 @@ Chromium headless está preinstalado en este entorno:
 
 Las tipografías saldrán en fallback porque el sandbox bloquea
 `fonts.googleapis.com` — es del entorno, no de la página.
+
+## Reserva en línea (Shopify + Cowlendar)
+
+`contacto.html` crea el carrito con la **Storefront API** y manda al checkout
+de Shopify. Cowlendar es la app de reservas instalada en la tienda: registra
+la reserva en su calendario cuando entra la orden.
+
+- **Toda la configuración vive en el objeto `CONFIG`** al inicio de
+  `assets/js/reserva.js`: token, dominio, versión de API y los dos precios.
+- **Las fechas y los IDs de variante viven en el HTML**, en los `data-adulto`
+  y `data-nino` de cada `<option>` de `#r-fecha`, y el `value` es la fecha en
+  formato `YYYY-MM-DD`. Se hizo así para que el desplegable siga siendo
+  correcto aunque el JS no cargue, y para tener un solo lugar que editar.
+  **Agregar fechas nuevas = agregar `<option>`s, no tocar el JS.**
+- Cowlendar necesita dos propiedades por línea: `_booking_date` y
+  `_cowlendar_date`, ambas con la fecha. El guion bajo las oculta del
+  checkout.
+- Si `niños = 0` la línea de niños no se agrega: `quantity: 0` hace fallar la
+  mutation.
+- **El token de Storefront es público por diseño** (solo lee catálogo y crea
+  carritos), así que puede vivir en el archivo. **Un token de Admin API
+  jamás**: esos empiezan en `shpat_` y dan acceso a pedidos y clientes.
+- El botón nace `disabled` en el HTML y el JS lo habilita, para que nadie
+  apriete un botón muerto si el archivo no carga. Hay un `<noscript>` que
+  manda a WhatsApp.
+
+### Pendiente de verificar cuando llegue el token
+
+- Que la Storefront API responda en `brasasdelopirque.cl`. Si da 404 o CORS,
+  hay que cambiar `CONFIG.dominio` por el `*.myshopify.com` de la tienda.
+- **Que Cowlendar acepte reservas creadas por fuera de su propio widget.**
+  Es el supuesto más grande de toda la integración: la app normalmente valida
+  disponibilidad ella misma, y acá el carrito se crea saltándose ese paso.
+  Hay que hacer una compra de prueba y confirmar que la reserva aparece en el
+  calendario de Cowlendar.
+- Que el cupo por fecha se controle en alguna parte. Hoy nada impide vender
+  más lugares de los que hay: eso lo tiene que hacer el inventario de Shopify
+  o Cowlendar.
 
 ## Estilo y marca
 
