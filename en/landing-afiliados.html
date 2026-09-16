@@ -35,7 +35,7 @@
   .rule{ width: 46px; height: 2px; background: var(--gold); margin: 18px 0; border:none; }
 
   /* topbar */
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding: 26px 32px; max-width:1180px; margin:0 auto; position: relative; z-index: 5; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:20px; padding: 26px 32px; max-width:1180px; margin:0 auto; position: relative; z-index: 5; }
   .brand{ display:block; line-height:0; text-decoration:none; }
   .brand img{ height:30px; width:auto; display:block; }
   @media (max-width: 700px){ .brand img{ height:26px; } }
@@ -47,19 +47,38 @@
   .topbar nav:not(.idiomas) a:hover{ opacity:1; }
   @media (max-width: 900px){ .topbar nav:not(.idiomas){ display:none; } }
 
-  /* Selector de idiomas. Va fuera de la regla de arriba a proposito: el
-     menu del landing desaparece bajo 900px y el idioma no debe irse con
-     el. */
+  /* Selector de idiomas: control segmentado. Va fuera de la regla del
+     menu a proposito, porque el menu del landing desaparece bajo 900px y
+     el idioma no debe irse con el. El activo no va dorado: el dorado es
+     de los botones de accion. */
   .idiomas{
-    display:flex; align-items:center; gap:2px; margin:0 0 0 auto;
-    font-size: 0.72rem; letter-spacing: 0.08em; font-weight:600;
+    display:flex; align-items:center; gap:2px;
+    margin:0 0 0 auto; padding:3px;
+    border:1px solid var(--line); border-radius:999px;
+    background: rgba(255,255,255,0.03);
   }
-  .idiomas a, .idiomas span{
-    padding:5px 7px; text-decoration:none; color: var(--ink-faint);
-    border-radius:2px;
+  .idiomas .idioma{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 9px; border-radius:999px;
+    font-size:0.7rem; font-weight:600; letter-spacing:0.06em;
+    color: var(--ink-faint); text-decoration:none; opacity:1;
   }
-  .idiomas a:hover{ color: var(--ink); }
-  .idiomas [aria-current="true"]{ color: var(--gold); }
+  .idiomas .idioma svg{
+    width:17px; height:auto; aspect-ratio:3/2; flex:none;
+    display:block; border-radius:2px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.14);
+  }
+  .idiomas a.idioma:hover{ color: var(--ink); background: rgba(255,255,255,0.06); }
+  .idiomas a.idioma:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+  .idiomas .actual{ color: var(--ink); background: rgba(255,255,255,0.10); }
+  @media (max-width: 380px){
+    .idiomas .idioma{ gap:0; padding:5px 7px; }
+    .idiomas .cod{
+      position:absolute; width:1px; height:1px;
+      margin:-1px; padding:0; overflow:hidden;
+      clip-path: inset(50%); white-space:nowrap;
+    }
+  }
 
   .btn{
     display:inline-flex; align-items:center; gap:8px; background: var(--gold); color: #1A1400;
@@ -348,7 +367,7 @@
 <body>
   <div class="topbar">
     <a class="brand" href="index.html"><img src="../assets/logo-brasas-wordmark.png" alt="Brasas de Lo Pirque" width="363" height="94"></a>
-    <!--i18n--><nav class="idiomas" aria-label="Idioma"><a href="../landing-afiliados.html" hreflang="es" lang="es">ES</a><span aria-current="true">EN</span><a href="../pt/landing-afiliados.html" hreflang="pt" lang="pt">PT</a></nav><!--/i18n-->
+    <!--i18n--><nav class="idiomas" aria-label="Idioma"><a class="idioma" href="../landing-afiliados.html" hreflang="es" lang="es" title="Español"><svg viewBox="0 0 9 6" aria-hidden="true" focusable="false"><rect width="9" height="6" fill="#D52B1E"/><rect width="9" height="3" fill="#fff"/><rect width="3" height="3" fill="#0039A6"/><path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z" fill="#fff"/></svg><span class="cod">ES</span></a><span class="idioma actual" aria-current="true"><svg viewBox="0 0 60 30" aria-hidden="true" focusable="false"><rect width="60" height="30" fill="#012169"/><path d="M0 0l60 30M60 0L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30M60 0L0 30" stroke="#C8102E" stroke-width="3"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="cod">EN</span></span><a class="idioma" href="../pt/landing-afiliados.html" hreflang="pt" lang="pt" title="Português"><svg viewBox="0 0 70 49" aria-hidden="true" focusable="false"><rect width="70" height="49" fill="#009739"/><path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/><circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg><span class="cod">PT</span></a></nav><!--/i18n-->
     <nav>
       <a href="#experiencias">Experiences</a>
       <a href="#actividades">Activities</a>

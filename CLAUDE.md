@@ -72,11 +72,35 @@ total calculado con el mismo criterio.
 
 ### El selector de idiomas
 
-Es el `ES · EN · PT` de la barra superior. **El markup lo arma el script**
-(`selector_idiomas()`), y el bloque `<!--i18n-->…<!--/i18n-->` que está
-escrito en los archivos españoles tiene que coincidir exactamente con lo que
-el script genera; si no, la corrida avisa. Para cambiarlo se toca el script,
-no el HTML.
+Es el control segmentado con banderitas de la barra superior. **El markup lo
+arma el script** (`selector_idiomas()`), y el bloque `<!--i18n-->…<!--/i18n-->`
+que está escrito en los archivos españoles tiene que coincidir exactamente con
+lo que el script genera; si no, la corrida avisa. Para cambiarlo se toca el
+script, no el HTML.
+
+**Las banderas son SVG inline, no emoji.** Chrome en Windows no dibuja los
+emoji de bandera (🇨🇱): muestra las dos letras del país. Buena parte del
+público chileno está en Windows, así que el emoji no era opción. Los SVG
+están simplificados a propósito —el globo de la bandera brasileña y el
+detalle fino de la Union Jack no se leen a 17px— y viven en el diccionario
+`BANDERAS` del script, en un solo lugar para las 24 páginas.
+
+**Qué bandera para qué idioma es una decisión, no un hecho:** una bandera
+representa un país y no un idioma. El inglés podría llevar la de Estados
+Unidos y el portugués la de Portugal. Se eligió Reino Unido porque la
+traducción usa ortografía británica (`programme`, `centre`,
+`organisational`), y Brasil porque el portugués es de Brasil. Si el cliente
+prefiere otras, es editar `BANDERAS` y regenerar.
+
+Cada segmento lleva **bandera + código** (`ES`, `EN`, `PT`), no bandera sola:
+una bandera no le dice nada a un lector de pantalla. El SVG va
+`aria-hidden` y el código es el que nombra el enlace. Bajo 380px el código se
+oculta a la vista pero no se borra, así que el enlace conserva su nombre
+accesible.
+
+El segmento activo **no va dorado** a propósito: el dorado relleno es del
+botón "Reserva", que queda justo al lado, y dos píldoras doradas pegadas
+compiten entre sí. El activo se marca con fondo levantado y texto pleno.
 
 Va **fuera del menú desplegable** a propósito: en celular el menú se
 esconde tras la hamburguesa, y el idioma tiene que poder cambiarse sin

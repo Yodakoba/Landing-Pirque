@@ -45,6 +45,40 @@ IDIOMAS = ['es', 'en', 'pt']
 ETIQUETAS = {'es': 'ES', 'en': 'EN', 'pt': 'PT'}
 NOMBRES = {'es': 'Español', 'en': 'English', 'pt': 'Português'}
 
+# Banderitas del selector de idiomas.
+#
+# Van como SVG inline y no como emoji (🇨🇱) porque Chrome en Windows no
+# dibuja los emoji de bandera: muestra las dos letras del país. Buena parte
+# del público chileno está en Windows, así que el emoji no era opción.
+#
+# Son versiones simplificadas a propósito: a 18px de ancho el globo de la
+# bandera brasileña o el detalle fino de la Union Jack no se leen, y sí
+# pesan. Lo que importa a ese tamaño es la silueta de color.
+#
+# Una bandera representa un país, no un idioma, así que la elección tiene
+# algo de arbitraria: el inglés podría ser la de Estados Unidos y el
+# portugués la de Portugal. Se eligió Reino Unido porque la traducción usa
+# ortografía británica, y Brasil porque el portugués es de Brasil, que es
+# además el mercado emisor grande hacia Chile. Cambiarlas es editar acá.
+BANDERAS = {
+    'es': '<svg viewBox="0 0 9 6" aria-hidden="true" focusable="false">'
+          '<rect width="9" height="6" fill="#D52B1E"/>'
+          '<rect width="9" height="3" fill="#fff"/>'
+          '<rect width="3" height="3" fill="#0039A6"/>'
+          '<path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z"'
+          ' fill="#fff"/></svg>',
+    'en': '<svg viewBox="0 0 60 30" aria-hidden="true" focusable="false">'
+          '<rect width="60" height="30" fill="#012169"/>'
+          '<path d="M0 0l60 30M60 0L0 30" stroke="#fff" stroke-width="6"/>'
+          '<path d="M0 0l60 30M60 0L0 30" stroke="#C8102E" stroke-width="3"/>'
+          '<path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/>'
+          '<path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg>',
+    'pt': '<svg viewBox="0 0 70 49" aria-hidden="true" focusable="false">'
+          '<rect width="70" height="49" fill="#009739"/>'
+          '<path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/>'
+          '<circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg>',
+}
+
 # Los archivos que se traducen: los de la raíz. assets/ se comparte entre
 # los tres idiomas y no se copia.
 PAGINAS = [
@@ -175,13 +209,20 @@ def selector_idiomas(pagina, idioma):
     lo edita a mano en el HTML, la corrida avisa."""
     partes = ['<!--i18n--><nav class="idiomas" aria-label="Idioma">']
     for otro in IDIOMAS:
+        # La bandera va aria-hidden y el código ES/EN/PT queda como texto:
+        # una bandera sola no le dice nada a un lector de pantalla, y el
+        # par bandera + código es lo que se usa en todas partes.
         if otro == idioma:
-            partes.append('<span aria-current="true">%s</span>' % ETIQUETAS[otro])
+            partes.append(
+                '<span class="idioma actual" aria-current="true">%s'
+                '<span class="cod">%s</span></span>'
+                % (BANDERAS[otro], ETIQUETAS[otro]))
         else:
             partes.append(
-                '<a href="%s" hreflang="%s" lang="%s">%s</a>' % (
+                '<a class="idioma" href="%s" hreflang="%s" lang="%s" '
+                'title="%s">%s<span class="cod">%s</span></a>' % (
                     ruta_relativa(pagina, idioma, otro), otro, otro,
-                    ETIQUETAS[otro]))
+                    NOMBRES[otro], BANDERAS[otro], ETIQUETAS[otro]))
     partes.append('</nav><!--/i18n-->')
     return ''.join(partes)
 

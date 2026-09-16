@@ -114,23 +114,55 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 .brand-pie{ display:inline-block; line-height:0; }
 .brand-pie img{ height:90px; width:auto; }
 @media (max-width: 700px){ .brand-pie img{ height:70px; } }
-/* El selector de idiomas vive fuera del menu desplegable: en celular el
-   menu se esconde tras la hamburguesa, y el idioma tiene que poder
-   cambiarse sin abrirlo. El margin-left:auto se come el espacio libre de
-   la barra, asi que la marca queda a la izquierda y el selector pegado al
-   menu (o a la hamburguesa) a la derecha. */
+/* Selector de idiomas: control segmentado, el patron estandar para 2-4
+   opciones. Vive fuera del menu desplegable porque en celular el menu se
+   esconde tras la hamburguesa y el idioma tiene que poder cambiarse sin
+   abrirlo. El margin-left:auto se come el espacio libre de la barra, asi
+   que la marca queda a la izquierda y el selector pegado al menu (o a la
+   hamburguesa) a la derecha.
+
+   El segmento activo NO va dorado a proposito: el dorado relleno es del
+   boton "Reserva", que queda justo al lado, y dos pildoras doradas
+   pegadas compiten entre si. Aca el activo se marca con fondo levantado
+   y texto pleno. */
 .idiomas{
-  display:flex; align-items:center; gap:2px; margin:0 0 0 auto;
-  font-size:0.72rem; letter-spacing:0.08em; font-weight:600;
+  display:flex; align-items:center; gap:2px;
+  margin:0 0 0 auto; padding:3px;
+  border:1px solid var(--line); border-radius:999px;
+  background: rgba(255,255,255,0.03);
 }
-.idiomas a, .idiomas span{
-  padding:5px 7px; text-decoration:none; color: var(--ink-faint);
-  border-radius:2px; transition: color .15s ease;
+.idiomas .idioma{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 9px; border-radius:999px;
+  font-size:0.7rem; font-weight:600; letter-spacing:0.06em;
+  color: var(--ink-faint); text-decoration:none;
+  transition: color .15s ease, background-color .15s ease;
 }
-.idiomas a:hover{ color: var(--ink); }
-.idiomas [aria-current="true"]{ color: var(--gold); }
+/* La razon va en el propio svg: un ancho fijo con height:auto dentro de
+   un flex se estira distinto en cada motor. */
+.idiomas .idioma svg{
+  width:17px; height:auto; aspect-ratio:3/2; flex:none;
+  display:block; border-radius:2px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.14);
+}
+.idiomas a.idioma:hover{ color: var(--ink); background: rgba(255,255,255,0.06); }
+.idiomas a.idioma:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+.idiomas .actual{ color: var(--ink); background: rgba(255,255,255,0.10); }
+
 @media (max-width: 920px){
-  .idiomas{ margin-right:8px; }
+  .idiomas{ margin-right:10px; }
+}
+/* Bajo 380px la barra se aprieta: se esconde el codigo y quedan las
+   banderas, que siguen siendo tres blancos comodos de tocar. El texto no
+   se borra, se oculta a la vista: los lectores de pantalla lo siguen
+   leyendo y el enlace conserva su nombre accesible. */
+@media (max-width: 380px){
+  .idiomas .idioma{ gap:0; padding:5px 7px; }
+  .idiomas .cod{
+    position:absolute; width:1px; height:1px;
+    margin:-1px; padding:0; overflow:hidden;
+    clip-path: inset(50%); white-space:nowrap;
+  }
 }
 
 .nav{ display:flex; align-items:center; gap:26px; }
