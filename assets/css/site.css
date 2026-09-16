@@ -193,9 +193,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
    la izquierda y el selector pegado al menu a la derecha. */
 .idiomas{ position:relative; margin:0 0 0 auto; }
 .idiomas > summary{
-  display:inline-flex; align-items:center; gap:7px;
-  padding:6px 10px; border:1px solid var(--line); border-radius:999px;
-  font-size:0.72rem; font-weight:600; letter-spacing:0.06em;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 9px; border:1px solid var(--line); border-radius:999px;
+  font-size:0.7rem; font-weight:600; letter-spacing:0.06em;
   color: var(--ink-dim); cursor:pointer; user-select:none;
   background: rgba(255,255,255,0.03);
   transition: color .15s ease, border-color .15s ease;
@@ -207,40 +207,48 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 .idiomas > summary:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 .idiomas[open] > summary{ color: var(--ink); border-color: var(--gold-soft); }
 
-/* La razon va en el propio svg: un ancho fijo con height:auto dentro de
-   un flex se estira distinto en cada motor. */
+/* Alto y ancho EXPLICITOS, nunca height:auto. Un <svg> inline al que no
+   se le resuelve la razon cae a su tamano por defecto, que son 300x150:
+   ahi salen las banderas gigantes. Las tres comparten viewBox 3:2, asi
+   que llenan la caja sin deformarse ni dejar borde. */
 .idiomas svg:not(.caret){
-  width:20px; height:auto; aspect-ratio:3/2; flex:none;
-  display:block; border-radius:2px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.16);
+  width:18px; height:12px; flex:none; display:block;
+  border-radius:2px; box-shadow: 0 0 0 1px rgba(255,255,255,0.16);
 }
-.idiomas .caret{ width:9px; height:auto; flex:none; opacity:0.7; transition: transform .15s ease; }
+.idiomas .caret{
+  width:9px; height:6px; flex:none; display:block;
+  opacity:0.7; transition: transform .15s ease;
+}
 .idiomas[open] .caret{ transform: rotate(180deg); }
 
 .idiomas-menu{
   position:absolute; top:calc(100% + 8px); right:0; z-index:60;
-  min-width:186px; padding:6px;
+  min-width:172px; padding:5px;
   background: var(--bg-raise); border:1px solid var(--line); border-radius:8px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.55);
 }
 .idiomas .op{
-  display:flex; align-items:center; gap:10px;
-  padding:9px 10px; border-radius:5px;
-  font-size:0.86rem; color: var(--ink-dim); text-decoration:none;
+  display:flex; align-items:center; gap:9px;
+  padding:8px 10px; border-radius:5px;
+  font-size:0.82rem; color: var(--ink-dim); text-decoration:none;
 }
 .idiomas a.op:hover{ background: rgba(255,255,255,0.07); color: var(--ink); }
 .idiomas a.op:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
 .idiomas .actual{ color: var(--ink); background: rgba(255,255,255,0.05); }
 /* El tilde del idioma en uso. Va como ::after para no ensuciar el markup
    que genera el script. */
-.idiomas .actual::after{ content:"\2713"; margin-left:auto; color: var(--gold); font-size:0.8rem; }
+.idiomas .actual::after{ content:"\2713"; margin-left:auto; color: var(--gold); font-size:0.78rem; }
 
-@media (max-width: 920px){ .idiomas{ margin-right:10px; } }
+/* En celular el boton se toca con el dedo, asi que ahi si crece. */
+@media (max-width: 920px){
+  .idiomas{ margin-right:10px; }
+  .idiomas > summary{ padding:7px 10px; }
+}
 /* Bajo 380px la barra se aprieta: queda la bandera y la flecha. El codigo
    no se borra, se oculta a la vista, asi que el boton conserva su nombre
    accesible. */
 @media (max-width: 380px){
-  .idiomas > summary{ gap:5px; padding:6px 8px; }
+  .idiomas > summary{ gap:5px; padding:7px 8px; }
   .idiomas .cod{
     position:absolute; width:1px; height:1px; margin:-1px;
     padding:0; overflow:hidden; clip-path: inset(50%); white-space:nowrap;
