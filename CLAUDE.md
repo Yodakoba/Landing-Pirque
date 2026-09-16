@@ -34,8 +34,14 @@ unos pocos KB; las imágenes se cachean entre páginas.
   explícitamente. No la uses como precedente para nada más.
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
-- Los precios de las experiencias y del arriendo son los mismos que el
-  landing. Si cambian, hay que cambiarlos en ambos lados.
+- **El sitio público vende DOS experiencias, el landing sigue con CUATRO**
+  (decidido el 2026-09-16). En el sitio público son **Tradiciones $44.000** y
+  **A Brasas abiertas $60.000**; esta última lleva la descripción de la
+  experiencia "Brasas" del landing, pero a $60.000 en vez de $70.000. "Lo
+  Pirque" y "Sommelier" se sacaron del sitio público.
+- **Ojo con eso:** la misma experiencia tiene dos precios según el entregable.
+  Es intencional por ahora, pero es la clase de cosa que una agencia puede
+  notar. El precio del arriendo sí sigue igual en ambos lados.
 
 ### Trampas de layout ya resueltas (no las reintroduzcas)
 
@@ -80,7 +86,7 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ### Editar el HTML
 
-Ya no tiene la trampa de los 5 MB: son 828 líneas de HTML legible y se puede
+Ya no tiene la trampa de los 5 MB: son unas 850 líneas de HTML legible y se puede
 abrir entero. Si vuelves a embeber imágenes en base64 por algún motivo,
 vuelven las precauciones de antes (no leerlo entero, filtrar los payloads con
 `sed 's/data:image\/[a-z]*;base64,[A-Za-z0-9+\/=]*/[B64]/g'` antes de mirarlo,
@@ -280,6 +286,9 @@ agencias que compran por grupo. Por eso:
 - El landing dice **"sobre 25 personas"** en las cuatro tarjetas. Correcto ahí.
 - El sitio público **no** lo dice, y dice "por adulto". Tenerlo era un error:
   le decía a una familia de seis que no podía reservar.
+- El landing ofrece **cuatro** experiencias (Tradiciones $44.000 / Lo Pirque
+  $50.000 / Brasas $70.000 / Sommelier $90.000). El sitio público ofrece
+  **dos** (Tradiciones $44.000 / A Brasas abiertas $60.000). Ver arriba.
 
 **Supuesto sin confirmar:** que el mínimo de 25 no rige para venta directa.
 Se dedujo de que el producto en Shopify no muestra ningún mínimo. Si resulta
