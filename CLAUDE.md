@@ -80,7 +80,7 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ### Editar el HTML
 
-Ya no tiene la trampa de los 5 MB: son 828 líneas de HTML legible y se puede
+Ya no tiene la trampa de los 5 MB: son unas 850 líneas de HTML legible y se puede
 abrir entero. Si vuelves a embeber imágenes en base64 por algún motivo,
 vuelven las precauciones de antes (no leerlo entero, filtrar los payloads con
 `sed 's/data:image\/[a-z]*;base64,[A-Za-z0-9+\/=]*/[B64]/g'` antes de mirarlo,
