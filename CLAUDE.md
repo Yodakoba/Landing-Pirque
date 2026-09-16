@@ -94,8 +94,23 @@ estando en la versión en español. Por eso tampoco están en los diccionarios.
 emoji de bandera (🇨🇱): muestra las dos letras del país. Buena parte del
 público chileno está en Windows, así que el emoji no era opción. Los SVG
 están simplificados a propósito —las 50 estrellas de la bandera de Estados
-Unidos y el globo de la brasileña no se leen a 20px— y viven en el
+Unidos y el globo de la brasileña no se leen a 18px— y viven en el
 diccionario `BANDERAS` del script, en un solo lugar para las 24 páginas.
+
+**Las tres comparten `viewBox="0 0 300 200"` y llevan `width`/`height` como
+atributos, no solo en el CSS. Las dos cosas son a propósito** y arreglan un
+bug real (2026-09-16: se veían gigantes en escritorio):
+
+- Un `<svg>` inline al que no se le resuelve la razón **se dibuja a su
+  tamaño por defecto, que son 300×150**. Con `height:auto` + `aspect-ratio`
+  eso depende del motor, y donde falla aparecen banderas enormes. Por eso
+  el CSS les da **alto y ancho explícitos**, nunca `auto`, y los atributos
+  sostienen el tamaño incluso si la hoja de estilos todavía no aplicó.
+- Si cada bandera trajera su razón real —Estados Unidos es 19:10, Brasil
+  10:7— con medidas fijas quedarían con franjas transparentes arriba o a
+  los lados. Redibujadas las tres en 3:2 llenan la caja exacta. La
+  diferencia con la razón oficial no se nota a 18px; un borde descuadrado
+  sí.
 
 **Qué bandera para qué idioma lo decidió el cliente** (2026-09-16): Chile
 para el español, Estados Unidos para el inglés, Brasil para el portugués.
@@ -222,6 +237,11 @@ unos pocos KB; las imágenes se cachean entre páginas.
   1138px). Por eso la `<img>` va `position:absolute` y no aporta altura.
 - `calc(18px + env(safe-area-inset-bottom))` no parsea en todos los motores y
   tumba la declaración entera. Va detrás de un `@supports`.
+- **`height:auto` en un `<svg>` inline es una bomba**: si el motor no
+  resuelve la razón (por `aspect-ratio` o por el `viewBox`), el elemento
+  cae a su tamaño por defecto, **300×150**. En el selector de idiomas eso
+  se veía como banderas gigantes en escritorio. A un `<svg>` inline se le
+  dan medidas explícitas en el CSS *y* como atributos.
 - **La esquina inferior derecha ya está ocupada** por el botón flotante de
   WhatsApp (`.wa-float`, 52px a 18px del borde; 48px a 14px bajo 600px).
   Cualquier cosa nueva que se ancle ahí lo tapa. La tarjeta de sugerencia de

@@ -51,52 +51,68 @@ NOMBRES = {'es': 'Español', 'en': 'English', 'pt': 'Português'}
 # dibuja los emoji de bandera: muestra las dos letras del país. Buena parte
 # del público chileno está en Windows, así que el emoji no era opción.
 #
-# Son versiones simplificadas a propósito: a 20px de ancho las 50 estrellas
-# de la bandera de Estados Unidos o el globo de la brasileña no se leen, y
-# sí pesan. Lo que se reconoce a ese tamaño es la silueta de color.
+# LAS TRES COMPARTEN viewBox "0 0 300 200" A PROPÓSITO. El CSS les da un
+# alto y un ancho explícitos, y si cada una trajera su razón real —la de
+# Estados Unidos es 19:10, la de Brasil 10:7— quedarían con franjas
+# transparentes arriba o a los lados dentro de su caja. Redibujadas todas
+# en 3:2 calzan exactas. La diferencia con la razón oficial no se nota a
+# 18px y sí se notaría un borde descuadrado.
 #
-# Una bandera representa un país y no un idioma, así que la elección la
-# tomó el cliente: Chile para el español, Estados Unidos para el inglés y
-# Brasil para el portugués. Cambiarlas es editar acá y regenerar.
+# Llevan además width/height como atributos, no solo en el CSS: si la hoja
+# de estilos todavía no aplicó, un <svg> inline sin medidas se dibuja a su
+# tamaño por defecto, que son 300x150.
+#
+# Son versiones simplificadas: a 18px de ancho las 50 estrellas de la
+# bandera de Estados Unidos o el globo de la brasileña no se leen, y sí
+# pesan. Lo que se reconoce a ese tamaño es la silueta de color.
+#
+# Qué bandera para qué idioma lo decidió el cliente: Chile para el
+# español, Estados Unidos para el inglés y Brasil para el portugués. Una
+# bandera representa un país y no un idioma, así que siempre es una
+# convención. Cambiarlas es editar acá y regenerar.
+_SVG = ('<svg viewBox="0 0 300 200" width="18" height="12" '
+        'aria-hidden="true" focusable="false">%s</svg>')
+
 BANDERAS = {
-    'es': '<svg viewBox="0 0 9 6" aria-hidden="true" focusable="false">'
-          '<rect width="9" height="6" fill="#D52B1E"/>'
-          '<rect width="9" height="3" fill="#fff"/>'
-          '<rect width="3" height="3" fill="#0039A6"/>'
-          '<path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z"'
-          ' fill="#fff"/></svg>',
-    # 13 franjas: un fondo rojo y seis franjas blancas encima sale mas
-    # corto que dibujar las trece.
-    'en': '<svg viewBox="0 0 190 100" aria-hidden="true" focusable="false">'
-          '<rect width="190" height="100" fill="#B31942"/>'
-          '<g fill="#fff">'
-          '<rect y="7.7" width="190" height="7.7"/>'
-          '<rect y="23.1" width="190" height="7.7"/>'
-          '<rect y="38.5" width="190" height="7.7"/>'
-          '<rect y="53.9" width="190" height="7.7"/>'
-          '<rect y="69.2" width="190" height="7.7"/>'
-          '<rect y="84.6" width="190" height="7.7"/>'
-          '</g>'
-          '<rect width="76" height="53.9" fill="#0A3161"/>'
-          '<g fill="#fff">'
-          '<circle cx="12" cy="10" r="4"/><circle cx="31" cy="10" r="4"/>'
-          '<circle cx="50" cy="10" r="4"/><circle cx="69" cy="10" r="4"/>'
-          '<circle cx="12" cy="27" r="4"/><circle cx="31" cy="27" r="4"/>'
-          '<circle cx="50" cy="27" r="4"/><circle cx="69" cy="27" r="4"/>'
-          '<circle cx="12" cy="44" r="4"/><circle cx="31" cy="44" r="4"/>'
-          '<circle cx="50" cy="44" r="4"/><circle cx="69" cy="44" r="4"/>'
-          '</g></svg>',
-    'pt': '<svg viewBox="0 0 70 49" aria-hidden="true" focusable="false">'
-          '<rect width="70" height="49" fill="#009739"/>'
-          '<path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/>'
-          '<circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg>',
+    'es': _SVG % (
+        '<rect width="300" height="200" fill="#D52B1E"/>'
+        '<rect width="300" height="100" fill="#fff"/>'
+        '<rect width="100" height="100" fill="#0039A6"/>'
+        '<path d="M50 17l7.4 22.8h24L62 53.9l7.4 22.8L50 62.6 30.6 76.7'
+        'L38 53.9 18.6 39.8h24z" fill="#fff"/>'),
+    # 13 franjas: fondo rojo y seis franjas blancas encima sale mas corto
+    # que dibujar las trece.
+    'en': _SVG % (
+        '<rect width="300" height="200" fill="#B31942"/>'
+        '<g fill="#fff">'
+        '<rect y="15.4" width="300" height="15.4"/>'
+        '<rect y="46.2" width="300" height="15.4"/>'
+        '<rect y="76.9" width="300" height="15.4"/>'
+        '<rect y="107.7" width="300" height="15.4"/>'
+        '<rect y="138.5" width="300" height="15.4"/>'
+        '<rect y="169.2" width="300" height="15.4"/>'
+        '</g>'
+        '<rect width="120" height="107.7" fill="#0A3161"/>'
+        '<g fill="#fff">'
+        '<circle cx="15" cy="18" r="7"/><circle cx="45" cy="18" r="7"/>'
+        '<circle cx="75" cy="18" r="7"/><circle cx="105" cy="18" r="7"/>'
+        '<circle cx="15" cy="54" r="7"/><circle cx="45" cy="54" r="7"/>'
+        '<circle cx="75" cy="54" r="7"/><circle cx="105" cy="54" r="7"/>'
+        '<circle cx="15" cy="90" r="7"/><circle cx="45" cy="90" r="7"/>'
+        '<circle cx="75" cy="90" r="7"/><circle cx="105" cy="90" r="7"/>'
+        '</g>'),
+    'pt': _SVG % (
+        '<rect width="300" height="200" fill="#009739"/>'
+        '<path d="M150 20l130 80-130 80L20 100z" fill="#FEDD00"/>'
+        '<circle cx="150" cy="100" r="42" fill="#012169"/>'),
 }
 
-# La flechita del desplegable.
-CARET = ('<svg class="caret" viewBox="0 0 10 6" aria-hidden="true" '
-         'focusable="false"><path d="M1 1l4 4 4-4" fill="none" '
-         'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" '
-         'stroke-linejoin="round"/></svg>')
+# La flechita del desplegable. Mismo criterio: razon 3:2 y medidas
+# explicitas, para que nunca dependa de height:auto.
+CARET = ('<svg class="caret" viewBox="0 0 12 8" width="9" height="6" '
+         'aria-hidden="true" focusable="false"><path d="M2 2.5L6 5.5l4-3" '
+         'fill="none" stroke="currentColor" stroke-width="1.6" '
+         'stroke-linecap="round" stroke-linejoin="round"/></svg>')
 
 # El title del boton que abre el desplegable, en el idioma de la pagina.
 ABRIR = {'es': 'Cambiar idioma', 'en': 'Change language', 'pt': 'Mudar idioma'}
