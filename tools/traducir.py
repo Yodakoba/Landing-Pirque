@@ -51,15 +51,13 @@ NOMBRES = {'es': 'Español', 'en': 'English', 'pt': 'Português'}
 # dibuja los emoji de bandera: muestra las dos letras del país. Buena parte
 # del público chileno está en Windows, así que el emoji no era opción.
 #
-# Son versiones simplificadas a propósito: a 18px de ancho el globo de la
-# bandera brasileña o el detalle fino de la Union Jack no se leen, y sí
-# pesan. Lo que importa a ese tamaño es la silueta de color.
+# Son versiones simplificadas a propósito: a 20px de ancho las 50 estrellas
+# de la bandera de Estados Unidos o el globo de la brasileña no se leen, y
+# sí pesan. Lo que se reconoce a ese tamaño es la silueta de color.
 #
-# Una bandera representa un país, no un idioma, así que la elección tiene
-# algo de arbitraria: el inglés podría ser la de Estados Unidos y el
-# portugués la de Portugal. Se eligió Reino Unido porque la traducción usa
-# ortografía británica, y Brasil porque el portugués es de Brasil, que es
-# además el mercado emisor grande hacia Chile. Cambiarlas es editar acá.
+# Una bandera representa un país y no un idioma, así que la elección la
+# tomó el cliente: Chile para el español, Estados Unidos para el inglés y
+# Brasil para el portugués. Cambiarlas es editar acá y regenerar.
 BANDERAS = {
     'es': '<svg viewBox="0 0 9 6" aria-hidden="true" focusable="false">'
           '<rect width="9" height="6" fill="#D52B1E"/>'
@@ -67,17 +65,41 @@ BANDERAS = {
           '<rect width="3" height="3" fill="#0039A6"/>'
           '<path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z"'
           ' fill="#fff"/></svg>',
-    'en': '<svg viewBox="0 0 60 30" aria-hidden="true" focusable="false">'
-          '<rect width="60" height="30" fill="#012169"/>'
-          '<path d="M0 0l60 30M60 0L0 30" stroke="#fff" stroke-width="6"/>'
-          '<path d="M0 0l60 30M60 0L0 30" stroke="#C8102E" stroke-width="3"/>'
-          '<path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/>'
-          '<path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg>',
+    # 13 franjas: un fondo rojo y seis franjas blancas encima sale mas
+    # corto que dibujar las trece.
+    'en': '<svg viewBox="0 0 190 100" aria-hidden="true" focusable="false">'
+          '<rect width="190" height="100" fill="#B31942"/>'
+          '<g fill="#fff">'
+          '<rect y="7.7" width="190" height="7.7"/>'
+          '<rect y="23.1" width="190" height="7.7"/>'
+          '<rect y="38.5" width="190" height="7.7"/>'
+          '<rect y="53.9" width="190" height="7.7"/>'
+          '<rect y="69.2" width="190" height="7.7"/>'
+          '<rect y="84.6" width="190" height="7.7"/>'
+          '</g>'
+          '<rect width="76" height="53.9" fill="#0A3161"/>'
+          '<g fill="#fff">'
+          '<circle cx="12" cy="10" r="4"/><circle cx="31" cy="10" r="4"/>'
+          '<circle cx="50" cy="10" r="4"/><circle cx="69" cy="10" r="4"/>'
+          '<circle cx="12" cy="27" r="4"/><circle cx="31" cy="27" r="4"/>'
+          '<circle cx="50" cy="27" r="4"/><circle cx="69" cy="27" r="4"/>'
+          '<circle cx="12" cy="44" r="4"/><circle cx="31" cy="44" r="4"/>'
+          '<circle cx="50" cy="44" r="4"/><circle cx="69" cy="44" r="4"/>'
+          '</g></svg>',
     'pt': '<svg viewBox="0 0 70 49" aria-hidden="true" focusable="false">'
           '<rect width="70" height="49" fill="#009739"/>'
           '<path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/>'
           '<circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg>',
 }
+
+# La flechita del desplegable.
+CARET = ('<svg class="caret" viewBox="0 0 10 6" aria-hidden="true" '
+         'focusable="false"><path d="M1 1l4 4 4-4" fill="none" '
+         'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" '
+         'stroke-linejoin="round"/></svg>')
+
+# El title del boton que abre el desplegable, en el idioma de la pagina.
+ABRIR = {'es': 'Cambiar idioma', 'en': 'Change language', 'pt': 'Mudar idioma'}
 
 # Los archivos que se traducen: los de la raíz. assets/ se comparte entre
 # los tres idiomas y no se copia.
@@ -201,29 +223,41 @@ def ruta_relativa(pagina, desde, hacia):
 
 
 def selector_idiomas(pagina, idioma):
-    """El selector ES · EN · PT de la barra superior.
+    """El desplegable de idiomas de la barra superior.
 
-    El markup lo arma el script para los tres idiomas, español incluido,
-    así que vive en un solo lugar. verificar_fuente() comprueba que el
-    bloque escrito en el archivo español sea exactamente este: si alguien
-    lo edita a mano en el HTML, la corrida avisa."""
-    partes = ['<!--i18n--><nav class="idiomas" aria-label="Idioma">']
+    Es un <details>/<summary>: se abre y se cierra sin una linea de
+    JavaScript, y viene con el teclado y los lectores de pantalla
+    resueltos de fabrica. El resumen muestra el idioma actual; la lista
+    muestra los tres, con el actual marcado y sin enlace.
+
+    Los nombres van cada uno en su propio idioma —Espanol, English,
+    Portugues— y no traducidos al idioma de la pagina. Es lo estandar y
+    es lo util: alguien que solo lee portugues tiene que poder reconocer
+    "Portugues" estando en la version en espanol.
+
+    El markup lo arma el script para los tres idiomas, asi que vive en un
+    solo lugar. verificar_fuente() comprueba que el bloque escrito en el
+    archivo espanol sea exactamente este.
+    """
+    partes = [
+        '<!--i18n--><details class="idiomas"><summary title="%s">%s'
+        '<span class="cod">%s</span>%s</summary>'
+        '<div class="idiomas-menu">' % (
+            ABRIR[idioma], BANDERAS[idioma], ETIQUETAS[idioma], CARET)
+    ]
     for otro in IDIOMAS:
-        # La bandera va aria-hidden y el código ES/EN/PT queda como texto:
-        # una bandera sola no le dice nada a un lector de pantalla, y el
-        # par bandera + código es lo que se usa en todas partes.
         if otro == idioma:
             partes.append(
-                '<span class="idioma actual" aria-current="true">%s'
-                '<span class="cod">%s</span></span>'
-                % (BANDERAS[otro], ETIQUETAS[otro]))
+                '<span class="op actual" aria-current="true">%s'
+                '<span class="nom">%s</span></span>'
+                % (BANDERAS[otro], NOMBRES[otro]))
         else:
             partes.append(
-                '<a class="idioma" href="%s" hreflang="%s" lang="%s" '
-                'title="%s">%s<span class="cod">%s</span></a>' % (
+                '<a class="op" href="%s" hreflang="%s" lang="%s">%s'
+                '<span class="nom">%s</span></a>' % (
                     ruta_relativa(pagina, idioma, otro), otro, otro,
-                    NOMBRES[otro], BANDERAS[otro], ETIQUETAS[otro]))
-    partes.append('</nav><!--/i18n-->')
+                    BANDERAS[otro], NOMBRES[otro]))
+    partes.append('</div></details><!--/i18n-->')
     return ''.join(partes)
 
 

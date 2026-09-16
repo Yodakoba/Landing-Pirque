@@ -47,36 +47,48 @@
   .topbar nav:not(.idiomas) a:hover{ opacity:1; }
   @media (max-width: 900px){ .topbar nav:not(.idiomas){ display:none; } }
 
-  /* Selector de idiomas: control segmentado. Va fuera de la regla del
-     menu a proposito, porque el menu del landing desaparece bajo 900px y
-     el idioma no debe irse con el. El activo no va dorado: el dorado es
-     de los botones de accion. */
-  .idiomas{
-    display:flex; align-items:center; gap:2px;
-    margin:0 0 0 auto; padding:3px;
-    border:1px solid var(--line); border-radius:999px;
+  /* Selector de idiomas: desplegable con <details>, sin JavaScript. Va
+     fuera de la regla del menu a proposito, porque el menu del landing
+     desaparece bajo 900px y el idioma no debe irse con el. */
+  .idiomas{ position:relative; margin:0 0 0 auto; }
+  .idiomas > summary{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:6px 10px; border:1px solid var(--line); border-radius:999px;
+    font-size:0.72rem; font-weight:600; letter-spacing:0.06em;
+    color: var(--ink-dim); cursor:pointer; user-select:none;
     background: rgba(255,255,255,0.03);
+    list-style:none;
   }
-  .idiomas .idioma{
-    display:inline-flex; align-items:center; gap:6px;
-    padding:4px 9px; border-radius:999px;
-    font-size:0.7rem; font-weight:600; letter-spacing:0.06em;
-    color: var(--ink-faint); text-decoration:none; opacity:1;
-  }
-  .idiomas .idioma svg{
-    width:17px; height:auto; aspect-ratio:3/2; flex:none;
+  .idiomas > summary::-webkit-details-marker{ display:none; }
+  .idiomas > summary:hover{ color: var(--ink); border-color: rgba(201,162,39,0.45); }
+  .idiomas > summary:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .idiomas[open] > summary{ color: var(--ink); border-color: rgba(201,162,39,0.45); }
+  .idiomas svg:not(.caret){
+    width:20px; height:auto; aspect-ratio:3/2; flex:none;
     display:block; border-radius:2px;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.14);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.16);
   }
-  .idiomas a.idioma:hover{ color: var(--ink); background: rgba(255,255,255,0.06); }
-  .idiomas a.idioma:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
-  .idiomas .actual{ color: var(--ink); background: rgba(255,255,255,0.10); }
+  .idiomas .caret{ width:9px; height:auto; flex:none; opacity:0.7; }
+  .idiomas[open] .caret{ transform: rotate(180deg); }
+  .idiomas-menu{
+    position:absolute; top:calc(100% + 8px); right:0; z-index:60;
+    min-width:186px; padding:6px;
+    background:#1B1814; border:1px solid var(--line); border-radius:8px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+  }
+  .idiomas .op{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:5px;
+    font-size:0.86rem; color: var(--ink-dim); text-decoration:none; opacity:1;
+  }
+  .idiomas a.op:hover{ background: rgba(255,255,255,0.07); color: var(--ink); }
+  .idiomas .actual{ color: var(--ink); background: rgba(255,255,255,0.05); }
+  .idiomas .actual::after{ content:"\2713"; margin-left:auto; color: var(--gold); font-size:0.8rem; }
   @media (max-width: 380px){
-    .idiomas .idioma{ gap:0; padding:5px 7px; }
+    .idiomas > summary{ gap:5px; padding:6px 8px; }
     .idiomas .cod{
-      position:absolute; width:1px; height:1px;
-      margin:-1px; padding:0; overflow:hidden;
-      clip-path: inset(50%); white-space:nowrap;
+      position:absolute; width:1px; height:1px; margin:-1px;
+      padding:0; overflow:hidden; clip-path: inset(50%); white-space:nowrap;
     }
   }
 
@@ -367,7 +379,7 @@
 <body>
   <div class="topbar">
     <a class="brand" href="index.html"><img src="assets/logo-brasas-wordmark.png" alt="Brasas de Lo Pirque" width="363" height="94"></a>
-    <!--i18n--><nav class="idiomas" aria-label="Idioma"><span class="idioma actual" aria-current="true"><svg viewBox="0 0 9 6" aria-hidden="true" focusable="false"><rect width="9" height="6" fill="#D52B1E"/><rect width="9" height="3" fill="#fff"/><rect width="3" height="3" fill="#0039A6"/><path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z" fill="#fff"/></svg><span class="cod">ES</span></span><a class="idioma" href="en/landing-afiliados.html" hreflang="en" lang="en" title="English"><svg viewBox="0 0 60 30" aria-hidden="true" focusable="false"><rect width="60" height="30" fill="#012169"/><path d="M0 0l60 30M60 0L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30M60 0L0 30" stroke="#C8102E" stroke-width="3"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="cod">EN</span></a><a class="idioma" href="pt/landing-afiliados.html" hreflang="pt" lang="pt" title="Português"><svg viewBox="0 0 70 49" aria-hidden="true" focusable="false"><rect width="70" height="49" fill="#009739"/><path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/><circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg><span class="cod">PT</span></a></nav><!--/i18n-->
+    <!--i18n--><details class="idiomas"><summary title="Cambiar idioma"><svg viewBox="0 0 9 6" aria-hidden="true" focusable="false"><rect width="9" height="6" fill="#D52B1E"/><rect width="9" height="3" fill="#fff"/><rect width="3" height="3" fill="#0039A6"/><path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z" fill="#fff"/></svg><span class="cod">ES</span><svg class="caret" viewBox="0 0 10 6" aria-hidden="true" focusable="false"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="idiomas-menu"><span class="op actual" aria-current="true"><svg viewBox="0 0 9 6" aria-hidden="true" focusable="false"><rect width="9" height="6" fill="#D52B1E"/><rect width="9" height="3" fill="#fff"/><rect width="3" height="3" fill="#0039A6"/><path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z" fill="#fff"/></svg><span class="nom">Español</span></span><a class="op" href="en/landing-afiliados.html" hreflang="en" lang="en"><svg viewBox="0 0 190 100" aria-hidden="true" focusable="false"><rect width="190" height="100" fill="#B31942"/><g fill="#fff"><rect y="7.7" width="190" height="7.7"/><rect y="23.1" width="190" height="7.7"/><rect y="38.5" width="190" height="7.7"/><rect y="53.9" width="190" height="7.7"/><rect y="69.2" width="190" height="7.7"/><rect y="84.6" width="190" height="7.7"/></g><rect width="76" height="53.9" fill="#0A3161"/><g fill="#fff"><circle cx="12" cy="10" r="4"/><circle cx="31" cy="10" r="4"/><circle cx="50" cy="10" r="4"/><circle cx="69" cy="10" r="4"/><circle cx="12" cy="27" r="4"/><circle cx="31" cy="27" r="4"/><circle cx="50" cy="27" r="4"/><circle cx="69" cy="27" r="4"/><circle cx="12" cy="44" r="4"/><circle cx="31" cy="44" r="4"/><circle cx="50" cy="44" r="4"/><circle cx="69" cy="44" r="4"/></g></svg><span class="nom">English</span></a><a class="op" href="pt/landing-afiliados.html" hreflang="pt" lang="pt"><svg viewBox="0 0 70 49" aria-hidden="true" focusable="false"><rect width="70" height="49" fill="#009739"/><path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/><circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg><span class="nom">Português</span></a></div></details><!--/i18n-->
     <nav>
       <a href="#experiencias">Experiencias</a>
       <a href="#actividades">Actividades</a>

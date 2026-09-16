@@ -72,35 +72,39 @@ total calculado con el mismo criterio.
 
 ### El selector de idiomas
 
-Es el control segmentado con banderitas de la barra superior. **El markup lo
-arma el script** (`selector_idiomas()`), y el bloque `<!--i18n-->…<!--/i18n-->`
-que está escrito en los archivos españoles tiene que coincidir exactamente con
-lo que el script genera; si no, la corrida avisa. Para cambiarlo se toca el
-script, no el HTML.
+Es el desplegable de la barra superior. **El markup lo arma el script**
+(`selector_idiomas()`), y el bloque `<!--i18n-->…<!--/i18n-->` que está
+escrito en los archivos españoles tiene que coincidir exactamente con lo que
+el script genera; si no, la corrida avisa. Para cambiarlo se toca el script,
+no el HTML.
+
+**Es un `<details>`/`<summary>`, así que no usa una línea de JavaScript.**
+Se abre y se cierra solo, y viene con el teclado y los lectores de pantalla
+resueltos de fábrica. El resumen muestra el idioma actual (bandera + código);
+la lista muestra los tres con su nombre completo, y el actual va marcado con
+un tilde y sin enlace. Lo único que no hace gratis un `<details>` es cerrarse
+al hacer clic afuera: eso necesitaría JS y no vale la pena.
+
+**Los nombres van cada uno en su propio idioma** —Español, English,
+Português— y no traducidos al idioma de la página. Es lo estándar y es lo
+útil: alguien que solo lee portugués tiene que poder reconocer "Português"
+estando en la versión en español. Por eso tampoco están en los diccionarios.
 
 **Las banderas son SVG inline, no emoji.** Chrome en Windows no dibuja los
 emoji de bandera (🇨🇱): muestra las dos letras del país. Buena parte del
 público chileno está en Windows, así que el emoji no era opción. Los SVG
-están simplificados a propósito —el globo de la bandera brasileña y el
-detalle fino de la Union Jack no se leen a 17px— y viven en el diccionario
-`BANDERAS` del script, en un solo lugar para las 24 páginas.
+están simplificados a propósito —las 50 estrellas de la bandera de Estados
+Unidos y el globo de la brasileña no se leen a 20px— y viven en el
+diccionario `BANDERAS` del script, en un solo lugar para las 24 páginas.
 
-**Qué bandera para qué idioma es una decisión, no un hecho:** una bandera
-representa un país y no un idioma. El inglés podría llevar la de Estados
-Unidos y el portugués la de Portugal. Se eligió Reino Unido porque la
-traducción usa ortografía británica (`programme`, `centre`,
-`organisational`), y Brasil porque el portugués es de Brasil. Si el cliente
-prefiere otras, es editar `BANDERAS` y regenerar.
+**Qué bandera para qué idioma lo decidió el cliente** (2026-09-16): Chile
+para el español, Estados Unidos para el inglés, Brasil para el portugués.
+Vale la pena tener presente que una bandera representa un país y no un
+idioma, así que la elección siempre es una convención. Cambiarlas es editar
+`BANDERAS` y regenerar.
 
-Cada segmento lleva **bandera + código** (`ES`, `EN`, `PT`), no bandera sola:
-una bandera no le dice nada a un lector de pantalla. El SVG va
-`aria-hidden` y el código es el que nombra el enlace. Bajo 380px el código se
-oculta a la vista pero no se borra, así que el enlace conserva su nombre
-accesible.
-
-El segmento activo **no va dorado** a propósito: el dorado relleno es del
-botón "Reserva", que queda justo al lado, y dos píldoras doradas pegadas
-compiten entre sí. El activo se marca con fondo levantado y texto pleno.
+Bajo 380px el código del idioma se oculta a la vista pero no se borra, así
+que el botón conserva su nombre accesible.
 
 Va **fuera del menú desplegable** a propósito: en celular el menú se
 esconde tras la hamburguesa, y el idioma tiene que poder cambiarse sin
