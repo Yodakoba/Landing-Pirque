@@ -17,7 +17,7 @@ algo. Cinco páginas, sin los niveles de comisión.
 | `experiencias.html` | Los cuatro niveles culinarios con precios, menú completo, desayuno y once |
 | `actividades.html` | Las seis actividades incluidas en el recinto y las cuatro con costo adicional |
 | `eventos.html` | Eventos a medida, arriendo exclusivo del recinto y sus valores |
-| `contacto.html` | WhatsApp, lista de novedades y accesos al resto del sitio |
+| `reservas.html` | Formulario de reserva, qué incluye, cómo llegar y lista de novedades |
 | `404.html` | Página de error con la identidad del sitio |
 
 Todas comparten `assets/css/site.css` y apuntan a las fotos reales de
