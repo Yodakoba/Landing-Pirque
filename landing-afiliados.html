@@ -47,6 +47,78 @@
   .topbar nav:not(.idiomas) a:hover{ opacity:1; }
   @media (max-width: 900px){ .topbar nav:not(.idiomas){ display:none; } }
 
+  /* Sugerencia de idioma: la tarjetita que aparece cuando el navegador del
+     visitante esta en otro idioma que el sitio tiene. La pinta
+     assets/js/idioma.js y solo sugiere, nunca redirige.
+
+     Va fixed a proposito: insertarla en el flujo empujaria la pagina hacia
+     abajo despues de que el navegador ya pinto, y ese salto es peor que la
+     tarjeta misma.
+
+     El bottom la deja POR ENCIMA del boton flotante de WhatsApp, que vive en
+     esa misma esquina: 52px de alto mas sus 18px de separacion, mas aire. */
+  .sugerencia-idioma{
+    position: fixed; z-index: 80;
+    right: 18px; bottom: 82px; width: min(320px, calc(100vw - 36px));
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding: 16px 40px 16px 18px;
+    background: #1B1814; border:1px solid var(--line); border-radius:10px;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.6);
+    animation: sugerencia-entra .25s ease-out;
+  }
+  .sugerencia-idioma p{
+    margin:0; flex:1 1 100%;
+    font-size:0.88rem; line-height:1.45; color: var(--ink-dim);
+  }
+  .sugerencia-ir{
+    display:inline-block; padding:8px 14px; border-radius:2px;
+    background: var(--gold); color:#1A1400; text-decoration:none;
+    font-size:0.78rem; font-weight:700; letter-spacing:0.04em;
+    text-transform:uppercase;
+  }
+  .sugerencia-ir:hover{ background:#DAB02C; }
+  .sugerencia-cerrar{
+    position:absolute; top:8px; right:8px;
+    width:28px; height:28px; padding:0; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:0; border-radius:4px; cursor:pointer;
+    color: var(--ink-faint); font-size:1.15rem;
+  }
+  .sugerencia-cerrar:hover{ color: var(--ink); background: rgba(255,255,255,0.08); }
+  .sugerencia-idioma a:focus-visible,
+  .sugerencia-cerrar:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  @keyframes sugerencia-entra{ from{ opacity:0; transform: translateY(10px); } }
+  /* Quien pidio menos movimiento no recibe la entrada animada. */
+  @media (prefers-reduced-motion: reduce){
+    .sugerencia-idioma{ animation:none; }
+  }
+
+  /* Bajo 600px el boton de WhatsApp se achica a 48px y sube a 14px del
+     borde, asi que la tarjeta lo sigue. */
+  @media (max-width: 600px){
+    .sugerencia-idioma{ bottom: 72px; }
+  }
+  /* En celular ocupa el ancho y se aprieta: es una tarjeta fija abajo, asi
+     que cada pixel de alto es contenido que tapa. */
+  @media (max-width: 480px){
+    .sugerencia-idioma{
+      right:12px; left:12px; width:auto;
+      gap:8px; padding:12px 36px 12px 14px;
+    }
+    .sugerencia-idioma p{ font-size:0.82rem; line-height:1.4; }
+    .sugerencia-ir{ padding:7px 12px; font-size:0.74rem; }
+  }
+  /* Igual que en .wa-float, el desplazamiento por la barra de gestos va
+     detras de @supports: calc()+env() no parsea en todos los motores y sin
+     la guarda cae la declaracion entera y la tarjeta pierde el anclaje. */
+  @supports (bottom: calc(82px + env(safe-area-inset-bottom, 0px))){
+    .sugerencia-idioma{ bottom: calc(82px + env(safe-area-inset-bottom, 0px)); }
+    @media (max-width: 600px){
+      .sugerencia-idioma{ bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+    }
+  }
+
   /* Selector de idiomas: desplegable con <details>, sin JavaScript. Va
      fuera de la regla del menu a proposito, porque el menu del landing
      desaparece bajo 900px y el idioma no debe irse con el. */
@@ -375,6 +447,7 @@
 <link rel="alternate" hreflang="pt" href="https://brasasdelopirque.cl/pt/landing-afiliados.html">
 <link rel="alternate" hreflang="x-default" href="https://brasasdelopirque.cl/landing-afiliados.html">
 <!--/i18n:alternate-->
+<script src="assets/js/idioma.js" defer></script>
 </head>
 <body>
   <div class="topbar">
