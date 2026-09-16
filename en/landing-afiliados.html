@@ -35,7 +35,7 @@
   .rule{ width: 46px; height: 2px; background: var(--gold); margin: 18px 0; border:none; }
 
   /* topbar */
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding: 26px 32px; max-width:1180px; margin:0 auto; position: relative; z-index: 5; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:20px; padding: 26px 32px; max-width:1180px; margin:0 auto; position: relative; z-index: 5; }
   .brand{ display:block; line-height:0; text-decoration:none; }
   .brand img{ height:30px; width:auto; display:block; }
   @media (max-width: 700px){ .brand img{ height:26px; } }
@@ -47,19 +47,122 @@
   .topbar nav:not(.idiomas) a:hover{ opacity:1; }
   @media (max-width: 900px){ .topbar nav:not(.idiomas){ display:none; } }
 
-  /* Selector de idiomas. Va fuera de la regla de arriba a proposito: el
-     menu del landing desaparece bajo 900px y el idioma no debe irse con
-     el. */
-  .idiomas{
-    display:flex; align-items:center; gap:2px; margin:0 0 0 auto;
-    font-size: 0.72rem; letter-spacing: 0.08em; font-weight:600;
+  /* Sugerencia de idioma: la tarjetita que aparece cuando el navegador del
+     visitante esta en otro idioma que el sitio tiene. La pinta
+     assets/js/idioma.js y solo sugiere, nunca redirige.
+
+     Va fixed a proposito: insertarla en el flujo empujaria la pagina hacia
+     abajo despues de que el navegador ya pinto, y ese salto es peor que la
+     tarjeta misma.
+
+     El bottom la deja POR ENCIMA del boton flotante de WhatsApp, que vive en
+     esa misma esquina: 52px de alto mas sus 18px de separacion, mas aire. */
+  .sugerencia-idioma{
+    position: fixed; z-index: 80;
+    right: 18px; bottom: 82px; width: min(320px, calc(100vw - 36px));
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding: 16px 40px 16px 18px;
+    background: #1B1814; border:1px solid var(--line); border-radius:10px;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.6);
+    animation: sugerencia-entra .25s ease-out;
   }
-  .idiomas a, .idiomas span{
-    padding:5px 7px; text-decoration:none; color: var(--ink-faint);
-    border-radius:2px;
+  .sugerencia-idioma p{
+    margin:0; flex:1 1 100%;
+    font-size:0.88rem; line-height:1.45; color: var(--ink-dim);
   }
-  .idiomas a:hover{ color: var(--ink); }
-  .idiomas [aria-current="true"]{ color: var(--gold); }
+  .sugerencia-ir{
+    display:inline-block; padding:8px 14px; border-radius:2px;
+    background: var(--gold); color:#1A1400; text-decoration:none;
+    font-size:0.78rem; font-weight:700; letter-spacing:0.04em;
+    text-transform:uppercase;
+  }
+  .sugerencia-ir:hover{ background:#DAB02C; }
+  .sugerencia-cerrar{
+    position:absolute; top:8px; right:8px;
+    width:28px; height:28px; padding:0; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:0; border-radius:4px; cursor:pointer;
+    color: var(--ink-faint); font-size:1.15rem;
+  }
+  .sugerencia-cerrar:hover{ color: var(--ink); background: rgba(255,255,255,0.08); }
+  .sugerencia-idioma a:focus-visible,
+  .sugerencia-cerrar:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  @keyframes sugerencia-entra{ from{ opacity:0; transform: translateY(10px); } }
+  /* Quien pidio menos movimiento no recibe la entrada animada. */
+  @media (prefers-reduced-motion: reduce){
+    .sugerencia-idioma{ animation:none; }
+  }
+
+  /* Bajo 600px el boton de WhatsApp se achica a 48px y sube a 14px del
+     borde, asi que la tarjeta lo sigue. */
+  @media (max-width: 600px){
+    .sugerencia-idioma{ bottom: 72px; }
+  }
+  /* En celular ocupa el ancho y se aprieta: es una tarjeta fija abajo, asi
+     que cada pixel de alto es contenido que tapa. */
+  @media (max-width: 480px){
+    .sugerencia-idioma{
+      right:12px; left:12px; width:auto;
+      gap:8px; padding:12px 36px 12px 14px;
+    }
+    .sugerencia-idioma p{ font-size:0.82rem; line-height:1.4; }
+    .sugerencia-ir{ padding:7px 12px; font-size:0.74rem; }
+  }
+  /* Igual que en .wa-float, el desplazamiento por la barra de gestos va
+     detras de @supports: calc()+env() no parsea en todos los motores y sin
+     la guarda cae la declaracion entera y la tarjeta pierde el anclaje. */
+  @supports (bottom: calc(82px + env(safe-area-inset-bottom, 0px))){
+    .sugerencia-idioma{ bottom: calc(82px + env(safe-area-inset-bottom, 0px)); }
+    @media (max-width: 600px){
+      .sugerencia-idioma{ bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+    }
+  }
+
+  /* Selector de idiomas: desplegable con <details>, sin JavaScript. Va
+     fuera de la regla del menu a proposito, porque el menu del landing
+     desaparece bajo 900px y el idioma no debe irse con el. */
+  .idiomas{ position:relative; margin:0 0 0 auto; }
+  .idiomas > summary{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:6px 10px; border:1px solid var(--line); border-radius:999px;
+    font-size:0.72rem; font-weight:600; letter-spacing:0.06em;
+    color: var(--ink-dim); cursor:pointer; user-select:none;
+    background: rgba(255,255,255,0.03);
+    list-style:none;
+  }
+  .idiomas > summary::-webkit-details-marker{ display:none; }
+  .idiomas > summary:hover{ color: var(--ink); border-color: rgba(201,162,39,0.45); }
+  .idiomas > summary:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .idiomas[open] > summary{ color: var(--ink); border-color: rgba(201,162,39,0.45); }
+  .idiomas svg:not(.caret){
+    width:20px; height:auto; aspect-ratio:3/2; flex:none;
+    display:block; border-radius:2px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.16);
+  }
+  .idiomas .caret{ width:9px; height:auto; flex:none; opacity:0.7; }
+  .idiomas[open] .caret{ transform: rotate(180deg); }
+  .idiomas-menu{
+    position:absolute; top:calc(100% + 8px); right:0; z-index:60;
+    min-width:186px; padding:6px;
+    background:#1B1814; border:1px solid var(--line); border-radius:8px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+  }
+  .idiomas .op{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:5px;
+    font-size:0.86rem; color: var(--ink-dim); text-decoration:none; opacity:1;
+  }
+  .idiomas a.op:hover{ background: rgba(255,255,255,0.07); color: var(--ink); }
+  .idiomas .actual{ color: var(--ink); background: rgba(255,255,255,0.05); }
+  .idiomas .actual::after{ content:"\2713"; margin-left:auto; color: var(--gold); font-size:0.8rem; }
+  @media (max-width: 380px){
+    .idiomas > summary{ gap:5px; padding:6px 8px; }
+    .idiomas .cod{
+      position:absolute; width:1px; height:1px; margin:-1px;
+      padding:0; overflow:hidden; clip-path: inset(50%); white-space:nowrap;
+    }
+  }
 
   .btn{
     display:inline-flex; align-items:center; gap:8px; background: var(--gold); color: #1A1400;
@@ -344,11 +447,12 @@
 <link rel="alternate" hreflang="pt" href="https://brasasdelopirque.cl/pt/landing-afiliados.html">
 <link rel="alternate" hreflang="x-default" href="https://brasasdelopirque.cl/landing-afiliados.html">
 <!--/i18n:alternate-->
+<script src="../assets/js/idioma.js" defer></script>
 </head>
 <body>
   <div class="topbar">
     <a class="brand" href="index.html"><img src="../assets/logo-brasas-wordmark.png" alt="Brasas de Lo Pirque" width="363" height="94"></a>
-    <!--i18n--><nav class="idiomas" aria-label="Idioma"><a href="../landing-afiliados.html" hreflang="es" lang="es">ES</a><span aria-current="true">EN</span><a href="../pt/landing-afiliados.html" hreflang="pt" lang="pt">PT</a></nav><!--/i18n-->
+    <!--i18n--><details class="idiomas"><summary title="Change language"><svg viewBox="0 0 190 100" aria-hidden="true" focusable="false"><rect width="190" height="100" fill="#B31942"/><g fill="#fff"><rect y="7.7" width="190" height="7.7"/><rect y="23.1" width="190" height="7.7"/><rect y="38.5" width="190" height="7.7"/><rect y="53.9" width="190" height="7.7"/><rect y="69.2" width="190" height="7.7"/><rect y="84.6" width="190" height="7.7"/></g><rect width="76" height="53.9" fill="#0A3161"/><g fill="#fff"><circle cx="12" cy="10" r="4"/><circle cx="31" cy="10" r="4"/><circle cx="50" cy="10" r="4"/><circle cx="69" cy="10" r="4"/><circle cx="12" cy="27" r="4"/><circle cx="31" cy="27" r="4"/><circle cx="50" cy="27" r="4"/><circle cx="69" cy="27" r="4"/><circle cx="12" cy="44" r="4"/><circle cx="31" cy="44" r="4"/><circle cx="50" cy="44" r="4"/><circle cx="69" cy="44" r="4"/></g></svg><span class="cod">EN</span><svg class="caret" viewBox="0 0 10 6" aria-hidden="true" focusable="false"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="idiomas-menu"><a class="op" href="../landing-afiliados.html" hreflang="es" lang="es"><svg viewBox="0 0 9 6" aria-hidden="true" focusable="false"><rect width="9" height="6" fill="#D52B1E"/><rect width="9" height="3" fill="#fff"/><rect width="3" height="3" fill="#0039A6"/><path d="M1.5.75l.28.86h.9l-.73.53.28.86-.73-.53-.73.53.28-.86-.73-.53h.9z" fill="#fff"/></svg><span class="nom">Español</span></a><span class="op actual" aria-current="true"><svg viewBox="0 0 190 100" aria-hidden="true" focusable="false"><rect width="190" height="100" fill="#B31942"/><g fill="#fff"><rect y="7.7" width="190" height="7.7"/><rect y="23.1" width="190" height="7.7"/><rect y="38.5" width="190" height="7.7"/><rect y="53.9" width="190" height="7.7"/><rect y="69.2" width="190" height="7.7"/><rect y="84.6" width="190" height="7.7"/></g><rect width="76" height="53.9" fill="#0A3161"/><g fill="#fff"><circle cx="12" cy="10" r="4"/><circle cx="31" cy="10" r="4"/><circle cx="50" cy="10" r="4"/><circle cx="69" cy="10" r="4"/><circle cx="12" cy="27" r="4"/><circle cx="31" cy="27" r="4"/><circle cx="50" cy="27" r="4"/><circle cx="69" cy="27" r="4"/><circle cx="12" cy="44" r="4"/><circle cx="31" cy="44" r="4"/><circle cx="50" cy="44" r="4"/><circle cx="69" cy="44" r="4"/></g></svg><span class="nom">English</span></span><a class="op" href="../pt/landing-afiliados.html" hreflang="pt" lang="pt"><svg viewBox="0 0 70 49" aria-hidden="true" focusable="false"><rect width="70" height="49" fill="#009739"/><path d="M35 6l29 18.5L35 43 6 24.5z" fill="#FEDD00"/><circle cx="35" cy="24.5" r="10.5" fill="#012169"/></svg><span class="nom">Português</span></a></div></details><!--/i18n-->
     <nav>
       <a href="#experiencias">Experiences</a>
       <a href="#actividades">Activities</a>

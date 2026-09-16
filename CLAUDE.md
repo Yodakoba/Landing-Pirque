@@ -72,11 +72,39 @@ total calculado con el mismo criterio.
 
 ### El selector de idiomas
 
-Es el `ES · EN · PT` de la barra superior. **El markup lo arma el script**
+Es el desplegable de la barra superior. **El markup lo arma el script**
 (`selector_idiomas()`), y el bloque `<!--i18n-->…<!--/i18n-->` que está
 escrito en los archivos españoles tiene que coincidir exactamente con lo que
 el script genera; si no, la corrida avisa. Para cambiarlo se toca el script,
 no el HTML.
+
+**Es un `<details>`/`<summary>`, así que no usa una línea de JavaScript.**
+Se abre y se cierra solo, y viene con el teclado y los lectores de pantalla
+resueltos de fábrica. El resumen muestra el idioma actual (bandera + código);
+la lista muestra los tres con su nombre completo, y el actual va marcado con
+un tilde y sin enlace. Lo único que no hace gratis un `<details>` es cerrarse
+al hacer clic afuera: eso necesitaría JS y no vale la pena.
+
+**Los nombres van cada uno en su propio idioma** —Español, English,
+Português— y no traducidos al idioma de la página. Es lo estándar y es lo
+útil: alguien que solo lee portugués tiene que poder reconocer "Português"
+estando en la versión en español. Por eso tampoco están en los diccionarios.
+
+**Las banderas son SVG inline, no emoji.** Chrome en Windows no dibuja los
+emoji de bandera (🇨🇱): muestra las dos letras del país. Buena parte del
+público chileno está en Windows, así que el emoji no era opción. Los SVG
+están simplificados a propósito —las 50 estrellas de la bandera de Estados
+Unidos y el globo de la brasileña no se leen a 20px— y viven en el
+diccionario `BANDERAS` del script, en un solo lugar para las 24 páginas.
+
+**Qué bandera para qué idioma lo decidió el cliente** (2026-09-16): Chile
+para el español, Estados Unidos para el inglés, Brasil para el portugués.
+Vale la pena tener presente que una bandera representa un país y no un
+idioma, así que la elección siempre es una convención. Cambiarlas es editar
+`BANDERAS` y regenerar.
+
+Bajo 380px el código del idioma se oculta a la vista pero no se borra, así
+que el botón conserva su nombre accesible.
 
 Va **fuera del menú desplegable** a propósito: en celular el menú se
 esconde tras la hamburguesa, y el idioma tiene que poder cambiarse sin
@@ -91,6 +119,44 @@ constante `SITIO`** al inicio del script. Hoy dice `brasasdelopirque.cl`.
 
 `404.html` y `contacto.html` van con `noindex`, así que no llevan `hreflang`;
 `contacto.html` tampoco lleva selector, porque redirige al instante.
+
+### Sugerencia de idioma (`assets/js/idioma.js`)
+
+Si el navegador del visitante está en un idioma que el sitio tiene, y no es
+el de la página que abrió, le aparece una tarjetita abajo a la derecha
+ofreciéndole cambiarse.
+
+**Sugiere, no redirige.** Nadie termina en un idioma que no pidió. Se
+decidió así con el cliente el 2026-09-16 sobre la alternativa de redirigir
+automático, por dos razones: Google desaconseja explícitamente la
+redirección automática por idioma, y además atrapa —un chileno con el
+notebook configurado en inglés vería el sitio en inglés sin haberlo pedido
+y sin entender por qué.
+
+**Mira el idioma del navegador, no el país.** Detectar el país de verdad
+necesita geolocalización por IP, o sea un servicio externo en cada carga.
+El idioma del navegador además suele ser mejor señal: un brasileño
+navegando desde Santiago quiere portugués, y el país diría Chile.
+
+**Los enlaces los saca del propio selector de la barra**, que ya trae las
+rutas correctas a esta misma página en los otros idiomas. Así no hay una
+segunda lista que mantener, y si la página no tiene selector no pasa nada.
+
+Se muestra **una sola vez**. Apenas la persona la cierra o elige un idioma
+—en la tarjeta o en el desplegable de la barra— queda anotado en
+`localStorage` y no vuelve a aparecer. Si `localStorage` está bloqueado
+(navegación privada, cookies deshabilitadas) la tarjeta reaparece en la
+próxima visita: molesto, pero no roto, y sin lanzar errores.
+
+**Ojo: esto agrega JavaScript al sitio completo**, incluido el landing, que
+hasta el 2026-09-16 tenía cero. Es la segunda excepción a la regla, después
+de `reserva.js`, y también se decidió explícitamente. Sigue sin haber JS
+para nada de interfaz: el menú, las tarjetas que giran, los carruseles y el
+propio selector de idiomas siguen siendo CSS puro.
+
+El texto de la tarjeta va **en el idioma que se ofrece**, no en el de la
+página: a alguien que lee inglés hay que ofrecerle el cambio en inglés. Los
+tres textos viven en el objeto `TEXTOS` del archivo.
 
 ### Lo que queda en español pase lo que pase
 
@@ -128,12 +194,14 @@ unos pocos KB; las imágenes se cachean entre páginas.
   · Experiencias · Actividades · Eventos · **Socios comerciales** (delineado,
   porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
 - **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
-  tarjetas que giran y los carruseles son CSS. La única excepción es
-  `assets/js/reserva.js`, que solo carga en `reservas.html`: la integración
-  con Shopify no se puede hacer sin JS y esa excepción se decidió
-  explícitamente. No la uses como precedente para nada más. **El selector de
-  idiomas tampoco usa JS**: son tres enlaces a la misma página en otra
-  carpeta.
+  tarjetas que giran y los carruseles son CSS. **El selector de idiomas
+  tampoco usa JS**: es un `<details>` con enlaces a la misma página en otra
+  carpeta. Hay exactamente **dos** excepciones, las dos decididas
+  explícitamente con el cliente, y ninguna sirve de precedente:
+  `assets/js/reserva.js` (solo en `reservas.html`; la integración con
+  Shopify no se puede hacer sin JS) y `assets/js/idioma.js` (en todas; la
+  sugerencia de idioma no se puede hacer sin JS en un sitio estático).
+  **Para interfaz no se usa JavaScript.**
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
 - **El sitio público vende DOS experiencias, el landing sigue con CUATRO**
@@ -154,11 +222,18 @@ unos pocos KB; las imágenes se cachean entre páginas.
   1138px). Por eso la `<img>` va `position:absolute` y no aporta altura.
 - `calc(18px + env(safe-area-inset-bottom))` no parsea en todos los motores y
   tumba la declaración entera. Va detrás de un `@supports`.
+- **La esquina inferior derecha ya está ocupada** por el botón flotante de
+  WhatsApp (`.wa-float`, 52px a 18px del borde; 48px a 14px bajo 600px).
+  Cualquier cosa nueva que se ancle ahí lo tapa. La tarjeta de sugerencia de
+  idioma va por encima (`bottom:82px`, y 72px bajo 600px), con la misma
+  guarda `@supports` del punto anterior.
 
 ## Landing de socios (`landing-afiliados.html`)
 
 - Es **el único archivo** de ese entregable y el que hay que editar: HTML con
-  el CSS inline en un solo `<style>`, y cero JavaScript.
+  el CSS inline en un solo `<style>`. Desde el 2026-09-16 carga un único
+  script externo, `assets/js/idioma.js`, que es la sugerencia de idioma; no
+  tiene JavaScript propio ni inline.
 - **Las imágenes ya no van embebidas.** Antes eran 46 payloads base64 y el
   archivo pesaba 5,12 MB; ahora son referencias a `assets/` y pesa 48 KB. Un
   visitante descarga 376 KB al llegar en vez de 5,12 MB, porque todo lo que
