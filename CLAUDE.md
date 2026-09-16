@@ -10,9 +10,9 @@ restaurante campestre y centro de eventos en Chile:
    Enlazado desde el menú del sitio público; los niveles de comisión viven
    solo acá.
 
-**Ojo: los dos están armados de forma distinta a propósito.** El landing es un
-archivo suelto y autocontenido; el sitio público es un sitio estático normal
-con carpeta de assets. No unifiques los dos criterios sin hablarlo.
+Los dos comparten la carpeta `assets/`. El landing sigue siendo **un solo
+archivo HTML con su CSS inline**, pero **ya no es autocontenido**: desde el
+2026-09-16 sus imágenes son archivos referenciados, no base64.
 
 ## Sitio público
 
@@ -49,9 +49,17 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ## Landing de socios (`landing-afiliados.html`)
 
-- Es **el único archivo** de ese entregable y el que hay que editar. Es HTML autocontenido: CSS inline en un solo `<style>`, 40 imágenes
-  embebidas en base64, cero JavaScript de terceros. Se abre directo en el
-  navegador, sin servidor ni build step.
+- Es **el único archivo** de ese entregable y el que hay que editar: HTML con
+  el CSS inline en un solo `<style>`, y cero JavaScript.
+- **Las imágenes ya no van embebidas.** Antes eran 46 payloads base64 y el
+  archivo pesaba 5,12 MB; ahora son referencias a `assets/` y pesa 48 KB. Un
+  visitante descarga 376 KB al llegar en vez de 5,12 MB, porque todo lo que
+  no entra en la primera pantalla va con `loading="lazy"`. Las únicas dos sin
+  lazy son el logo de la cabecera y la foto del hero.
+- **Por eso mismo ya no se abre con doble clic desde cualquier parte:**
+  necesita la carpeta `assets/` al lado. Se decidió así el 2026-09-16 porque
+  las agencias llegan por link, no por correo. Si alguna vez hay que mandarlo
+  por correo, hay que volver a embeber o mandar un zip con `assets/`.
 - **No hay toolchain**: no hay npm, bundler, linter ni tests. No agregues uno
   salvo que el cliente lo pida.
 - **`assets/`** guarda los originales ya procesados de esas fotos, por si hay
@@ -70,19 +78,13 @@ unos pocos KB; las imágenes se cachean entre páginas.
   conversación, que para archivos de 1 a 3 MB no es viable. Hay que pedirle al
   cliente que las suba al repo (GitHub → Add file → Upload files).
 
-### Editar el HTML sin romperlo
+### Editar el HTML
 
-El archivo pesa ~5.1 MB porque los payloads base64 ocupan casi todo. Para
-trabajarlo:
-
-- **Nunca lo leas entero.** Filtra los payloads primero:
-  `sed 's/data:image\/[a-z]*;base64,[A-Za-z0-9+\/=]*/[B64]/g' landing-afiliados.html`
-- Para reemplazos de texto masivos, opera **solo fuera de los payloads**
-  (parte el archivo con `re.split` sobre el patrón `data:image/...;base64,...`),
-  porque una cadena corta puede aparecer por casualidad dentro del base64.
-- Después de cualquier edición, verifica integridad:
-  `wc -l landing-afiliados.html` debe seguir dando 828 líneas y
-  `grep -c 'data:image/jpeg;base64' landing-afiliados.html` debe dar 44.
+Ya no tiene la trampa de los 5 MB: son 828 líneas de HTML legible y se puede
+abrir entero. Si vuelves a embeber imágenes en base64 por algún motivo,
+vuelven las precauciones de antes (no leerlo entero, filtrar los payloads con
+`sed 's/data:image\/[a-z]*;base64,[A-Za-z0-9+\/=]*/[B64]/g'` antes de mirarlo,
+y operar solo fuera de los payloads).
 
 ### Previsualizar
 
