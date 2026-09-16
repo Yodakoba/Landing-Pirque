@@ -114,6 +114,25 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 .brand-pie{ display:inline-block; line-height:0; }
 .brand-pie img{ height:90px; width:auto; }
 @media (max-width: 700px){ .brand-pie img{ height:70px; } }
+/* El selector de idiomas vive fuera del menu desplegable: en celular el
+   menu se esconde tras la hamburguesa, y el idioma tiene que poder
+   cambiarse sin abrirlo. El margin-left:auto se come el espacio libre de
+   la barra, asi que la marca queda a la izquierda y el selector pegado al
+   menu (o a la hamburguesa) a la derecha. */
+.idiomas{
+  display:flex; align-items:center; gap:2px; margin:0 0 0 auto;
+  font-size:0.72rem; letter-spacing:0.08em; font-weight:600;
+}
+.idiomas a, .idiomas span{
+  padding:5px 7px; text-decoration:none; color: var(--ink-faint);
+  border-radius:2px; transition: color .15s ease;
+}
+.idiomas a:hover{ color: var(--ink); }
+.idiomas [aria-current="true"]{ color: var(--gold); }
+@media (max-width: 920px){
+  .idiomas{ margin-right:8px; }
+}
+
 .nav{ display:flex; align-items:center; gap:26px; }
 .nav a{
   text-decoration:none; font-size:0.82rem; text-transform:uppercase;
