@@ -14,6 +14,104 @@ Los dos comparten la carpeta `assets/`. El landing sigue siendo **un solo
 archivo HTML con su CSS inline**, pero **ya no es autocontenido**: desde el
 2026-09-16 sus imágenes son archivos referenciados, no base64.
 
+Desde el 2026-09-16 los dos entregables se publican además **en inglés y en
+portugués**, generados desde el español. Ver "Sitio en tres idiomas".
+
+## Sitio en tres idiomas (es · en · pt)
+
+**El español de la raíz es la fuente de verdad. `en/` y `pt/` son generadas
+y no se editan a mano.** Lo que se les haga se pierde en la próxima corrida.
+
+```
+python3 tools/traducir.py            # escribe en/ y pt/
+python3 tools/traducir.py --revisar  # no escribe: avisa si algo quedó viejo
+```
+
+Solo necesita `python3`: sin npm, sin dependencias. **Esto no contradice la
+regla de "no hay toolchain"**: el sitio que se publica sigue siendo HTML
+plano y el script no corre en el navegador ni en el servidor, solo acá. Se
+eligió sobre las dos alternativas porque duplicar los archivos a mano habría
+convertido cada cambio de copy en tres ediciones, y un selector en
+JavaScript habría roto la regla de cero JS y dejado a Google indexando solo
+el español.
+
+### El flujo de trabajo, que es lo único que hay que recordar
+
+1. Editas el español en la raíz, como siempre.
+2. Corres `python3 tools/traducir.py`.
+3. Commiteas las tres versiones juntas.
+
+Si el paso 2 se olvida, `--revisar` lo delata: compara lo generado contra lo
+que hay en disco y nombra los archivos desfasados. Si agregaste texto nuevo,
+el script **se niega a generar** y lista lo que falta traducir, en vez de
+publicar una página a medio traducir sin que nadie se entere.
+
+### Las traducciones
+
+Viven en `traducciones/en.json` y `traducciones/pt.json`. La llave es el
+texto en español tal cual aparece en el HTML:
+
+```json
+"Reserva tu visita": "Book your visit"
+```
+
+Cuando el mismo español necesita traducciones distintas según la página, se
+usa una llave calificada `"archivo.html|texto"`, que le gana a la suelta solo
+en ese archivo. Las llaves que parten con `_` son comentarios, no textos.
+
+Lo que **no** pasa por el diccionario, porque se reconoce por su forma:
+números, teléfonos, correos, dominios y URLs. Los nombres propios
+(`Tradiciones`, `Sommelier`, `Pirque`, `WhatsApp`) están en la lista
+`PROPIOS` del script.
+
+**Los precios sí están en el diccionario, a propósito.** En formato chileno
+`$44.000` son cuarenta y cuatro mil pesos, pero en inglés se lee como
+cuarenta y cuatro dólares con cero centavos. Por eso en `en/` sale
+`$44,000 CLP` y en `pt/` `$44.000 CLP`. `assets/js/reserva.js` formatea el
+total calculado con el mismo criterio.
+
+### El selector de idiomas
+
+Es el `ES · EN · PT` de la barra superior. **El markup lo arma el script**
+(`selector_idiomas()`), y el bloque `<!--i18n-->…<!--/i18n-->` que está
+escrito en los archivos españoles tiene que coincidir exactamente con lo que
+el script genera; si no, la corrida avisa. Para cambiarlo se toca el script,
+no el HTML.
+
+Va **fuera del menú desplegable** a propósito: en celular el menú se
+esconde tras la hamburguesa, y el idioma tiene que poder cambiarse sin
+abrirlo. En el landing es todavía más importante, porque ahí el menú
+directamente desaparece bajo 900px — por eso sus reglas CSS quedaron
+acotadas a `.topbar nav:not(.idiomas)`.
+
+El `<head>` lleva además un bloque `<!--i18n:alternate-->` con los
+`hreflang`, que le dicen a Google que las tres son la misma página. Van con
+URL absoluta, así que **si el sitio cambia de dominio hay que cambiar la
+constante `SITIO`** al inicio del script. Hoy dice `brasasdelopirque.cl`.
+
+`404.html` y `contacto.html` van con `noindex`, así que no llevan `hreflang`;
+`contacto.html` tampoco lleva selector, porque redirige al instante.
+
+### Lo que queda en español pase lo que pase
+
+- **El checkout de Shopify y el calendario de Cowlendar.** El formulario de
+  reserva se traduce, pero al apretar "Complete booking" la persona cae en un
+  checkout en español. Se arregla con Shopify Markets, del lado de la tienda,
+  no desde acá. Es tema para cuando esté la tienda de desarrollo.
+- **Las conversaciones de WhatsApp.** El mensaje prellenado sí se traduce
+  (el script lo decodifica del `?text=`), pero quien responde al otro lado
+  escribe en el idioma que maneje. Vale la pena avisarle al cliente antes de
+  promocionar el sitio en inglés o portugués.
+
+### Traducciones sin revisar por hablante nativo
+
+Las escribió Claude, igual que el copy nuevo en español. El inglés y el
+portugués (variante de Brasil) están cuidados y consistentes, pero nadie
+nativo los ha leído todavía. Los términos chilenos que no tienen equivalente
+—`sopaipillas`, `pebre`, `pan amasado`, `mote con huesillo`, `huaso`,
+`cueca`, `cochayuyo`— se dejaron en español a propósito, porque son parte de
+lo que se vende.
+
 ## Sitio público
 
 Archivos: `index.html`, `experiencias.html`, `actividades.html`,
@@ -23,7 +121,9 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 - **No hay build step.** Cabecera y pie están duplicados en cada página, que es
   lo normal en un sitio estático sin toolchain. Si tocas el menú, tócalo en
-  las seis (las cinco más `404.html`).
+  las seis (las cinco más `404.html`) **y después corre
+  `python3 tools/traducir.py`**, que es lo que propaga el cambio a `en/` y
+  `pt/`. Esas carpetas son generadas: no se editan.
 - El menú son 5 ítems: **Reserva** (botón dorado relleno, la acción principal)
   · Experiencias · Actividades · Eventos · **Socios comerciales** (delineado,
   porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
@@ -31,7 +131,9 @@ unos pocos KB; las imágenes se cachean entre páginas.
   tarjetas que giran y los carruseles son CSS. La única excepción es
   `assets/js/reserva.js`, que solo carga en `reservas.html`: la integración
   con Shopify no se puede hacer sin JS y esa excepción se decidió
-  explícitamente. No la uses como precedente para nada más.
+  explícitamente. No la uses como precedente para nada más. **El selector de
+  idiomas tampoco usa JS**: son tres enlaces a la misma página en otra
+  carpeta.
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
 - **El sitio público vende DOS experiencias, el landing sigue con CUATRO**

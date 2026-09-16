@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservar — Brasas de Lo Pirque</title>
+<meta name="description" content="Reserve e pague online o seu dia de campo: escolha a data, a quantidade de adultos e crianças, e confirme as suas vagas em poucos passos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;0,9..144,600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<!--i18n:alternate-->
+<link rel="alternate" hreflang="es" href="https://brasasdelopirque.cl/reservas.html">
+<link rel="alternate" hreflang="en" href="https://brasasdelopirque.cl/en/reservas.html">
+<link rel="alternate" hreflang="pt" href="https://brasasdelopirque.cl/pt/reservas.html">
+<link rel="alternate" hreflang="x-default" href="https://brasasdelopirque.cl/reservas.html">
+<!--/i18n:alternate-->
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="index.html"><img src="../assets/logo-brasas-wordmark.png" alt="Brasas de Lo Pirque" width="363" height="94"></a>
+    <!--i18n--><nav class="idiomas" aria-label="Idioma"><a href="../reservas.html" hreflang="es" lang="es">ES</a><a href="../en/reservas.html" hreflang="en" lang="en">EN</a><span aria-current="true">PT</span></nav><!--/i18n-->
+    <input type="checkbox" id="nav" class="nav-toggle">
+    <label for="nav" class="nav-burger" aria-label="Abrir menu"><span></span><span></span><span></span></label>
+    <nav class="nav">
+      <a class="nav-reserva" href="reservas.html" aria-current="page">Reservar</a>
+      <a href="experiencias.html">Experiências</a>
+      <a href="actividades.html">Atividades</a>
+      <a href="eventos.html">Eventos</a>
+      <a class="nav-socios" href="landing-afiliados.html">Parceiros comerciais</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="bg"><img src="../assets/gallery/g01.jpg" alt="Fachada do galpão do Brasas de Lo Pirque" width="553" height="850"></div>
+  <div class="hero-in">
+    <p class="kicker">Garanta já</p>
+    <h1>Reserve a sua visita</h1>
+    <p class="lede">A forma mais rápida e simples de reservar é aqui, junto ao nosso parceiro Shopify. É simples: escolha e siga os passos.</p>
+  </div>
+</section>
+
+<section class="pad" id="reserva-en-linea">
+  <div class="wrap">
+    <div class="reserva-widget">
+
+      <h2 class="reserva-titulo">Menu Tradiciones</h2>
+
+      <div class="campo">
+        <label class="etiqueta" for="r-fecha">Escolher data</label>
+        <select id="r-fecha">
+          <option value="2026-09-05" data-adulto="46253136314425" data-nino="46253136347193">Sábado, 5 de setembro</option>
+          <option value="2026-09-06" data-adulto="46253136379961" data-nino="46253136412729">Domingo, 6 de setembro</option>
+          <option value="2026-09-12" data-adulto="46253136445497" data-nino="46253136478265">Sábado, 12 de setembro</option>
+          <option value="2026-09-13" data-adulto="46253136511033" data-nino="46253136543801">Domingo, 13 de setembro</option>
+          <option value="2026-09-17" data-adulto="46253136576569" data-nino="46253136609337">Quinta, 17 de setembro</option>
+          <option value="2026-09-18" data-adulto="46253136642105" data-nino="46253136674873">Sexta, 18 de setembro</option>
+          <option value="2026-09-19" data-adulto="46253136707641" data-nino="46253136740409">Sábado, 19 de setembro</option>
+          <option value="2026-09-20" data-adulto="46253136773177" data-nino="46253136805945">Domingo, 20 de setembro</option>
+          <option value="2026-09-26" data-adulto="46253136838713" data-nino="46253136871481">Sábado, 26 de setembro</option>
+          <option value="2026-09-27" data-adulto="46253136904249" data-nino="46253136937017">Domingo, 27 de setembro</option>
+        </select>
+      </div>
+      <p class="aviso">Escolha a data certa antes de continuar.</p>
+
+      <div class="reserva-fila">
+        <div class="quien">Adultos</div>
+        <div>
+          <label class="etiqueta" for="r-adultos">Quantidade</label>
+          <input id="r-adultos" type="number" min="1" step="1" value="2">
+        </div>
+        <div class="valor">$44.000 CLP</div>
+      </div>
+
+      <div class="reserva-fila">
+        <div class="quien">Crianças <small>De 4 a 12 anos</small></div>
+        <div>
+          <label class="etiqueta" for="r-ninos">Quantidade</label>
+          <input id="r-ninos" type="number" min="0" step="1" value="0">
+        </div>
+        <div class="valor">$19.000 CLP</div>
+      </div>
+
+      <div class="reserva-total">
+        <span>Pessoas <b data-total-personas>2</b></span>
+        <span>Total <b data-total-precio>$88.000 CLP</b></span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" type="button" data-reservar disabled>Finalizar reserva</button>
+      </div>
+
+      <p class="reserva-mensaje" data-mensaje></p>
+
+      <noscript>
+        <p class="fine" style="margin-top:20px;">Para reservar online é preciso ativar o JavaScript. Se preferir, fale com a gente no WhatsApp e registramos a sua reserva.</p>
+      </noscript>
+
+    </div>
+
+    <div class="incluye">
+      <h3>O que a sua reserva inclui</h3>
+
+      <div class="incluye-horario">
+        <div>
+          <span class="etiqueta">Horário</span>
+          <p class="rango">13h às 18h</p>
+        </div>
+        <div class="horario-nota">
+          <p>Dia inteiro. Chegue na abertura e aproveite cada minuto.</p>
+          <p class="fine">As reservas sem pagamento antecipado só são mantidas até as 14h.</p>
+        </div>
+      </div>
+
+      <span class="etiqueta">O que espera por você</span>
+      <div class="incluye-grid">
+
+        <figure class="incluye-item">
+          <img src="../assets/gallery/g11.jpg" alt="Tábua com sopaipillas, pan amasado e pebre" width="680" height="850" loading="lazy" decoding="async">
+          <figcaption>
+            <h4>Tábua de boas-vindas</h4>
+            <p>Sopaipillas recém-feitas, pebre caseiro e pan amasado.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="incluye-item">
+          <img src="../assets/gallery/g04.jpg" alt="Carnes assando na brasa" width="850" height="248" loading="lazy" decoding="async">
+          <figcaption>
+            <h4>Menu</h4>
+            <p>Carnes na brasa, acompanhamentos e sobremesas típicas chilenas.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="incluye-item">
+          <img src="../assets/gallery/g02.jpg" alt="Huaso a cavalo ao lado de uma dançarina de cueca" width="712" height="850" loading="lazy" decoding="async">
+          <figcaption>
+            <h4>Show equestre</h4>
+            <p>Os nossos cavaleiros e os seus cavalos chilenos, com a destreza e a tradição do campo chileno.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="incluye-item">
+          <img src="../assets/imgs3/jardin-familias.jpg" alt="Famílias descansando na grama do espaço" width="1400" height="933" loading="lazy" decoding="async">
+          <figcaption>
+            <h4>Jardim e brincadeiras</h4>
+            <p>Grama, sombra e espaço de sobra para relaxar, correr e brincar.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="incluye-item">
+          <img src="../assets/imgs3/castillo-inflable.jpg" alt="Crianças brincando no castelo inflável" width="1400" height="933" loading="lazy" decoding="async">
+          <figcaption>
+            <h4>Castelo inflável</h4>
+            <p>Presença certa nas tardes em família, disponível o dia inteiro.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="incluye-item">
+          <img src="../assets/imgs3/pintacaritas.jpg" alt="Menina com o rosto pintado de coelhinho, rindo" width="1600" height="2400" loading="lazy" decoding="async">
+          <figcaption>
+            <h4>Pintura facial</h4>
+            <p>Para que os pequenos também entrem na festa.</p>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+    <p class="alternativa">Prefere falar com alguém antes de reservar? Fale com a gente pelo
+      <a href="https://wa.me/56940096228?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20Brasas%20de%20Lo%20Pirque" target="_blank" rel="noopener">WhatsApp +56 9 4009 6228</a>.</p>
+
+  </div>
+</section>
+
+<section class="pad">
+  <div class="wrap">
+    <div class="contact-solo">
+
+      <div class="contact-card">
+        <h3>Entre na lista de novidades</h3>
+        <p>Deixe o seu e-mail para saber de datas especiais, novas experiências e programas de temporada.</p>
+        <form class="newsletter-row" onsubmit="return false;">
+          <label for="email" class="fine" style="position:absolute;left:-9999px;">Seu e-mail</label>
+          <input id="email" type="email" placeholder="tu@email.com" required>
+          <button type="submit">Quero entrar</button>
+        </form>
+        <p class="fine" style="margin:18px 0 0;">Por enquanto este formulário só reúne e-mails — será conectado à plataforma de envio quando ela for definida.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="pad" id="como-llegar">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Como chegar</p>
+      <h2>Estamos em Pirque</h2>
+    </div>
+    <div class="mapa-grid">
+      <div class="mapa">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d53134.866056142164!2d-70.633598!3d-33.6589982!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x966327ffc4d98343%3A0xc5134e559c9108c0!2sLo%20Pirque%20Restaurant!5e0!3m2!1sen!2scl!4v1788441005885!5m2!1sen!2scl"
+          title="Mapa da localização do Brasas de Lo Pirque"
+          loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+      <div class="mapa-datos">
+        <div class="dato">
+          <div class="etiqueta">Endereço</div>
+          <div class="valor">Casas de San Vicente, lote 4<br>Pirque, Região Metropolitana</div>
+        </div>
+        <div class="dato">
+          <div class="etiqueta">Reservas</div>
+          <div class="valor"><a href="tel:+56940096228">+56 9 4009 6228</a></div>
+        </div>
+        <div class="btn-row">
+          <a class="btn" href="https://maps.app.goo.gl/NPkmd1foma1Uc8nB8" target="_blank" rel="noopener">Abrir no Google Maps</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad panel">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Antes de reservar, talvez ajude</h2>
+    </div>
+    <div class="grid grid-3">
+      <a class="card" href="experiencias.html">
+        <div class="card-body">
+          <h3>Preços das experiências</h3>
+          <p>As duas experiências, o que cada uma inclui e o menu completo de quatro tempos.</p>
+          <span class="mas">Ver experiências →</span>
+        </div>
+      </a>
+      <a class="card" href="actividades.html">
+        <div class="card-body">
+          <h3>O que dá para fazer</h3>
+          <p>O que está incluso no espaço e o que é combinado à parte.</p>
+          <span class="mas">Ver atividades →</span>
+        </div>
+      </a>
+      <a class="card" href="eventos.html">
+        <div class="card-body">
+          <h3>Alugar o lugar</h3>
+          <p>Valores do espaço para fim de semana e dias de semana, sem buffet.</p>
+          <span class="mas">Ver eventos e locação →</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="cierre">
+  <div class="wrap">
+    <div>
+      <h2>Você trabalha com turismo ou em uma empresa?</h2>
+      <p class="lede" style="margin-top:12px;">Se você vende experiências para terceiros, temos um programa de parceiros comerciais com condições especiais.</p>
+    </div>
+    <div class="btn-row" style="margin-top:0;">
+      <a class="btn btn-ghost" href="landing-afiliados.html" style="color:var(--gold);border-color:var(--gold-soft);">Programa de parceiros comerciais</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <a class="brand-pie" href="index.html"><img src="../assets/logo-brasas.png" alt="Brasas de Lo Pirque" width="368" height="161" loading="lazy"></a>
+      <p class="fine" style="margin-top:10px;">
+        <a href="https://maps.app.goo.gl/NPkmd1foma1Uc8nB8" target="_blank" rel="noopener">Casas de San Vicente, lote 4, Pirque, Região Metropolitana</a><br>
+        <a href="tel:+56940096228">+56 9 4009 6228</a> · brasasdelopirque.cl
+      </p>
+    </div>
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="experiencias.html">Experiências</a>
+      <a href="actividades.html">Atividades</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="landing-afiliados.html" style="color:var(--gold);">Parceiros comerciais</a>
+    </nav>
+  </div>
+</footer>
+
+<a class="wa-float" href="https://wa.me/56940096228?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20Brasas%20de%20Lo%20Pirque" target="_blank" rel="noopener" aria-label="Fale com a gente no WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
+</a>
+
+<script src="../assets/js/reserva.js" defer></script>
+
+</body>
+</html>

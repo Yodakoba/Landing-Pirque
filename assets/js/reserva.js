@@ -44,10 +44,49 @@
     precioNino: 19000
   };
 
+  /* ---------- idiomas ---------- */
+
+  // El sitio se publica en tres idiomas: el espanol vive en la raiz y las
+  // copias en en/ y pt/ las genera tools/traducir.py. Este archivo es uno
+  // solo para los tres, asi que los textos que muestra salen de aca segun
+  // el lang del <html>. Si se agrega un idioma alla, se agrega una fila.
+  var TEXTOS = {
+    es: {
+      locale: 'es-CL',
+      moneda: '',
+      creando: 'Creando tu reserva\u2026',
+      sinPago: 'El sistema de pago todavia no esta conectado. Escribenos por WhatsApp y tomamos tu reserva.',
+      falla: 'No pudimos crear tu reserva. Vuelve a intentarlo o escribenos por WhatsApp y la tomamos nosotros.',
+      vistaPrevia: 'Vista previa: el pago se conecta cuando la tienda entregue el token.'
+    },
+    en: {
+      locale: 'en-US',
+      moneda: ' CLP',
+      creando: 'Creating your booking\u2026',
+      sinPago: 'The payment system is not connected yet. Message us on WhatsApp and we will take your booking.',
+      falla: 'We could not create your booking. Please try again, or message us on WhatsApp and we will take it.',
+      vistaPrevia: 'Preview: payment connects once the store provides the token.'
+    },
+    pt: {
+      locale: 'pt-BR',
+      moneda: ' CLP',
+      creando: 'Criando a sua reserva\u2026',
+      sinPago: 'O sistema de pagamento ainda nao esta conectado. Fale com a gente no WhatsApp e registramos a sua reserva.',
+      falla: 'Nao conseguimos criar a sua reserva. Tente de novo ou fale com a gente no WhatsApp que registramos.',
+      vistaPrevia: 'Previa: o pagamento se conecta quando a loja entregar o token.'
+    }
+  };
+
+  var idioma = (document.documentElement.lang || 'es').slice(0, 2);
+  var T = TEXTOS[idioma] || TEXTOS.es;
+
   /* ---------- utilidades ---------- */
 
   function pesos(n) {
-    return '$' + n.toLocaleString('es-CL');
+    // El separador de miles cambia por idioma: 44.000 en espanol y
+    // portugues, 44,000 en ingles. Afuera de Chile se agrega la sigla
+    // CLP, porque el signo $ solo se lee como peso chileno aca.
+    return '$' + n.toLocaleString(T.locale) + T.moneda;
   }
 
   function gid(id) {
@@ -134,13 +173,13 @@
 
   function reservar() {
     if (!CONFIG.token) {
-      mensaje('El sistema de pago todavía no está conectado. Escríbenos por WhatsApp y tomamos tu reserva.', 'error');
+      mensaje(T.sinPago, 'error');
       return;
     }
 
     btnReservar.disabled = true;
     var textoOriginal = btnReservar.textContent;
-    btnReservar.textContent = 'Creando tu reserva…';
+    btnReservar.textContent = T.creando;
     mensaje('');
 
     fetch('https://' + CONFIG.dominio + '/api/' + CONFIG.version + '/graphql.json', {
@@ -172,7 +211,7 @@
       .catch(function (e) {
         btnReservar.disabled = false;
         btnReservar.textContent = textoOriginal;
-        mensaje('No pudimos crear tu reserva. Vuelve a intentarlo o escríbenos por WhatsApp y la tomamos nosotros.', 'error');
+        mensaje(T.falla, 'error');
         if (window.console) console.error('[reserva]', e);
       });
   }
@@ -190,7 +229,7 @@
   caja.classList.add('reserva-viva');
 
   if (!CONFIG.token) {
-    mensaje('Vista previa: el pago se conecta cuando la tienda entregue el token.', 'aviso');
+    mensaje(T.vistaPrevia, 'aviso');
   }
 
   recalcular();
