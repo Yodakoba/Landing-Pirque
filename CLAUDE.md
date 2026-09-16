@@ -125,18 +125,57 @@ la reserva en su calendario cuando entra la orden.
   apriete un botón muerto si el archivo no carga. Hay un `<noscript>` que
   manda a WhatsApp.
 
-### Pendiente de verificar cuando llegue el token
+### EN PAUSA — esperando la tienda de desarrollo (2026-09-16)
 
-- Que la Storefront API responda en `brasasdelopirque.cl`. Si da 404 o CORS,
-  hay que cambiar `CONFIG.dominio` por el `*.myshopify.com` de la tienda.
+**Lo que está en el repo es una primera pasada y va a cambiar.** El plan
+acordado con el cliente:
+
+1. Esperar a que vuelva el dueño de la organización en Shopify.
+2. Crear una **tienda de desarrollo** desde su cuenta.
+3. Implementar la integración paso a paso ahí, y recién después producción.
+
+No avances la integración por tu cuenta mientras tanto: los cambios vienen
+desde esa tienda, no desde acá.
+
+**Mergear el código actual es seguro.** Sin token, el botón no llama a la API:
+muestra un aviso y manda a WhatsApp. Está verificado.
+
+### El cambio de diseño ya acordado, para cuando se retome
+
+Hoy los 20 IDs de variante están escritos en el HTML de `contacto.html`. Una
+tienda de desarrollo trae **su propio dominio, su propio token y sus propios
+IDs**, así que esos números no sirven allá, y los de allá tampoco sirven en
+producción: habría que cambiarlos a mano dos veces.
+
+**Acordado con el cliente: invertir eso.** Que el JS le **pida las variantes a
+Shopify al cargar** en vez de tenerlas escritas. Entonces lo único que cambia
+entre ambientes son dos líneas —`CONFIG.dominio` y `CONFIG.token`— y de paso
+se arregla solo el problema de las fechas que vencen, porque la lista sale de
+la tienda y no de un HTML que alguien tiene que acordarse de editar.
+
+No se hizo antes porque sin token no se puede ver cómo están armadas las
+opciones del producto, y habría sido adivinar la estructura.
+
+### Lo que hay que verificar con la tienda de desarrollo en pie
+
 - **Que Cowlendar acepte reservas creadas por fuera de su propio widget.**
   Es el supuesto más grande de toda la integración: la app normalmente valida
   disponibilidad ella misma, y acá el carrito se crea saltándose ese paso.
   Hay que hacer una compra de prueba y confirmar que la reserva aparece en el
-  calendario de Cowlendar.
+  calendario de Cowlendar. Si la ignora, la reserva se cobra y no queda
+  agendada, que es el peor error posible acá.
+- Que la Storefront API responda en el dominio configurado. Si da 404 o CORS,
+  hay que usar el `*.myshopify.com` de la tienda.
 - Que el cupo por fecha se controle en alguna parte. Hoy nada impide vender
   más lugares de los que hay: eso lo tiene que hacer el inventario de Shopify
   o Cowlendar.
+
+### Pendiente conocido: fechas vencidas
+
+Las diez fechas del `<select>` son de septiembre 2026 y **cuatro ya pasaron**
+(5, 6, 12 y 13). El cliente decidió el 2026-09-16 **no** agregar un filtro
+provisorio, porque el arreglo de fondo es el cambio de diseño de arriba. Si
+alguien pregunta por qué el formulario ofrece fechas pasadas, es esto.
 
 ## Estilo y marca
 
