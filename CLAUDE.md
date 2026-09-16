@@ -17,7 +17,7 @@ archivo HTML con su CSS inline**, pero **ya no es autocontenido**: desde el
 ## Sitio público
 
 Archivos: `index.html`, `experiencias.html`, `actividades.html`,
-`eventos.html`, `contacto.html`, todos apuntando a la hoja compartida
+`eventos.html`, `reservas.html`, todos apuntando a la hoja compartida
 `assets/css/site.css` y a las fotos reales de `assets/`. Cada página pesa
 unos pocos KB; las imágenes se cachean entre páginas.
 
@@ -29,7 +29,7 @@ unos pocos KB; las imágenes se cachean entre páginas.
   porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
 - **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
   tarjetas que giran y los carruseles son CSS. La única excepción es
-  `assets/js/reserva.js`, que solo carga en `contacto.html`: la integración
+  `assets/js/reserva.js`, que solo carga en `reservas.html`: la integración
   con Shopify no se puede hacer sin JS y esa excepción se decidió
   explícitamente. No la uses como precedente para nada más.
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
@@ -108,7 +108,7 @@ Las tipografías saldrán en fallback porque el sandbox bloquea
 
 ## Reserva en línea (Shopify + Cowlendar)
 
-`contacto.html` crea el carrito con la **Storefront API** y manda al checkout
+`reservas.html` crea el carrito con la **Storefront API** y manda al checkout
 de Shopify. Cowlendar es la app de reservas instalada en la tienda: registra
 la reserva en su calendario cuando entra la orden.
 
@@ -148,7 +148,7 @@ muestra un aviso y manda a WhatsApp. Está verificado.
 
 ### El cambio de diseño ya acordado, para cuando se retome
 
-Hoy los 20 IDs de variante están escritos en el HTML de `contacto.html`. Una
+Hoy los 20 IDs de variante están escritos en el HTML de `reservas.html`. Una
 tienda de desarrollo trae **su propio dominio, su propio token y sus propios
 IDs**, así que esos números no sirven allá, y los de allá tampoco sirven en
 producción: habría que cambiarlos a mano dos veces.
@@ -268,7 +268,7 @@ tomada.
 
 - El plan es **contratar o instalar un sistema de reservas pronto**. Todavía
   no existe, pero se da por venir, así que el diseño ya apunta a eso.
-- Por eso `contacto.html` abre con el formulario de reserva y no con
+- Por eso `reservas.html` abre con el formulario de reserva y no con
   WhatsApp. La maqueta de esa sección está en el sitio esperando conexión.
 - **WhatsApp sigue siendo el canal del landing de socios** (agencias,
   municipalidades, empresas), donde sí se cotiza conversando. Los dos números
@@ -319,9 +319,10 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   Restaurant" y el email es `@lopirque.cl`, pero el sitio se llama "Brasas de
   Lo Pirque" y el dominio es `brasasdelopirque.cl`. Si alguien busca la marca
   del sitio en Maps, puede no encontrarla. El cliente lo está aclarando.
-- **`contacto.html` podría renombrarse a `reserva.html`.** La página ya se
-  llama "Reserva" en el menú y en su contenido; solo falta el archivo. No se
-  hizo para no romper enlaces que el cliente pueda haber compartido.
+- ~~`contacto.html` podría renombrarse~~ — **hecho el 2026-09-16**: la página
+  es `reservas.html`. Queda un `contacto.html` de una pantalla que redirige
+  con `<meta http-equiv="refresh">`, para no romper enlaces ya compartidos.
+  Se puede borrar cuando deje de llegar tráfico por ahí.
 
 ## Pendientes de contenido
 
