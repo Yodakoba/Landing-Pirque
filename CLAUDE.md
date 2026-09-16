@@ -10,9 +10,9 @@ restaurante campestre y centro de eventos en Chile:
    Enlazado desde el menú del sitio público; los niveles de comisión viven
    solo acá.
 
-**Ojo: los dos están armados de forma distinta a propósito.** El landing es un
-archivo suelto y autocontenido; el sitio público es un sitio estático normal
-con carpeta de assets. No unifiques los dos criterios sin hablarlo.
+Los dos comparten la carpeta `assets/`. El landing sigue siendo **un solo
+archivo HTML con su CSS inline**, pero **ya no es autocontenido**: desde el
+2026-09-16 sus imágenes son archivos referenciados, no base64.
 
 ## Sitio público
 
@@ -27,8 +27,11 @@ unos pocos KB; las imágenes se cachean entre páginas.
 - El menú son 5 ítems: **Reserva** (botón dorado relleno, la acción principal)
   · Experiencias · Actividades · Eventos · **Socios comerciales** (delineado,
   porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
-- **Sin JavaScript**, igual que el landing: el menú de celular es checkbox +
-  label, y las tarjetas que giran y los carruseles son CSS.
+- **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
+  tarjetas que giran y los carruseles son CSS. La única excepción es
+  `assets/js/reserva.js`, que solo carga en `contacto.html`: la integración
+  con Shopify no se puede hacer sin JS y esa excepción se decidió
+  explícitamente. No la uses como precedente para nada más.
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
 - Los precios de las experiencias y del arriendo son los mismos que el
@@ -46,9 +49,17 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ## Landing de socios (`landing-afiliados.html`)
 
-- Es **el único archivo** de ese entregable y el que hay que editar. Es HTML autocontenido: CSS inline en un solo `<style>`, 40 imágenes
-  embebidas en base64, cero JavaScript de terceros. Se abre directo en el
-  navegador, sin servidor ni build step.
+- Es **el único archivo** de ese entregable y el que hay que editar: HTML con
+  el CSS inline en un solo `<style>`, y cero JavaScript.
+- **Las imágenes ya no van embebidas.** Antes eran 46 payloads base64 y el
+  archivo pesaba 5,12 MB; ahora son referencias a `assets/` y pesa 48 KB. Un
+  visitante descarga 376 KB al llegar en vez de 5,12 MB, porque todo lo que
+  no entra en la primera pantalla va con `loading="lazy"`. Las únicas dos sin
+  lazy son el logo de la cabecera y la foto del hero.
+- **Por eso mismo ya no se abre con doble clic desde cualquier parte:**
+  necesita la carpeta `assets/` al lado. Se decidió así el 2026-09-16 porque
+  las agencias llegan por link, no por correo. Si alguna vez hay que mandarlo
+  por correo, hay que volver a embeber o mandar un zip con `assets/`.
 - **No hay toolchain**: no hay npm, bundler, linter ni tests. No agregues uno
   salvo que el cliente lo pida.
 - **`assets/`** guarda los originales ya procesados de esas fotos, por si hay
@@ -67,19 +78,13 @@ unos pocos KB; las imágenes se cachean entre páginas.
   conversación, que para archivos de 1 a 3 MB no es viable. Hay que pedirle al
   cliente que las suba al repo (GitHub → Add file → Upload files).
 
-### Editar el HTML sin romperlo
+### Editar el HTML
 
-El archivo pesa ~5.1 MB porque los payloads base64 ocupan casi todo. Para
-trabajarlo:
-
-- **Nunca lo leas entero.** Filtra los payloads primero:
-  `sed 's/data:image\/[a-z]*;base64,[A-Za-z0-9+\/=]*/[B64]/g' landing-afiliados.html`
-- Para reemplazos de texto masivos, opera **solo fuera de los payloads**
-  (parte el archivo con `re.split` sobre el patrón `data:image/...;base64,...`),
-  porque una cadena corta puede aparecer por casualidad dentro del base64.
-- Después de cualquier edición, verifica integridad:
-  `wc -l landing-afiliados.html` debe seguir dando 828 líneas y
-  `grep -c 'data:image/jpeg;base64' landing-afiliados.html` debe dar 44.
+Ya no tiene la trampa de los 5 MB: son 828 líneas de HTML legible y se puede
+abrir entero. Si vuelves a embeber imágenes en base64 por algún motivo,
+vuelven las precauciones de antes (no leerlo entero, filtrar los payloads con
+`sed 's/data:image\/[a-z]*;base64,[A-Za-z0-9+\/=]*/[B64]/g'` antes de mirarlo,
+y operar solo fuera de los payloads).
 
 ### Previsualizar
 
@@ -94,6 +99,83 @@ Chromium headless está preinstalado en este entorno:
 
 Las tipografías saldrán en fallback porque el sandbox bloquea
 `fonts.googleapis.com` — es del entorno, no de la página.
+
+## Reserva en línea (Shopify + Cowlendar)
+
+`contacto.html` crea el carrito con la **Storefront API** y manda al checkout
+de Shopify. Cowlendar es la app de reservas instalada en la tienda: registra
+la reserva en su calendario cuando entra la orden.
+
+- **Toda la configuración vive en el objeto `CONFIG`** al inicio de
+  `assets/js/reserva.js`: token, dominio, versión de API y los dos precios.
+- **Las fechas y los IDs de variante viven en el HTML**, en los `data-adulto`
+  y `data-nino` de cada `<option>` de `#r-fecha`, y el `value` es la fecha en
+  formato `YYYY-MM-DD`. Se hizo así para que el desplegable siga siendo
+  correcto aunque el JS no cargue, y para tener un solo lugar que editar.
+  **Agregar fechas nuevas = agregar `<option>`s, no tocar el JS.**
+- Cowlendar necesita dos propiedades por línea: `_booking_date` y
+  `_cowlendar_date`, ambas con la fecha. El guion bajo las oculta del
+  checkout.
+- Si `niños = 0` la línea de niños no se agrega: `quantity: 0` hace fallar la
+  mutation.
+- **El token de Storefront es público por diseño** (solo lee catálogo y crea
+  carritos), así que puede vivir en el archivo. **Un token de Admin API
+  jamás**: esos empiezan en `shpat_` y dan acceso a pedidos y clientes.
+- El botón nace `disabled` en el HTML y el JS lo habilita, para que nadie
+  apriete un botón muerto si el archivo no carga. Hay un `<noscript>` que
+  manda a WhatsApp.
+
+### EN PAUSA — esperando la tienda de desarrollo (2026-09-16)
+
+**Lo que está en el repo es una primera pasada y va a cambiar.** El plan
+acordado con el cliente:
+
+1. Esperar a que vuelva el dueño de la organización en Shopify.
+2. Crear una **tienda de desarrollo** desde su cuenta.
+3. Implementar la integración paso a paso ahí, y recién después producción.
+
+No avances la integración por tu cuenta mientras tanto: los cambios vienen
+desde esa tienda, no desde acá.
+
+**Mergear el código actual es seguro.** Sin token, el botón no llama a la API:
+muestra un aviso y manda a WhatsApp. Está verificado.
+
+### El cambio de diseño ya acordado, para cuando se retome
+
+Hoy los 20 IDs de variante están escritos en el HTML de `contacto.html`. Una
+tienda de desarrollo trae **su propio dominio, su propio token y sus propios
+IDs**, así que esos números no sirven allá, y los de allá tampoco sirven en
+producción: habría que cambiarlos a mano dos veces.
+
+**Acordado con el cliente: invertir eso.** Que el JS le **pida las variantes a
+Shopify al cargar** en vez de tenerlas escritas. Entonces lo único que cambia
+entre ambientes son dos líneas —`CONFIG.dominio` y `CONFIG.token`— y de paso
+se arregla solo el problema de las fechas que vencen, porque la lista sale de
+la tienda y no de un HTML que alguien tiene que acordarse de editar.
+
+No se hizo antes porque sin token no se puede ver cómo están armadas las
+opciones del producto, y habría sido adivinar la estructura.
+
+### Lo que hay que verificar con la tienda de desarrollo en pie
+
+- **Que Cowlendar acepte reservas creadas por fuera de su propio widget.**
+  Es el supuesto más grande de toda la integración: la app normalmente valida
+  disponibilidad ella misma, y acá el carrito se crea saltándose ese paso.
+  Hay que hacer una compra de prueba y confirmar que la reserva aparece en el
+  calendario de Cowlendar. Si la ignora, la reserva se cobra y no queda
+  agendada, que es el peor error posible acá.
+- Que la Storefront API responda en el dominio configurado. Si da 404 o CORS,
+  hay que usar el `*.myshopify.com` de la tienda.
+- Que el cupo por fecha se controle en alguna parte. Hoy nada impide vender
+  más lugares de los que hay: eso lo tiene que hacer el inventario de Shopify
+  o Cowlendar.
+
+### Pendiente conocido: fechas vencidas
+
+Las diez fechas del `<select>` son de septiembre 2026 y **cuatro ya pasaron**
+(5, 6, 12 y 13). El cliente decidió el 2026-09-16 **no** agregar un filtro
+provisorio, porque el arreglo de fondo es el cambio de diseño de arriba. Si
+alguien pregunta por qué el formulario ofrece fechas pasadas, es esto.
 
 ## Estilo y marca
 
