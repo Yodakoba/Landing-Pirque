@@ -507,10 +507,17 @@ calendario los días por llenarse llevan un punto; al elegir uno, aparece
 tan vacíos están los demás días.
 
 **El horario es sábados y domingos de 13:00 a 18:00**, una sola jornada por
-día, sin bloques de hora. Ojo: **el sitio no dice en ninguna parte que se
-abre solo fines de semana.** El calendario lo muestra implícitamente, pero
-quien lee `experiencias.html` o la portada no se entera. Queda pendiente
-decidir dónde decirlo.
+día, sin bloques de hora.
+
+**Eso quedó dicho en el pie del sitio público** (2026-10-13), en las seis
+páginas: "Horario general: sábados y domingos desde las 13:00 hasta el
+cierre. Para otras fechas, consulta la página de reserva o escríbenos por
+WhatsApp." El enlace apunta a `reservas.html#reserva-en-linea`, para que
+caiga directo en el calendario y no arriba de la página.
+
+**No va en el landing de socios**, que tiene pie propio y apunta al WhatsApp
+de Eventos: mandar a una agencia a la página de reserva sería mandarla al
+flujo del consumidor final.
 
 ### La pregunta abierta más importante: de dónde salen las fechas
 
