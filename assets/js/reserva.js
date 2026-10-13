@@ -23,18 +23,32 @@
   /* ---------- lo único que hay que tocar para salir a producción ---------- */
 
   var CONFIG = {
-    // Pega acá el Storefront API access token. Es público por
-    // diseño (solo lee catálogo y crea carritos), así que puede
-    // vivir en este archivo sin problema.
+    // Storefront API access token. Es público por diseño (solo lee
+    // catálogo y crea carritos), así que puede vivir en este archivo.
     // NUNCA pongas acá un token de Admin API: esos empiezan en
     // "shpat_" y dan acceso a pedidos, clientes y toda la tienda.
+    //
+    // VA VACÍO A PROPÓSITO, y es el interruptor de toda la integración.
+    // Mientras esté vacío el botón no llama a la API: avisa y manda a
+    // WhatsApp. Ponerle el token es lo que lo enciende para cualquiera
+    // que entre al sitio publicado, así que no se llena hasta que la
+    // tienda esté lista. El de la tienda de desarrollo está en la
+    // conversación con el cliente, no acá: apuntar el sitio en vivo a
+    // una tienda de desarrollo mandaría a la gente a un checkout que
+    // no puede cobrar.
     token: '',
 
-    // Dominio que sirve la Storefront API. El prompt de Shopify
-    // indica el dominio público; si diera 404 o CORS, hay que
-    // cambiarlo por el *.myshopify.com de la tienda.
-    dominio: 'brasasdelopirque.cl',
+    // Dominio que sirve la Storefront API.
+    //
+    // Hoy apunta a la TIENDA DE DESARROLLO. Al salir a producción hay
+    // que cambiar esta línea y el token, y además los IDs de variante
+    // del HTML, porque en producción son otros.
+    dominio: 'brasas-de-lo-pirque-development.myshopify.com',
 
+    // Shopify publica una versión por trimestre y las soporta unos 12
+    // meses. Esta es de octubre de 2024, así que ya está fuera de ese
+    // plazo: hay que confirmar con la tienda cuál usar antes de
+    // conectar.
     version: '2024-10'
   };
 

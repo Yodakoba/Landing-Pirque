@@ -310,7 +310,19 @@ de Shopify. Cowlendar es la app de reservas instalada en la tienda: registra
 la reserva en su calendario cuando entra la orden.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
-  `assets/js/reserva.js`: token, dominio, versión de API y los dos precios.
+  `assets/js/reserva.js`: token, dominio y versión de API. Los precios ya
+  no están ahí, se fueron al HTML.
+- **`CONFIG.token` vacío es el interruptor de toda la integración.** Con el
+  token en blanco el botón no llama a la API: avisa y manda a WhatsApp.
+  Llenarlo es lo que la enciende **para cualquiera que entre al sitio
+  publicado**, así que no se llena hasta que la tienda esté lista. El token
+  de la tienda de desarrollo está en la conversación con el cliente y **no
+  se commitea**: apuntar el sitio en vivo a una tienda de desarrollo
+  mandaría a la gente a un checkout que no puede cobrar.
+- **`CONFIG.dominio` apunta hoy a la tienda de desarrollo**
+  (`brasas-de-lo-pirque-development.myshopify.com`). Al salir a producción
+  hay que cambiar esa línea, el token, **y los IDs de variante del HTML**,
+  porque en producción son otros.
 - **Las variantes ya no son una por fecha** (cambió el 2026-10-13, con la
   tienda de desarrollo en pie). Antes eran 20: diez fechas × adulto/niño.
   Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
@@ -378,8 +390,8 @@ lista escrita a mano en el HTML, con el mismo problema de siempre.
 
 ### Desde este entorno no se alcanza Shopify
 
-La política de red del entorno niega `brasasdelopirque.cl` y `shopify.com`
-con 403 en el CONNECT. No es cosa del token: la conexión no llega a
+La política de red del entorno niega `brasasdelopirque.cl`, `shopify.com`
+y `brasas-de-lo-pirque-development.myshopify.com` con 403 en el CONNECT. No es cosa del token: la conexión no llega a
 establecerse. Para probar la integración de verdad hay que agregar el
 dominio en **Network access** del entorno, o correr las consultas en el
 navegador del cliente y traer la salida.
