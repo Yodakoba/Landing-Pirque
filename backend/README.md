@@ -155,7 +155,14 @@ cuenta.
 escribe nada, no expone datos de clientes, no recibe reservas. Es lo mismo
 que el sitio muestra en pantalla.
 
-Copia la URL que queda. Esa es la que necesita el sitio.
+Copia la URL que queda. Esa es la que necesita el sitio: va en
+`CONFIG.backend`, al inicio de `assets/js/reserva.js`.
+
+**Si alguna vez hay que cambiar el código**, en Apps Script usa
+**Implementar → Gestionar implementaciones → editar → Versión nueva**. Eso
+conserva la URL. Crear una **implementación nueva** entrega otra URL, y
+entonces hay que actualizar `CONFIG.backend` o el calendario del sitio queda
+apuntando a la vieja.
 
 ### 7. El activador
 
@@ -173,7 +180,20 @@ Es lo que trae los pedidos pagados y los convierte en reservas.
 Apps Script responden con un redirect a `googleusercontent.com`, y eso tiene
 manías conocidas con CORS. Puede funcionar directo o puede necesitar un
 ajuste. **Es lo primero que hay que probar, no algo que se dé por hecho**:
-abre la URL en el navegador y después pruébala desde el sitio.
+abre la URL en el navegador y después abre `reservas.html` publicado. Si el
+calendario trae fechas, está resuelto; si dice que no pudo cargarlas, es
+CORS y no el código del sitio.
+
+El lado del sitio ya está probado contra un backend simulado, así que si
+falla, el problema está acá o en el camino, no allá.
+
+## El endpoint responde 200 incluso cuando falla
+
+`ContentService` **no permite elegir el código HTTP**. Un error no viaja como
+400 ni como 500: viaja como **200 con `{"error": "..."}` en el cuerpo**. El
+sitio lo sabe y revisa ese campo. Si algún día se lee este endpoint desde
+otra parte, hay que hacer lo mismo, o los errores van a pasar por respuestas
+válidas y vacías.
 
 ## Lo que este diseño no resuelve
 

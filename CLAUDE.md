@@ -337,8 +337,19 @@ quedaría en un archivo público. En Apps Script corre del lado del servidor y
 se guarda en las propiedades del script, que nunca salen al navegador.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
-  `assets/js/reserva.js`: token, dominio y versión de API. Los precios ya
-  no están ahí, se fueron al HTML.
+  `assets/js/reserva.js`: token, dominio, versión de API y la URL del
+  backend. Los precios ya no están ahí, se fueron al HTML.
+- **`CONFIG.backend` ya está conectado** (2026-10-13): apunta al Web App de
+  Apps Script desplegado en la cuenta del cliente, así que el calendario
+  muestra las fechas reales de la planilla. Ojo al redesplegar: una
+  **implementación nueva** en Apps Script cambia la URL y hay que
+  actualizar esa línea; publicar una **versión nueva de la misma**
+  implementación la conserva.
+- **Un Web App de Apps Script no puede elegir el código HTTP**: responde 200
+  incluso cuando falla, con `{error: ...}` en el cuerpo. Por eso
+  `cargarFechas()` revisa el campo `error` y no solo `response.ok` — sin
+  eso, una falla del backend se vería en pantalla como "no hay fechas", que
+  es otra cosa y manda a buscar el problema donde no está.
 - **`CONFIG.token` vacío es el interruptor de toda la integración.** Con el
   token en blanco el botón no llama a la API: avisa y manda a WhatsApp.
   Llenarlo es lo que la enciende **para cualquiera que entre al sitio
@@ -535,10 +546,17 @@ navegador del cliente y traer la salida.
   comprobó que sobreviven en el carrito; falta verlas en un pedido real,
   porque de ahí las lee `leerReserva()`. Requiere completar una compra de
   prueba en la tienda de desarrollo.
-- **Que el Web App de Apps Script se pueda leer desde el sitio.** Los Web
-  Apps responden con un redirect a `googleusercontent.com` y eso tiene
-  manías conocidas con CORS. Es lo primero que hay que probar al desplegar,
-  no algo que se dé por hecho.
+- **Que el Web App de Apps Script se pueda leer desde el sitio.** El
+  endpoint ya está desplegado y conectado en `CONFIG.backend`, y el sitio
+  está probado de punta a punta contra un backend simulado en local: pinta
+  el mes, marca los días por llenarse, escribe la fecha en `#r-fecha`,
+  apaga el botón si piden más lugares de los que quedan, y muestra el aviso
+  de falla cuando el backend devuelve `error`. Lo que **no** se puede
+  probar desde este entorno es el endpoint de verdad: el proxy niega
+  `script.google.com` con 403. Los Web Apps responden con un redirect a
+  `googleusercontent.com` y eso tiene manías conocidas con CORS, así que
+  **hay que abrir `reservas.html` publicado y confirmar que el calendario
+  trae fechas**; si no, es CORS y no el código del sitio.
 - **Qué significa "solo reserva"** en la tienda: ¿pago completo, abono, pago
   en el lugar? El sitio no ofrece esa modalidad justamente porque nadie lo ha
   explicado, y cambia cómo se calcula el total.
