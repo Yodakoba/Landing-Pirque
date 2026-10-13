@@ -46,23 +46,35 @@
 
 <section class="pad" id="reserva-en-linea">
   <div class="wrap">
-    <div class="reserva-widget">
+    <!-- Los IDs de variante y los precios viven en el HTML a proposito: asi
+         el formulario sigue siendo correcto aunque el JS no cargue, y hay un
+         solo lugar que editar. El menu de ninos es uno solo para los dos
+         menus de adultos, por eso cuelga del widget y no de cada opcion. -->
+    <div class="reserva-widget" data-nino="50684218081497" data-precio-nino="19000">
 
-      <h2 class="reserva-titulo">Tradiciones menu</h2>
+      <h2 class="reserva-titulo">Book online</h2>
+
+      <div class="campo">
+        <label class="etiqueta" for="r-menu">Choose a menu</label>
+        <select id="r-menu">
+          <option value="tradiciones" data-variante="50684108013785" data-precio="44000">Tradiciones menu</option>
+          <option value="brasas" data-variante="50684143173849" data-precio="70000">A Brasas abiertas menu</option>
+        </select>
+      </div>
 
       <div class="campo">
         <label class="etiqueta" for="r-fecha">Choose a date</label>
         <select id="r-fecha">
-          <option value="2026-09-05" data-adulto="46253136314425" data-nino="46253136347193">Saturday 5 September</option>
-          <option value="2026-09-06" data-adulto="46253136379961" data-nino="46253136412729">Sunday 6 September</option>
-          <option value="2026-09-12" data-adulto="46253136445497" data-nino="46253136478265">Saturday 12 September</option>
-          <option value="2026-09-13" data-adulto="46253136511033" data-nino="46253136543801">Sunday 13 September</option>
-          <option value="2026-09-17" data-adulto="46253136576569" data-nino="46253136609337">Thursday 17 September</option>
-          <option value="2026-09-18" data-adulto="46253136642105" data-nino="46253136674873">Friday 18 September</option>
-          <option value="2026-09-19" data-adulto="46253136707641" data-nino="46253136740409">Saturday 19 September</option>
-          <option value="2026-09-20" data-adulto="46253136773177" data-nino="46253136805945">Sunday 20 September</option>
-          <option value="2026-09-26" data-adulto="46253136838713" data-nino="46253136871481">Saturday 26 September</option>
-          <option value="2026-09-27" data-adulto="46253136904249" data-nino="46253136937017">Sunday 27 September</option>
+          <option value="2026-09-05">Saturday 5 September</option>
+          <option value="2026-09-06">Sunday 6 September</option>
+          <option value="2026-09-12">Saturday 12 September</option>
+          <option value="2026-09-13">Sunday 13 September</option>
+          <option value="2026-09-17">Thursday 17 September</option>
+          <option value="2026-09-18">Friday 18 September</option>
+          <option value="2026-09-19">Saturday 19 September</option>
+          <option value="2026-09-20">Sunday 20 September</option>
+          <option value="2026-09-26">Saturday 26 September</option>
+          <option value="2026-09-27">Sunday 27 September</option>
         </select>
       </div>
       <p class="aviso">Choose the right date before continuing.</p>
@@ -73,7 +85,7 @@
           <label class="etiqueta" for="r-adultos">Quantity</label>
           <input id="r-adultos" type="number" min="1" step="1" value="2">
         </div>
-        <div class="valor">$44,000 CLP</div>
+        <div class="valor" data-precio-adulto>$44,000 CLP</div>
       </div>
 
       <div class="reserva-fila">
