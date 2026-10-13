@@ -23,26 +23,39 @@
   /* ---------- lo único que hay que tocar para salir a producción ---------- */
 
   var CONFIG = {
-    // Pega acá el Storefront API access token. Es público por
-    // diseño (solo lee catálogo y crea carritos), así que puede
-    // vivir en este archivo sin problema.
+    // Storefront API access token. Es público por diseño (solo lee
+    // catálogo y crea carritos), así que puede vivir en este archivo.
     // NUNCA pongas acá un token de Admin API: esos empiezan en
     // "shpat_" y dan acceso a pedidos, clientes y toda la tienda.
+    //
+    // VA VACÍO A PROPÓSITO, y es el interruptor de toda la integración.
+    // Mientras esté vacío el botón no llama a la API: avisa y manda a
+    // WhatsApp. Ponerle el token es lo que lo enciende para cualquiera
+    // que entre al sitio publicado, así que no se llena hasta que la
+    // tienda esté lista. El de la tienda de desarrollo está en la
+    // conversación con el cliente, no acá: apuntar el sitio en vivo a
+    // una tienda de desarrollo mandaría a la gente a un checkout que
+    // no puede cobrar.
     token: '',
 
-    // Dominio que sirve la Storefront API. El prompt de Shopify
-    // indica el dominio público; si diera 404 o CORS, hay que
-    // cambiarlo por el *.myshopify.com de la tienda.
-    dominio: 'brasasdelopirque.cl',
+    // Dominio que sirve la Storefront API.
+    //
+    // Hoy apunta a la TIENDA DE DESARROLLO. Al salir a producción hay
+    // que cambiar esta línea y el token, y además los IDs de variante
+    // del HTML, porque en producción son otros.
+    dominio: 'brasas-de-lo-pirque-development.myshopify.com',
 
-    version: '2024-10',
-
-    // Precios por persona. Hoy son iguales en todas las fechas.
-    // Si algún día cambian por fecha, hay que moverlos a los
-    // data-* de cada <option>, junto a los IDs de variante.
-    precioAdulto: 44000,
-    precioNino: 19000
+    // Shopify publica una versión por trimestre y las soporta unos 12
+    // meses. Esta es de octubre de 2024, así que ya está fuera de ese
+    // plazo: hay que confirmar con la tienda cuál usar antes de
+    // conectar.
+    version: '2024-10'
   };
+
+  // Los precios y los IDs de variante NO están acá: viven en el HTML.
+  // El de cada menú en su <option> de #r-menu, y el de niños en los
+  // data-* del propio widget. Así el formulario sigue siendo correcto
+  // aunque este archivo no cargue, y hay un solo lugar que editar.
 
   /* ---------- idiomas ---------- */
 
@@ -98,6 +111,7 @@
   var caja = document.querySelector('.reserva-widget');
   if (!caja) return;
 
+  var selMenu = caja.querySelector('#r-menu');
   var selFecha = caja.querySelector('#r-fecha');
   var inpAdultos = caja.querySelector('#r-adultos');
   var inpNinos = caja.querySelector('#r-ninos');
@@ -105,8 +119,18 @@
   var salTotal = caja.querySelector('[data-total-precio]');
   var btnReservar = caja.querySelector('[data-reservar]');
   var zonaAviso = caja.querySelector('[data-mensaje]');
+  var salPrecioAdulto = caja.querySelector('[data-precio-adulto]');
 
-  if (!selFecha || !inpAdultos || !inpNinos || !btnReservar) return;
+  if (!selMenu || !selFecha || !inpAdultos || !inpNinos || !btnReservar) return;
+
+  // El menú de niños es uno solo: se suma a cualquiera de los dos menús
+  // de adultos y no cambia de precio.
+  var varianteNino = caja.getAttribute('data-nino');
+  var precioNino = parseInt(caja.getAttribute('data-precio-nino'), 10) || 0;
+
+  function menuElegido() {
+    return selMenu.options[selMenu.selectedIndex];
+  }
 
   function cantidad(input, minimo) {
     var n = parseInt(input.value, 10);
@@ -115,9 +139,12 @@
   }
 
   function recalcular() {
+    var precioAdulto = parseInt(menuElegido().getAttribute('data-precio'), 10) || 0;
     var adultos = cantidad(inpAdultos, 1);
     var ninos = cantidad(inpNinos, 0);
-    var total = adultos * CONFIG.precioAdulto + ninos * CONFIG.precioNino;
+    var total = adultos * precioAdulto + ninos * precioNino;
+    // El precio por adulto cambia con el menú, así que la fila se reescribe.
+    if (salPrecioAdulto) salPrecioAdulto.textContent = pesos(precioAdulto);
     if (salPersonas) salPersonas.textContent = adultos + ninos;
     if (salTotal) salTotal.textContent = pesos(total);
   }
@@ -131,8 +158,10 @@
   /* ---------- crear el carrito ---------- */
 
   function lineas() {
-    var opcion = selFecha.options[selFecha.selectedIndex];
-    var fecha = opcion.value;                       // YYYY-MM-DD
+    // Desde 2026-10 las variantes ya no son una por fecha: son una por
+    // menú y modalidad. La fecha no elige variante, viaja como propiedad
+    // de línea para que Cowlendar la registre en su calendario.
+    var fecha = selFecha.options[selFecha.selectedIndex].value;   // YYYY-MM-DD
     var adultos = cantidad(inpAdultos, 1);
     var ninos = cantidad(inpNinos, 0);
 
@@ -145,7 +174,7 @@
     ];
 
     var out = [{
-      merchandiseId: gid(opcion.dataset.adulto),
+      merchandiseId: gid(menuElegido().getAttribute('data-variante')),
       quantity: adultos,
       attributes: atributos
     }];
@@ -154,7 +183,7 @@
     // hace fallar la mutation.
     if (ninos > 0) {
       out.push({
-        merchandiseId: gid(opcion.dataset.nino),
+        merchandiseId: gid(varianteNino),
         quantity: ninos,
         attributes: atributos
       });
@@ -218,6 +247,7 @@
 
   /* ---------- arranque ---------- */
 
+  selMenu.addEventListener('change', recalcular);
   selFecha.addEventListener('change', recalcular);
   inpAdultos.addEventListener('input', recalcular);
   inpNinos.addEventListener('input', recalcular);

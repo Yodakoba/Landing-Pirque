@@ -303,22 +303,70 @@ Chromium headless está preinstalado en este entorno:
 Las tipografías saldrán en fallback porque el sandbox bloquea
 `fonts.googleapis.com` — es del entorno, no de la página.
 
-## Reserva en línea (Shopify + Cowlendar)
+## Reserva en línea (Shopify + sistema propio)
 
 `reservas.html` crea el carrito con la **Storefront API** y manda al checkout
-de Shopify. Cowlendar es la app de reservas instalada en la tienda: registra
-la reserva en su calendario cuando entra la orden.
+de Shopify.
+
+**Cowlendar quedó descartado el 2026-10-13.** En su lugar se construye un
+sistema propio: **Shopify cobra, nosotros agendamos.** El código vive en
+`backend/` y corre en Google Apps Script, pegado a una planilla del cliente.
+Ver `backend/README.md`.
+
+El reparto queda así:
+
+| | Quién |
+|---|---|
+| Cobro y checkout | Shopify |
+| Calendario, cupo y registro | Nuestro backend |
+| Panel de administración | Una planilla de Google (por ahora) |
+| Agenda visible | Google Calendar |
+
+**Por qué consultamos a Shopify en vez de recibir un webhook:** los Web Apps
+de Apps Script **no dan acceso a las cabeceras** de la petición, así que es
+imposible verificar la firma HMAC con la que Shopify firma sus webhooks. Sin
+eso, cualquiera que descubriera la URL podría inventar reservas. Preguntando
+nosotros cada 5 minutos, nadie nos escribe. El costo es unos minutos de
+atraso; la ganancia es que además se recupera solo de caídas.
+
+**El token de Admin API del backend no contradice la regla de este
+proyecto.** "Un token de Admin API jamás" es sobre el **sitio**, donde
+quedaría en un archivo público. En Apps Script corre del lado del servidor y
+se guarda en las propiedades del script, que nunca salen al navegador.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
-  `assets/js/reserva.js`: token, dominio, versión de API y los dos precios.
-- **Las fechas y los IDs de variante viven en el HTML**, en los `data-adulto`
-  y `data-nino` de cada `<option>` de `#r-fecha`, y el `value` es la fecha en
-  formato `YYYY-MM-DD`. Se hizo así para que el desplegable siga siendo
-  correcto aunque el JS no cargue, y para tener un solo lugar que editar.
-  **Agregar fechas nuevas = agregar `<option>`s, no tocar el JS.**
-- Cowlendar necesita dos propiedades por línea: `_booking_date` y
-  `_cowlendar_date`, ambas con la fecha. El guion bajo las oculta del
-  checkout.
+  `assets/js/reserva.js`: token, dominio y versión de API. Los precios ya
+  no están ahí, se fueron al HTML.
+- **`CONFIG.token` vacío es el interruptor de toda la integración.** Con el
+  token en blanco el botón no llama a la API: avisa y manda a WhatsApp.
+  Llenarlo es lo que la enciende **para cualquiera que entre al sitio
+  publicado**, así que no se llena hasta que la tienda esté lista. El token
+  de la tienda de desarrollo está en la conversación con el cliente y **no
+  se commitea**: apuntar el sitio en vivo a una tienda de desarrollo
+  mandaría a la gente a un checkout que no puede cobrar.
+- **`CONFIG.dominio` apunta hoy a la tienda de desarrollo**
+  (`brasas-de-lo-pirque-development.myshopify.com`). Al salir a producción
+  hay que cambiar esa línea, el token, **y los IDs de variante del HTML**,
+  porque en producción son otros.
+- **Las variantes ya no son una por fecha** (cambió el 2026-10-13, con la
+  tienda de desarrollo en pie). Antes eran 20: diez fechas × adulto/niño.
+  Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
+  variante: **viaja como propiedad de línea** para que Cowlendar la
+  registre. El modelo se simplificó solo.
+- **Los IDs de variante y los precios viven en el HTML**, no en el JS: el de
+  cada menú en su `<option>` de `#r-menu` (`data-variante`, `data-precio`),
+  y el de niños en los `data-*` del propio `.reserva-widget`, porque el menú
+  de niños es uno solo para los dos de adultos. Se hizo así para que el
+  formulario siga siendo correcto aunque el JS no cargue, y para tener un
+  solo lugar que editar.
+- Las fechas son `<option>`s de `#r-fecha` con el `value` en `YYYY-MM-DD` y
+  **sin IDs de variante**. **Agregar fechas = agregar `<option>`s.**
+- Cada línea del carrito lleva dos propiedades con la fecha:
+  `_booking_date` y `_cowlendar_date`. El guion bajo las oculta del
+  checkout. **Se mantienen las dos aunque Cowlendar ya no esté**: el backend
+  lee `_booking_date`, y la segunda queda por si alguna vez se vuelve a una
+  app de reservas. Es la única forma en que la fecha llega al pedido, porque
+  las variantes no la tienen.
 - Si `niños = 0` la línea de niños no se agrega: `quantity: 0` hace fallar la
   mutation.
 - **El token de Storefront es público por diseño** (solo lee catálogo y crea
@@ -327,6 +375,114 @@ la reserva en su calendario cuando entra la orden.
 - El botón nace `disabled` en el HTML y el JS lo habilita, para que nadie
   apriete un botón muerto si el archivo no carga. Hay un `<noscript>` que
   manda a WhatsApp.
+
+### Las variantes de la tienda de desarrollo (2026-10-13)
+
+Las entregó el agente de Shopify del cliente. **Son de la tienda de
+desarrollo, no de producción**: en producción los IDs son otros.
+
+| Menú | Pago directo | Solo reserva |
+|---|---|---|
+| Tradiciones | `50684108013785` — $44.000 | `50684108046553` — $49.000 |
+| A Brasas abiertas | `50684143173849` — $70.000 | `50684143206617` — $75.000 |
+| Niños | `50684218081497` — $19.000 | `50684218114265` — $24.000 |
+
+**El sitio usa solo la columna "pago directo"**, que es coherente con el
+objetivo comercial: que la visita particular pague en línea. La modalidad
+"solo reserva" existe en la tienda y cuesta $4.000 a $5.000 más, pero
+**nadie ha explicado qué significa mecánicamente** —¿pago completo, abono,
+pago en el lugar?— así que el formulario no la ofrece. Si algún día se
+ofrece, hay que saber eso antes: cambia cómo se calcula el total.
+
+**Ojo con el precio de Tradiciones.** La tienda lo tiene en $45.000 y todo
+el sitio dice $44.000. El cliente decidió el 2026-10-13 que **manda
+Shopify**, pero que ese $45.000 es el que está mal y lo corrige él en la
+tienda. **Hasta que lo corrija, el sitio muestra $44.000 y el checkout
+cobraría $45.000.** Es una razón más para no conectar todavía.
+
+Por la misma decisión, **A Brasas abiertas subió de $60.000 a $70.000** en
+el sitio público, que es lo que dice la tienda y lo que ya decía el landing
+B2B. Con eso desaparece la diferencia de precio entre los dos entregables
+para esa experiencia.
+
+### Lo que devolvió la tienda de desarrollo (2026-10-13)
+
+Primera consulta real a la Storefront API, corrida desde el navegador del
+cliente porque desde acá el dominio está bloqueado. Respondió **HTTP 200**,
+así que el token, el dominio y la versión `2024-10` funcionan, y los tres
+IDs que usa el sitio existen y son los correctos.
+
+**El precio de Tradiciones resultó ser $44.000, no $45.000.** El dato que
+había pasado el agente estaba mal, o se corrigió en el intertanto. Los tres
+montos de la tienda coinciden hoy con los del sitio.
+
+Pero salieron dos problemas de configuración, los dos del lado de la tienda:
+
+- **La tienda está en USD.** `"amount": "44000.0", "currencyCode": "USD"`.
+  Así cobraría cuarenta y cuatro mil dólares por persona: un error de un
+  factor de ~900. Hay que cambiarla a CLP en Settings → Store details.
+  **Ojo: Shopify no deja cambiar la moneda si la tienda ya tiene pedidos**,
+  así que si hubo compras de prueba puede que haya que crear otra tienda.
+  El sitio no tiene cómo detectar esto: los precios que muestra salen del
+  HTML, no de Shopify.
+- **Las tres variantes vienen con `availableForSale: false`.** Con eso el
+  carrito no se crea, o se crea y el checkout lo rechaza. Como la consulta
+  sí las devolvió, están publicadas en el canal de venta, así que lo más
+  probable es el inventario: cantidad en cero con política de dejar de
+  vender. Para un producto de reservas suele resolverse con "seguir
+  vendiendo cuando no haya existencias", porque quien controla la
+  disponibilidad es Cowlendar. Hay que confirmarlo, porque se cruza con la
+  pregunta del cupo por fecha.
+
+Mientras esos dos no estén resueltos no tiene sentido probar `cartCreate`:
+va a fallar por la disponibilidad y no enseña nada.
+
+### Probado contra la tienda de verdad (2026-10-13)
+
+Corrido desde el navegador del cliente, porque desde este entorno el dominio
+está bloqueado. **La cadena completa funciona.**
+
+**Los dos problemas de configuración quedaron resueltos**: la tienda está en
+CLP y las tres variantes en `availableForSale: true`.
+
+`cartCreate` con el payload exacto que arma el sitio devolvió
+`userErrors: []` y un `checkoutUrl` real. Leyendo después ese carrito:
+
+- **Total `107000.0 CLP`** — dos adultos a 44.000 más un niño a 19.000. La
+  suma y la moneda, correctas.
+- **Las dos líneas conservan `_booking_date` y `_cowlendar_date`** con la
+  fecha elegida. Esto es lo que el backend necesita: es la única forma en
+  que la fecha llega al pedido, porque las variantes no la tienen.
+- Las variantes son las correctas.
+
+De paso, el `checkoutUrl` viene con `/es/`: el checkout sirve en español,
+que confirma lo anotado más arriba sobre los visitantes en inglés y
+portugués.
+
+**Lo único que falta comprobar** es que las propiedades sobrevivan del
+carrito al **pedido**. Shopify convierte los atributos de línea del carrito
+en propiedades de línea del pedido, pero hay que verlo en un pedido real
+antes de darlo por hecho: de ahí las lee `leerReserva()` en el backend.
+Requiere completar una compra de prueba.
+
+### La pregunta abierta más importante: de dónde salen las fechas
+
+Antes la fecha era una variante, así que la lista podía salir de Shopify.
+**Ahora las variantes no tienen fecha**, así que la Storefront API ya no
+tiene de dónde dar el calendario: las fechas disponibles viven en Cowlendar,
+que es otra aplicación con su propia API.
+
+Esto decide si se puede hacer la inversión de diseño acordada o no. Si el
+calendario de Cowlendar no es consultable desde el navegador, volvemos a una
+lista escrita a mano en el HTML, con el mismo problema de siempre.
+
+### Desde este entorno no se alcanza Shopify
+
+La política de red del entorno niega `brasasdelopirque.cl`, `shopify.com`
+y `brasas-de-lo-pirque-development.myshopify.com` con 403 en el CONNECT. No es cosa del token: la conexión no llega a
+establecerse. Para probar la integración de verdad hay que agregar el
+dominio en **Network access** del entorno, o correr las consultas en el
+navegador del cliente y traer la salida.
 
 ### EN PAUSA — esperando la tienda de desarrollo (2026-09-16)
 
