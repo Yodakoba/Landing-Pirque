@@ -125,6 +125,11 @@ dirección de correo.
 
 ### 5. Probar antes de desplegar
 
+**Ojo con el desplegable de funciones.** El editor trae preseleccionada la
+primera función del archivo, que es una ayudante interna. Si aprietas
+Ejecutar sin cambiarla, sale un error que no tiene que ver con tu
+configuración. **Elige la función en el desplegable antes de ejecutar.**
+
 En el editor hay cuatro funciones para correr a mano, en este orden:
 
 1. `revisarConfiguracion()` — que las cuatro propiedades estén.

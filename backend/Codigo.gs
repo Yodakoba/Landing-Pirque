@@ -54,8 +54,23 @@ var PROPIEDADES = [
 ];
 
 function config(clave) {
+  // El editor de Apps Script trae preseleccionada la primera función del
+  // archivo, y esta es una ayudante interna: correrla sola daba un
+  // "Falta la propiedad del script: undefined" que no le dice nada a
+  // nadie. Mejor que explique qué pasó.
+  if (!clave) {
+    throw new Error(
+      'config() es una función auxiliar y no se corre sola. En el ' +
+      'desplegable de arriba elige una de estas cuatro: ' +
+      'revisarConfiguracion, probarShopify, probarCalendario o ' +
+      'probarFechas.');
+  }
   var v = PropertiesService.getScriptProperties().getProperty(clave);
-  if (!v) throw new Error('Falta la propiedad del script: ' + clave);
+  if (!v) {
+    throw new Error(
+      'Falta la propiedad del script: ' + clave + '. Se ponen en ' +
+      'Configuración del proyecto → Propiedades del script.');
+  }
   return v;
 }
 
