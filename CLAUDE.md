@@ -437,6 +437,34 @@ Pero salieron dos problemas de configuración, los dos del lado de la tienda:
 Mientras esos dos no estén resueltos no tiene sentido probar `cartCreate`:
 va a fallar por la disponibilidad y no enseña nada.
 
+### Probado contra la tienda de verdad (2026-10-13)
+
+Corrido desde el navegador del cliente, porque desde este entorno el dominio
+está bloqueado. **La cadena completa funciona.**
+
+**Los dos problemas de configuración quedaron resueltos**: la tienda está en
+CLP y las tres variantes en `availableForSale: true`.
+
+`cartCreate` con el payload exacto que arma el sitio devolvió
+`userErrors: []` y un `checkoutUrl` real. Leyendo después ese carrito:
+
+- **Total `107000.0 CLP`** — dos adultos a 44.000 más un niño a 19.000. La
+  suma y la moneda, correctas.
+- **Las dos líneas conservan `_booking_date` y `_cowlendar_date`** con la
+  fecha elegida. Esto es lo que el backend necesita: es la única forma en
+  que la fecha llega al pedido, porque las variantes no la tienen.
+- Las variantes son las correctas.
+
+De paso, el `checkoutUrl` viene con `/es/`: el checkout sirve en español,
+que confirma lo anotado más arriba sobre los visitantes en inglés y
+portugués.
+
+**Lo único que falta comprobar** es que las propiedades sobrevivan del
+carrito al **pedido**. Shopify convierte los atributos de línea del carrito
+en propiedades de línea del pedido, pero hay que verlo en un pedido real
+antes de darlo por hecho: de ahí las lee `leerReserva()` en el backend.
+Requiere completar una compra de prueba.
+
 ### La pregunta abierta más importante: de dónde salen las fechas
 
 Antes la fecha era una variante, así que la lista podía salir de Shopify.
