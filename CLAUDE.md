@@ -377,6 +377,38 @@ el sitio público, que es lo que dice la tienda y lo que ya decía el landing
 B2B. Con eso desaparece la diferencia de precio entre los dos entregables
 para esa experiencia.
 
+### Lo que devolvió la tienda de desarrollo (2026-10-13)
+
+Primera consulta real a la Storefront API, corrida desde el navegador del
+cliente porque desde acá el dominio está bloqueado. Respondió **HTTP 200**,
+así que el token, el dominio y la versión `2024-10` funcionan, y los tres
+IDs que usa el sitio existen y son los correctos.
+
+**El precio de Tradiciones resultó ser $44.000, no $45.000.** El dato que
+había pasado el agente estaba mal, o se corrigió en el intertanto. Los tres
+montos de la tienda coinciden hoy con los del sitio.
+
+Pero salieron dos problemas de configuración, los dos del lado de la tienda:
+
+- **La tienda está en USD.** `"amount": "44000.0", "currencyCode": "USD"`.
+  Así cobraría cuarenta y cuatro mil dólares por persona: un error de un
+  factor de ~900. Hay que cambiarla a CLP en Settings → Store details.
+  **Ojo: Shopify no deja cambiar la moneda si la tienda ya tiene pedidos**,
+  así que si hubo compras de prueba puede que haya que crear otra tienda.
+  El sitio no tiene cómo detectar esto: los precios que muestra salen del
+  HTML, no de Shopify.
+- **Las tres variantes vienen con `availableForSale: false`.** Con eso el
+  carrito no se crea, o se crea y el checkout lo rechaza. Como la consulta
+  sí las devolvió, están publicadas en el canal de venta, así que lo más
+  probable es el inventario: cantidad en cero con política de dejar de
+  vender. Para un producto de reservas suele resolverse con "seguir
+  vendiendo cuando no haya existencias", porque quien controla la
+  disponibilidad es Cowlendar. Hay que confirmarlo, porque se cruza con la
+  pregunta del cupo por fecha.
+
+Mientras esos dos no estén resueltos no tiene sentido probar `cartCreate`:
+va a fallar por la disponibilidad y no enseña nada.
+
 ### La pregunta abierta más importante: de dónde salen las fechas
 
 Antes la fecha era una variante, así que la lista podía salir de Shopify.
