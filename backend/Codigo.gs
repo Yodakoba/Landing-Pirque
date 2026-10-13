@@ -59,9 +59,25 @@ function config(clave) {
   return v;
 }
 
-var HOJA_FECHAS = 'Fechas';
+var HOJA_CONFIG = 'Config';
+var HOJA_EXCEPCIONES = 'Excepciones';
 var HOJA_RESERVAS = 'Reservas';
 var HOJA_REGISTRO = 'Registro';
+
+// Valores por si la pestaña Config está incompleta. Que falte una fila no
+// puede dejar el formulario sin fechas.
+var POR_DEFECTO = {
+  dias_abiertos: 'sáb,dom',
+  cupo_normal: 60,
+  dias_a_futuro: 90,
+  aviso_pocos_lugares: 10
+};
+
+// Lunes es 1 y domingo 0, igual que getDay(). Se aceptan las formas con y
+// sin tilde, porque la planilla la escribe una persona.
+var DIAS = {
+  dom: 0, lun: 1, mar: 2, mie: 3, jue: 4, vie: 5, sab: 6
+};
 
 /* =============================================================
    1. Lo que el sitio consulta
@@ -86,36 +102,110 @@ function doGet(e) {
 }
 
 /**
- * Lee la pestaña Fechas y descuenta lo ya reservado.
+ * Arma la lista de fechas vendibles.
  *
- * Solo devuelve fechas de hoy en adelante: así el formulario nunca
- * puede ofrecer una fecha vencida, que es exactamente el problema
- * que tenía la lista escrita a mano.
+ * NO hay una lista de fechas escrita a mano. Si el lugar abre sábados y
+ * domingos, eso serían 104 filas al año que alguien tendría que mantener,
+ * y se desactualizarían: es exactamente el problema que tenía el sitio.
+ *
+ * En vez de eso: una REGLA (qué días de la semana se abre, con qué cupo y
+ * hasta cuándo a futuro) y una lista de EXCEPCIONES para lo que se sale de
+ * la regla. Tres casos cubre la misma tabla: abrir un día que normalmente
+ * no, cerrar uno que sí, y cambiarle el cupo a un día puntual.
+ *
+ * Al final se descuenta lo ya reservado. Una fecha sin lugares no se
+ * ofrece, y una vencida no puede aparecer ni por error, porque la lista
+ * empieza en hoy.
  */
 function fechasAbiertas() {
-  var hoy = Utilities.formatDate(new Date(), zonaHoraria(), 'yyyy-MM-dd');
+  var cfg = configuracion();
+  var exc = excepciones();
   var tomadas = lugaresTomadosPorFecha();
-  var filas = datos(HOJA_FECHAS);
+  var hoy = hoyAca();
+
   var salida = [];
+  for (var i = 0; i < cfg.dias_a_futuro; i++) {
+    var fecha = sumarDias(hoy, i);
+    var e = exc[fecha];
 
-  for (var i = 0; i < filas.length; i++) {
-    var f = filas[i];
-    var fecha = comoFecha(f.fecha);
-    if (!fecha || fecha < hoy) continue;
-    if (String(f.abierta).toLowerCase().indexOf('s') !== 0) continue;
+    // La excepción manda sobre la regla, en los dos sentidos.
+    var abierta = e && e.abierta !== null
+      ? e.abierta
+      : cfg.dias_abiertos.indexOf(diaDeLaSemana(fecha)) !== -1;
+    if (!abierta) continue;
 
-    var cupo = Number(f.cupo) || 0;
-    var usados = tomadas[fecha] || 0;
-    var quedan = Math.max(0, cupo - usados);
+    var cupo = (e && e.cupo) ? e.cupo : cfg.cupo_normal;
+    var quedan = Math.max(0, cupo - (tomadas[fecha] || 0));
     if (quedan <= 0) continue;
 
-    salida.push({ fecha: fecha, quedan: quedan });
+    salida.push({
+      fecha: fecha,
+      quedan: quedan,
+      // El sitio solo muestra el número cuando quedan pocos. Se calcula
+      // acá para que el criterio viva en un solo lugar, la planilla.
+      pocos: quedan <= cfg.aviso_pocos_lugares
+    });
   }
-  salida.sort(function (a, b) { return a.fecha < b.fecha ? -1 : 1; });
   return salida;
 }
 
-/** Suma adultos + niños ya reservados, por fecha. */
+/** Lee la pestaña Config, que es de pares clave/valor. */
+function configuracion() {
+  var cfg = {};
+  for (var k in POR_DEFECTO) cfg[k] = POR_DEFECTO[k];
+
+  var filas = datos(HOJA_CONFIG);
+  for (var i = 0; i < filas.length; i++) {
+    var clave = String(filas[i].clave || '').trim().toLowerCase();
+    if (clave && filas[i].valor !== '' && filas[i].valor != null) {
+      cfg[clave] = filas[i].valor;
+    }
+  }
+
+  cfg.cupo_normal = Number(cfg.cupo_normal) || POR_DEFECTO.cupo_normal;
+  cfg.dias_a_futuro = Number(cfg.dias_a_futuro) || POR_DEFECTO.dias_a_futuro;
+  cfg.aviso_pocos_lugares = Number(cfg.aviso_pocos_lugares) || 0;
+  cfg.dias_abiertos = aDiasDeSemana(cfg.dias_abiertos);
+  return cfg;
+}
+
+/** "sáb,dom" -> [6, 0]. Tolera tildes, espacios y mayúsculas. */
+function aDiasDeSemana(texto) {
+  var partes = String(texto || '').split(/[,;/ ]+/);
+  var dias = [];
+  for (var i = 0; i < partes.length; i++) {
+    var p = sinTildes(partes[i]).trim().toLowerCase().slice(0, 3);
+    if (p && DIAS.hasOwnProperty(p) && dias.indexOf(DIAS[p]) === -1) {
+      dias.push(DIAS[p]);
+    }
+  }
+  return dias;
+}
+
+/** Lee la pestaña Excepciones: fecha -> { abierta, cupo }. */
+function excepciones() {
+  var mapa = {};
+  var filas = datos(HOJA_EXCEPCIONES);
+  for (var i = 0; i < filas.length; i++) {
+    var fecha = comoFecha(filas[i].fecha);
+    if (!fecha) continue;
+
+    // Dejar la celda "abierta" en blanco significa "no opino sobre si
+    // abre, solo le cambio el cupo": por eso null y no false.
+    var txt = sinTildes(String(filas[i].abierta || '')).trim().toLowerCase();
+    var abierta = txt === '' ? null : txt.charAt(0) === 's';
+
+    mapa[fecha] = { abierta: abierta, cupo: Number(filas[i].cupo) || 0 };
+  }
+  return mapa;
+}
+
+/**
+ * Suma las personas ya reservadas por fecha.
+ *
+ * Cuenta adultos Y niños: el cupo son las personas que entran ese día,
+ * que es lo que limita sillas, mesas y comida (decidido el 2026-10-13).
+ */
 function lugaresTomadosPorFecha() {
   var tomadas = {};
   var filas = datos(HOJA_RESERVAS);
@@ -321,6 +411,40 @@ function json(obj, codigo) {
 
 function zonaHoraria() {
   return Session.getScriptTimeZone() || 'America/Santiago';
+}
+
+/**
+ * Las fechas se manejan SIEMPRE como texto AAAA-MM-DD, nunca como objetos
+ * Date que viajen entre zonas horarias.
+ *
+ * No es purismo: si el sitio manda un Date y acá se interpreta en UTC, una
+ * reserva hecha de noche en Chile cae al día siguiente, y una hecha desde
+ * Brasil al anterior. El error aparece en una de cada tantas reservas, que
+ * es la peor forma de aparecer.
+ */
+function hoyAca() {
+  return Utilities.formatDate(new Date(), zonaHoraria(), 'yyyy-MM-dd');
+}
+
+function sumarDias(fecha, n) {
+  var p = fecha.split('-');
+  // new Date(año, mes, día) construye en la zona local del script, que es
+  // la que queremos. El constructor con string sí interpretaría UTC.
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + n);
+  return Utilities.formatDate(d, zonaHoraria(), 'yyyy-MM-dd');
+}
+
+/** 0 es domingo y 6 sábado, igual que getDay(). */
+function diaDeLaSemana(fecha) {
+  var p = fecha.split('-');
+  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay();
+}
+
+/** Para que "sáb" y "sab" sean lo mismo en la planilla. */
+function sinTildes(s) {
+  return String(s)
+    .replace(/[áàä]/gi, 'a').replace(/[éèë]/gi, 'e').replace(/[íìï]/gi, 'i')
+    .replace(/[óòö]/gi, 'o').replace(/[úùü]/gi, 'u');
 }
 
 /** La planilla puede devolver una fecha como texto o como Date. */

@@ -136,7 +136,10 @@ SIN_ALTERNATE = {'404.html', 'contacto.html'}
 # Atributos cuyo valor lee una persona, y que por lo tanto se traducen.
 ATRIBUTOS = ('alt', 'title', 'placeholder', 'aria-label')
 
-TAG = re.compile(r'(<[^>]*>)')
+# Los comentarios van primero y completos: uno que mencione una etiqueta
+# —y los hay— tiene un '>' adentro, y partir en cada '>' lo rompía en
+# pedazos, dejando la cola suelta como si fuera texto traducible.
+TAG = re.compile(r'(<!--.*?-->|<[^>]*>)', re.S)
 ABRE_OPACO = re.compile(r'<\s*(script|style)\b', re.I)
 CIERRA_OPACO = re.compile(r'<\s*/\s*(script|style)\s*>', re.I)
 BLOQUE_IDIOMAS = re.compile(r'<!--i18n-->.*?<!--/i18n-->', re.S)

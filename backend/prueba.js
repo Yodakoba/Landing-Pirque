@@ -75,36 +75,94 @@ ok(r.menu === 'Menú A Brasas Abiertas', 'el menú queda registrado');
 ok(ctx.leerReserva({ id: 9, line_items: [{ title: 'Polera', quantity: 1, properties: [] }] }) === null,
    'un pedido sin _booking_date se ignora');
 
-/* ---------- fechasAbiertas: qué se puede vender ---------- */
+/* ---------- fechasAbiertas: reglas, excepciones y cupo ---------- */
 
-const dia = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
-const [ayer, hoy, manana, pasado] = [dia(-1), dia(0), dia(1), dia(2)];
+// Un sábado y un domingo concretos, lejos de hoy para que no se mezclen
+// con el borde del mes ni con el "desde hoy".
+const sabado  = '2026-11-14';
+const domingo = '2026-11-15';
+const lunes   = '2026-11-16';
+const jueves  = '2026-11-19';
 
-HOJAS = {
-  Fechas: [
-    ['fecha', 'cupo', 'abierta', 'notas'],
-    [ayer,   60, 'sí', ''],   // vencida
-    [manana, 60, 'sí', ''],   // abierta con espacio
-    [pasado, 10, 'sí', ''],   // se llena con las reservas de abajo
-    [hoy,    40, 'no', '']    // cerrada a mano
-  ],
-  Reservas: [
-    ['pedido', 'numero', 'fecha_reserva', 'nombre', 'email', 'telefono',
-     'menu', 'adultos', 'ninos', 'total', 'moneda', 'creado', 'evento'],
-    ['1', '#1', manana, 'Ana',  '', '', 'Trad', 4, 2, '', '', '', ''],
-    ['2', '#2', pasado, 'Luis', '', '', 'Trad', 8, 2, '', '', '', '']
-  ]
-};
+// fechasAbiertas() arranca en hoy, así que para probar fechas fijas hay
+// que fijar hoy también.
+ctx.hoyAca = () => '2026-11-14';
 
-const fechas = ctx.fechasAbiertas();
-console.log('fechasAbiertas ->', JSON.stringify(fechas));
+const sinReservas = [['pedido', 'fecha_reserva', 'adultos', 'ninos']];
 
-ok(!fechas.some((f) => f.fecha === ayer),   'la fecha vencida no se ofrece');
-ok(!fechas.some((f) => f.fecha === hoy),    'la fecha cerrada a mano no se ofrece');
-ok(!fechas.some((f) => f.fecha === pasado), 'la fecha sin cupo no se ofrece');
+function montar(config, excepciones, reservas) {
+  HOJAS = {
+    Config: [['clave', 'valor']].concat(config),
+    Excepciones: [['fecha', 'abierta', 'cupo', 'nota']].concat(excepciones || []),
+    Reservas: reservas || sinReservas
+  };
+  return ctx.fechasAbiertas();
+}
 
-const m = fechas.find((f) => f.fecha === manana);
-ok(m && m.quedan === 54, 'quedan 54: 60 menos 4 adultos y 2 niños');
+const base = [
+  ['dias_abiertos', 'sáb,dom'],
+  ['cupo_normal', 60],
+  ['dias_a_futuro', 10],
+  ['aviso_pocos_lugares', 10]
+];
 
-console.log(fallos ? '\n' + fallos + ' fallas' : '\nlas 10 comprobaciones pasan');
+// 1. La regla sola: solo sábados y domingos.
+let f = montar(base);
+let dias = f.map((x) => x.fecha);
+console.log('solo la regla ->', JSON.stringify(dias));
+ok(dias.indexOf(sabado) !== -1 && dias.indexOf(domingo) !== -1, 'abre sábado y domingo');
+ok(dias.indexOf(lunes) === -1, 'el lunes no abre');
+ok(f.every((x) => x.quedan === 60), 'sin reservas, el cupo es el normal');
+ok(f.every((x) => x.pocos === false), 'con 60 lugares no avisa "quedan pocos"');
+
+// 2. Excepción que ABRE un día que la regla cierra.
+dias = montar(base, [[jueves, 'sí', '', '18 de septiembre']]).map((x) => x.fecha);
+ok(dias.indexOf(jueves) !== -1, 'una excepción puede abrir un jueves');
+
+// 3. Excepción que CIERRA un día que la regla abre.
+dias = montar(base, [[domingo, 'no', '', 'Evento privado']]).map((x) => x.fecha);
+ok(dias.indexOf(domingo) === -1, 'una excepción puede cerrar un domingo');
+ok(dias.indexOf(sabado) !== -1, 'cerrar el domingo no afecta al sábado');
+
+// 4. Excepción que SOLO cambia el cupo, dejando "abierta" en blanco.
+f = montar(base, [[sabado, '', 40, 'Medio aforo']]);
+let s14 = f.find((x) => x.fecha === sabado);
+ok(s14 && s14.quedan === 40, 'la excepción cambia el cupo sin cerrar el día');
+ok(f.some((x) => x.fecha === domingo && x.quedan === 60), 'el resto conserva el cupo normal');
+
+// 5. El cupo descuenta adultos Y niños.
+f = montar(base, [], [
+  ['pedido', 'fecha_reserva', 'adultos', 'ninos'],
+  ['1', sabado, 4, 2]
+]);
+s14 = f.find((x) => x.fecha === sabado);
+ok(s14 && s14.quedan === 54, 'quedan 54: los niños también ocupan lugar');
+
+// 6. Un día lleno no se ofrece.
+f = montar(base, [[sabado, '', 6, '']], [
+  ['pedido', 'fecha_reserva', 'adultos', 'ninos'],
+  ['1', sabado, 4, 2]
+]);
+ok(!f.some((x) => x.fecha === sabado), 'un día sin lugares no se ofrece');
+
+// 7. El aviso de "quedan pocos".
+f = montar(base, [[sabado, '', 12, '']], [
+  ['pedido', 'fecha_reserva', 'adultos', 'ninos'],
+  ['1', sabado, 3, 0]
+]);
+s14 = f.find((x) => x.fecha === sabado);
+ok(s14 && s14.quedan === 9 && s14.pocos === true, 'con 9 lugares avisa que quedan pocos');
+
+// 8. La planilla la escribe una persona: hay que tolerar cómo escriba.
+dias = montar([['dias_abiertos', 'SAB / Dom'], ['dias_a_futuro', 10]]).map((x) => x.fecha);
+ok(dias.indexOf(sabado) !== -1 && dias.indexOf(domingo) !== -1,
+   'acepta "SAB / Dom" sin tildes, con espacios y en mayúsculas');
+
+// 9. Config vacía: valores por defecto en vez de quedarse sin fechas.
+ok(montar([]).length > 0, 'con la Config vacía igual ofrece fechas');
+
+// 10. Nunca ofrece una fecha anterior a hoy.
+ok(montar(base).every((x) => x.fecha >= '2026-11-14'), 'ninguna fecha vencida');
+
+console.log(fallos ? '\n' + fallos + ' fallas' : '\ntodas las comprobaciones pasan');
 process.exit(fallos ? 1 : 0);

@@ -359,8 +359,27 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   de niños es uno solo para los dos de adultos. Se hizo así para que el
   formulario siga siendo correcto aunque el JS no cargue, y para tener un
   solo lugar que editar.
-- Las fechas son `<option>`s de `#r-fecha` con el `value` en `YYYY-MM-DD` y
-  **sin IDs de variante**. **Agregar fechas = agregar `<option>`s.**
+- **La fecha se elige en un calendario mensual**, no en un desplegable
+  (2026-10-13). Lo dibuja `reserva.js` con lo que entrega el backend, y la
+  fecha elegida queda en el input oculto `#r-fecha`. **El sitio no decide
+  qué días se abren**: si lo hiciera habría dos lugares con la verdad.
+- **El calendario es interfaz hecha con JavaScript, y eso cruza la regla del
+  proyecto.** Vive dentro de `reserva.js`, que ya era la excepción de esa
+  página, y no sienta precedente. La consecuencia a asumir: **la página de
+  reserva dejó de funcionar sin JavaScript.** El `<noscript>` manda a
+  WhatsApp. En un sitio estático no hay forma de tener fechas al día sin JS,
+  y fechas vencidas son peores que ninguna.
+- **Las fechas se tratan como texto `AAAA-MM-DD` de punta a punta**, nunca
+  como objetos `Date`. No es purismo: convertirlas en algún paso hace que
+  una reserva hecha de noche en Chile, o desde Brasil, caiga en el día
+  equivocado. Ese error aparece en una de cada tantas reservas, que es la
+  peor forma de aparecer.
+- Los nombres de mes y de día **no están en los diccionarios**: salen de
+  `toLocaleDateString` con el idioma de la página. La semana parte en lunes
+  en los tres idiomas, que es la convención chilena.
+- **El botón solo se habilita con una fecha elegida que tenga lugares
+  suficientes.** Pedir más lugares de los que quedan lo apaga y lo dice. Es
+  preferible a dejar apretar y fallar en el checkout.
 - Cada línea del carrito lleva dos propiedades con la fecha:
   `_booking_date` y `_cowlendar_date`. El guion bajo las oculta del
   checkout. **Se mantienen las dos aunque Cowlendar ya no esté**: el backend
@@ -464,6 +483,34 @@ carrito al **pedido**. Shopify convierte los atributos de línea del carrito
 en propiedades de línea del pedido, pero hay que verlo en un pedido real
 antes de darlo por hecho: de ahí las lee `leerReserva()` en el backend.
 Requiere completar una compra de prueba.
+
+### Las fechas: reglas más excepciones (2026-10-13)
+
+Se resolvió de dónde salen las fechas, que era la pregunta abierta grande.
+**No hay una lista escrita a mano.** El backend las arma con una regla —qué
+días de la semana se abre, con qué cupo, hasta cuántos días adelante— y una
+lista de excepciones para lo que se sale de ella.
+
+La pestaña `Excepciones` cubre tres casos con una sola tabla: **abrir** un
+día que la regla cierra (`abierta` = sí), **cerrar** uno que abre
+(`abierta` = no), y **cambiarle solo el cupo** dejando `abierta` en blanco.
+Esa celda en blanco significa "no opino sobre si abre, solo le cambio el
+cupo", y por eso en el código es `null` y no `false`.
+
+**El cupo son personas totales, niños incluidos** (decidido el 2026-10-13):
+es lo que limita sillas, mesas y comida.
+
+**El sitio solo muestra cuántos lugares quedan cuando quedan pocos.** El
+umbral vive en la planilla (`aviso_pocos_lugares`), no en el código. En el
+calendario los días por llenarse llevan un punto; al elegir uno, aparece
+"últimos lugares". Se eligió así para apurar al que duda sin publicar qué
+tan vacíos están los demás días.
+
+**El horario es sábados y domingos de 13:00 a 18:00**, una sola jornada por
+día, sin bloques de hora. Ojo: **el sitio no dice en ninguna parte que se
+abre solo fines de semana.** El calendario lo muestra implícitamente, pero
+quien lee `experiencias.html` o la portada no se entera. Queda pendiente
+decidir dónde decirlo.
 
 ### La pregunta abierta más importante: de dónde salen las fechas
 
