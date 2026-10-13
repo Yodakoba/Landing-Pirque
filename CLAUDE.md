@@ -303,11 +303,36 @@ Chromium headless está preinstalado en este entorno:
 Las tipografías saldrán en fallback porque el sandbox bloquea
 `fonts.googleapis.com` — es del entorno, no de la página.
 
-## Reserva en línea (Shopify + Cowlendar)
+## Reserva en línea (Shopify + sistema propio)
 
 `reservas.html` crea el carrito con la **Storefront API** y manda al checkout
-de Shopify. Cowlendar es la app de reservas instalada en la tienda: registra
-la reserva en su calendario cuando entra la orden.
+de Shopify.
+
+**Cowlendar quedó descartado el 2026-10-13.** En su lugar se construye un
+sistema propio: **Shopify cobra, nosotros agendamos.** El código vive en
+`backend/` y corre en Google Apps Script, pegado a una planilla del cliente.
+Ver `backend/README.md`.
+
+El reparto queda así:
+
+| | Quién |
+|---|---|
+| Cobro y checkout | Shopify |
+| Calendario, cupo y registro | Nuestro backend |
+| Panel de administración | Una planilla de Google (por ahora) |
+| Agenda visible | Google Calendar |
+
+**Por qué consultamos a Shopify en vez de recibir un webhook:** los Web Apps
+de Apps Script **no dan acceso a las cabeceras** de la petición, así que es
+imposible verificar la firma HMAC con la que Shopify firma sus webhooks. Sin
+eso, cualquiera que descubriera la URL podría inventar reservas. Preguntando
+nosotros cada 5 minutos, nadie nos escribe. El costo es unos minutos de
+atraso; la ganancia es que además se recupera solo de caídas.
+
+**El token de Admin API del backend no contradice la regla de este
+proyecto.** "Un token de Admin API jamás" es sobre el **sitio**, donde
+quedaría en un archivo público. En Apps Script corre del lado del servidor y
+se guarda en las propiedades del script, que nunca salen al navegador.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
   `assets/js/reserva.js`: token, dominio y versión de API. Los precios ya
@@ -336,9 +361,12 @@ la reserva en su calendario cuando entra la orden.
   solo lugar que editar.
 - Las fechas son `<option>`s de `#r-fecha` con el `value` en `YYYY-MM-DD` y
   **sin IDs de variante**. **Agregar fechas = agregar `<option>`s.**
-- Cowlendar necesita dos propiedades por línea: `_booking_date` y
-  `_cowlendar_date`, ambas con la fecha. El guion bajo las oculta del
-  checkout.
+- Cada línea del carrito lleva dos propiedades con la fecha:
+  `_booking_date` y `_cowlendar_date`. El guion bajo las oculta del
+  checkout. **Se mantienen las dos aunque Cowlendar ya no esté**: el backend
+  lee `_booking_date`, y la segunda queda por si alguna vez se vuelve a una
+  app de reservas. Es la única forma en que la fecha llega al pedido, porque
+  las variantes no la tienen.
 - Si `niños = 0` la línea de niños no se agrega: `quantity: 0` hace fallar la
   mutation.
 - **El token de Storefront es público por diseño** (solo lee catálogo y crea
