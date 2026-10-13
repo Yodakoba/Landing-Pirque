@@ -10,7 +10,7 @@ cliente.
 ```
 Sitio (GitHub Pages)
    │
-   ├─ pide las fechas abiertas ────────► Apps Script ──► Planilla (Fechas)
+   ├─ pide las fechas abiertas ────────► Apps Script ──► Config + Excepciones
    │                                                          │
    └─ crea el carrito ──► checkout de Shopify ──► pago        │
                                                    │          │
@@ -42,16 +42,47 @@ nada.
 ### 1. La planilla
 
 Crea una planilla nueva en Google Drive. Llámala, por ejemplo, **Reservas
-Brasas**. Agrega una pestaña **`Fechas`** con esta fila 1 exacta:
+Brasas**.
 
-| fecha | cupo | abierta | notas |
+**No hay una lista de fechas escrita a mano.** Si el lugar abre sábados y
+domingos, eso serían 104 filas al año que alguien tendría que mantener, y se
+desactualizarían — es exactamente el problema que tenía el sitio. En vez de
+eso hay una **regla** y una lista de **excepciones**.
+
+Pestaña **`Config`**, con esta fila 1 exacta:
+
+| clave | valor |
+|---|---|
+| `dias_abiertos` | `sáb,dom` |
+| `cupo_normal` | `60` |
+| `dias_a_futuro` | `90` |
+| `aviso_pocos_lugares` | `10` |
+
+- **`dias_abiertos`** — qué días de la semana se abre normalmente. Acepta
+  `sáb`, `sab`, `SAB`, separados por coma, espacio o barra.
+- **`cupo_normal`** — cuántas **personas** entran en un día normal.
+  **Adultos y niños juntos**: es lo que limita sillas, mesas y comida.
+- **`dias_a_futuro`** — hasta cuántos días adelante se puede reservar.
+- **`aviso_pocos_lugares`** — bajo cuántos lugares el sitio avisa "últimos
+  lugares". Con `0` no avisa nunca.
+
+Pestaña **`Excepciones`**, solo para lo que se sale de la regla:
+
+| fecha | abierta | cupo | nota |
 |---|---|---|---|
-| 2026-11-15 | 60 | sí | |
-| 2026-11-16 | 60 | sí | |
+| 2026-09-18 | sí | 80 | 18 de septiembre, cae jueves |
+| 2026-12-25 | no | | Navidad |
+| 2026-11-15 | | 40 | Medio aforo por evento privado |
 
-- **fecha** en formato `AAAA-MM-DD`.
-- **cupo** es el total de personas de ese día, adultos y niños juntos.
-- **abierta** es `sí` o `no`. Cerrar un día es cambiar esa celda.
+Los tres casos en una sola tabla:
+
+- **Abrir un día que la regla cierra** → `abierta` = `sí`.
+- **Cerrar un día que la regla abre** → `abierta` = `no`.
+- **Cambiarle solo el cupo** → deja `abierta` **en blanco** y pon el `cupo`.
+  En blanco significa "no opino sobre si abre, solo le cambio el cupo".
+
+En operación normal esta pestaña queda quieta. Solo se toca cuando hay algo
+fuera de lo común.
 
 Las pestañas **`Reservas`** y **`Registro`** las crea el script solo la
 primera vez. No hay que armarlas a mano.
@@ -93,6 +124,11 @@ dirección de correo.
 **No pongas nada de esto en `Codigo.gs`.** Si va ahí, termina en el repo.
 
 ### 5. Probar antes de desplegar
+
+**Ojo con el desplegable de funciones.** El editor trae preseleccionada la
+primera función del archivo, que es una ayudante interna. Si aprietas
+Ejecutar sin cambiarla, sale un error que no tiene que ver con tu
+configuración. **Elige la función en el desplegable antes de ejecutar.**
 
 En el editor hay cuatro funciones para correr a mano, en este orden:
 

@@ -63,21 +63,16 @@
       </div>
 
       <div class="campo">
-        <label class="etiqueta" for="r-fecha">Escolher data</label>
-        <select id="r-fecha">
-          <option value="2026-09-05">Sábado, 5 de setembro</option>
-          <option value="2026-09-06">Domingo, 6 de setembro</option>
-          <option value="2026-09-12">Sábado, 12 de setembro</option>
-          <option value="2026-09-13">Domingo, 13 de setembro</option>
-          <option value="2026-09-17">Quinta, 17 de setembro</option>
-          <option value="2026-09-18">Sexta, 18 de setembro</option>
-          <option value="2026-09-19">Sábado, 19 de setembro</option>
-          <option value="2026-09-20">Domingo, 20 de setembro</option>
-          <option value="2026-09-26">Sábado, 26 de setembro</option>
-          <option value="2026-09-27">Domingo, 27 de setembro</option>
-        </select>
+        <span class="etiqueta" id="r-fecha-titulo">Escolher data</span>
+        <!-- El calendario lo dibuja assets/js/reserva.js con las fechas que
+             entrega el backend. Sin JavaScript queda vacio y el boton sigue
+             deshabilitado: el <noscript> del final manda a WhatsApp. En un
+             sitio estatico no hay forma de tener fechas al dia sin JS. -->
+        <div class="calendario" data-calendario role="group"
+             aria-labelledby="r-fecha-titulo"></div>
+        <input type="hidden" id="r-fecha" value="">
       </div>
-      <p class="aviso">Escolha a data certa antes de continuar.</p>
+      <p class="aviso" data-aviso-fecha>Escolha a data certa antes de continuar.</p>
 
       <div class="reserva-fila">
         <div class="quien">Adultos</div>
@@ -287,6 +282,11 @@
       <p class="fine" style="margin-top:10px;">
         <a href="https://maps.app.goo.gl/NPkmd1foma1Uc8nB8" target="_blank" rel="noopener">Casas de San Vicente, lote 4, Pirque, Região Metropolitana</a><br>
         <a href="tel:+56940096228">+56 9 4009 6228</a> · brasasdelopirque.cl
+      </p>
+      <p class="fine" style="margin-top:14px;">
+        Horário geral: sábados e domingos a partir das 13h até o fechamento.<br>
+        Para outras datas, veja <a href="reservas.html#reserva-en-linea">a página de reserva</a>
+        ou fale com a gente pelo <a href="https://wa.me/56940096228?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20Brasas%20de%20Lo%20Pirque" target="_blank" rel="noopener">WhatsApp</a>.
       </p>
     </div>
     <nav>

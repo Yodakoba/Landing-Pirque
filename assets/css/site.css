@@ -559,8 +559,6 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   padding: 28px; max-width: 620px;
 }
 .reserva-widget .campo{ margin-bottom: 4px; }
-/* el sitio publico vende un solo menu, asi que el widget lo nombra en vez
-   de ofrecer un selector de experiencia */
 .reserva-titulo{ font-size:1.15rem; margin-bottom:22px; }
 .reserva-widget .etiqueta{
   display:block; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em;
@@ -575,6 +573,74 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .reserva-widget .aviso{
   margin: 10px 0 22px; font-size:0.8rem; color: var(--gold);
 }
+/* ---------- el calendario de reservas ----------
+   Lo dibuja assets/js/reserva.js con las fechas que entrega el backend.
+   Los dias abiertos son <button> y los cerrados <span>: asi recorrer el
+   mes con el teclado no pasa por treinta casillas muertas. */
+.calendario{
+  border:1px solid var(--line); border-radius:3px;
+  background: var(--bg); padding:14px;
+}
+.cal-cab{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; margin-bottom:12px;
+}
+.cal-mes{
+  font-size:0.86rem; font-weight:600; letter-spacing:0.04em;
+  text-transform:uppercase; color: var(--ink);
+}
+.cal-nav{
+  width:34px; height:34px; flex:none; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  background:none; color: var(--ink-dim); cursor:pointer;
+  border:1px solid var(--line); border-radius:2px; font-size:1.1rem;
+}
+.cal-nav:hover:not(:disabled){ color: var(--ink); border-color: var(--gold-soft); }
+.cal-nav:disabled{ opacity:0.25; cursor:default; }
+
+.cal-grilla{ display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; }
+.cal-wd{
+  text-align:center; padding:4px 0 8px;
+  font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
+  color: var(--ink-faint);
+}
+/* La razon fija la casilla cuadrada sin depender del contenido, que es lo
+   que mantiene la grilla pareja entre meses de 28 y de 31 dias. */
+.cal-dia{
+  aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+  border:1px solid transparent; border-radius:2px;
+  font-family:var(--sans); font-size:0.86rem; padding:0;
+}
+.cal-dia.vacio{ border:0; }
+.cal-dia.cerrado{ color: var(--ink-faint); opacity:0.3; }
+.cal-dia.abierto{
+  background: rgba(201,162,39,0.10); border-color: var(--gold-soft);
+  color: var(--ink); cursor:pointer;
+  transition: background-color .12s ease, color .12s ease;
+}
+.cal-dia.abierto:hover{ background: rgba(201,162,39,0.22); }
+.cal-dia.abierto:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+.cal-dia.elegido{
+  background: var(--gold); border-color: var(--gold);
+  color:#1A1400; font-weight:700;
+}
+/* Un punto bajo el numero marca los dias que estan por llenarse, sin
+   gritar el numero exacto en cada casilla. */
+.cal-dia.pocos{ position:relative; }
+.cal-dia.pocos::after{
+  content:""; position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+  width:3px; height:3px; border-radius:50%; background: var(--gold);
+}
+.cal-dia.elegido.pocos::after{ background:#1A1400; }
+.cal-estado{ margin:0; padding:18px 4px; font-size:0.84rem; color: var(--ink-faint); }
+
+.reserva-widget .aviso.error{ color:#E0806F; }
+
+@media (max-width: 420px){
+  .calendario{ padding:10px; }
+  .cal-dia{ font-size:0.8rem; }
+}
+
 .reserva-fila{
   display:grid; grid-template-columns: 1fr 104px 128px; gap:16px; align-items:end;
   padding: 18px 0; border-top:1px solid var(--line);

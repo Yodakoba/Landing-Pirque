@@ -49,7 +49,13 @@
     // meses. Esta es de octubre de 2024, así que ya está fuera de ese
     // plazo: hay que confirmar con la tienda cuál usar antes de
     // conectar.
-    version: '2024-10'
+    version: '2024-10',
+
+    // URL del Web App de Apps Script que entrega las fechas abiertas.
+    // Ver backend/README.md. Vacío significa que el calendario no tiene
+    // de dónde sacar fechas: lo dice en pantalla y deja el botón apagado,
+    // en vez de inventar un calendario que no corresponde a la realidad.
+    backend: ''
   };
 
   // Los precios y los IDs de variante NO están acá: viven en el HTML.
@@ -65,6 +71,15 @@
   // el lang del <html>. Si se agrega un idioma alla, se agrega una fila.
   var TEXTOS = {
     es: {
+      mesAnterior: 'Mes anterior',
+      mesSiguiente: 'Mes siguiente',
+      cargando: 'Buscando fechas disponibles\u2026',
+      sinBackend: 'El calendario se conecta cuando el sistema de reservas esté publicado.',
+      sinFechas: 'No hay fechas disponibles por ahora. Escríbenos por WhatsApp y lo vemos.',
+      fallaFechas: 'No pudimos cargar las fechas. Vuelve a intentarlo o escríbenos por WhatsApp.',
+      ultimos: 'Últimos lugares: quedan {n}.',
+      noAlcanza: 'Para esa fecha quedan {n} lugares y estás pidiendo {p}.',
+      eligeFecha: 'Elige una fecha en el calendario.',
       locale: 'es-CL',
       moneda: '',
       creando: 'Creando tu reserva\u2026',
@@ -73,6 +88,15 @@
       vistaPrevia: 'Vista previa: el pago se conecta cuando la tienda entregue el token.'
     },
     en: {
+      mesAnterior: 'Previous month',
+      mesSiguiente: 'Next month',
+      cargando: 'Looking for available dates\u2026',
+      sinBackend: 'The calendar connects once the booking system is live.',
+      sinFechas: 'No dates available right now. Message us on WhatsApp and we will sort it out.',
+      fallaFechas: 'We could not load the dates. Please try again, or message us on WhatsApp.',
+      ultimos: 'Last places: {n} left.',
+      noAlcanza: 'That date has {n} places left and you are asking for {p}.',
+      eligeFecha: 'Pick a date on the calendar.',
       locale: 'en-US',
       moneda: ' CLP',
       creando: 'Creating your booking\u2026',
@@ -81,6 +105,15 @@
       vistaPrevia: 'Preview: payment connects once the store provides the token.'
     },
     pt: {
+      mesAnterior: 'Mês anterior',
+      mesSiguiente: 'Mês seguinte',
+      cargando: 'Procurando datas disponíveis\u2026',
+      sinBackend: 'O calendário se conecta quando o sistema de reservas estiver no ar.',
+      sinFechas: 'Não há datas disponíveis no momento. Fale com a gente no WhatsApp.',
+      fallaFechas: 'Não conseguimos carregar as datas. Tente de novo ou fale com a gente no WhatsApp.',
+      ultimos: 'Últimos lugares: restam {n}.',
+      noAlcanza: 'Nessa data restam {n} lugares e você está pedindo {p}.',
+      eligeFecha: 'Escolha uma data no calendário.',
       locale: 'pt-BR',
       moneda: ' CLP',
       creando: 'Criando a sua reserva\u2026',
@@ -132,6 +165,271 @@
     return selMenu.options[selMenu.selectedIndex];
   }
 
+  /* ---------- el calendario ----------
+
+     Un calendario mensual en vez de un desplegable. No es un capricho:
+     ver noviembre completo con los fines de semana encendidos y el resto
+     apagado comunica "abrimos sábados y domingos" de un vistazo, cosa que
+     una lista de fechas no hace.
+
+     Las fechas las entrega el backend. El sitio NO decide qué días se
+     abren: si lo hiciera, habría dos lugares con la verdad y tarde o
+     temprano dirían cosas distintas.
+
+     Las fechas se manejan como texto AAAA-MM-DD de punta a punta. Si se
+     convirtieran a Date en algún paso, alguien reservando de noche o desde
+     otro país terminaría con el día corrido, y ese error aparece en una de
+     cada tantas reservas: el peor tipo de error.
+  */
+
+  var cajaCal = caja.querySelector('[data-calendario]');
+  var avisoFecha = caja.querySelector('[data-aviso-fecha]');
+  var disponibles = {};      // 'AAAA-MM-DD' -> { quedan, pocos }
+  var mesVisible = null;     // primer día del mes que se está mostrando
+
+  function hoyTexto() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+           ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+           ('0' + d.getDate()).slice(-2);
+  }
+
+  function partes(fecha) {
+    var p = fecha.split('-');
+    return [Number(p[0]), Number(p[1]), Number(p[2])];
+  }
+
+  /** Primer día del mes al que pertenece una fecha, como texto. */
+  function mesDe(fecha) {
+    var p = partes(fecha);
+    return p[0] + '-' + ('0' + p[1]).slice(-2) + '-01';
+  }
+
+  function correrMes(mes, n) {
+    var p = partes(mes);
+    var m = p[1] - 1 + n;
+    var y = p[0] + Math.floor(m / 12);
+    m = ((m % 12) + 12) % 12;
+    return y + '-' + ('0' + (m + 1)).slice(-2) + '-01';
+  }
+
+  /** Los nombres de mes y de día salen del idioma de la página. */
+  function nombreMes(mes) {
+    var p = partes(mes);
+    var d = new Date(p[0], p[1] - 1, 1);
+    try {
+      return d.toLocaleDateString(idioma, { month: 'long', year: 'numeric' });
+    } catch (e) {
+      return p[1] + '/' + p[0];
+    }
+  }
+
+  function inicialesDias() {
+    var out = [];
+    // Se parte en lunes: es un negocio chileno y el fin de semana queda
+    // junto al final de la fila, que es donde se busca.
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(2024, 0, 1 + i);   // 2024-01-01 fue lunes
+      var txt;
+      try {
+        txt = d.toLocaleDateString(idioma, { weekday: 'narrow' });
+      } catch (e) {
+        txt = ['L', 'M', 'M', 'J', 'V', 'S', 'D'][i];
+      }
+      out.push(txt);
+    }
+    return out;
+  }
+
+  function dibujarCalendario() {
+    if (!cajaCal || !mesVisible) return;
+    cajaCal.innerHTML = '';
+
+    var p = partes(mesVisible);
+    var primero = new Date(p[0], p[1] - 1, 1);
+    var diasDelMes = new Date(p[0], p[1], 0).getDate();
+    // getDay() da 0 para domingo; la grilla empieza en lunes.
+    var desplazamiento = (primero.getDay() + 6) % 7;
+
+    var fechas = Object.keys(disponibles).sort();
+    var primeraLibre = fechas.length ? mesDe(fechas[0]) : mesVisible;
+    var ultimaLibre = fechas.length ? mesDe(fechas[fechas.length - 1]) : mesVisible;
+
+    // --- cabecera con los dos botones de mes ---
+    var cab = document.createElement('div');
+    cab.className = 'cal-cab';
+    cab.appendChild(botonMes(-1, T.mesAnterior, mesVisible > primeraLibre));
+    var titulo = document.createElement('strong');
+    titulo.className = 'cal-mes';
+    titulo.textContent = nombreMes(mesVisible);
+    cab.appendChild(titulo);
+    cab.appendChild(botonMes(1, T.mesSiguiente, mesVisible < ultimaLibre));
+    cajaCal.appendChild(cab);
+
+    // --- la grilla ---
+    var grilla = document.createElement('div');
+    grilla.className = 'cal-grilla';
+
+    var iniciales = inicialesDias();
+    for (var i = 0; i < 7; i++) {
+      var th = document.createElement('span');
+      th.className = 'cal-wd';
+      th.setAttribute('aria-hidden', 'true');   // la fecha completa va en el botón
+      th.textContent = iniciales[i];
+      grilla.appendChild(th);
+    }
+
+    for (var h = 0; h < desplazamiento; h++) {
+      var hueco = document.createElement('span');
+      hueco.className = 'cal-dia vacio';
+      grilla.appendChild(hueco);
+    }
+
+    for (var d = 1; d <= diasDelMes; d++) {
+      var fecha = p[0] + '-' + ('0' + p[1]).slice(-2) + '-' + ('0' + d).slice(-2);
+      grilla.appendChild(celdaDia(fecha, d));
+    }
+
+    cajaCal.appendChild(grilla);
+  }
+
+  function botonMes(paso, etiqueta, habilitado) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cal-nav';
+    b.setAttribute('aria-label', etiqueta);
+    b.title = etiqueta;
+    b.textContent = paso < 0 ? '‹' : '›';
+    b.disabled = !habilitado;
+    if (habilitado) {
+      b.addEventListener('click', function () {
+        mesVisible = correrMes(mesVisible, paso);
+        dibujarCalendario();
+      });
+    }
+    return b;
+  }
+
+  /**
+   * Un día abierto es un <button>, así que se llega con el teclado. Uno
+   * cerrado es un <span>: si fuera un botón deshabilitado, recorrer el mes
+   * con Tab pasaría por treinta casillas muertas.
+   */
+  function celdaDia(fecha, numero) {
+    var info = disponibles[fecha];
+    if (!info) {
+      var muerto = document.createElement('span');
+      muerto.className = 'cal-dia cerrado';
+      muerto.textContent = numero;
+      return muerto;
+    }
+
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cal-dia abierto' + (info.pocos ? ' pocos' : '');
+    b.setAttribute('data-fecha', fecha);
+    b.textContent = numero;
+
+    // El nombre accesible lleva la fecha completa, no el número suelto:
+    // "14" sin contexto no le sirve a nadie que no vea la grilla.
+    var leible = fecha;
+    try {
+      leible = new Date(partes(fecha)[0], partes(fecha)[1] - 1, partes(fecha)[2])
+        .toLocaleDateString(idioma, { weekday: 'long', day: 'numeric', month: 'long' });
+    } catch (e) { /* queda la fecha cruda */ }
+    b.setAttribute('aria-label', leible);
+
+    if (fecha === selFecha.value) {
+      b.classList.add('elegido');
+      b.setAttribute('aria-current', 'date');
+    }
+
+    b.addEventListener('click', function () {
+      selFecha.value = fecha;
+      dibujarCalendario();
+      recalcular();
+    });
+    return b;
+  }
+
+  /** El aviso bajo el calendario: pocos lugares, o que no alcanzan. */
+  function avisarSobreFecha() {
+    if (!avisoFecha) return;
+    var fecha = selFecha.value;
+    var info = fecha ? disponibles[fecha] : null;
+
+    if (!fecha || !info) {
+      avisoFecha.textContent = T.eligeFecha;
+      avisoFecha.className = 'aviso';
+      return;
+    }
+
+    var piden = cantidad(inpAdultos, 1) + cantidad(inpNinos, 0);
+    if (piden > info.quedan) {
+      avisoFecha.textContent = T.noAlcanza
+        .replace('{n}', info.quedan).replace('{p}', piden);
+      avisoFecha.className = 'aviso error';
+      return;
+    }
+    if (info.pocos) {
+      avisoFecha.textContent = T.ultimos.replace('{n}', info.quedan);
+      avisoFecha.className = 'aviso';
+      return;
+    }
+    avisoFecha.textContent = '';
+    avisoFecha.className = 'aviso';
+  }
+
+  /** ¿Se puede apretar reservar con lo que hay elegido? */
+  function fechaUsable() {
+    var info = disponibles[selFecha.value];
+    if (!info) return false;
+    return (cantidad(inpAdultos, 1) + cantidad(inpNinos, 0)) <= info.quedan;
+  }
+
+  function pintarEstado(texto) {
+    if (!cajaCal) return;
+    cajaCal.innerHTML = '';
+    var p = document.createElement('p');
+    p.className = 'cal-estado';
+    p.textContent = texto;
+    cajaCal.appendChild(p);
+  }
+
+  function cargarFechas() {
+    if (!CONFIG.backend) {
+      pintarEstado(T.sinBackend);
+      return;
+    }
+    pintarEstado(T.cargando);
+
+    fetch(CONFIG.backend + (CONFIG.backend.indexOf('?') === -1 ? '?' : '&') +
+          'accion=fechas')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (d) {
+        var lista = (d && d.fechas) || [];
+        if (!lista.length) { pintarEstado(T.sinFechas); return; }
+
+        disponibles = {};
+        for (var i = 0; i < lista.length; i++) {
+          disponibles[lista[i].fecha] = {
+            quedan: Number(lista[i].quedan) || 0,
+            pocos: !!lista[i].pocos
+          };
+        }
+        mesVisible = mesDe(Object.keys(disponibles).sort()[0]);
+        dibujarCalendario();
+        recalcular();
+      })
+      .catch(function (e) {
+        pintarEstado(T.fallaFechas);
+        if (window.console) console.error('[reserva] fechas', e);
+      });
+  }
+
   function cantidad(input, minimo) {
     var n = parseInt(input.value, 10);
     if (isNaN(n) || n < minimo) n = minimo;
@@ -147,6 +445,11 @@
     if (salPrecioAdulto) salPrecioAdulto.textContent = pesos(precioAdulto);
     if (salPersonas) salPersonas.textContent = adultos + ninos;
     if (salTotal) salTotal.textContent = pesos(total);
+
+    avisarSobreFecha();
+    // Sin fecha elegida, o pidiendo más lugares de los que quedan, el
+    // botón se apaga. Vale más que deje apretar y falle en el checkout.
+    btnReservar.disabled = !fechaUsable();
   }
 
   function mensaje(texto, tipo) {
@@ -161,7 +464,7 @@
     // Desde 2026-10 las variantes ya no son una por fecha: son una por
     // menú y modalidad. La fecha no elige variante, viaja como propiedad
     // de línea para que Cowlendar la registre en su calendario.
-    var fecha = selFecha.options[selFecha.selectedIndex].value;   // YYYY-MM-DD
+    var fecha = selFecha.value;                                   // YYYY-MM-DD
     var adultos = cantidad(inpAdultos, 1);
     var ninos = cantidad(inpNinos, 0);
 
@@ -201,6 +504,8 @@
   ].join('\n');
 
   function reservar() {
+    if (!fechaUsable()) { avisarSobreFecha(); return; }
+
     if (!CONFIG.token) {
       mensaje(T.sinPago, 'error');
       return;
@@ -248,15 +553,15 @@
   /* ---------- arranque ---------- */
 
   selMenu.addEventListener('change', recalcular);
-  selFecha.addEventListener('change', recalcular);
   inpAdultos.addEventListener('input', recalcular);
   inpNinos.addEventListener('input', recalcular);
   btnReservar.addEventListener('click', reservar);
 
-  // El botón nace deshabilitado en el HTML para que nadie apriete
-  // un botón muerto si este archivo no carga. Se habilita acá.
-  btnReservar.disabled = false;
+  // El botón nace deshabilitado en el HTML para que nadie apriete un botón
+  // muerto si este archivo no carga. Acá NO se habilita a ciegas: lo
+  // decide recalcular() según haya o no una fecha elegida con lugares.
   caja.classList.add('reserva-viva');
+  cargarFechas();
 
   if (!CONFIG.token) {
     mensaje(T.vistaPrevia, 'aviso');
