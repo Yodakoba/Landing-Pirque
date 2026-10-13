@@ -175,10 +175,11 @@ tres textos viven en el objeto `TEXTOS` del archivo.
 
 ### Lo que queda en español pase lo que pase
 
-- **El checkout de Shopify y el calendario de Cowlendar.** El formulario de
-  reserva se traduce, pero al apretar "Complete booking" la persona cae en un
-  checkout en español. Se arregla con Shopify Markets, del lado de la tienda,
-  no desde acá. Es tema para cuando esté la tienda de desarrollo.
+- **El checkout de Shopify.** El formulario de reserva se traduce, pero al
+  apretar "Complete booking" la persona cae en un checkout en español —
+  confirmado el 2026-10-13: el `checkoutUrl` que devuelve la tienda viene
+  con `/es/`. Se arregla con Shopify Markets, del lado de la tienda, no
+  desde acá.
 - **Las conversaciones de WhatsApp.** El mensaje prellenado sí se traduce
   (el script lo decodifica del `?text=`), pero quien responde al otro lado
   escribe en el idioma que maneje. Vale la pena avisarle al cliente antes de
@@ -221,12 +222,13 @@ unos pocos KB; las imágenes se cachean entre páginas.
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
 - **El sitio público vende DOS experiencias, el landing sigue con CUATRO**
   (decidido el 2026-09-16). En el sitio público son **Tradiciones $44.000** y
-  **A Brasas abiertas $60.000**; esta última lleva la descripción de la
-  experiencia "Brasas" del landing, pero a $60.000 en vez de $70.000. "Lo
-  Pirque" y "Sommelier" se sacaron del sitio público.
-- **Ojo con eso:** la misma experiencia tiene dos precios según el entregable.
-  Es intencional por ahora, pero es la clase de cosa que una agencia puede
-  notar. El precio del arriendo sí sigue igual en ambos lados.
+  **A Brasas abiertas $70.000**, que lleva la descripción de la experiencia
+  "Brasas" del landing. "Lo Pirque" y "Sommelier" se sacaron del sitio
+  público.
+- Esa segunda estuvo un tiempo a $60.000 por una decisión de presentación,
+  lo que dejaba la misma experiencia con dos precios según el entregable.
+  **Eso se acabó el 2026-10-13**: manda Shopify, y ahí vale $70.000, igual
+  que en el landing. Los precios coinciden hoy en los dos entregables.
 
 ### Trampas de layout ya resueltas (no las reintroduzcas)
 
@@ -413,16 +415,16 @@ objetivo comercial: que la visita particular pague en línea. La modalidad
 pago en el lugar?— así que el formulario no la ofrece. Si algún día se
 ofrece, hay que saber eso antes: cambia cómo se calcula el total.
 
-**Ojo con el precio de Tradiciones.** La tienda lo tiene en $45.000 y todo
-el sitio dice $44.000. El cliente decidió el 2026-10-13 que **manda
-Shopify**, pero que ese $45.000 es el que está mal y lo corrige él en la
-tienda. **Hasta que lo corrija, el sitio muestra $44.000 y el checkout
-cobraría $45.000.** Es una razón más para no conectar todavía.
+**El $45.000 de Tradiciones de esta tabla era un dato equivocado del
+agente.** Al consultar la tienda directamente, la variante dice $44.000,
+igual que el sitio. No hubo nada que corregir por ese lado.
 
-Por la misma decisión, **A Brasas abiertas subió de $60.000 a $70.000** en
-el sitio público, que es lo que dice la tienda y lo que ya decía el landing
-B2B. Con eso desaparece la diferencia de precio entre los dos entregables
-para esa experiencia.
+El cliente decidió el 2026-10-13 que en los precios **manda Shopify**, y por
+eso **A Brasas abiertas subió de $60.000 a $70.000** en el sitio público,
+que es lo que dice la tienda y lo que ya decía el landing B2B. Con eso
+desaparece la diferencia de precio entre los dos entregables.
+
+**Los tres montos coinciden hoy**: tienda, sitio público y landing.
 
 ### Lo que devolvió la tienda de desarrollo (2026-10-13)
 
@@ -519,17 +521,6 @@ caiga directo en el calendario y no arriba de la página.
 de Eventos: mandar a una agencia a la página de reserva sería mandarla al
 flujo del consumidor final.
 
-### La pregunta abierta más importante: de dónde salen las fechas
-
-Antes la fecha era una variante, así que la lista podía salir de Shopify.
-**Ahora las variantes no tienen fecha**, así que la Storefront API ya no
-tiene de dónde dar el calendario: las fechas disponibles viven en Cowlendar,
-que es otra aplicación con su propia API.
-
-Esto decide si se puede hacer la inversión de diseño acordada o no. Si el
-calendario de Cowlendar no es consultable desde el navegador, volvemos a una
-lista escrita a mano en el HTML, con el mismo problema de siempre.
-
 ### Desde este entorno no se alcanza Shopify
 
 La política de red del entorno niega `brasasdelopirque.cl`, `shopify.com`
@@ -538,57 +529,32 @@ establecerse. Para probar la integración de verdad hay que agregar el
 dominio en **Network access** del entorno, o correr las consultas en el
 navegador del cliente y traer la salida.
 
-### EN PAUSA — esperando la tienda de desarrollo (2026-09-16)
+### Lo que falta por verificar
 
-**Lo que está en el repo es una primera pasada y va a cambiar.** El plan
-acordado con el cliente:
+- **Que las propiedades `_booking_date` pasen del carrito al pedido.** Ya se
+  comprobó que sobreviven en el carrito; falta verlas en un pedido real,
+  porque de ahí las lee `leerReserva()`. Requiere completar una compra de
+  prueba en la tienda de desarrollo.
+- **Que el Web App de Apps Script se pueda leer desde el sitio.** Los Web
+  Apps responden con un redirect a `googleusercontent.com` y eso tiene
+  manías conocidas con CORS. Es lo primero que hay que probar al desplegar,
+  no algo que se dé por hecho.
+- **Qué significa "solo reserva"** en la tienda: ¿pago completo, abono, pago
+  en el lugar? El sitio no ofrece esa modalidad justamente porque nadie lo ha
+  explicado, y cambia cómo se calcula el total.
+- **Qué versión de la Storefront API usar.** La configurada es `2024-10` y
+  lleva como un año fuera del plazo de soporte de Shopify. Responde, pero hay
+  que confirmar cuál corresponde antes de salir a producción.
 
-1. Esperar a que vuelva el dueño de la organización en Shopify.
-2. Crear una **tienda de desarrollo** desde su cuenta.
-3. Implementar la integración paso a paso ahí, y recién después producción.
+### Lo que este diseño no resuelve
 
-No avances la integración por tu cuenta mientras tanto: los cambios vienen
-desde esa tienda, no desde acá.
-
-**Mergear el código actual es seguro.** Sin token, el botón no llama a la API:
-muestra un aviso y manda a WhatsApp. Está verificado.
-
-### El cambio de diseño ya acordado, para cuando se retome
-
-Hoy los 20 IDs de variante están escritos en el HTML de `reservas.html`. Una
-tienda de desarrollo trae **su propio dominio, su propio token y sus propios
-IDs**, así que esos números no sirven allá, y los de allá tampoco sirven en
-producción: habría que cambiarlos a mano dos veces.
-
-**Acordado con el cliente: invertir eso.** Que el JS le **pida las variantes a
-Shopify al cargar** en vez de tenerlas escritas. Entonces lo único que cambia
-entre ambientes son dos líneas —`CONFIG.dominio` y `CONFIG.token`— y de paso
-se arregla solo el problema de las fechas que vencen, porque la lista sale de
-la tienda y no de un HTML que alguien tiene que acordarse de editar.
-
-No se hizo antes porque sin token no se puede ver cómo están armadas las
-opciones del producto, y habría sido adivinar la estructura.
-
-### Lo que hay que verificar con la tienda de desarrollo en pie
-
-- **Que Cowlendar acepte reservas creadas por fuera de su propio widget.**
-  Es el supuesto más grande de toda la integración: la app normalmente valida
-  disponibilidad ella misma, y acá el carrito se crea saltándose ese paso.
-  Hay que hacer una compra de prueba y confirmar que la reserva aparece en el
-  calendario de Cowlendar. Si la ignora, la reserva se cobra y no queda
-  agendada, que es el peor error posible acá.
-- Que la Storefront API responda en el dominio configurado. Si da 404 o CORS,
-  hay que usar el `*.myshopify.com` de la tienda.
-- Que el cupo por fecha se controle en alguna parte. Hoy nada impide vender
-  más lugares de los que hay: eso lo tiene que hacer el inventario de Shopify
-  o Cowlendar.
-
-### Pendiente conocido: fechas vencidas
-
-Las diez fechas del `<select>` son de septiembre 2026 y **cuatro ya pasaron**
-(5, 6, 12 y 13). El cliente decidió el 2026-09-16 **no** agregar un filtro
-provisorio, porque el arreglo de fondo es el cambio de diseño de arriba. Si
-alguien pregunta por qué el formulario ofrece fechas pasadas, es esto.
+- **Se puede sobrevender por un margen chico.** El cupo se descuenta cuando
+  el pedido ya está pagado. Entre que alguien llega al checkout y paga, otro
+  podría tomar los últimos lugares. Si molesta, se arregla reservando el
+  lugar unos minutos al crear el carrito.
+- **No manda correos.** La confirmación de compra la manda Shopify.
+- **No cancela ni reagenda.** Una cancelación en Shopify no borra la fila ni
+  el evento: hoy eso se hace a mano en la planilla.
 
 ## Estilo y marca
 
@@ -695,7 +661,7 @@ agencias que compran por grupo. Por eso:
   le decía a una familia de seis que no podía reservar.
 - El landing ofrece **cuatro** experiencias (Tradiciones $44.000 / Lo Pirque
   $50.000 / Brasas $70.000 / Sommelier $90.000). El sitio público ofrece
-  **dos** (Tradiciones $44.000 / A Brasas abiertas $60.000). Ver arriba.
+  **dos** (Tradiciones $44.000 / A Brasas abiertas $70.000). Ver arriba.
 
 **Supuesto sin confirmar:** que el mínimo de 25 no rige para venta directa.
 Se dedujo de que el producto en Shopify no muestra ningún mínimo. Si resulta
