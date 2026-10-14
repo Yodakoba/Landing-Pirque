@@ -56,6 +56,11 @@ el paso 3.
 En la planilla: **Extensiones → Apps Script**. Borra lo que venga y pega
 entero el contenido de `Codigo.gs`. Guarda.
 
+Y **un segundo archivo para el panel**: *Archivo → Nuevo → Archivo HTML*,
+llámalo **`Panel`** —sin `.html`, Apps Script se lo pone solo— y pega ahí el
+contenido de `Panel.html`. El nombre importa: `abrirPanel()` lo busca
+exactamente por ese nombre.
+
 ### 3. Las pestañas
 
 En el editor, elige **`prepararPlanilla`** en el desplegable de funciones y
@@ -185,6 +190,51 @@ Para no adivinar, corre **`probarDatosDelCliente()`** desde el editor. Mira
 el pedido más reciente y dice si el nombre y el correo están llegando o si
 los están censurando.
 
+**Cómo se ve la censura** (comprobado contra la tienda, pedido #1007,
+2026-10-14). Es al revés de lo que uno supondría:
+
+| | Cómo viene |
+|---|---|
+| Campo censurado por falta de permiso | **la llave no aparece** |
+| Dato que de verdad no existe | la llave está, en `null` |
+
+En ese pedido `shipping_address` vino en `null` —correcto, una reserva no
+tiene envío— mientras que `customer` y `billing_address` **traían datos pero
+sin las llaves** de nombre, correo y teléfono. Un objeto que existe y tiene
+contenido al que le faltan justo esos campos no es un cliente sin nombre: es
+un cliente censurado, y **no hay ningún campo alternativo del que sacarlo**.
+
+### En la tienda de desarrollo esto no se puede arreglar, y está bien
+
+Según el agente de Shopify del cliente (2026-10-14), **el acceso a datos
+protegidos necesita un plan pagado y no está disponible en una tienda de
+desarrollo**. No se pudo verificar desde el entorno de trabajo porque el
+dominio está bloqueado, pero la consecuencia práctica es la misma igual.
+
+**No bloquea nada y no hay que rehacer nada.** Todo lo demás de la cadena
+funciona —fechas, cupo, totales, modalidad, estado del pago, evento en el
+calendario— y las tres columnas de la persona se van a llenar **solas** cuando
+la tienda de producción tenga el permiso. No hay una línea de código que
+cambiar: el backend ya lee esos campos de donde corresponde.
+
+**Ojo al activar el permiso:** las reservas ya anotadas no se reescriben.
+`sincronizarPedidos()` solo corrige el `estado` de una fila que ya existe. Si
+se quiere que un pedido viejo recupere el nombre, hay que borrar su fila de
+`Reservas` y dejar que se vuelva a anotar.
+
+**No se duplica la captura en el formulario del sitio**, que era la otra
+salida posible: pedir el nombre y el correo en `reservas.html` y mandarlos
+como propiedad de línea, igual que `_booking_date`. Lo decidió el cliente el
+2026-10-14, y la razón es buena: **el checkout de Shopify ya los pide
+obligatoriamente**, así que el dato va a existir en producción de todas
+formas. Pedirlo dos veces solo le resta al formulario.
+
+**Y lo que NO es una salida:** consultar el Admin API "en vez del webhook".
+Este backend **ya consulta el Admin API con el token** —`pedidosDesde()`, un
+`GET /admin/api/…/orders.json`— y es justo esa llamada la que devolvió el
+pedido censurado. No hay ningún webhook en este proyecto. El permiso gobierna
+el **dato**, no la puerta por donde entra: por GraphQL pasa lo mismo.
+
 ### De qué campo sale cada dato
 
 Cuando los datos sí llegan, estos son los lugares donde Shopify los pone, en
@@ -280,6 +330,52 @@ apuntando a la vieja.
 Es lo que trae los pedidos y los convierte en reservas. **Trae los pagados y
 los que están por pagar**, porque una reserva con pago en el local es una
 reserva igual: ocupa la silla.
+
+## El panel
+
+En la planilla aparece un menú **Brasas → Panel de reservas**. La primera vez
+Google pide autorización, porque el panel lee la planilla.
+
+### Por qué vive adentro de la planilla y no es una página aparte
+
+- **La autenticación sale gratis.** Quien puede abrir la planilla puede abrir
+  el panel, y nadie más. Una página suelta que cambia cupos y fechas
+  necesitaría su propio login, y el Web App que usa el sitio está publicado
+  como "cualquier usuario": quien descubriera esa URL podría cambiarte el
+  aforo.
+- **Un solo lugar con la verdad.** Escribe y lee las mismas pestañas que ya
+  usa el sitio, así que no hay una segunda copia que se desfase.
+- **Nada nuevo que desplegar**: mismo proyecto, sin URL nueva, sin CORS.
+
+Y la planilla sigue siendo el respaldo: si el panel falla, las filas se
+editan a mano como siempre.
+
+### Ocupación
+
+Los próximos doce días abiertos —unos dos meses de fines de semana— con el
+reparto entre **pagadas** y **por pagar en el local**, cuántos lugares quedan
+y el cupo del día. Los días llenos **sí aparecen**: son justamente los que
+hay que mirar. El sitio no los ofrece, pero eso es otra cosa.
+
+**El reparto no es la modalidad comprada, es el estado del pago.** Son
+columnas distintas de `Reservas` y no significan lo mismo: alguien puede
+haber comprado *Pago directo* y estar *por pagar*, que es la fuga que
+vigilamos. Lo que el panel muestra es cuánta plata está adentro y cuánta se
+cobra en la puerta.
+
+**Una fila sin `estado` cuenta como pagada.** Son anteriores a que existiera
+la columna, y en esa época el backend solo anotaba pedidos pagados; contarlas
+como deuda inventaría una que no existe.
+
+### De dónde salen los números
+
+De `diasAbiertos()`, la misma función de la que sale lo que recibe el sitio.
+Son dos vistas de un cálculo, no dos cálculos: si mañana cambia la regla del
+cupo, el panel la sigue solo.
+
+Lo que el sitio recibe es **deliberadamente menos** —solo fecha, lugares que
+quedan y si son pocos—. Cuánta gente ya reservó, cuánto pagó y de qué tamaño
+es el local no son cosas que tenga que saber un visitante.
 
 ## Lo primero que hay que validar
 

@@ -132,14 +132,30 @@ function doGet(e) {
  * ofrece, y una vencida no puede aparecer ni por error, porque la lista
  * empieza en hoy.
  */
-function fechasAbiertas() {
+/**
+ * Los días abiertos con TODO lo que se sabe de cada uno.
+ *
+ * Es la base de dos cosas distintas: lo que recibe el sitio y lo que ve
+ * el panel. Viven de esta función para que no puedan decir cosas
+ * diferentes del mismo día.
+ *
+ * OJO: acá los días llenos SÍ van. El sitio los saca después, porque no
+ * puede ofrecer lo que no tiene; el panel los necesita, porque un día
+ * lleno es justamente el que hay que mirar.
+ *
+ * `tope` limita cuántos devolver, para que el panel no tenga que pedir
+ * tres meses de fines de semana cuando le bastan las próximas semanas.
+ */
+function diasAbiertos(tope) {
   var cfg = configuracion();
   var exc = excepciones();
-  var tomadas = lugaresTomadosPorFecha();
+  var ocup = ocupacionPorFecha();
   var hoy = hoyAca();
 
   var salida = [];
   for (var i = 0; i < cfg.dias_a_futuro; i++) {
+    if (tope && salida.length >= tope) break;
+
     var fecha = sumarDias(hoy, i);
     var e = exc[fecha];
 
@@ -150,15 +166,43 @@ function fechasAbiertas() {
     if (!abierta) continue;
 
     var cupo = (e && e.cupo) ? e.cupo : cfg.cupo_normal;
-    var quedan = Math.max(0, cupo - (tomadas[fecha] || 0));
-    if (quedan <= 0) continue;
+    var o = ocup[fecha] || { pagadas: 0, porPagar: 0, total: 0 };
+    var quedan = Math.max(0, cupo - o.total);
 
     salida.push({
       fecha: fecha,
+      cupo: cupo,
+      pagadas: o.pagadas,
+      porPagar: o.porPagar,
+      tomadas: o.total,
       quedan: quedan,
       // El sitio solo muestra el número cuando quedan pocos. Se calcula
       // acá para que el criterio viva en un solo lugar, la planilla.
-      pocos: quedan <= cfg.aviso_pocos_lugares
+      pocos: quedan <= cfg.aviso_pocos_lugares,
+      // Si el día es una excepción, por qué lo es.
+      nota: (e && e.nota) || '',
+      excepcion: !!e
+    });
+  }
+  return salida;
+}
+
+/**
+ * Lo que recibe el SITIO. Deliberadamente menos que diasAbiertos():
+ * cuánta gente ya reservó, cuánto pagó y de qué tamaño es el local no
+ * son cosas que tenga que saber un visitante. Solo van la fecha, cuántos
+ * lugares quedan y si son pocos.
+ */
+function fechasAbiertas() {
+  var salida = [];
+  var dias = diasAbiertos();
+  for (var i = 0; i < dias.length; i++) {
+    // Un día lleno no se ofrece.
+    if (dias[i].quedan <= 0) continue;
+    salida.push({
+      fecha: dias[i].fecha,
+      quedan: dias[i].quedan,
+      pocos: dias[i].pocos
     });
   }
   return salida;
@@ -210,7 +254,11 @@ function excepciones() {
     var txt = sinTildes(String(filas[i].abierta || '')).trim().toLowerCase();
     var abierta = txt === '' ? null : txt.charAt(0) === 's';
 
-    mapa[fecha] = { abierta: abierta, cupo: Number(filas[i].cupo) || 0 };
+    mapa[fecha] = {
+      abierta: abierta,
+      cupo: Number(filas[i].cupo) || 0,
+      nota: String(filas[i].nota || '').trim()
+    };
   }
   return mapa;
 }
@@ -221,8 +269,8 @@ function excepciones() {
  * Cuenta adultos Y niños: el cupo son las personas que entran ese día,
  * que es lo que limita sillas, mesas y comida (decidido el 2026-10-13).
  */
-function lugaresTomadosPorFecha() {
-  var tomadas = {};
+function ocupacionPorFecha() {
+  var mapa = {};
   var filas = datos(HOJA_RESERVAS);
   for (var i = 0; i < filas.length; i++) {
     var fecha = comoFecha(filas[i].fecha_reserva);
@@ -230,12 +278,21 @@ function lugaresTomadosPorFecha() {
 
     // Una reserva cancelada libera su cupo. Una SIN PAGAR no: la silla
     // queda ocupada igual, y el día se llena con las dos.
-    if (String(filas[i].estado || '').toLowerCase() === 'cancelada') continue;
+    var estado = String(filas[i].estado || '').trim().toLowerCase();
+    if (estado === 'cancelada') continue;
 
     var n = (Number(filas[i].adultos) || 0) + (Number(filas[i].ninos) || 0);
-    tomadas[fecha] = (tomadas[fecha] || 0) + n;
+    if (!mapa[fecha]) mapa[fecha] = { pagadas: 0, porPagar: 0, total: 0 };
+
+    // Una fila SIN estado es anterior a que existiera la columna, y en
+    // esa época el backend solo anotaba pedidos con financial_status=paid.
+    // O sea que estaba pagada: contarla como "por pagar" haría que el
+    // panel mostrara una deuda que no existe.
+    if (estado === 'pagada' || estado === '') mapa[fecha].pagadas += n;
+    else mapa[fecha].porPagar += n;
+    mapa[fecha].total += n;
   }
-  return tomadas;
+  return mapa;
 }
 
 /* =============================================================
@@ -740,6 +797,61 @@ function registrar(nivel, mensaje) {
 }
 
 /* =============================================================
+   Panel de administración
+   -------------------------------------------------------------
+   Vive DENTRO de la planilla, como un menú propio y una ventana.
+   No es una página aparte, y eso es a propósito:
+
+   - La autenticación sale gratis. Quien puede abrir la planilla puede
+     abrir el panel, y nadie más. Una página suelta que cambia cupos y
+     fechas necesitaría su propio login, y el Web App que usa el sitio
+     está publicado como "cualquier usuario".
+   - Un solo lugar con la verdad: escribe en las mismas pestañas que ya
+     lee el sitio, así que no hay una segunda copia que se desfase.
+   - Nada nuevo que desplegar: mismo proyecto, sin URL nueva, sin CORS.
+
+   Y la planilla sigue siendo el respaldo: si el panel falla, las filas
+   se editan a mano como siempre.
+   ============================================================= */
+
+/**
+ * El menú de arriba. Es un activador simple: Google lo corre solo al
+ * abrir la planilla, sin pedir permisos, porque crear un menú no toca
+ * datos. Lo que el menú abre sí corre con la sesión de quien lo aprieta.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Brasas')
+    .addItem('Panel de reservas', 'abrirPanel')
+    .addToUi();
+}
+
+function abrirPanel() {
+  var html = HtmlService.createHtmlOutputFromFile('Panel')
+    .setWidth(920)
+    .setHeight(640);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Reservas');
+}
+
+/**
+ * Lo que el panel pide para dibujar la ocupación.
+ *
+ * Devuelve los próximos días abiertos, llenos incluidos, con el reparto
+ * entre pagadas y por pagar. Doce días abiertos son unos dos meses de
+ * fines de semana: suficiente para planificar sin traer la agenda entera.
+ */
+function panelOcupacion() {
+  var dias = diasAbiertos(12);
+  var cfg = configuracion();
+  return {
+    dias: dias,
+    cupoNormal: cfg.cupo_normal,
+    hoy: hoyAca()
+  };
+}
+
+
+/* =============================================================
    Para correr a mano desde el editor, al configurar
    ============================================================= */
 
@@ -839,11 +951,11 @@ function probarDatosDelCliente() {
              '   total: ' + p.total_price + ' ' + p.currency);
   Logger.log('');
 
-  // Campo por campo, y distinguiendo "la llave no está" de "la llave está
-  // pero vino nula". No es un matiz: cuando Shopify censura un dato manda
-  // la llave en null, no la omite. Si todas las llaves están presentes y
-  // todas en null, eso es censura y no un pedido sin datos, y no hay
-  // ningún campo alternativo del que sacarlo.
+  // Campo por campo, distinguiendo "la llave no aparece" de "está en null".
+  // Comprobado contra la tienda: Shopify CENSURA OMITIENDO la llave, y usa
+  // null para un dato que de verdad no hay. Así que un `customer` que trae
+  // datos pero sin `first_name` ni `email` no es un cliente sin nombre: es
+  // un cliente censurado, y no hay campo alternativo del que sacarlo.
   Logger.log('Qué trae el pedido, campo por campo:');
   Logger.log('  order.email           ' + estadoDelCampo(p, 'email'));
   Logger.log('  order.contact_email   ' + estadoDelCampo(p, 'contact_email'));
@@ -877,32 +989,71 @@ function probarDatosDelCliente() {
     Logger.log('parte y la lista de arriba dice de qué campo hay que sacarlos.');
   } else if (!nombreDe(p) && !emailDe(p)) {
     Logger.log('DIAGNÓSTICO: el pedido llega completo —líneas y total— pero sin');
-    Logger.log('nombre NI correo, en ninguno de los campos de arriba. Eso no es');
-    Logger.log('de qué campo se lee: es el permiso de datos protegidos del');
-    Logger.log('cliente, que read_orders no incluye. Se habilita en el admin de');
-    Logger.log('Shopify, en la app que generó el token. Ver backend/README.md.');
+    Logger.log('nombre NI correo, en ninguno de los campos de arriba.');
+
+    var censurado =
+      pareceCensurado(p.customer, ['first_name', 'last_name', 'email', 'phone']) ||
+      pareceCensurado(p.billing_address, ['name', 'first_name', 'last_name', 'phone']);
+    if (censurado) {
+      Logger.log('Y hay objetos que traen datos pero a los que les faltan JUSTO');
+      Logger.log('esas llaves, que es la firma de la censura. Eso descarta que');
+      Logger.log('sea de qué campo se lee.');
+    }
+
+    Logger.log('Es el permiso de datos protegidos del cliente, que read_orders');
+    Logger.log('no incluye. Se habilita en el admin de Shopify, en la app que');
+    Logger.log('generó el token.');
+    Logger.log('');
+    Logger.log('EN UNA TIENDA DE DESARROLLO ESTO ES LO ESPERADO y no hay nada');
+    Logger.log('que arreglar acá: el permiso necesita un plan pagado. Las tres');
+    Logger.log('columnas se llenan solas en producción, sin tocar una línea de');
+    Logger.log('código. Ver backend/README.md.');
   } else {
     Logger.log('DIAGNÓSTICO: llega uno de los dos y el otro no. Mira la lista de');
-    Logger.log('arriba: si el que falta tiene su llave presente y en null, es el');
-    Logger.log('permiso; si la llave no está, ese pedido no traía el dato.');
+    Logger.log('arriba: si al que falta le falta la LLAVE dentro de un objeto que');
+    Logger.log('sí trae datos, es el permiso; si viene en null, ese pedido no');
+    Logger.log('tenía el dato.');
   }
 }
 
 /**
  * Si una llave falta, vino nula, vino vacía o trae algo.
  *
- * La diferencia entre "no está" y "está en null" es la que decide esta
- * discusión: cuando Shopify censura un dato por falta de permiso manda la
- * llave en null, no la omite. Un pedido que de verdad no tiene el dato
- * suele no traer la llave.
+ * COMPROBADO CONTRA LA TIENDA (pedido #1007, 2026-10-14), y resultó ser al
+ * revés de lo que uno supondría:
+ *
+ *   - Censurado por falta de permiso  -> LA LLAVE NO APARECE.
+ *   - Sin valor de verdad             -> la llave está, en null.
+ *
+ * En ese pedido `shipping_address` vino en null —correcto, una reserva no
+ * tiene envío— mientras que `customer` y `billing_address` traían datos
+ * pero SIN las llaves de nombre, correo y teléfono. Un objeto que existe y
+ * tiene contenido al que le faltan justo esos campos es la firma de la
+ * censura; un null es un dato que de verdad no hay.
  */
 function estadoDelCampo(obj, llave) {
-  if (!obj || !obj.hasOwnProperty(llave)) return '-> la llave NO ESTÁ';
+  if (!obj || !obj.hasOwnProperty(llave)) return '-> la llave NO APARECE';
   var v = obj[llave];
-  if (v === null) return '-> está, en NULL  (firma de censura)';
+  if (v === null) return '-> está, en null  (no hay dato)';
   if (v === '') return '-> está, VACÍA';
   if (typeof v === 'object') return '-> trae datos';
   return '-> trae algo';
+}
+
+/**
+ * ¿El objeto existe y tiene contenido, pero sin ninguna de estas llaves?
+ * Eso no pasa por casualidad: es la censura sacando los campos protegidos
+ * de un objeto que por lo demás viene entero.
+ */
+function pareceCensurado(obj, llaves) {
+  if (!obj || typeof obj !== 'object') return false;
+  var tieneAlgo = false;
+  for (var k in obj) { if (obj.hasOwnProperty(k)) { tieneAlgo = true; break; } }
+  if (!tieneAlgo) return false;
+  for (var i = 0; i < llaves.length; i++) {
+    if (obj.hasOwnProperty(llaves[i])) return false;
+  }
+  return true;
 }
 
 /** Deja ver si un correo llegó, sin escribirlo entero en el registro. */

@@ -147,19 +147,30 @@ ok(ctx.telefonoDe({ billing_address: {}, customer: { phone: '+56 9 4444' } }) ==
    'una direccion sin telefono no tapa al de la ficha');
 ok(ctx.telefonoDe({}) === '', 'sin ninguno, vacio');
 
-// estadoDelCampo distingue los cuatro casos. La diferencia entre "no esta"
-// y "esta en null" es la que decide si falta un permiso o si el pedido de
-// verdad no traia el dato.
-ok(ctx.estadoDelCampo({}, 'email').indexOf('NO ESTÁ') !== -1,
+// estadoDelCampo distingue los cuatro casos.
+ok(ctx.estadoDelCampo({}, 'email').indexOf('NO APARECE') !== -1,
    'una llave ausente se reporta como ausente');
-ok(ctx.estadoDelCampo({ email: null }, 'email').indexOf('NULL') !== -1,
-   'una llave en null se reporta como null, que es la firma de censura');
+ok(ctx.estadoDelCampo({ email: null }, 'email').indexOf('null') !== -1,
+   'una llave en null se reporta como null');
 ok(ctx.estadoDelCampo({ email: '' }, 'email').indexOf('VACÍA') !== -1,
    'una llave vacia no es lo mismo que una en null');
 ok(ctx.estadoDelCampo({ email: 'a@b.cl' }, 'email').indexOf('trae') !== -1,
    'una llave con valor se reporta como que trae algo');
-ok(ctx.estadoDelCampo(null, 'email').indexOf('NO ESTÁ') !== -1,
+ok(ctx.estadoDelCampo(null, 'email').indexOf('NO APARECE') !== -1,
    'un objeto nulo no revienta');
+
+// pareceCensurado: un objeto que trae datos pero sin JUSTO esas llaves.
+// Comprobado contra el pedido #1007 de la tienda: asi se ve la censura,
+// y NO como llaves en null, que era lo que se supuso al principio.
+const PII = ['first_name', 'last_name', 'email', 'phone'];
+ok(ctx.pareceCensurado({ id: 1, state: 'enabled' }, PII) === true,
+   'un customer con datos pero sin ninguna llave de persona: censurado');
+ok(ctx.pareceCensurado({ id: 1, first_name: 'Ana' }, PII) === false,
+   'si trae una de las llaves, no esta censurado');
+ok(ctx.pareceCensurado({ id: 1, email: null }, PII) === false,
+   'una llave presente en null es un dato que no hay, no censura');
+ok(ctx.pareceCensurado(null, PII) === false, 'un objeto nulo no es censura');
+ok(ctx.pareceCensurado({}, PII) === false, 'un objeto vacio tampoco: no trae nada que censurar');
 
 // El correo se enmascara para no dejarlo entero en el registro.
 ok(ctx.enmascarar('ana.soto@correo.cl') === 'an***@correo.cl', 'el correo se enmascara');
@@ -317,6 +328,59 @@ ok(montar([]).length > 0, 'con la Config vacía igual ofrece fechas');
 
 // 10. Nunca ofrece una fecha anterior a hoy.
 ok(montar(base).every((x) => x.fecha >= '2026-11-14'), 'ninguna fecha vencida');
+
+/* ---------- el panel: ocupacion repartida por estado ---------- */
+
+// Lo que el panel dibuja. Dos reservas el mismo dia, una pagada y una por
+// pagar, mas una cancelada que no tiene que contar en ninguna de las dos.
+montar(base, [], [
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'pagada',    4, 2],
+  ['2', sabado, 'por pagar', 3, 0],
+  ['3', sabado, 'cancelada', 9, 9]
+]);
+let pDias = ctx.diasAbiertos();
+let pSab = pDias.find((x) => x.fecha === sabado);
+ok(pSab.pagadas === 6, 'suma 6 personas pagadas (4 adultos + 2 ninos)');
+ok(pSab.porPagar === 3, 'y 3 por pagar, aparte');
+ok(pSab.tomadas === 9, 'el total es la suma de las dos, sin la cancelada');
+ok(pSab.quedan === 51, 'y lo que queda descuenta las dos, no solo la pagada');
+ok(pSab.cupo === 60, 'el panel ve el cupo del dia, que el sitio no recibe');
+
+// Una fila vieja sin estado es anterior a la columna, y en esa epoca solo
+// se anotaban pedidos pagados: contarla como deuda inventaria una.
+montar(base, [], [
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, '', 4, 0]
+]);
+pSab = ctx.diasAbiertos().find((x) => x.fecha === sabado);
+ok(pSab.pagadas === 4 && pSab.porPagar === 0,
+   'una fila sin estado cuenta como pagada, no como deuda');
+
+// Un dia LLENO lo ve el panel y no lo ve el sitio. Es la diferencia que
+// justifica que sean dos funciones.
+montar(base, [[sabado, '', 6, 'Medio aforo']], [
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'pagada', 6, 0]
+]);
+ok(ctx.diasAbiertos().some((x) => x.fecha === sabado),
+   'el panel ve un dia lleno: es justo el que hay que mirar');
+ok(!ctx.fechasAbiertas().some((x) => x.fecha === sabado),
+   'y el sitio no lo ofrece, porque no puede venderlo');
+pSab = ctx.diasAbiertos().find((x) => x.fecha === sabado);
+ok(pSab.nota === 'Medio aforo', 'la nota de la excepcion llega al panel');
+ok(pSab.excepcion === true, 'y queda marcado que ese dia es una excepcion');
+
+// El sitio recibe deliberadamente MENOS: cuanta gente reservo, cuanto
+// pago y de que tamano es el local no son cosas de un visitante.
+montar(base);
+const delSitio = ctx.fechasAbiertas()[0];
+ok(Object.keys(delSitio).sort().join(',') === 'fecha,pocos,quedan',
+   'el sitio solo recibe fecha, quedan y pocos: nada de cupo ni de pagadas');
+
+// El tope existe para que el panel no pida tres meses de fines de semana.
+ok(ctx.diasAbiertos(3).length === 3, 'el tope limita cuantos dias devuelve');
+ok(ctx.diasAbiertos().length > 3, 'y sin tope devuelve todos los de la ventana');
 
 /* ---------- prepararPlanilla: las cuatro pestanas ---------- */
 
