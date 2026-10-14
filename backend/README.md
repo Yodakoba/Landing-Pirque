@@ -217,6 +217,13 @@ cambiar: el backend ya lee esos campos de donde corresponde.
 se quiere que un pedido viejo recupere el nombre, hay que borrar su fila de
 `Reservas` y dejar que se vuelva a anotar.
 
+**No se duplica la captura en el formulario del sitio**, que era la otra
+salida posible: pedir el nombre y el correo en `reservas.html` y mandarlos
+como propiedad de línea, igual que `_booking_date`. Lo decidió el cliente el
+2026-10-14, y la razón es buena: **el checkout de Shopify ya los pide
+obligatoriamente**, así que el dato va a existir en producción de todas
+formas. Pedirlo dos veces solo le resta al formulario.
+
 **Y lo que NO es una salida:** consultar el Admin API "en vez del webhook".
 Este backend **ya consulta el Admin API con el token** —`pedidosDesde()`, un
 `GET /admin/api/…/orders.json`— y es justo esa llamada la que devolvió el
