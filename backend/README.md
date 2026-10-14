@@ -159,6 +159,21 @@ access token**, que empieza en `shpat_`.
 > token se guarda en las propiedades del script, que nunca salen al
 > navegador. Es el lugar correcto para uno.
 
+**Y hace falta una segunda cosa, que es la que se olvida: el acceso a datos
+protegidos del cliente.** `read_orders` deja leer el pedido, pero **no** el
+nombre, el correo, el teléfono ni las direcciones. Shopify los trata aparte
+y hay que pedirlos explícitamente en la configuración de la app, en la
+sección de **datos protegidos del cliente** (*Protected customer data*).
+
+**Lo peor es cómo falla: no falla.** El pedido llega completo —líneas,
+total, fecha— y esos campos vienen simplemente en blanco. Nadie avisa que
+los censuró. Desde la planilla se ve igual que un pedido sin datos, y son
+cosas distintas que se arreglan en lugares distintos.
+
+Para no adivinar, corre **`probarDatosDelCliente()`** desde el editor. Mira
+el pedido más reciente y dice si el nombre y el correo están llegando o si
+los están censurando.
+
 ### 7. Las propiedades
 
 En el editor de Apps Script: **Configuración del proyecto → Propiedades del
@@ -184,14 +199,16 @@ primera función del archivo, que es una ayudante interna. Si aprietas
 Ejecutar sin cambiarla, sale un error que no tiene que ver con tu
 configuración. **Elige la función en el desplegable antes de ejecutar.**
 
-En el editor hay cinco funciones para correr a mano. `prepararPlanilla()` ya
-se corrió en el paso 3; las otras cuatro van en este orden:
+En el editor hay seis funciones para correr a mano. `prepararPlanilla()` ya
+se corrió en el paso 3; las otras cinco van en este orden:
 
 1. `revisarConfiguracion()` — que las cuatro propiedades estén.
 2. `probarShopify()` — que el token sirva. Muestra cuántos pedidos hay en
    los últimos 30 días.
-3. `probarCalendario()` — que el calendario exista y se pueda escribir.
-4. `probarFechas()` — muestra lo que el sitio recibiría hoy.
+3. `probarDatosDelCliente()` — que el nombre y el correo estén llegando y no
+   censurados. Ver el paso 6.
+4. `probarCalendario()` — que el calendario exista y se pueda escribir.
+5. `probarFechas()` — muestra lo que el sitio recibiría hoy.
 
 La primera vez Google va a pedir autorización. Como el script no está
 verificado, aparece una pantalla de advertencia: **Configuración avanzada →
@@ -279,6 +296,8 @@ válidas y vacías.
   datos de clientes.
 - El token de Shopify y el ID del calendario viven en las propiedades del
   script, **nunca en este repo ni en el navegador**.
-- El token pide **solo `read_orders`**. No puede modificar la tienda.
+- El token pide **solo `read_orders`**, más el acceso a datos protegidos del
+  cliente, que es lo que hace falta para anotar a nombre de quién va la
+  reserva. No puede modificar la tienda.
 - `sincronizarPedidos()` toma un candado, para que dos corridas solapadas no
   puedan duplicar una reserva, y además ignora los pedidos ya anotados.

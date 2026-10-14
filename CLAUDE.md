@@ -434,6 +434,12 @@ se guarda en las propiedades del script, que nunca salen al navegador.
 - **Las reservas sin pagar se anotan igual y toman cupo** (2026-10-14). El
   backend dejó de filtrar por `financial_status=paid`; ver `backend/README.md`.
   Una cancelada libera su cupo, una por pagar no.
+- **`read_orders` no alcanza para el nombre y el correo del cliente.**
+  Shopify los trata como datos protegidos y hay que pedirlos aparte en la
+  configuración de la app. **Y no falla avisando**: el pedido llega
+  completo y esos campos vienen en blanco, igual que un pedido sin datos.
+  `probarDatosDelCliente()` distingue los dos casos. Ver
+  `backend/README.md`.
 - **Los títulos de las cuatro pestañas de la planilla no se escriben a
   mano**: los deja `prepararPlanilla()`, que se corre una vez desde el
   editor de Apps Script y es segura de repetir. No es comodidad: el script
