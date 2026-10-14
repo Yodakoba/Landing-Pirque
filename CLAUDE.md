@@ -35,9 +35,35 @@ convertido cada cambio de copy en tres ediciones, y un selector en
 JavaScript habría roto la regla de cero JS y dejado a Google indexando solo
 el español.
 
+### La versión de los assets (`?v=`), que no es decorativa
+
+Cada `<link>` y `<script>` de `assets/` va con `?v=<hash del archivo>`, y
+**ese hash lo pone el script**, sacado del contenido del archivo. Es lo
+único que `traducir.py` le escribe a los archivos españoles de la raíz.
+
+Arregla un error real y feo del 2026-10-14. Se publicó un `reserva.js`
+nuevo junto a un `reservas.html` nuevo, pero los navegadores que ya habían
+entrado antes siguieron usando **el JS viejo**, que buscaba elementos que
+ese HTML ya no tenía. Se devolvía antes de dibujar el calendario y antes de
+conectar un solo botón: **el calendario desaparecía y los `+`/`−` no hacían
+nada, sin un error en consola**, porque el JS viejo no fallaba, simplemente
+se iba. A quien no había entrado nunca le funcionaba perfecto, que es lo
+que hace difícil de ver este tipo de error.
+
+Con la versión en la URL no puede volver a pasar: si el archivo cambia, su
+URL cambia, y ningún navegador puede servir el de antes. Si no cambia, la
+URL es la misma y la caché se sigue aprovechando.
+
+**El hash sale del contenido, no de un número a mano.** Un número a mano es
+justo lo que alguien olvida subir, y el olvido se ve recién en producción.
+Por lo mismo, **tocar el CSS o el JS ahora obliga a correr
+`python3 tools/traducir.py`**, igual que tocar el HTML: `--revisar` lo
+delata nombrando las páginas con la versión vieja.
+
 ### El flujo de trabajo, que es lo único que hay que recordar
 
-1. Editas el español en la raíz, como siempre.
+1. Editas el español en la raíz, como siempre. **O el CSS, o el JS**: la
+   versión de los assets también sale de ahí.
 2. Corres `python3 tools/traducir.py`.
 3. Commiteas las tres versiones juntas.
 
