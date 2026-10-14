@@ -60,7 +60,8 @@ usa una llave calificada `"archivo.html|texto"`, que le gana a la suelta solo
 en ese archivo. Las llaves que parten con `_` son comentarios, no textos.
 
 Lo que **no** pasa por el diccionario, porque se reconoce por su forma:
-números, teléfonos, correos, dominios y URLs. Los nombres propios
+números, teléfonos, correos, dominios, URLs y la puntuación suelta —ahí
+entran el `+` y el `−` de los contadores del formulario de reserva—. Los nombres propios
 (`Tradiciones`, `Sommelier`, `Pirque`, `WhatsApp`) están en la lista
 `PROPIOS` del script.
 
@@ -350,13 +351,18 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   `cargarFechas()` revisa el campo `error` y no solo `response.ok` — sin
   eso, una falla del backend se vería en pantalla como "no hay fechas", que
   es otra cosa y manda a buscar el problema donde no está.
-- **`CONFIG.token` vacío es el interruptor de toda la integración.** Con el
-  token en blanco el botón no llama a la API: avisa y manda a WhatsApp.
-  Llenarlo es lo que la enciende **para cualquiera que entre al sitio
-  publicado**, así que no se llena hasta que la tienda esté lista. El token
-  de la tienda de desarrollo está en la conversación con el cliente y **no
-  se commitea**: apuntar el sitio en vivo a una tienda de desarrollo
-  mandaría a la gente a un checkout que no puede cobrar.
+- **`CONFIG.token` es el interruptor de toda la integración, y está
+  encendido desde el 2026-10-14.** Lo decidió el cliente para poder probar
+  la cadena completa mientras el sitio todavía no se difunde: el token del
+  Storefront es público por diseño, así que vivir en el archivo no es el
+  problema; el problema es a qué tienda apunta. **Apunta a la de
+  desarrollo**, o sea que quien apriete "Terminar reserva" hoy cae en un
+  checkout que no puede cobrarle. Con el token en blanco, en cambio, el
+  botón no llama a la API: avisa y manda a WhatsApp.
+- **Antes de difundir el sitio hay que cambiar las tres cosas juntas**:
+  el token, `CONFIG.dominio` y los IDs de variante del HTML. Cambiar una
+  sola deja el formulario apuntando a medias y falla en el checkout, que es
+  el peor lugar para fallar.
 - **`CONFIG.dominio` apunta hoy a la tienda de desarrollo**
   (`brasas-de-lo-pirque-development.myshopify.com`). Al salir a producción
   hay que cambiar esa línea, el token, **y los IDs de variante del HTML**,
@@ -366,12 +372,23 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
   variante: **viaja como propiedad de línea** para que Cowlendar la
   registre. El modelo se simplificó solo.
-- **Los IDs de variante y los precios viven en el HTML**, no en el JS: el de
-  cada menú en su `<option>` de `#r-menu` (`data-variante`, `data-precio`),
-  y el de niños en los `data-*` del propio `.reserva-widget`, porque el menú
-  de niños es uno solo para los dos de adultos. Se hizo así para que el
-  formulario siga siendo correcto aunque el JS no cargue, y para tener un
-  solo lugar que editar.
+- **Las tres opciones van visibles a la vez, cada una con su contador**
+  (2026-10-14). Antes era un desplegable y un solo menú por pedido, lo que
+  dejaba fuera algo tan corriente como tres personas con Tradiciones y dos
+  con A Brasas abiertas. Ahora cada fila `[data-opcion]` es una línea del
+  carrito y las que quedan en cero no se agregan.
+- **Los contadores son botones de 44px, no las flechitas del
+  `<input type=number>`**, que son de unos 10px y en celular no se aciertan.
+  El input sigue debajo y se puede escribir: los botones son una comodidad
+  encima, no el único camino, y `recalcular()` normaliza lo que se escriba.
+- **El menú de niños se puede pedir solo** (decidido por el cliente el
+  2026-10-14). No hay mínimo de adultos: un pedido de tres menús de niños y
+  nada más es válido. Lo único que el formulario no deja es el pedido
+  vacío.
+- **Los IDs de variante y los precios viven en el HTML**, no en el JS: cada
+  fila `[data-opcion]` lleva los suyos (`data-variante`, `data-precio`), y
+  `data-tipo` dice si cuenta como adulto. Se hizo así para tener un solo
+  lugar que editar al pasar a producción, donde los IDs son otros.
 - **La fecha se elige en un calendario mensual**, no en un desplegable
   (2026-10-13). Lo dibuja `reserva.js` con lo que entrega el backend, y la
   fecha elegida queda en el input oculto `#r-fecha`. **El sitio no decide
@@ -390,9 +407,9 @@ se guarda en las propiedades del script, que nunca salen al navegador.
 - Los nombres de mes y de día **no están en los diccionarios**: salen de
   `toLocaleDateString` con el idioma de la página. La semana parte en lunes
   en los tres idiomas, que es la convención chilena.
-- **El botón solo se habilita con una fecha elegida que tenga lugares
-  suficientes.** Pedir más lugares de los que quedan lo apaga y lo dice. Es
-  preferible a dejar apretar y fallar en el checkout.
+- **El botón solo se habilita con una fecha elegida, al menos una persona
+  y lugares suficientes.** Pedir más lugares de los que quedan lo apaga y lo
+  dice. Es preferible a dejar apretar y fallar en el checkout.
 - Cada línea del carrito lleva dos propiedades con la fecha:
   `_booking_date` y `_cowlendar_date`. El guion bajo las oculta del
   checkout. **Se mantienen las dos aunque Cowlendar ya no esté**: el backend

@@ -47,20 +47,17 @@
 <section class="pad" id="reserva-en-linea">
   <div class="wrap">
     <!-- Los IDs de variante y los precios viven en el HTML a proposito: asi
-         el formulario sigue siendo correcto aunque el JS no cargue, y hay un
-         solo lugar que editar. El menu de ninos es uno solo para los dos
-         menus de adultos, por eso cuelga del widget y no de cada opcion. -->
-    <div class="reserva-widget" data-nino="50684218081497" data-precio-nino="19000">
+         hay un solo lugar que editar y el formulario sigue diciendo la
+         verdad aunque el JS falle.
+
+         Las tres opciones van visibles al mismo tiempo, cada una con su
+         contador, para que un mismo pedido pueda llevar dos menus
+         distintos: tres personas con Tradiciones y dos con A Brasas
+         abiertas es un pedido normal y antes no se podia armar. Cada fila
+         es una linea del carrito; las que quedan en cero no se agregan. -->
+    <div class="reserva-widget">
 
       <h2 class="reserva-titulo">Book online</h2>
-
-      <div class="campo">
-        <label class="etiqueta" for="r-menu">Choose a menu</label>
-        <select id="r-menu">
-          <option value="tradiciones" data-variante="50684108013785" data-precio="44000">Tradiciones menu</option>
-          <option value="brasas" data-variante="50684143173849" data-precio="70000">A Brasas abiertas menu</option>
-        </select>
-      </div>
 
       <div class="campo">
         <span class="etiqueta" id="r-fecha-titulo">Choose a date</span>
@@ -74,27 +71,48 @@
       </div>
       <p class="aviso" data-aviso-fecha>Choose the right date before continuing.</p>
 
-      <div class="reserva-fila">
-        <div class="quien">Adults</div>
-        <div>
-          <label class="etiqueta" for="r-adultos">Quantity</label>
-          <input id="r-adultos" type="number" min="1" step="1" value="2">
+      <div class="reserva-fila" data-opcion
+           data-variante="50684108013785" data-precio="44000"
+           role="group" aria-labelledby="r-op-tradiciones">
+        <div class="quien" id="r-op-tradiciones">Tradiciones menu <small>Per adult</small></div>
+        <div class="contador">
+          <button class="paso" type="button" data-menos aria-label="Remove one person">−</button>
+          <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Number of people">
+          <button class="paso" type="button" data-mas aria-label="Add one person">+</button>
         </div>
-        <div class="valor" data-precio-adulto>$44,000 CLP</div>
+        <div class="valor">$44,000 CLP</div>
       </div>
 
-      <div class="reserva-fila">
-        <div class="quien">Children <small>Ages 4 to 12</small></div>
-        <div>
-          <label class="etiqueta" for="r-ninos">Quantity</label>
-          <input id="r-ninos" type="number" min="0" step="1" value="0">
+      <div class="reserva-fila" data-opcion
+           data-variante="50684143173849" data-precio="70000"
+           role="group" aria-labelledby="r-op-brasas">
+        <div class="quien" id="r-op-brasas">A Brasas abiertas menu <small>Per adult</small></div>
+        <div class="contador">
+          <button class="paso" type="button" data-menos aria-label="Remove one person">−</button>
+          <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Number of people">
+          <button class="paso" type="button" data-mas aria-label="Add one person">+</button>
+        </div>
+        <div class="valor">$70,000 CLP</div>
+      </div>
+
+      <div class="reserva-fila" data-opcion
+           data-variante="50684218081497" data-precio="19000"
+           role="group" aria-labelledby="r-op-ninos">
+        <div class="quien" id="r-op-ninos">Children's menu <small>Ages 4 to 12</small></div>
+        <div class="contador">
+          <button class="paso" type="button" data-menos aria-label="Remove one person">−</button>
+          <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Number of people">
+          <button class="paso" type="button" data-mas aria-label="Add one person">+</button>
         </div>
         <div class="valor">$19,000 CLP</div>
       </div>
 
+      <!-- Las tres opciones nacen en cero: el pedido lo arma la persona,
+           el sitio no elige por ella. Estos dos numeros dicen la verdad
+           aunque el JS no corra, y recalcular() los reescribe apenas corre. -->
       <div class="reserva-total">
-        <span>People <b data-total-personas>2</b></span>
-        <span>Total <b data-total-precio>$88,000 CLP</b></span>
+        <span>People <b data-total-personas>0</b></span>
+        <span>Total <b data-total-precio>$0</b></span>
       </div>
 
       <div class="btn-row">

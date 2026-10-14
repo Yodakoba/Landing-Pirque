@@ -1,0 +1,3 @@
+# Los .pyc de tools/traducir.py: se regeneran solos y no van al repo.
+__pycache__/
+*.pyc
