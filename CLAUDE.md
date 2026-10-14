@@ -434,6 +434,13 @@ se guarda en las propiedades del script, que nunca salen al navegador.
 - **Las reservas sin pagar se anotan igual y toman cupo** (2026-10-14). El
   backend dejó de filtrar por `financial_status=paid`; ver `backend/README.md`.
   Una cancelada libera su cupo, una por pagar no.
+- **Los títulos de las cuatro pestañas de la planilla no se escriben a
+  mano**: los deja `prepararPlanilla()`, que se corre una vez desde el
+  editor de Apps Script y es segura de repetir. No es comodidad: el script
+  busca cada valor por el **nombre** de su columna, y la normalización
+  arregla mayúsculas y espacios pero **no tildes**, así que un `Menú` o un
+  `Niños` escritos a mano no calzan con `menu` y `ninos`. Y no da error:
+  deja la columna vacía, o la duplica al lado.
 - **La fecha se elige en un calendario mensual**, no en un desplegable
   (2026-10-13). Lo dibuja `reserva.js` con lo que entrega el backend, y la
   fecha elegida queda en el input oculto `#r-fecha`. **El sitio no decide
