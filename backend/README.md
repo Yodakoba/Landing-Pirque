@@ -56,10 +56,14 @@ el paso 3.
 En la planilla: **Extensiones → Apps Script**. Borra lo que venga y pega
 entero el contenido de `Codigo.gs`. Guarda.
 
-Y **un segundo archivo para el panel**: *Archivo → Nuevo → Archivo HTML*,
-llámalo **`Panel`** —sin `.html`, Apps Script se lo pone solo— y pega ahí el
-contenido de `Panel.html`. El nombre importa: `abrirPanel()` lo busca
-exactamente por ese nombre.
+Y **dos archivos HTML más**, para las dos ventanas. El + de arriba a la
+izquierda → **HTML**, con estos nombres exactos (sin `.html`, Apps Script se
+lo pone solo), y pegar adentro el archivo del mismo nombre de `backend/`:
+
+- **`Formulario`** — agregar una reserva a mano.
+- **`Calendario`** — abrir y cerrar días.
+
+Los nombres importan: el código los busca exactamente así.
 
 ### 3. Las pestañas
 
@@ -333,49 +337,100 @@ reserva igual: ocupa la silla.
 
 ## El panel
 
-En la planilla aparece un menú **Brasas → Panel de reservas**. La primera vez
-Google pide autorización, porque el panel lee la planilla.
+En la planilla aparece un menú **Brasas** con cuatro cosas. La primera vez
+Google pide autorización.
 
-### Por qué vive adentro de la planilla y no es una página aparte
+| | Qué hace |
+|---|---|
+| **Actualizar panel** | Redibuja la pestaña `Panel` |
+| **Ver las reservas de un día** | Lleva a la pestaña `Día` |
+| **Agregar una reserva a mano** | Abre el formulario |
+| **Abrir y cerrar días** | Abre el calendario |
 
-- **La autenticación sale gratis.** Quien puede abrir la planilla puede abrir
-  el panel, y nadie más. Una página suelta que cambia cupos y fechas
-  necesitaría su propio login, y el Web App que usa el sitio está publicado
-  como "cualquier usuario": quien descubriera esa URL podría cambiarte el
-  aforo.
-- **Un solo lugar con la verdad.** Escribe y lee las mismas pestañas que ya
-  usa el sitio, así que no hay una segunda copia que se desfase.
-- **Nada nuevo que desplegar**: mismo proyecto, sin URL nueva, sin CORS.
+**Lo que se mira vive en pestañas, lo que se toca vive en ventanas.** No es
+un capricho: una pestaña de Google Sheets es una grilla de celdas y no puede
+tener botones, pero está siempre ahí, se ve en el celular y se imprime. Una
+ventana tiene botones de verdad pero hay que abrirla. Cada cosa donde rinde.
 
-Y la planilla sigue siendo el respaldo: si el panel falla, las filas se
-editan a mano como siempre.
+### Si el menú no aparece
 
-### Ocupación
+**Recarga la planilla.** Es la causa número uno: `onOpen()` corre solo al
+**abrir** la planilla, y pegar código en el editor no la reabre.
 
-Los próximos doce días abiertos —unos dos meses de fines de semana— con el
-reparto entre **pagadas** y **por pagar en el local**, cuántos lugares quedan
-y el cupo del día. Los días llenos **sí aparecen**: son justamente los que
-hay que mirar. El sitio no los ofrece, pero eso es otra cosa.
+Y si una ventana no abre, corre **`revisarPanel()`**: dice cuál de los dos
+archivos HTML falta.
+
+### La pestaña `Panel` — la ocupación
+
+Los próximos doce días abiertos con el reparto entre **pagadas** y **por
+pagar en el local**, los lugares que quedan y el cupo. Los días llenos **sí
+aparecen**: son justamente los que hay que mirar.
+
+Se redibuja sola al abrir la planilla y desde el menú. **Lo que se escriba
+ahí se pierde**, porque la pestaña se reescribe entera; no guarda nada que no
+esté en `Reservas` o en `Excepciones`.
 
 **El reparto no es la modalidad comprada, es el estado del pago.** Son
-columnas distintas de `Reservas` y no significan lo mismo: alguien puede
-haber comprado *Pago directo* y estar *por pagar*, que es la fuga que
-vigilamos. Lo que el panel muestra es cuánta plata está adentro y cuánta se
-cobra en la puerta.
+columnas distintas: alguien puede haber comprado *Pago directo* y estar *por
+pagar*, que es la fuga que vigilamos. **Una fila sin `estado` cuenta como
+pagada**, porque es anterior a la columna y en esa época solo se anotaban
+pedidos pagados.
 
-**Una fila sin `estado` cuenta como pagada.** Son anteriores a que existiera
-la columna, y en esa época el backend solo anotaba pedidos pagados; contarlas
-como deuda inventaría una que no existe.
+### La pestaña `Día` — quiénes vienen
 
-### De dónde salen los números
+Se escribe la fecha en **B2** y la lista se dibuja sola. Es la lista que se
+mira el sábado en la mañana, así que lleva el teléfono y el correo al lado
+del nombre: sirve para llamar a quien no llegó.
 
-De `diasAbiertos()`, la misma función de la que sale lo que recibe el sitio.
-Son dos vistas de un cálculo, no dos cálculos: si mañana cambia la regla del
-cupo, el panel la sigue solo.
+Las canceladas se muestran tachadas —sirve saber que alguien anuló— pero no
+suman en el recuento.
 
-Lo que el sitio recibe es **deliberadamente menos** —solo fecha, lugares que
-quedan y si son pocos—. Cuánta gente ya reservó, cuánto pagó y de qué tamaño
-es el local no son cosas que tenga que saber un visitante.
+### El formulario — una reserva a mano
+
+Para las que llegan por teléfono, por WhatsApp o en el mesón. Obligatorios:
+fecha, nombre, apellido, al menos una persona y el estado del pago. El
+teléfono y el correo son opcionales.
+
+Mientras se escribe la fecha, el formulario dice cuánta gente hay ya ese día
+y cuánto queda. Es lo que evita el error caro: anotar a diez personas en un
+día que ya estaba lleno.
+
+**Se puede anotar en un día cerrado.** Quien toma una reserva por teléfono
+sabe más que la regla; el formulario avisa, no bloquea.
+
+Dos cosas que conviene saber de cómo quedan guardadas:
+
+- **El `pedido` queda como `MANUAL-…`**, y eso no es cosmético:
+  `sincronizarPedidos()` usa esa columna para saber qué pedidos de Shopify ya
+  anotó. Los ids de Shopify son números, así que uno que empieza en `MANUAL-`
+  no puede coincidir con ninguno. La sincronización nunca la va a pisar.
+- **El `total` queda en blanco.** Los precios viven en el HTML del sitio y
+  este backend no los conoce; copiarlos acá sería un segundo lugar con la
+  verdad. Si hace falta, se escribe la celda a mano.
+
+### El calendario — abrir y cerrar días
+
+**Lo que escribe son excepciones, no días.** Las fechas salen de una regla
+—qué días de la semana se abre— más una lista corta de excepciones. Un
+calendario que escribiera una fila por cada día abierto llenaría la pestaña
+con 104 filas al año, que es el problema que este diseño evitó.
+
+Por eso:
+
+| Lo que haces | Lo que queda escrito |
+|---|---|
+| Cerrar un día que la regla abre | una fila `abierta = no` |
+| Abrir uno que la regla cierra | una fila `abierta = sí` |
+| Devolverlo a su estado normal | **la fila se borra** |
+| Ponerle un cupo distinto | el `cupo`, con `abierta` en blanco |
+| Dejarle el cupo general | ese cupo **no** se escribe |
+
+Los días con **borde dorado** tienen una fila propia. Lo marcado es lo que
+alguien tuvo que decidir, y es lo único que hay que revisar. **Si la pestaña
+`Excepciones` crece hasta tener un día por fila, algo se hizo mal.**
+
+Antes de guardar, el editor dice en palabras qué va a quedar escrito, porque
+es justo lo que no se ve.
 
 ## Lo primero que hay que validar
 
