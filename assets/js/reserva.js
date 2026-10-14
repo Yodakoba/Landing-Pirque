@@ -157,9 +157,21 @@
 
   var selFecha = caja.querySelector('#r-fecha');
   var salPersonas = caja.querySelector('[data-total-personas]');
-  var salTotal = caja.querySelector('[data-total-precio]');
-  var btnReservar = caja.querySelector('[data-reservar]');
   var zonaAviso = caja.querySelector('[data-mensaje]');
+
+  // Dos botones, uno por modalidad. Cada uno muestra su propio total y
+  // manda su propia variante al carrito; el checkout de Shopify oculta
+  // los medios de pago que no corresponden según el SKU.
+  var botones = [];
+  var nodosBtn = caja.querySelectorAll('[data-pagar]');
+  for (var b = 0; b < nodosBtn.length; b++) {
+    botones.push({
+      nodo: nodosBtn[b],
+      modo: nodosBtn[b].getAttribute('data-pagar'),
+      salida: nodosBtn[b].querySelector('[data-total-de]'),
+      etiqueta: nodosBtn[b].querySelector('span')
+    });
+  }
 
   // Las tres opciones conviven: cada fila es un menú con su propio
   // contador, y un pedido puede llevar varias. Antes era un desplegable y
@@ -188,25 +200,30 @@
     });
   }
 
-  // Cuál de las dos modalidades está elegida. Si el radio no existe
-  // —porque alguien editó el HTML— se asume pagar en línea, que es la
-  // más barata: equivocarse cobrando de menos es preferible a cobrar de
-  // más sin que la persona lo haya elegido.
-  var radioLocal = caja.querySelector('[data-modo-local]');
-
-  function enLocal() {
-    return !!(radioLocal && radioLocal.checked);
+  // La modalidad es un argumento y no un estado guardado: la decide el
+  // botón que se apretó. Un estado habría que mantenerlo sincronizado
+  // con lo que la persona ve, y acá no hay nada que sincronizar.
+  //
+  // Si a una fila le falta la variante de pagar en el local, cae en la
+  // de pagar en línea, que es la más barata: equivocarse cobrando de
+  // menos es preferible a cobrar de más sin que lo hayan elegido.
+  function varianteDe(op, modo) {
+    return modo === 'local' && op.varianteLocal ? op.varianteLocal : op.variante;
   }
 
-  function varianteDe(op) {
-    return enLocal() && op.varianteLocal ? op.varianteLocal : op.variante;
+  function precioDe(op, modo) {
+    return modo === 'local' && op.precioLocal ? op.precioLocal : op.precio;
   }
 
-  function precioDe(op) {
-    return enLocal() && op.precioLocal ? op.precioLocal : op.precio;
+  function totalDe(modo) {
+    var t = 0;
+    for (var i = 0; i < opciones.length; i++) {
+      t += cuantos(opciones[i]) * precioDe(opciones[i], modo);
+    }
+    return t;
   }
 
-  if (!selFecha || !btnReservar || !opciones.length) return;
+  if (!selFecha || !botones.length || !opciones.length) return;
 
   function cuantos(op) {
     var n = parseInt(op.input.value, 10);
@@ -503,15 +520,9 @@
   }
 
   function recalcular() {
-    var total = 0;
     for (var i = 0; i < opciones.length; i++) {
       var op = opciones[i];
       var n = cuantos(op);
-      var precio = precioDe(op);
-      total += n * precio;
-      // El precio de la fila cambia con la modalidad, así que se
-      // reescribe: no puede quedar mostrando el de la otra.
-      if (op.valor) op.valor.textContent = pesos(precio);
       // El input se normaliza: si alguien escribe "-3" o lo deja en blanco,
       // lo que ve tiene que ser lo que se va a cobrar.
       if (op.input.value !== String(n)) op.input.value = n;
@@ -522,13 +533,22 @@
     }
 
     if (salPersonas) salPersonas.textContent = personas();
-    if (salTotal) salTotal.textContent = pesos(total);
+
+    // Cada botón lleva su propio total. Así la diferencia entre pagar
+    // ahora y pagar en el local se ve sin tener que cambiar nada
+    // primero, que era lo que obligaba un selector de modalidad.
+    var usable = pedidoUsable();
+    for (var k = 0; k < botones.length; k++) {
+      if (botones[k].salida) {
+        botones[k].salida.textContent = personas() ? pesos(totalDe(botones[k].modo)) : '';
+      }
+      // Sin fecha elegida, con el pedido vacío, o pidiendo más lugares
+      // de los que quedan, los dos se apagan. Vale más que dejen apretar
+      // y fallen en el checkout.
+      botones[k].nodo.disabled = !usable;
+    }
 
     avisarSobreFecha();
-    // Sin fecha elegida, con el pedido vacío, o pidiendo más lugares de
-    // los que quedan, el botón se apaga. Vale más que deje apretar y falle
-    // en el checkout.
-    btnReservar.disabled = !pedidoUsable();
   }
 
   function mensaje(texto, tipo) {
@@ -539,7 +559,7 @@
 
   /* ---------- crear el carrito ---------- */
 
-  function lineas() {
+  function lineas(modo) {
     // Desde 2026-10 las variantes ya no son una por fecha: son una por
     // menú y modalidad. La fecha no elige variante, viaja como propiedad
     // de línea: es la única forma en que llega al pedido, y de ahí la lee
@@ -561,7 +581,7 @@
       var n = cuantos(opciones[i]);
       if (n < 1) continue;
       out.push({
-        merchandiseId: gid(varianteDe(opciones[i])),
+        merchandiseId: gid(varianteDe(opciones[i], modo)),
         quantity: n,
         attributes: atributos
       });
@@ -578,7 +598,7 @@
     '}'
   ].join('\n');
 
-  function reservar() {
+  function reservar(boton) {
     if (!pedidoUsable()) { avisarSobreFecha(); return; }
 
     if (!CONFIG.token) {
@@ -586,10 +606,20 @@
       return;
     }
 
-    btnReservar.disabled = true;
-    var textoOriginal = btnReservar.textContent;
-    btnReservar.textContent = T.creando;
+    // Se apagan LOS DOS mientras se crea el carrito. Dejar vivo el otro
+    // dejaría apretar los dos seguidos y crear dos carritos, y la
+    // persona terminaría en el checkout del segundo sin entender por
+    // qué cambió el precio.
+    for (var k = 0; k < botones.length; k++) botones[k].nodo.disabled = true;
+    var etiquetaOriginal = boton.etiqueta ? boton.etiqueta.textContent : '';
+    if (boton.etiqueta) boton.etiqueta.textContent = T.creando;
+    if (boton.salida) boton.salida.textContent = '';
     mensaje('');
+
+    function devolverBotones() {
+      if (boton.etiqueta) boton.etiqueta.textContent = etiquetaOriginal;
+      recalcular();
+    }
 
     fetch('https://' + CONFIG.dominio + '/api/' + CONFIG.version + '/graphql.json', {
       method: 'POST',
@@ -599,7 +629,7 @@
       },
       body: JSON.stringify({
         query: MUTATION,
-        variables: { input: { lines: lineas() } }
+        variables: { input: { lines: lineas(boton.modo) } }
       })
     })
       .then(function (r) {
@@ -618,8 +648,7 @@
         window.location.href = res.cart.checkoutUrl;
       })
       .catch(function (e) {
-        btnReservar.disabled = false;
-        btnReservar.textContent = textoOriginal;
+        devolverBotones();
         mensaje(T.falla, 'error');
         if (window.console) console.error('[reserva]', e);
       });
@@ -639,21 +668,24 @@
     };
   }
 
-  var radios = caja.querySelectorAll('[name="r-modo"]');
-  for (var m = 0; m < radios.length; m++) {
-    radios[m].addEventListener('change', recalcular);
-  }
-
   for (var k = 0; k < opciones.length; k++) {
     var op = opciones[k];
     op.input.addEventListener('input', recalcular);
     if (op.menos) op.menos.addEventListener('click', paso(op, -1));
     if (op.mas) op.mas.addEventListener('click', paso(op, 1));
   }
-  btnReservar.addEventListener('click', reservar);
+  // Cada botón se queda con su modalidad en el closure, igual que los
+  // pasos del contador: un bucle que compartiera la variable dejaría a
+  // los dos mandando la última.
+  function alApretar(boton) {
+    return function () { reservar(boton); };
+  }
+  for (var j = 0; j < botones.length; j++) {
+    botones[j].nodo.addEventListener('click', alApretar(botones[j]));
+  }
 
-  // El botón nace deshabilitado en el HTML para que nadie apriete un botón
-  // muerto si este archivo no carga. Acá NO se habilita a ciegas: lo
+  // Los botones nacen deshabilitados en el HTML para que nadie apriete uno
+  // muerto si este archivo no carga. Acá NO se habilitan a ciegas: lo
   // decide recalcular() según haya o no una fecha elegida con lugares.
   caja.classList.add('reserva-viva');
   cargarFechas();

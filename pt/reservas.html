@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;0,9..144,600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/site.css?v=58cf6207">
+<link rel="stylesheet" href="../assets/css/site.css?v=7c69b82c">
 <!--i18n:alternate-->
 <link rel="alternate" hreflang="es" href="https://brasasdelopirque.cl/reservas.html">
 <link rel="alternate" hreflang="en" href="https://brasasdelopirque.cl/en/reservas.html">
@@ -59,34 +59,6 @@
 
       <h2 class="reserva-titulo">Reserva online</h2>
 
-      <!-- Las dos modalidades son variantes distintas en Shopify, con
-           precios distintos. El sitio no decide como se paga: eso lo elige
-           la persona en el checkout. Lo que hace esta eleccion es mandar la
-           variante que corresponde, con su precio.
-
-           Son <input type=radio> y la marca visual la hace el CSS, asi que
-           no necesitan JavaScript para verse bien. reserva.js solo los lee
-           para saber que variante y que precio usar. -->
-      <div class="campo">
-        <span class="etiqueta" id="r-modo-titulo">Como você paga</span>
-        <div class="modos" role="radiogroup" aria-labelledby="r-modo-titulo">
-          <label class="modo">
-            <input type="radio" name="r-modo" value="directo" data-modo checked>
-            <span class="modo-caja">
-              <b>Pagar agora</b>
-              <small>Preço com desconto, online.</small>
-            </span>
-          </label>
-          <label class="modo">
-            <input type="radio" name="r-modo" value="local" data-modo-local>
-            <span class="modo-caja">
-              <b>Pagar no local</b>
-              <small>Reserve agora e pague ao chegar.</small>
-            </span>
-          </label>
-        </div>
-      </div>
-
       <div class="campo">
         <span class="etiqueta" id="r-fecha-titulo">Escolher data</span>
         <!-- El calendario lo dibuja assets/js/reserva.js con las fechas que
@@ -109,7 +81,7 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Quantidade de pessoas">
           <button class="paso" type="button" data-mas aria-label="Adicionar uma pessoa">+</button>
         </div>
-        <div class="valor" data-valor>$44.000 CLP</div>
+        <div class="valor">$44.000 CLP</div>
       </div>
 
       <div class="reserva-fila" data-opcion
@@ -122,7 +94,7 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Quantidade de pessoas">
           <button class="paso" type="button" data-mas aria-label="Adicionar uma pessoa">+</button>
         </div>
-        <div class="valor" data-valor>$70.000 CLP</div>
+        <div class="valor">$70.000 CLP</div>
       </div>
 
       <div class="reserva-fila" data-opcion
@@ -135,7 +107,7 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Quantidade de pessoas">
           <button class="paso" type="button" data-mas aria-label="Adicionar uma pessoa">+</button>
         </div>
-        <div class="valor" data-valor>$19.000 CLP</div>
+        <div class="valor">$19.000 CLP</div>
       </div>
 
       <!-- Las tres opciones nacen en cero: el pedido lo arma la persona,
@@ -143,12 +115,28 @@
            aunque el JS no corra, y recalcular() los reescribe apenas corre. -->
       <div class="reserva-total">
         <span>Pessoas <b data-total-personas>0</b></span>
-        <span>Total <b data-total-precio>$0</b></span>
       </div>
 
-      <div class="btn-row">
-        <button class="btn" type="button" data-reservar disabled>Finalizar reserva</button>
+      <!-- Dos botones y no un desplegable de modalidad: cada uno lleva su
+           propio total, asi la diferencia de precio se ve sin tener que
+           cambiar nada primero. Cual se apreto decide que variante va al
+           carrito, y el checkout de Shopify oculta los medios de pago que
+           no corresponden segun el SKU.
+
+           Los precios de las filas de arriba son los de pagar en linea,
+           que son los que anuncia el resto del sitio. El recargo de pagar
+           en el local no se escribe en ninguna parte como numero: sale de
+           restar los dos totales, que es un dato que no se puede quedar
+           viejo si manana cambia un precio en la tienda. -->
+      <div class="btn-row dos">
+        <button class="btn" type="button" data-pagar="directo" disabled>
+          <span>Pagar agora</span> <b data-total-de="directo"></b>
+        </button>
+        <button class="btn btn-ghost" type="button" data-pagar="local" disabled>
+          <span>Só reservar</span> <b data-total-de="local"></b>
+        </button>
       </div>
+      <p class="fine" style="margin-top:12px;">Com “Só reservar” você garante os seus lugares e paga ao chegar. Custa um pouco mais do que pagar online.</p>
 
       <p class="reserva-mensaje" data-mensaje></p>
 
@@ -352,7 +340,7 @@
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
 </a>
 
-<script src="../assets/js/reserva.js?v=d7c86999" defer></script>
+<script src="../assets/js/reserva.js?v=6c064cb1" defer></script>
 
 </body>
 </html>

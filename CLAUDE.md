@@ -416,11 +416,21 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   para pagar en línea y `data-variante-local`/`data-precio-local` para pagar
   en el local—. Se hizo así para tener un solo lugar que editar al pasar a
   producción, donde los IDs son otros.
-- **Las dos modalidades son un `<input type=radio>` y la marca visual la
-  hace el CSS**, así que no necesitan JavaScript para verse bien;
-  `reserva.js` solo los lee. El radio se esconde con `opacity` y no con
-  `display:none` ni `visibility:hidden`: esos dos lo sacan del orden de
-  tabulación y dejan la elección sin teclado.
+- **Las dos modalidades son dos botones, cada uno con su propio total**
+  —"Pagar ahora $177.000" / "Solo reservar $197.000"— y no un selector
+  (2026-10-14). Así la diferencia de precio se ve sin tener que cambiar
+  nada primero, que es justo lo que obliga un selector. Cuál se apretó
+  decide qué variante va al carrito: la modalidad es un argumento
+  (`lineas(modo)`), no un estado guardado que haya que mantener
+  sincronizado con lo que la persona ve.
+- **Las filas muestran el precio de pagar en línea**, que es el que anuncia
+  el resto del sitio (`experiencias.html` dice $44.000). El recargo de
+  pagar en el local **no está escrito como número en ninguna parte**: sale
+  de restar los dos totales de los botones, así que no se puede quedar
+  viejo si mañana cambia un precio en la tienda.
+- **Apretar uno apaga los dos** mientras se crea el carrito. Dejar vivo el
+  otro dejaría crear dos carritos seguidos y la persona terminaría en el
+  checkout del segundo sin entender por qué cambió el precio.
 - **Las reservas sin pagar se anotan igual y toman cupo** (2026-10-14). El
   backend dejó de filtrar por `financial_status=paid`; ver `backend/README.md`.
   Una cancelada libera su cupo, una por pagar no.
@@ -482,13 +492,18 @@ lo aclaró el cliente ese día:
 El cliente agregó el método de pago "pago en el local" en Shopify, que es lo
 que hace posible la segunda.
 
-**El sitio no controla cómo se paga, y eso es un agujero conocido.** El
-medio de pago se elige en el checkout de Shopify, no en nuestro formulario,
-así que alguien puede comprar la variante con descuento y después elegir
-pagar en el local: se queda con los $44.000 sin pagar nada. No se puede
-cerrar desde acá. Lo que sí se hace es **dejarlo a la vista**: la planilla
-anota la modalidad comprada y el estado del pago, y una fila que diga
-"Pago directo / por pagar" es exactamente ese caso.
+**Quién puede pagar cómo lo decide el checkout, no el sitio.** El medio de
+pago se elige en el checkout de Shopify, así que el sitio no puede impedir
+que alguien compre la variante con descuento y después elija pagar en el
+local. Eso lo cierra la tienda: **el cliente configuró reglas que ocultan
+los medios de pago según el SKU del carrito** (2026-10-14).
+
+**Esa regla es del lado de Shopify y si deja de aplicar no avisa**: en el
+checkout simplemente aparecen otra vez los dos medios. Por eso la planilla
+sigue anotando la modalidad comprada junto al estado del pago: una fila que
+diga **"Pago directo / por pagar"** significa que la regla no aplicó, y es
+la única forma de enterarse. Conviene comprobarla con una compra de prueba
+de cada tipo cuando se toque algo de la tienda.
 
 **El $45.000 de Tradiciones de la tabla de más arriba era un dato equivocado
 del agente**, y por eso esta nota decía antes "$4.000 a $5.000 más". Con el

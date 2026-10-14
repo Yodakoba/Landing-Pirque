@@ -656,32 +656,23 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   color: var(--ink-faint); }
 .reserva-fila.activa .valor{ color: var(--gold); }
 
-/* Las dos modalidades de pago. Son <input type=radio> escondidos con la
-   marca visual en el <span> de al lado, asi que funcionan con el teclado y
-   con lector de pantalla sin una linea de JavaScript.
+/* Los dos botones de pago, cada uno con su total.
 
-   El radio se esconde con opacity y no con display:none ni visibility:
-   esos dos lo sacan del orden de tabulacion y dejan la eleccion sin
-   teclado. Queda encima de su caja, transparente. */
-.modos{ display:flex; gap:10px; flex-wrap:wrap; }
-.modo{ flex:1 1 200px; position:relative; display:block; cursor:pointer; }
-.modo input{
-  position:absolute; inset:0; width:100%; height:100%; margin:0;
-  opacity:0; cursor:pointer;
+   El total va en <b> con la serif italica, igual que todos los numeros del
+   sitio, y en su propio elemento para poder reescribirlo sin tocar la
+   etiqueta: mientras se crea el carrito la etiqueta dice "Creando tu
+   reserva" y el monto se vacia. */
+.btn-row.dos{ display:flex; gap:10px; flex-wrap:wrap; }
+.btn-row.dos .btn{
+  flex:1 1 220px; display:flex; align-items:baseline; justify-content:center;
+  gap:10px; text-align:center;
 }
-.modo-caja{
-  display:block; padding:14px 16px; border-radius:2px;
-  border:1px solid var(--line); background: var(--bg);
+.btn-row.dos .btn b{
+  font-family:var(--serif); font-style:italic; font-weight:400;
+  font-size:1.05rem; text-transform:none; letter-spacing:0;
 }
-.modo-caja b{ display:block; font-size:0.92rem; font-weight:600; }
-.modo-caja small{
-  display:block; margin-top:4px; color: var(--ink-faint); font-size:0.78rem;
-}
-.modo input:checked + .modo-caja{
-  border-color: var(--gold); background: var(--gold-wash);
-}
-.modo input:focus-visible + .modo-caja{ outline:2px solid var(--gold); outline-offset:2px; }
-.modo:hover .modo-caja{ border-color: var(--gold-soft); }
+/* Vacio —sin fecha o sin gente— el <b> no deja un hueco al lado del texto. */
+.btn-row.dos .btn b:empty{ display:none; }
 
 /* El contador: el menos a la izquierda del numero y el mas a la derecha.
    Los dos van dorados y sin marco, que es lo que se pidio: el signo solo,

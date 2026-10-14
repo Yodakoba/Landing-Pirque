@@ -98,10 +98,12 @@ columna, no por su posición.
   Shopify.
 - **`estado`** — `pagada`, `por pagar` o `cancelada`.
 
-**Una fila que diga `Pago directo` y `por pagar` es alguien que se llevó el
-precio con descuento y después eligió pagar en el local.** El sitio no puede
-impedirlo, porque el medio de pago se elige en el checkout de Shopify, no en
-el formulario. Queda a la vista para que se cobre la diferencia en la puerta.
+**Una fila que diga `Pago directo` y `por pagar` no debería existir.** La
+tienda tiene reglas que ocultan los medios de pago según el SKU, así que
+quien compra la variante con descuento no debería poder elegir pagar en el
+local. Si esa combinación aparece, **la regla dejó de aplicar**: en el
+checkout no avisa nada, simplemente vuelven a salir los dos medios. Esta
+columna es la única forma de enterarse.
 
 El estado **se mantiene al día**: si un pedido se paga después, o se cancela,
 la corrida siguiente le corrige la celda. Por eso no sirve editarla a mano.
