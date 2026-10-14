@@ -109,10 +109,10 @@ function doGet(e) {
   var accion = (e && e.parameter && e.parameter.accion) || 'fechas';
   try {
     if (accion === 'fechas') return json({ fechas: fechasAbiertas() });
-    return json({ error: 'Acción desconocida: ' + accion }, 400);
+    return json({ error: 'Acción desconocida: ' + accion });
   } catch (err) {
     registrar('ERROR doGet', err.message);
-    return json({ error: 'Error interno' }, 500);
+    return json({ error: 'Error interno' });
   }
 }
 
@@ -418,7 +418,16 @@ function crearEvento(r) {
    Utilidades
    ============================================================= */
 
-function json(obj, codigo) {
+/**
+ * Un Web App de Apps Script NO puede elegir el código HTTP: ContentService
+ * siempre responde 200. Por eso un error viaja como 200 con {error: ...} en
+ * el cuerpo, y no como 400 o 500.
+ *
+ * El sitio lo sabe: assets/js/reserva.js revisa el campo `error` del JSON,
+ * no solo `response.ok`. Si alguna vez se lee este endpoint desde otra
+ * parte, hay que hacer lo mismo o los errores pasan por respuestas válidas.
+ */
+function json(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);

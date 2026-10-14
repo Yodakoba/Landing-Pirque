@@ -55,7 +55,12 @@
     // Ver backend/README.md. Vacío significa que el calendario no tiene
     // de dónde sacar fechas: lo dice en pantalla y deja el botón apagado,
     // en vez de inventar un calendario que no corresponde a la realidad.
-    backend: ''
+    //
+    // Ojo al redesplegar el backend: si en Apps Script se crea una
+    // implementación NUEVA en vez de una versión nueva de la misma, la
+    // URL cambia y hay que actualizar esta línea. Publicar una versión
+    // nueva de la implementación existente conserva la URL.
+    backend: 'https://script.google.com/macros/s/AKfycbxBBvz2b_C3VbKuXg75r-BCYNgPvgEjyT9YiYrhPeW6xsXZIKQRlAoFoXhuacVG6C7F/exec'
   };
 
   // Los precios y los IDs de variante NO están acá: viven en el HTML.
@@ -410,6 +415,12 @@
         return r.json();
       })
       .then(function (d) {
+        // Un Web App de Apps Script no puede elegir el código HTTP:
+        // siempre responde 200, tambien cuando falla. El error viene en
+        // el cuerpo, asi que hay que mirarlo. Sin esto una falla del
+        // backend se veria como "no hay fechas", que es otra cosa.
+        if (d && d.error) throw new Error(d.error);
+
         var lista = (d && d.fechas) || [];
         if (!lista.length) { pintarEstado(T.sinFechas); return; }
 
