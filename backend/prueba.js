@@ -32,7 +32,14 @@ function hojaFalsa(nombre) {
     getLastRow: () => filas.length,
     getLastColumn: () => filas.reduce((m, f) => Math.max(m, f.length), 0),
     appendRow: (f) => { filas.push(f.slice()); },
+    deleteRow: (n) => { filas.splice(n - 1, 1); },
+    clear: () => { filas.length = 0; },
+    getMaxRows: () => Math.max(filas.length, 1),
+    getMaxColumns: () => Math.max(hojaFalsa(nombre).getLastColumn(), 1),
     setFrozenRows: () => {},
+    setColumnWidth: () => {},
+    setActiveRange: () => {},
+    getName: () => nombre,
     getRange: (f0, c0, nf, nc) => ({
       getValues: () => {
         const out = [];
@@ -46,18 +53,38 @@ function hojaFalsa(nombre) {
         }
         return out;
       },
-      setValues: (v) => {
-        for (let i = 0; i < v.length; i++) {
+      setValues: function (v) {
+        for (var i = 0; i < v.length; i++) {
           while (filas.length < f0 + i) filas.push([]);
-          for (let j = 0; j < v[i].length; j++) {
+          for (var j = 0; j < v[i].length; j++) {
             filas[f0 - 1 + i][c0 - 1 + j] = v[i][j];
           }
         }
+        return this;
       },
-      setValue: (val) => {
+      setValue: function (val) {
         while (filas.length < f0) filas.push([]);
         filas[f0 - 1][c0 - 1] = val;
-      }
+        return this;
+      },
+      // El formato no se simula: lo que importa probar son los VALORES.
+      // Pero tienen que encadenar, porque el codigo escribe
+      // .setValue(x).setFontWeight('bold') y si devolvieran undefined
+      // reventaria en la segunda llamada.
+      clear: function () {
+        for (var i = 0; i < (nf || 1); i++) {
+          var fl = filas[f0 - 1 + i];
+          if (!fl) continue;
+          for (var j = 0; j < (nc || 1); j++) fl[c0 - 1 + j] = '';
+        }
+        return this;
+      },
+      setFontWeight: function () { return this; },
+      setFontSize: function () { return this; },
+      setFontColor: function () { return this; },
+      setFontLine: function () { return this; },
+      setBackground: function () { return this; },
+      setNumberFormat: function () { return this; }
     })
   };
 }
@@ -68,7 +95,9 @@ const ctx = {
   SpreadsheetApp: {
     getActive: () => ({
       getSheetByName: (n) => (HOJAS[n] ? hojaFalsa(n) : null),
-      insertSheet: (n) => { HOJAS[n] = []; return hojaFalsa(n); }
+      insertSheet: (n) => { HOJAS[n] = []; return hojaFalsa(n); },
+      setActiveSheet: () => {},
+      toast: () => {}
     })
   },
   PropertiesService: {
@@ -430,6 +459,155 @@ ok(titulos('Reservas').indexOf('modalidad') !== -1 &&
 ok(HOJAS.Reservas[1][3] === 'Ana Soto' && HOJAS.Reservas[1][7] === 2,
    'y no corre de lugar los datos que ya estaban');
 ok(HOJAS.Reservas.length === 2, 'no agrega filas');
+
+/* ---------- fijarDia: escribe EXCEPCIONES, no dias ---------- */
+
+// La regla que no se puede romper: un calendario que escriba una fila por
+// cada dia abierto llena la pestana con 104 filas al ano, que es justo el
+// problema que este diseno evito.
+
+function montarExcepciones(filas) {
+  HOJAS = {
+    Config: [['clave', 'valor']].concat(base),
+    Excepciones: [['fecha', 'abierta', 'cupo', 'nota']].concat(filas || []),
+    Reservas: sinReservas
+  };
+}
+const filasExc = () => HOJAS.Excepciones.slice(1);
+
+// Abrir un sabado —que la regla YA abre— no escribe nada.
+montarExcepciones([]);
+ctx.fijarDia(sabado, true, 60, '');
+ok(filasExc().length === 0, 'abrir un dia que la regla ya abre no escribe fila');
+
+// Cerrarlo si escribe, porque se sale de la regla.
+montarExcepciones([]);
+ctx.fijarDia(sabado, false, 60, '');
+ok(filasExc().length === 1 && filasExc()[0][1] === 'no',
+   'cerrar un dia que la regla abre escribe una excepcion');
+
+// Y volverlo a abrir BORRA la fila, no escribe una segunda.
+ctx.fijarDia(sabado, true, 60, '');
+ok(filasExc().length === 0, 'devolverlo a su estado normal borra la fila');
+
+// Abrir un jueves —que la regla cierra— si escribe.
+montarExcepciones([]);
+ctx.fijarDia(jueves, true, 60, '18 de septiembre');
+ok(filasExc().length === 1 && filasExc()[0][1] === 'sí',
+   'abrir un dia que la regla cierra escribe una excepcion');
+
+// El cupo igual al general no se escribe: seria una fila que no dice nada.
+montarExcepciones([]);
+ctx.fijarDia(sabado, true, 60, '');
+ok(filasExc().length === 0, 'un cupo igual al general no genera fila');
+
+// Un cupo distinto si, y deja "abierta" en blanco: no opina sobre el dia.
+montarExcepciones([]);
+ctx.fijarDia(sabado, true, 40, '');
+ok(filasExc().length === 1 && filasExc()[0][1] === '' && filasExc()[0][2] === 40,
+   'un cupo propio se guarda con abierta en blanco');
+
+// Una nota sola tambien justifica la fila: es informacion que no esta en
+// ninguna otra parte.
+montarExcepciones([]);
+ctx.fijarDia(sabado, true, 60, 'Viene un grupo grande');
+ok(filasExc().length === 1 && filasExc()[0][3] === 'Viene un grupo grande',
+   'una nota sola mantiene la fila viva');
+
+// Tocar dos veces el mismo dia ACTUALIZA su fila, no agrega otra.
+montarExcepciones([]);
+ctx.fijarDia(sabado, false, 60, '');
+ctx.fijarDia(sabado, false, 30, 'Medio aforo');
+ok(filasExc().length === 1 && filasExc()[0][2] === 30 && filasExc()[0][3] === 'Medio aforo',
+   'tocar dos veces el mismo dia no duplica la fila');
+
+// Y no toca las de los demas dias.
+montarExcepciones([[domingo, 'no', '', 'Cerrado']]);
+ctx.fijarDia(sabado, false, 20, '');
+ok(filasExc().length === 2, 'no pisa las excepciones de otros dias');
+
+/* ---------- mesDelCalendario: lo que ve el panel ---------- */
+
+montarExcepciones([[jueves, 'sí', 80, 'Feriado']]);
+const mes = ctx.mesDelCalendario('2026-11-01');
+ok(mes.dias.length === 30, 'noviembre trae 30 dias, no 31');
+const jue = mes.dias.find((x) => x.fecha === jueves);
+ok(jue.abierta === true && jue.porRegla === false,
+   'el jueves abre por excepcion, no por la regla');
+ok(jue.excepcion === true && jue.cupo === 80, 'y trae su cupo propio');
+const sab = mes.dias.find((x) => x.fecha === sabado);
+ok(sab.abierta === true && sab.excepcion === false,
+   'el sabado abre por la regla y no tiene fila propia');
+
+/* ---------- guardarReservaManual: las que no pasan por Shopify ---------- */
+
+ctx.Utilities.formatDate = (d) => d.toISOString().slice(0, 10);
+ctx.CalendarApp = { getCalendarById: () => null };   // sin calendario, no revienta
+
+function montarVacio() {
+  HOJAS = {
+    Config: [['clave', 'valor']].concat(base),
+    Excepciones: [['fecha', 'abierta', 'cupo', 'nota']],
+    Reservas: [ctx.COLUMNAS_RESERVAS.slice()]
+  };
+}
+
+montarVacio();
+ctx.guardarReservaManual({
+  fecha: sabado, nombre: 'Ana', apellido: 'Soto',
+  tradiciones: 2, brasas: 1, ninos: 3, estado: 'pagada', telefono: '+56 9 1111'
+});
+const manual = HOJAS.Reservas[1];
+const col = (n) => manual[HOJAS.Reservas[0].indexOf(n)];
+ok(HOJAS.Reservas.length === 2, 'la reserva a mano queda anotada');
+ok(col('nombre') === 'Ana Soto', 'nombre y apellido se juntan');
+ok(col('adultos') === 3, 'los dos menus de adulto se suman: 2 + 1');
+ok(col('ninos') === 3, 'los ninos van aparte');
+ok(col('estado') === 'pagada', 'el estado del pago se guarda');
+ok(col('modalidad') === 'A mano', 'queda marcada como escrita a mano');
+ok(String(col('pedido')).indexOf('MANUAL-') === 0,
+   'el pedido empieza en MANUAL-, que no puede chocar con un id de Shopify');
+ok(col('total') === '', 'el total queda en blanco: el backend no conoce los precios');
+
+// Y toma cupo como cualquier otra.
+const tras = ctx.diasAbiertos().find((x) => x.fecha === sabado);
+ok(tras.tomadas === 6 && tras.pagadas === 6,
+   'una reserva a mano ocupa lugar igual que una de Shopify');
+
+// Lo que falta se dice entero, no de a uno.
+montarVacio();
+let error = '';
+try { ctx.guardarReservaManual({ fecha: sabado }); } catch (e) { error = e.message; }
+ok(error.indexOf('el nombre') !== -1 && error.indexOf('el apellido') !== -1 &&
+   error.indexOf('al menos una persona') !== -1 && error.indexOf('el estado') !== -1,
+   'nombra de una vez todo lo que falta');
+ok(HOJAS.Reservas.length === 1, 'y no anota nada a medias');
+
+// Sin gente no hay reserva, aunque el resto este completo.
+montarVacio();
+error = '';
+try {
+  ctx.guardarReservaManual({ fecha: sabado, nombre: 'Ana', apellido: 'Soto',
+    tradiciones: 0, brasas: 0, ninos: 0, estado: 'pagada' });
+} catch (e) { error = e.message; }
+ok(error.indexOf('al menos una persona') !== -1, 'cero personas no es una reserva');
+
+// Un estado inventado no entra: la planilla solo entiende tres.
+montarVacio();
+error = '';
+try {
+  ctx.guardarReservaManual({ fecha: sabado, nombre: 'Ana', apellido: 'Soto',
+    tradiciones: 1, estado: 'quizas' });
+} catch (e) { error = e.message; }
+ok(error.indexOf('el estado del pago') !== -1, 'un estado inventado se rechaza');
+
+// Y sincronizarPedidos no puede confundirla con un pedido suyo.
+montarVacio();
+ctx.guardarReservaManual({ fecha: sabado, nombre: 'Ana', apellido: 'Soto',
+  tradiciones: 1, estado: 'pagada' });
+const anotados = ctx.pedidosYaAnotados();
+ok(Object.keys(anotados).length === 1, 'la reserva a mano aparece entre las anotadas');
+ok(!anotados['123'] && !anotados[''], 'y no colisiona con un id de Shopify');
 
 console.log(fallos ? '\n' + fallos + ' fallas' : '\ntodas las comprobaciones pasan');
 process.exit(fallos ? 1 : 0);

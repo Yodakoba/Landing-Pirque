@@ -80,6 +80,12 @@ var HOJA_EXCEPCIONES = 'Excepciones';
 var HOJA_RESERVAS = 'Reservas';
 var HOJA_REGISTRO = 'Registro';
 
+// Las dos pestañas del panel. Son DIBUJADAS: el script las reescribe
+// enteras cada vez, así que lo que alguien escriba ahí se pierde. Por eso
+// no guardan nada que no esté en otra parte.
+var HOJA_PANEL = 'Panel';
+var HOJA_DIA = 'Día';
+
 // Valores por si la pestaña Config está incompleta. Que falte una fila no
 // puede dejar el formulario sin fechas.
 var POR_DEFECTO = {
@@ -819,82 +825,523 @@ function registrar(nivel, mensaje) {
  * El menú de arriba. Es un activador simple: Google lo corre solo al
  * abrir la planilla, sin pedir permisos, porque crear un menú no toca
  * datos. Lo que el menú abre sí corre con la sesión de quien lo aprieta.
+ *
+ * El menú se crea ANTES de redibujar el panel, y el redibujo va en un
+ * try: si falla —una Config rota, por ejemplo— al menos queda el menú
+ * para poder arreglarlo. Al revés, un error dejaría la planilla sin
+ * ninguna forma de entrar.
  */
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Brasas')
-    .addItem('Panel de reservas', 'abrirPanel')
+    .addItem('Actualizar panel', 'dibujarPanel')
+    .addItem('Ver las reservas de un día', 'irAlDia')
+    .addSeparator()
+    .addItem('Agregar una reserva a mano', 'abrirFormulario')
+    .addItem('Abrir y cerrar días', 'abrirCalendario')
     .addToUi();
+
+  try {
+    dibujarPanel();
+  } catch (err) {
+    // Que no se pueda dibujar no puede dejar la planilla inutilizable.
+  }
+}
+
+/* -------------------------------------------------------------
+   La pestaña Día: quiénes vienen una fecha concreta.
+
+   La fecha se escribe en B2 y la lista se dibuja sola. Es un
+   activador onEdit, no un botón, porque en una planilla escribir en
+   una celda ES la acción natural: pedirle a alguien que escriba y
+   DESPUÉS apriete algo es un paso que se olvida.
+
+   Es la lista que se mira el sábado en la mañana, así que lleva el
+   teléfono y el correo al lado del nombre: sirve para llamar a quien
+   no llegó, y para eso no se puede estar saltando a otra pestaña.
+   ------------------------------------------------------------- */
+
+var TITULOS_DIA = ['Nombre', 'Personas', 'Adultos', 'Niños', 'Menú', 'Estado',
+                   'Modalidad', 'Teléfono', 'Email', 'Pedido'];
+
+/** Deja la pestaña lista y lleva el cursor ahí. Es lo que abre el menú. */
+function irAlDia() {
+  var hoja = hojaDia();
+  SpreadsheetApp.getActive().setActiveSheet(hoja);
+  hoja.setActiveRange(hoja.getRange('B2'));
+  SpreadsheetApp.getActive().toast(
+    'Escribe la fecha en B2, en formato 2026-10-17.', 'Reservas de un día', 8);
+}
+
+function hojaDia() {
+  var libro = SpreadsheetApp.getActive();
+  var hoja = libro.getSheetByName(HOJA_DIA);
+  if (hoja) return hoja;
+
+  hoja = libro.insertSheet(HOJA_DIA);
+  hoja.getRange('A1').setValue('RESERVAS DE UN DÍA').setFontWeight('bold').setFontSize(12);
+  hoja.getRange('A2').setValue('Fecha (AAAA-MM-DD):').setFontWeight('bold');
+  hoja.getRange('B2').setNumberFormat('@');   // texto: una fecha de verdad se
+                                              // convertiría y cambiaría de día
+  hoja.setColumnWidth(1, 220);
+  hoja.setColumnWidth(2, 120);
+  return hoja;
 }
 
 /**
- * Por qué no aparece el panel.
+ * Activador simple: corre solo al editar una celda. Solo reacciona a B2
+ * de la pestaña Día; cualquier otra edición en la planilla lo atraviesa
+ * sin hacer nada, que es lo que tiene que pasar.
+ */
+function onEdit(e) {
+  if (!e || !e.range) return;
+  var hoja = e.range.getSheet();
+  if (hoja.getName() !== HOJA_DIA) return;
+  if (e.range.getA1Notation() !== 'B2') return;
+  try {
+    dibujarDia(hoja);
+  } catch (err) {
+    hoja.getRange('A4').setValue('No se pudo dibujar: ' + err.message);
+  }
+}
+
+function dibujarDia(hoja) {
+  hoja = hoja || hojaDia();
+  var fecha = comoFecha(hoja.getRange('B2').getValue());
+
+  // Se limpia de la fila 4 para abajo: arriba vive el rótulo y la celda
+  // de la fecha, que son lo único que no se redibuja.
+  var ultimas = hoja.getMaxRows() - 3;
+  if (ultimas > 0) hoja.getRange(4, 1, ultimas, hoja.getMaxColumns()).clear();
+
+  if (!fecha) {
+    hoja.getRange('A4').setValue('Escribe una fecha en B2, así: 2026-10-17.')
+        .setFontColor('#666666');
+    return;
+  }
+
+  var filas = [];
+  var personas = 0, pagadas = 0, porPagar = 0;
+  var todas = datos(HOJA_RESERVAS);
+  for (var i = 0; i < todas.length; i++) {
+    var r = todas[i];
+    if (comoFecha(r.fecha_reserva) !== fecha) continue;
+
+    var estado = String(r.estado || '').trim().toLowerCase();
+    var n = (Number(r.adultos) || 0) + (Number(r.ninos) || 0);
+    filas.push([
+      String(r.nombre || '(sin nombre)'),
+      n,
+      Number(r.adultos) || 0,
+      Number(r.ninos) || 0,
+      String(r.menu || ''),
+      String(r.estado || 'pagada'),
+      String(r.modalidad || ''),
+      String(r.telefono || ''),
+      String(r.email || ''),
+      String(r.pedido || '')
+    ]);
+
+    // Una cancelada se muestra igual —sirve saber que alguien anuló— pero
+    // no suma en el recuento del día.
+    if (estado === 'cancelada') continue;
+    personas += n;
+    if (estado === 'pagada' || estado === '') pagadas += n;
+    else porPagar += n;
+  }
+
+  var titulo = enPalabras(fecha) + '  ·  ' + personas + ' personas';
+  if (porPagar) titulo += '  ·  ' + pagadas + ' pagadas, ' + porPagar + ' por pagar';
+  hoja.getRange(4, 1).setValue(titulo).setFontWeight('bold');
+
+  if (!filas.length) {
+    hoja.getRange(6, 1).setValue('No hay reservas para esa fecha.').setFontColor('#666666');
+    return;
+  }
+
+  hoja.getRange(6, 1, 1, TITULOS_DIA.length).setValues([TITULOS_DIA])
+      .setFontWeight('bold').setBackground('#F3F1EA');
+  hoja.getRange(7, 1, filas.length, TITULOS_DIA.length).setValues(filas);
+
+  for (var k = 0; k < filas.length; k++) {
+    var est = String(filas[k][5]).trim().toLowerCase();
+    if (est === 'cancelada') {
+      hoja.getRange(7 + k, 1, 1, TITULOS_DIA.length)
+          .setFontColor('#999999').setFontLine('line-through');
+    } else if (est === 'por pagar') {
+      hoja.getRange(7 + k, 6).setFontColor('#C9872A').setFontWeight('bold');
+    }
+  }
+}
+
+
+/* -------------------------------------------------------------
+   La pestaña Panel: la ocupación de los próximos días abiertos.
+
+   Es una pestaña y no una ventana porque es lo que se mira, no lo
+   que se toca: está siempre ahí, se ve en el celular, se imprime y
+   no hay que abrir nada. Lo que SÍ se toca —el calendario y el
+   formulario— vive en ventanas, que es donde hay botones de verdad.
+
+   Se redibuja entera cada vez. Lo que alguien escriba ahí se pierde,
+   y por eso no guarda nada que no esté en Reservas o en Excepciones.
+   ------------------------------------------------------------- */
+
+var TITULOS_PANEL = ['Día', 'Personas', 'Pagadas', 'Por pagar', 'Libres', 'Cupo', 'Nota'];
+
+function dibujarPanel() {
+  var hoja = hojaOCrear(HOJA_PANEL, TITULOS_PANEL);
+  var dias = diasAbiertos(12);
+
+  hoja.clear();
+
+  var gente = 0, deuda = 0;
+  for (var i = 0; i < dias.length; i++) {
+    gente += dias[i].tomadas;
+    deuda += dias[i].porPagar;
+  }
+
+  var filas = [];
+  filas.push(['OCUPACIÓN', '', '', '', '', '', '']);
+  filas.push([resumen(dias.length, gente, deuda), '', '', '', '', '', '']);
+  filas.push(['', '', '', '', '', '', '']);
+  filas.push(TITULOS_PANEL);
+
+  for (var j = 0; j < dias.length; j++) {
+    var d = dias[j];
+    filas.push([
+      enPalabras(d.fecha),
+      d.tomadas,
+      d.pagadas,
+      d.porPagar,
+      d.quedan,
+      d.cupo,
+      d.nota || (d.quedan <= 0 ? 'LLENO' : (d.pocos ? 'Últimos lugares' : ''))
+    ]);
+  }
+
+  if (!dias.length) {
+    filas.push(['No hay días abiertos por delante. Revisa dias_abiertos en Config.',
+                '', '', '', '', '', '']);
+  }
+
+  hoja.getRange(1, 1, filas.length, TITULOS_PANEL.length).setValues(filas);
+
+  // Formato: lo justo para que se lea de un vistazo, sin convertirlo en
+  // un trabajo de mantención cada vez que cambie una columna.
+  hoja.getRange(1, 1).setFontWeight('bold').setFontSize(12);
+  hoja.getRange(2, 1).setFontColor('#666666');
+  hoja.getRange(4, 1, 1, TITULOS_PANEL.length).setFontWeight('bold')
+      .setBackground('#F3F1EA');
+  hoja.setFrozenRows(4);
+  hoja.setColumnWidth(1, 220);
+  hoja.setColumnWidth(7, 220);
+
+  // Los días por llenarse y los llenos se marcan, que es lo que se busca
+  // al abrir la pestaña.
+  for (var k = 0; k < dias.length; k++) {
+    var fila = 5 + k;
+    if (dias[k].quedan <= 0) {
+      hoja.getRange(fila, 1, 1, TITULOS_PANEL.length).setBackground('#FBEEDC');
+    } else if (dias[k].pocos) {
+      hoja.getRange(fila, 5).setFontColor('#C9872A').setFontWeight('bold');
+    }
+    if (dias[k].porPagar) {
+      hoja.getRange(fila, 4).setFontColor('#C9872A').setFontWeight('bold');
+    }
+  }
+  return dias.length;
+}
+
+function resumen(cuantos, gente, deuda) {
+  var t = 'Actualizado: ' + Utilities.formatDate(new Date(), zonaHoraria(), 'dd-MM-yyyy HH:mm') +
+          '  ·  ' + cuantos + ' días abiertos  ·  ' + gente + ' personas';
+  if (deuda) t += '  ·  ' + deuda + ' pagan en el local';
+  return t;
+}
+
+/** "2026-10-17" -> "Sábado 17 de octubre". */
+function enPalabras(fecha) {
+  var p = fecha.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  var t = Utilities.formatDate(d, zonaHoraria(), 'EEEE d \'de\' MMMM');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/* -------------------------------------------------------------
+   Abrir y cerrar días, y cambiarles el cupo
+
+   LA REGLA QUE NO SE PUEDE ROMPER: esto escribe EXCEPCIONES, no
+   días. Las fechas salen de una regla —qué días de la semana se
+   abre— más una lista corta de excepciones. Un calendario que
+   escribiera una fila por cada día abierto llenaría la pestaña con
+   104 filas al año, que es exactamente el problema que este diseño
+   evitó.
+
+   Por eso volver un día a su estado normal BORRA su fila, y un cupo
+   igual al general tampoco se escribe. La pestaña Excepciones tiene
+   que quedar corta y legible: si crece, algo se hizo mal.
+   ------------------------------------------------------------- */
+
+function abrirCalendario() {
+  var html = HtmlService.createHtmlOutputFromFile('Calendario')
+    .setWidth(720).setHeight(640);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Abrir y cerrar días');
+}
+
+/**
+ * Un mes para dibujar: qué días abre la REGLA, cuáles son excepción y
+ * cuánta gente hay en cada uno.
+ */
+function mesDelCalendario(ancla) {
+  var cfg = configuracion();
+  var exc = excepciones();
+  var ocup = ocupacionPorFecha();
+  var hoy = hoyAca();
+
+  var base = comoFecha(ancla) || hoy;
+  var p = base.split('-');
+  var anio = Number(p[0]), mes = Number(p[1]);
+
+  var dias = [];
+  for (var d = 1; d <= 31; d++) {
+    var fecha = anio + '-' + ('0' + mes).slice(-2) + '-' + ('0' + d).slice(-2);
+    // El día 31 de un mes de 30 "existe" como texto pero no como fecha:
+    // se descarta comparando con lo que devuelve el calendario de verdad.
+    var real = new Date(anio, mes - 1, d);
+    if (real.getMonth() !== mes - 1) break;
+
+    var e = exc[fecha];
+    var porRegla = cfg.dias_abiertos.indexOf(diaDeLaSemana(fecha)) !== -1;
+    var abierta = e && e.abierta !== null ? e.abierta : porRegla;
+    var o = ocup[fecha] || { total: 0 };
+
+    dias.push({
+      fecha: fecha,
+      dia: d,
+      diaSemana: real.getDay(),
+      porRegla: porRegla,
+      abierta: abierta,
+      // Distinto de `abierta`: dice si hay una fila escrita para este día,
+      // que es lo que el panel marca y lo que se puede borrar.
+      excepcion: !!e,
+      cupo: (e && e.cupo) ? e.cupo : cfg.cupo_normal,
+      cupoPropio: !!(e && e.cupo),
+      tomadas: o.total,
+      pasado: fecha < hoy,
+      nota: (e && e.nota) || ''
+    });
+  }
+
+  return {
+    anio: anio, mes: mes, dias: dias, hoy: hoy,
+    cupoNormal: cfg.cupo_normal,
+    diasAbiertosRegla: cfg.dias_abiertos
+  };
+}
+
+/**
+ * Deja un día como lo pide el panel, escribiendo lo MÍNIMO.
  *
- * Se corre a mano desde el editor cuando el menú "Brasas" no sale o la
- * ventana no abre. Mira las dos piezas por separado —el archivo HTML y
- * los datos— porque fallan distinto y se arreglan distinto, y desde la
- * planilla las dos se ven igual: no pasa nada.
+ * `abrir` puede ser true, false o null —null significa "no opino, solo
+ * el cupo"—, y `cupo` 0 significa "el general". Si al final no queda
+ * nada que decir sobre el día, la fila se borra en vez de quedar
+ * guardando ceros.
+ */
+function fijarDia(fecha, abrir, cupo, nota) {
+  var f = comoFecha(fecha);
+  if (!f) throw new Error('Fecha inválida: ' + fecha);
+
+  var cfg = configuracion();
+  var porRegla = cfg.dias_abiertos.indexOf(diaDeLaSemana(f)) !== -1;
+  cupo = Math.max(0, Number(cupo) || 0);
+  if (cupo === cfg.cupo_normal) cupo = 0;   // el general no se escribe
+
+  // Si la regla ya hace lo que se pide, no hay excepción que guardar.
+  if (abrir === porRegla) abrir = null;
+
+  var hoja = asegurarColumnas(hojaOCrear(HOJA_EXCEPCIONES, COLUMNAS_EXCEPCIONES),
+                              COLUMNAS_EXCEPCIONES);
+  var cols = encabezado(hoja);
+  var filas = datos(HOJA_EXCEPCIONES);
+  var fila = 0;
+  for (var i = 0; i < filas.length; i++) {
+    if (comoFecha(filas[i].fecha) === f) { fila = i + 2; break; }
+  }
+
+  var sobra = (abrir === null && !cupo && !String(nota || '').trim());
+
+  if (sobra) {
+    // Nada que decir de este día: la fila no tiene por qué existir.
+    if (fila) hoja.deleteRow(fila);
+    registrar('OK', 'Excepción borrada: ' + f);
+    try { dibujarPanel(); } catch (e) {}
+    return { ok: true, borrada: true };
+  }
+
+  var valores = {
+    fecha: f,
+    abierta: abrir === null ? '' : (abrir ? 'sí' : 'no'),
+    cupo: cupo || '',
+    nota: String(nota || '').trim()
+  };
+  var linea = cols.map(function (c) {
+    return valores.hasOwnProperty(c) ? valores[c] : '';
+  });
+
+  if (fila) hoja.getRange(fila, 1, 1, linea.length).setValues([linea]);
+  else hoja.appendRow(linea);
+
+  registrar('OK', 'Excepción: ' + f + ' abierta=' + valores.abierta +
+                  ' cupo=' + (cupo || 'general'));
+  try { dibujarPanel(); } catch (e2) {}
+  return { ok: true, borrada: false };
+}
+
+
+/* -------------------------------------------------------------
+   Reservas escritas a mano
+   ------------------------------------------------------------- */
+
+function abrirFormulario() {
+  var html = HtmlService.createHtmlOutputFromFile('Formulario')
+    .setWidth(620).setHeight(640);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Agregar una reserva');
+}
+
+/** Lo que el formulario necesita saber antes de dibujarse. */
+function datosDelFormulario() {
+  return { dias: diasAbiertos(16), hoy: hoyAca() };
+}
+
+/**
+ * Guarda una reserva escrita a mano: las que llegan por teléfono, por
+ * WhatsApp o en el mesón y no pasan por Shopify.
+ *
+ * El `pedido` queda como "MANUAL-<marca de tiempo>", y eso NO es
+ * cosmético: sincronizarPedidos() usa esa columna para saber qué pedidos
+ * de Shopify ya anotó. Los ids de Shopify son números, así que uno que
+ * empieza en MANUAL- no puede coincidir con ninguno: la sincronización
+ * no la va a pisar, ni a borrar, ni a confundir con un pedido suyo.
+ *
+ * El `total` queda en blanco a propósito. Los precios viven en el HTML
+ * del sitio y este backend no los conoce; copiarlos acá sería un segundo
+ * lugar con la verdad, que es justo lo que este proyecto evita. Si algún
+ * día hace falta la plata de una reserva a mano, se escribe la celda.
+ */
+function guardarReservaManual(f) {
+  f = f || {};
+
+  var fecha = comoFecha(f.fecha);
+  var nombre = String(f.nombre || '').trim();
+  var apellido = String(f.apellido || '').trim();
+  var tradiciones = Math.max(0, Number(f.tradiciones) || 0);
+  var brasas = Math.max(0, Number(f.brasas) || 0);
+  var ninos = Math.max(0, Number(f.ninos) || 0);
+  var estado = String(f.estado || '').trim().toLowerCase();
+
+  var faltan = [];
+  if (!fecha) faltan.push('la fecha');
+  if (!nombre) faltan.push('el nombre');
+  if (!apellido) faltan.push('el apellido');
+  if (tradiciones + brasas + ninos < 1) faltan.push('al menos una persona');
+  if (estado !== 'pagada' && estado !== 'por pagar') faltan.push('el estado del pago');
+  if (faltan.length) throw new Error('Falta ' + faltan.join(', ') + '.');
+
+  var menus = [];
+  if (tradiciones) menus.push('Tradiciones ×' + tradiciones);
+  if (brasas) menus.push('A Brasas abiertas ×' + brasas);
+  if (ninos) menus.push('Niños ×' + ninos);
+
+  var reserva = {
+    pedido: 'MANUAL-' + new Date().getTime(),
+    numero: 'a mano',
+    fecha: fecha,
+    nombre: (nombre + ' ' + apellido).trim(),
+    email: String(f.email || '').trim(),
+    telefono: String(f.telefono || '').trim(),
+    menu: menus.join(' + '),
+    modalidad: 'A mano',
+    estado: estado,
+    adultos: tradiciones + brasas,
+    ninos: ninos,
+    total: '',
+    moneda: '',
+    creado: new Date().toISOString()
+  };
+
+  var idEvento = crearEvento(reserva);
+  anotarReserva(reserva, idEvento);
+  registrar('OK', 'Reserva a mano: ' + reserva.nombre + ' el ' + fecha +
+                  ' (' + (reserva.adultos + reserva.ninos) + ' personas)');
+
+  try { dibujarPanel(); } catch (e2) { /* la reserva ya quedó: el dibujo es aparte */ }
+
+  // El aviso no bloquea: quien toma una reserva por teléfono sabe más que
+  // la regla. Pero tiene que enterarse de que ese día estaba cerrado o de
+  // que se pasó del cupo, que es justo cuando conviene revisar.
+  return { ok: true, nombre: reserva.nombre, aviso: avisoDelDia(fecha, reserva) };
+}
+
+function avisoDelDia(fecha, reserva) {
+  var dias = diasAbiertos();
+  for (var i = 0; i < dias.length; i++) {
+    if (dias[i].fecha !== fecha) continue;
+    var piden = reserva.adultos + reserva.ninos;
+    // `quedan` ya incluye esta reserva, porque se anotó antes.
+    if (dias[i].quedan < 0) {
+      return 'Ojo: ese día quedó con ' + (-dias[i].quedan) + ' personas sobre el cupo.';
+    }
+    if (dias[i].quedan === 0) return 'Con esta, ese día quedó lleno.';
+    if (dias[i].pocos) return 'Quedan ' + dias[i].quedan + ' lugares ese día.';
+    return '';
+  }
+  return 'Ojo: ese día no está abierto. La reserva quedó anotada igual, ' +
+         'pero no aparece en el panel hasta que lo abras.';
+}
+
+
+/**
+ * Por qué no abre una ventana.
+ *
+ * Se corre a mano desde el editor cuando "Agregar una reserva" o "Abrir
+ * y cerrar días" no hacen nada. Mira cada archivo HTML por separado,
+ * porque faltar uno y faltar el otro se ven igual desde la planilla: no
+ * pasa nada.
  */
 function revisarPanel() {
-  var bien = true;
+  var archivos = ['Formulario', 'Calendario'];
+  var faltan = [];
 
-  try {
-    HtmlService.createHtmlOutputFromFile('Panel');
-    Logger.log('El archivo Panel: OK, lo encuentra.');
-  } catch (err) {
-    bien = false;
-    Logger.log('El archivo Panel: NO LO ENCUENTRA.');
-    Logger.log('  Falta crearlo, o está con otro nombre. En el editor:');
-    Logger.log('  el + de arriba a la izquierda → HTML, y llamarlo exactamente');
-    Logger.log('  "Panel" (sin .html, Apps Script se lo pone solo). Después');
-    Logger.log('  pegar adentro el contenido de Panel.html del repo.');
+  for (var i = 0; i < archivos.length; i++) {
+    try {
+      HtmlService.createHtmlOutputFromFile(archivos[i]);
+      Logger.log('Archivo ' + archivos[i] + ': OK.');
+    } catch (err) {
+      faltan.push(archivos[i]);
+      Logger.log('Archivo ' + archivos[i] + ': NO LO ENCUENTRA.');
+    }
   }
 
   try {
-    var d = panelOcupacion();
-    Logger.log('Los datos: OK, ' + d.dias.length + ' días abiertos por delante.');
-    if (!d.dias.length) {
-      Logger.log('  Cero días es raro: revisa dias_abiertos en la pestaña Config.');
-    }
+    var n = dibujarPanel();
+    Logger.log('La pestaña Panel: OK, ' + n + ' días dibujados.');
+    if (!n) Logger.log('  Cero días es raro: revisa dias_abiertos en Config.');
   } catch (err2) {
-    bien = false;
-    Logger.log('Los datos: FALLAN — ' + err2.message);
+    Logger.log('La pestaña Panel: FALLA — ' + err2.message);
   }
 
   Logger.log('');
-  if (bien) {
-    Logger.log('Las dos piezas están. Si el menú "Brasas" igual no aparece,');
-    Logger.log('es que la planilla no se ha recargado: onOpen() solo corre al');
-    Logger.log('ABRIR la planilla, y pegar código no la reabre. Cierra la');
-    Logger.log('pestaña de la planilla y vuelve a entrar.');
-    Logger.log('');
-    Logger.log('Mientras tanto, el panel se puede abrir sin el menú: elige');
-    Logger.log('abrirPanel en el desplegable de funciones y dale Ejecutar.');
+  if (faltan.length) {
+    Logger.log('Falta crear ' + faltan.length + ' archivo(s) HTML: ' + faltan.join(', '));
+    Logger.log('En el editor: el + de arriba a la izquierda → HTML, con ese');
+    Logger.log('nombre exacto (sin .html, Apps Script se lo pone solo), y pegar');
+    Logger.log('adentro el archivo del mismo nombre que está en backend/.');
+  } else {
+    Logger.log('Todo está. Si el menú "Brasas" no aparece, es que la planilla');
+    Logger.log('no se ha recargado: onOpen() solo corre al ABRIRLA, y pegar');
+    Logger.log('código no la reabre. Cierra la pestaña y vuelve a entrar.');
   }
-}
-
-function abrirPanel() {
-  var html = HtmlService.createHtmlOutputFromFile('Panel')
-    .setWidth(920)
-    .setHeight(640);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Reservas');
-}
-
-/**
- * Lo que el panel pide para dibujar la ocupación.
- *
- * Devuelve los próximos días abiertos, llenos incluidos, con el reparto
- * entre pagadas y por pagar. Doce días abiertos son unos dos meses de
- * fines de semana: suficiente para planificar sin traer la agenda entera.
- */
-function panelOcupacion() {
-  var dias = diasAbiertos(12);
-  var cfg = configuracion();
-  return {
-    dias: dias,
-    cupoNormal: cfg.cupo_normal,
-    hoy: hoyAca()
-  };
 }
 
 

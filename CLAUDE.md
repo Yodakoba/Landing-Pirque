@@ -460,12 +460,29 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   mientras que `customer` y `billing_address` traían datos **sin las
   llaves** de nombre, correo y teléfono. Ver `backend/README.md`.
 - **El panel de administración vive DENTRO de la planilla** (menú
-  `Brasas → Panel de reservas`), y no es una página aparte a propósito: la
-  autenticación sale gratis de la planilla, no hay segunda copia de los
-  datos y no hay nada nuevo que desplegar. Una página suelta tendría que
-  escribirle al Web App, que está publicado como "cualquier usuario".
-  Primera entrega: la pestaña **Ocupación**, que solo lee. El calendario
-  editable viene después. Ver `backend/README.md`.
+  `Brasas`), y no es una página aparte a propósito: la autenticación sale
+  gratis de la planilla, no hay segunda copia de los datos y no hay nada
+  nuevo que desplegar. Una página suelta tendría que escribirle al Web App,
+  que está publicado como "cualquier usuario".
+- **Lo que se mira vive en pestañas, lo que se toca vive en ventanas**
+  (2026-10-14). Una pestaña de Sheets es una grilla y no puede tener
+  botones, pero está siempre ahí, se ve en el celular y se imprime; una
+  ventana tiene botones pero hay que abrirla. Pestañas: `Panel`
+  (ocupación) y `Día` (quiénes vienen). Ventanas: el formulario de reserva
+  a mano y el calendario de abrir/cerrar días. Ver `backend/README.md`.
+- **Las dos pestañas se redibujan enteras**: lo que alguien escriba ahí se
+  pierde, y por eso no guardan nada que no esté en `Reservas` o
+  `Excepciones`.
+- **El calendario escribe EXCEPCIONES, no días.** Volver un día a su
+  estado normal **borra** su fila, y un cupo igual al general no se
+  escribe. Si `Excepciones` crece hasta tener un día por fila, el diseño
+  se rompió: eran 104 filas al año, que es lo que se evitó. Hay nueve
+  pruebas que lo fijan.
+- **Una reserva a mano lleva `pedido` = `MANUAL-…`.** No es cosmético:
+  `sincronizarPedidos()` usa esa columna para saber qué pedidos de Shopify
+  ya anotó, y los ids de Shopify son números, así que no pueden chocar. Su
+  `total` queda en blanco a propósito: los precios viven en el HTML del
+  sitio y el backend no los conoce.
 - **El panel y el sitio salen de la misma función**, `diasAbiertos()`. El
   sitio recibe deliberadamente menos: solo fecha, lugares que quedan y si
   son pocos. Cuánta gente reservó, cuánto pagó y el tamaño del local no son
