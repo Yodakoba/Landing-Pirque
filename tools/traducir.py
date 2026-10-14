@@ -156,7 +156,7 @@ MARCA_ALTERNATE = '\x00i18n-alternate\x00'
 # forma, así que no hay que repetirlo en cada diccionario.
 INTACTO = re.compile(r"""
     ^(?:
-        [\s·—–\-|/:.,()]+               # separadores sueltos
+        [\s·—–\-−|/:.,()]+              # separadores sueltos y el signo menos
       | [·\s]*\+?[\d\s.,$%°ºª:/()+-]+   # números, precios, teléfonos, horarios
       | [·\s]*[\w.+-]+@[\w.-]+          # correos
       | [·\s]*(?:https?://|www\.)\S+    # urls

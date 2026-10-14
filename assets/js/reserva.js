@@ -85,6 +85,8 @@
       ultimos: 'Últimos lugares: quedan {n}.',
       noAlcanza: 'Para esa fecha quedan {n} lugares y estás pidiendo {p}.',
       eligeFecha: 'Elige una fecha en el calendario.',
+      sinNadie: 'Elige cuántas personas van con cada menú.',
+      sinAdultos: 'Agrega al menos un adulto: el menú de niños acompaña al de un adulto.',
       locale: 'es-CL',
       moneda: '',
       creando: 'Creando tu reserva\u2026',
@@ -102,6 +104,8 @@
       ultimos: 'Last places: {n} left.',
       noAlcanza: 'That date has {n} places left and you are asking for {p}.',
       eligeFecha: 'Pick a date on the calendar.',
+      sinNadie: 'Choose how many people go with each menu.',
+      sinAdultos: 'Add at least one adult: the children\u2019s menu goes alongside an adult menu.',
       locale: 'en-US',
       moneda: ' CLP',
       creando: 'Creating your booking\u2026',
@@ -119,6 +123,8 @@
       ultimos: 'Últimos lugares: restam {n}.',
       noAlcanza: 'Nessa data restam {n} lugares e você está pedindo {p}.',
       eligeFecha: 'Escolha uma data no calendário.',
+      sinNadie: 'Escolha quantas pessoas vão com cada menu.',
+      sinAdultos: 'Adicione pelo menos um adulto: o menu infantil acompanha o de um adulto.',
       locale: 'pt-BR',
       moneda: ' CLP',
       creando: 'Criando a sua reserva\u2026',
@@ -149,25 +155,56 @@
   var caja = document.querySelector('.reserva-widget');
   if (!caja) return;
 
-  var selMenu = caja.querySelector('#r-menu');
   var selFecha = caja.querySelector('#r-fecha');
-  var inpAdultos = caja.querySelector('#r-adultos');
-  var inpNinos = caja.querySelector('#r-ninos');
   var salPersonas = caja.querySelector('[data-total-personas]');
   var salTotal = caja.querySelector('[data-total-precio]');
   var btnReservar = caja.querySelector('[data-reservar]');
   var zonaAviso = caja.querySelector('[data-mensaje]');
-  var salPrecioAdulto = caja.querySelector('[data-precio-adulto]');
 
-  if (!selMenu || !selFecha || !inpAdultos || !inpNinos || !btnReservar) return;
+  // Las tres opciones conviven: cada fila es un menú con su propio
+  // contador, y un pedido puede llevar varias. Antes era un desplegable y
+  // un solo menú por pedido, lo que dejaba fuera algo tan corriente como
+  // tres personas con Tradiciones y dos con A Brasas abiertas.
+  //
+  // Los IDs de variante y los precios salen del HTML, no de acá: un solo
+  // lugar que editar al pasar a producción, donde los IDs son otros.
+  var opciones = [];
+  var nodos = caja.querySelectorAll('[data-opcion]');
+  for (var i = 0; i < nodos.length; i++) {
+    var nodo = nodos[i];
+    opciones.push({
+      nodo: nodo,
+      variante: nodo.getAttribute('data-variante'),
+      precio: parseInt(nodo.getAttribute('data-precio'), 10) || 0,
+      // El menú de niños no cuenta como adulto. Es un agregado al de un
+      // adulto, no un pedido en sí: ver "al menos un adulto" más abajo.
+      adulto: nodo.getAttribute('data-tipo') !== 'nino',
+      input: nodo.querySelector('input[type="number"]'),
+      menos: nodo.querySelector('[data-menos]'),
+      mas: nodo.querySelector('[data-mas]')
+    });
+  }
 
-  // El menú de niños es uno solo: se suma a cualquiera de los dos menús
-  // de adultos y no cambia de precio.
-  var varianteNino = caja.getAttribute('data-nino');
-  var precioNino = parseInt(caja.getAttribute('data-precio-nino'), 10) || 0;
+  if (!selFecha || !btnReservar || !opciones.length) return;
 
-  function menuElegido() {
-    return selMenu.options[selMenu.selectedIndex];
+  function cuantos(op) {
+    var n = parseInt(op.input.value, 10);
+    if (isNaN(n) || n < 0) n = 0;
+    return n;
+  }
+
+  function personas() {
+    var n = 0;
+    for (var i = 0; i < opciones.length; i++) n += cuantos(opciones[i]);
+    return n;
+  }
+
+  function adultos() {
+    var n = 0;
+    for (var i = 0; i < opciones.length; i++) {
+      if (opciones[i].adulto) n += cuantos(opciones[i]);
+    }
+    return n;
   }
 
   /* ---------- el calendario ----------
@@ -369,7 +406,25 @@
       return;
     }
 
-    var piden = cantidad(inpAdultos, 1) + cantidad(inpNinos, 0);
+    // Las tres opciones nacen en cero, así que lo primero es decir qué
+    // falta. Vacío y "solo niños" son cosas distintas: una es el estado
+    // inicial y la otra es un pedido que no se puede cumplir.
+    if (personas() < 1) {
+      avisoFecha.textContent = T.sinNadie;
+      avisoFecha.className = 'aviso';
+      return;
+    }
+
+    // Sin un adulto no hay pedido: el menú de niños es un agregado al de
+    // un adulto, no algo que se venda solo. Se avisa antes que el cupo
+    // porque es lo que hay que arreglar primero.
+    if (adultos() < 1) {
+      avisoFecha.textContent = T.sinAdultos;
+      avisoFecha.className = 'aviso error';
+      return;
+    }
+
+    var piden = personas();
     if (piden > info.quedan) {
       avisoFecha.textContent = T.noAlcanza
         .replace('{n}', info.quedan).replace('{p}', piden);
@@ -386,10 +441,11 @@
   }
 
   /** ¿Se puede apretar reservar con lo que hay elegido? */
-  function fechaUsable() {
+  function pedidoUsable() {
     var info = disponibles[selFecha.value];
-    if (!info) return false;
-    return (cantidad(inpAdultos, 1) + cantidad(inpNinos, 0)) <= info.quedan;
+    if (!info) return false;              // sin fecha elegida no hay nada
+    if (adultos() < 1) return false;      // el menú de niños no va solo
+    return personas() <= info.quedan;
   }
 
   function pintarEstado(texto) {
@@ -441,26 +497,29 @@
       });
   }
 
-  function cantidad(input, minimo) {
-    var n = parseInt(input.value, 10);
-    if (isNaN(n) || n < minimo) n = minimo;
-    return n;
-  }
-
   function recalcular() {
-    var precioAdulto = parseInt(menuElegido().getAttribute('data-precio'), 10) || 0;
-    var adultos = cantidad(inpAdultos, 1);
-    var ninos = cantidad(inpNinos, 0);
-    var total = adultos * precioAdulto + ninos * precioNino;
-    // El precio por adulto cambia con el menú, así que la fila se reescribe.
-    if (salPrecioAdulto) salPrecioAdulto.textContent = pesos(precioAdulto);
-    if (salPersonas) salPersonas.textContent = adultos + ninos;
+    var total = 0;
+    for (var i = 0; i < opciones.length; i++) {
+      var op = opciones[i];
+      var n = cuantos(op);
+      total += n * op.precio;
+      // El input se normaliza: si alguien escribe "-3" o lo deja en blanco,
+      // lo que ve tiene que ser lo que se va a cobrar.
+      if (op.input.value !== String(n)) op.input.value = n;
+      // Con tres filas iguales hay que poder ver de un vistazo cuáles
+      // entraron al pedido.
+      op.nodo.className = n > 0 ? 'reserva-fila activa' : 'reserva-fila';
+      if (op.menos) op.menos.disabled = n < 1;
+    }
+
+    if (salPersonas) salPersonas.textContent = personas();
     if (salTotal) salTotal.textContent = pesos(total);
 
     avisarSobreFecha();
-    // Sin fecha elegida, o pidiendo más lugares de los que quedan, el
-    // botón se apaga. Vale más que deje apretar y falle en el checkout.
-    btnReservar.disabled = !fechaUsable();
+    // Sin fecha elegida, sin un adulto, o pidiendo más lugares de los que
+    // quedan, el botón se apaga. Vale más que deje apretar y falle en el
+    // checkout.
+    btnReservar.disabled = !pedidoUsable();
   }
 
   function mensaje(texto, tipo) {
@@ -474,31 +533,27 @@
   function lineas() {
     // Desde 2026-10 las variantes ya no son una por fecha: son una por
     // menú y modalidad. La fecha no elige variante, viaja como propiedad
-    // de línea para que Cowlendar la registre en su calendario.
+    // de línea: es la única forma en que llega al pedido, y de ahí la lee
+    // el backend para anotar la reserva.
     var fecha = selFecha.value;                                   // YYYY-MM-DD
-    var adultos = cantidad(inpAdultos, 1);
-    var ninos = cantidad(inpNinos, 0);
 
-    // Cowlendar lee estas dos propiedades para registrar la reserva
-    // en su calendario. Van con guion bajo adelante para que no se
-    // le muestren al cliente en el checkout.
+    // Van con guion bajo adelante para que no se le muestren al cliente
+    // en el checkout. El backend lee _booking_date; la segunda queda por
+    // si alguna vez se vuelve a una app de reservas.
     var atributos = [
       { key: '_booking_date', value: fecha },
       { key: '_cowlendar_date', value: fecha }
     ];
 
-    var out = [{
-      merchandiseId: gid(menuElegido().getAttribute('data-variante')),
-      quantity: adultos,
-      attributes: atributos
-    }];
-
-    // Si no vienen niños, la línea no se agrega: un quantity 0
-    // hace fallar la mutation.
-    if (ninos > 0) {
+    // Una línea por menú con cantidad. Las que quedan en cero no se
+    // agregan: un quantity 0 hace fallar la mutation.
+    var out = [];
+    for (var i = 0; i < opciones.length; i++) {
+      var n = cuantos(opciones[i]);
+      if (n < 1) continue;
       out.push({
-        merchandiseId: gid(varianteNino),
-        quantity: ninos,
+        merchandiseId: gid(opciones[i].variante),
+        quantity: n,
         attributes: atributos
       });
     }
@@ -515,7 +570,7 @@
   ].join('\n');
 
   function reservar() {
-    if (!fechaUsable()) { avisarSobreFecha(); return; }
+    if (!pedidoUsable()) { avisarSobreFecha(); return; }
 
     if (!CONFIG.token) {
       mensaje(T.sinPago, 'error');
@@ -563,9 +618,24 @@
 
   /* ---------- arranque ---------- */
 
-  selMenu.addEventListener('change', recalcular);
-  inpAdultos.addEventListener('input', recalcular);
-  inpNinos.addEventListener('input', recalcular);
+  // Los botones + y - son una comodidad encima del <input type=number>,
+  // que sigue siendo el que guarda la cantidad y se puede escribir a mano.
+  // Por eso el paso mueve el valor del input y vuelve a recalcular, en vez
+  // de llevar la cuenta por su lado: un solo lugar con la verdad.
+  function paso(op, delta) {
+    return function () {
+      var n = cuantos(op) + delta;
+      op.input.value = n < 0 ? 0 : n;
+      recalcular();
+    };
+  }
+
+  for (var k = 0; k < opciones.length; k++) {
+    var op = opciones[k];
+    op.input.addEventListener('input', recalcular);
+    if (op.menos) op.menos.addEventListener('click', paso(op, -1));
+    if (op.mas) op.mas.addEventListener('click', paso(op, 1));
+  }
   btnReservar.addEventListener('click', reservar);
 
   // El botón nace deshabilitado en el HTML para que nadie apriete un botón

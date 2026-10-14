@@ -641,16 +641,52 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   .cal-dia{ font-size:0.8rem; }
 }
 
+/* Las tres opciones van visibles a la vez, cada una con su contador, para
+   que un pedido pueda mezclar menus. La fila con cantidad sobre cero se
+   marca: con tres filas iguales hay que poder ver de un vistazo cuales
+   entraron al pedido. */
 .reserva-fila{
-  display:grid; grid-template-columns: 1fr 104px 128px; gap:16px; align-items:end;
+  display:grid; grid-template-columns: 1fr 150px 118px; gap:16px; align-items:center;
   padding: 18px 0; border-top:1px solid var(--line);
 }
 .reserva-fila .quien{ font-size:0.95rem; }
 .reserva-fila .quien small{ display:block; color: var(--ink-faint); font-size:0.78rem; margin-top:3px; }
-.reserva-fila .valor{ text-align:right; font-family:var(--serif); font-style:italic; font-size:1.15rem; }
+.reserva-fila .valor{ text-align:right; font-family:var(--serif); font-style:italic; font-size:1.15rem;
+  color: var(--ink-faint); }
+.reserva-fila.activa .valor{ color: var(--gold); }
+
+/* El contador: dos botones grandes y el numero al medio. Los botones son de
+   44px, que es el minimo que se acierta con el pulgar sin apuntar.
+
+   El <input type=number> sigue ahi debajo y se puede escribir: los botones
+   son una comodidad encima, no el unico camino. Se le esconden las flechitas
+   nativas porque al lado de botones de 44px se ven como un error de dibujo. */
+.contador{ display:flex; align-items:stretch; }
+.contador .paso{
+  flex:0 0 auto; width:44px; min-height:46px; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  background: var(--bg); border:1px solid var(--line); color: var(--ink);
+  font-family:var(--sans); font-size:1.25rem; line-height:1; cursor:pointer;
+}
+.contador .paso:first-child{ border-radius:2px 0 0 2px; }
+.contador .paso:last-child{ border-radius:0 2px 2px 0; }
+.contador .paso:hover:not(:disabled){ border-color: var(--gold); color: var(--gold); }
+.contador .paso:disabled{ opacity:0.3; cursor:not-allowed; }
+.reserva-widget .contador input[type="number"]{
+  width:62px; padding:13px 0; border-left:0; border-right:0; border-radius:0;
+  -moz-appearance:textfield; appearance:textfield;
+}
+.contador input[type="number"]::-webkit-outer-spin-button,
+.contador input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance:none; margin:0;
+}
 @media (max-width: 560px){
-  .reserva-fila{ grid-template-columns: 1fr 104px; }
-  .reserva-fila .valor{ grid-column:1 / -1; text-align:left; margin-top:4px; }
+  /* El contador se achica lo justo para que el nombre del menu no quede
+     partido: los botones siguen sobre los 40px que se aciertan con el pulgar. */
+  .reserva-fila{ grid-template-columns: 1fr 134px; gap:12px; }
+  .contador .paso{ width:41px; }
+  .reserva-widget .contador input[type="number"]{ width:50px; }
+  .reserva-fila .valor{ grid-column:1 / -1; text-align:left; margin-top:4px; font-size:1.05rem; }
 }
 .reserva-total{
   display:flex; flex-wrap:wrap; gap:12px 30px; justify-content:space-between;
