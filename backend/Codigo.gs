@@ -63,7 +63,8 @@ function config(clave) {
       'config() es una función auxiliar y no se corre sola. En el ' +
       'desplegable de arriba elige una de estas: prepararPlanilla ' +
       '(la primera vez), revisarConfiguracion, probarShopify, ' +
-      'probarDatosDelCliente, probarCalendario o probarFechas.');
+      'probarDatosDelCliente, probarCalendario, probarFechas o ' +
+      'revisarPanel.');
   }
   var v = PropertiesService.getScriptProperties().getProperty(clave);
   if (!v) {
@@ -824,6 +825,52 @@ function onOpen() {
     .createMenu('Brasas')
     .addItem('Panel de reservas', 'abrirPanel')
     .addToUi();
+}
+
+/**
+ * Por qué no aparece el panel.
+ *
+ * Se corre a mano desde el editor cuando el menú "Brasas" no sale o la
+ * ventana no abre. Mira las dos piezas por separado —el archivo HTML y
+ * los datos— porque fallan distinto y se arreglan distinto, y desde la
+ * planilla las dos se ven igual: no pasa nada.
+ */
+function revisarPanel() {
+  var bien = true;
+
+  try {
+    HtmlService.createHtmlOutputFromFile('Panel');
+    Logger.log('El archivo Panel: OK, lo encuentra.');
+  } catch (err) {
+    bien = false;
+    Logger.log('El archivo Panel: NO LO ENCUENTRA.');
+    Logger.log('  Falta crearlo, o está con otro nombre. En el editor:');
+    Logger.log('  el + de arriba a la izquierda → HTML, y llamarlo exactamente');
+    Logger.log('  "Panel" (sin .html, Apps Script se lo pone solo). Después');
+    Logger.log('  pegar adentro el contenido de Panel.html del repo.');
+  }
+
+  try {
+    var d = panelOcupacion();
+    Logger.log('Los datos: OK, ' + d.dias.length + ' días abiertos por delante.');
+    if (!d.dias.length) {
+      Logger.log('  Cero días es raro: revisa dias_abiertos en la pestaña Config.');
+    }
+  } catch (err2) {
+    bien = false;
+    Logger.log('Los datos: FALLAN — ' + err2.message);
+  }
+
+  Logger.log('');
+  if (bien) {
+    Logger.log('Las dos piezas están. Si el menú "Brasas" igual no aparece,');
+    Logger.log('es que la planilla no se ha recargado: onOpen() solo corre al');
+    Logger.log('ABRIR la planilla, y pegar código no la reabre. Cierra la');
+    Logger.log('pestaña de la planilla y vuelve a entrar.');
+    Logger.log('');
+    Logger.log('Mientras tanto, el panel se puede abrir sin el menú: elige');
+    Logger.log('abrirPanel en el desplegable de funciones y dale Ejecutar.');
+  }
 }
 
 function abrirPanel() {

@@ -336,6 +336,20 @@ reserva igual: ocupa la silla.
 En la planilla aparece un menú **Brasas → Panel de reservas**. La primera vez
 Google pide autorización, porque el panel lee la planilla.
 
+### Si el menú no aparece
+
+**Recarga la planilla.** Es la causa número uno: `onOpen()` corre solo al
+**abrir** la planilla, y pegar código en el editor no la reabre. Cierra la
+pestaña y vuelve a entrar.
+
+Mientras tanto el panel se puede abrir **sin el menú**: en el editor, elige
+`abrirPanel` en el desplegable de funciones y dale Ejecutar. Si así abre, el
+panel está bien y lo único que faltaba era recargar.
+
+Y si quieres saber qué pieza falta, corre **`revisarPanel()`**: mira por
+separado el archivo HTML y los datos, que fallan distinto y se arreglan
+distinto, aunque desde la planilla se vean igual —no pasa nada—.
+
 ### Por qué vive adentro de la planilla y no es una página aparte
 
 - **La autenticación sale gratis.** Quien puede abrir la planilla puede abrir
