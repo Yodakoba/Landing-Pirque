@@ -56,6 +56,11 @@ el paso 3.
 En la planilla: **Extensiones → Apps Script**. Borra lo que venga y pega
 entero el contenido de `Codigo.gs`. Guarda.
 
+Y **un segundo archivo para el panel**: *Archivo → Nuevo → Archivo HTML*,
+llámalo **`Panel`** —sin `.html`, Apps Script se lo pone solo— y pega ahí el
+contenido de `Panel.html`. El nombre importa: `abrirPanel()` lo busca
+exactamente por ese nombre.
+
 ### 3. Las pestañas
 
 En el editor, elige **`prepararPlanilla`** en el desplegable de funciones y
@@ -325,6 +330,52 @@ apuntando a la vieja.
 Es lo que trae los pedidos y los convierte en reservas. **Trae los pagados y
 los que están por pagar**, porque una reserva con pago en el local es una
 reserva igual: ocupa la silla.
+
+## El panel
+
+En la planilla aparece un menú **Brasas → Panel de reservas**. La primera vez
+Google pide autorización, porque el panel lee la planilla.
+
+### Por qué vive adentro de la planilla y no es una página aparte
+
+- **La autenticación sale gratis.** Quien puede abrir la planilla puede abrir
+  el panel, y nadie más. Una página suelta que cambia cupos y fechas
+  necesitaría su propio login, y el Web App que usa el sitio está publicado
+  como "cualquier usuario": quien descubriera esa URL podría cambiarte el
+  aforo.
+- **Un solo lugar con la verdad.** Escribe y lee las mismas pestañas que ya
+  usa el sitio, así que no hay una segunda copia que se desfase.
+- **Nada nuevo que desplegar**: mismo proyecto, sin URL nueva, sin CORS.
+
+Y la planilla sigue siendo el respaldo: si el panel falla, las filas se
+editan a mano como siempre.
+
+### Ocupación
+
+Los próximos doce días abiertos —unos dos meses de fines de semana— con el
+reparto entre **pagadas** y **por pagar en el local**, cuántos lugares quedan
+y el cupo del día. Los días llenos **sí aparecen**: son justamente los que
+hay que mirar. El sitio no los ofrece, pero eso es otra cosa.
+
+**El reparto no es la modalidad comprada, es el estado del pago.** Son
+columnas distintas de `Reservas` y no significan lo mismo: alguien puede
+haber comprado *Pago directo* y estar *por pagar*, que es la fuga que
+vigilamos. Lo que el panel muestra es cuánta plata está adentro y cuánta se
+cobra en la puerta.
+
+**Una fila sin `estado` cuenta como pagada.** Son anteriores a que existiera
+la columna, y en esa época el backend solo anotaba pedidos pagados; contarlas
+como deuda inventaría una que no existe.
+
+### De dónde salen los números
+
+De `diasAbiertos()`, la misma función de la que sale lo que recibe el sitio.
+Son dos vistas de un cálculo, no dos cálculos: si mañana cambia la regla del
+cupo, el panel la sigue solo.
+
+Lo que el sitio recibe es **deliberadamente menos** —solo fecha, lugares que
+quedan y si son pocos—. Cuánta gente ya reservó, cuánto pagó y de qué tamaño
+es el local no son cosas que tenga que saber un visitante.
 
 ## Lo primero que hay que validar
 

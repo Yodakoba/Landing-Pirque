@@ -348,7 +348,7 @@ El reparto queda así:
 |---|---|
 | Cobro y checkout | Shopify |
 | Calendario, cupo y registro | Nuestro backend |
-| Panel de administración | Una planilla de Google (por ahora) |
+| Panel de administración | Un panel dentro de la misma planilla |
 | Agenda visible | Google Calendar |
 
 **Por qué consultamos a Shopify en vez de recibir un webhook:** los Web Apps
@@ -459,6 +459,17 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   `shipping_address` vino en `null` (correcto: una reserva no tiene envío)
   mientras que `customer` y `billing_address` traían datos **sin las
   llaves** de nombre, correo y teléfono. Ver `backend/README.md`.
+- **El panel de administración vive DENTRO de la planilla** (menú
+  `Brasas → Panel de reservas`), y no es una página aparte a propósito: la
+  autenticación sale gratis de la planilla, no hay segunda copia de los
+  datos y no hay nada nuevo que desplegar. Una página suelta tendría que
+  escribirle al Web App, que está publicado como "cualquier usuario".
+  Primera entrega: la pestaña **Ocupación**, que solo lee. El calendario
+  editable viene después. Ver `backend/README.md`.
+- **El panel y el sitio salen de la misma función**, `diasAbiertos()`. El
+  sitio recibe deliberadamente menos: solo fecha, lugares que quedan y si
+  son pocos. Cuánta gente reservó, cuánto pagó y el tamaño del local no son
+  datos de un visitante. Hay una prueba que lo fija.
 - **Los títulos de las cuatro pestañas de la planilla no se escriben a
   mano**: los deja `prepararPlanilla()`, que se corre una vez desde el
   editor de Apps Script y es segura de repetir. No es comodidad: el script
