@@ -63,7 +63,7 @@ function config(clave) {
       'config() es una función auxiliar y no se corre sola. En el ' +
       'desplegable de arriba elige una de estas: prepararPlanilla ' +
       '(la primera vez), revisarConfiguracion, probarShopify, ' +
-      'probarCalendario o probarFechas.');
+      'probarDatosDelCliente, probarCalendario o probarFechas.');
   }
   var v = PropertiesService.getScriptProperties().getProperty(clave);
   if (!v) {
@@ -420,8 +420,8 @@ function leerReserva(pedido) {
     pedido: String(pedido.id),
     numero: pedido.name || '',
     fecha: fecha,
-    nombre: ((c.first_name || '') + ' ' + (c.last_name || '')).trim(),
-    email: pedido.email || c.email || '',
+    nombre: nombreDe(pedido),
+    email: pedido.email || pedido.contact_email || c.email || '',
     telefono: pedido.phone || c.phone || '',
     menu: menus.join(' + '),
     modalidad: modalidades.join(' + '),
@@ -433,6 +433,34 @@ function leerReserva(pedido) {
     creado: pedido.created_at || ''
   };
 }
+
+/**
+ * El nombre de quien reserva, mirando en los tres lugares donde Shopify
+ * lo puede tener.
+ *
+ * No es paranoia: `customer` viene vacío en dos casos distintos. Uno, que
+ * el pedido no tenga cliente asociado. Dos, y más común, que la app no
+ * tenga permiso de DATOS PROTEGIDOS DEL CLIENTE — `read_orders` por sí
+ * solo no alcanza, y Shopify devuelve el pedido completo pero con el
+ * nombre, el correo y las direcciones en blanco, sin decir que los
+ * censuró. Ver backend/README.md.
+ *
+ * Cuando es lo segundo las direcciones también vienen censuradas y este
+ * respaldo no salva nada; para eso está probarDatosDelCliente(). Pero en
+ * el primer caso sí, y cuesta diez líneas.
+ */
+function nombreDe(pedido) {
+  var c = pedido.customer || {};
+  var n = ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+  if (n) return n;
+
+  var dir = pedido.billing_address || pedido.shipping_address || {};
+  n = String(dir.name || '').trim();
+  if (n) return n;
+
+  return ((dir.first_name || '') + ' ' + (dir.last_name || '')).trim();
+}
+
 
 /* =============================================================
    3. Escribir: planilla y calendario
@@ -753,6 +781,62 @@ function probarShopify() {
   var pedidos = pedidosDesde(new Date(new Date().getTime() - 30 * 24 * 3600 * 1000));
   Logger.log('Pedidos en los últimos 30 días: ' + pedidos.length);
   if (pedidos.length) Logger.log('El más reciente: ' + pedidos[0].name);
+}
+
+/**
+ * Dice si Shopify nos está entregando el nombre y el correo, o si nos los
+ * está censurando.
+ *
+ * Correr esto en vez de adivinar: los dos casos se ven igual desde la
+ * planilla —la celda vacía— pero se arreglan en lugares distintos. Si el
+ * pedido trae las líneas y el total pero no el nombre ni el correo, no es
+ * que falte el dato: es que la app no tiene permiso de datos protegidos
+ * del cliente.
+ *
+ * El correo sale enmascarado. Para saber si llegó basta con verlo, y el
+ * registro de Apps Script no es lugar para dejar el correo de un cliente
+ * escrito entero.
+ */
+function probarDatosDelCliente() {
+  var pedidos = pedidosDesde(new Date(new Date().getTime() - 90 * 24 * 3600 * 1000));
+  if (!pedidos.length) {
+    Logger.log('No hay pedidos en los últimos 90 días: no hay nada que mirar.');
+    return;
+  }
+
+  var p = pedidos[0];
+  var c = p.customer || {};
+  var dir = p.billing_address || p.shipping_address || {};
+
+  Logger.log('Pedido más reciente: ' + (p.name || p.id));
+  Logger.log('  líneas: ' + ((p.line_items || []).length) +
+             '   total: ' + p.total_price + ' ' + p.currency);
+  Logger.log('  customer: ' + (p.customer ? 'viene' : 'NO VIENE'));
+  Logger.log('  nombre: ' + (nombreDe(p) || '(vacío)'));
+  Logger.log('  email: ' + (enmascarar(p.email || p.contact_email || c.email) || '(vacío)'));
+  Logger.log('  dirección: ' + (dir.name || dir.city ? 'viene' : 'NO VIENE'));
+
+  // El pedido llegó entero pero sin nada de la persona: eso no es un
+  // pedido sin datos, es un pedido censurado.
+  if ((p.line_items || []).length && !nombreDe(p) &&
+      !(p.email || p.contact_email || c.email)) {
+    Logger.log('');
+    Logger.log('DIAGNÓSTICO: el pedido llega completo pero sin nombre ni correo.');
+    Logger.log('Eso es el permiso de datos protegidos del cliente, que read_orders');
+    Logger.log('no incluye. Se habilita en el admin de Shopify, en la configuración');
+    Logger.log('de la app que generó el token. Ver backend/README.md.');
+  } else {
+    Logger.log('');
+    Logger.log('Los datos del cliente están llegando.');
+  }
+}
+
+/** Deja ver si un correo llegó, sin escribirlo entero en el registro. */
+function enmascarar(correo) {
+  var t = String(correo || '');
+  var i = t.indexOf('@');
+  if (i < 1) return t ? '(ilegible)' : '';
+  return t.slice(0, Math.min(2, i)) + '***' + t.slice(i);
 }
 
 /** Prueba que el calendario exista y se pueda escribir. */

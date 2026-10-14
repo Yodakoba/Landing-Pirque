@@ -109,6 +109,24 @@ ok(r.ninos === 2, '2 niños: la línea de niños no se cuenta como adulto');
 ok(r.nombre === 'Ana Soto', 'el nombre se arma del customer');
 ok(r.menu === 'Menú A Brasas Abiertas', 'el menú queda registrado');
 
+/* ---------- nombreDe: los tres lugares donde Shopify lo tiene ---------- */
+
+ok(ctx.nombreDe({ customer: { first_name: 'Ana', last_name: 'Soto' } }) === 'Ana Soto',
+   'el nombre sale del customer cuando viene');
+// Sin customer, la direccion de facturacion suele traerlo igual.
+ok(ctx.nombreDe({ billing_address: { name: 'Ana Soto' } }) === 'Ana Soto',
+   'sin customer, cae a la direccion de facturacion');
+ok(ctx.nombreDe({ shipping_address: { first_name: 'Ana', last_name: 'Soto' } }) === 'Ana Soto',
+   'y si no, a la de envio, armandolo de las dos partes');
+ok(ctx.nombreDe({ customer: {}, billing_address: { name: 'Ana Soto' } }) === 'Ana Soto',
+   'un customer vacio no tapa a la direccion');
+ok(ctx.nombreDe({}) === '', 'sin nada en ninguna parte, queda vacio y no "undefined undefined"');
+
+// El correo se enmascara para no dejarlo entero en el registro.
+ok(ctx.enmascarar('ana.soto@correo.cl') === 'an***@correo.cl', 'el correo se enmascara');
+ok(ctx.enmascarar('') === '', 'un correo vacio sigue vacio');
+ok(ctx.enmascarar('sinarroba') === '(ilegible)', 'algo que no es correo se nota');
+
 /* ---------- estadoDe: pagada, por pagar, cancelada ---------- */
 
 // Desde que existe "pagar en el local" el backend anota tambien los
