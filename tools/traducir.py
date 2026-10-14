@@ -28,6 +28,7 @@ No hay que instalar nada: solo python3.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -411,6 +412,51 @@ def verificar_fuente(fuente, pagina, problemas):
                          % pagina)
 
 
+# ----------------------------------------------------------------------
+# versión de los assets (romper la caché del navegador)
+# ----------------------------------------------------------------------
+
+# A cada <link>/<script> de assets/ se le pega ?v=<hash de su contenido>.
+#
+# Esto arregla un error real y feo (2026-10-14). El sitio se publicó con un
+# reserva.js nuevo y un reservas.html nuevo, pero los navegadores que ya
+# habían entrado antes siguieron usando el JS viejo, que buscaba elementos
+# que ese HTML ya no tenía. Se devolvía antes de dibujar el calendario y
+# antes de conectar un solo botón: el calendario desaparecía y los + y -
+# no hacían nada. Y sin un error en consola, porque el JS viejo no
+# fallaba, simplemente se iba.
+#
+# Con la versión en la URL eso no puede pasar: si el archivo cambia, su
+# URL cambia, y ningún navegador puede servir el de antes. Si no cambia,
+# la URL es la misma y se sigue aprovechando la caché, que es lo que uno
+# quiere.
+#
+# El hash sale del contenido, no de la fecha ni de un número a mano: un
+# número a mano es justamente lo que alguien olvida subir, y el olvido se
+# ve recién en producción.
+ASSET = re.compile(r'(?P<attr>href|src)="(?P<ruta>(?:\.\./)?assets/[\w./-]+\.(?:css|js))'
+                   r'(?:\?v=[0-9a-f]+)?"')
+
+
+def version_de(ruta_relativa_al_html):
+    """Hash corto del asset, o None si el archivo no está."""
+    ruta = os.path.join(RAIZ, ruta_relativa_al_html.lstrip('./'))
+    if not os.path.exists(ruta):
+        return None
+    with open(ruta, 'rb') as f:
+        return hashlib.sha1(f.read()).hexdigest()[:8]
+
+
+def sellar_assets(html):
+    """Deja cada asset con ?v=<hash> al día. Devuelve el HTML sellado."""
+    def cambiar(m):
+        v = version_de(m.group('ruta'))
+        if v is None:
+            return m.group(0)
+        return '%s="%s?v=%s"' % (m.group('attr'), m.group('ruta'), v)
+    return ASSET.sub(cambiar, html)
+
+
 def main():
     ap = argparse.ArgumentParser(
         description='Genera en/ y pt/ a partir del español de la raíz.')
@@ -421,6 +467,7 @@ def main():
 
     problemas, faltantes, sobrantes, desfasados = [], [], [], []
     escritos = 0
+    sellados = 0
 
     fuentes = {}
     for pagina in PAGINAS:
@@ -429,7 +476,22 @@ def main():
             problemas.append('%s: no existe' % pagina)
             continue
         with open(ruta, encoding='utf-8') as f:
-            fuentes[pagina] = f.read()
+            original = f.read()
+
+        # El sello de los assets se pone también en el español de la raíz,
+        # que es lo que se publica. Es lo único que este script le escribe
+        # a la raíz, y no es contenido: es la versión de un archivo que él
+        # mismo calcula. En --revisar solo se avisa.
+        sellado = sellar_assets(original)
+        if sellado != original:
+            if args.revisar:
+                desfasados.append(pagina + ' (versión de los assets)')
+            else:
+                with open(ruta, 'w', encoding='utf-8') as f:
+                    f.write(sellado)
+                sellados += 1
+
+        fuentes[pagina] = sellado
         verificar_fuente(fuentes[pagina], pagina, problemas)
 
     for idioma in IDIOMAS:
@@ -483,7 +545,7 @@ def main():
             print('  [%s] %s' % (idioma, llave), file=sys.stderr)
 
     if desfasados:
-        print('\nEstas páginas generadas no coinciden con el español (%d).'
+        print('\nEstas páginas no están al día (%d).'
               % len(desfasados), file=sys.stderr)
         print('Corre: python3 tools/traducir.py', file=sys.stderr)
         for d in desfasados:
@@ -498,6 +560,9 @@ def main():
     else:
         print('Escritas %d páginas en %s.'
               % (escritos, ' y '.join(i for i in IDIOMAS if i != 'es')))
+        if sellados:
+            print('Versión de los assets actualizada en %d página(s) del '
+                  'español.' % sellados)
     return 0
 
 
