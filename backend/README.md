@@ -85,7 +85,29 @@ En operación normal esta pestaña queda quieta. Solo se toca cuando hay algo
 fuera de lo común.
 
 Las pestañas **`Reservas`** y **`Registro`** las crea el script solo la
-primera vez. No hay que armarlas a mano.
+primera vez. No hay que armarlas a mano, y **se les pueden mover o insertar
+columnas**: el script escribe buscando cada valor por el nombre de su
+columna, no por su posición.
+
+### Las dos columnas que importan para mirar el día
+
+`Reservas` tiene dos columnas que vienen de que existan dos formas de pagar:
+
+- **`modalidad`** — qué compró: `Pago directo` (en línea, con descuento) o
+  `Solo reserva` (paga en el local). Sale del nombre de la variante en
+  Shopify.
+- **`estado`** — `pagada`, `por pagar` o `cancelada`.
+
+**Una fila que diga `Pago directo` y `por pagar` es alguien que se llevó el
+precio con descuento y después eligió pagar en el local.** El sitio no puede
+impedirlo, porque el medio de pago se elige en el checkout de Shopify, no en
+el formulario. Queda a la vista para que se cobre la diferencia en la puerta.
+
+El estado **se mantiene al día**: si un pedido se paga después, o se cancela,
+la corrida siguiente le corrige la celda. Por eso no sirve editarla a mano.
+
+Una celda de `estado` en blanco es una reserva anotada antes de que la
+columna existiera. Cuenta como ocupada.
 
 ### 2. El código
 
@@ -133,8 +155,8 @@ configuración. **Elige la función en el desplegable antes de ejecutar.**
 En el editor hay cuatro funciones para correr a mano, en este orden:
 
 1. `revisarConfiguracion()` — que las cuatro propiedades estén.
-2. `probarShopify()` — que el token sirva. Muestra cuántos pedidos pagados
-   hay en los últimos 30 días.
+2. `probarShopify()` — que el token sirva. Muestra cuántos pedidos hay en
+   los últimos 30 días.
 3. `probarCalendario()` — que el calendario exista y se pueda escribir.
 4. `probarFechas()` — muestra lo que el sitio recibiría hoy.
 
@@ -172,7 +194,9 @@ apuntando a la vieja.
 - Origen: según tiempo
 - Intervalo: cada 5 minutos
 
-Es lo que trae los pedidos pagados y los convierte en reservas.
+Es lo que trae los pedidos y los convierte en reservas. **Trae los pagados y
+los que están por pagar**, porque una reserva con pago en el local es una
+reserva igual: ocupa la silla.
 
 ## Lo primero que hay que validar
 
@@ -204,8 +228,14 @@ válidas y vacías.
   descubrirlo. Si molesta, se arregla reservando el lugar unos minutos al
   crear el carrito.
 - **No manda correos.** La confirmación de compra la manda Shopify.
-- **No cancela ni reagenda.** Una cancelación en Shopify no borra la fila ni
-  el evento. Hoy eso se hace a mano en la planilla.
+- **Una cancelación en Shopify libera el cupo, pero no borra nada.** La fila
+  queda con `estado` en `cancelada` y deja de contar para el aforo; la fila y
+  el evento del calendario siguen ahí y se borran a mano. Reagendar sigue
+  siendo a mano.
+- **Una reserva sin pagar ocupa lugar igual, y alguien puede no llegar.** Ese
+  lugar se pierde. Es el costo de ofrecer pago en el local, y se administra
+  desde la planilla: si pasa seguido, se cierra la modalidad o se le pone un
+  abono, las dos cosas del lado de Shopify.
 - **La planilla es la fuente de verdad, el calendario es una comodidad.** Si
   falla crear el evento, la reserva igual queda anotada y el problema queda
   en la pestaña `Registro`.

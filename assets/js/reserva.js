@@ -174,12 +174,36 @@
     var nodo = nodos[i];
     opciones.push({
       nodo: nodo,
+      // Cada menú tiene dos variantes en Shopify: la de pagar en línea,
+      // con descuento, y la de pagar en el local. No son dos precios de
+      // lo mismo: son dos productos distintos de la tienda.
       variante: nodo.getAttribute('data-variante'),
       precio: parseInt(nodo.getAttribute('data-precio'), 10) || 0,
+      varianteLocal: nodo.getAttribute('data-variante-local'),
+      precioLocal: parseInt(nodo.getAttribute('data-precio-local'), 10) || 0,
       input: nodo.querySelector('input[type="number"]'),
       menos: nodo.querySelector('[data-menos]'),
-      mas: nodo.querySelector('[data-mas]')
+      mas: nodo.querySelector('[data-mas]'),
+      valor: nodo.querySelector('[data-valor]')
     });
+  }
+
+  // Cuál de las dos modalidades está elegida. Si el radio no existe
+  // —porque alguien editó el HTML— se asume pagar en línea, que es la
+  // más barata: equivocarse cobrando de menos es preferible a cobrar de
+  // más sin que la persona lo haya elegido.
+  var radioLocal = caja.querySelector('[data-modo-local]');
+
+  function enLocal() {
+    return !!(radioLocal && radioLocal.checked);
+  }
+
+  function varianteDe(op) {
+    return enLocal() && op.varianteLocal ? op.varianteLocal : op.variante;
+  }
+
+  function precioDe(op) {
+    return enLocal() && op.precioLocal ? op.precioLocal : op.precio;
   }
 
   if (!selFecha || !btnReservar || !opciones.length) return;
@@ -483,7 +507,11 @@
     for (var i = 0; i < opciones.length; i++) {
       var op = opciones[i];
       var n = cuantos(op);
-      total += n * op.precio;
+      var precio = precioDe(op);
+      total += n * precio;
+      // El precio de la fila cambia con la modalidad, así que se
+      // reescribe: no puede quedar mostrando el de la otra.
+      if (op.valor) op.valor.textContent = pesos(precio);
       // El input se normaliza: si alguien escribe "-3" o lo deja en blanco,
       // lo que ve tiene que ser lo que se va a cobrar.
       if (op.input.value !== String(n)) op.input.value = n;
@@ -533,7 +561,7 @@
       var n = cuantos(opciones[i]);
       if (n < 1) continue;
       out.push({
-        merchandiseId: gid(opciones[i].variante),
+        merchandiseId: gid(varianteDe(opciones[i])),
         quantity: n,
         attributes: atributos
       });
@@ -609,6 +637,11 @@
       op.input.value = n < 0 ? 0 : n;
       recalcular();
     };
+  }
+
+  var radios = caja.querySelectorAll('[name="r-modo"]');
+  for (var m = 0; m < radios.length; m++) {
+    radios[m].addEventListener('change', recalcular);
   }
 
   for (var k = 0; k < opciones.length; k++) {

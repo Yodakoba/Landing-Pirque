@@ -412,9 +412,18 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   nada más es válido. Lo único que el formulario no deja es el pedido
   vacío.
 - **Los IDs de variante y los precios viven en el HTML**, no en el JS: cada
-  fila `[data-opcion]` lleva los suyos (`data-variante`, `data-precio`), y
-  `data-tipo` dice si cuenta como adulto. Se hizo así para tener un solo
-  lugar que editar al pasar a producción, donde los IDs son otros.
+  fila `[data-opcion]` lleva **dos pares** —`data-variante`/`data-precio`
+  para pagar en línea y `data-variante-local`/`data-precio-local` para pagar
+  en el local—. Se hizo así para tener un solo lugar que editar al pasar a
+  producción, donde los IDs son otros.
+- **Las dos modalidades son un `<input type=radio>` y la marca visual la
+  hace el CSS**, así que no necesitan JavaScript para verse bien;
+  `reserva.js` solo los lee. El radio se esconde con `opacity` y no con
+  `display:none` ni `visibility:hidden`: esos dos lo sacan del orden de
+  tabulación y dejan la elección sin teclado.
+- **Las reservas sin pagar se anotan igual y toman cupo** (2026-10-14). El
+  backend dejó de filtrar por `financial_status=paid`; ver `backend/README.md`.
+  Una cancelada libera su cupo, una por pagar no.
 - **La fecha se elige en un calendario mensual**, no en un desplegable
   (2026-10-13). Lo dibuja `reserva.js` con lo que entrega el backend, y la
   fecha elegida queda en el input oculto `#r-fecha`. **El sitio no decide
@@ -462,16 +471,28 @@ desarrollo, no de producción**: en producción los IDs son otros.
 | A Brasas abiertas | `50684143173849` — $70.000 | `50684143206617` — $75.000 |
 | Niños | `50684218081497` — $19.000 | `50684218114265` — $24.000 |
 
-**El sitio usa solo la columna "pago directo"**, que es coherente con el
-objetivo comercial: que la visita particular pague en línea. La modalidad
-"solo reserva" existe en la tienda y cuesta $4.000 a $5.000 más, pero
-**nadie ha explicado qué significa mecánicamente** —¿pago completo, abono,
-pago en el lugar?— así que el formulario no la ofrece. Si algún día se
-ofrece, hay que saber eso antes: cambia cómo se calcula el total.
+**El sitio ofrece las dos columnas desde el 2026-10-14.** Lo que significan
+lo aclaró el cliente ese día:
 
-**El $45.000 de Tradiciones de esta tabla era un dato equivocado del
-agente.** Al consultar la tienda directamente, la variante dice $44.000,
-igual que el sitio. No hubo nada que corregir por ese lado.
+- **Pago directo** — paga en línea en el checkout de Shopify, con el precio
+  con descuento.
+- **Solo reserva** — reserva ahora y paga en el local. Cuesta **$5.000 más**
+  en los tres menús, que es el recargo por no pagar por adelantado.
+
+El cliente agregó el método de pago "pago en el local" en Shopify, que es lo
+que hace posible la segunda.
+
+**El sitio no controla cómo se paga, y eso es un agujero conocido.** El
+medio de pago se elige en el checkout de Shopify, no en nuestro formulario,
+así que alguien puede comprar la variante con descuento y después elegir
+pagar en el local: se queda con los $44.000 sin pagar nada. No se puede
+cerrar desde acá. Lo que sí se hace es **dejarlo a la vista**: la planilla
+anota la modalidad comprada y el estado del pago, y una fila que diga
+"Pago directo / por pagar" es exactamente ese caso.
+
+**El $45.000 de Tradiciones de la tabla de más arriba era un dato equivocado
+del agente**, y por eso esta nota decía antes "$4.000 a $5.000 más". Con el
+precio real, $44.000, la diferencia son $5.000 parejos en los tres.
 
 El cliente decidió el 2026-10-13 que en los precios **manda Shopify**, y por
 eso **A Brasas abiertas subió de $60.000 a $70.000** en el sitio público,
@@ -600,9 +621,6 @@ navegador del cliente y traer la salida.
   `googleusercontent.com` y eso tiene manías conocidas con CORS, así que
   **hay que abrir `reservas.html` publicado y confirmar que el calendario
   trae fechas**; si no, es CORS y no el código del sitio.
-- **Qué significa "solo reserva"** en la tienda: ¿pago completo, abono, pago
-  en el lugar? El sitio no ofrece esa modalidad justamente porque nadie lo ha
-  explicado, y cambia cómo se calcula el total.
 - **Qué versión de la Storefront API usar.** La configurada es `2024-10` y
   lleva como un año fuera del plazo de soporte de Shopify. Responde, pero hay
   que confirmar cuál corresponde antes de salir a producción.

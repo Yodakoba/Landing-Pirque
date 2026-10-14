@@ -70,6 +70,38 @@ ok(r.ninos === 2, '2 niños: la línea de niños no se cuenta como adulto');
 ok(r.nombre === 'Ana Soto', 'el nombre se arma del customer');
 ok(r.menu === 'Menú A Brasas Abiertas', 'el menú queda registrado');
 
+/* ---------- estadoDe: pagada, por pagar, cancelada ---------- */
+
+// Desde que existe "pagar en el local" el backend anota tambien los
+// pedidos sin pagar, asi que de esta funcion depende si una reserva
+// cuenta como vendida, como pendiente de cobro o como muerta.
+ok(ctx.estadoDe({ financial_status: 'paid' }) === 'pagada', 'paid es pagada');
+ok(ctx.estadoDe({ financial_status: 'pending' }) === 'por pagar',
+   'pending (pago en el local) es por pagar');
+ok(ctx.estadoDe({ financial_status: 'authorized' }) === 'por pagar',
+   'authorized todavia no es plata cobrada');
+ok(ctx.estadoDe({ financial_status: 'partially_paid' }) === 'por pagar',
+   'con saldo pendiente no esta pagada');
+ok(ctx.estadoDe({ financial_status: 'refunded' }) === 'cancelada',
+   'un reembolso cancela la reserva');
+ok(ctx.estadoDe({ financial_status: 'voided' }) === 'cancelada', 'voided cancela');
+ok(ctx.estadoDe({ financial_status: 'paid', cancelled_at: '2026-10-14T10:00:00Z' })
+     === 'cancelada',
+   'un pedido cancelado esta cancelado aunque se haya pagado');
+ok(ctx.estadoDe({}) === 'por pagar', 'sin financial_status se asume por pagar');
+
+// La modalidad sale del nombre de la variante, que es como se ve que
+// alguien compro con descuento y despues eligio pagar en el local.
+const rLocal = ctx.leerReserva({
+  id: 124, name: '#1002', financial_status: 'pending',
+  line_items: [
+    { title: 'Menú Tradiciones', variant_title: 'Solo reserva',
+      quantity: 2, properties: attrs('2026-11-15') }
+  ]
+});
+ok(rLocal.modalidad === 'Solo reserva', 'la modalidad sale del variant_title');
+ok(rLocal.estado === 'por pagar', 'un pedido pendiente queda por pagar');
+
 // Un pedido sin fecha no es una reserva: puede ser cualquier otra cosa
 // vendida en la tienda, y meterla al calendario sería un error.
 ok(ctx.leerReserva({ id: 9, line_items: [{ title: 'Polera', quantity: 1, properties: [] }] }) === null,
@@ -88,7 +120,7 @@ const jueves  = '2026-11-19';
 // que fijar hoy también.
 ctx.hoyAca = () => '2026-11-14';
 
-const sinReservas = [['pedido', 'fecha_reserva', 'adultos', 'ninos']];
+const sinReservas = [['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos']];
 
 function montar(config, excepciones, reservas) {
   HOJAS = {
@@ -132,23 +164,49 @@ ok(f.some((x) => x.fecha === domingo && x.quedan === 60), 'el resto conserva el 
 
 // 5. El cupo descuenta adultos Y niños.
 f = montar(base, [], [
-  ['pedido', 'fecha_reserva', 'adultos', 'ninos'],
-  ['1', sabado, 4, 2]
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'pagada', 4, 2]
 ]);
 s14 = f.find((x) => x.fecha === sabado);
 ok(s14 && s14.quedan === 54, 'quedan 54: los niños también ocupan lugar');
 
+// 5b. Una reserva SIN PAGAR toma cupo igual: la silla queda ocupada.
+f = montar(base, [], [
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'por pagar', 4, 2]
+]);
+s14 = f.find((x) => x.fecha === sabado);
+ok(s14 && s14.quedan === 54, 'una reserva por pagar ocupa lugar igual');
+
+// 5c. Una CANCELADA lo libera, y no arrastra a las demás del mismo día.
+f = montar(base, [], [
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'cancelada', 4, 2],
+  ['2', sabado, 'pagada', 1, 0]
+]);
+s14 = f.find((x) => x.fecha === sabado);
+ok(s14 && s14.quedan === 59, 'la cancelada libera su cupo y la pagada lo conserva');
+
+// 5d. Una fila vieja, sin estado, cuenta: es de antes de que existiera
+// la columna y era una reserva pagada.
+f = montar(base, [], [
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, '', 4, 2]
+]);
+s14 = f.find((x) => x.fecha === sabado);
+ok(s14 && s14.quedan === 54, 'una fila sin estado sigue ocupando lugar');
+
 // 6. Un día lleno no se ofrece.
 f = montar(base, [[sabado, '', 6, '']], [
-  ['pedido', 'fecha_reserva', 'adultos', 'ninos'],
-  ['1', sabado, 4, 2]
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'pagada', 4, 2]
 ]);
 ok(!f.some((x) => x.fecha === sabado), 'un día sin lugares no se ofrece');
 
 // 7. El aviso de "quedan pocos".
 f = montar(base, [[sabado, '', 12, '']], [
-  ['pedido', 'fecha_reserva', 'adultos', 'ninos'],
-  ['1', sabado, 3, 0]
+  ['pedido', 'fecha_reserva', 'estado', 'adultos', 'ninos'],
+  ['1', sabado, 'pagada', 3, 0]
 ]);
 s14 = f.find((x) => x.fecha === sabado);
 ok(s14 && s14.quedan === 9 && s14.pocos === true, 'con 9 lugares avisa que quedan pocos');

@@ -656,6 +656,33 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   color: var(--ink-faint); }
 .reserva-fila.activa .valor{ color: var(--gold); }
 
+/* Las dos modalidades de pago. Son <input type=radio> escondidos con la
+   marca visual en el <span> de al lado, asi que funcionan con el teclado y
+   con lector de pantalla sin una linea de JavaScript.
+
+   El radio se esconde con opacity y no con display:none ni visibility:
+   esos dos lo sacan del orden de tabulacion y dejan la eleccion sin
+   teclado. Queda encima de su caja, transparente. */
+.modos{ display:flex; gap:10px; flex-wrap:wrap; }
+.modo{ flex:1 1 200px; position:relative; display:block; cursor:pointer; }
+.modo input{
+  position:absolute; inset:0; width:100%; height:100%; margin:0;
+  opacity:0; cursor:pointer;
+}
+.modo-caja{
+  display:block; padding:14px 16px; border-radius:2px;
+  border:1px solid var(--line); background: var(--bg);
+}
+.modo-caja b{ display:block; font-size:0.92rem; font-weight:600; }
+.modo-caja small{
+  display:block; margin-top:4px; color: var(--ink-faint); font-size:0.78rem;
+}
+.modo input:checked + .modo-caja{
+  border-color: var(--gold); background: var(--gold-wash);
+}
+.modo input:focus-visible + .modo-caja{ outline:2px solid var(--gold); outline-offset:2px; }
+.modo:hover .modo-caja{ border-color: var(--gold-soft); }
+
 /* El contador: el menos a la izquierda del numero y el mas a la derecha.
    Los dos van dorados y sin marco, que es lo que se pidio: el signo solo,
    grande, sin caja alrededor.
