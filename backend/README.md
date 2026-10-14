@@ -42,14 +42,32 @@ nada.
 ### 1. La planilla
 
 Crea una planilla nueva en Google Drive. Llámala, por ejemplo, **Reservas
-Brasas**.
+Brasas**. **Déjala vacía**: las pestañas y los títulos los pone el script en
+el paso 3.
 
-**No hay una lista de fechas escrita a mano.** Si el lugar abre sábados y
-domingos, eso serían 104 filas al año que alguien tendría que mantener, y se
-desactualizarían — es exactamente el problema que tenía el sitio. En vez de
-eso hay una **regla** y una lista de **excepciones**.
+### 2. El código
 
-Pestaña **`Config`**, con esta fila 1 exacta:
+En la planilla: **Extensiones → Apps Script**. Borra lo que venga y pega
+entero el contenido de `Codigo.gs`. Guarda.
+
+### 3. Las pestañas
+
+En el editor, elige **`prepararPlanilla`** en el desplegable de funciones y
+dale Ejecutar. Deja las cuatro pestañas creadas con sus títulos.
+
+**No las escribas a mano.** El script busca cada valor por el **nombre** de
+su columna, y la normalización arregla mayúsculas y espacios pero **no
+tildes**: un `Menú` o un `Niños` escritos a mano no calzan con `menu` y
+`ninos`. Eso no da error — deja la columna vacía, o la duplica al lado
+cuando el script agrega la que falta.
+
+Correrla de nuevo es seguro: no borra ni pisa nada.
+
+### 4. Los valores de `Config`
+
+`prepararPlanilla` deja la pestaña **`Config`** con los valores por defecto
+escritos, para que se vean y se puedan corregir. **Revísalos, el cupo sobre
+todo**, porque es el que decide cuánta gente entra:
 
 | clave | valor |
 |---|---|
@@ -66,7 +84,15 @@ Pestaña **`Config`**, con esta fila 1 exacta:
 - **`aviso_pocos_lugares`** — bajo cuántos lugares el sitio avisa "últimos
   lugares". Con `0` no avisa nunca.
 
-Pestaña **`Excepciones`**, solo para lo que se sale de la regla:
+**No hay una lista de fechas escrita a mano.** Si el lugar abre sábados y
+domingos, eso serían 104 filas al año que alguien tendría que mantener, y se
+desactualizarían — es exactamente el problema que tenía el sitio. En vez de
+eso hay una **regla**, que es esta tabla, y una lista de **excepciones**.
+
+### 5. La pestaña `Excepciones`, solo para lo que se sale de la regla
+
+Queda vacía, y así se queda en operación normal. Solo se toca cuando hay algo
+fuera de lo común:
 
 | fecha | abierta | cupo | nota |
 |---|---|---|---|
@@ -84,10 +110,19 @@ Los tres casos en una sola tabla:
 En operación normal esta pestaña queda quieta. Solo se toca cuando hay algo
 fuera de lo común.
 
-Las pestañas **`Reservas`** y **`Registro`** las crea el script solo la
-primera vez. No hay que armarlas a mano, y **se les pueden mover o insertar
-columnas**: el script escribe buscando cada valor por el nombre de su
-columna, no por su posición.
+Las pestañas **`Reservas`** y **`Registro`** no se tocan: las llena el
+script. Sus columnas **se pueden mover o reordenar**, eso sí, porque el
+script escribe buscando cada valor por el nombre de su columna y no por su
+posición.
+
+Para referencia, `Reservas` son estas quince, en este orden:
+
+```
+pedido · numero · fecha_reserva · nombre · email · telefono · menu ·
+modalidad · estado · adultos · ninos · total · moneda · creado · evento
+```
+
+y `Registro` son tres: `cuando · nivel · mensaje`.
 
 ### Las dos columnas que importan para mirar el día
 
@@ -111,12 +146,7 @@ la corrida siguiente le corrige la celda. Por eso no sirve editarla a mano.
 Una celda de `estado` en blanco es una reserva anotada antes de que la
 columna existiera. Cuenta como ocupada.
 
-### 2. El código
-
-En la planilla: **Extensiones → Apps Script**. Borra lo que venga y pega
-entero el contenido de `Codigo.gs`. Guarda.
-
-### 3. El token de Shopify
+### 6. El token de Shopify
 
 En el admin de Shopify: **Settings → Apps and sales channels → Develop apps
 → Create an app**. En **Configuration → Admin API integration** marca el
@@ -129,7 +159,7 @@ access token**, que empieza en `shpat_`.
 > token se guarda en las propiedades del script, que nunca salen al
 > navegador. Es el lugar correcto para uno.
 
-### 4. Las propiedades
+### 7. Las propiedades
 
 En el editor de Apps Script: **Configuración del proyecto → Propiedades del
 script**. Agrega las cuatro:
@@ -147,14 +177,15 @@ dirección de correo.
 
 **No pongas nada de esto en `Codigo.gs`.** Si va ahí, termina en el repo.
 
-### 5. Probar antes de desplegar
+### 8. Probar antes de desplegar
 
 **Ojo con el desplegable de funciones.** El editor trae preseleccionada la
 primera función del archivo, que es una ayudante interna. Si aprietas
 Ejecutar sin cambiarla, sale un error que no tiene que ver con tu
 configuración. **Elige la función en el desplegable antes de ejecutar.**
 
-En el editor hay cuatro funciones para correr a mano, en este orden:
+En el editor hay cinco funciones para correr a mano. `prepararPlanilla()` ya
+se corrió en el paso 3; las otras cuatro van en este orden:
 
 1. `revisarConfiguracion()` — que las cuatro propiedades estén.
 2. `probarShopify()` — que el token sirva. Muestra cuántos pedidos hay en
@@ -167,7 +198,7 @@ verificado, aparece una pantalla de advertencia: **Configuración avanzada →
 Ir a (nombre del proyecto)**. Es el proyecto propio del cliente, en su
 cuenta.
 
-### 6. Publicar el endpoint
+### 9. Publicar el endpoint
 
 **Implementar → Nueva implementación → Aplicación web**:
 
@@ -188,7 +219,7 @@ conserva la URL. Crear una **implementación nueva** entrega otra URL, y
 entonces hay que actualizar `CONFIG.backend` o el calendario del sitio queda
 apuntando a la vieja.
 
-### 7. El activador
+### 10. El activador
 
 **Activadores → Añadir activador**:
 

@@ -61,9 +61,9 @@ function config(clave) {
   if (!clave) {
     throw new Error(
       'config() es una función auxiliar y no se corre sola. En el ' +
-      'desplegable de arriba elige una de estas cuatro: ' +
-      'revisarConfiguracion, probarShopify, probarCalendario o ' +
-      'probarFechas.');
+      'desplegable de arriba elige una de estas: prepararPlanilla ' +
+      '(la primera vez), revisarConfiguracion, probarShopify, ' +
+      'probarCalendario o probarFechas.');
   }
   var v = PropertiesService.getScriptProperties().getProperty(clave);
   if (!v) {
@@ -438,6 +438,13 @@ function leerReserva(pedido) {
    3. Escribir: planilla y calendario
    ============================================================= */
 
+// Los títulos de las cuatro pestañas viven acá y en ninguna otra parte.
+// No son decorativos: el script busca cada valor POR EL NOMBRE de su
+// columna, así que un título mal escrito no da error, deja la columna
+// vacía o la duplica al lado.
+var COLUMNAS_CONFIG = ['clave', 'valor'];
+var COLUMNAS_EXCEPCIONES = ['fecha', 'abierta', 'cupo', 'nota'];
+var COLUMNAS_REGISTRO = ['cuando', 'nivel', 'mensaje'];
 var COLUMNAS_RESERVAS = [
   'pedido', 'numero', 'fecha_reserva', 'nombre', 'email', 'telefono',
   'menu', 'modalidad', 'estado', 'adultos', 'ninos', 'total', 'moneda',
@@ -669,7 +676,7 @@ function hojaOCrear(nombre, titulos) {
 
 function registrar(nivel, mensaje) {
   try {
-    var hoja = hojaOCrear(HOJA_REGISTRO, ['cuando', 'nivel', 'mensaje']);
+    var hoja = hojaOCrear(HOJA_REGISTRO, COLUMNAS_REGISTRO);
     hoja.appendRow([new Date(), nivel, mensaje]);
   } catch (e) {
     // Si ni siquiera se puede escribir el registro, no hay nada que
@@ -680,6 +687,54 @@ function registrar(nivel, mensaje) {
 /* =============================================================
    Para correr a mano desde el editor, al configurar
    ============================================================= */
+
+/**
+ * PASO 0. Deja las cuatro pestañas creadas con sus títulos.
+ *
+ * Existe para no escribirlos a mano, y no es comodidad: el script busca
+ * cada valor por el NOMBRE de su columna. Escrito a mano, un "Menú" con
+ * tilde o un "Niños" con eñe no calzan con `menu` y `ninos` —la
+ * normalización arregla mayúsculas y espacios, no tildes— y el error no
+ * se ve: la columna queda vacía, o aparece duplicada al lado cuando el
+ * script agrega la que falta.
+ *
+ * Es segura de correr de nuevo. No borra ni pisa nada: a una pestaña que
+ * ya existe solo le agrega las columnas que le falten, y si Config ya
+ * tiene filas no las toca.
+ */
+function prepararPlanilla() {
+  var hechos = [];
+
+  var cfg = asegurarColumnas(hojaOCrear(HOJA_CONFIG, COLUMNAS_CONFIG),
+                             COLUMNAS_CONFIG);
+  if (cfg.getLastRow() < 2) {
+    // Los valores por defecto se escriben para que se VEAN. El script ya
+    // los usaba cuando la pestaña estaba vacía, solo que invisibles, y
+    // nadie puede corregir un número que no sabe que existe. Son los que
+    // hay que revisar: el cupo sobre todo.
+    for (var k in POR_DEFECTO) cfg.appendRow([k, POR_DEFECTO[k]]);
+    hechos.push('Config: creada con los valores por defecto. REVÍSALOS.');
+  } else {
+    hechos.push('Config: ya tenía filas, no se tocó.');
+  }
+
+  asegurarColumnas(hojaOCrear(HOJA_EXCEPCIONES, COLUMNAS_EXCEPCIONES),
+                   COLUMNAS_EXCEPCIONES);
+  hechos.push('Excepciones: lista, y vacía es lo normal.');
+
+  asegurarColumnas(hojaOCrear(HOJA_RESERVAS, COLUMNAS_RESERVAS),
+                   COLUMNAS_RESERVAS);
+  hechos.push('Reservas: ' + COLUMNAS_RESERVAS.length + ' columnas.');
+
+  asegurarColumnas(hojaOCrear(HOJA_REGISTRO, COLUMNAS_REGISTRO),
+                   COLUMNAS_REGISTRO);
+  hechos.push('Registro: listo.');
+
+  var texto = hechos.join('\n');
+  Logger.log(texto);
+  registrar('OK', 'prepararPlanilla: ' + hechos.join(' | '));
+  return texto;
+}
 
 /** Comprueba que las cuatro propiedades estén puestas. */
 function revisarConfiguracion() {

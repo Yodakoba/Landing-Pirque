@@ -22,14 +22,53 @@ const path = require('path');
 
 let HOJAS = {};
 
+// Una hoja de calculo de mentira, con lo justo que usa Codigo.gs. Los
+// rangos van en base 1 como los de verdad, porque un off-by-one aca
+// haria pasar una prueba que en Google falla.
+function hojaFalsa(nombre) {
+  const filas = HOJAS[nombre];
+  return {
+    getDataRange: () => ({ getValues: () => filas }),
+    getLastRow: () => filas.length,
+    getLastColumn: () => filas.reduce((m, f) => Math.max(m, f.length), 0),
+    appendRow: (f) => { filas.push(f.slice()); },
+    setFrozenRows: () => {},
+    getRange: (f0, c0, nf, nc) => ({
+      getValues: () => {
+        const out = [];
+        for (let i = 0; i < (nf || 1); i++) {
+          const fila = filas[f0 - 1 + i] || [];
+          const r = [];
+          for (let j = 0; j < (nc || 1); j++) {
+            r.push(fila[c0 - 1 + j] === undefined ? '' : fila[c0 - 1 + j]);
+          }
+          out.push(r);
+        }
+        return out;
+      },
+      setValues: (v) => {
+        for (let i = 0; i < v.length; i++) {
+          while (filas.length < f0 + i) filas.push([]);
+          for (let j = 0; j < v[i].length; j++) {
+            filas[f0 - 1 + i][c0 - 1 + j] = v[i][j];
+          }
+        }
+      },
+      setValue: (val) => {
+        while (filas.length < f0) filas.push([]);
+        filas[f0 - 1][c0 - 1] = val;
+      }
+    })
+  };
+}
+
 const ctx = {
   Session: { getScriptTimeZone: () => 'America/Santiago' },
   Utilities: { formatDate: (d) => d.toISOString().slice(0, 10) },
   SpreadsheetApp: {
     getActive: () => ({
-      getSheetByName: (n) => HOJAS[n]
-        ? { getDataRange: () => ({ getValues: () => HOJAS[n] }) }
-        : null
+      getSheetByName: (n) => (HOJAS[n] ? hojaFalsa(n) : null),
+      insertSheet: (n) => { HOJAS[n] = []; return hojaFalsa(n); }
     })
   },
   PropertiesService: {
@@ -221,6 +260,55 @@ ok(montar([]).length > 0, 'con la Config vacía igual ofrece fechas');
 
 // 10. Nunca ofrece una fecha anterior a hoy.
 ok(montar(base).every((x) => x.fecha >= '2026-11-14'), 'ninguna fecha vencida');
+
+/* ---------- prepararPlanilla: las cuatro pestanas ---------- */
+
+// Libro vacio: tiene que dejarlas las cuatro, con sus titulos.
+HOJAS = {};
+ctx.prepararPlanilla();
+const titulos = (n) => HOJAS[n][0];
+
+ok(HOJAS.Config && HOJAS.Excepciones && HOJAS.Reservas && HOJAS.Registro,
+   'crea las cuatro pestanas');
+ok(titulos('Reservas').join(',') ===
+   'pedido,numero,fecha_reserva,nombre,email,telefono,menu,modalidad,' +
+   'estado,adultos,ninos,total,moneda,creado,evento',
+   'Reservas queda con sus 15 columnas en orden');
+ok(titulos('Excepciones').join(',') === 'fecha,abierta,cupo,nota',
+   'Excepciones queda con sus cuatro columnas');
+ok(titulos('Config').join(',') === 'clave,valor', 'Config queda con clave y valor');
+
+// Y Config con los valores por defecto escritos, para que se vean.
+const claves = HOJAS.Config.slice(1).map((f) => f[0]);
+ok(claves.indexOf('dias_abiertos') !== -1 && claves.indexOf('cupo_normal') !== -1 &&
+   claves.indexOf('dias_a_futuro') !== -1 && claves.indexOf('aviso_pocos_lugares') !== -1,
+   'Config trae las cuatro claves por defecto');
+
+// Correrla de nuevo no puede duplicar nada: es lo que mas se va a hacer
+// mal, porque no hay forma de saber si ya se corrio.
+const antesConfig = HOJAS.Config.length;
+const antesTitulos = titulos('Reservas').length;
+ctx.prepararPlanilla();
+ok(HOJAS.Config.length === antesConfig, 'correrla de nuevo no duplica las filas de Config');
+ok(titulos('Reservas').length === antesTitulos, 'correrla de nuevo no duplica columnas');
+
+// El caso real: una planilla que ya existe con las columnas de antes.
+// Las dos nuevas se agregan al final y los datos no se mueven.
+HOJAS = {
+  Reservas: [
+    ['pedido', 'numero', 'fecha_reserva', 'nombre', 'email', 'telefono',
+     'menu', 'adultos', 'ninos', 'total', 'moneda', 'creado', 'evento'],
+    ['123', '#1001', '2026-11-15', 'Ana Soto', 'a@b.cl', '',
+     'Menú Tradiciones', 2, 1, '107000', 'CLP', '', '']
+  ]
+};
+ctx.prepararPlanilla();
+ok(titulos('Reservas').indexOf('modalidad') !== -1 &&
+   titulos('Reservas').indexOf('estado') !== -1,
+   'a una planilla vieja le agrega modalidad y estado');
+ok(HOJAS.Reservas[1][3] === 'Ana Soto' && HOJAS.Reservas[1][7] === 2,
+   'y no corre de lugar los datos que ya estaban');
+ok(HOJAS.Reservas.length === 2, 'no agrega filas');
 
 console.log(fallos ? '\n' + fallos + ' fallas' : '\ntodas las comprobaciones pasan');
 process.exit(fallos ? 1 : 0);
