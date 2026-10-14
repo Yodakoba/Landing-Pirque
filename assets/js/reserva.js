@@ -28,15 +28,18 @@
     // NUNCA pongas acá un token de Admin API: esos empiezan en
     // "shpat_" y dan acceso a pedidos, clientes y toda la tienda.
     //
-    // VA VACÍO A PROPÓSITO, y es el interruptor de toda la integración.
-    // Mientras esté vacío el botón no llama a la API: avisa y manda a
-    // WhatsApp. Ponerle el token es lo que lo enciende para cualquiera
-    // que entre al sitio publicado, así que no se llena hasta que la
-    // tienda esté lista. El de la tienda de desarrollo está en la
-    // conversación con el cliente, no acá: apuntar el sitio en vivo a
-    // una tienda de desarrollo mandaría a la gente a un checkout que
-    // no puede cobrar.
-    token: '',
+    // Es el interruptor de toda la integración: vacío, el botón no llama
+    // a la API y manda a WhatsApp.
+    //
+    // ESTE ES EL TOKEN DE LA TIENDA DE DESARROLLO, encendido el
+    // 2026-10-14 por decisión del cliente para poder probar la cadena
+    // completa de punta a punta mientras el sitio todavía no se difunde.
+    //
+    // OJO AL SALIR A PRODUCCIÓN: hay que cambiar este token, el dominio
+    // de abajo y los IDs de variante del HTML, los tres. Si queda este,
+    // la gente cae en un checkout de una tienda de prueba que no puede
+    // cobrarles.
+    token: 'f7a303e30966d1444ab304747a27031d',
 
     // Dominio que sirve la Storefront API.
     //
@@ -86,7 +89,6 @@
       noAlcanza: 'Para esa fecha quedan {n} lugares y estás pidiendo {p}.',
       eligeFecha: 'Elige una fecha en el calendario.',
       sinNadie: 'Elige cuántas personas van con cada menú.',
-      sinAdultos: 'Agrega al menos un adulto: el menú de niños acompaña al de un adulto.',
       locale: 'es-CL',
       moneda: '',
       creando: 'Creando tu reserva\u2026',
@@ -105,7 +107,6 @@
       noAlcanza: 'That date has {n} places left and you are asking for {p}.',
       eligeFecha: 'Pick a date on the calendar.',
       sinNadie: 'Choose how many people go with each menu.',
-      sinAdultos: 'Add at least one adult: the children\u2019s menu goes alongside an adult menu.',
       locale: 'en-US',
       moneda: ' CLP',
       creando: 'Creating your booking\u2026',
@@ -124,7 +125,6 @@
       noAlcanza: 'Nessa data restam {n} lugares e você está pedindo {p}.',
       eligeFecha: 'Escolha uma data no calendário.',
       sinNadie: 'Escolha quantas pessoas vão com cada menu.',
-      sinAdultos: 'Adicione pelo menos um adulto: o menu infantil acompanha o de um adulto.',
       locale: 'pt-BR',
       moneda: ' CLP',
       creando: 'Criando a sua reserva\u2026',
@@ -176,9 +176,6 @@
       nodo: nodo,
       variante: nodo.getAttribute('data-variante'),
       precio: parseInt(nodo.getAttribute('data-precio'), 10) || 0,
-      // El menú de niños no cuenta como adulto. Es un agregado al de un
-      // adulto, no un pedido en sí: ver "al menos un adulto" más abajo.
-      adulto: nodo.getAttribute('data-tipo') !== 'nino',
       input: nodo.querySelector('input[type="number"]'),
       menos: nodo.querySelector('[data-menos]'),
       mas: nodo.querySelector('[data-mas]')
@@ -196,14 +193,6 @@
   function personas() {
     var n = 0;
     for (var i = 0; i < opciones.length; i++) n += cuantos(opciones[i]);
-    return n;
-  }
-
-  function adultos() {
-    var n = 0;
-    for (var i = 0; i < opciones.length; i++) {
-      if (opciones[i].adulto) n += cuantos(opciones[i]);
-    }
     return n;
   }
 
@@ -406,21 +395,11 @@
       return;
     }
 
-    // Las tres opciones nacen en cero, así que lo primero es decir qué
-    // falta. Vacío y "solo niños" son cosas distintas: una es el estado
-    // inicial y la otra es un pedido que no se puede cumplir.
+    // Las tres opciones nacen en cero, así que con la fecha ya elegida lo
+    // que falta es decir cuánta gente va.
     if (personas() < 1) {
       avisoFecha.textContent = T.sinNadie;
       avisoFecha.className = 'aviso';
-      return;
-    }
-
-    // Sin un adulto no hay pedido: el menú de niños es un agregado al de
-    // un adulto, no algo que se venda solo. Se avisa antes que el cupo
-    // porque es lo que hay que arreglar primero.
-    if (adultos() < 1) {
-      avisoFecha.textContent = T.sinAdultos;
-      avisoFecha.className = 'aviso error';
       return;
     }
 
@@ -444,7 +423,9 @@
   function pedidoUsable() {
     var info = disponibles[selFecha.value];
     if (!info) return false;              // sin fecha elegida no hay nada
-    if (adultos() < 1) return false;      // el menú de niños no va solo
+    if (personas() < 1) return false;     // ni con el pedido vacío
+    // El menú de niños se puede pedir solo: lo decidió el cliente el
+    // 2026-10-14. No hay mínimo de adultos.
     return personas() <= info.quedan;
   }
 
@@ -516,9 +497,9 @@
     if (salTotal) salTotal.textContent = pesos(total);
 
     avisarSobreFecha();
-    // Sin fecha elegida, sin un adulto, o pidiendo más lugares de los que
-    // quedan, el botón se apaga. Vale más que deje apretar y falle en el
-    // checkout.
+    // Sin fecha elegida, con el pedido vacío, o pidiendo más lugares de
+    // los que quedan, el botón se apaga. Vale más que deje apretar y falle
+    // en el checkout.
     btnReservar.disabled = !pedidoUsable();
   }
 

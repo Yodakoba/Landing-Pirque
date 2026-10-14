@@ -351,13 +351,18 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   `cargarFechas()` revisa el campo `error` y no solo `response.ok` — sin
   eso, una falla del backend se vería en pantalla como "no hay fechas", que
   es otra cosa y manda a buscar el problema donde no está.
-- **`CONFIG.token` vacío es el interruptor de toda la integración.** Con el
-  token en blanco el botón no llama a la API: avisa y manda a WhatsApp.
-  Llenarlo es lo que la enciende **para cualquiera que entre al sitio
-  publicado**, así que no se llena hasta que la tienda esté lista. El token
-  de la tienda de desarrollo está en la conversación con el cliente y **no
-  se commitea**: apuntar el sitio en vivo a una tienda de desarrollo
-  mandaría a la gente a un checkout que no puede cobrar.
+- **`CONFIG.token` es el interruptor de toda la integración, y está
+  encendido desde el 2026-10-14.** Lo decidió el cliente para poder probar
+  la cadena completa mientras el sitio todavía no se difunde: el token del
+  Storefront es público por diseño, así que vivir en el archivo no es el
+  problema; el problema es a qué tienda apunta. **Apunta a la de
+  desarrollo**, o sea que quien apriete "Terminar reserva" hoy cae en un
+  checkout que no puede cobrarle. Con el token en blanco, en cambio, el
+  botón no llama a la API: avisa y manda a WhatsApp.
+- **Antes de difundir el sitio hay que cambiar las tres cosas juntas**:
+  el token, `CONFIG.dominio` y los IDs de variante del HTML. Cambiar una
+  sola deja el formulario apuntando a medias y falla en el checkout, que es
+  el peor lugar para fallar.
 - **`CONFIG.dominio` apunta hoy a la tienda de desarrollo**
   (`brasas-de-lo-pirque-development.myshopify.com`). Al salir a producción
   hay que cambiar esa línea, el token, **y los IDs de variante del HTML**,
@@ -376,11 +381,10 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   `<input type=number>`**, que son de unos 10px y en celular no se aciertan.
   El input sigue debajo y se puede escribir: los botones son una comodidad
   encima, no el único camino, y `recalcular()` normaliza lo que se escriba.
-- **El menú de niños no se vende solo.** Un pedido necesita al menos un
-  adulto: es un agregado al menú de un adulto, no un pedido en sí. Sin
-  adultos el botón se apaga y lo dice. Es una regla del formulario, no un
-  dato del negocio — si el cliente dice otra cosa, se cambia en
-  `pedidoUsable()` y en `avisarSobreFecha()`.
+- **El menú de niños se puede pedir solo** (decidido por el cliente el
+  2026-10-14). No hay mínimo de adultos: un pedido de tres menús de niños y
+  nada más es válido. Lo único que el formulario no deja es el pedido
+  vacío.
 - **Los IDs de variante y los precios viven en el HTML**, no en el JS: cada
   fila `[data-opcion]` lleva los suyos (`data-variante`, `data-precio`), y
   `data-tipo` dice si cuenta como adulto. Se hizo así para tener un solo
@@ -403,8 +407,8 @@ se guarda en las propiedades del script, que nunca salen al navegador.
 - Los nombres de mes y de día **no están en los diccionarios**: salen de
   `toLocaleDateString` con el idioma de la página. La semana parte en lunes
   en los tres idiomas, que es la convención chilena.
-- **El botón solo se habilita con una fecha elegida, al menos un adulto y
-  lugares suficientes.** Pedir más lugares de los que quedan lo apaga y lo
+- **El botón solo se habilita con una fecha elegida, al menos una persona
+  y lugares suficientes.** Pedir más lugares de los que quedan lo apaga y lo
   dice. Es preferible a dejar apretar y fallar en el checkout.
 - Cada línea del carrito lleva dos propiedades con la fecha:
   `_booking_date` y `_cowlendar_date`. El guion bajo las oculta del
