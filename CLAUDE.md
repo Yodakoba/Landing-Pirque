@@ -446,6 +446,13 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   `probarDatosDelCliente()`: el pedido #1007 llegó con sus tres líneas y su
   total, y sin nombre, correo ni teléfono. Shopify los trata como datos
   protegidos y hay que pedirlos aparte en la configuración de la app.
+- **En la tienda de desarrollo eso no se puede arreglar**, según el agente
+  de Shopify del cliente: el permiso necesita plan pagado. **No bloquea
+  nada** — todo lo demás funciona y las tres columnas se llenan solas en
+  producción, sin tocar código. Y **no es salida** consultar el Admin API
+  "en vez del webhook": el backend ya consulta el Admin API, no hay
+  webhook, y fue esa llamada la que devolvió el pedido censurado. El
+  permiso gobierna el dato, no la puerta.
 - **La censura se ve OMITIENDO la llave, no poniéndola en `null`** — al
   revés de lo que uno supondría, y vale la pena saberlo porque es lo que
   distingue "falta un permiso" de "ese pedido no tenía el dato". En #1007,

@@ -890,7 +890,12 @@ function probarDatosDelCliente() {
 
     Logger.log('Es el permiso de datos protegidos del cliente, que read_orders');
     Logger.log('no incluye. Se habilita en el admin de Shopify, en la app que');
-    Logger.log('generó el token. Ver backend/README.md.');
+    Logger.log('generó el token.');
+    Logger.log('');
+    Logger.log('EN UNA TIENDA DE DESARROLLO ESTO ES LO ESPERADO y no hay nada');
+    Logger.log('que arreglar acá: el permiso necesita un plan pagado. Las tres');
+    Logger.log('columnas se llenan solas en producción, sin tocar una línea de');
+    Logger.log('código. Ver backend/README.md.');
   } else {
     Logger.log('DIAGNÓSTICO: llega uno de los dos y el otro no. Mira la lista de');
     Logger.log('arriba: si al que falta le falta la LLAVE dentro de un objeto que');

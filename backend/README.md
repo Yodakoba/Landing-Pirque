@@ -199,6 +199,30 @@ sin las llaves** de nombre, correo y teléfono. Un objeto que existe y tiene
 contenido al que le faltan justo esos campos no es un cliente sin nombre: es
 un cliente censurado, y **no hay ningún campo alternativo del que sacarlo**.
 
+### En la tienda de desarrollo esto no se puede arreglar, y está bien
+
+Según el agente de Shopify del cliente (2026-10-14), **el acceso a datos
+protegidos necesita un plan pagado y no está disponible en una tienda de
+desarrollo**. No se pudo verificar desde el entorno de trabajo porque el
+dominio está bloqueado, pero la consecuencia práctica es la misma igual.
+
+**No bloquea nada y no hay que rehacer nada.** Todo lo demás de la cadena
+funciona —fechas, cupo, totales, modalidad, estado del pago, evento en el
+calendario— y las tres columnas de la persona se van a llenar **solas** cuando
+la tienda de producción tenga el permiso. No hay una línea de código que
+cambiar: el backend ya lee esos campos de donde corresponde.
+
+**Ojo al activar el permiso:** las reservas ya anotadas no se reescriben.
+`sincronizarPedidos()` solo corrige el `estado` de una fila que ya existe. Si
+se quiere que un pedido viejo recupere el nombre, hay que borrar su fila de
+`Reservas` y dejar que se vuelva a anotar.
+
+**Y lo que NO es una salida:** consultar el Admin API "en vez del webhook".
+Este backend **ya consulta el Admin API con el token** —`pedidosDesde()`, un
+`GET /admin/api/…/orders.json`— y es justo esa llamada la que devolvió el
+pedido censurado. No hay ningún webhook en este proyecto. El permiso gobierna
+el **dato**, no la puerta por donde entra: por GraphQL pasa lo mismo.
+
 ### De qué campo sale cada dato
 
 Cuando los datos sí llegan, estos son los lugares donde Shopify los pone, en
