@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;0,9..144,600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/site.css?v=b7bcb248">
+<link rel="stylesheet" href="../assets/css/site.css?v=7c69b82c">
 <!--i18n:alternate-->
 <link rel="alternate" hreflang="es" href="https://brasasdelopirque.cl/reservas.html">
 <link rel="alternate" hreflang="en" href="https://brasasdelopirque.cl/en/reservas.html">
@@ -73,6 +73,7 @@
 
       <div class="reserva-fila" data-opcion
            data-variante="50684108013785" data-precio="44000"
+           data-variante-local="50684108046553" data-precio-local="49000"
            role="group" aria-labelledby="r-op-tradiciones">
         <div class="quien" id="r-op-tradiciones">Tradiciones menu <small>Per adult</small></div>
         <div class="contador">
@@ -85,6 +86,7 @@
 
       <div class="reserva-fila" data-opcion
            data-variante="50684143173849" data-precio="70000"
+           data-variante-local="50684143206617" data-precio-local="75000"
            role="group" aria-labelledby="r-op-brasas">
         <div class="quien" id="r-op-brasas">A Brasas abiertas menu <small>Per adult</small></div>
         <div class="contador">
@@ -97,6 +99,7 @@
 
       <div class="reserva-fila" data-opcion
            data-variante="50684218081497" data-precio="19000"
+           data-variante-local="50684218114265" data-precio-local="24000"
            role="group" aria-labelledby="r-op-ninos">
         <div class="quien" id="r-op-ninos">Children's menu <small>Ages 4 to 12</small></div>
         <div class="contador">
@@ -112,12 +115,28 @@
            aunque el JS no corra, y recalcular() los reescribe apenas corre. -->
       <div class="reserva-total">
         <span>People <b data-total-personas>0</b></span>
-        <span>Total <b data-total-precio>$0</b></span>
       </div>
 
-      <div class="btn-row">
-        <button class="btn" type="button" data-reservar disabled>Complete booking</button>
+      <!-- Dos botones y no un desplegable de modalidad: cada uno lleva su
+           propio total, asi la diferencia de precio se ve sin tener que
+           cambiar nada primero. Cual se apreto decide que variante va al
+           carrito, y el checkout de Shopify oculta los medios de pago que
+           no corresponden segun el SKU.
+
+           Los precios de las filas de arriba son los de pagar en linea,
+           que son los que anuncia el resto del sitio. El recargo de pagar
+           en el local no se escribe en ninguna parte como numero: sale de
+           restar los dos totales, que es un dato que no se puede quedar
+           viejo si manana cambia un precio en la tienda. -->
+      <div class="btn-row dos">
+        <button class="btn" type="button" data-pagar="directo" disabled>
+          <span>Pay now</span> <b data-total-de="directo"></b>
+        </button>
+        <button class="btn btn-ghost" type="button" data-pagar="local" disabled>
+          <span>Book only</span> <b data-total-de="local"></b>
+        </button>
       </div>
+      <p class="fine" style="margin-top:12px;">With “Book only” you take your places and pay when you arrive. It costs a little more than paying online.</p>
 
       <p class="reserva-mensaje" data-mensaje></p>
 
@@ -321,7 +340,7 @@
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
 </a>
 
-<script src="../assets/js/reserva.js?v=c79d5d13" defer></script>
+<script src="../assets/js/reserva.js?v=6c064cb1" defer></script>
 
 </body>
 </html>

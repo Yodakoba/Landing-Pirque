@@ -13,7 +13,7 @@
  *      deja de estar escrito a mano en el HTML.
  *
  *   2. sincronizarPedidos() — cada pocos minutos le pregunta a
- *      Shopify por pedidos pagados nuevos, los anota en la planilla
+ *      Shopify por pedidos nuevos, los anota en la planilla
  *      y crea el evento en Google Calendar.
  *
  * POR QUÉ CONSULTAMOS EN VEZ DE RECIBIR UN WEBHOOK
@@ -227,6 +227,11 @@ function lugaresTomadosPorFecha() {
   for (var i = 0; i < filas.length; i++) {
     var fecha = comoFecha(filas[i].fecha_reserva);
     if (!fecha) continue;
+
+    // Una reserva cancelada libera su cupo. Una SIN PAGAR no: la silla
+    // queda ocupada igual, y el día se llena con las dos.
+    if (String(filas[i].estado || '').toLowerCase() === 'cancelada') continue;
+
     var n = (Number(filas[i].adultos) || 0) + (Number(filas[i].ninos) || 0);
     tomadas[fecha] = (tomadas[fecha] || 0) + n;
   }
@@ -234,17 +239,30 @@ function lugaresTomadosPorFecha() {
 }
 
 /* =============================================================
-   2. Traer los pedidos pagados desde Shopify
+   2. Traer los pedidos desde Shopify
    ============================================================= */
 
 /**
  * Esto es lo que corre cada pocos minutos con un activador de
- * tiempo. Busca pedidos pagados posteriores al último que ya
- * anotamos, y por cada uno escribe la reserva y crea el evento.
+ * tiempo. Busca pedidos posteriores al último que ya anotamos, y por
+ * cada uno escribe la reserva y crea el evento.
  *
- * Es idempotente: si el mismo pedido llega dos veces, la segunda se
- * ignora. Importa porque un reintento o una corrida solapada no
- * pueden duplicar una reserva.
+ * ANOTA TAMBIÉN LOS QUE NO ESTÁN PAGADOS, desde el 2026-10-14, cuando
+ * se agregó la modalidad "pagar en el local". Esos pedidos quedan en
+ * Shopify como pendientes, y antes esta función los ignoraba: la
+ * reserva nunca habría llegado a la planilla. Ahora toda reserva se
+ * anota y la columna `estado` dice si está pagada o por pagar.
+ *
+ * Eso significa que una reserva sin pagar TOMA CUPO igual. Es lo
+ * correcto: la silla queda ocupada se haya pagado o no. También
+ * significa que alguien puede reservar y no llegar, y ese lugar se
+ * pierde. Es el costo de ofrecer pago en el local, y se administra
+ * desde la planilla, no desde el código.
+ *
+ * Es idempotente: si el mismo pedido llega dos veces, la segunda no
+ * duplica la fila. Lo que sí hace es ponerle al día el `estado`, para
+ * que un pedido que se pagó después —o que se canceló— no quede
+ * congelado en lo que era la primera vez que lo vimos.
  */
 function sincronizarPedidos() {
   // Dos corridas en paralelo escribiendo la misma planilla es la
@@ -257,25 +275,39 @@ function sincronizarPedidos() {
 
   try {
     var yaAnotados = pedidosYaAnotados();
-    var pedidos = pedidosPagadosDesde(ultimaRevision());
+    var pedidos = pedidosDesde(ultimaRevision());
 
-    var nuevos = 0;
+    var nuevos = 0, actualizados = 0;
     for (var i = 0; i < pedidos.length; i++) {
       var p = pedidos[i];
-      if (yaAnotados[String(p.id)]) continue;
+
+      var ya = yaAnotados[String(p.id)];
+      if (ya) {
+        // Ya está anotado. Lo único que puede haber cambiado y nos
+        // importa es si pagó o si se canceló.
+        var ahora = estadoDe(p);
+        if (ya.estado !== ahora) {
+          actualizarEstado(ya.fila, ahora);
+          ya.estado = ahora;
+          actualizados++;
+        }
+        continue;
+      }
 
       var reserva = leerReserva(p);
       if (!reserva) continue;          // pedido sin fecha: no es una reserva
 
       var idEvento = crearEvento(reserva);
       anotarReserva(reserva, idEvento);
-      yaAnotados[String(p.id)] = true;
+      yaAnotados[String(p.id)] = { fila: 0, estado: reserva.estado };
       nuevos++;
     }
 
     PropertiesService.getScriptProperties()
       .setProperty('ULTIMA_REVISION', new Date().toISOString());
-    registrar('OK', 'Pedidos revisados: ' + pedidos.length + ', nuevos: ' + nuevos);
+    registrar('OK', 'Pedidos revisados: ' + pedidos.length +
+                    ', nuevos: ' + nuevos +
+                    ', estados corregidos: ' + actualizados);
   } catch (err) {
     registrar('ERROR sincronizarPedidos', err.message);
     throw err;                          // que quede en el historial de Apps Script
@@ -296,10 +328,13 @@ function ultimaRevision() {
   return new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
 }
 
-function pedidosPagadosDesde(desde) {
+function pedidosDesde(desde) {
+  // Sin filtro de financial_status: hacen falta los pendientes, que son
+  // los que van a pagar en el local. El estado se evalúa después, en
+  // estadoDe(), que es un solo lugar y no una condición en la URL.
   var url = 'https://' + config('SHOPIFY_DOMINIO') +
             '/admin/api/' + config('SHOPIFY_VERSION') + '/orders.json' +
-            '?status=any&financial_status=paid&limit=250' +
+            '?status=any&limit=250' +
             '&updated_at_min=' + encodeURIComponent(desde.toISOString());
 
   var r = UrlFetchApp.fetch(url, {
@@ -322,8 +357,32 @@ function pedidosPagadosDesde(desde) {
  * _booking_date. Si un pedido no la trae, no es una reserva —puede
  * ser cualquier otra cosa vendida en la tienda— y se ignora.
  */
+/**
+ * En qué está el pedido. Tres estados y no el financial_status crudo de
+ * Shopify, porque la planilla la lee una persona y "partially_refunded"
+ * no le dice nada a nadie:
+ *
+ *   pagada     — la plata está.
+ *   por pagar  — reservó y paga en el local. También cae acá un pago
+ *                a medias: mientras quede saldo, no está pagada.
+ *   cancelada  — se anuló o se devolvió. No toma cupo.
+ *
+ * Que `authorized` cuente como "por pagar" es a propósito: la tarjeta
+ * está retenida pero la plata todavía no se cobró. Equivocarse hacia
+ * "falta cobrar" hace que alguien lo revise; equivocarse hacia "pagada"
+ * hace que nadie lo revise.
+ */
+function estadoDe(pedido) {
+  if (pedido.cancelled_at) return 'cancelada';
+  var f = String(pedido.financial_status || '');
+  if (f === 'refunded' || f === 'voided') return 'cancelada';
+  if (f === 'paid') return 'pagada';
+  return 'por pagar';
+}
+
+
 function leerReserva(pedido) {
-  var fecha = null, adultos = 0, ninos = 0, menus = [];
+  var fecha = null, adultos = 0, ninos = 0, menus = [], modalidades = [];
 
   var lineas = pedido.line_items || [];
   for (var i = 0; i < lineas.length; i++) {
@@ -334,6 +393,16 @@ function leerReserva(pedido) {
         fecha = String(props[j].value).slice(0, 10);
       }
     }
+
+    // La modalidad sale del nombre de la variante que vendió Shopify
+    // ("Pago directo" / "Solo reserva"). Se anota porque el sitio no
+    // controla cómo se paga: la persona elige el medio de pago en el
+    // checkout. Alguien puede comprar la variante con descuento y ahí
+    // elegir pagar en el local. Una fila que diga "Pago directo" y
+    // "por pagar" es exactamente ese caso, y así se ve.
+    var variante = String(l.variant_title || '');
+    if (variante && modalidades.indexOf(variante) === -1) modalidades.push(variante);
+
     var titulo = String(l.title || '');
     if (titulo.toLowerCase().indexOf('niñ') !== -1 ||
         titulo.toLowerCase().indexOf('nin') !== -1) {
@@ -355,6 +424,8 @@ function leerReserva(pedido) {
     email: pedido.email || c.email || '',
     telefono: pedido.phone || c.phone || '',
     menu: menus.join(' + '),
+    modalidad: modalidades.join(' + '),
+    estado: estadoDe(pedido),
     adultos: adultos,
     ninos: ninos,
     total: pedido.total_price || '',
@@ -367,15 +438,77 @@ function leerReserva(pedido) {
    3. Escribir: planilla y calendario
    ============================================================= */
 
+var COLUMNAS_RESERVAS = [
+  'pedido', 'numero', 'fecha_reserva', 'nombre', 'email', 'telefono',
+  'menu', 'modalidad', 'estado', 'adultos', 'ninos', 'total', 'moneda',
+  'creado', 'evento'
+];
+
+/** Los títulos de la hoja, normalizados igual que en datos(). */
+function encabezado(hoja) {
+  var ancho = hoja.getLastColumn();
+  if (!ancho) return [];
+  return hoja.getRange(1, 1, 1, ancho).getValues()[0].map(function (t) {
+    return String(t).trim().toLowerCase().replace(/\s+/g, '_');
+  });
+}
+
+/**
+ * Agrega al encabezado las columnas que falten, sin tocar las que ya
+ * están ni los datos de abajo.
+ *
+ * Hace falta porque la planilla del cliente ya existe: hojaOCrear()
+ * escribe los títulos solo cuando crea la hoja, así que una columna
+ * nueva no aparecería nunca y appendRow la escribiría bajo un título
+ * vacío. Las filas viejas quedan con la celda en blanco, que es lo
+ * honesto: de esos pedidos no teníamos el dato.
+ */
+function asegurarColumnas(hoja, titulos) {
+  var actuales = encabezado(hoja);
+  var faltan = [];
+  for (var i = 0; i < titulos.length; i++) {
+    if (actuales.indexOf(titulos[i]) === -1) faltan.push(titulos[i]);
+  }
+  if (faltan.length) {
+    hoja.getRange(1, actuales.length + 1, 1, faltan.length).setValues([faltan]);
+  }
+  return hoja;
+}
+
+/**
+ * Escribe la fila buscando cada valor por el NOMBRE de su columna, no
+ * por su posición. Así alguien puede mover o insertar columnas en la
+ * planilla —que es de ellos y la van a tocar— sin que las reservas
+ * empiecen a caer corridas de lugar, que es el tipo de error que no se
+ * nota hasta que ya hay veinte filas malas.
+ */
 function anotarReserva(r, idEvento) {
-  var hoja = hojaOCrear(HOJA_RESERVAS, [
-    'pedido', 'numero', 'fecha_reserva', 'nombre', 'email', 'telefono',
-    'menu', 'adultos', 'ninos', 'total', 'moneda', 'creado', 'evento'
-  ]);
-  hoja.appendRow([
-    r.pedido, r.numero, r.fecha, r.nombre, r.email, r.telefono,
-    r.menu, r.adultos, r.ninos, r.total, r.moneda, r.creado, idEvento || ''
-  ]);
+  var hoja = hojaOCrear(HOJA_RESERVAS, COLUMNAS_RESERVAS);
+  asegurarColumnas(hoja, COLUMNAS_RESERVAS);
+
+  var valores = {
+    pedido: r.pedido, numero: r.numero, fecha_reserva: r.fecha,
+    nombre: r.nombre, email: r.email, telefono: r.telefono,
+    menu: r.menu, modalidad: r.modalidad, estado: r.estado,
+    adultos: r.adultos, ninos: r.ninos, total: r.total,
+    moneda: r.moneda, creado: r.creado, evento: idEvento || ''
+  };
+  hoja.appendRow(encabezado(hoja).map(function (t) {
+    return valores.hasOwnProperty(t) ? valores[t] : '';
+  }));
+}
+
+/**
+ * Un pedido que se pagó después, o que se canceló, no puede quedar
+ * congelado en lo que era la primera vez que lo vimos: el panel de
+ * pagadas contra por pagar saldría mal y nadie se daría cuenta.
+ */
+function actualizarEstado(fila, estado) {
+  var hoja = SpreadsheetApp.getActive().getSheetByName(HOJA_RESERVAS);
+  if (!hoja) return;
+  var col = encabezado(hoja).indexOf('estado');
+  if (col === -1) return;
+  hoja.getRange(fila, col + 1).setValue(estado);
 }
 
 /**
@@ -393,12 +526,18 @@ function crearEvento(r) {
     var fin    = new Date(partes[0], Number(partes[1]) - 1, partes[2], 18, 0, 0);
 
     var personas = r.adultos + r.ninos;
-    var titulo = personas + ' personas · ' + (r.nombre || 'Sin nombre');
+    // "POR PAGAR" va en el título y no solo en la descripción: en el
+    // celular se ve el título del evento y nada más, y es justo el dato
+    // que hay que tener en la mano cuando llega la gente.
+    var titulo = personas + ' personas · ' + (r.nombre || 'Sin nombre') +
+                 (r.estado === 'pagada' ? '' : ' · POR PAGAR');
 
     var evento = cal.createEvent(titulo, inicio, fin, {
       description:
         'Pedido: ' + r.numero + '\n' +
         'Menú: ' + r.menu + '\n' +
+        'Modalidad: ' + (r.modalidad || 'sin especificar') + '\n' +
+        'Estado: ' + r.estado + '\n' +
         'Adultos: ' + r.adultos + '   Niños: ' + r.ninos + '\n' +
         'Total: ' + r.total + ' ' + r.moneda + '\n' +
         'Email: ' + r.email + '\n' +
@@ -500,10 +639,20 @@ function datos(nombre) {
   return filas;
 }
 
+/**
+ * Los pedidos que ya están en la planilla, con en qué fila y en qué
+ * estado. La fila hace falta para poder corregirle el estado a uno que
+ * cambió; antes bastaba con saber que existía.
+ */
 function pedidosYaAnotados() {
   var vistos = {};
   var filas = datos(HOJA_RESERVAS);
-  for (var i = 0; i < filas.length; i++) vistos[String(filas[i].pedido)] = true;
+  for (var i = 0; i < filas.length; i++) {
+    vistos[String(filas[i].pedido)] = {
+      fila: i + 2,                    // +1 por el encabezado, +1 porque empieza en 1
+      estado: String(filas[i].estado || '')
+    };
+  }
   return vistos;
 }
 
@@ -546,8 +695,8 @@ function revisarConfiguracion() {
 
 /** Prueba que el token de Shopify sirva, sin escribir nada. */
 function probarShopify() {
-  var pedidos = pedidosPagadosDesde(new Date(new Date().getTime() - 30 * 24 * 3600 * 1000));
-  Logger.log('Pedidos pagados en los últimos 30 días: ' + pedidos.length);
+  var pedidos = pedidosDesde(new Date(new Date().getTime() - 30 * 24 * 3600 * 1000));
+  Logger.log('Pedidos en los últimos 30 días: ' + pedidos.length);
   if (pedidos.length) Logger.log('El más reciente: ' + pedidos[0].name);
 }
 
