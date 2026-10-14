@@ -147,6 +147,20 @@ ok(ctx.telefonoDe({ billing_address: {}, customer: { phone: '+56 9 4444' } }) ==
    'una direccion sin telefono no tapa al de la ficha');
 ok(ctx.telefonoDe({}) === '', 'sin ninguno, vacio');
 
+// estadoDelCampo distingue los cuatro casos. La diferencia entre "no esta"
+// y "esta en null" es la que decide si falta un permiso o si el pedido de
+// verdad no traia el dato.
+ok(ctx.estadoDelCampo({}, 'email').indexOf('NO ESTÁ') !== -1,
+   'una llave ausente se reporta como ausente');
+ok(ctx.estadoDelCampo({ email: null }, 'email').indexOf('NULL') !== -1,
+   'una llave en null se reporta como null, que es la firma de censura');
+ok(ctx.estadoDelCampo({ email: '' }, 'email').indexOf('VACÍA') !== -1,
+   'una llave vacia no es lo mismo que una en null');
+ok(ctx.estadoDelCampo({ email: 'a@b.cl' }, 'email').indexOf('trae') !== -1,
+   'una llave con valor se reporta como que trae algo');
+ok(ctx.estadoDelCampo(null, 'email').indexOf('NO ESTÁ') !== -1,
+   'un objeto nulo no revienta');
+
 // El correo se enmascara para no dejarlo entero en el registro.
 ok(ctx.enmascarar('ana.soto@correo.cl') === 'an***@correo.cl', 'el correo se enmascara');
 ok(ctx.enmascarar('') === '', 'un correo vacio sigue vacio');

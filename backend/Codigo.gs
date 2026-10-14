@@ -837,24 +837,72 @@ function probarDatosDelCliente() {
   Logger.log('Pedido más reciente: ' + (p.name || p.id));
   Logger.log('  líneas: ' + ((p.line_items || []).length) +
              '   total: ' + p.total_price + ' ' + p.currency);
-  Logger.log('  customer: ' + (p.customer ? 'viene' : 'NO VIENE'));
+  Logger.log('');
+
+  // Campo por campo, y distinguiendo "la llave no está" de "la llave está
+  // pero vino nula". No es un matiz: cuando Shopify censura un dato manda
+  // la llave en null, no la omite. Si todas las llaves están presentes y
+  // todas en null, eso es censura y no un pedido sin datos, y no hay
+  // ningún campo alternativo del que sacarlo.
+  Logger.log('Qué trae el pedido, campo por campo:');
+  Logger.log('  order.email           ' + estadoDelCampo(p, 'email'));
+  Logger.log('  order.contact_email   ' + estadoDelCampo(p, 'contact_email'));
+  Logger.log('  order.phone           ' + estadoDelCampo(p, 'phone'));
+  Logger.log('  order.customer        ' + estadoDelCampo(p, 'customer'));
+  Logger.log('  order.billing_address ' + estadoDelCampo(p, 'billing_address'));
+  Logger.log('  order.shipping_address ' + estadoDelCampo(p, 'shipping_address'));
+  if (p.customer) {
+    Logger.log('  customer.first_name   ' + estadoDelCampo(p.customer, 'first_name'));
+    Logger.log('  customer.email        ' + estadoDelCampo(p.customer, 'email'));
+  }
+  if (p.billing_address) {
+    Logger.log('  billing_address.name  ' + estadoDelCampo(p.billing_address, 'name'));
+    Logger.log('  billing_address.phone ' + estadoDelCampo(p.billing_address, 'phone'));
+  }
+
+  Logger.log('');
+  Logger.log('Lo que el backend sacaría de ahí:');
   Logger.log('  nombre: ' + (nombreDe(p) || '(vacío)'));
   Logger.log('  email: ' + (enmascarar(emailDe(p)) || '(vacío)'));
   Logger.log('  teléfono: ' + (telefonoDe(p) ? 'viene' : '(vacío)'));
-  Logger.log('  dirección: ' + (dir.name || dir.city ? 'viene' : 'NO VIENE'));
 
   // El pedido llegó entero pero sin nada de la persona: eso no es un
   // pedido sin datos, es un pedido censurado.
-  if ((p.line_items || []).length && !nombreDe(p) && !emailDe(p)) {
-    Logger.log('');
-    Logger.log('DIAGNÓSTICO: el pedido llega completo pero sin nombre ni correo.');
-    Logger.log('Eso es el permiso de datos protegidos del cliente, que read_orders');
-    Logger.log('no incluye. Se habilita en el admin de Shopify, en la configuración');
-    Logger.log('de la app que generó el token. Ver backend/README.md.');
+  Logger.log('');
+  if (!(p.line_items || []).length) {
+    Logger.log('DIAGNÓSTICO: este pedido no trae ni líneas. Algo más pasa.');
+  } else if (nombreDe(p) && emailDe(p)) {
+    Logger.log('DIAGNÓSTICO: los datos del cliente están llegando.');
+    Logger.log('Si igual salen vacíos en la planilla, el problema está en otra');
+    Logger.log('parte y la lista de arriba dice de qué campo hay que sacarlos.');
+  } else if (!nombreDe(p) && !emailDe(p)) {
+    Logger.log('DIAGNÓSTICO: el pedido llega completo —líneas y total— pero sin');
+    Logger.log('nombre NI correo, en ninguno de los campos de arriba. Eso no es');
+    Logger.log('de qué campo se lee: es el permiso de datos protegidos del');
+    Logger.log('cliente, que read_orders no incluye. Se habilita en el admin de');
+    Logger.log('Shopify, en la app que generó el token. Ver backend/README.md.');
   } else {
-    Logger.log('');
-    Logger.log('Los datos del cliente están llegando.');
+    Logger.log('DIAGNÓSTICO: llega uno de los dos y el otro no. Mira la lista de');
+    Logger.log('arriba: si el que falta tiene su llave presente y en null, es el');
+    Logger.log('permiso; si la llave no está, ese pedido no traía el dato.');
   }
+}
+
+/**
+ * Si una llave falta, vino nula, vino vacía o trae algo.
+ *
+ * La diferencia entre "no está" y "está en null" es la que decide esta
+ * discusión: cuando Shopify censura un dato por falta de permiso manda la
+ * llave en null, no la omite. Un pedido que de verdad no tiene el dato
+ * suele no traer la llave.
+ */
+function estadoDelCampo(obj, llave) {
+  if (!obj || !obj.hasOwnProperty(llave)) return '-> la llave NO ESTÁ';
+  var v = obj[llave];
+  if (v === null) return '-> está, en NULL  (firma de censura)';
+  if (v === '') return '-> está, VACÍA';
+  if (typeof v === 'object') return '-> trae datos';
+  return '-> trae algo';
 }
 
 /** Deja ver si un correo llegó, sin escribirlo entero en el registro. */
