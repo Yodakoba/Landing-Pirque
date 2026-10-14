@@ -839,11 +839,11 @@ function probarDatosDelCliente() {
              '   total: ' + p.total_price + ' ' + p.currency);
   Logger.log('');
 
-  // Campo por campo, y distinguiendo "la llave no está" de "la llave está
-  // pero vino nula". No es un matiz: cuando Shopify censura un dato manda
-  // la llave en null, no la omite. Si todas las llaves están presentes y
-  // todas en null, eso es censura y no un pedido sin datos, y no hay
-  // ningún campo alternativo del que sacarlo.
+  // Campo por campo, distinguiendo "la llave no aparece" de "está en null".
+  // Comprobado contra la tienda: Shopify CENSURA OMITIENDO la llave, y usa
+  // null para un dato que de verdad no hay. Así que un `customer` que trae
+  // datos pero sin `first_name` ni `email` no es un cliente sin nombre: es
+  // un cliente censurado, y no hay campo alternativo del que sacarlo.
   Logger.log('Qué trae el pedido, campo por campo:');
   Logger.log('  order.email           ' + estadoDelCampo(p, 'email'));
   Logger.log('  order.contact_email   ' + estadoDelCampo(p, 'contact_email'));
@@ -877,32 +877,66 @@ function probarDatosDelCliente() {
     Logger.log('parte y la lista de arriba dice de qué campo hay que sacarlos.');
   } else if (!nombreDe(p) && !emailDe(p)) {
     Logger.log('DIAGNÓSTICO: el pedido llega completo —líneas y total— pero sin');
-    Logger.log('nombre NI correo, en ninguno de los campos de arriba. Eso no es');
-    Logger.log('de qué campo se lee: es el permiso de datos protegidos del');
-    Logger.log('cliente, que read_orders no incluye. Se habilita en el admin de');
-    Logger.log('Shopify, en la app que generó el token. Ver backend/README.md.');
+    Logger.log('nombre NI correo, en ninguno de los campos de arriba.');
+
+    var censurado =
+      pareceCensurado(p.customer, ['first_name', 'last_name', 'email', 'phone']) ||
+      pareceCensurado(p.billing_address, ['name', 'first_name', 'last_name', 'phone']);
+    if (censurado) {
+      Logger.log('Y hay objetos que traen datos pero a los que les faltan JUSTO');
+      Logger.log('esas llaves, que es la firma de la censura. Eso descarta que');
+      Logger.log('sea de qué campo se lee.');
+    }
+
+    Logger.log('Es el permiso de datos protegidos del cliente, que read_orders');
+    Logger.log('no incluye. Se habilita en el admin de Shopify, en la app que');
+    Logger.log('generó el token. Ver backend/README.md.');
   } else {
     Logger.log('DIAGNÓSTICO: llega uno de los dos y el otro no. Mira la lista de');
-    Logger.log('arriba: si el que falta tiene su llave presente y en null, es el');
-    Logger.log('permiso; si la llave no está, ese pedido no traía el dato.');
+    Logger.log('arriba: si al que falta le falta la LLAVE dentro de un objeto que');
+    Logger.log('sí trae datos, es el permiso; si viene en null, ese pedido no');
+    Logger.log('tenía el dato.');
   }
 }
 
 /**
  * Si una llave falta, vino nula, vino vacía o trae algo.
  *
- * La diferencia entre "no está" y "está en null" es la que decide esta
- * discusión: cuando Shopify censura un dato por falta de permiso manda la
- * llave en null, no la omite. Un pedido que de verdad no tiene el dato
- * suele no traer la llave.
+ * COMPROBADO CONTRA LA TIENDA (pedido #1007, 2026-10-14), y resultó ser al
+ * revés de lo que uno supondría:
+ *
+ *   - Censurado por falta de permiso  -> LA LLAVE NO APARECE.
+ *   - Sin valor de verdad             -> la llave está, en null.
+ *
+ * En ese pedido `shipping_address` vino en null —correcto, una reserva no
+ * tiene envío— mientras que `customer` y `billing_address` traían datos
+ * pero SIN las llaves de nombre, correo y teléfono. Un objeto que existe y
+ * tiene contenido al que le faltan justo esos campos es la firma de la
+ * censura; un null es un dato que de verdad no hay.
  */
 function estadoDelCampo(obj, llave) {
-  if (!obj || !obj.hasOwnProperty(llave)) return '-> la llave NO ESTÁ';
+  if (!obj || !obj.hasOwnProperty(llave)) return '-> la llave NO APARECE';
   var v = obj[llave];
-  if (v === null) return '-> está, en NULL  (firma de censura)';
+  if (v === null) return '-> está, en null  (no hay dato)';
   if (v === '') return '-> está, VACÍA';
   if (typeof v === 'object') return '-> trae datos';
   return '-> trae algo';
+}
+
+/**
+ * ¿El objeto existe y tiene contenido, pero sin ninguna de estas llaves?
+ * Eso no pasa por casualidad: es la censura sacando los campos protegidos
+ * de un objeto que por lo demás viene entero.
+ */
+function pareceCensurado(obj, llaves) {
+  if (!obj || typeof obj !== 'object') return false;
+  var tieneAlgo = false;
+  for (var k in obj) { if (obj.hasOwnProperty(k)) { tieneAlgo = true; break; } }
+  if (!tieneAlgo) return false;
+  for (var i = 0; i < llaves.length; i++) {
+    if (obj.hasOwnProperty(llaves[i])) return false;
+  }
+  return true;
 }
 
 /** Deja ver si un correo llegó, sin escribirlo entero en el registro. */

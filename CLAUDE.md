@@ -442,11 +442,16 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   dentro de la dirección, así que el número está en
   `billing_address.phone`. `telefonoDe()` mira los cuatro lugares.
 - **`read_orders` no alcanza para el nombre y el correo del cliente.**
-  Shopify los trata como datos protegidos y hay que pedirlos aparte en la
-  configuración de la app. **Y no falla avisando**: el pedido llega
-  completo y esos campos vienen en blanco, igual que un pedido sin datos.
-  `probarDatosDelCliente()` distingue los dos casos. Ver
-  `backend/README.md`.
+  **Confirmado contra la tienda el 2026-10-14** con
+  `probarDatosDelCliente()`: el pedido #1007 llegó con sus tres líneas y su
+  total, y sin nombre, correo ni teléfono. Shopify los trata como datos
+  protegidos y hay que pedirlos aparte en la configuración de la app.
+- **La censura se ve OMITIENDO la llave, no poniéndola en `null`** — al
+  revés de lo que uno supondría, y vale la pena saberlo porque es lo que
+  distingue "falta un permiso" de "ese pedido no tenía el dato". En #1007,
+  `shipping_address` vino en `null` (correcto: una reserva no tiene envío)
+  mientras que `customer` y `billing_address` traían datos **sin las
+  llaves** de nombre, correo y teléfono. Ver `backend/README.md`.
 - **Los títulos de las cuatro pestañas de la planilla no se escriben a
   mano**: los deja `prepararPlanilla()`, que se corre una vez desde el
   editor de Apps Script y es segura de repetir. No es comodidad: el script

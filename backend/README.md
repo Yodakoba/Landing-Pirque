@@ -185,6 +185,20 @@ Para no adivinar, corre **`probarDatosDelCliente()`** desde el editor. Mira
 el pedido más reciente y dice si el nombre y el correo están llegando o si
 los están censurando.
 
+**Cómo se ve la censura** (comprobado contra la tienda, pedido #1007,
+2026-10-14). Es al revés de lo que uno supondría:
+
+| | Cómo viene |
+|---|---|
+| Campo censurado por falta de permiso | **la llave no aparece** |
+| Dato que de verdad no existe | la llave está, en `null` |
+
+En ese pedido `shipping_address` vino en `null` —correcto, una reserva no
+tiene envío— mientras que `customer` y `billing_address` **traían datos pero
+sin las llaves** de nombre, correo y teléfono. Un objeto que existe y tiene
+contenido al que le faltan justo esos campos no es un cliente sin nombre: es
+un cliente censurado, y **no hay ningún campo alternativo del que sacarlo**.
+
 ### De qué campo sale cada dato
 
 Cuando los datos sí llegan, estos son los lugares donde Shopify los pone, en

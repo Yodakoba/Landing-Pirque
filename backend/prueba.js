@@ -147,19 +147,30 @@ ok(ctx.telefonoDe({ billing_address: {}, customer: { phone: '+56 9 4444' } }) ==
    'una direccion sin telefono no tapa al de la ficha');
 ok(ctx.telefonoDe({}) === '', 'sin ninguno, vacio');
 
-// estadoDelCampo distingue los cuatro casos. La diferencia entre "no esta"
-// y "esta en null" es la que decide si falta un permiso o si el pedido de
-// verdad no traia el dato.
-ok(ctx.estadoDelCampo({}, 'email').indexOf('NO ESTÁ') !== -1,
+// estadoDelCampo distingue los cuatro casos.
+ok(ctx.estadoDelCampo({}, 'email').indexOf('NO APARECE') !== -1,
    'una llave ausente se reporta como ausente');
-ok(ctx.estadoDelCampo({ email: null }, 'email').indexOf('NULL') !== -1,
-   'una llave en null se reporta como null, que es la firma de censura');
+ok(ctx.estadoDelCampo({ email: null }, 'email').indexOf('null') !== -1,
+   'una llave en null se reporta como null');
 ok(ctx.estadoDelCampo({ email: '' }, 'email').indexOf('VACÍA') !== -1,
    'una llave vacia no es lo mismo que una en null');
 ok(ctx.estadoDelCampo({ email: 'a@b.cl' }, 'email').indexOf('trae') !== -1,
    'una llave con valor se reporta como que trae algo');
-ok(ctx.estadoDelCampo(null, 'email').indexOf('NO ESTÁ') !== -1,
+ok(ctx.estadoDelCampo(null, 'email').indexOf('NO APARECE') !== -1,
    'un objeto nulo no revienta');
+
+// pareceCensurado: un objeto que trae datos pero sin JUSTO esas llaves.
+// Comprobado contra el pedido #1007 de la tienda: asi se ve la censura,
+// y NO como llaves en null, que era lo que se supuso al principio.
+const PII = ['first_name', 'last_name', 'email', 'phone'];
+ok(ctx.pareceCensurado({ id: 1, state: 'enabled' }, PII) === true,
+   'un customer con datos pero sin ninguna llave de persona: censurado');
+ok(ctx.pareceCensurado({ id: 1, first_name: 'Ana' }, PII) === false,
+   'si trae una de las llaves, no esta censurado');
+ok(ctx.pareceCensurado({ id: 1, email: null }, PII) === false,
+   'una llave presente en null es un dato que no hay, no censura');
+ok(ctx.pareceCensurado(null, PII) === false, 'un objeto nulo no es censura');
+ok(ctx.pareceCensurado({}, PII) === false, 'un objeto vacio tampoco: no trae nada que censurar');
 
 // El correo se enmascara para no dejarlo entero en el registro.
 ok(ctx.enmascarar('ana.soto@correo.cl') === 'an***@correo.cl', 'el correo se enmascara');
