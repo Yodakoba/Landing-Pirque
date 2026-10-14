@@ -421,8 +421,8 @@ function leerReserva(pedido) {
     numero: pedido.name || '',
     fecha: fecha,
     nombre: nombreDe(pedido),
-    email: pedido.email || pedido.contact_email || c.email || '',
-    telefono: pedido.phone || c.phone || '',
+    email: emailDe(pedido),
+    telefono: telefonoDe(pedido),
     menu: menus.join(' + '),
     modalidad: modalidades.join(' + '),
     estado: estadoDe(pedido),
@@ -459,6 +459,33 @@ function nombreDe(pedido) {
   if (n) return n;
 
   return ((dir.first_name || '') + ' ' + (dir.last_name || '')).trim();
+}
+
+/**
+ * El correo. `email` es el del pedido —el que la persona escribió en el
+ * checkout— y es el que corresponde; `customer.email` es el de la ficha
+ * del cliente y puede ser otro si reservó con un correo distinto al de su
+ * cuenta. Por eso el del pedido va primero.
+ */
+function emailDe(pedido) {
+  var c = pedido.customer || {};
+  return pedido.email || pedido.contact_email || c.email || '';
+}
+
+/**
+ * El teléfono, y acá estaba el hueco: `order.phone` viene vacío casi
+ * siempre. El checkout no pide un teléfono suelto, lo pide DENTRO de la
+ * dirección, así que el número que la persona escribió está en
+ * `billing_address.phone` o en `shipping_address.phone`.
+ *
+ * Mirar solo `order.phone` y `customer.phone` era quedarse con los dos
+ * lugares que normalmente están vacíos.
+ */
+function telefonoDe(pedido) {
+  var c = pedido.customer || {};
+  var fact = pedido.billing_address || {};
+  var envio = pedido.shipping_address || {};
+  return pedido.phone || fact.phone || envio.phone || c.phone || '';
 }
 
 
@@ -805,7 +832,6 @@ function probarDatosDelCliente() {
   }
 
   var p = pedidos[0];
-  var c = p.customer || {};
   var dir = p.billing_address || p.shipping_address || {};
 
   Logger.log('Pedido más reciente: ' + (p.name || p.id));
@@ -813,13 +839,13 @@ function probarDatosDelCliente() {
              '   total: ' + p.total_price + ' ' + p.currency);
   Logger.log('  customer: ' + (p.customer ? 'viene' : 'NO VIENE'));
   Logger.log('  nombre: ' + (nombreDe(p) || '(vacío)'));
-  Logger.log('  email: ' + (enmascarar(p.email || p.contact_email || c.email) || '(vacío)'));
+  Logger.log('  email: ' + (enmascarar(emailDe(p)) || '(vacío)'));
+  Logger.log('  teléfono: ' + (telefonoDe(p) ? 'viene' : '(vacío)'));
   Logger.log('  dirección: ' + (dir.name || dir.city ? 'viene' : 'NO VIENE'));
 
   // El pedido llegó entero pero sin nada de la persona: eso no es un
   // pedido sin datos, es un pedido censurado.
-  if ((p.line_items || []).length && !nombreDe(p) &&
-      !(p.email || p.contact_email || c.email)) {
+  if ((p.line_items || []).length && !nombreDe(p) && !emailDe(p)) {
     Logger.log('');
     Logger.log('DIAGNÓSTICO: el pedido llega completo pero sin nombre ni correo.');
     Logger.log('Eso es el permiso de datos protegidos del cliente, que read_orders');

@@ -32,6 +32,12 @@ Web Apps de Apps Script no dan acceso a las cabeceras**: `doPost(e)` entrega
 el cuerpo y los parámetros, nada más. Sin poder verificar la firma,
 cualquiera que descubriera la URL podría inventar reservas.
 
+**Por lo mismo, este código no tiene `doPost`.** Un webhook apuntado a esta
+URL no hace nada — y peor: **Shopify lo va a dar por entregado**, porque un
+Web App de Apps Script responde 200 aunque la función no exista. Se ve como
+que funciona y no se anota ninguna reserva. Si hay un webhook configurado en
+la tienda apuntando acá, lo que corresponde es borrarlo, no depurarlo.
+
 Preguntando nosotros, eso no existe: nadie nos escribe. Además el sistema se
 recupera solo de caídas, porque la próxima corrida se pone al día. El costo
 es que la reserva aparece con unos minutos de atraso, que para esto no es
@@ -159,6 +165,11 @@ access token**, que empieza en `shpat_`.
 > token se guarda en las propiedades del script, que nunca salen al
 > navegador. Es el lugar correcto para uno.
 
+**Esto vale para los dos caminos.** Da lo mismo si los datos se piden por la
+API o llegan en un webhook: lo que decide si vienen o no es el permiso, no
+por dónde entran. Cambiar de campo tampoco ayuda — si están censurados,
+`email`, `customer.email` y `contact_email` vienen los tres en blanco.
+
 **Y hace falta una segunda cosa, que es la que se olvida: el acceso a datos
 protegidos del cliente.** `read_orders` deja leer el pedido, pero **no** el
 nombre, el correo, el teléfono ni las direcciones. Shopify los trata aparte
@@ -173,6 +184,28 @@ cosas distintas que se arreglan en lugares distintos.
 Para no adivinar, corre **`probarDatosDelCliente()`** desde el editor. Mira
 el pedido más reciente y dice si el nombre y el correo están llegando o si
 los están censurando.
+
+### De qué campo sale cada dato
+
+Cuando los datos sí llegan, estos son los lugares donde Shopify los pone, en
+el orden en que el código los busca:
+
+| Dato | Dónde se busca, en orden |
+|---|---|
+| **Correo** | `order.email` · `order.contact_email` · `order.customer.email` |
+| **Nombre** | `order.customer.first_name`+`last_name` · `billing_address.name` · `shipping_address.name` |
+| **Teléfono** | `order.phone` · `billing_address.phone` · `shipping_address.phone` · `customer.phone` |
+
+Dos cosas que no son obvias:
+
+- **El correo del pedido le gana al de la ficha del cliente.** Son campos
+  distintos: alguien puede reservar con un correo que no es el de su cuenta,
+  y el que sirve para avisarle es el que escribió al reservar.
+- **`order.phone` viene vacío casi siempre.** El checkout no pide un teléfono
+  suelto, lo pide **dentro de la dirección**, así que el número que la
+  persona escribió está en `billing_address.phone`. Mirar solo `order.phone`
+  y `customer.phone` era quedarse con los dos lugares que suelen estar
+  vacíos.
 
 ### 7. Las propiedades
 

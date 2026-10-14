@@ -122,6 +122,31 @@ ok(ctx.nombreDe({ customer: {}, billing_address: { name: 'Ana Soto' } }) === 'An
    'un customer vacio no tapa a la direccion');
 ok(ctx.nombreDe({}) === '', 'sin nada en ninguna parte, queda vacio y no "undefined undefined"');
 
+/* ---------- emailDe y telefonoDe: de donde salen de verdad ---------- */
+
+// El correo del PEDIDO manda sobre el de la ficha del cliente: puede
+// haber reservado con uno distinto al de su cuenta.
+ok(ctx.emailDe({ email: 'pedido@x.cl', customer: { email: 'cuenta@x.cl' } }) === 'pedido@x.cl',
+   'el correo del pedido le gana al de la ficha');
+ok(ctx.emailDe({ contact_email: 'contacto@x.cl' }) === 'contacto@x.cl',
+   'si no hay email, sirve contact_email');
+ok(ctx.emailDe({ customer: { email: 'cuenta@x.cl' } }) === 'cuenta@x.cl',
+   'y en ultimo lugar el de la ficha');
+ok(ctx.emailDe({}) === '', 'sin ninguno, vacio');
+
+// El telefono: order.phone viene vacio casi siempre porque el checkout
+// lo pide DENTRO de la direccion. Este era el hueco.
+ok(ctx.telefonoDe({ billing_address: { phone: '+56 9 1111' } }) === '+56 9 1111',
+   'el telefono sale de la direccion de facturacion');
+ok(ctx.telefonoDe({ shipping_address: { phone: '+56 9 2222' } }) === '+56 9 2222',
+   'o de la de envio');
+ok(ctx.telefonoDe({ phone: '+56 9 3333', billing_address: { phone: '+56 9 1111' } })
+     === '+56 9 3333',
+   'si el pedido trae uno suelto, ese manda');
+ok(ctx.telefonoDe({ billing_address: {}, customer: { phone: '+56 9 4444' } }) === '+56 9 4444',
+   'una direccion sin telefono no tapa al de la ficha');
+ok(ctx.telefonoDe({}) === '', 'sin ninguno, vacio');
+
 // El correo se enmascara para no dejarlo entero en el registro.
 ok(ctx.enmascarar('ana.soto@correo.cl') === 'an***@correo.cl', 'el correo se enmascara');
 ok(ctx.enmascarar('') === '', 'un correo vacio sigue vacio');

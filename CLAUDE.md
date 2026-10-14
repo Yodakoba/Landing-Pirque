@@ -434,6 +434,13 @@ se guarda en las propiedades del script, que nunca salen al navegador.
 - **Las reservas sin pagar se anotan igual y toman cupo** (2026-10-14). El
   backend dejó de filtrar por `financial_status=paid`; ver `backend/README.md`.
   Una cancelada libera su cupo, una por pagar no.
+- **No hay `doPost`: un webhook apuntado al Web App no hace nada**, y
+  Shopify igual lo da por entregado porque Apps Script responde 200 aunque
+  la función no exista. Si aparece uno configurado en la tienda, se borra.
+  El backend pregunta, no recibe; ver `backend/README.md`.
+- **`order.phone` viene vacío casi siempre.** El checkout pide el teléfono
+  dentro de la dirección, así que el número está en
+  `billing_address.phone`. `telefonoDe()` mira los cuatro lugares.
 - **`read_orders` no alcanza para el nombre y el correo del cliente.**
   Shopify los trata como datos protegidos y hay que pedirlos aparte en la
   configuración de la app. **Y no falla avisando**: el pedido llega
