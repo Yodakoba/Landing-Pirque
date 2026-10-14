@@ -122,6 +122,45 @@ ok(ctx.nombreDe({ customer: {}, billing_address: { name: 'Ana Soto' } }) === 'An
    'un customer vacio no tapa a la direccion');
 ok(ctx.nombreDe({}) === '', 'sin nada en ninguna parte, queda vacio y no "undefined undefined"');
 
+/* ---------- emailDe y telefonoDe: de donde salen de verdad ---------- */
+
+// El correo del PEDIDO manda sobre el de la ficha del cliente: puede
+// haber reservado con uno distinto al de su cuenta.
+ok(ctx.emailDe({ email: 'pedido@x.cl', customer: { email: 'cuenta@x.cl' } }) === 'pedido@x.cl',
+   'el correo del pedido le gana al de la ficha');
+ok(ctx.emailDe({ contact_email: 'contacto@x.cl' }) === 'contacto@x.cl',
+   'si no hay email, sirve contact_email');
+ok(ctx.emailDe({ customer: { email: 'cuenta@x.cl' } }) === 'cuenta@x.cl',
+   'y en ultimo lugar el de la ficha');
+ok(ctx.emailDe({}) === '', 'sin ninguno, vacio');
+
+// El telefono: order.phone viene vacio casi siempre porque el checkout
+// lo pide DENTRO de la direccion. Este era el hueco.
+ok(ctx.telefonoDe({ billing_address: { phone: '+56 9 1111' } }) === '+56 9 1111',
+   'el telefono sale de la direccion de facturacion');
+ok(ctx.telefonoDe({ shipping_address: { phone: '+56 9 2222' } }) === '+56 9 2222',
+   'o de la de envio');
+ok(ctx.telefonoDe({ phone: '+56 9 3333', billing_address: { phone: '+56 9 1111' } })
+     === '+56 9 3333',
+   'si el pedido trae uno suelto, ese manda');
+ok(ctx.telefonoDe({ billing_address: {}, customer: { phone: '+56 9 4444' } }) === '+56 9 4444',
+   'una direccion sin telefono no tapa al de la ficha');
+ok(ctx.telefonoDe({}) === '', 'sin ninguno, vacio');
+
+// estadoDelCampo distingue los cuatro casos. La diferencia entre "no esta"
+// y "esta en null" es la que decide si falta un permiso o si el pedido de
+// verdad no traia el dato.
+ok(ctx.estadoDelCampo({}, 'email').indexOf('NO ESTÁ') !== -1,
+   'una llave ausente se reporta como ausente');
+ok(ctx.estadoDelCampo({ email: null }, 'email').indexOf('NULL') !== -1,
+   'una llave en null se reporta como null, que es la firma de censura');
+ok(ctx.estadoDelCampo({ email: '' }, 'email').indexOf('VACÍA') !== -1,
+   'una llave vacia no es lo mismo que una en null');
+ok(ctx.estadoDelCampo({ email: 'a@b.cl' }, 'email').indexOf('trae') !== -1,
+   'una llave con valor se reporta como que trae algo');
+ok(ctx.estadoDelCampo(null, 'email').indexOf('NO ESTÁ') !== -1,
+   'un objeto nulo no revienta');
+
 // El correo se enmascara para no dejarlo entero en el registro.
 ok(ctx.enmascarar('ana.soto@correo.cl') === 'an***@correo.cl', 'el correo se enmascara');
 ok(ctx.enmascarar('') === '', 'un correo vacio sigue vacio');
