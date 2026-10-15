@@ -762,29 +762,51 @@ navegador del cliente y traer la salida.
 
 ## Estructura de la página (orden actual)
 
-1. Foto full-screen "Trabaja con nosotros / Únete a nuestro programa de
-   afiliados" + botón WhatsApp
-2. Tres paneles de comisión (5% / 10% / 15%)
-3. "Una experiencia chilena auténtica, ideal para tus clientes" + 2º botón
-   WhatsApp
-4. Cuatro niveles de experiencias culinarias (Tradiciones $49.000 / Lo Pirque
-   $55.000 / Brasas $75.000 / Sommelier $95.000) — tarjetas con flip 3D en CSS
-   puro (checkbox + label, sin JS). Menú compartido en un `<details>` debajo.
-5. Galería "Date una vuelta por el lugar" — 27 fotos, carrusel swipe con
-   `scroll-snap`, sin JS
-6. Foto + texto del show ecuestre ("Una experiencia para todas las edades")
-7. Seis tarjetas de actividades familiares dentro del recinto
-8. Experiencias externas para empresas (coaching con caballos, taller de queso,
-   karting, taller de asado)
-9. Servicios adicionales (desayuno de campo / once campesina)
-10. Precio del recinto ($2.500.000 + IVA fin de semana / $1.500.000 + IVA días
-    de semana, solo arriendo, sin catering)
-11. "Eventos a medida" (full-bleed con overlay)
-12. Segmentos (agencias / municipalidades / empresas)
-13. Por qué sumarte como socio
-14. Cómo funciona (3 pasos)
-15. Contacto: botón WhatsApp + formulario de email
-16. Footer
+**Desde el 2026-10-15 el grueso vive dentro de cinco paneles plegables**, en
+los dos landings. La página pasó de unas 15 pantallas de celular a poco más
+de 4. Ver "Los paneles" abajo.
+
+Siempre a la vista:
+
+1. Foto full-screen + botón WhatsApp. En el B2B es "Trabaja con nosotros";
+   en promociones es la secuencia de tres tiempos.
+2. **Solo en el B2B**: tres paneles de comisión (5% / 10% / 15%) y la bajada
+   "Una experiencia chilena auténtica" con el 2º botón de WhatsApp.
+   **Solo en promociones**: el bloque de oferta (11% / 44 personas / sin
+   costo de arriendo) con los botones.
+3. Contacto: botón WhatsApp + formulario de email.
+4. Footer.
+
+Dentro de los paneles, en este orden:
+
+| Panel | Qué trae |
+|---|---|
+| Las experiencias y el menú | Los cuatro niveles con flip 3D en CSS puro (checkbox + label), y el menú compartido en un `<details>` debajo |
+| Date una vuelta por el lugar | La galería de 27 fotos, carrusel swipe con `scroll-snap`, sin JS |
+| Las actividades | Show ecuestre · seis tarjetas de actividades del recinto · actividades adicionales (coaching con caballos, taller de queso, karting, taller de asado) |
+| El recinto y los extras | Desayuno de campo y once campesina · precio del recinto ($2.500.000 + IVA fin de semana / $1.500.000 + IVA días de semana, solo arriendo, sin catering) · "Eventos a medida" |
+| Por qué acá *(B2B: Por qué sumarte)* | Los tres momentos o segmentos · los beneficios · cómo funciona en 3 pasos |
+
+### Los paneles
+
+- **Son `<details>`, no una ventana a pantalla completa.** La ventana era lo
+  pedido, y se descartó con el cliente el 2026-10-15: sin JavaScript no hay
+  tecla Escape, el foco del teclado se escapa por detrás, la página de atrás
+  se sigue haciendo scroll y el botón Atrás del celular sale del sitio en vez
+  de cerrarla. `<details>` trae todo eso resuelto de fábrica, y es lo que el
+  sitio ya usa para el menú y el selector de idiomas.
+- **Abierto, el `<summary>` queda pegado arriba** con la ✕ a la derecha, para
+  que cerrar esté siempre a mano aunque la sección sea larga. Cerrado muestra
+  un `+`.
+- **Hay un beneficio que no se ve**: adentro de un panel cerrado las fotos con
+  `loading="lazy"` no se descargan. Las 27 de la galería dejan de pesar en la
+  primera carga.
+- **Los anclas `#experiencias` y `#actividades` van en el `<details>`, no en
+  la sección de adentro.** Así el enlace aterriza en el botón del panel, que
+  es predecible en todo navegador. El costo a asumir: "Ver experiencias" deja
+  al visitante sobre el botón y hace falta un toque más. Ponerlo en la sección
+  de adentro haría que los navegadores nuevos abrieran el panel solos, pero en
+  los viejos llevaría a contenido invisible, que es peor.
 
 Las interacciones (flip de tarjetas, carrusel) son **CSS puro a propósito**.
 Mantenlo así salvo que el cliente pida lo contrario.

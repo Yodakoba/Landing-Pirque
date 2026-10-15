@@ -239,6 +239,55 @@
   .comm-pie{ font-family: var(--serif); font-style: italic; font-size: 1.01rem;
     color: var(--ink-dim); margin-top: 14px; line-height: 1.5; max-width: 52ch; }
 
+  /* ---------- paneles ---------- */
+  /* Las secciones largas viven dentro de <details>. La página pasa de unas
+     quince pantallas a unas pocas, y cada bloque se abre cuando interesa.
+
+     Es <details> y no una ventana a pantalla completa. La ventana era lo
+     pedido, pero sin JavaScript no hay tecla Escape, el foco del teclado se
+     escapa por detrás, la página de atrás sigue haciéndose scroll y el botón
+     Atrás del celular sale del sitio en vez de cerrarla. <details> trae el
+     teclado, los lectores de pantalla y el botón Atrás resueltos de fábrica,
+     y es lo que este sitio ya usa para el menú y el selector de idiomas.
+
+     Hay un segundo beneficio que no se ve: adentro de un panel cerrado las
+     fotos con loading="lazy" no se descargan. Las 27 de la galería dejan de
+     pesar en la primera carga. */
+  .panel{ border-top:1px solid var(--line); }
+  .panel > summary{
+    display:block; cursor:pointer; list-style:none; padding: 30px 0;
+    transition: background .15s ease;
+  }
+  .panel > summary::-webkit-details-marker{ display:none; }
+  .panel > summary:hover{ background: rgba(255,255,255,0.025); }
+  .panel > summary:focus-visible{ outline:2px solid var(--gold); outline-offset:-3px; }
+  .panel-fila{ display:flex; align-items:center; gap:24px; }
+  .panel-txt{ flex:1; }
+  .panel-titulo{
+    display:block; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+    font-size: clamp(1.05rem, 2.4vw, 1.5rem); line-height:1.2;
+  }
+  .panel-bajada{ display:block; margin-top:7px; font-size:0.88rem; color: var(--ink-dim); }
+  /* 52px de blanco de toque: esta es la X que cierra el panel. */
+  .panel-icono{
+    flex:none; display:flex; align-items:center; justify-content:center;
+    width:52px; height:52px; border:1px solid var(--line); border-radius:50%;
+    color: var(--gold); font-size:1.5rem; line-height:1;
+    transition: border-color .15s ease;
+  }
+  .panel-icono::before{ content:"+"; }
+  .panel[open] .panel-icono::before{ content:"\2715"; }
+  .panel > summary:hover .panel-icono{ border-color: var(--gold); }
+  /* Abierto, la barra queda pegada arriba: la X sigue a mano aunque la
+     sección sea larga, que es justo cuando hace falta. */
+  .panel[open] > summary{
+    position:sticky; top:0; z-index:4; padding: 18px 0;
+    background: var(--bg); border-bottom:1px solid var(--line);
+  }
+  .panel[open] .panel-bajada{ display:none; }
+  /* La primera sección de adentro ya queda bajo el borde de la barra. */
+  .panel-cuerpo > section:first-child{ border-top:none; padding-top:34px; }
+
   section{ border-top: 1px solid var(--line); }
   .pad{ padding: 76px 0; }
   .section-head{ max-width: 60ch; margin-bottom: 40px; }
@@ -545,419 +594,449 @@
     </div>
   </section>
 
-  <section id="experiencias" class="pad">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Cuatro niveles de experiencias culinarias para tus clientes</h2>
-        <p class="lede">Precio válido por persona. Toca la foto para ver más detalles. Abajo encontrarás el menú completo.</p>
-      </div>
-
-      <div class="tier-selector">
-        <div class="tier-cards">
-          <label class="flip-card">
-            <input type="checkbox" class="flip-input">
-            <div class="flip-inner">
-              <div class="flip-front">
-                <img src="assets/imgs/img-004.jpg" alt="Experiencia Tradiciones" width="1651" height="482" loading="lazy" decoding="async">
-                <span class="tier-cap"><span class="name">Tradiciones</span><span class="price">$49.000</span></span>
-                <span class="flip-hint">Ver detalle</span>
-              </div>
-              <div class="flip-back">
-                <span class="fb-name">Tradiciones</span>
-                <div class="fb-price">$49.000</div>
-                <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
-                <span class="fb-note">Show ecuestre incluido</span>
-                <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> elección de 1 opción: bebidas, jugos de fruta natural, cervezas o pisco sour.</p>
-              </div>
-            </div>
-          </label>
-
-          <label class="flip-card">
-            <input type="checkbox" class="flip-input">
-            <div class="flip-inner">
-              <div class="flip-front">
-                <img src="assets/imgs/img-005.jpg" alt="Experiencia Lo Pirque" width="1650" height="482" loading="lazy" decoding="async">
-                <span class="tier-cap"><span class="name">Lo Pirque</span><span class="price">$55.000</span></span>
-                <span class="flip-hint">Ver detalle</span>
-              </div>
-              <div class="flip-back">
-                <span class="fb-name">Lo Pirque</span>
-                <div class="fb-price">$55.000</div>
-                <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
-                <span class="fb-note">Show ecuestre incluido</span>
-                <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> elección de 2 opciones: bebidas, jugos naturales, cervezas, pisco sour, sangría, copa de vino reserva, michelada, chelada, Aperol o Ramazzotti spritz.</p>
-              </div>
-            </div>
-          </label>
-
-          <label class="flip-card">
-            <input type="checkbox" class="flip-input">
-            <div class="flip-inner">
-              <div class="flip-front">
-                <img src="assets/imgs/img-006.jpg" alt="Experiencia Brasas" width="1650" height="482" loading="lazy" decoding="async">
-                <span class="tier-cap"><span class="name">Brasas</span><span class="price">$75.000</span></span>
-                <span class="flip-hint">Ver detalle</span>
-              </div>
-              <div class="flip-back">
-                <span class="fb-name">Brasas</span>
-                <div class="fb-price">$75.000</div>
-                <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
-                <span class="fb-note">Show ecuestre incluido</span>
-                <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> bar abierto: bebidas, jugos naturales, cervezas, pisco sour, sangría, copa de vino reserva, michelada, chelada, Aperol o Ramazzotti spritz, a libre elección.</p>
-              </div>
-            </div>
-          </label>
-
-          <label class="flip-card">
-            <input type="checkbox" class="flip-input">
-            <div class="flip-inner">
-              <div class="flip-front">
-                <img src="assets/imgs/img-007.jpg" alt="Experiencia Sommelier" width="1650" height="482" loading="lazy" decoding="async">
-                <span class="tier-cap"><span class="name">Sommelier</span><span class="price">$95.000</span></span>
-                <span class="flip-hint">Ver detalle</span>
-              </div>
-              <div class="flip-back">
-                <span class="fb-name">Sommelier</span>
-                <div class="fb-price">$95.000</div>
-                <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
-                <span class="fb-note">Sommelier + show ecuestre incluidos</span>
-                <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> bar abierto, misma libertad que Brasas. Un sommelier guía el almuerzo, comparte maridajes y datos de cada vino.</p>
-              </div>
-            </div>
-          </label>
+    <details class="panel" id="experiencias">
+    <summary><span class="wrap panel-fila"><span class="panel-txt"><span class="panel-titulo">Las experiencias y el menú</span><span class="panel-bajada">Cuatro niveles, con el menú completo</span></span><span class="panel-icono" aria-hidden="true"></span></span></summary>
+    <div class="panel-cuerpo">
+  <section class="pad">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Cuatro niveles de experiencias culinarias para tus clientes</h2>
+          <p class="lede">Precio válido por persona. Toca la foto para ver más detalles. Abajo encontrarás el menú completo.</p>
         </div>
 
-        <details class="menu-details">
-          <summary><span class="menu-cta">Ver el menú completo</span><span class="menu-sub">Igual en las cuatro experiencias</span></summary>
-          <div class="menu-grid">
-            <div>
-              <h4>Entrada</h4>
-              <p>Tabla campestre (1 cada 4 personas): sopaipillas, pan amasado, pebre casero, nachos caseros y mantequilla saborizada.</p>
-            </div>
-            <div>
-              <h4>Plato principal</h4>
-              <p>1 porción de 300 g o 2 de 150 g, a carbón y leña: tapabarriga angus, salmón del Pacífico, lomo vetado o liso al rescoldo, cordero patagónico, punta de picana al vino tinto, costillar de cerdo o pollo asado.</p>
-            </div>
-            <div>
-              <h4>Acompañamientos</h4>
-              <p>2 opciones por invitado: vegetales al rescoldo, papas nativas chilotas, papas fritas o inglesas, pastelera de choclo, arroz blanco, papas mayo, ensalada chilena, hojas verdes, ensalada de quinoa, ceviche de cochayuyo o espinacas a la crema.</p>
-            </div>
-            <div>
-              <h4>Postre</h4>
-              <p>1 opción: mote con huesillo, frutas de estación, panqueques con manjar, leche asada, torta de milhojas o crumble de manzana.</p>
-            </div>
+        <div class="tier-selector">
+          <div class="tier-cards">
+            <label class="flip-card">
+              <input type="checkbox" class="flip-input">
+              <div class="flip-inner">
+                <div class="flip-front">
+                  <img src="assets/imgs/img-004.jpg" alt="Experiencia Tradiciones" width="1651" height="482" loading="lazy" decoding="async">
+                  <span class="tier-cap"><span class="name">Tradiciones</span><span class="price">$49.000</span></span>
+                  <span class="flip-hint">Ver detalle</span>
+                </div>
+                <div class="flip-back">
+                  <span class="fb-name">Tradiciones</span>
+                  <div class="fb-price">$49.000</div>
+                  <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
+                  <span class="fb-note">Show ecuestre incluido</span>
+                  <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> elección de 1 opción: bebidas, jugos de fruta natural, cervezas o pisco sour.</p>
+                </div>
+              </div>
+            </label>
+
+            <label class="flip-card">
+              <input type="checkbox" class="flip-input">
+              <div class="flip-inner">
+                <div class="flip-front">
+                  <img src="assets/imgs/img-005.jpg" alt="Experiencia Lo Pirque" width="1650" height="482" loading="lazy" decoding="async">
+                  <span class="tier-cap"><span class="name">Lo Pirque</span><span class="price">$55.000</span></span>
+                  <span class="flip-hint">Ver detalle</span>
+                </div>
+                <div class="flip-back">
+                  <span class="fb-name">Lo Pirque</span>
+                  <div class="fb-price">$55.000</div>
+                  <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
+                  <span class="fb-note">Show ecuestre incluido</span>
+                  <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> elección de 2 opciones: bebidas, jugos naturales, cervezas, pisco sour, sangría, copa de vino reserva, michelada, chelada, Aperol o Ramazzotti spritz.</p>
+                </div>
+              </div>
+            </label>
+
+            <label class="flip-card">
+              <input type="checkbox" class="flip-input">
+              <div class="flip-inner">
+                <div class="flip-front">
+                  <img src="assets/imgs/img-006.jpg" alt="Experiencia Brasas" width="1650" height="482" loading="lazy" decoding="async">
+                  <span class="tier-cap"><span class="name">Brasas</span><span class="price">$75.000</span></span>
+                  <span class="flip-hint">Ver detalle</span>
+                </div>
+                <div class="flip-back">
+                  <span class="fb-name">Brasas</span>
+                  <div class="fb-price">$75.000</div>
+                  <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
+                  <span class="fb-note">Show ecuestre incluido</span>
+                  <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> bar abierto: bebidas, jugos naturales, cervezas, pisco sour, sangría, copa de vino reserva, michelada, chelada, Aperol o Ramazzotti spritz, a libre elección.</p>
+                </div>
+              </div>
+            </label>
+
+            <label class="flip-card">
+              <input type="checkbox" class="flip-input">
+              <div class="flip-inner">
+                <div class="flip-front">
+                  <img src="assets/imgs/img-007.jpg" alt="Experiencia Sommelier" width="1650" height="482" loading="lazy" decoding="async">
+                  <span class="tier-cap"><span class="name">Sommelier</span><span class="price">$95.000</span></span>
+                  <span class="flip-hint">Ver detalle</span>
+                </div>
+                <div class="flip-back">
+                  <span class="fb-name">Sommelier</span>
+                  <div class="fb-price">$95.000</div>
+                  <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
+                  <span class="fb-note">Sommelier + show ecuestre incluidos</span>
+                  <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> bar abierto, misma libertad que Brasas. Un sommelier guía el almuerzo, comparte maridajes y datos de cada vino.</p>
+                </div>
+              </div>
+            </label>
           </div>
-        </details>
-      </div>
-    </div>
-  </section>
 
+          <details class="menu-details">
+            <summary><span class="menu-cta">Ver el menú completo</span><span class="menu-sub">Igual en las cuatro experiencias</span></summary>
+            <div class="menu-grid">
+              <div>
+                <h4>Entrada</h4>
+                <p>Tabla campestre (1 cada 4 personas): sopaipillas, pan amasado, pebre casero, nachos caseros y mantequilla saborizada.</p>
+              </div>
+              <div>
+                <h4>Plato principal</h4>
+                <p>1 porción de 300 g o 2 de 150 g, a carbón y leña: tapabarriga angus, salmón del Pacífico, lomo vetado o liso al rescoldo, cordero patagónico, punta de picana al vino tinto, costillar de cerdo o pollo asado.</p>
+              </div>
+              <div>
+                <h4>Acompañamientos</h4>
+                <p>2 opciones por invitado: vegetales al rescoldo, papas nativas chilotas, papas fritas o inglesas, pastelera de choclo, arroz blanco, papas mayo, ensalada chilena, hojas verdes, ensalada de quinoa, ceviche de cochayuyo o espinacas a la crema.</p>
+              </div>
+              <div>
+                <h4>Postre</h4>
+                <p>1 opción: mote con huesillo, frutas de estación, panqueques con manjar, leche asada, torta de milhojas o crumble de manzana.</p>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+    </div>
+  </details>
+
+
+    <details class="panel">
+    <summary><span class="wrap panel-fila"><span class="panel-txt"><span class="panel-titulo">Date una vuelta por el lugar</span><span class="panel-bajada">27 fotos del recinto</span></span><span class="panel-icono" aria-hidden="true"></span></span></summary>
+    <div class="panel-cuerpo">
   <section class="pad">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Date una vuelta por el lugar</h2>
-        <p class="lede">Desliza para conocer el restaurante, la parrilla, el show ecuestre y nuestro equipo.</p>
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Date una vuelta por el lugar</h2>
+          <p class="lede">Desliza para conocer el restaurante, la parrilla, el show ecuestre y nuestro equipo.</p>
+        </div>
+        <div class="food-strip">
+          <figure>
+            <img src="assets/imgs3/familia-guagua.jpg" alt="Papá riéndose con su hija en brazos" width="1400" height="2100" loading="lazy" decoding="async">
+            <figcaption>Un día en familia</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/imgs3/paseo-carreta.jpg" alt="Niños saludando desde la carreta tirada por caballos" width="1400" height="933" loading="lazy" decoding="async">
+            <figcaption>Paseo en carreta</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/imgs3/castillo-inflable.jpg" alt="Niños jugando en el castillo inflable" width="1400" height="933" loading="lazy" decoding="async">
+            <figcaption>El castillo inflable</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/imgs3/tacataca.jpg" alt="Niños jugando al tacataca en el pasto" width="1400" height="933" loading="lazy" decoding="async">
+            <figcaption>El tacataca</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g01.jpg" alt="Fachada del galpón de Brasas de Lo Pirque" width="553" height="850" loading="lazy" decoding="async">
+            <figcaption>Fachada del galpón de Brasas de Lo Pirque</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g02.jpg" alt="Show ecuestre con huaso y bailarina de cueca" width="712" height="850" loading="lazy" decoding="async">
+            <figcaption>Show ecuestre con huaso y bailarina de cueca</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g03.jpg" alt="Huaso a caballo junto a bailarina de cueca" width="478" height="850" loading="lazy" decoding="async">
+            <figcaption>Huaso a caballo junto a bailarina de cueca</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g04.jpg" alt="Corte a la parrilla, Experiencia Tradiciones" width="850" height="248" loading="lazy" decoding="async">
+            <figcaption>Corte a la parrilla, Experiencia Tradiciones</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g05.jpg" alt="Salmón del Pacífico, Experiencia Lo Pirque" width="850" height="248" loading="lazy" decoding="async">
+            <figcaption>Salmón del Pacífico, Experiencia Lo Pirque</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g06.jpg" alt="Propuesta gastronómica, Experiencia Brasas" width="850" height="248" loading="lazy" decoding="async">
+            <figcaption>Propuesta gastronómica, Experiencia Brasas</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g07.jpg" alt="Selección de vinos, Experiencia Sommelier" width="850" height="248" loading="lazy" decoding="async">
+            <figcaption>Selección de vinos, Experiencia Sommelier</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g08.jpg" alt="Costillar a la parrilla con papas fritas y ensalada" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Costillar a la parrilla con papas fritas y ensalada</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g09.jpg" alt="Pollo asado a la parrilla" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Pollo asado a la parrilla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g10.jpg" alt="Corte a la parrilla con pebre" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Corte a la parrilla con pebre</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g11.jpg" alt="Tabla campestre: sopaipillas, pan amasado y pebre" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Tabla campestre: sopaipillas, pan amasado y pebre</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g12.jpg" alt="Ensalada chilena de tomate y cebolla" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Ensalada chilena de tomate y cebolla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g13.jpg" alt="Ensalada verde con vinagreta" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Ensalada verde con vinagreta</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g14.jpg" alt="Costillar dorándose en la parrilla al carbón" width="567" height="850" loading="lazy" decoding="async">
+            <figcaption>Costillar dorándose en la parrilla al carbón</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g15.jpg" alt="Costillar dorándose en la parrilla" width="850" height="567" loading="lazy" decoding="async">
+            <figcaption>Costillar dorándose en la parrilla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g16.jpg" alt="Panqueque con manjar de postre" width="680" height="850" loading="lazy" decoding="async">
+            <figcaption>Panqueque con manjar de postre</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g17.jpg" alt="Selección de postres de la casa" width="637" height="850" loading="lazy" decoding="async">
+            <figcaption>Selección de postres de la casa</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g18.jpg" alt="Mesa servida con platos de la parrilla" width="637" height="850" loading="lazy" decoding="async">
+            <figcaption>Mesa servida con platos de la parrilla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g19.jpg" alt="Parrilla exterior del restaurante" width="528" height="850" loading="lazy" decoding="async">
+            <figcaption>Parrilla exterior del restaurante</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g20.jpg" alt="Nuestro equipo trabajando la parrilla" width="567" height="850" loading="lazy" decoding="async">
+            <figcaption>Nuestro equipo trabajando la parrilla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g21.jpg" alt="Preparando los cortes a la parrilla" width="567" height="850" loading="lazy" decoding="async">
+            <figcaption>Preparando los cortes a la parrilla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g22.jpg" alt="Coaching organizacional con caballos" width="830" height="666" loading="lazy" decoding="async">
+            <figcaption>Coaching organizacional con caballos</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g23.jpg" alt="Taller de queso" width="850" height="692" loading="lazy" decoding="async">
+            <figcaption>Taller de queso</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g24.jpg" alt="Karting para empresas" width="792" height="638" loading="lazy" decoding="async">
+            <figcaption>Karting para empresas</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g25.jpg" alt="Taller de asado" width="790" height="642" loading="lazy" decoding="async">
+            <figcaption>Taller de asado</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g26.jpg" alt="Corte de carne a la parrilla" width="544" height="850" loading="lazy" decoding="async">
+            <figcaption>Corte de carne a la parrilla</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/gallery/g27.jpg" alt="Evento corporativo en el galpón" width="850" height="497" loading="lazy" decoding="async">
+            <figcaption>Evento corporativo en el galpón</figcaption>
+          </figure>
+        </div>
       </div>
-      <div class="food-strip">
-        <figure>
-          <img src="assets/imgs3/familia-guagua.jpg" alt="Papá riéndose con su hija en brazos" width="1400" height="2100" loading="lazy" decoding="async">
-          <figcaption>Un día en familia</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/imgs3/paseo-carreta.jpg" alt="Niños saludando desde la carreta tirada por caballos" width="1400" height="933" loading="lazy" decoding="async">
-          <figcaption>Paseo en carreta</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/imgs3/castillo-inflable.jpg" alt="Niños jugando en el castillo inflable" width="1400" height="933" loading="lazy" decoding="async">
-          <figcaption>El castillo inflable</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/imgs3/tacataca.jpg" alt="Niños jugando al tacataca en el pasto" width="1400" height="933" loading="lazy" decoding="async">
-          <figcaption>El tacataca</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g01.jpg" alt="Fachada del galpón de Brasas de Lo Pirque" width="553" height="850" loading="lazy" decoding="async">
-          <figcaption>Fachada del galpón de Brasas de Lo Pirque</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g02.jpg" alt="Show ecuestre con huaso y bailarina de cueca" width="712" height="850" loading="lazy" decoding="async">
-          <figcaption>Show ecuestre con huaso y bailarina de cueca</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g03.jpg" alt="Huaso a caballo junto a bailarina de cueca" width="478" height="850" loading="lazy" decoding="async">
-          <figcaption>Huaso a caballo junto a bailarina de cueca</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g04.jpg" alt="Corte a la parrilla, Experiencia Tradiciones" width="850" height="248" loading="lazy" decoding="async">
-          <figcaption>Corte a la parrilla, Experiencia Tradiciones</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g05.jpg" alt="Salmón del Pacífico, Experiencia Lo Pirque" width="850" height="248" loading="lazy" decoding="async">
-          <figcaption>Salmón del Pacífico, Experiencia Lo Pirque</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g06.jpg" alt="Propuesta gastronómica, Experiencia Brasas" width="850" height="248" loading="lazy" decoding="async">
-          <figcaption>Propuesta gastronómica, Experiencia Brasas</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g07.jpg" alt="Selección de vinos, Experiencia Sommelier" width="850" height="248" loading="lazy" decoding="async">
-          <figcaption>Selección de vinos, Experiencia Sommelier</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g08.jpg" alt="Costillar a la parrilla con papas fritas y ensalada" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Costillar a la parrilla con papas fritas y ensalada</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g09.jpg" alt="Pollo asado a la parrilla" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Pollo asado a la parrilla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g10.jpg" alt="Corte a la parrilla con pebre" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Corte a la parrilla con pebre</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g11.jpg" alt="Tabla campestre: sopaipillas, pan amasado y pebre" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Tabla campestre: sopaipillas, pan amasado y pebre</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g12.jpg" alt="Ensalada chilena de tomate y cebolla" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Ensalada chilena de tomate y cebolla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g13.jpg" alt="Ensalada verde con vinagreta" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Ensalada verde con vinagreta</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g14.jpg" alt="Costillar dorándose en la parrilla al carbón" width="567" height="850" loading="lazy" decoding="async">
-          <figcaption>Costillar dorándose en la parrilla al carbón</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g15.jpg" alt="Costillar dorándose en la parrilla" width="850" height="567" loading="lazy" decoding="async">
-          <figcaption>Costillar dorándose en la parrilla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g16.jpg" alt="Panqueque con manjar de postre" width="680" height="850" loading="lazy" decoding="async">
-          <figcaption>Panqueque con manjar de postre</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g17.jpg" alt="Selección de postres de la casa" width="637" height="850" loading="lazy" decoding="async">
-          <figcaption>Selección de postres de la casa</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g18.jpg" alt="Mesa servida con platos de la parrilla" width="637" height="850" loading="lazy" decoding="async">
-          <figcaption>Mesa servida con platos de la parrilla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g19.jpg" alt="Parrilla exterior del restaurante" width="528" height="850" loading="lazy" decoding="async">
-          <figcaption>Parrilla exterior del restaurante</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g20.jpg" alt="Nuestro equipo trabajando la parrilla" width="567" height="850" loading="lazy" decoding="async">
-          <figcaption>Nuestro equipo trabajando la parrilla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g21.jpg" alt="Preparando los cortes a la parrilla" width="567" height="850" loading="lazy" decoding="async">
-          <figcaption>Preparando los cortes a la parrilla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g22.jpg" alt="Coaching organizacional con caballos" width="830" height="666" loading="lazy" decoding="async">
-          <figcaption>Coaching organizacional con caballos</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g23.jpg" alt="Taller de queso" width="850" height="692" loading="lazy" decoding="async">
-          <figcaption>Taller de queso</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g24.jpg" alt="Karting para empresas" width="792" height="638" loading="lazy" decoding="async">
-          <figcaption>Karting para empresas</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g25.jpg" alt="Taller de asado" width="790" height="642" loading="lazy" decoding="async">
-          <figcaption>Taller de asado</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g26.jpg" alt="Corte de carne a la parrilla" width="544" height="850" loading="lazy" decoding="async">
-          <figcaption>Corte de carne a la parrilla</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/gallery/g27.jpg" alt="Evento corporativo en el galpón" width="850" height="497" loading="lazy" decoding="async">
-          <figcaption>Evento corporativo en el galpón</figcaption>
-        </figure>
-      </div>
+    </section>
     </div>
-  </section>
+  </details>
 
+
+    <details class="panel" id="actividades">
+    <summary><span class="wrap panel-fila"><span class="panel-txt"><span class="panel-titulo">Las actividades</span><span class="panel-bajada">Show ecuestre, juegos del recinto y talleres</span></span><span class="panel-icono" aria-hidden="true"></span></span></summary>
+    <div class="panel-cuerpo">
   <section class="fullbleed fullbleed-ecuestre">
-    <div class="bg"><img src="assets/imgs/img-003.jpg" alt="Show ecuestre con huaso y caballo chileno" width="792" height="945" loading="lazy" decoding="async"></div>
-    <div class="content">
-      <p class="kicker">Mucho más que una parrillada.</p>
-      <hr class="rule">
-      <h2>Una experiencia para todas las edades</h2>
-      <p class="lede">De los más chicos a los abuelos: el show ecuestre abre la tarde, y abajo te contamos las actividades que la completan para que cada grupo arme su propio plan.</p>
-    </div>
-  </section>
+      <div class="bg"><img src="assets/imgs/img-003.jpg" alt="Show ecuestre con huaso y caballo chileno" width="792" height="945" loading="lazy" decoding="async"></div>
+      <div class="content">
+        <p class="kicker">Mucho más que una parrillada.</p>
+        <hr class="rule">
+        <h2>Una experiencia para todas las edades</h2>
+        <p class="lede">De los más chicos a los abuelos: el show ecuestre abre la tarde, y abajo te contamos las actividades que la completan para que cada grupo arme su propio plan.</p>
+      </div>
+    </section>
 
-  <section id="actividades" class="pad">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Actividades del recinto</h2>
-        <p class="lede">Siempre están disponibles y sin costo adicional.</p>
+    <section class="pad">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Actividades del recinto</h2>
+          <p class="lede">Siempre están disponibles y sin costo adicional.</p>
+        </div>
+        <div class="fam-grid">
+          <div class="fam-card">
+            <div class="fam-media"><img src="assets/gallery/g02.jpg" alt="Huaso a caballo y bailarina de cueca durante el show" width="712" height="850" loading="lazy" decoding="async"></div>
+            <div class="fam-cuerpo">
+              <h3>Show ecuestre</h3>
+              <p>Caballos chilenos, tradición huasa y bailes típicos.</p>
+            </div>
+          </div>
+          <div class="fam-card">
+            <div class="fam-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20c2-6 4-9 8-9s6 3 8 9M9 11V6a3 3 0 013-3 3 3 0 013 3v5"/></svg></div>
+            <div class="fam-cuerpo">
+              <h3>Cabalgatas</h3>
+              <p>Paseos a caballo dentro del predio para visitantes de todas las edades.</p>
+            </div>
+          </div>
+          <div class="fam-card">
+            <div class="fam-media"><img src="assets/imgs3/castillo-inflable.jpg" alt="Niños jugando en el castillo inflable" width="1400" height="933" loading="lazy" decoding="async"></div>
+            <div class="fam-cuerpo">
+              <h3>Castillo inflable</h3>
+              <p>Infaltable para las tardes en familia.</p>
+            </div>
+          </div>
+          <div class="fam-card">
+            <div class="fam-media"><img src="assets/imgs3/pintacaritas.jpg" alt="Niña con la cara pintada de conejito, riéndose" width="1600" height="2400" loading="lazy" decoding="async"></div>
+            <div class="fam-cuerpo">
+              <h3>Pintacaritas</h3>
+              <p>Para que los más chicos se sumen a la fiesta.</p>
+            </div>
+          </div>
+          <div class="fam-card">
+            <div class="fam-media"><img src="assets/imgs3/tacataca.jpg" alt="Niños jugando al tacataca en el pasto" width="1400" height="933" loading="lazy" decoding="async"></div>
+            <div class="fam-cuerpo">
+              <h3>Ping-pong y tacataca</h3>
+              <p>Juegos para todas las edades, disponibles toda la tarde.</p>
+            </div>
+          </div>
+          <div class="fam-card">
+            <div class="fam-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8"/></svg></div>
+            <div class="fam-cuerpo">
+              <h3>Cancha de beach tenis</h3>
+              <p>Espacio deportivo al aire libre para animar la jornada.</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="fam-grid">
-        <div class="fam-card">
-          <div class="fam-media"><img src="assets/gallery/g02.jpg" alt="Huaso a caballo y bailarina de cueca durante el show" width="712" height="850" loading="lazy" decoding="async"></div>
-          <div class="fam-cuerpo">
-            <h3>Show ecuestre</h3>
-            <p>Caballos chilenos, tradición huasa y bailes típicos.</p>
-          </div>
-        </div>
-        <div class="fam-card">
-          <div class="fam-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20c2-6 4-9 8-9s6 3 8 9M9 11V6a3 3 0 013-3 3 3 0 013 3v5"/></svg></div>
-          <div class="fam-cuerpo">
-            <h3>Cabalgatas</h3>
-            <p>Paseos a caballo dentro del predio para visitantes de todas las edades.</p>
-          </div>
-        </div>
-        <div class="fam-card">
-          <div class="fam-media"><img src="assets/imgs3/castillo-inflable.jpg" alt="Niños jugando en el castillo inflable" width="1400" height="933" loading="lazy" decoding="async"></div>
-          <div class="fam-cuerpo">
-            <h3>Castillo inflable</h3>
-            <p>Infaltable para las tardes en familia.</p>
-          </div>
-        </div>
-        <div class="fam-card">
-          <div class="fam-media"><img src="assets/imgs3/pintacaritas.jpg" alt="Niña con la cara pintada de conejito, riéndose" width="1600" height="2400" loading="lazy" decoding="async"></div>
-          <div class="fam-cuerpo">
-            <h3>Pintacaritas</h3>
-            <p>Para que los más chicos se sumen a la fiesta.</p>
-          </div>
-        </div>
-        <div class="fam-card">
-          <div class="fam-media"><img src="assets/imgs3/tacataca.jpg" alt="Niños jugando al tacataca en el pasto" width="1400" height="933" loading="lazy" decoding="async"></div>
-          <div class="fam-cuerpo">
-            <h3>Ping-pong y tacataca</h3>
-            <p>Juegos para todas las edades, disponibles toda la tarde.</p>
-          </div>
-        </div>
-        <div class="fam-card">
-          <div class="fam-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8"/></svg></div>
-          <div class="fam-cuerpo">
-            <h3>Cancha de beach tenis</h3>
-            <p>Espacio deportivo al aire libre para animar la jornada.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="externas" class="pad">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Actividades adicionales</h2>
-        <p class="lede">Con costo adicional, previa coordinación con nuestro equipo de ventas.</p>
+    <section id="externas" class="pad">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Actividades adicionales</h2>
+          <p class="lede">Con costo adicional, previa coordinación con nuestro equipo de ventas.</p>
+        </div>
+        <div class="ext-grid">
+          <div class="ext-card">
+            <div class="ext-photo"><img src="assets/imgs/img-009.jpg" alt="Coaching organizacional con caballos" width="830" height="666" loading="lazy" decoding="async"></div>
+            <div class="ext-body"><h3>Coaching con caballos</h3><p>Liderazgo, comunicación y trabajo en equipo junto a Fundación Caballos y Personas. Valor según programa.</p></div>
+          </div>
+          <div class="ext-card">
+            <div class="ext-photo"><img src="assets/imgs/img-010.jpg" alt="Taller de queso" width="960" height="781" loading="lazy" decoding="async"></div>
+            <div class="ext-body"><h3>Taller de queso</h3><p>Cada alumno elabora y se lleva sus propios quesos, con degustación final maridada.</p></div>
+          </div>
+          <div class="ext-card">
+            <div class="ext-photo"><img src="assets/imgs/img-011.jpg" alt="Karting" width="792" height="638" loading="lazy" decoding="async"></div>
+            <div class="ext-body"><h3>Karting</h3><p>Velocidad y trabajo en equipo, ideal para team building corporativo.</p></div>
+          </div>
+          <div class="ext-card">
+            <div class="ext-photo"><img src="assets/imgs/img-012.jpg" alt="Taller de asado" width="790" height="642" loading="lazy" decoding="async"></div>
+            <div class="ext-body"><h3>Taller de asado</h3><p>Técnicas de parrilla junto a expertos asadores, para fortalecer vínculos de equipo.</p></div>
+          </div>
+        </div>
       </div>
-      <div class="ext-grid">
-        <div class="ext-card">
-          <div class="ext-photo"><img src="assets/imgs/img-009.jpg" alt="Coaching organizacional con caballos" width="830" height="666" loading="lazy" decoding="async"></div>
-          <div class="ext-body"><h3>Coaching con caballos</h3><p>Liderazgo, comunicación y trabajo en equipo junto a Fundación Caballos y Personas. Valor según programa.</p></div>
-        </div>
-        <div class="ext-card">
-          <div class="ext-photo"><img src="assets/imgs/img-010.jpg" alt="Taller de queso" width="960" height="781" loading="lazy" decoding="async"></div>
-          <div class="ext-body"><h3>Taller de queso</h3><p>Cada alumno elabora y se lleva sus propios quesos, con degustación final maridada.</p></div>
-        </div>
-        <div class="ext-card">
-          <div class="ext-photo"><img src="assets/imgs/img-011.jpg" alt="Karting" width="792" height="638" loading="lazy" decoding="async"></div>
-          <div class="ext-body"><h3>Karting</h3><p>Velocidad y trabajo en equipo, ideal para team building corporativo.</p></div>
-        </div>
-        <div class="ext-card">
-          <div class="ext-photo"><img src="assets/imgs/img-012.jpg" alt="Taller de asado" width="790" height="642" loading="lazy" decoding="async"></div>
-          <div class="ext-body"><h3>Taller de asado</h3><p>Técnicas de parrilla junto a expertos asadores, para fortalecer vínculos de equipo.</p></div>
-        </div>
-      </div>
+    </section>
     </div>
-  </section>
+  </details>
 
+
+    <details class="panel">
+    <summary><span class="wrap panel-fila"><span class="panel-txt"><span class="panel-titulo">El recinto y los extras</span><span class="panel-bajada">Desayuno y once, arriendo exclusivo y eventos a medida</span></span><span class="panel-icono" aria-hidden="true"></span></span></summary>
+    <div class="panel-cuerpo">
   <section class="pad">
-    <div class="wrap">
-      <div class="section-head"><h2>Para completar la jornada</h2></div>
-      <div class="service-split">
-        <div class="service-photo"><img src="assets/imgs2/SPREAD.jpg" alt="Mesa servida con platos de la parrilla" width="1200" height="1600" loading="lazy" decoding="async"></div>
-        <div class="service-cards">
-          <div class="service-card">
-            <span class="tag">$8.000 + IVA por persona</span>
-            <h3>Desayuno de campo</h3>
-            <p>Pan amasado, huevos revueltos, tapaditos de jamón y queso, café de grano, té, jugo natural de naranja, ensalada de fruta y muffin. Extra: sándwich mechado, pie o kuchen (consultar valor).</p>
-          </div>
-          <div class="service-card">
-            <span class="tag">$8.000 + IVA por persona</span>
-            <h3>Once campesina</h3>
-            <p>Misma propuesta que el desayuno de campo, en formato once.</p>
+      <div class="wrap">
+        <div class="section-head"><h2>Para completar la jornada</h2></div>
+        <div class="service-split">
+          <div class="service-photo"><img src="assets/imgs2/SPREAD.jpg" alt="Mesa servida con platos de la parrilla" width="1200" height="1600" loading="lazy" decoding="async"></div>
+          <div class="service-cards">
+            <div class="service-card">
+              <span class="tag">$8.000 + IVA por persona</span>
+              <h3>Desayuno de campo</h3>
+              <p>Pan amasado, huevos revueltos, tapaditos de jamón y queso, café de grano, té, jugo natural de naranja, ensalada de fruta y muffin. Extra: sándwich mechado, pie o kuchen (consultar valor).</p>
+            </div>
+            <div class="service-card">
+              <span class="tag">$8.000 + IVA por persona</span>
+              <h3>Once campesina</h3>
+              <p>Misma propuesta que el desayuno de campo, en formato once.</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="socios" class="pad">
-    <div class="wrap venue-split">
-      <div class="venue-photo"><img src="assets/imgs2/MEATPLATE.jpg" alt="Costillar a la parrilla con papas fritas y ensalada" width="1120" height="1400" loading="lazy" decoding="async"></div>
-      <div>
-        <h2>Arriendo exclusivo del recinto</h2>
-        <p class="lede" style="margin-top:10px;">Valores sin catering.</p>
-        <div class="venue-price">
-          <div><div class="amount">$2.500.000 + IVA</div><div class="label">Viernes, sábado y domingo</div></div>
-          <div><div class="amount">$1.500.000 + IVA</div><div class="label">Días de semana</div></div>
+    <section id="socios" class="pad">
+      <div class="wrap venue-split">
+        <div class="venue-photo"><img src="assets/imgs2/MEATPLATE.jpg" alt="Costillar a la parrilla con papas fritas y ensalada" width="1120" height="1400" loading="lazy" decoding="async"></div>
+        <div>
+          <h2>Arriendo exclusivo del recinto</h2>
+          <p class="lede" style="margin-top:10px;">Valores sin catering.</p>
+          <div class="venue-price">
+            <div><div class="amount">$2.500.000 + IVA</div><div class="label">Viernes, sábado y domingo</div></div>
+            <div><div class="amount">$1.500.000 + IVA</div><div class="label">Días de semana</div></div>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="fullbleed">
-    <div class="bg"><img src="assets/imgs/img-014.jpg" alt="Evento corporativo en el galpón" width="1655" height="967" loading="lazy" decoding="async"></div>
-    <div class="content">
-      <h2>Eventos a medida</h2>
-      <p class="lede">¿Buscas algo diferente? Bar abierto o sin bar, DJ, música en vivo, minigolf u otras actividades especiales. Cuéntanos tu idea y diseñamos una experiencia alineada con el estilo y los objetivos de cada grupo o empresa.</p>
+    <section class="fullbleed">
+      <div class="bg"><img src="assets/imgs/img-014.jpg" alt="Evento corporativo en el galpón" width="1655" height="967" loading="lazy" decoding="async"></div>
+      <div class="content">
+        <h2>Eventos a medida</h2>
+        <p class="lede">¿Buscas algo diferente? Bar abierto o sin bar, DJ, música en vivo, minigolf u otras actividades especiales. Cuéntanos tu idea y diseñamos una experiencia alineada con el estilo y los objetivos de cada grupo o empresa.</p>
+      </div>
+    </section>
     </div>
-  </section>
+  </details>
 
+
+    <details class="panel">
+    <summary><span class="wrap panel-fila"><span class="panel-txt"><span class="panel-titulo">Por qué sumarte</span><span class="panel-bajada">Los segmentos, los beneficios y cómo funciona</span></span><span class="panel-icono" aria-hidden="true"></span></span></summary>
+    <div class="panel-cuerpo">
   <section class="pad">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Pensado para quienes venden experiencias</h2>
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Pensado para quienes venden experiencias</h2>
+        </div>
+        <div class="segments">
+          <div class="segment"><h3>Agencias de turismo</h3><p>Suma el fundo a tus paseos grupales: show ecuestre, gastronomía chilena y actividades familiares en un mismo circuito.</p></div>
+          <div class="segment"><h3>Municipalidades</h3><p>Un lugar con capacidad para actividades comunitarias, celebraciones locales o jornadas al aire libre.</p></div>
+          <div class="segment"><h3>Empresas</h3><p>Aniversarios, team building y eventos corporativos, con catering propio y experiencias externas incluidas.</p></div>
+        </div>
       </div>
-      <div class="segments">
-        <div class="segment"><h3>Agencias de turismo</h3><p>Suma el fundo a tus paseos grupales: show ecuestre, gastronomía chilena y actividades familiares en un mismo circuito.</p></div>
-        <div class="segment"><h3>Municipalidades</h3><p>Un lugar con capacidad para actividades comunitarias, celebraciones locales o jornadas al aire libre.</p></div>
-        <div class="segment"><h3>Empresas</h3><p>Aniversarios, team building y eventos corporativos, con catering propio y experiencias externas incluidas.</p></div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="pad">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Por qué sumarte como socio comercial</h2>
-        <p class="lede">Vende Brasas de Lo Pirque como parte de tu oferta y gana por cada evento que concretes.</p>
+    <section class="pad">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Por qué sumarte como socio comercial</h2>
+          <p class="lede">Vende Brasas de Lo Pirque como parte de tu oferta y gana por cada evento que concretes.</p>
+        </div>
+        <div class="benefits">
+          <div class="benefit"><span class="num">01</span><div><h3>Comisión por evento cerrado</h3><p>Un porcentaje por cada celebración, conferencia o paseo que gestiones.</p></div></div>
+          <div class="benefit"><span class="num">02</span><div><h3>Material de venta listo</h3><p>Fotos, videos y tarifario para presentar el lugar a tus clientes.</p></div></div>
+          <div class="benefit"><span class="num">03</span><div><h3>Acompañamiento directo</h3><p>Un contacto único en el fundo para coordinar fechas y detalles.</p></div></div>
+          <div class="benefit"><span class="num">04</span><div><h3>Eventos a medida</h3><p>Bar, DJ, música en vivo, minigolf u otras actividades según cada grupo.</p></div></div>
+        </div>
       </div>
-      <div class="benefits">
-        <div class="benefit"><span class="num">01</span><div><h3>Comisión por evento cerrado</h3><p>Un porcentaje por cada celebración, conferencia o paseo que gestiones.</p></div></div>
-        <div class="benefit"><span class="num">02</span><div><h3>Material de venta listo</h3><p>Fotos, videos y tarifario para presentar el lugar a tus clientes.</p></div></div>
-        <div class="benefit"><span class="num">03</span><div><h3>Acompañamiento directo</h3><p>Un contacto único en el fundo para coordinar fechas y detalles.</p></div></div>
-        <div class="benefit"><span class="num">04</span><div><h3>Eventos a medida</h3><p>Bar, DJ, música en vivo, minigolf u otras actividades según cada grupo.</p></div></div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="pad">
-    <div class="wrap">
-      <div class="section-head"><h2>Cómo funciona</h2></div>
-      <div class="steps">
-        <div class="step"><span class="num">1</span><h3>Cuéntanos sobre tu negocio</h3><p>Escríbenos por WhatsApp y cuéntanos si eres agencia, municipalidad o empresa.</p></div>
-        <div class="step"><span class="num">2</span><h3>Recibe el kit comercial</h3><p>Tarifas, fotos y condiciones para presentar el lugar a tus clientes.</p></div>
-        <div class="step"><span class="num">3</span><h3>Ofrece el fundo y gana comisión</h3><p>Cada evento concretado te deja una comisión acordada.</p></div>
+    <section class="pad">
+      <div class="wrap">
+        <div class="section-head"><h2>Cómo funciona</h2></div>
+        <div class="steps">
+          <div class="step"><span class="num">1</span><h3>Cuéntanos sobre tu negocio</h3><p>Escríbenos por WhatsApp y cuéntanos si eres agencia, municipalidad o empresa.</p></div>
+          <div class="step"><span class="num">2</span><h3>Recibe el kit comercial</h3><p>Tarifas, fotos y condiciones para presentar el lugar a tus clientes.</p></div>
+          <div class="step"><span class="num">3</span><h3>Ofrece el fundo y gana comisión</h3><p>Cada evento concretado te deja una comisión acordada.</p></div>
+        </div>
       </div>
+    </section>
     </div>
-  </section>
+  </details>
+
 
   <section id="contacto" class="pad">
     <div class="wrap contact-grid">
