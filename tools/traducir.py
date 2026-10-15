@@ -123,7 +123,7 @@ ABRIR = {'es': 'Cambiar idioma', 'en': 'Change language', 'pt': 'Mudar idioma'}
 PAGINAS = [
     '404.html', 'actividades.html', 'contacto.html', 'eventos.html',
     'experiencias.html', 'index.html', 'landing-afiliados.html',
-    'reservas.html',
+    'promociones.html', 'reservas.html',
 ]
 
 # contacto.html redirige al instante a reservas.html: un selector de
