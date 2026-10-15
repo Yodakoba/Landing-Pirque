@@ -550,7 +550,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   background: var(--gold); color:#1A1400; border:none; padding:13px 24px; border-radius:2px;
   font-family:var(--sans); font-weight:600; font-size:0.85rem; text-transform:uppercase;
   letter-spacing:0.04em; cursor:pointer;
-}
+ min-height:44px;}
 
 /* ---------- reserva en línea (maqueta, sin Shopify todavía) ----------
    Reproduce los campos del widget actual de Shopify en nuestro diseño.

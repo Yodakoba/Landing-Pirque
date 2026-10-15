@@ -915,8 +915,11 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   `onsubmit="return false;"` y ningún handler, así que **el email se descarta
   al enviar: hoy no captura nada**. Hay que resolver al menos la captura
   (Formspree, Google Forms o un endpoint propio).
-- **Fotos de castillo inflable, ping-pong/tacataca y beach tenis** —
-  bloqueadas por la restricción de imagen de arriba.
+- **Fotos de cabalgatas y de la cancha de beach tenis** — son las dos
+  únicas actividades que siguen con icono en vez de foto. Castillo
+  inflable, pintacaritas y ping-pong/tacataca **ya tienen la suya**: este
+  pendiente las seguía listando por inercia desde que se levantó la
+  restricción de imagen.
 - **Copy nuevo sin revisar por el cliente** — los titulares y bajadas del
   sitio público los redactó Claude, no vienen del cliente. El contenido
   factual (precios, menú, actividades) sí es textual del landing.
