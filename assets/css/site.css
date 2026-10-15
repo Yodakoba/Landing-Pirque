@@ -243,7 +243,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 /* En celular el boton se toca con el dedo, asi que ahi si crece. */
 @media (max-width: 920px){
   .idiomas{ margin-right:10px; }
-  .idiomas > summary{ padding:7px 10px; }
+  /* 44px es el blanco de toque minimo recomendado. Medido antes del
+     cambio: 33px de alto a 393px y 28px a 320px. */
+  .idiomas > summary{ padding:7px 10px; min-height:44px; }
+  .idiomas .op{ min-height:44px; }
 }
 /* Bajo 380px la barra se aprieta: queda la bandera y la flecha. El codigo
    no se borra, se oculta a la vista, asi que el boton conserva su nombre
