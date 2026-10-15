@@ -113,10 +113,9 @@ Para no sacar más conclusiones de las que aguanta:
   primera prueba de verdad, y `/api/diagnostico` es por dónde empezar.
 - **Los componentes no se renderizaron.** No se instalaron las dependencias
   ni se levantó el servidor.
-- **No hay autenticación.** Fue lo pedido («uso interno sin autenticación
-  pública»). Mientras corra en `localhost` está bien. **Si se despliega en
-  internet, va detrás de autenticación de verdad** — una URL difícil de
-  adivinar no es una.
+- **La autenticación sí está**, y sus pruebas pasan, pero **el middleware
+  nunca se ejecutó dentro de Next**: se probó la función que valida la
+  credencial, no el ciclo completo de petición. Ver `DESPLIEGUE.md`.
 
 ## Un riesgo conocido
 

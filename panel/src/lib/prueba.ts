@@ -11,6 +11,7 @@ import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras } from './fechas.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
+import { credencialValida, iguales } from './auth.ts';
 
 let fallos = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA: ' + m); } };
@@ -97,6 +98,27 @@ ok(faltantes(sinTildes, COL_RESERVAS).length === 0,
 const malo = ['ID Orden','Fecha Reserva','Nombre','Personas'];
 ok(faltantes(malo, COL_RESERVAS).join(', ').includes('Tipo Pago'),
    'y si falta una columna de verdad, se dice cuál en vez de fallar callado');
+
+/* ---------- la credencial del panel ---------- */
+const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
+
+ok(credencialValida(basic('brasas', 'clave-larga'), 'brasas', 'clave-larga'),
+   'la credencial correcta pasa');
+ok(!credencialValida(basic('brasas', 'otra'), 'brasas', 'clave-larga'), 'clave mala no pasa');
+ok(!credencialValida(basic('otro', 'clave-larga'), 'brasas', 'clave-larga'), 'usuario malo no pasa');
+ok(!credencialValida('', 'brasas', 'clave-larga'), 'sin cabecera no pasa');
+ok(!credencialValida('Bearer abc', 'brasas', 'clave-larga'), 'otro esquema no pasa');
+ok(!credencialValida('Basic %%%no-es-base64%%%', 'brasas', 'clave-larga'),
+   'base64 invalido no revienta, solo no pasa');
+ok(!credencialValida('Basic ' + Buffer.from('sin-dos-puntos').toString('base64'),
+   'brasas', 'clave-larga'), 'sin ":" no pasa');
+
+// Una clave puede llevar ":" — por eso se corta en el PRIMERO y no se usa split.
+ok(credencialValida(basic('brasas', 'a:b:c'), 'brasas', 'a:b:c'),
+   'una clave con dos puntos adentro funciona');
+
+ok(iguales('abc', 'abc') && !iguales('abc', 'abd') && !iguales('abc', 'abcd'),
+   'la comparacion distingue contenido y largo');
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);
