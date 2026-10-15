@@ -13,6 +13,7 @@ export interface Reserva {
   tipoPago: TipoPago | '';
   estadoPago: string;    // el financial_status de Shopify, tal cual
   creada: string;
+  asistencia: string;   // '' sin marcar · 'Sí' vino · 'No' no-show
   fila: number;          // número de fila en la planilla, para poder editarla
 }
 

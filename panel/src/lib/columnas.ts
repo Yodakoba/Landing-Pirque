@@ -27,7 +27,8 @@ export const COL_RESERVAS = {
   monto: 'Monto',
   tipoPago: 'Tipo Pago',
   estadoPago: 'Estado Pago Shopify',
-  creada: 'Creada'
+  creada: 'Creada',
+  asistencia: 'Asistencia'
 } as const;
 
 export const COL_FECHAS = {
@@ -50,6 +51,16 @@ export const ESTADO_PAGO = {
   pendiente: 'pending',
   reembolsado: 'refunded',
   anulado: 'voided'
+} as const;
+
+/**
+ * La asistencia, para los no-shows. Vacío significa "todavía no se sabe":
+ * no se puede marcar a alguien como ausente antes del día.
+ */
+export const ASISTENCIA = {
+  sinMarcar: '',
+  vino: 'Sí',
+  noVino: 'No'
 } as const;
 
 export type TipoPago = (typeof TIPO_PAGO)[keyof typeof TIPO_PAGO];

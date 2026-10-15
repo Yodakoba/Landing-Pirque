@@ -12,13 +12,15 @@ import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras } from './fecha
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
+import { filaReserva } from './filas.ts';
+import { ASISTENCIA } from './columnas.ts';
 
 let fallos = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA: ' + m); } };
 
 const r = (p: Partial<Reserva>): Reserva => ({
   id: 'x', fecha: '2026-11-14', nombre: '', email: '', telefono: '',
-  menu: 'Tradiciones', personas: 1, monto: null, tipoPago: TIPO_PAGO.directo,
+  menu: 'Tradiciones', personas: 1, monto: null, tipoPago: TIPO_PAGO.directo, asistencia: '',
   estadoPago: 'paid', creada: '', fila: 2, ...p
 });
 const dia = (p: Partial<FechaHabil>): FechaHabil => ({
@@ -86,7 +88,8 @@ ok(normalizar('Capacidad Máx') === 'capacidad max', 'la normalización saca til
 ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
-               'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada'];
+               'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
+               'Asistencia'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -98,6 +101,35 @@ ok(faltantes(sinTildes, COL_RESERVAS).length === 0,
 const malo = ['ID Orden','Fecha Reserva','Nombre','Personas'];
 ok(faltantes(malo, COL_RESERVAS).join(', ').includes('Tipo Pago'),
    'y si falta una columna de verdad, se dice cuál en vez de fallar callado');
+
+/* ---------- armar la fila que se escribe en la planilla ---------- */
+// El encabezado a propósito EN OTRO ORDEN que COL_RESERVAS: la fila tiene que
+// salir del encabezado real, no del orden en que están declaradas las llaves.
+const encRaro = ['Creada','Personas','Nombre','Asistencia','ID Orden','Fecha Reserva',
+                 'Email','Teléfono','Menú','Monto','Tipo Pago','Estado Pago Shopify'];
+
+let f = filaReserva(encRaro, r({ id: '1007', nombre: 'Ana', personas: 4, monto: 176000 }));
+ok(f[4] === '1007' && f[2] === 'Ana' && f[1] === 4,
+   'cada valor cae en la columna que le toca según el encabezado');
+ok(f.length === encRaro.length, 'y la fila mide lo mismo que el encabezado');
+
+// Esto es lo que hace el botón de asistencia: manda SOLO ese campo.
+const previa = ['2026-10-14','4','Ana','','1007','2026-11-14',
+                'ana@x.cl','+56 9','Tradiciones','176000','Pago directo','paid'];
+f = filaReserva(encRaro, { asistencia: ASISTENCIA.noVino }, previa);
+ok(f[3] === 'No', 'marcar la asistencia escribe esa columna');
+ok(f[2] === 'Ana' && f[6] === 'ana@x.cl' && f[9] === '176000' && f[11] === 'paid',
+   'y NO borra el resto de la fila: una edición parcial solo toca lo que manda');
+
+// Vaciar un campo a propósito tiene que seguir siendo posible.
+f = filaReserva(encRaro, { asistencia: ASISTENCIA.sinMarcar }, previa);
+ok(f[3] === '', 'volver a "sin marcar" sí vacía la celda');
+
+// Una columna que la planilla no tiene no puede tumbar la escritura.
+const encCorto = ['ID Orden','Fecha Reserva','Personas'];
+f = filaReserva(encCorto, { asistencia: ASISTENCIA.vino, personas: 2 });
+ok(f.length === 3 && f[2] === 2,
+   'si la planilla no tiene la columna Asistencia, se escribe el resto igual');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

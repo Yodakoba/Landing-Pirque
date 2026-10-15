@@ -15,6 +15,7 @@ import {
   indices, faltantes
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
+import { filaReserva, filaFecha } from './filas.ts';
 import { esFecha } from './fechas.ts';
 
 const num = (v: unknown): number => {
@@ -48,29 +49,11 @@ export async function leerReservas(): Promise<Reserva[]> {
       tipoPago: String(en(f, i.tipoPago)) as Reserva['tipoPago'],
       estadoPago: String(en(f, i.estadoPago)),
       creada: String(en(f, i.creada)),
+      asistencia: String(en(f, i.asistencia)),
       fila: n + 1                            // 1-based, y la 1 es el encabezado
     });
   }
   return salida;
-}
-
-/** Arma la fila respetando el orden real del encabezado, no el nuestro. */
-function filaReserva(enc: string[], r: Partial<Reserva>, previa?: string[]): unknown[] {
-  const i = indices(enc, COL_RESERVAS);
-  const fila = previa ? [...previa] : new Array(enc.length).fill('');
-  const poner = (k: number, v: unknown) => { if (k !== -1) fila[k] = v ?? ''; };
-  poner(i.id, r.id);
-  poner(i.fecha, r.fecha);
-  poner(i.nombre, r.nombre);
-  poner(i.email, r.email);
-  poner(i.telefono, r.telefono);
-  poner(i.menu, r.menu);
-  poner(i.personas, r.personas);
-  poner(i.monto, r.monto ?? '');
-  poner(i.tipoPago, r.tipoPago);
-  poner(i.estadoPago, r.estadoPago);
-  if (r.creada !== undefined) poner(i.creada, r.creada);
-  return fila;
 }
 
 export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): Promise<string> {
@@ -119,18 +102,6 @@ export async function leerFechas(): Promise<FechaHabil[]> {
     });
   }
   return salida;
-}
-
-function filaFecha(enc: string[], d: Partial<FechaHabil>, previa?: string[]): unknown[] {
-  const i = indices(enc, COL_FECHAS);
-  const fila = previa ? [...previa] : new Array(enc.length).fill('');
-  const poner = (k: number, v: unknown) => { if (k !== -1) fila[k] = v ?? ''; };
-  poner(i.fecha, d.fecha);
-  poner(i.capacidad, d.capacidad);
-  poner(i.apertura, d.apertura);
-  poner(i.estado, d.estado);
-  poner(i.notas, d.notas);
-  return fila;
 }
 
 export async function guardarFecha(d: Omit<FechaHabil, 'fila'>): Promise<void> {

@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
-import { TIPO_PAGO, ESTADO_PAGO } from '@/lib/columnas';
+import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar } from '@/lib/ocupacion';
@@ -44,17 +44,31 @@ export default function DayView({ fecha }: { fecha: string }) {
 
   const personas = visibles.filter(ocupaLugar)
     .reduce((s, r) => s + (Number(r.personas) || 0), 0);
+  const noShows = visibles.filter((r) => r.asistencia === ASISTENCIA.noVino).length;
 
   function exportar() {
     const csv = aCSV(
-      ['ID Orden','Nombre','Email','Teléfono','Menú','Personas','Tipo Pago','Estado Pago','Monto'],
+      ['ID Orden','Nombre','Email','Teléfono','Menú','Personas','Tipo Pago',
+       'Estado Pago','Monto','Asistencia'],
       visibles.map((r) => [r.id, r.nombre, r.email, r.telefono, r.menu,
-                           r.personas, r.tipoPago, r.estadoPago, r.monto ?? ''])
+                           r.personas, r.tipoPago, r.estadoPago, r.monto ?? '',
+                           r.asistencia])
     );
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url; a.download = `reservas-${fecha}.csv`; a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Marcar quién vino. Es lo que se hace el mismo día, en el mesón, así que
+  // guarda al instante: sin botón de confirmar y sin abrir un formulario.
+  async function marcar(r: Reserva, asistencia: string) {
+    const res = await fetch(`/api/reservas/${r.fila}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ asistencia })
+    });
+    const d = await res.json();
+    if (d.error) alert(d.error); else cargar();
   }
 
   async function borrar(r: Reserva) {
@@ -75,6 +89,9 @@ export default function DayView({ fecha }: { fecha: string }) {
       </h1>
       <p className="text-hueso/60 text-sm">
         {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
+        {noShows > 0 && (
+          <span className="text-red-400"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
+        )}
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -108,6 +125,7 @@ export default function DayView({ fecha }: { fecha: string }) {
                 <th className="py-2 pr-3">Menú</th>
                 <th className="py-2 pr-3 text-right">Personas</th>
                 <th className="py-2 pr-3">Pago</th>
+                <th className="py-2 pr-3">Asistencia</th>
                 <th className="py-2" />
               </tr>
             </thead>
@@ -139,6 +157,20 @@ export default function DayView({ fecha }: { fecha: string }) {
                           ⚠ pago directo sin pagar
                         </div>
                       )}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <select value={r.asistencia || ''}
+                        onChange={(e) => marcar(r, e.target.value)}
+                        className={`rounded border bg-tinta px-2 py-1 text-xs ${
+                          r.asistencia === ASISTENCIA.noVino
+                            ? 'border-red-500/60 text-red-400'
+                            : r.asistencia === ASISTENCIA.vino
+                              ? 'border-emerald-500/50 text-emerald-400'
+                              : 'border-hueso/20 text-hueso/50'}`}>
+                        <option value={ASISTENCIA.sinMarcar}>— sin marcar</option>
+                        <option value={ASISTENCIA.vino}>Vino</option>
+                        <option value={ASISTENCIA.noVino}>No llegó</option>
+                      </select>
                     </td>
                     <td className="py-2 text-right whitespace-nowrap">
                       <button onClick={() => { setCreando(false); setEditando(r); }}
