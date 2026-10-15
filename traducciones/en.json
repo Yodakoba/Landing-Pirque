@@ -3,6 +3,9 @@
 
   "_precios": "Los precios llevan coma de miles y la sigla CLP. En formato chileno, $44.000 se lee como cuarenta y cuatro dólares en inglés.",
   "$44.000": "$44,000 CLP",
+  "$49.000": "$49,000 CLP",
+  "$75.000": "$75,000 CLP",
+  "Pagando tu reserva ahora": "Paying for your booking now",
   "$50.000": "$50,000 CLP",
   "$70.000": "$70,000 CLP",
   "$90.000": "$90,000 CLP",

@@ -3,6 +3,9 @@
 
   "_precios": "El separador de miles con punto ya es el correcto en portugués de Brasil. Se agrega la sigla CLP porque el signo $ se confunde con el real.",
   "$44.000": "$44.000 CLP",
+  "$49.000": "$49.000 CLP",
+  "$75.000": "$75.000 CLP",
+  "Pagando tu reserva ahora": "Pagando sua reserva agora",
   "$50.000": "$50.000 CLP",
   "$70.000": "$70.000 CLP",
   "$90.000": "$90.000 CLP",

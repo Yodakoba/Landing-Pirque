@@ -423,6 +423,15 @@ a.card .mas{
 }
 .tier-cap .name{ font-weight:700; text-transform:uppercase; letter-spacing:0.05em; font-size:0.82rem; line-height:1.2; }
 .tier-cap .price{ font-family: var(--serif); font-style:italic; font-size:1.35rem; line-height:1.15; color: var(--gold); }
+/* Va DENTRO del <label> que gira la tarjeta. No la gira al apretarla porque
+   el spec dice que el label no activa nada cuando el clic cae en contenido
+   interactivo descendiente — un <a> lo es. Comprobado en el navegador. */
+.tier-cap .pay{
+  align-self:flex-start; margin-top:5px; text-decoration:none;
+  font-size:0.72rem; color: var(--ink-dim);
+  border-bottom:1px solid var(--gold-soft); padding-bottom:1px;
+}
+.tier-cap .pay:hover, .tier-cap .pay:focus-visible{ color: var(--gold); border-bottom-color: var(--gold); }
 .flip-back{
   transform: rotateY(180deg); background: var(--bg-raise); border-color: var(--gold-soft);
   padding: 18px 16px; display:flex; flex-direction:column; justify-content:center; gap:2px;
