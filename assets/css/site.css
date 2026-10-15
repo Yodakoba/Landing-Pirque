@@ -13,8 +13,8 @@
   --bg-panel:  #14120F;   /* panel apenas más cálido que el del landing */
   --bg-raise:  #1B1814;
   --ink:       #F4F0E6;
-  --ink-dim:   rgba(244,240,230,0.74);
-  --ink-faint: rgba(244,240,230,0.52);
+  --ink-dim:   rgba(244,240,230,0.80);
+  --ink-faint: rgba(244,240,230,0.57);
   --gold:      #C9A227;
   --gold-soft: rgba(201,162,39,0.45);
   --gold-wash: rgba(201,162,39,0.14);  /* fondo dorado apenas insinuado */
@@ -319,7 +319,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
   max-width: var(--ancho); margin:0 auto; padding: 60px var(--pad-x);
 }
 .hero h1{ font-size: clamp(2rem, 5.2vw, 3.5rem); max-width: 15ch; }
-.hero .lede{ margin-top:16px; color: rgba(244,240,230,0.88); }
+.hero .lede{ margin-top:16px; color: rgba(244,240,230,0.95); }
 @media (max-width: 700px){
   .hero{ min-height: 420px; }
   .hero-lg{ min-height: 540px; }
@@ -414,7 +414,7 @@ a.card .mas{
 .flip-hint{
   position:absolute; top:10px; right:10px; z-index:2;
   font-size:0.62rem; text-transform:uppercase; letter-spacing:0.03em;
-  color: rgba(244,240,230,0.85); background: rgba(0,0,0,0.5); padding:4px 8px; border-radius:2px;
+  color: rgba(244,240,230,0.92); background: rgba(0,0,0,0.5); padding:4px 8px; border-radius:2px;
 }
 .tier-cap{
   position:absolute; left:0; right:0; bottom:0; z-index:2;
