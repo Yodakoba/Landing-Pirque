@@ -221,6 +221,54 @@
   .hero-full-content .kicker{ font-family: var(--sans); font-style:normal; text-transform:uppercase; letter-spacing:0.1em; font-size:0.82rem; color: var(--gold); }
   .hero-full-title{ font-size: clamp(2.4rem, 7vw, 4.6rem); margin-top: 14px; max-width: 16ch; }
   .hero-full-content .btn{ margin-top: 30px; }
+
+  /* ---------- la promoción ---------- */
+  /* Los tres tiempos entran uno tras otro. Es CSS y no JavaScript: en este
+     proyecto la interfaz no lleva JS, y una entrada en secuencia son
+     keyframes con retardos.
+
+     El fill-mode es "backwards" y NO hay un opacity:0 en la regla base, a
+     propósito. Durante el retardo el elemento toma el estado inicial del
+     keyframe, y al terminar vuelve a su propio estilo. Si el navegador no
+     animara nada, el texto se ve igual. Con opacity:0 en la base, en
+     cambio, cualquier falla de la animación dejaría la promoción invisible,
+     que es la peor forma de fallar: sin error y sin texto. */
+  @keyframes promo-entra{
+    from{ opacity:0; transform: translateY(12px); }
+    to  { opacity:1; transform: none; }
+  }
+  .promo-paso{ animation: promo-entra .6s cubic-bezier(.2,.7,.3,1) backwards; }
+  .promo-p1{ animation-delay: 0.25s; }
+  .promo-p2{ animation-delay: 1.15s; }
+  .promo-p3{ animation-delay: 2.05s; }
+  .promo-p4{ animation-delay: 2.85s; }
+  @media (prefers-reduced-motion: reduce){ .promo-paso{ animation: none; } }
+
+  /* El sello va entre dos filetes, como los carteles esmaltados de antes.
+     El color sale de currentColor para no inventar un token nuevo. */
+  .promo-sello{
+    display:flex; align-items:center; gap:12px;
+    font-size:0.72rem; text-transform:uppercase; letter-spacing:0.22em;
+    color: var(--gold);
+  }
+  .promo-sello::before{ content:""; height:1px; background:currentColor; opacity:0.5; flex:0 0 34px; }
+  .promo-sello::after{ content:""; height:1px; background:currentColor; opacity:0.5; flex:1; max-width:150px; }
+
+  /* El número en Fraunces itálica, que es la que el sitio reserva para
+     cifras y precios. Grande, porque es el gancho de la promo. */
+  .promo-numero{
+    font-family: var(--serif); font-style:italic; color: var(--gold);
+    font-size: clamp(3.2rem, 10vw, 6.4rem); line-height:0.95; margin-top:8px;
+  }
+  .promo-remate{
+    font-family: var(--serif); font-style:italic; color: var(--ink);
+    font-size: clamp(1.05rem, 2.5vw, 1.55rem); margin-top:4px;
+  }
+  /* La única que no se anima: es la condición, no el gancho. */
+  .promo-fina{
+    margin-top:28px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:0.78rem; line-height:1.55; color: var(--ink-dim); max-width:72ch;
+  }
   @media (max-width: 600px){ .hero-full{ min-height: 78vh; } }
 
   .intro-text .wrap{ max-width: 760px; }
@@ -481,12 +529,20 @@
   <!-- =================================================================
        LA PROMOCIÓN — es lo único que se cambia de campaña en campaña.
 
-       Son tres cosas y están las tres acá abajo: el titular (<h1>), la
-       bajada (.kicker) y el mensaje que lleva prellenado el WhatsApp.
-       La foto de fondo también se puede cambiar si la campaña lo pide.
+       Las piezas, en orden: el sello (.promo-sello), el titular (<h1>), el
+       número (.promo-numero), el remate (.promo-remate), el mensaje que
+       lleva prellenado el WhatsApp, y la condición en letra chica
+       (.promo-fina). La foto de fondo también se cambia si la campaña lo
+       pide.
 
-       El texto que está ahora es el neutro, el que sirve cuando no hay
-       campaña corriendo. No inventa ninguna oferta a propósito.
+       Los tres primeros entran animados, uno tras otro. El orden lo dan las
+       clases .promo-p1 a .promo-p4, y los retardos están en el CSS, en el
+       bloque "la promoción". La letra chica NO se anima a propósito: es la
+       condición, no el gancho.
+
+       Para volver al estado neutro —sin campaña corriendo— el texto era
+       "Promociones / Escríbenos y te contamos qué promociones hay
+       vigentes.", sin sello, número ni letra chica.
 
        Después de editar hay que correr  python3 tools/traducir.py ,
        que propaga a en/ y pt/. Si el texto es nuevo el script se niega
@@ -495,16 +551,19 @@
        ================================================================= -->
   <header class="hero-full">
     <div class="hero-full-bg">
-      <img src="../assets/imgs/img-000.jpg" alt="The front of the barn at Brasas de Lo Pirque" width="830" height="1275">
+      <img src="../assets/gallery/g14.jpg" alt="Racks of ribs roasting on the grills" width="567" height="850">
       <div class="scrim"></div>
     </div>
     <div class="hero-full-content">
-      <h1 class="hero-full-title">Offers</h1>
-      <p class="kicker" style="margin-top:16px;">Message us and we will tell you which offers are running.</p>
-      <a href="https://wa.me/56933858575?text=Hello%2C%20I%20would%20like%20information%20about%20the%20Brasas%20de%20Lo%20Pirque%20offers" class="btn btn-whatsapp" target="_blank" rel="noopener">
+      <p class="promo-sello promo-paso promo-p1">Seasonal offer</p>
+      <h1 class="hero-full-title promo-paso promo-p1">Year-end party or Christmas</h1>
+      <p class="promo-numero promo-paso promo-p2">11?</p>
+      <p class="promo-remate promo-paso promo-p3">Finger-licking good, then…</p>
+      <a href="https://wa.me/56933858575?text=Hello%2C%20I%20would%20like%20information%20about%20the%20Brasas%20de%20Lo%20Pirque%20year-end%20offer" class="btn btn-whatsapp promo-paso promo-p4" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
         Message us on WhatsApp
       </a>
+      <p class="promo-fina">11% off your bill. From 44 people, valid with no exclusive-hire fee. Please get in touch so we can talk about what you need — we always have an open ear.</p>
     </div>
   </header>
 
