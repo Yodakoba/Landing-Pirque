@@ -14,7 +14,7 @@
  */
 
 export const HOJA_RESERVAS = 'Reservas';
-export const HOJA_FECHAS = 'Fechas hábiles';
+export const HOJA_FECHAS = 'Fechas Hábiles';
 
 export const COL_RESERVAS = {
   id: 'ID Orden',
