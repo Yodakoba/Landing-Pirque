@@ -319,7 +319,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
   max-width: var(--ancho); margin:0 auto; padding: 60px var(--pad-x);
 }
 .hero h1{ font-size: clamp(2rem, 5.2vw, 3.5rem); max-width: 15ch; }
-.hero .lede{ margin-top:16px; color: rgba(244,240,230,0.88); }
+.hero .lede{ margin-top:16px; color: rgba(244,240,230,0.95); }
 @media (max-width: 700px){
   .hero{ min-height: 420px; }
   .hero-lg{ min-height: 540px; }
@@ -414,7 +414,7 @@ a.card .mas{
 .flip-hint{
   position:absolute; top:10px; right:10px; z-index:2;
   font-size:0.62rem; text-transform:uppercase; letter-spacing:0.03em;
-  color: rgba(244,240,230,0.85); background: rgba(0,0,0,0.5); padding:4px 8px; border-radius:2px;
+  color: rgba(244,240,230,0.92); background: rgba(0,0,0,0.5); padding:4px 8px; border-radius:2px;
 }
 .tier-cap{
   position:absolute; left:0; right:0; bottom:0; z-index:2;
