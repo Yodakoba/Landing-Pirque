@@ -222,54 +222,93 @@
   .hero-full-title{ font-size: clamp(2.4rem, 7vw, 4.6rem); margin-top: 14px; max-width: 16ch; }
   .hero-full-content .btn{ margin-top: 30px; }
 
-  /* ---------- la promoción ---------- */
-  /* Los tres tiempos entran uno tras otro. Es CSS y no JavaScript: en este
-     proyecto la interfaz no lleva JS, y una entrada en secuencia son
-     keyframes con retardos.
+  /* ---------- la promoción: tres tiempos ---------- */
+  /* Tres textos y tres fotos que se relevan. Es CSS y no JavaScript: en este
+     proyecto la interfaz no lleva JS, y una secuencia son keyframes.
 
-     El fill-mode es "backwards" y NO hay un opacity:0 en la regla base, a
-     propósito. Durante el retardo el elemento toma el estado inicial del
-     keyframe, y al terminar vuelve a su propio estilo. Si el navegador no
-     animara nada, el texto se ve igual. Con opacity:0 en la base, en
-     cambio, cualquier falla de la animación dejaría la promoción invisible,
-     que es la peor forma de fallar: sin error y sin texto. */
-  @keyframes promo-entra{
-    from{ opacity:0; transform: translateY(12px); }
-    to  { opacity:1; transform: none; }
+     Los seis comparten la MISMA duración (--promo-ciclo) y el momento de
+     cada uno va en porcentajes, no en animation-delay. Con retardos
+     separados, texto y foto se desincronizan apenas uno arranca tarde; con
+     una sola línea de tiempo no pueden separarse nunca.
+
+     El tercer tiempo es el estado por defecto del HTML: su opacidad base es
+     1 y la animación lo esconde hacia atrás (fill-mode backwards). Si el
+     navegador no animara nada, se ve la invitación sola, que es justo el
+     mensaje. Los dos primeros son el gancho y nacen en 0: sin animación
+     simplemente no aparecen, que es la forma correcta de que falten. */
+  /* overflow:hidden porque el acercamiento escala .hero-full-bg a 1.09 y ese
+     contenedor ocupa todo el ancho: sin esto se sale por la derecha y
+     aparece scroll horizontal en celular. */
+  .promo-hero{ --promo-ciclo: 7s; overflow:hidden; }
+  @keyframes promo-b1{ 0%{opacity:0} 5%,30%{opacity:1} 36%,100%{opacity:0} }
+  @keyframes promo-b2{ 0%,32%{opacity:0} 38%,64%{opacity:1} 70%,100%{opacity:0} }
+  @keyframes promo-b3{ 0%,66%{opacity:0} 72%,100%{opacity:1} }
+  @keyframes promo-acerca{ from{ transform: scale(1.09); } to{ transform: none; } }
+
+  .promo-hero .hero-full-bg{ animation: promo-acerca var(--promo-ciclo) linear forwards; }
+  .promo-foto{ position:absolute; inset:0; }
+  .promo-f1, .promo-f2{ opacity:0; }
+  .promo-f1{ animation: promo-b1 var(--promo-ciclo) ease forwards; }
+  .promo-f2{ animation: promo-b2 var(--promo-ciclo) ease forwards; }
+  .promo-f3{ animation: promo-b3 var(--promo-ciclo) ease backwards; }
+
+  /* Los tres tiempos ocupan la MISMA celda de una grilla, alineados abajo.
+     Con grid y no con position:absolute + min-height, la escena mide sola lo
+     que mide el tiempo más alto. Con un min-height a ojo, el tercero —que
+     suma el logo— se desbordaba hacia arriba y se montaba sobre el sello. */
+  .promo-escena{ display:grid; }
+  .promo-t{ grid-area: 1 / 1; align-self: end; margin:0; }
+  .promo-t1, .promo-t2{ opacity:0; }
+  .promo-t1{ animation: promo-b1 var(--promo-ciclo) ease forwards; }
+  .promo-t2{ animation: promo-b2 var(--promo-ciclo) ease forwards; }
+  .promo-t3{ animation: promo-b3 var(--promo-ciclo) ease backwards; }
+
+  @media (prefers-reduced-motion: reduce){
+    .promo-hero .hero-full-bg, .promo-foto, .promo-t{ animation: none; }
+    .promo-f1, .promo-f2, .promo-t1, .promo-t2{ display:none; }
   }
-  .promo-paso{ animation: promo-entra .6s cubic-bezier(.2,.7,.3,1) backwards; }
-  .promo-p1{ animation-delay: 0.25s; }
-  .promo-p2{ animation-delay: 1.15s; }
-  .promo-p3{ animation-delay: 2.05s; }
-  .promo-p4{ animation-delay: 2.85s; }
-  @media (prefers-reduced-motion: reduce){ .promo-paso{ animation: none; } }
 
-  /* El sello va entre dos filetes, como los carteles esmaltados de antes.
-     El color sale de currentColor para no inventar un token nuevo. */
+  /* El número, en Fraunces itálica: la que el sitio reserva para cifras. */
+  .promo-numero{
+    font-family: var(--serif); font-style:italic; color: var(--gold);
+    font-size: clamp(4rem, 15vw, 9rem); line-height:0.9;
+  }
+  .promo-remate{
+    font-family: var(--serif); font-style:italic; color: var(--ink);
+    font-size: clamp(1.4rem, 4vw, 2.6rem); line-height:1.15;
+  }
+  /* Más chico que el titular genérico del hero: esta es una frase larga y a
+     4.6rem se iba a tres líneas altas. */
+  .promo-t3 .hero-full-title{ margin-top:0; max-width:20ch; font-size: clamp(2rem, 5.4vw, 3.6rem); }
+  .promo-logo{ width:auto; height:auto; max-width:132px; margin-bottom:14px; }
+
+  /* El sello, entre dos filetes, como los carteles esmaltados de antes. */
   .promo-sello{
-    display:flex; align-items:center; gap:12px;
+    display:flex; align-items:center; gap:12px; margin-bottom:20px;
     font-size:0.72rem; text-transform:uppercase; letter-spacing:0.22em;
     color: var(--gold);
   }
   .promo-sello::before{ content:""; height:1px; background:currentColor; opacity:0.5; flex:0 0 34px; }
   .promo-sello::after{ content:""; height:1px; background:currentColor; opacity:0.5; flex:1; max-width:150px; }
 
-  /* El número en Fraunces itálica, que es la que el sitio reserva para
-     cifras y precios. Grande, porque es el gancho de la promo. */
-  .promo-numero{
-    font-family: var(--serif); font-style:italic; color: var(--gold);
-    font-size: clamp(3.2rem, 10vw, 6.4rem); line-height:0.95; margin-top:8px;
+  /* ---------- la oferta concreta ---------- */
+  /* Era una línea de letra chica. Son los tres datos que decide un
+     encargado de RRHH, así que se leen como datos y no como condiciones. */
+  .oferta{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:1px;
+    background: var(--line); border:1px solid var(--line); margin-top:30px;
   }
-  .promo-remate{
-    font-family: var(--serif); font-style:italic; color: var(--ink);
-    font-size: clamp(1.05rem, 2.5vw, 1.55rem); margin-top:4px;
+  @media (max-width: 620px){ .oferta{ grid-template-columns:1fr; } }
+  .oferta-dato{ background: var(--bg); padding:22px 20px; }
+  .oferta-dato b{
+    display:block; font-family: var(--serif); font-style:italic; font-weight:400;
+    color: var(--gold); font-size: clamp(1.9rem,4.4vw,2.6rem); line-height:1;
   }
-  /* La única que no se anima: es la condición, no el gancho. */
-  .promo-fina{
-    margin-top:28px; padding-top:14px; border-top:1px solid var(--line);
-    font-size:0.78rem; line-height:1.55; color: var(--ink-dim); max-width:72ch;
+  .oferta-dato span{
+    display:block; margin-top:8px; font-size:0.78rem; color: var(--ink-dim);
+    text-transform:uppercase; letter-spacing:0.06em; line-height:1.4;
   }
-  @media (max-width: 600px){ .hero-full{ min-height: 78vh; } }
+  .oferta-nota{ margin-top:16px; font-size:0.88rem; color: var(--ink-dim); max-width:62ch; }
 
   .intro-text .wrap{ max-width: 760px; }
 
@@ -549,33 +588,43 @@
        a generar y lista lo que falta traducir, que es lo que evita
        publicar una promo a medio traducir.
        ================================================================= -->
-  <header class="hero-full">
+  <header class="hero-full promo-hero">
     <div class="hero-full-bg">
-      <img src="assets/gallery/g14.jpg" alt="Costillares asándose en las parrillas" width="567" height="850">
+      <img class="promo-foto promo-f1" src="assets/imgs/img-000.jpg" alt="El galpón de Brasas de Lo Pirque" width="830" height="1275">
+      <img class="promo-foto promo-f2" src="assets/gallery/g14.jpg" alt="Costillares asándose en las parrillas" width="567" height="850" loading="lazy" decoding="async">
+      <img class="promo-foto promo-f3" src="assets/gallery/g27.jpg" alt="Una celebración montada bajo el galpón" width="850" height="497" loading="lazy" decoding="async">
       <div class="scrim"></div>
     </div>
     <div class="hero-full-content">
-      <p class="promo-sello promo-paso promo-p1">Promoción de temporada</p>
-      <h1 class="hero-full-title promo-paso promo-p1">Fiesta fin de año o Navidad</h1>
-      <p class="promo-numero promo-paso promo-p2">¿11?</p>
-      <p class="promo-remate promo-paso promo-p3">Me chupo los dedos entonces…</p>
-      <a href="https://wa.me/56933858575?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20las%20promociones%20de%20Brasas%20de%20Lo%20Pirque" class="btn btn-whatsapp promo-paso promo-p4" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
-        Escríbenos por WhatsApp
-      </a>
-      <p class="promo-fina">11% descuento al consumo. A partir de 44 personas, válido sin costo de arriendo exclusivo. Por favor contáctanos para conversar lo que tú necesitas, siempre tenemos un oído abierto.</p>
+      <p class="promo-sello">Promoción de temporada</p>
+      <div class="promo-escena">
+        <p class="promo-t promo-t1 promo-numero">¿11?</p>
+        <p class="promo-t promo-t2 promo-remate">Me chupo los dedos entonces…</p>
+        <div class="promo-t promo-t3">
+          <img class="promo-logo" src="assets/logo-brasas.png" alt="" width="368" height="161">
+          <h1 class="hero-full-title">Celebra el fin de año o Navidad con nosotros</h1>
+        </div>
+      </div>
     </div>
   </header>
 
-  <section class="pad intro-text">
+  <section class="pad intro-text" id="oferta">
     <div class="wrap">
       <p class="kicker">Bienestar y eventos corporativos</p>
       <h2 style="font-size:clamp(1.7rem,3.6vw,2.4rem); margin-top:10px;">Saca al equipo de la oficina por un día</h2>
       <p class="lede" style="margin-top:16px;">Campo, fuego y tradición chilena en Pirque — para cerrar el año, premiar un buen semestre o simplemente juntar al equipo sin pantallas de por medio. Si te toca organizarlo, acá está todo junto: coordinamos contigo la comida, el show y las actividades, y tú llegas con el equipo.</p>
+
+      <div class="oferta">
+        <div class="oferta-dato"><b>11%</b><span>de descuento al consumo</span></div>
+        <div class="oferta-dato"><b>44</b><span>personas en adelante</span></div>
+        <div class="oferta-dato"><b>Sin costo</b><span>de arriendo exclusivo</span></div>
+      </div>
+      <p class="oferta-nota">Por favor contáctanos para conversar lo que tú necesitas, siempre tenemos un oído abierto.</p>
+
       <div class="hero-cta" style="margin-top:26px;">
         <a href="https://wa.me/56933858575?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20las%20promociones%20de%20Brasas%20de%20Lo%20Pirque" class="btn btn-whatsapp" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
-          WhatsApp
+          Escríbenos por WhatsApp
         </a>
         <a href="#experiencias" class="btn btn-ghost">Ver experiencias</a>
       </div>
@@ -585,7 +634,7 @@
   <section id="experiencias" class="pad">
     <div class="wrap">
       <div class="section-head">
-        <h2>Cuatro niveles de experiencias culinarias para tus clientes</h2>
+        <h2>Cuatro niveles de experiencias culinarias</h2>
         <p class="lede">Precio válido por persona. Toca la foto para ver más detalles. Abajo encontrarás el menú completo.</p>
       </div>
 
@@ -962,12 +1011,12 @@
   <section class="pad">
     <div class="wrap">
       <div class="section-head">
-        <h2>Pensado para quienes venden experiencias</h2>
+        <h2>Tres momentos en que el campo resuelve</h2>
       </div>
       <div class="segments">
-        <div class="segment"><h3>Agencias de turismo</h3><p>Suma el fundo a tus paseos grupales: show ecuestre, gastronomía chilena y actividades familiares en un mismo circuito.</p></div>
-        <div class="segment"><h3>Municipalidades</h3><p>Un lugar con capacidad para actividades comunitarias, celebraciones locales o jornadas al aire libre.</p></div>
-        <div class="segment"><h3>Empresas</h3><p>Aniversarios, team building y eventos corporativos, con catering propio y experiencias externas incluidas.</p></div>
+        <div class="segment"><h3>Cierre de año</h3><p>La celebración que el equipo espera todo el año: asado, show ecuestre y música, sin que nadie tenga que cocinar ni ordenar después.</p></div>
+        <div class="segment"><h3>Día de bienestar</h3><p>Una jornada fuera de la rutina: aire libre, caballos y tiempo sin pantallas, que es lo que de verdad descansa.</p></div>
+        <div class="segment"><h3>Team building</h3><p>Taller de asado, coaching con caballos o karting, según lo que tu equipo necesite trabajar.</p></div>
       </div>
     </div>
   </section>
@@ -975,14 +1024,14 @@
   <section class="pad">
     <div class="wrap">
       <div class="section-head">
-        <h2>Por qué sumarte como socio comercial</h2>
-        <p class="lede">Vende Brasas de Lo Pirque como parte de tu oferta y gana por cada evento que concretes.</p>
+        <h2>Por qué funciona para una empresa</h2>
+        <p class="lede">Organizar la jornada del equipo suele ser el trabajo extra de alguien. Acá ese trabajo ya está hecho.</p>
       </div>
       <div class="benefits">
-        <div class="benefit"><span class="num">01</span><div><h3>Comisión por evento cerrado</h3><p>Un porcentaje por cada celebración, conferencia o paseo que gestiones.</p></div></div>
-        <div class="benefit"><span class="num">02</span><div><h3>Material de venta listo</h3><p>Fotos, videos y tarifario para presentar el lugar a tus clientes.</p></div></div>
-        <div class="benefit"><span class="num">03</span><div><h3>Acompañamiento directo</h3><p>Un contacto único en el fundo para coordinar fechas y detalles.</p></div></div>
-        <div class="benefit"><span class="num">04</span><div><h3>Eventos a medida</h3><p>Bar, DJ, música en vivo, minigolf u otras actividades según cada grupo.</p></div></div>
+        <div class="benefit"><span class="num">01</span><div><h3>Todo en un mismo lugar</h3><p>Comida, show y actividades en un solo recinto: no hay proveedores que coordinar ni grupo que mover de un lado a otro.</p></div></div>
+        <div class="benefit"><span class="num">02</span><div><h3>Un solo contacto</h3><p>Una persona en el fundo para la fecha, el menú y los detalles. No hay que explicar lo mismo tres veces.</p></div></div>
+        <div class="benefit"><span class="num">03</span><div><h3>El recinto para ustedes solos</h3><p>Arriendo exclusivo para que el día sea de tu empresa y de nadie más.</p></div></div>
+        <div class="benefit"><span class="num">04</span><div><h3>Se arma según el grupo</h3><p>Bar, DJ, música en vivo u otras actividades, según el tamaño del equipo y el presupuesto.</p></div></div>
       </div>
     </div>
   </section>
@@ -991,9 +1040,9 @@
     <div class="wrap">
       <div class="section-head"><h2>Cómo funciona</h2></div>
       <div class="steps">
-        <div class="step"><span class="num">1</span><h3>Cuéntanos sobre tu negocio</h3><p>Escríbenos por WhatsApp y cuéntanos si eres agencia, municipalidad o empresa.</p></div>
-        <div class="step"><span class="num">2</span><h3>Recibe el kit comercial</h3><p>Tarifas, fotos y condiciones para presentar el lugar a tus clientes.</p></div>
-        <div class="step"><span class="num">3</span><h3>Ofrece el fundo y gana comisión</h3><p>Cada evento concretado te deja una comisión acordada.</p></div>
+        <div class="step"><span class="num">1</span><h3>Cuéntanos qué necesitas</h3><p>Escríbenos por WhatsApp con la fecha que tienes en mente y cuántas personas son.</p></div>
+        <div class="step"><span class="num">2</span><h3>Armamos la jornada</h3><p>Menú, show y actividades según tu equipo y lo que tengas disponible.</p></div>
+        <div class="step"><span class="num">3</span><h3>Llegan y disfrutan</h3><p>Tú le avisas al equipo; del resto nos encargamos nosotros.</p></div>
       </div>
     </div>
   </section>
@@ -1002,7 +1051,7 @@
     <div class="wrap contact-grid">
       <div class="contact-card">
         <h3>Hablemos por WhatsApp</h3>
-        <p>La forma más rápida de coordinar tarifas, disponibilidad y comisión.</p>
+        <p>La forma más rápida de ver fechas disponibles y armar la jornada de tu equipo.</p>
         <a href="https://wa.me/56933858575?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20las%20promociones%20de%20Brasas%20de%20Lo%20Pirque" class="btn btn-whatsapp" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
           WhatsApp
