@@ -264,14 +264,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 }
 .nav a:hover{ color: var(--ink); }
 .nav a[aria-current="page"]{ color: var(--ink); border-bottom-color: var(--gold); }
-/* el acceso al sitio de socios se diferencia: es otro público */
-.nav a.nav-socios{
-  color: var(--gold); border:1px solid var(--gold-soft);
-  border-radius:2px; padding:7px 14px;
-}
-.nav a.nav-socios:hover{ background: rgba(201,162,39,0.10); border-color: var(--gold); }
 
-/* Reserva es la accion principal: relleno. Socios es otro publico: delineado. */
+/* Reserva es la accion principal: va en relleno y primero. */
 .nav a.nav-reserva{
   background: var(--gold); color:#1A1400; border:1px solid var(--gold);
   border-radius:2px; padding:8px 18px; font-weight:600;
@@ -299,7 +293,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
   .nav a{ font-size:0.95rem; padding: 15px 0; border-bottom:1px solid var(--line); }
   .nav a[aria-current="page"]{ border-bottom-color: var(--line); color: var(--gold); }
   .nav a.nav-reserva{ order:-1; margin-bottom:8px; text-align:center; padding:15px; border-bottom-color: var(--gold); }
-  .nav a.nav-socios{ margin-top:16px; text-align:center; padding:14px; border-color: var(--gold-soft); }
 }
 
 /* ---------- heros ---------- */
@@ -423,6 +416,15 @@ a.card .mas{
 }
 .tier-cap .name{ font-weight:700; text-transform:uppercase; letter-spacing:0.05em; font-size:0.82rem; line-height:1.2; }
 .tier-cap .price{ font-family: var(--serif); font-style:italic; font-size:1.35rem; line-height:1.15; color: var(--gold); }
+/* Va DENTRO del <label> que gira la tarjeta. No la gira al apretarla porque
+   el spec dice que el label no activa nada cuando el clic cae en contenido
+   interactivo descendiente — un <a> lo es. Comprobado en el navegador. */
+.tier-cap .pay{
+  align-self:flex-start; margin-top:5px; text-decoration:none;
+  font-size:0.72rem; color: var(--ink-dim);
+  border-bottom:1px solid var(--gold-soft); padding-bottom:1px;
+}
+.tier-cap .pay:hover, .tier-cap .pay:focus-visible{ color: var(--gold); border-bottom-color: var(--gold); }
 .flip-back{
   transform: rotateY(180deg); background: var(--bg-raise); border-color: var(--gold-soft);
   padding: 18px 16px; display:flex; flex-direction:column; justify-content:center; gap:2px;
@@ -759,6 +761,18 @@ button.btn{ font-family: var(--sans); cursor:pointer; }
 footer{ border-top:1px solid var(--line); padding: 46px 0; font-size:0.84rem; color: var(--ink-faint); }
 footer .wrap{ display:flex; flex-wrap:wrap; gap:18px; justify-content:space-between; align-items:flex-start; }
 footer nav{ display:flex; flex-wrap:wrap; gap:18px; }
+/* Promociones y Socios salieron del menu de arriba y viven aca: son otros
+   publicos, no paginas del recorrido normal. Apilados y no en fila para que
+   se lean como dos accesos y no como dos items mas del pie. */
+.pie-nav{ display:flex; flex-direction:column; gap:18px; align-items:flex-start; }
+.pie-botones{ display:flex; flex-direction:column; gap:8px; align-self:stretch; }
+.pie-botones a{
+  text-align:center; color: var(--gold); border:1px solid var(--gold-soft);
+  border-radius:2px; padding:9px 18px;
+  font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
+}
+/* mas especifico que el footer a:hover de abajo, que lo dejaria color ink */
+.pie-botones a:hover{ background: rgba(201,162,39,0.10); border-color: var(--gold); color: var(--gold); }
 footer a{ text-decoration:none; }
 footer p.fine a{ text-decoration: underline; text-underline-offset: 2px; }
 footer a:hover{ color: var(--ink); }

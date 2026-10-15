@@ -3,9 +3,12 @@
 
   "_precios": "Los precios llevan coma de miles y la sigla CLP. En formato chileno, $44.000 se lee como cuarenta y cuatro dólares en inglés.",
   "$44.000": "$44,000 CLP",
-  "$50.000": "$50,000 CLP",
+  "$49.000": "$49,000 CLP",
+  "$55.000": "$55,000 CLP",
+  "$95.000": "$95,000 CLP",
+  "$75.000": "$75,000 CLP",
+  "Pagando tu reserva ahora": "Paying for your booking now",
   "$70.000": "$70,000 CLP",
-  "$90.000": "$90,000 CLP",
   "$19.000": "$19,000 CLP",
   "$2.500.000 + IVA": "$2,500,000 CLP + VAT",
   "$1.500.000 + IVA": "$1,500,000 CLP + VAT",
@@ -177,7 +180,7 @@
   "Precio por adulto. Toca la foto para ver qué incluye. Los niños tienen su propio menú, abajo.": "Price per adult. Tap the photo to see what's included. Children have their own menu, below.",
   "Experiencia Tradiciones": "Tradiciones experience",
   "Ver detalle": "See details",
-  "por adulto · IVA incluido, propina extra": "per adult · VAT included, gratuity extra",
+  "por adulto pagando en el local · IVA incluido, propina extra": "per adult paying at the venue · VAT included, gratuity extra",
   "Show ecuestre incluido": "Equestrian show included",
   "Bebestibles —": "Drinks —",
   "elección de 1 opción: bebidas, jugos de fruta natural, cervezas o pisco sour.": "choice of 1 option: soft drinks, fresh fruit juices, beers or pisco sour.",
@@ -399,5 +402,9 @@
   "Súmate a la lista de novedades": "Join the news list",
   "Deja tu email para recibir el link a esta página y futuras novedades.": "Leave your email to receive the link to this page and future updates.",
   "Sumarme": "Sign up",
-  "Por ahora este formulario solo junta emails — se conecta a tu plataforma de envío cuando la definas.": "For now this form only collects emails — it will connect to your mailing platform once you choose one."
+  "Por ahora este formulario solo junta emails — se conecta a tu plataforma de envío cuando la definas.": "For now this form only collects emails — it will connect to your mailing platform once you choose one.",
+  "Promociones — Brasas de Lo Pirque": "Offers — Brasas de Lo Pirque",
+  "Promociones": "Offers",
+  "Escríbenos y te contamos qué promociones hay vigentes.": "Message us and we will tell you which offers are running.",
+  "Hola, quiero información sobre las promociones de Brasas de Lo Pirque": "Hello, I would like information about the Brasas de Lo Pirque offers"
 }

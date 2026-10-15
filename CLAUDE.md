@@ -233,9 +233,13 @@ unos pocos KB; las imágenes se cachean entre páginas.
   las seis (las cinco más `404.html`) **y después corre
   `python3 tools/traducir.py`**, que es lo que propaga el cambio a `en/` y
   `pt/`. Esas carpetas son generadas: no se editan.
-- El menú son 5 ítems: **Reserva** (botón dorado relleno, la acción principal)
-  · Experiencias · Actividades · Eventos · **Socios comerciales** (delineado,
-  porque es otro público). No hay ítem "Inicio": eso lo hace el logo.
+- El menú son 4 ítems: **Reserva** (botón dorado relleno, la acción
+  principal) · Experiencias · Actividades · Eventos. No hay ítem "Inicio":
+  eso lo hace el logo.
+- **Socios comerciales y Promociones viven en el pie, no en el menú**
+  (2026-10-15), apilados como dos botones delineados y en ese orden. Son
+  otros públicos, no pasos del recorrido normal: el menú de arriba quedó
+  para quien vino a pasar el día. Las reglas `.nav-socios` se borraron.
 - **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
   tarjetas que giran y los carruseles son CSS. **El selector de idiomas
   tampoco usa JS**: es un `<details>` con enlaces a la misma página en otra
@@ -279,8 +283,9 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ## Landing de socios (`landing-afiliados.html`)
 
-- Es **el único archivo** de ese entregable y el que hay que editar: HTML con
-  el CSS inline en un solo `<style>`. Desde el 2026-09-16 carga un único
+- **Ese entregable son hoy dos archivos**, no uno: `landing-afiliados.html`
+  y `promociones.html` (ver abajo). Cada uno con su CSS inline en un solo
+  `<style>`, y ese es el archivo que hay que editar. Desde el 2026-09-16 carga un único
   script externo, `assets/js/idioma.js`, que es la sugerencia de idioma; no
   tiene JavaScript propio ni inline.
 - **Las imágenes ya no van embebidas.** Antes eran 46 payloads base64 y el
@@ -331,6 +336,32 @@ Chromium headless está preinstalado en este entorno:
 
 Las tipografías saldrán en fallback porque el sandbox bloquea
 `fonts.googleapis.com` — es del entorno, no de la página.
+
+## Landing de promociones (`promociones.html`)
+
+Nació el 2026-10-15 como copia del landing B2B, **sin el bloque de comisiones
+y con todo lo demás igual**. Existe para que las campañas tengan dónde
+aterrizar sin mezclarse con el programa de socios.
+
+- **La cabecera es lo único que cambia de campaña en campaña**: el titular,
+  la bajada y el mensaje prellenado del WhatsApp. Está marcada con un
+  comentario grande en el archivo para que no haya que buscarla.
+- **Es una sola página, no una por campaña** (decidido el 2026-10-15). Las
+  campañas se distinguen con **parámetros UTM en el anuncio**, que es lo
+  estándar para medir y no obliga a duplicar 980 líneas por cada una. La
+  contra a asumir: **no sirve para dos promociones distintas vivas al mismo
+  tiempo**. Si eso llega a hacer falta, lo que corresponde es generarlas con
+  un script desde un archivo de datos, como `traducir.py` genera `en/` y
+  `pt/` — nunca copiando el HTML a mano.
+- **El texto que trae hoy es el neutro**, el que sirve sin campaña corriendo:
+  "Promociones / Escríbenos y te contamos qué promociones hay vigentes." No
+  inventa ninguna oferta a propósito, porque las ofertas son dato del cliente.
+- Usa el **WhatsApp de Eventos** (`+56 9 3385 8575`), igual que el landing
+  B2B, con su propio mensaje prellenado.
+- El CSS de los paneles de comisión **se borró de este archivo**, no se dejó
+  muerto: el `<style>` es inline y propio de cada página.
+- Está enlazada desde el pie del sitio público y registrada en `PAGINAS` de
+  `tools/traducir.py`, así que son **9 páginas × 3 idiomas = 27**.
 
 ## Reserva en línea (Shopify + sistema propio)
 
@@ -736,8 +767,8 @@ navegador del cliente y traer la salida.
 2. Tres paneles de comisión (5% / 10% / 15%)
 3. "Una experiencia chilena auténtica, ideal para tus clientes" + 2º botón
    WhatsApp
-4. Cuatro niveles de experiencias culinarias (Tradiciones $44.000 / Lo Pirque
-   $50.000 / Brasas $70.000 / Sommelier $90.000) — tarjetas con flip 3D en CSS
+4. Cuatro niveles de experiencias culinarias (Tradiciones $49.000 / Lo Pirque
+   $55.000 / Brasas $75.000 / Sommelier $95.000) — tarjetas con flip 3D en CSS
    puro (checkbox + label, sin JS). Menú compartido en un `<details>` debajo.
 5. Galería "Date una vuelta por el lugar" — 27 fotos, carrusel swipe con
    `scroll-snap`, sin JS
@@ -813,9 +844,14 @@ agencias que compran por grupo. Por eso:
 - El landing dice **"sobre 25 personas"** en las cuatro tarjetas. Correcto ahí.
 - El sitio público **no** lo dice, y dice "por adulto". Tenerlo era un error:
   le decía a una familia de seis que no podía reservar.
-- El landing ofrece **cuatro** experiencias (Tradiciones $44.000 / Lo Pirque
-  $50.000 / Brasas $70.000 / Sommelier $90.000). El sitio público ofrece
+- El landing ofrece **cuatro** experiencias (Tradiciones $49.000 / Lo Pirque
+  $55.000 / Brasas $75.000 / Sommelier $95.000). El sitio público ofrece
   **dos** (Tradiciones $44.000 / A Brasas abiertas $70.000). Ver arriba.
+- **Los montos dejaron de coincidir entre los dos entregables** (2026-10-15).
+  El landing subió $5.000 en los cuatro niveles y ahora muestra el precio de
+  **pagar en el local**, que es el mismo que el sitio público pone en la cara
+  de atrás de sus tarjetas. El sitio público muestra al frente el de **pagar
+  por adelantado**. No es una inconsistencia: son las dos modalidades.
 
 **Supuesto sin confirmar:** que el mínimo de 25 no rige para venta directa.
 Se dedujo de que el producto en Shopify no muestra ningún mínimo. Si resulta
@@ -853,8 +889,6 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 
 ## Pendientes de contenido
 
-- **Condición de cada nivel de comisión** — 3 apariciones de
-  `[Placeholder: condición]` en los paneles de 5% / 10% / 15% del landing.
 - **Plataforma de newsletter** — el formulario de email tiene
   `onsubmit="return false;"` y ningún handler, así que **el email se descarta
   al enviar: hoy no captura nada**. Hay que resolver al menos la captura
