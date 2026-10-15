@@ -13,8 +13,8 @@
   --bg-panel:  #14120F;   /* panel apenas más cálido que el del landing */
   --bg-raise:  #1B1814;
   --ink:       #F4F0E6;
-  --ink-dim:   rgba(244,240,230,0.74);
-  --ink-faint: rgba(244,240,230,0.52);
+  --ink-dim:   rgba(244,240,230,0.80);
+  --ink-faint: rgba(244,240,230,0.57);
   --gold:      #C9A227;
   --gold-soft: rgba(201,162,39,0.45);
   --gold-wash: rgba(201,162,39,0.14);  /* fondo dorado apenas insinuado */
