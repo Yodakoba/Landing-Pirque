@@ -373,6 +373,42 @@ sistema propio: **Shopify cobra, nosotros agendamos.** El código vive en
 `backend/` y corre en Google Apps Script, pegado a una planilla del cliente.
 Ver `backend/README.md`.
 
+**La razón del descarte, anotada el 2026-10-15 porque no estaba escrita en
+ninguna parte:** Cowlendar no tiene un widget integrable al 100% con el
+diseño del sitio, ni una API integrable al 100% —según el agente de Shopify
+del cliente—, y el cliente no encontró ninguna otra app de reservas que
+cumpliera el requisito de integrarse por API.
+
+Vale la pena tenerlo presente porque **ese criterio no es sobre Cowlendar, es
+sobre todas las apps de reservas**: el sitio es estático, con identidad
+visual propia y la regla de cero JS para interfaz. Un widget de terceros en
+medio de `reservas.html` rompe las tres cosas. Así que la pregunta "¿y si
+mejor instalamos una app?" ya está contestada, y seguirá contestada mientras
+el requisito sea integración por API — salvo que aparezca una app que la dé
+de verdad, cosa que conviene volver a mirar antes de pagar por cualquiera.
+
+### La costura con el backend, que es lo que mantiene abiertas las puertas
+
+El sitio habla con el backend por **un solo punto**: `CONFIG.backend`, una URL
+que devuelve JSON. Y de esa respuesta consume **tres campos y nada más**:
+
+```
+{ fecha, quedan, pocos }     más un campo `error` si algo falló
+```
+
+Eso significa que **cambiar de backend es cambiar esa URL** —más permitir
+CORS en el nuevo endpoint—, sin tocar una línea del sitio. Conviene no
+engordar ese contrato sin pensarlo: cada campo que se agregue es un campo que
+cualquier reemplazo futuro tendrá que imitar.
+
+Por lo mismo, cada línea del carrito sigue mandando `_cowlendar_date` además
+de `_booking_date`, aunque hoy no la lea nadie. No es código muerto: es la
+puerta cableada por si alguna vez se vuelve a una app de reservas.
+
+**El momento más barato para cambiar de backend es antes de difundir el
+sitio**, que es cuando no hay reservas reales que migrar ni plata en juego.
+Después sigue siendo posible; deja de ser gratis.
+
 El reparto queda así:
 
 | | Quién |
