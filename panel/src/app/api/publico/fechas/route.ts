@@ -18,10 +18,10 @@
  * manejo de errores.
  */
 import { NextResponse } from 'next/server';
-import { leerReservas, leerFechas } from '@/lib/datos';
+import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { paraElSitio } from '@/lib/publico';
-import { hoy } from '@/lib/fechas';
+import { hoy, sumarDias } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';   // cupos vivos, nunca cacheados
 
@@ -42,11 +42,22 @@ export async function OPTIONS() {
 
 export async function GET() {
   try {
-    const [reservas, fechas] = await Promise.all([leerReservas(), leerFechas()]);
+    const [reservas, fechas, cfg] = await Promise.all([
+      leerReservas(), leerFechas(), leerConfig()
+    ]);
+
     // Un día que ya pasó no se ofrece, aunque siga abierto en la planilla.
-    const futuras = fechas.filter((f) => f.fecha >= hoy());
-    const dias = ocupacionDeTodos(reservas, futuras);
-    return NextResponse.json({ fechas: paraElSitio(dias) }, { headers: CORS });
+    // Y tampoco uno más lejano que el tope configurado: una fecha abierta
+    // por error a un año plazo no debería poder reservarse.
+    const desde = hoy();
+    const hasta = sumarDias(desde, cfg.diasAFuturo);
+    const ventana = fechas.filter((f) => f.fecha >= desde && f.fecha <= hasta);
+
+    const dias = ocupacionDeTodos(reservas, ventana, cfg.cortes);
+    return NextResponse.json(
+      { fechas: paraElSitio(dias, cfg.avisoPocosLugares) },
+      { headers: CORS }
+    );
   } catch (e) {
     // El mensaje real queda en el log de Vercel, no en la respuesta: este
     // endpoint es público y los errores de la API de Sheets nombran la

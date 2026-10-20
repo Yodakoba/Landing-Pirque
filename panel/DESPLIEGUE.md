@@ -134,6 +134,29 @@ Si algo no calza, lo arreglas en **un solo archivo**: `src/lib/columnas.ts`.
 
 ---
 
+## Los parámetros del negocio van en la planilla, no en Vercel
+
+El umbral de "quedan pocos lugares", el cupo normal de un día, la hora de
+apertura, qué días se abre, cuántos días adelante se ofrecen y los cortes del
+semáforo viven en una pestaña **`Config`** de la planilla, con filas
+`Clave` / `Valor`. Se editan desde **/config** en el panel.
+
+**Por qué ahí y no en una variable de entorno:** cambiar un 10 por un 8 no
+puede obligar a redesplegar. El backend de Apps Script ya lo resolvía así y
+estos son los mismos parámetros, no unos nuevos.
+
+**No hay que crear la pestaña a mano.** Si no existe, el panel usa los
+valores de siempre y la crea la primera vez que se guarda algo.
+
+Lo escrito ahí se valida antes de usarse, y eso es visible: un cupo en cero
+o un corte amarillo por encima del rojo se ignoran y vuelven al valor de
+siempre, porque un parámetro imposible no puede dejar el panel sin dibujar.
+Si guardas un cero y ves que vuelve a 60, es eso.
+
+Lo único que **no** se cambia desde el panel es la clave de acceso: vive en
+Vercel. Guardarla en la planilla sería dejar la contraseña del panel en un
+documento compartido.
+
 ## Antes de empujar un cambio
 
 **Corre esto, siempre:**

@@ -18,24 +18,12 @@
  * imitar, así que conviene no engordarlo.
  */
 import type { Ocupacion } from './tipos.ts';
+import { POR_DEFECTO } from './config.ts';
 
 export interface FechaPublica {
   fecha: string;
   quedan: number;
   pocos: boolean;
-}
-
-/**
- * El umbral para "quedan pocos lugares".
- *
- * El 10 no es inventado: es el `aviso_pocos_lugares` que ya traía el
- * backend de Apps Script. Se puede cambiar con AVISO_POCOS_LUGARES sin
- * tocar código, porque es un parámetro del negocio y no una constante
- * técnica.
- */
-export function umbralPocos(): number {
-  const n = Number(process.env.AVISO_POCOS_LUGARES);
-  return Number.isFinite(n) && n >= 0 ? n : 10;
 }
 
 /**
@@ -45,7 +33,13 @@ export function umbralPocos(): number {
  * "quedan 0": simplemente no está, porque el calendario del sitio solo
  * dibuja lo que se puede reservar y un cero invita a intentarlo.
  */
-export function paraElSitio(dias: Ocupacion[], umbral = umbralPocos()): FechaPublica[] {
+export function paraElSitio(
+  dias: Ocupacion[],
+  // El umbral lo pasa la ruta, sacado de la pestaña Config de la planilla.
+  // El valor por defecto es solo el respaldo de cuando esa pestaña no
+  // existe; vive en config.ts y no duplicado acá.
+  umbral = POR_DEFECTO.avisoPocosLugares
+): FechaPublica[] {
   const salida: FechaPublica[] = [];
   for (const d of dias) {
     if (d.bloqueada) continue;

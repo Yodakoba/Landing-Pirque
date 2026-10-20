@@ -73,12 +73,16 @@ export function hoy(): Fecha {
  * Los próximos días que caen en sábado o domingo, empezando por `desde`
  * inclusive. El horario base del negocio son esos dos días desde las 13h.
  */
-export function proximosFinesDeSemana(desde: Fecha, cuantos: number): Fecha[] {
+export function proximosFinesDeSemana(
+  desde: Fecha, cuantos: number, diasAbiertos: number[] = [6, 0]
+): Fecha[] {
   const salida: Fecha[] = [];
+  // Si lo que llega no sirve se usan sábado y domingo, en vez de devolver
+  // una lista vacía que dejaría el panel sin ningún día que mostrar.
+  const abre = diasAbiertos.length ? diasAbiertos : [6, 0];
   for (let i = 0; salida.length < cuantos && i < 400; i++) {
     const f = sumarDias(desde, i);
-    const d = diaSemana(f);
-    if (d === 6 || d === 0) salida.push(f);
+    if (abre.includes(diaSemana(f))) salida.push(f);
   }
   return salida;
 }

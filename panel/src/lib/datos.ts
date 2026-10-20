@@ -9,13 +9,15 @@
  * continuo— pero es real. Por eso las reservas creadas acá llevan un id
  * MANUAL-<timestamp>: no pueden chocar con los ids numéricos de Shopify.
  */
-import { leerHoja, agregarFila, escribirFila, borrarFila } from './sheets.ts';
+import { leerHoja, agregarFila, escribirFila, borrarFila, escribirBloque } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
   indices, faltantes
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { filaReserva, filaFecha } from './filas.ts';
+import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
+         type Config } from './config.ts';
 import { esFecha } from './fechas.ts';
 
 const num = (v: unknown): number => {
@@ -147,4 +149,26 @@ export async function diagnostico() {
       filas: Math.max(0, fec.length - 1)
     }
   };
+}
+
+/* ---------- Configuración ---------- */
+
+/**
+ * Los parámetros del negocio.
+ *
+ * **Si la pestaña `Config` no existe, devuelve los valores por defecto en
+ * vez de fallar.** Es deliberado: el panel tiene que arrancar contra una
+ * planilla recién creada, y esa pestaña solo hace falta para cambiar algo.
+ */
+export async function leerConfig(): Promise<Config> {
+  try {
+    return leerConfigDe(await leerHoja(HOJA_CONFIG));
+  } catch {
+    return POR_DEFECTO;
+  }
+}
+
+/** Reescribe la pestaña entera, creándola si hace falta. */
+export async function guardarConfig(c: Config): Promise<void> {
+  await escribirBloque(HOJA_CONFIG, aFilasConfig(c));
 }

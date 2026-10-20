@@ -5,6 +5,7 @@
 import type { Reserva, FechaHabil, Ocupacion, Semaforo } from './tipos.ts';
 import { TIPO_PAGO, ESTADO_PAGO, estaCerrado } from './columnas.ts';
 import type { Fecha } from './fechas.ts';
+import { POR_DEFECTO } from './config.ts';
 
 /**
  * Los cortes del semáforo, como fracción de la capacidad.
@@ -13,13 +14,21 @@ import type { Fecha } from './fechas.ts';
  * pero el rojo empieza antes: a 51 de 60 ya no caben dos familias, y eso es
  * lo que hay que ver de un vistazo.
  */
-export const CORTES = { amarillo: 0.6, rojo: 0.85 };
+export const CORTES = POR_DEFECTO.cortes;
 
-export function semaforo(tomadas: number, capacidad: number): Semaforo {
+/**
+ * Los cortes entran como parámetro con un valor por defecto, no como
+ * constante leída de adentro: así esto sigue siendo una función pura que se
+ * prueba con cortes de mentira, y el panel puede pasarle los de la planilla
+ * sin que este archivo sepa que existe una planilla.
+ */
+export function semaforo(
+  tomadas: number, capacidad: number, cortes = CORTES
+): Semaforo {
   if (capacidad <= 0) return 'rojo';
   const r = tomadas / capacidad;
-  if (r >= CORTES.rojo) return 'rojo';
-  if (r >= CORTES.amarillo) return 'amarillo';
+  if (r >= cortes.rojo) return 'rojo';
+  if (r >= cortes.amarillo) return 'amarillo';
   return 'verde';
 }
 
@@ -44,7 +53,8 @@ export function deEseDia(reservas: Reserva[], fecha: Fecha): Reserva[] {
  */
 export function ocupacionDe(
   reservas: Reserva[],
-  dia: FechaHabil
+  dia: FechaHabil,
+  cortes = CORTES
 ): Ocupacion {
   const delDia = deEseDia(reservas, dia.fecha).filter(ocupaLugar);
 
@@ -67,7 +77,7 @@ export function ocupacionDe(
     quedan: Math.max(0, dia.capacidad - tomadas),
     online,
     local,
-    semaforo: bloqueada ? 'rojo' : semaforo(tomadas, dia.capacidad),
+    semaforo: bloqueada ? 'rojo' : semaforo(tomadas, dia.capacidad, cortes),
     bloqueada,
     notas: dia.notas || ''
   };
@@ -75,7 +85,8 @@ export function ocupacionDe(
 
 export function ocupacionDeTodos(
   reservas: Reserva[],
-  dias: FechaHabil[]
+  dias: FechaHabil[],
+  cortes = CORTES
 ): Ocupacion[] {
-  return dias.map((d) => ocupacionDe(reservas, d));
+  return dias.map((d) => ocupacionDe(reservas, d, cortes));
 }

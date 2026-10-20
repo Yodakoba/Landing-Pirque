@@ -9,10 +9,12 @@
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona } from './fechas.ts';
-import { paraElSitio, umbralPocos } from './publico.ts';
+import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
          camposDeShopify, type PedidoShopify } from './shopify.ts';
 import { ESTADO_PAGO } from './columnas.ts';
+import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
+         POR_DEFECTO, CLAVES } from './config.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
@@ -189,8 +191,8 @@ ok(lleno.quedan === 10 && lleno.pocos === true, 'con 10 de 60 libres, "pocos" se
 const vacio = pub.find((f) => f.fecha === '2026-11-21')!;
 ok(vacio.quedan === 60 && vacio.pocos === false, 'y con el dia entero libre, no');
 ok(paraElSitio(ocu, 0).every((f) => !f.pocos), 'el umbral manda: en cero, nunca hay "pocos"');
-ok(umbralPocos() === 10,
-   'por defecto son 10 lugares, que es el aviso_pocos_lugares del backend viejo');
+ok(paraElSitio(ocu)[0].pocos === true,
+   'sin umbral explicito se usa el de config.ts, que son los 10 del backend viejo');
 
 /* ---------- "hoy" es hoy en Chile, no donde corra el codigo ---------- */
 // 02:00 UTC del 21 son las 23:00 del 20 en Santiago. Con la zona del
@@ -283,6 +285,77 @@ ok(!('asistencia' in campos),
 ok(!('creada' in campos), 'ni "creada": cuando entro el pedido no cambia');
 ok('estadoPago' in campos && 'personas' in campos,
    'pero si actualiza lo suyo, como el estado de pago y las personas');
+
+/* ---------- la configuracion, que la escribe una persona a mano ---------- */
+const cfg = (filas: string[][]) => leerConfigDe([['Clave', 'Valor'], ...filas]);
+
+// Sin pestana Config el panel tiene que funcionar igual.
+let c = leerConfigDe([]);
+ok(c.avisoPocosLugares === 10 && c.cupoNormal === 60 && c.horaApertura === '13:00',
+   'sin la pestana Config se usan los valores del backend viejo');
+ok(c.diasAbiertos.join(',') === '6,0', 'y los dias son sabado y domingo');
+
+c = cfg([[CLAVES.avisoPocosLugares, '8'], [CLAVES.cupoNormal, '80'],
+         [CLAVES.horaApertura, '12:30'], [CLAVES.diasAFuturo, '120']]);
+ok(c.avisoPocosLugares === 8 && c.cupoNormal === 80, 'lo escrito manda sobre el defecto');
+ok(c.horaApertura === '12:30' && c.diasAFuturo === 120, 'la hora y los dias a futuro tambien');
+
+// Las claves se buscan normalizadas: una tilde o una mayuscula no rompen nada.
+ok(cfg([['AVISO POCOS LUGARES', '5']]).avisoPocosLugares === 5,
+   'la clave se reconoce con espacios y en mayusculas');
+
+/* ---------- un valor malo NO puede dejar el panel sin dibujar ---------- */
+ok(cfg([[CLAVES.cupoNormal, '0']]).cupoNormal === 60,
+   'un cupo en CERO se ignora: dejaria todos los dias en rojo');
+ok(cfg([[CLAVES.cupoNormal, '-20']]).cupoNormal === 60, 'y uno negativo tambien');
+ok(cfg([[CLAVES.cupoNormal, 'sesenta']]).cupoNormal === 60, 'y una palabra');
+ok(cfg([[CLAVES.avisoPocosLugares, '']]).avisoPocosLugares === 10, 'y una celda vacia');
+ok(cfg([[CLAVES.horaApertura, '  ']]).horaApertura === '13:00',
+   'una hora en blanco vuelve al defecto en vez de quedar vacia');
+
+/* ---------- los cortes del semaforo ---------- */
+ok(cfg([[CLAVES.corteAmarillo, '50'], [CLAVES.corteRojo, '90']]).cortes.amarillo === 0.5,
+   'se acepta 50 como porcentaje, que es lo que alguien escribe en una planilla');
+ok(cfg([[CLAVES.corteAmarillo, '0.5'], [CLAVES.corteRojo, '0.9']]).cortes.rojo === 0.9,
+   'y tambien 0.9 como fraccion');
+ok(cfg([[CLAVES.corteAmarillo, '70%'], [CLAVES.corteRojo, '90%']]).cortes.amarillo === 0.7,
+   'y con el signo de porcentaje');
+
+// Esta es la que importa: al revés, el amarillo nunca se veria.
+c = cfg([[CLAVES.corteAmarillo, '90'], [CLAVES.corteRojo, '50']]);
+ok(c.cortes.amarillo === 0.6 && c.cortes.rojo === 0.85,
+   'amarillo por encima de rojo se IGNORA: el amarillo nunca se dibujaria');
+
+// Y que de verdad lleguen al semaforo.
+ok(semaforo(30, 60, { amarillo: 0.9, rojo: 0.95 }) === 'verde',
+   'con el corte en 90%, 30 de 60 todavia es verde');
+ok(semaforo(36, 60, { amarillo: 0.9, rojo: 0.95 }) === 'verde' &&
+   semaforo(36, 60) === 'amarillo',
+   'los mismos 36 de 60 son amarillos con los cortes de siempre y verdes con los otros');
+
+/* ---------- los dias de la semana como los escribe una persona ---------- */
+ok(aDiasSemana('sáb,dom')!.join(',') === '6,0', '"sáb,dom" con tilde');
+ok(aDiasSemana('sab, dom')!.join(',') === '6,0', 'y sin tilde, con espacio');
+ok(aDiasSemana('SÁBADO DOMINGO')!.join(',') === '6,0', 'y en mayusculas, completos');
+ok(aDiasSemana('viernes/sabado/domingo')!.join(',') === '5,6,0', 'y con barras');
+ok(aDiasSemana('sab,sab,dom')!.join(',') === '6,0', 'sin repetir');
+ok(aDiasSemana('cualquier cosa') === null, 'y si no se entiende ni uno, null');
+ok(cfg([[CLAVES.diasAbiertos, 'martes']]).diasAbiertos.join(',') === '2',
+   'abrir solo los martes es configurable, no esta cableado al fin de semana');
+ok(cfg([[CLAVES.diasAbiertos, 'xyz']]).diasAbiertos.join(',') === '6,0',
+   'y una basura vuelve a sabado y domingo en vez de dejar cero dias');
+
+ok(proximosFinesDeSemana('2026-11-16', 3, [1, 3]).join(',') ===
+   '2026-11-16,2026-11-18,2026-11-23',
+   'los dias que se ofrecen salen de la configuracion');
+
+/* ---------- ida y vuelta ---------- */
+const filas = aFilasConfig(POR_DEFECTO);
+ok(filas[0][0] === 'Clave' && filas[0][1] === 'Valor', 'se escribe con su encabezado');
+const vuelta = leerConfigDe(filas);
+ok(JSON.stringify(vuelta) === JSON.stringify(POR_DEFECTO),
+   'escribir y volver a leer devuelve exactamente lo mismo');
+ok(deDiasSemana([6, 0]) === 'sáb,dom', 'y los dias se guardan legibles');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

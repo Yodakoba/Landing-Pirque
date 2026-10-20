@@ -11,9 +11,7 @@ import type { FechaHabil } from '@/lib/tipos';
 import { proximosFinesDeSemana, hoy, enPalabras } from '@/lib/fechas';
 import { Aviso } from './CalendarView';
 import { ESTADO_DIA, estaCerrado } from '@/lib/columnas';
-
-const APERTURA = '13:00';
-const CAPACIDAD = 60;
+import { POR_DEFECTO, deDiasSemana, type Config } from '@/lib/config';
 
 export default function FechasHabilesManager() {
   const [fechas, setFechas] = useState<FechaHabil[] | null>(null);
@@ -28,19 +26,30 @@ export default function FechasHabilesManager() {
 
   useEffect(() => { cargar(); }, []);
 
+  // La configuración decide qué días se proponen, con qué cupo y a qué hora.
+  // Si no llega, se siguen usando los valores de respaldo en vez de dejar la
+  // pantalla vacía.
+  const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((d) => d.config && setCfg(d.config))
+      .catch(() => {});
+  }, []);
+
   // Los próximos fines de semana, más cualquier fecha de la hoja que se salga
   // de esa ventana (un feriado abierto a mano, por ejemplo).
   const filas = useMemo(() => {
     const porFecha = new Map((fechas ?? []).map((f) => [f.fecha, f]));
-    const base = proximosFinesDeSemana(hoy(), 10);
+    const base = proximosFinesDeSemana(hoy(), 10, cfg.diasAbiertos);
     const extra = (fechas ?? []).map((f) => f.fecha).filter((f) => !base.includes(f) && f >= hoy());
     return [...new Set([...base, ...extra])].sort().map(
       (f) => porFecha.get(f) ?? {
-        fecha: f, capacidad: 0, apertura: APERTURA,
+        fecha: f, capacidad: 0, apertura: cfg.horaApertura,
         estado: '', notas: '', fila: -1
       }
     );
-  }, [fechas]);
+  }, [fechas, cfg]);
 
   async function guardar(d: FechaHabil, cambios: Partial<FechaHabil>) {
     setGuardando(d.fecha);
@@ -68,8 +77,10 @@ export default function FechasHabilesManager() {
     <>
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">Fechas hábiles</h1>
       <p className="text-hueso/60 text-sm mb-6">
-        Por defecto se abre sábado y domingo desde las {APERTURA}. Las que dicen
-        «sin definir» todavía no están en la hoja.
+        Por defecto se abre {deDiasSemana(cfg.diasAbiertos)} desde
+        las {cfg.horaApertura}, con {cfg.cupoNormal} lugares. Las que dicen
+        «sin definir» todavía no están en la hoja.{' '}
+        <a href="/config" className="text-oro hover:underline">Cambiar</a>.
       </p>
 
       <div className="overflow-x-auto">
@@ -96,7 +107,7 @@ export default function FechasHabilesManager() {
                   </td>
                   <td className="py-2 pr-3">
                     <input type="number" min={0} step={1}
-                      defaultValue={sinDefinir ? CAPACIDAD : d.capacidad}
+                      defaultValue={sinDefinir ? cfg.cupoNormal : d.capacidad}
                       onBlur={(e) => {
                         const v = Number(e.target.value) || 0;
                         if (!sinDefinir && v === d.capacidad) return;
@@ -108,7 +119,7 @@ export default function FechasHabilesManager() {
                       className={ENTRADA} />
                   </td>
                   <td className="py-2 pr-3">
-                    <input type="text" defaultValue={d.apertura || APERTURA}
+                    <input type="text" defaultValue={d.apertura || cfg.horaApertura}
                       onBlur={(e) => e.target.value !== d.apertura &&
                         guardar(d, { apertura: e.target.value })}
                       className={ENTRADA} />
@@ -138,8 +149,8 @@ export default function FechasHabilesManager() {
                       <>
                         <button
                           onClick={() => guardar(d, {
-                            capacidad: sinDefinir ? CAPACIDAD : d.capacidad,
-                            apertura: d.apertura || APERTURA,
+                            capacidad: sinDefinir ? cfg.cupoNormal : d.capacidad,
+                            apertura: d.apertura || cfg.horaApertura,
                             estado: cerrada ? ESTADO_DIA.abierta : ESTADO_DIA.cerrada
                           })}
                           className="text-hueso/60 hover:text-oro">

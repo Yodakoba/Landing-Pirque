@@ -132,3 +132,38 @@ export async function borrarFila(hoja: string, fila: number): Promise<void> {
     }
   });
 }
+
+/**
+ * Crea una pestaña si no existe, y devuelve su título real.
+ *
+ * El panel la usa para la pestaña `Config`: así no hay que preparar nada a
+ * mano antes de guardar la configuración por primera vez. Es segura de
+ * repetir.
+ */
+export async function asegurarHoja(hoja: string): Promise<string> {
+  try {
+    return await nombreReal(hoja);
+  } catch {
+    await sheets().spreadsheets.batchUpdate({
+      spreadsheetId: idPlanilla(),
+      requestBody: { requests: [{ addSheet: { properties: { title: hoja } } }] }
+    });
+    titulos = null;          // el cache quedó viejo: ahora hay una pestaña más
+    return hoja;
+  }
+}
+
+/**
+ * Reescribe un bloque entero desde A1.
+ *
+ * Para tablas chicas y de tamaño fijo, como `Config`. No borra lo que
+ * quede más abajo, así que no sirve para una lista que se acorta.
+ */
+export async function escribirBloque(hoja: string, filas: unknown[][]): Promise<void> {
+  await sheets().spreadsheets.values.update({
+    spreadsheetId: idPlanilla(),
+    range: `'${await asegurarHoja(hoja)}'!A1`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: filas }
+  });
+}
