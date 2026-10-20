@@ -4,8 +4,39 @@ El panel es una aplicación Next.js. **No se copia ni se pega en ninguna
 parte**: se ejecuta en un servidor y le habla a la planilla por la API de
 Google Sheets.
 
-Esta guía usa **Vercel**, que es de los creadores de Next.js, tiene plan
-gratuito suficiente para esto y despliega desde GitHub con cada push.
+Esta guía usa **Vercel**, que es de los creadores de Next.js y despliega
+desde GitHub con cada push.
+
+> **Ojo con el plan.** El plan gratuito de Vercel (Hobby) es **solo para uso
+> personal no comercial**, y un panel de administración de un restaurante es
+> uso comercial. El plan Pro ronda los US$20 al mes por asiento. Conviene
+> confirmarlo en los términos de vercel.com antes de que el panel entre en
+> uso diario: es una cuenta que alguien paga todos los meses, y esa decisión
+> es del cliente, no técnica. La guía decía antes que el plan gratuito
+> alcanzaba; era un dato equivocado.
+
+---
+
+## Dónde vive cada cuenta
+
+Anotado porque es lo primero que no se encuentra cuando hay que arreglar algo
+meses después, y porque decide qué hay que rehacer si el proyecto cambia de
+manos.
+
+| Pieza | En qué cuenta | Al traspasar |
+|---|---|---|
+| La planilla y el Apps Script | la del cliente | nada que mover |
+| El proyecto de Google Cloud y la cuenta de servicio | **la del cliente** (decidido el 2026-10-16) | nada que mover |
+| Shopify y el dominio | la del cliente | nada que mover |
+| El repositorio de GitHub | la de quien desarrolla | **Transfer ownership**, que se lleva historia, PRs y discusiones, y deja redirecciones. Crear un repo nuevo y empujarle el código **no** es lo mismo: pierde los PRs, que en este proyecto son el registro de por qué las cosas están como están. |
+| El proyecto de Vercel | por definir | los proyectos se transfieren entre cuentas; ver la nota del plan más arriba |
+
+Que el proyecto de Google Cloud esté en la cuenta del cliente es a propósito:
+deja al robot donde ya viven la planilla y el Apps Script, así que el panel no
+depende de que exista la cuenta personal de quien lo construyó. La contra a
+asumir: **rotar la clave del robot necesita entrar a esa cuenta**, así que
+quien mantenga el panel tiene que tener acceso al proyecto de Cloud, o pedirlo
+cuando haga falta.
 
 ---
 
