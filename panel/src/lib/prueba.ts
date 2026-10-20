@@ -13,6 +13,7 @@ import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './colum
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
 import { filaReserva } from './filas.ts';
+import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
 
 let fallos = 0;
@@ -25,7 +26,7 @@ const r = (p: Partial<Reserva>): Reserva => ({
 });
 const dia = (p: Partial<FechaHabil>): FechaHabil => ({
   fecha: '2026-11-14', capacidad: 60, apertura: '13:00',
-  estado: 'Abierta', notas: '', fila: 2, ...p
+  estado: ESTADO_DIA.abierta, notas: '', fila: 2, ...p
 });
 
 /* ---------- semáforo ---------- */
@@ -101,6 +102,30 @@ ok(faltantes(sinTildes, COL_RESERVAS).length === 0,
 const malo = ['ID Orden','Fecha Reserva','Nombre','Personas'];
 ok(faltantes(malo, COL_RESERVAS).join(', ').includes('Tipo Pago'),
    'y si falta una columna de verdad, se dice cuál en vez de fallar callado');
+
+/* ---------- abierto o cerrado, que falla cerrando ---------- */
+ok(!estaCerrado('Activa'), '"Activa" abre: es lo que dicen las 24 filas de la planilla');
+ok(!estaCerrado('activa '), 'y no importan may\u00fasculas ni espacios de sobra');
+ok(!estaCerrado('Abierta'), '"Abierta" tambi\u00e9n: es lo que el panel escrib\u00eda antes');
+ok(!estaCerrado('H\u00e1bil'), 'ni las tildes');
+ok(!estaCerrado(''), 'la celda en BLANCO abre: la fila existe porque alguien puso ese dia');
+
+ok(estaCerrado('Cerrada'), '"Cerrada" cierra');
+ok(estaCerrado('Bloqueada'), '"Bloqueada" tambi\u00e9n, que es lo que se escrib\u00eda antes');
+ok(estaCerrado('Inactiva'), 'y "Inactiva"');
+
+// Esta es la prueba que importa, y la que antes fallaba.
+ok(estaCerrado('Cerado'), 'un ERROR DE TECLEO cierra el dia, no lo abre');
+ok(estaCerrado('no viene nadie'), 'y cualquier cosa que no reconozcamos, igual');
+
+// Los dos errores no cuestan lo mismo: un dia abierto leido como cerrado
+// pierde reservas y se ve en el panel; uno cerrado leido como abierto deja
+// entrar 60 personas a un dia que no abre, y se ve cuando llegan.
+let cerrado = ocupacionDe([], dia({ estado: 'Cerrada' }));
+ok(cerrado.bloqueada && cerrado.semaforo === 'rojo',
+   'un dia cerrado sale rojo aunque no tenga ni una reserva');
+cerrado = ocupacionDe([], dia({ estado: 'Qvzx' }));
+ok(cerrado.bloqueada, 'y una palabra sin sentido NO deja el dia recibiendo reservas');
 
 /* ---------- armar la fila que se escribe en la planilla ---------- */
 // El encabezado a propósito EN OTRO ORDEN que COL_RESERVAS: la fila tiene que

@@ -96,7 +96,9 @@ export async function leerFechas(): Promise<FechaHabil[]> {
       fecha,
       capacidad: num(en(f, i.capacidad)),
       apertura: String(en(f, i.apertura)) || '13:00',
-      estado: String(en(f, i.estado)) || 'Abierta',
+      // Se pasa tal cual lo que diga la celda, incluso en blanco: quien decide
+      // si eso es abierto o cerrado es estaCerrado(), en un solo lugar.
+      estado: String(en(f, i.estado)),
       notas: String(en(f, i.notas)),
       fila: n + 1
     });

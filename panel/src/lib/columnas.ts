@@ -63,6 +63,57 @@ export const ASISTENCIA = {
   noVino: 'No'
 } as const;
 
+/**
+ * El estado de un día en "Fechas Hábiles".
+ *
+ * **Abierta / Cerrada**, porque son opuestos de verdad. "Activa / Cerrada"
+ * no lo son, y "Abierta / Bloqueada" —lo que el panel escribía antes— suena
+ * a dos cosas distintas: bloqueado da a entender "reservado para otra cosa",
+ * no "no abre".
+ *
+ * Las 24 filas que trae la planilla dicen `Activa`. No se tocan y siguen
+ * funcionando, porque estaCerrado() reconoce las dos; lo que el panel escriba
+ * de aquí en adelante dirá `Abierta`.
+ */
+export const ESTADO_DIA = {
+  abierta: 'Abierta',
+  cerrada: 'Cerrada'
+} as const;
+
+/**
+ * Qué se reconoce como día abierto. Se comparan normalizados, así que
+ * `ACTIVA`, `activa ` y `Hábil` entran igual.
+ *
+ * Están los sinónimos que alguien puede escribir a mano, y los que el panel
+ * mismo escribía antes, para que las filas viejas sigan leéndose.
+ */
+const ABIERTOS = new Set([
+  'activa', 'activo', 'abierta', 'abierto', 'disponible', 'habil', 'si', 'ok'
+]);
+
+/**
+ * Si un día NO recibe reservas.
+ *
+ * **Falla cerrando, a propósito, y esa asimetría es la razón de que esto sea
+ * una función y no un `startsWith` repetido en dos archivos.** Antes se
+ * tomaba por cerrado solo lo que empezaba con "bloq", o sea que cualquier
+ * otra palabra caía en abierto: un `Cerrada`, un `Inactiva` o un error de
+ * tecleo dejaban el día recibiendo reservas.
+ *
+ * Los dos errores posibles no cuestan lo mismo. Un día abierto que se lee
+ * cerrado pierde reservas, y se nota en el panel. Un día cerrado que se lee
+ * abierto deja entrar hasta 60 personas a un día que no abre, y se nota
+ * cuando llegan. Por eso solo lo explícitamente reconocido abre.
+ *
+ * La celda **en blanco sí abre**: la fila existe porque alguien puso ese día
+ * en el calendario, y el estado vacío es "sin novedad", no "cerrado".
+ */
+export function estaCerrado(estado: unknown): boolean {
+  const e = normalizar(String(estado ?? ''));
+  if (e === '') return false;
+  return !ABIERTOS.has(e);
+}
+
 export type TipoPago = (typeof TIPO_PAGO)[keyof typeof TIPO_PAGO];
 
 /**

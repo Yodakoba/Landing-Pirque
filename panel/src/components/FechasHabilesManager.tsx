@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FechaHabil } from '@/lib/tipos';
 import { proximosFinesDeSemana, hoy, enPalabras } from '@/lib/fechas';
 import { Aviso } from './CalendarView';
+import { ESTADO_DIA, estaCerrado } from '@/lib/columnas';
 
 const APERTURA = '13:00';
 const CAPACIDAD = 60;
@@ -36,7 +37,7 @@ export default function FechasHabilesManager() {
     return [...new Set([...base, ...extra])].sort().map(
       (f) => porFecha.get(f) ?? {
         fecha: f, capacidad: 0, apertura: APERTURA,
-        estado: 'Sin definir', notas: '', fila: -1
+        estado: '', notas: '', fila: -1
       }
     );
   }, [fechas]);
@@ -86,7 +87,7 @@ export default function FechasHabilesManager() {
           <tbody>
             {filas.map((d) => {
               const sinDefinir = d.fila < 0;
-              const bloqueada = d.estado.toLowerCase().startsWith('bloq');
+              const cerrada = estaCerrado(d.estado);
               return (
                 <tr key={d.fecha} className="border-b border-hueso/5">
                   <td className="py-2 pr-3 capitalize">
@@ -99,7 +100,10 @@ export default function FechasHabilesManager() {
                       onBlur={(e) => {
                         const v = Number(e.target.value) || 0;
                         if (!sinDefinir && v === d.capacidad) return;
-                        guardar(d, { capacidad: v, estado: bloqueada ? d.estado : 'Abierta' });
+                        guardar(d, {
+                          capacidad: v,
+                          estado: cerrada ? d.estado : ESTADO_DIA.abierta
+                        });
                       }}
                       className={ENTRADA} />
                   </td>
@@ -113,8 +117,11 @@ export default function FechasHabilesManager() {
                     {sinDefinir ? (
                       <span className="text-hueso/40">sin definir</span>
                     ) : (
-                      <span className={bloqueada ? 'text-red-400' : 'text-emerald-400'}>
-                        {bloqueada ? 'Bloqueada' : 'Abierta'}
+                      <span className={cerrada ? 'text-red-400' : 'text-emerald-400'}>
+                        {/* Se muestra lo que dice la celda, no una etiqueta nuestra:
+                            si alguien escribió algo que no reconocemos, el día sale
+                            cerrado y conviene ver con qué palabra. */}
+                        {d.estado || ESTADO_DIA.abierta}
                       </span>
                     )}
                   </td>
@@ -133,10 +140,10 @@ export default function FechasHabilesManager() {
                           onClick={() => guardar(d, {
                             capacidad: sinDefinir ? CAPACIDAD : d.capacidad,
                             apertura: d.apertura || APERTURA,
-                            estado: bloqueada ? 'Abierta' : 'Bloqueada'
+                            estado: cerrada ? ESTADO_DIA.abierta : ESTADO_DIA.cerrada
                           })}
                           className="text-hueso/60 hover:text-oro">
-                          {sinDefinir ? 'Abrir' : bloqueada ? 'Desbloquear' : 'Bloquear'}
+                          {sinDefinir ? 'Abrir' : cerrada ? 'Abrir' : 'Cerrar'}
                         </button>
                         {!sinDefinir && (
                           <button onClick={() => quitar(d)}
