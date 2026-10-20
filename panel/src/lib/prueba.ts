@@ -18,7 +18,9 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
-import { filaReserva } from './filas.ts';
+import { filaReserva, buscarFilaPorId } from './filas.ts';
+import { firmaValida } from './firma.ts';
+import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
 
@@ -356,6 +358,55 @@ const vuelta = leerConfigDe(filas);
 ok(JSON.stringify(vuelta) === JSON.stringify(POR_DEFECTO),
    'escribir y volver a leer devuelve exactamente lo mismo');
 ok(deDiasSemana([6, 0]) === 'sáb,dom', 'y los dias se guardan legibles');
+
+/* ---------- la firma del webhook, que es lo unico que lo protege ---------- */
+// La URL del webhook es publica: sin esto, cualquiera que la descubra puede
+// mandar un POST y meter una reserva que descuente cupo de un dia real.
+const SECRETO = 'el-client-secret-de-la-app';
+const firmar = (cuerpo: string, secreto = SECRETO) =>
+  createHmac('sha256', secreto).update(cuerpo, 'utf8').digest('base64');
+
+const cuerpo = '{"id":1007,"financial_status":"paid"}';
+ok(firmaValida(cuerpo, firmar(cuerpo), SECRETO), 'una firma correcta pasa');
+ok(!firmaValida(cuerpo, firmar(cuerpo, 'otro-secreto'), SECRETO),
+   'firmada con OTRO secreto no pasa');
+ok(!firmaValida(cuerpo + ' ', firmar(cuerpo), SECRETO),
+   'un cuerpo con UN ESPACIO de mas no pasa: por eso se firma el texto crudo y no el JSON reserializado');
+ok(!firmaValida(cuerpo, 'no-es-base64-valido', SECRETO), 'una firma basura no pasa');
+ok(!firmaValida(cuerpo, '', SECRETO), 'sin firma no pasa');
+ok(!firmaValida(cuerpo, null, SECRETO), 'ni con la cabecera ausente');
+
+// La que de verdad importa: un despliegue al que se le olvido la variable.
+ok(!firmaValida(cuerpo, firmar(cuerpo), undefined),
+   'SIN SECRETO configurado NO pasa nada: se cierra, no se abre');
+ok(!firmaValida(cuerpo, firmar(cuerpo, ''), ''),
+   'y un secreto vacio tampoco abre la puerta');
+
+/* ---------- la idempotencia, porque Shopify REINTENTA ---------- */
+// Si esta busqueda falla, un reintento anota la misma reserva dos veces y
+// descuenta cupo dos veces de un dia real.
+const encR = ['ID Orden', 'Fecha Reserva', 'Nombre', 'Personas'];
+const hoja = [encR,
+  ['1007', '2026-11-14', 'Ana', '3'],
+  ['1008', '2026-11-15', 'Beto', '2'],
+  ['MANUAL-123', '2026-11-15', 'A mano', '4']];
+
+ok(buscarFilaPorId(hoja, encR, '1007') === 2, 'encuentra el pedido en su fila');
+ok(buscarFilaPorId(hoja, encR, 1008) === 3,
+   'y lo encuentra aunque el id venga como NUMERO: Shopify lo manda numerico');
+ok(buscarFilaPorId([encR, ['1007 ', 'x', 'y', 'z']], encR, '1007') === 2,
+   'y con espacios de sobra en la celda');
+ok(buscarFilaPorId(hoja, encR, '9999') === -1, 'un pedido nuevo no esta: se agrega');
+ok(buscarFilaPorId(hoja, encR, 'MANUAL-123') === 4,
+   'una reserva hecha a mano tambien se encuentra, por si llega a tener id de Shopify');
+
+// Un id vacio NO puede calzar con las filas que tampoco tienen id.
+ok(buscarFilaPorId([encR, ['', 'x', 'y', 'z']], encR, '') === -1,
+   'un id VACIO no calza con una fila sin id: esas son justo las que hay que ignorar');
+ok(buscarFilaPorId([encR], encR, '1007') === -1, 'una hoja con solo encabezado no revienta');
+ok(buscarFilaPorId([], [], '1007') === -1, 'ni una hoja vacia');
+ok(buscarFilaPorId(hoja, ['Otra', 'Cosa'], '1007') === -1,
+   'y si la planilla no tiene la columna ID Orden, no se inventa una fila');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

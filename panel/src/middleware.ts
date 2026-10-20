@@ -30,7 +30,14 @@ import { credencialValida } from './lib/auth.ts';
  * recortados en src/lib/publico.ts; ahí está escrito por qué y hay una
  * prueba que lo fija.
  */
-const PUBLICAS = ['/api/publico/fechas'];
+const PUBLICAS = [
+  // Las fechas que dibuja el calendario del sitio.
+  '/api/publico/fechas',
+  // El webhook de Shopify. Público por fuerza: Shopify no puede
+  // autenticarse con nuestra contraseña. Lo que lo protege es la firma
+  // HMAC, que se verifica dentro de la ruta; ver src/lib/firma.ts.
+  '/api/shopify/webhook'
+];
 
 export function middleware(req: NextRequest) {
   if (PUBLICAS.includes(req.nextUrl.pathname)) return NextResponse.next();

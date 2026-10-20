@@ -134,6 +134,62 @@ Si algo no calza, lo arreglas en **un solo archivo**: `src/lib/columnas.ts`.
 
 ---
 
+## Shopify: webhook más una tarea diaria
+
+Las reservas entran por dos caminos que se respaldan entre ellos.
+
+**El webhook** (`/api/shopify/webhook`) las anota en cuanto ocurren. Es
+público por fuerza —Shopify no puede autenticarse con la contraseña del
+panel— y lo único que lo protege es la **firma HMAC**, que se verifica con
+el *Client secret* de la app. Sin `SHOPIFY_WEBHOOK_SECRET` configurado la
+ruta rechaza todo: se cierra, no se abre.
+
+**La tarea diaria** (`/api/shopify/sincronizar`) le pregunta a Shopify por
+los pedidos de los últimos diez días y anota lo que falte. No reemplaza al
+webhook, lo respalda: recupera lo que se haya perdido por una caída, un
+despliegue a mitad de camino o un webhook que nunca se creó. Está en
+`vercel.json`.
+
+**Por qué las dos cosas y no solo consultar**, que es lo que hacía el Apps
+Script: en Vercel el plan gratuito **solo permite tareas una vez al día**,
+así que consultar cada 5 minutos necesitaría el plan Pro. Y **por qué las
+dos y no solo el webhook**: un webhook perdido no se recupera nunca.
+
+**Por qué ahora sí se puede usar un webhook**, cuando el Apps Script no
+podía: allá los Web Apps no dan acceso a las cabeceras de la petición, así
+que verificar la firma era imposible y cualquiera que descubriera la URL
+podía inventar reservas. En Vercel hay cabeceras. El impedimento era de la
+plataforma, no de la idea.
+
+### Las variables de Shopify
+
+| Variable | De dónde sale |
+|---|---|
+| `SHOPIFY_DOMINIO` | el `*.myshopify.com` de la tienda |
+| `SHOPIFY_ADMIN_TOKEN` | el token de la app, empieza en `shpat_` |
+| `SHOPIFY_VERSION` | `2026-10` (estable al 2026-10-20, soportada hasta oct. 2027) |
+| `SHOPIFY_WEBHOOK_SECRET` | el **Client secret** de la app, que es lo que firma |
+| `CRON_SECRET` | una cadena larga al azar, para la tarea programada |
+
+**El token de Admin API no se guarda en el repositorio ni viaja por una
+conversación.** Va del admin de Shopify al campo de Vercel y a ningún otro
+lugar: da acceso a pedidos y clientes. Es lo contrario del token de
+Storefront que el sitio lleva en un archivo público, que solo lee catálogo.
+
+Si el token existente se perdió, **antes de reinstalar la app** conviene
+mirar las propiedades del script del Apps Script viejo (Configuración del
+proyecto → Propiedades del script): `SHOPIFY_ADMIN_TOKEN` está ahí, visible.
+Reinstalar la app invalida el token actual, y el Apps Script lo está usando.
+
+### Crear los webhooks
+
+Tres tópicos —`orders/create`, `orders/updated` y `orders/cancelled`—
+apuntando a `https://<la-url>/api/shopify/webhook`. Basta `read_orders`:
+suscribirse a los webhooks de un recurso necesita su permiso de LECTURA, no
+de escritura. **No conviene pedir `write_orders`**: el panel solo lee, y un
+token que puede editar o cancelar pedidos reales es mucho más alcance del
+que hace falta.
+
 ## Los parámetros del negocio van en la planilla, no en Vercel
 
 El umbral de "quedan pocos lugares", el cupo normal de un día, la hora de

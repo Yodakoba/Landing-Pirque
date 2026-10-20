@@ -15,9 +15,10 @@ import {
   indices, faltantes
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
-import { filaReserva, filaFecha } from './filas.ts';
+import { filaReserva, filaFecha, buscarFilaPorId } from './filas.ts';
 import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
          type Config } from './config.ts';
+import { camposDeShopify } from './shopify.ts';
 import { esFecha } from './fechas.ts';
 
 const num = (v: unknown): number => {
@@ -171,4 +172,37 @@ export async function leerConfig(): Promise<Config> {
 /** Reescribe la pestaña entera, creándola si hace falta. */
 export async function guardarConfig(c: Config): Promise<void> {
   await escribirBloque(HOJA_CONFIG, aFilasConfig(c));
+}
+
+/* ---------- Guardar un pedido de Shopify ---------- */
+
+/**
+ * Anota o actualiza la reserva de un pedido, buscándola por `ID Orden`.
+ *
+ * **Es idempotente, y eso no es un lujo: Shopify REINTENTA.** Si nuestra
+ * respuesta tarda o falla, manda el mismo webhook otra vez, y además
+ * `orders/updated` llega cada vez que el pedido cambia. Sin buscar primero,
+ * la misma reserva se anotaría dos, tres o diez veces, y cada copia
+ * descontaría cupo de un día real.
+ *
+ * Al actualizar solo se escriben las columnas de Shopify: la asistencia que
+ * alguien marcó a mano no se pisa. Ver `camposDeShopify()`.
+ *
+ * Devuelve qué pasó, para poder contarlo en el registro sin tener que
+ * adivinarlo después.
+ */
+export async function guardarPedido(
+  r: Omit<Reserva, 'fila'>
+): Promise<'creada' | 'actualizada'> {
+  const filas = await leerHoja(HOJA_RESERVAS);
+  const enc = filas[0] ?? [];
+  const fila = buscarFilaPorId(filas, enc, r.id);
+
+  if (fila > 1) {
+    await escribirFila(HOJA_RESERVAS, fila,
+      filaReserva(enc, camposDeShopify(r), filas[fila - 1]));
+    return 'actualizada';
+  }
+  await agregarFila(HOJA_RESERVAS, filaReserva(enc, r));
+  return 'creada';
 }
