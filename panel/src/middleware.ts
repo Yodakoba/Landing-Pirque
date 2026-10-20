@@ -22,7 +22,19 @@ import { credencialValida } from './lib/auth.ts';
  * Si algún día hacen falta cuentas separadas o un registro de quién tocó
  * qué, esto se reemplaza por Auth.js. Para hoy sería desproporcionado.
  */
+/**
+ * La única ruta pública del panel: la que consume el sitio.
+ *
+ * Está exenta a mano y no por un patrón, para que agregar una ruta nueva
+ * no la deje expuesta por accidente. Lo que devuelve son tres campos
+ * recortados en src/lib/publico.ts; ahí está escrito por qué y hay una
+ * prueba que lo fija.
+ */
+const PUBLICAS = ['/api/publico/fechas'];
+
 export function middleware(req: NextRequest) {
+  if (PUBLICAS.includes(req.nextUrl.pathname)) return NextResponse.next();
+
   const usuario = process.env.PANEL_USUARIO;
   const clave = process.env.PANEL_CLAVE;
 
@@ -51,5 +63,10 @@ export const config = {
   // Todo el panel, incluidas las rutas de API y /api/diagnostico, que
   // muestra la estructura de la planilla. Quedan fuera solo los archivos
   // internos de Next y el favicon.
+  //
+  // El endpoint del sitio NO se excluye acá sino dentro de middleware(),
+  // en PUBLICAS: así sigue pasando por esta función y la lista de lo
+  // abierto se lee en un solo lugar, en vez de quedar escondida en una
+  // expresión regular.
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
 };

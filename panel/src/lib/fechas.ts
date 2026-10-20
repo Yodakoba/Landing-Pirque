@@ -30,14 +30,43 @@ export function sumarDias(f: Fecha, n: number): Fecha {
   ].join('-');
 }
 
-/** Hoy en la zona del servidor, como texto. */
+/**
+ * La zona del negocio. "Hoy" en este proyecto significa siempre hoy en
+ * Pirque, no donde corra el código.
+ */
+export const ZONA = 'America/Santiago';
+
+/**
+ * Qué día es un instante dado, en una zona dada.
+ *
+ * Se arma con Intl y no con los métodos de Date porque esos usan la zona
+ * de la máquina. Es una función aparte de hoy() para poder probarla con
+ * un instante fijo: con "ahora" no hay prueba posible.
+ */
+export function fechaEnZona(instante: Date, zona = ZONA): Fecha {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(instante);
+  const p = (t: string) => partes.find((x) => x.type === t)?.value ?? '';
+  return `${p('year')}-${p('month')}-${p('day')}`;
+}
+
+/**
+ * Hoy en Chile, como texto.
+ *
+ * **No es la zona del servidor, y esa diferencia es un error que ya
+ * estaba.** El panel corre en Vercel, o sea en UTC, y Chile va tres o
+ * cuatro horas atrás: desde las 21:00 en Pirque el servidor ya cree que es
+ * mañana. Con la zona del servidor, /api/ocupacion dejaba de mostrar el
+ * día de hoy a partir de esa hora —justo la tarde de un sábado, que es
+ * cuando se mira— y el endpoint del sitio dejaba de ofrecerlo.
+ *
+ * Es el mismo error de huso que el encabezado de este archivo advierte,
+ * entrando por otra puerta: no por convertir una fecha a Date, sino por
+ * preguntarle a Date qué día es hoy.
+ */
 export function hoy(): Fecha {
-  const x = new Date();
-  return [
-    x.getFullYear(),
-    String(x.getMonth() + 1).padStart(2, '0'),
-    String(x.getDate()).padStart(2, '0')
-  ].join('-');
+  return fechaEnZona(new Date());
 }
 
 /**

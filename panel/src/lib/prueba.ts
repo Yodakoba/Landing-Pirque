@@ -6,9 +6,10 @@
  * Cubre lo que puede romperse en silencio: el semáforo, qué reserva ocupa
  * lugar, el escape del CSV y el calce de los encabezados de la planilla.
  */
-import { semaforo, ocupacionDe, ocupaLugar, CORTES } from './ocupacion.ts';
+import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
-import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras } from './fechas.ts';
+import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona } from './fechas.ts';
+import { paraElSitio, umbralPocos } from './publico.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
@@ -155,6 +156,50 @@ const encCorto = ['ID Orden','Fecha Reserva','Personas'];
 f = filaReserva(encCorto, { asistencia: ASISTENCIA.vino, personas: 2 });
 ok(f.length === 3 && f[2] === 2,
    'si la planilla no tiene la columna Asistencia, se escribe el resto igual');
+
+/* ---------- lo que se le manda al SITIO, que es una frontera ---------- */
+// Al otro lado de esto no hay contrasena: lo pide cualquiera en internet.
+const ocu = ocupacionDeTodos(
+  [ r({ fecha: '2026-11-14', personas: 50 }),
+    r({ fecha: '2026-11-15', personas: 60 }) ],
+  [ dia({ fecha: '2026-11-14' }),
+    dia({ fecha: '2026-11-15' }),
+    dia({ fecha: '2026-11-21' }),
+    dia({ fecha: '2026-11-22', estado: 'Cerrada' }) ]
+);
+const pub = paraElSitio(ocu, 10);
+
+ok(pub.length === 2, 'el dia LLENO y el CERRADO no se mandan: el sitio solo dibuja lo reservable');
+ok(pub.every((f) => f.fecha !== '2026-11-15'), 'el lleno no va como "quedan 0", va ausente');
+ok(pub.every((f) => f.fecha !== '2026-11-22'), 'y el cerrado tampoco aparece');
+
+// LA prueba de esta frontera: tres campos y nada mas.
+const llaves = Object.keys(pub[0]).sort().join(',');
+ok(llaves === 'fecha,pocos,quedan',
+   `al sitio van exactamente fecha, quedan y pocos — y fueron: ${llaves}`);
+ok(!('capacidad' in pub[0]) && !('tomadas' in pub[0]) && !('online' in pub[0]) &&
+   !('local' in pub[0]) && !('notas' in pub[0]) && !('semaforo' in pub[0]),
+   'NO se filtra el tamano del local, cuanta gente reservo, cuanto pago ni las notas internas');
+
+const lleno = pub.find((f) => f.fecha === '2026-11-14')!;
+ok(lleno.quedan === 10 && lleno.pocos === true, 'con 10 de 60 libres, "pocos" se enciende');
+const vacio = pub.find((f) => f.fecha === '2026-11-21')!;
+ok(vacio.quedan === 60 && vacio.pocos === false, 'y con el dia entero libre, no');
+ok(paraElSitio(ocu, 0).every((f) => !f.pocos), 'el umbral manda: en cero, nunca hay "pocos"');
+ok(umbralPocos() === 10,
+   'por defecto son 10 lugares, que es el aviso_pocos_lugares del backend viejo');
+
+/* ---------- "hoy" es hoy en Chile, no donde corra el codigo ---------- */
+// 02:00 UTC del 21 son las 23:00 del 20 en Santiago. Con la zona del
+// servidor el panel perdia el dia de hoy desde las 21:00, justo la tarde
+// de un sabado.
+const nocheEnChile = new Date('2026-10-21T02:00:00Z');
+ok(fechaEnZona(nocheEnChile, 'America/Santiago') === '2026-10-20',
+   'a las 23:00 en Pirque sigue siendo el dia 20');
+ok(fechaEnZona(nocheEnChile, 'UTC') === '2026-10-21',
+   'y en UTC ya es el 21: por eso no se puede usar la zona del servidor');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(fechaEnZona(new Date())),
+   'y el formato sigue siendo AAAA-MM-DD');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
