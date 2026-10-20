@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { leerReservas, crearReserva } from '@/lib/datos';
+import { ASISTENCIA } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
@@ -27,7 +28,10 @@ export async function POST(req: Request) {
       telefono: b.telefono ?? '', menu: b.menu ?? '', personas: Number(b.personas),
       // El monto queda en blanco a propósito: los precios viven en Shopify y
       // en el sitio. Que el panel los fije sería una segunda verdad.
-      monto: null, tipoPago: b.tipoPago ?? '', estadoPago: b.estadoPago ?? ''
+      monto: null, tipoPago: b.tipoPago ?? '', estadoPago: b.estadoPago ?? '',
+      // Sin marcar: a una reserva que se acaba de crear todavía no se le
+      // puede saber si la persona apareció.
+      asistencia: ASISTENCIA.sinMarcar
     });
     return NextResponse.json({ id });
   } catch (e) {
