@@ -29,7 +29,9 @@ export function semaforo(tomadas: number, capacidad: number): Semaforo {
  */
 export function ocupaLugar(r: Reserva): boolean {
   const e = String(r.estadoPago || '').trim().toLowerCase();
-  return e !== ESTADO_PAGO.reembolsado && e !== ESTADO_PAGO.anulado;
+  return e !== ESTADO_PAGO.reembolsado &&
+         e !== ESTADO_PAGO.anulado &&
+         e !== ESTADO_PAGO.cancelado;
 }
 
 export function deEseDia(reservas: Reserva[], fecha: Fecha): Reserva[] {

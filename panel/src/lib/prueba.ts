@@ -10,6 +10,9 @@ import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './o
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona } from './fechas.ts';
 import { paraElSitio, umbralPocos } from './publico.ts';
+import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
+         camposDeShopify, type PedidoShopify } from './shopify.ts';
+import { ESTADO_PAGO } from './columnas.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
@@ -200,6 +203,86 @@ ok(fechaEnZona(nocheEnChile, 'UTC') === '2026-10-21',
    'y en UTC ya es el 21: por eso no se puede usar la zona del servidor');
 ok(/^\d{4}-\d{2}-\d{2}$/.test(fechaEnZona(new Date())),
    'y el formato sigue siendo AAAA-MM-DD');
+
+/* ---------- traducir un pedido de Shopify a una fila ---------- */
+const linea = (t: string, cant: number, variante = 'Pago directo', fecha = '2026-11-14') => ({
+  title: t, variant_title: variante, quantity: cant,
+  properties: [{ name: '_booking_date', value: fecha },
+               { name: '_cowlendar_date', value: fecha }]
+});
+const pedido = (p: Partial<PedidoShopify> = {}): PedidoShopify => ({
+  id: 1007, name: '#1007', email: 'ana@x.cl', total_price: '107000',
+  created_at: '2026-10-20T15:04:00-03:00', financial_status: 'paid',
+  line_items: [linea('Tradiciones', 2), linea('Menú de niños', 1)], ...p
+});
+
+let res = aReserva(pedido())!;
+ok(res !== null, 'un pedido con _booking_date es una reserva');
+ok(res.fecha === '2026-11-14', 'la fecha sale de _booking_date, no de cuando se compro');
+ok(res.personas === 3, 'personas son adultos MAS ninos: el cupo son personas totales');
+ok(res.menu === 'Tradiciones', 'el menu de ninos no entra en la columna Menu');
+ok(res.monto === 107000 && res.estadoPago === ESTADO_PAGO.pagado, 'monto y estado');
+ok(res.asistencia === '', 'la asistencia nace en blanco: la marca una persona, no Shopify');
+
+// Lo que NO es una reserva.
+ok(aReserva(pedido({ line_items: [{ title: 'Polera', quantity: 1 }] })) === null,
+   'un pedido SIN _booking_date no es una reserva y se ignora');
+ok(aReserva(pedido({ line_items: [] })) === null, 'ni un pedido sin lineas');
+ok(aReserva(pedido({ line_items: [linea('Tradiciones', 2, 'Pago directo', 'no-es-fecha')] })) === null,
+   'ni una fecha con basura: mejor ignorarlo que descontar cupo de un dia inventado');
+
+/* ---------- el estado, donde una cancelacion gana ---------- */
+ok(estadoDe(pedido({ financial_status: 'paid' })) === ESTADO_PAGO.pagado, 'paid es pagado');
+ok(estadoDe(pedido({ financial_status: 'pending' })) === ESTADO_PAGO.pendiente, 'pending, pendiente');
+ok(estadoDe(pedido({ financial_status: 'authorized' })) === ESTADO_PAGO.pendiente,
+   'authorized cuenta como PENDIENTE: la tarjeta esta retenida pero la plata no se cobro');
+ok(estadoDe(pedido({ financial_status: 'partially_paid' })) === ESTADO_PAGO.pendiente,
+   'un pago a medias tampoco esta pagado');
+ok(estadoDe(pedido({ financial_status: 'refunded' })) === ESTADO_PAGO.reembolsado, 'refunded');
+
+// Esta es la que importa: un pedido anulado CONSERVA su financial_status.
+const anulado = pedido({ financial_status: 'paid', cancelled_at: '2026-10-20T18:00:00-03:00' });
+ok(estadoDe(anulado) === ESTADO_PAGO.cancelado,
+   'una cancelacion gana sobre el estado de pago, aunque siga diciendo "paid"');
+ok(!ocupaLugar(r({ estadoPago: estadoDe(anulado) })),
+   'y por eso libera el cupo de inmediato, sin esperar a que alguien procese la devolucion');
+
+/* ---------- el telefono, que no esta donde uno creeria ---------- */
+ok(telefonoDe(pedido({ phone: '', billing_address: { phone: '+56 9 1111 1111' } }))
+   === '+56 9 1111 1111',
+   'el telefono sale de billing_address: el checkout lo pide DENTRO de la direccion');
+ok(telefonoDe(pedido({ phone: '', billing_address: null, shipping_address: { phone: '+56 9 2222 2222' } }))
+   === '+56 9 2222 2222', 'y si no, de shipping_address');
+ok(telefonoDe(pedido({ phone: '' })) === '', 'y si no hay en ninguna parte, queda vacio sin reventar');
+
+/* ---------- el pedido censurado por falta de permiso ---------- */
+// Confirmado contra la tienda el 2026-10-14 con el pedido #1007: la censura
+// OMITE las llaves, no las pone en null. shipping_address si vino en null,
+// que es correcto porque una reserva no tiene envio.
+const censurado = pedido({
+  email: undefined, phone: undefined,
+  customer: {}, billing_address: {}, shipping_address: null
+});
+res = aReserva(censurado)!;
+ok(res !== null, 'un pedido censurado SIGUE siendo una reserva: la fecha y las lineas estan');
+ok(res.nombre === '' && res.email === '' && res.telefono === '',
+   'solo quedan vacios nombre, correo y telefono, que es lo que Shopify censura');
+ok(res.personas === 3 && res.monto === 107000,
+   'y lo que de verdad hace falta para el cupo llega igual');
+
+/* ---------- la modalidad comprada, que delata una regla caida ---------- */
+res = aReserva(pedido({ financial_status: 'pending',
+  line_items: [linea('Tradiciones', 2, 'Pago directo')] }))!;
+ok(res.tipoPago === 'Pago directo' && res.estadoPago === ESTADO_PAGO.pendiente,
+   '"Pago directo" + "pending" queda anotado tal cual: es como se ve que la regla de Shopify no aplico');
+
+/* ---------- lo que el sincronizador NO toca ---------- */
+const campos = camposDeShopify(aReserva(pedido())!);
+ok(!('asistencia' in campos),
+   'Shopify NO escribe la asistencia: pisarla borraria el no-show marcado a mano');
+ok(!('creada' in campos), 'ni "creada": cuando entro el pedido no cambia');
+ok('estadoPago' in campos && 'personas' in campos,
+   'pero si actualiza lo suyo, como el estado de pago y las personas');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

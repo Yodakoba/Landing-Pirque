@@ -45,12 +45,21 @@ export const TIPO_PAGO = {
   local: 'Solo reserva'
 } as const;
 
-/** El `financial_status` de Shopify, tal cual. */
+/**
+ * El `financial_status` de Shopify, tal cual —la columna se llama "Estado
+ * Pago Shopify", así que lleva el código de Shopify y no una traducción.
+ *
+ * `cancelado` no es un financial_status: un pedido anulado en Shopify
+ * conserva el suyo (puede quedar en `paid` y reembolsarse después). Se
+ * escribe aparte para que una cancelación libere el cupo de inmediato, sin
+ * esperar a que alguien procese la devolución.
+ */
 export const ESTADO_PAGO = {
   pagado: 'paid',
   pendiente: 'pending',
   reembolsado: 'refunded',
-  anulado: 'voided'
+  anulado: 'voided',
+  cancelado: 'cancelled'
 } as const;
 
 /**
