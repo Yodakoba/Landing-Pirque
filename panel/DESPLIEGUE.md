@@ -4,8 +4,39 @@ El panel es una aplicación Next.js. **No se copia ni se pega en ninguna
 parte**: se ejecuta en un servidor y le habla a la planilla por la API de
 Google Sheets.
 
-Esta guía usa **Vercel**, que es de los creadores de Next.js, tiene plan
-gratuito suficiente para esto y despliega desde GitHub con cada push.
+Esta guía usa **Vercel**, que es de los creadores de Next.js y despliega
+desde GitHub con cada push.
+
+> **Ojo con el plan.** El plan gratuito de Vercel (Hobby) es **solo para uso
+> personal no comercial**, y un panel de administración de un restaurante es
+> uso comercial. El plan Pro ronda los US$20 al mes por asiento. Conviene
+> confirmarlo en los términos de vercel.com antes de que el panel entre en
+> uso diario: es una cuenta que alguien paga todos los meses, y esa decisión
+> es del cliente, no técnica. La guía decía antes que el plan gratuito
+> alcanzaba; era un dato equivocado.
+
+---
+
+## Dónde vive cada cuenta
+
+Anotado porque es lo primero que no se encuentra cuando hay que arreglar algo
+meses después, y porque decide qué hay que rehacer si el proyecto cambia de
+manos.
+
+| Pieza | En qué cuenta | Al traspasar |
+|---|---|---|
+| La planilla y el Apps Script | la del cliente | nada que mover |
+| El proyecto de Google Cloud y la cuenta de servicio | **la del cliente** (decidido el 2026-10-16) | nada que mover |
+| Shopify y el dominio | la del cliente | nada que mover |
+| El repositorio de GitHub | la de quien desarrolla | **Transfer ownership**, que se lleva historia, PRs y discusiones, y deja redirecciones. Crear un repo nuevo y empujarle el código **no** es lo mismo: pierde los PRs, que en este proyecto son el registro de por qué las cosas están como están. |
+| El proyecto de Vercel | por definir | los proyectos se transfieren entre cuentas; ver la nota del plan más arriba |
+
+Que el proyecto de Google Cloud esté en la cuenta del cliente es a propósito:
+deja al robot donde ya viven la planilla y el Apps Script, así que el panel no
+depende de que exista la cuenta personal de quien lo construyó. La contra a
+asumir: **rotar la clave del robot necesita entrar a esa cuenta**, así que
+quien mantenga el panel tiene que tener acceso al proyecto de Cloud, o pedirlo
+cuando haga falta.
 
 ---
 
@@ -102,6 +133,52 @@ Si algo no calza, lo arreglas en **un solo archivo**: `src/lib/columnas.ts`.
 | El panel abre pero todo en cero | Abre `/api/diagnostico`: casi seguro es un encabezado que no calza. |
 
 ---
+
+## Antes de empujar un cambio
+
+**Corre esto, siempre:**
+
+```
+cd panel && npm run revisar
+```
+
+Son el chequeo de tipos (`tsc --noEmit`) más las pruebas de lógica. Toma unos
+segundos y es lo único que separa un error de tipos de descubrirlo en el log
+de Vercel tres minutos después.
+
+No es una recomendación de manual: el primer despliegue falló exactamente
+así. Se agregó la columna `Asistencia` al tipo `Reserva` y se olvidó en la
+ruta que crea una reserva a mano; `npm run tipos` lo dice en dos segundos,
+el build de Vercel lo dijo después de instalar 150 dependencias.
+
+## La versión de Next, que no es decorativa
+
+El panel está en **Next 14.2.35**, el último parche de esa línea. Importa una
+cosa en particular: **la única protección del panel es autenticación básica
+en `src/middleware.ts`**, y las versiones de Next anteriores a la 14.2.25
+tienen un bypass de autorización en el middleware (CVE-2025-29927) — una
+cabecera interna que, mandada desde afuera, hace que el framework se salte el
+middleware entero. O sea, el candado.
+
+El panel nació en 14.2.15, que es vulnerable. Quedó en 14.2.35.
+
+> Para ser justos: según el aviso de GitHub, las aplicaciones alojadas en
+> Vercel no estaban afectadas, porque Vercel bloquea esa cabecera en su
+> infraestructura. Igual no corresponde dejar la versión vulnerable: eso
+> amarra la seguridad del panel a una protección de la que no somos dueños, y
+> se cae el día que esto corra en otra parte.
+
+`npm audit` **va a seguir mostrando avisos de Next**, y conviene saber por qué
+antes de alarmarse: la línea 14.x ya no recibe arreglos para varios, que solo
+están corregidos en la 16. Casi todos son de funciones **que este panel no
+usa**: Image Optimization (no hay un solo `next/image`), Server Actions,
+rewrites, i18n del Pages Router, servidores propios, servidores en Windows.
+Lo revisado el 2026-10-20 es eso: el que apuntaba al middleware se arregló,
+el resto no aplica.
+
+**Subir a Next 16 es trabajo aparte y no trivial**: cambia `params` a una
+promesa, así que hay que tocar las rutas con `[fila]` y `[fecha]`. Vale la
+pena hacerlo, pero no en medio de un despliegue.
 
 ## Después
 
