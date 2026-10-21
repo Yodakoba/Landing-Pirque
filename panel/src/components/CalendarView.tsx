@@ -6,8 +6,10 @@
  * cobrada y cuánta hay que cobrar el mismo día.
  */
 import { useEffect, useMemo, useState } from 'react';
-import type { Ocupacion } from '@/lib/tipos';
-import { enPalabras, mesDe, mesEnPalabras } from '@/lib/fechas';
+import type { Ocupacion, Reserva } from '@/lib/tipos';
+import ReservaForm from './ReservaForm';
+import { menusConocidos } from '@/lib/shopify';
+import { enPalabras, mesDe, mesEnPalabras, hoy } from '@/lib/fechas';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
   verde: 'border-emerald-500/50 bg-emerald-500/5',
@@ -21,14 +23,23 @@ const PUNTO: Record<Ocupacion['semaforo'], string> = {
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const [error, setError] = useState('');
+  const [creando, setCreando] = useState(false);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
 
-  useEffect(() => {
+  const cargar = () => {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
     fetch('/api/ocupacion')
       .then((r) => r.json())
       .then((d) => (d.error ? setError(d.error) : setDias(d.ocupacion)))
       .catch((e) => setError(String(e)));
-  }, []);
+    // Solo para los nombres de menú del formulario manual; si falla, el
+    // calendario se dibuja igual y el formulario deja escribirlos a mano.
+    fetch('/api/reservas')
+      .then((r) => r.json())
+      .then((d) => d.reservas && setReservas(d.reservas))
+      .catch(() => {});
+  };
+  useEffect(cargar, []);
 
   // Agrupado por mes, conservando el orden. Con 90 días a la vista una
   // grilla corrida se vuelve ilegible: el corte de mes es la referencia que
@@ -59,6 +70,26 @@ export default function CalendarView() {
         )}
         <a href="/config" className="text-oro hover:underline">Cambiar el rango</a>.
       </p>
+
+      {/* También está en la vista de cada día, pero ahí hay que entrar
+          primero. Una reserva que llega por teléfono se anota sin saber
+          todavía de qué día es: la fecha se elige en el formulario. */}
+      <div className="mb-6">
+        <button onClick={() => setCreando(true)}
+          className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta">
+          Agregar reserva
+        </button>
+      </div>
+
+      {creando && (
+        <ReservaForm
+          fecha={dias[0]?.fecha ?? hoy()}
+          menusConocidos={menusConocidos(reservas)}
+          reserva={null}
+          onListo={() => { setCreando(false); cargar(); }}
+          onCancelar={() => setCreando(false)}
+        />
+      )}
 
       {meses.map(({ mes, dias: delMes }) => (
         <section key={mes} className="mb-8 last:mb-0">
