@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
+import { exigir } from '@/lib/permisos';
 import { leerMenus, guardarMenus } from '@/lib/datos';
 import { aMonto, type Menu } from '@/lib/menus';
 import { normalizar } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const no = exigir(req, 'configurar');
+  if (no) return no;
   try {
     return NextResponse.json({ menus: await leerMenus() });
   } catch (e) {
@@ -23,6 +26,8 @@ export async function GET() {
  * leer.
  */
 export async function PUT(req: Request) {
+  const no = exigir(req, 'configurar');
+  if (no) return no;
   try {
     const { menus } = await req.json();
     if (!Array.isArray(menus)) {

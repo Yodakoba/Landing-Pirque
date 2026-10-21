@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { credencialValida } from './lib/auth.ts';
+import { rolDe, credencialesDelEntorno, ROL } from './lib/auth.ts';
 
 /**
  * Autenticación básica HTTP sobre todo el panel.
@@ -14,8 +14,11 @@ import { credencialValida } from './lib/auth.ts';
  * - **No hay botón de cerrar sesión.** El navegador recuerda la credencial
  *   hasta que se cierra. Para "salir" hay que cerrar el navegador o usar
  *   una ventana privada.
- * - **No hay usuarios distintos.** Una sola credencial compartida; no queda
- *   registro de quién hizo cada cambio.
+ * - **Hay DOS credenciales, no usuarios.** Administrador y encargado, cada
+ *   uno con la suya. Quién puede hacer qué se decide en src/lib/auth.ts y se
+ *   comprueba ruta por ruta, no acá. **Esto solo contesta "¿quién eres?"**
+ * - Dentro de un rol la credencial es compartida, así que no queda registro
+ *   de cuál de los dos encargados hizo cada cambio.
  * - **Va sobre HTTPS obligatoriamente.** En Vercel eso es automático. Por
  *   HTTP plano, la credencial viaja legible en cada petición.
  *
@@ -39,8 +42,23 @@ const PUBLICAS = [
   '/api/shopify/webhook'
 ];
 
+/**
+ * La única excepción por prefijo, y va aparte de PUBLICAS para que se vea.
+ *
+ * `/mi/<token>` es la página del trabajador. No puede pedir contraseña
+ * —justamente la gracia es que entra con un link y nada más— así que lo que
+ * la protege es el token de la URL, que la página verifica contra la lista
+ * de trabajadores antes de mostrar nada.
+ *
+ * `/mi` a secas, sin token, no abre nada: `trabajadorPorToken()` no
+ * encuentra a nadie con un token vacío.
+ */
+const PREFIJO_TRABAJADOR = '/mi/';
+
 export function middleware(req: NextRequest) {
-  if (PUBLICAS.includes(req.nextUrl.pathname)) return NextResponse.next();
+  const ruta = req.nextUrl.pathname;
+  if (PUBLICAS.includes(ruta)) return NextResponse.next();
+  if (ruta.startsWith(PREFIJO_TRABAJADOR)) return NextResponse.next();
 
   const usuario = process.env.PANEL_USUARIO;
   const clave = process.env.PANEL_CLAVE;
@@ -57,8 +75,12 @@ export function middleware(req: NextRequest) {
     );
   }
 
+  // Pasa cualquiera de los dos roles del panel. Qué puede hacer cada uno se
+  // resuelve después, en cada ruta.
   const cabecera = req.headers.get('authorization') ?? '';
-  if (credencialValida(cabecera, usuario, clave)) return NextResponse.next();
+  if (rolDe(cabecera, credencialesDelEntorno(process.env)) !== ROL.ninguno) {
+    return NextResponse.next();
+  }
 
   return new NextResponse('Necesitas autenticarte.', {
     status: 401,

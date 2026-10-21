@@ -23,7 +23,8 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
 import { diaParaReservaManual } from './dias.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
-import { credencialValida, iguales } from './auth.ts';
+import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
+         ROL, PERMISOS, type Rol, type Accion } from './auth.ts';
 import { filaReserva, buscarFilaPorId } from './filas.ts';
 import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
@@ -32,6 +33,7 @@ import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
 import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          leerTurnosDe, filaTurno, normalizarPlan, planDelDia, resumenEquipo,
          sugeridos, sinFicha, esSi, aEntero, COL_TURNOS,
+         nuevoToken, trabajadorPorToken, turnosDe,
          POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
@@ -1028,8 +1030,8 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true },
-  { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '' },
+  { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '' }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
@@ -1037,6 +1039,112 @@ ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
 ok(sinFicha(turnos, []).length === 3, 'sin lista de trabajadores, todos quedan sin ficha');
 ok(!sinFicha([{ fecha: '2026-11-14', trabajador: 'LUIS SOTO', puesto: 'Cocina', fila: 2 }],
    equipo).length, 'y no se queja por mayúsculas ni tildes');
+
+
+/* ---------- los tres roles ---------- */
+const CREDENCIALES = {
+  adminUsuario: 'jefe', adminClave: 'clave-del-jefe',
+  encargadoUsuario: 'turno', encargadoClave: 'clave-del-turno'
+};
+ok(rolDe(basic('jefe', 'clave-del-jefe'), CREDENCIALES) === ROL.admin,
+   'la credencial del administrador da admin');
+ok(rolDe(basic('turno', 'clave-del-turno'), CREDENCIALES) === ROL.encargado,
+   'la del encargado da encargado');
+ok(rolDe(basic('jefe', 'clave-del-turno'), CREDENCIALES) === ROL.ninguno,
+   'cruzar usuario y clave no da ningún rol');
+ok(rolDe('', CREDENCIALES) === ROL.ninguno, 'sin cabecera, ningún rol');
+
+// **Falla cerrando.** Un rol al que le falta el usuario o la clave NO existe:
+// si el blanco pasara, dejar una variable sin configurar abriría la puerta en
+// vez de cerrarla, que es exactamente al revés de lo que hay que hacer.
+ok(rolDe(basic('', ''), { adminUsuario: '', adminClave: '' }) === ROL.ninguno,
+   'credenciales en blanco no abren nada');
+ok(rolDe(basic('turno', 'clave-del-turno'),
+   { adminUsuario: 'jefe', adminClave: 'clave-del-jefe' }) === ROL.ninguno,
+   'sin encargado configurado, su credencial no sirve');
+ok(rolDe(basic('jefe', ''), { adminUsuario: 'jefe', adminClave: '' }) === ROL.ninguno,
+   'un rol con la clave vacía tampoco existe');
+
+const delEntorno = credencialesDelEntorno({
+  PANEL_USUARIO: 'a', PANEL_CLAVE: 'b',
+  PANEL_ENCARGADO_USUARIO: 'c', PANEL_ENCARGADO_CLAVE: 'd'
+});
+ok(delEntorno.adminUsuario === 'a' && delEntorno.encargadoClave === 'd',
+   'las variables de entorno se leen con los nombres de siempre');
+ok(credencialesDelEntorno({}).adminUsuario === undefined,
+   'un entorno vacío no inventa credenciales');
+
+/* ---------- quién puede qué ---------- */
+ok(puede(ROL.admin, 'configurar') && puede(ROL.admin, 'puestos') &&
+   puede(ROL.admin, 'links') && puede(ROL.admin, 'mantencion'),
+   'el administrador puede todo lo reservado');
+ok(puede(ROL.encargado, 'reservas') && puede(ROL.encargado, 'dias') &&
+   puede(ROL.encargado, 'equipo') && puede(ROL.encargado, 'ver'),
+   'el encargado hace el día a día, incluida la lista de trabajadores');
+ok(!puede(ROL.encargado, 'configurar') && !puede(ROL.encargado, 'puestos') &&
+   !puede(ROL.encargado, 'links') && !puede(ROL.encargado, 'mantencion'),
+   'pero no toca precios, puestos, links ni mantención');
+
+// El trabajador no figura en NINGUNA fila de la tabla, y eso es el punto:
+// no hay una sola acción del panel que pueda ejecutar. Entra por su link.
+const acciones = Object.keys(PERMISOS) as Accion[];
+ok(acciones.every((a) => !puede(ROL.trabajador, a)),
+   'el trabajador no puede ninguna acción del panel');
+ok(acciones.every((a) => !puede(ROL.ninguno, a)),
+   'y quien no se identificó, tampoco');
+ok(acciones.every((a) => puede(ROL.admin, a)),
+   'el administrador sí puede todas: si alguna se le escapara, quedaría una parte sin dueño');
+
+/* ---------- el link personal ---------- */
+const t1 = nuevoToken(), t2 = nuevoToken();
+ok(t1 !== t2, 'dos tokens seguidos no son iguales');
+ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
+ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
+
+const conAcceso: Trabajador[] = [
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana' },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '' },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro' }
+];
+ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
+   'el token encuentra a su dueño');
+ok(trabajadorPorToken(conAcceso, 'otra-cosa') === undefined, 'uno inventado no encuentra a nadie');
+
+// Si el vacío calzara, entrar a /mi/ sin nada detrás abriría la ficha de
+// alguien. Es el agujero que se descubre tarde.
+ok(trabajadorPorToken(conAcceso, '') === undefined, 'un token vacío no encuentra a nadie');
+ok(trabajadorPorToken(conAcceso, '   ') === undefined, 'ni uno de puros espacios');
+ok(trabajadorPorToken(conAcceso, undefined) === undefined, 'ni uno que no vino');
+
+// Dar de baja a alguien tiene que cerrarle la puerta: si no, seguiría viendo
+// la planificación después de irse.
+ok(trabajadorPorToken(conAcceso, 'token-de-pedro') === undefined,
+   'un trabajador dado de baja no entra aunque conserve su token');
+ok(trabajadorPorToken(conAcceso, 'TOKEN-DE-ANA') === undefined,
+   'el token distingue mayúsculas: es una credencial, no un nombre');
+
+const conToken = leerTrabajadoresDe(aFilasTrabajadores(conAcceso));
+ok(JSON.stringify(conToken) === JSON.stringify(conAcceso),
+   'el token sobrevive la ida y vuelta a filas');
+ok(leerTrabajadoresDe([['Nombre', 'Teléfono', 'Puesto habitual', 'Activo'],
+                       ['Ana', '', 'Garzón', 'Sí']])[0].token === '',
+   'una planilla vieja, sin la columna, se lee con todos sin acceso');
+
+/* ---------- los turnos de una persona ---------- */
+const agenda: Turno[] = [
+  { fecha: '2026-11-15', trabajador: 'Ana Pérez', puesto: 'Barra', fila: 3 },
+  { fecha: '2026-11-14', trabajador: 'ana perez', puesto: 'Garzón', fila: 2 },
+  { fecha: '2026-11-01', trabajador: 'Ana Pérez', puesto: 'Garzón', fila: 4 },
+  { fecha: '2026-11-14', trabajador: 'Luis Soto', puesto: 'Cocina', fila: 5 }
+];
+const deAna = turnosDe(agenda, 'Ana Pérez', '2026-11-10');
+ok(deAna.length === 2, 'solo los suyos, y solo de la fecha en adelante');
+ok(deAna[0].fecha === '2026-11-14' && deAna[1].fecha === '2026-11-15', 'ordenados por fecha');
+ok(turnosDe(agenda, 'ANA PEREZ', '2026-11-10').length === 2,
+   'el nombre se compara sin mayúsculas ni tildes, como el resto del panel');
+ok(turnosDe(agenda, 'Ana Pérez', '2026-11-14')[0].fecha === '2026-11-14',
+   'el día de hoy cuenta: un turno de hoy todavía no pasó');
+ok(turnosDe(agenda, 'Nadie', '2026-01-01').length === 0, 'alguien sin turnos no recibe los de otro');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

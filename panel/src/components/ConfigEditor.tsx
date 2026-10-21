@@ -28,6 +28,7 @@ const ENTRADA =
 export default function ConfigEditor() {
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState('');
+  const [sinPermiso, setSinPermiso] = useState(false);
   const [guardando, setGuardando] = useState('');
   const [revisando, setRevisando] = useState(false);
   const [resumen, setResumen] = useState('');
@@ -47,7 +48,7 @@ export default function ConfigEditor() {
     setRevisando(true);
     setResumen('');
     try {
-      const r = await fetch('/api/shopify/sincronizar', { headers: { 'x-panel': 'si' } });
+      const r = await fetch('/api/shopify/sincronizar');
       const d = await r.json();
       setResumen(d.error
         ? d.error
@@ -62,7 +63,7 @@ export default function ConfigEditor() {
   async function cargar() {
     const r = await fetch('/api/config');
     const d = await r.json();
-    if (d.error) setError(d.error);
+    if (d.error) { setError(d.error); setSinPermiso(!!d.permiso); }
     else setConfig(d.config);
   }
   useEffect(() => { cargar(); }, []);
@@ -76,14 +77,14 @@ export default function ConfigEditor() {
         body: JSON.stringify(cambio)
       });
       const d = await r.json();
-      if (d.error) setError(d.error);
+      if (d.error) { setError(d.error); setSinPermiso(!!d.permiso); }
       else { setConfig(d.config); setError(''); }
     } finally {
       setGuardando('');
     }
   }
 
-  if (error) return <Aviso error={error} />;
+  if (error) return <Aviso error={error} permiso={sinPermiso} />;
   if (!config) return <p className="text-hueso/50">Cargando…</p>;
 
   const campo = (

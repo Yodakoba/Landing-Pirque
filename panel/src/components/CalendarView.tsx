@@ -204,7 +204,17 @@ export default function CalendarView() {
   );
 }
 
-export function Aviso({ error }: { error: string }) {
+export function Aviso({ error, permiso = false }: { error: string; permiso?: boolean }) {
+  // Un 403 no es una falla de la planilla, y decir que lo es manda a buscar
+  // el problema donde no está.
+  if (permiso) {
+    return (
+      <div className="rounded border border-hueso/20 bg-hueso/5 p-4">
+        <p className="font-semibold text-hueso/85">Esta parte no es tuya.</p>
+        <p className="mt-1 text-sm text-hueso/70">{error}</p>
+      </div>
+    );
+  }
   return (
     <div className="rounded border border-red-500/50 bg-red-500/5 p-4">
       <p className="font-semibold text-red-300">No se pudo leer la planilla.</p>

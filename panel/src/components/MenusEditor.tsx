@@ -23,12 +23,16 @@ export default function MenusEditor() {
   const [menus, setMenus] = useState<Menu[] | null>(null);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [error, setError] = useState('');
+  const [sinPermiso, setSinPermiso] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [sucio, setSucio] = useState(false);
 
   useEffect(() => {
     fetch('/api/menus').then((r) => r.json())
-      .then((d) => (d.error ? setError(d.error) : setMenus(d.menus)))
+      .then((d) => {
+        if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
+        setMenus(d.menus);
+      })
       .catch((e) => setError(String(e)));
     fetch('/api/reservas').then((r) => r.json())
       .then((d) => d.reservas && setReservas(d.reservas))
@@ -52,12 +56,12 @@ export default function MenusEditor() {
         body: JSON.stringify({ menus: lista })
       });
       const d = await r.json();
-      if (d.error) setError(d.error);
+      if (d.error) { setError(d.error); setSinPermiso(!!d.permiso); }
       else { setMenus(d.menus); setError(''); setSucio(false); }
     } finally { setGuardando(false); }
   }
 
-  if (error) return <Aviso error={error} />;
+  if (error) return <Aviso error={error} permiso={sinPermiso} />;
   if (!menus) return <p className="text-hueso/50">Cargando…</p>;
 
   const cambiar = (i: number, campo: keyof Menu, valor: string) => {

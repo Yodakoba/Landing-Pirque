@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
+import { exigir } from '@/lib/permisos';
 import { leerFechas, guardarFecha } from '@/lib/datos';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const no = exigir(req, 'ver');
+  if (no) return no;
   try {
     return NextResponse.json({ fechas: await leerFechas() });
   } catch (e) {
@@ -12,6 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const no = exigir(req, 'dias');
+  if (no) return no;
   try {
     const b = await req.json();
     if (!b.fecha) return NextResponse.json({ error: 'Falta la fecha.' }, { status: 400 });

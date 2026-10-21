@@ -808,7 +808,7 @@ uno sirviera por sí solo:
 
 1. **Planificar** (hecho): qué puestos existen, quién es el equipo, y quién
    trabaja qué día.
-2. **Los accesos** (pendiente): admin / encargado / trabajador.
+2. **Los accesos** (hecho): admin / encargado / trabajador.
 3. **Las cuentas del día** (pendiente): asistencia del equipo, horas,
    ajustes y propina.
 
@@ -890,6 +890,104 @@ usa para los menús, y por el mismo motivo: sin alias ni equivalencias, lo
 único que mantiene alineadas dos listas es que alguien se entere cuando dejan
 de estarlo.
 
+### Quién puede hacer qué (2026-10-21)
+
+Tres roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
+
+| | Administrador | Encargado | Trabajador |
+|---|---|---|---|
+| Ver el calendario y las reservas | sí | sí | — |
+| Anotar reservas, abrir y cerrar días | sí | sí | — |
+| Asignar turnos y editar la lista de trabajadores | sí | sí | — |
+| Puestos y su regla "uno cada N" | sí | — | — |
+| Precios, menús y configuración | sí | — | — |
+| Links personales, diagnóstico y Shopify a mano | sí | — | — |
+| Ver **sus propios** turnos | — | — | sí |
+
+**El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
+Lo que no toca es la plata, la configuración y las credenciales.
+
+**El trabajador no figura en ninguna fila de la tabla de permisos, y ese es
+el punto**: no hay una sola acción del panel que pueda ejecutar. Su acceso no
+pasa por ahí.
+
+### El middleware autentica, cada ruta autoriza
+
+Son dos preguntas distintas —"¿quién eres?" y "¿puedes hacer esto?"— y las
+contesta código distinto a propósito. Si el permiso se comprobara solo en el
+middleware, **cualquier forma de saltárselo abriría de una vez todas las
+rutas**: es la forma exacta del CVE-2025-29927, el que obligó a subir Next
+hace unos días.
+
+Por lo mismo, **el rol se vuelve a derivar de la cabecera `Authorization` en
+cada ruta**, en vez de leerlo de una cabecera que ponga el middleware: una
+cabecera la puede mandar cualquiera. Cuesta comparar dos strings y borra esa
+clase entera de error.
+
+De ahí salió un arreglo concreto: `/api/shopify/sincronizar` se contentaba
+con un `x-panel: si`, confiando en que el middleware ya había pedido la
+contraseña. **Eso dejó de alcanzar cuando el panel pasó a tener dos roles**,
+porque un encargado podía agregar esa cabecera a mano. Ahora comprueba el
+permiso de verdad.
+
+`GET /api/config` y `GET /api/menus` también pasaron a ser de administrador:
+un encargado que entrara a esas pantallas las vería cargar y fallar en cada
+guardado. Ahora le dicen "esta parte no es tuya", que es lo que pasa.
+
+**Las credenciales son dos pares de variables de entorno**: `PANEL_USUARIO` y
+`PANEL_CLAVE` siguen siendo las del administrador —con los mismos nombres de
+antes, para no dejar al cliente fuera de su propio panel en el primer
+despliegue— y `PANEL_ENCARGADO_USUARIO` / `PANEL_ENCARGADO_CLAVE` son las del
+encargado. **Un rol al que le falte el usuario o la clave no existe**: el
+blanco cierra, no abre.
+
+Dentro de un rol la credencial es compartida, así que **no queda registro de
+cuál de los dos encargados hizo cada cambio**. Es el costo de no montar un
+sistema de cuentas, y se puede pagar con dos o tres personas.
+
+### El link personal del trabajador
+
+`/mi/<token>`. Se manda por WhatsApp y no pide contraseña ni correo. Se
+administra desde `/equipo`, columna **Link personal**: crear, copiar, renovar
+y quitar — **solo el administrador**, aunque el encargado sí edite la lista.
+Un encargado ni siquiera recibe los tokens: la ruta se los borra de la
+respuesta.
+
+Se eligió sobre una clave compartida de solo lectura por una razón concreta:
+**cuando el panel tenga sueldos y ajustes, una clave compartida dejaría que
+cualquier trabajador viera lo que gana y lo que le descontaron a todos los
+demás.**
+
+- **El token se guarda tal cual en la planilla, no como hash, y es a
+  propósito.** No es una contraseña: es un link que el administrador tiene
+  que poder volver a copiar cuando alguien lo pierda. Con un hash habría que
+  renovarlo cada vez, o sea cambiarle el link a la persona por haberlo
+  extraviado. Quien ve la planilla ya es el administrador.
+- **Renovar invalida el anterior en el acto**, que es lo que hay que hacer
+  cuando alguien pierde el teléfono.
+- **Desmarcar "activo" también cierra la puerta.** Si no, alguien que se fue
+  seguiría viendo la planificación.
+- **Un token vacío no encuentra a nadie**, aunque haya trabajadores sin
+  token. Si calzara, entrar a `/mi/` sin nada detrás abriría la ficha del
+  primero de la lista.
+- **Un link inválido y uno revocado dicen lo mismo.** Decir "ese link ya no
+  sirve" confirmaría que existió, y a quien sí es trabajador no le sirve de
+  nada: la salida es la misma, pedir otro.
+- La página **lee la planilla directo, sin pasar por una ruta de API**, así
+  que no hay ningún endpoint nuevo que se pueda llamar con un token prestado
+  para sacar datos en bruto. Lo único que sale es el HTML de una persona.
+- **Degrada en vez de reventar**: si no se pueden leer las reservas o las
+  fechas, igual muestra los turnos. Y una lista de trabajadores vacía se
+  reporta como "no se pudo cargar", no como "tu link no sirve", porque no
+  existe el caso de un token válido con la lista en cero.
+- En `/mi/` **no se dibuja la barra del panel**: todos sus enlaces le
+  pedirían una contraseña que no tiene.
+
+**Lo que ve el trabajador**: qué día, a qué hora, en qué puesto y cuánta
+gente se espera. No ve reservas, ni montos, ni a los demás trabajadores.
+*(Lo de "cuánta gente se espera" lo decidí yo porque es útil para saber cómo
+viene el día; si el cliente prefiere que no lo vea, es una línea.)*
+
 ### Lo que falta decidir
 
 - **El reparto de la propina.** El cliente lo dejó para más adelante
@@ -897,14 +995,12 @@ de estarlo.
   agrega después sobre los turnos.
 - **El pago** va a ser **jornada + valor hora extra** (decidido el
   2026-10-21), y todavía no está construido.
-- **Los accesos** van a ser tres: admin, encargado y trabajador. El
-  trabajador entra con un **link personal** que se manda por WhatsApp — sin
-  contraseña ni correo— y ve solo sus días. Se eligió sobre una clave
-  compartida de solo lectura por una razón concreta: **con sueldos y ajustes
-  en el panel, una clave compartida dejaría que cualquier trabajador viera lo
-  que gana y lo que le descontaron a todos los demás.**
-- El **encargado sí puede agregar trabajadores**, además de reservas,
-  asistencia y equipo. No toca precios ni configuración.
+- **La asistencia del equipo** —vino / no vino / vino alguien extra, horas y
+  ajustes con motivo— es el lote 3 y tampoco está.
+- **Ojo con los descuentos por atraso**: el panel puede registrarlos sin
+  problema, pero si ese monto se descuenta de una liquidación formal, los
+  descuentos al sueldo tienen reglas en Chile. Conviene confirmarlo con quien
+  les lleve la contabilidad antes de usarlo así.
 
 ## Estilo y marca
 

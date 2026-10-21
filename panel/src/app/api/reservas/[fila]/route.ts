@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { exigir } from '@/lib/permisos';
 import { editarReserva, borrarReserva } from '@/lib/datos';
 
 export const dynamic = 'force-dynamic';
@@ -6,6 +7,8 @@ export const dynamic = 'force-dynamic';
 // La fila de la planilla es el identificador para editar: el ID Orden puede
 // venir vacío en pedidos viejos, la fila nunca.
 export async function PATCH(req: Request, { params }: { params: { fila: string } }) {
+  const no = exigir(req, 'reservas');
+  if (no) return no;
   try {
     const fila = Number(params.fila);
     if (!(fila > 1)) return NextResponse.json({ error: 'Fila inválida.' }, { status: 400 });
@@ -16,7 +19,9 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: { fila: string } }) {
+export async function DELETE(req: Request, { params }: { params: { fila: string } }) {
+  const no = exigir(req, 'reservas');
+  if (no) return no;
   try {
     const fila = Number(params.fila);
     if (!(fila > 1)) return NextResponse.json({ error: 'Fila inválida.' }, { status: 400 });

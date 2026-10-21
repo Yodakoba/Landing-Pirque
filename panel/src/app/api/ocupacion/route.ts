@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { exigir } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasAbiertosEntre, hoy, sumarDias } from '@/lib/fechas';
@@ -31,6 +32,8 @@ export const dynamic = 'force-dynamic';
  * vez de que simplemente no aparezcan.
  */
 export async function GET(req: Request) {
+  const no = exigir(req, 'ver');
+  if (no) return no;
   try {
     // El parámetro sigue existiendo para poder pedir otra ventana a mano,
     // pero el valor de siempre sale de la planilla.

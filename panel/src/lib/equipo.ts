@@ -13,6 +13,7 @@
  */
 import { normalizar, indices } from './columnas.ts';
 import { esFecha, type Fecha } from './fechas.ts';
+import { iguales } from './auth.ts';
 
 export const HOJA_PUESTOS = 'Puestos';
 export const HOJA_TRABAJADORES = 'Trabajadores';
@@ -27,7 +28,8 @@ export const COL_TRABAJADORES = {
   nombre: 'Nombre',
   telefono: 'Teléfono',
   puesto: 'Puesto habitual',
-  activo: 'Activo'
+  activo: 'Activo',
+  token: 'Token de acceso'
 } as const;
 
 export const COL_TURNOS = {
@@ -62,6 +64,21 @@ export interface Trabajador {
    * turnos son el registro de quién trabajó qué día.
    */
   activo: boolean;
+  /**
+   * La llave de su link personal, o vacío si todavía no tiene acceso.
+   *
+   * **Se guarda tal cual, no como hash, y es a propósito.** Un hash sería
+   * más prudente si esto fuera una contraseña, pero no lo es: es un link que
+   * el administrador tiene que poder volver a copiar y mandar por WhatsApp
+   * cuando alguien lo pierda. Con un hash habría que renovarlo cada vez, o
+   * sea cambiarle el link a la persona por haberlo extraviado.
+   *
+   * Lo que abre es **solo lectura y solo de lo suyo**: sus días y su puesto.
+   * No hay plata, no hay reservas, no hay datos de otros trabajadores. Quien
+   * ve la planilla ya es el administrador, así que no le revela nada que no
+   * tenga.
+   */
+  token: string;
 }
 
 export interface Turno {
@@ -151,7 +168,10 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
       nombre,
       telefono: String(filas[i]?.[1] ?? '').trim(),
       puesto: String(filas[i]?.[2] ?? '').trim(),
-      activo: esSi(filas[i]?.[3])
+      activo: esSi(filas[i]?.[3]),
+      // La columna puede no existir todavía: una planilla escrita antes de
+      // que hubiera links personales se lee igual, con todos sin acceso.
+      token: String(filas[i]?.[4] ?? '').trim()
     });
   }
   return salida;
@@ -160,8 +180,9 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
 export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
   return [
     [COL_TRABAJADORES.nombre, COL_TRABAJADORES.telefono,
-     COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo],
-    ...gente.map((t) => [t.nombre, t.telefono, t.puesto, t.activo ? 'Sí' : 'No'])
+     COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo, COL_TRABAJADORES.token],
+    ...gente.map((t) => [t.nombre, t.telefono, t.puesto,
+                         t.activo ? 'Sí' : 'No', t.token])
   ];
 }
 
@@ -353,4 +374,62 @@ export function sinFicha(turnos: Turno[], gente: Trabajador[]): string[] {
     salida.push(t.trabajador);
   }
   return salida;
+}
+
+/* ---------- El link personal del trabajador ---------- */
+
+/**
+ * Una llave nueva: 24 bytes al azar, en base64 apto para una URL.
+ *
+ * Son 192 bits. No hace falta tanto para proteger "qué días trabajo", pero
+ * un token corto invita a probar suerte y alargarlo no cuesta nada.
+ *
+ * Usa `crypto.getRandomValues`, que existe igual en Node y en el navegador,
+ * y **no `Math.random()`**: ese es predecible y sirve para barajar una
+ * lista, no para una credencial.
+ */
+export function nuevoToken(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * De quién es este link.
+ *
+ * **Un token vacío no encuentra a nadie**, aunque haya trabajadores sin
+ * token. Si no, entrar a `/mi/` sin nada detrás abriría la ficha del primero
+ * de la lista, que es justo el tipo de agujero que se descubre tarde.
+ *
+ * **Y un trabajador dado de baja tampoco entra.** Desmarcar "activo" es la
+ * forma de sacar a alguien del equipo, así que tiene que cerrarle también
+ * la puerta; si no, seguiría viendo la planificación después de irse.
+ *
+ * La comparación es en tiempo constante por la misma razón que la del
+ * panel: el tiempo de respuesta no debe decir cuántos caracteres se
+ * acertaron.
+ */
+export function trabajadorPorToken(
+  gente: Trabajador[], token: unknown
+): Trabajador | undefined {
+  const buscado = String(token ?? '').trim();
+  if (!buscado) return undefined;
+  let encontrado: Trabajador | undefined;
+  for (const t of gente) {
+    if (!t.token || !t.activo) continue;
+    // Sin cortar al primer acierto: recorrer siempre la lista entera hace
+    // que el tiempo no dependa de en qué posición está la persona.
+    if (iguales(t.token, buscado)) encontrado = t;
+  }
+  return encontrado;
+}
+
+/** Los turnos de una persona, de hoy en adelante y ordenados. */
+export function turnosDe(turnos: Turno[], nombre: string, desde: Fecha): Turno[] {
+  const quien = normalizar(nombre);
+  return turnos
+    .filter((t) => normalizar(t.trabajador) === quien && t.fecha >= desde)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
 }

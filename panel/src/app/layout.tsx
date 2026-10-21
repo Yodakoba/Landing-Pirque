@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Nav from '@/components/Nav';
+import Cabecera from '@/components/Cabecera';
+import { headers } from 'next/headers';
+import { rolDeCabecera } from '@/lib/permisos';
 
 export const metadata: Metadata = {
   title: 'Reservas — Brasas de Lo Pirque',
@@ -9,17 +11,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // El rol se deriva acá, en el servidor, para que la barra no le ofrezca al
+  // encargado enlaces que le van a devolver 403. **No es la protección**:
+  // esa está en cada ruta. Esto es para no mentirle a quien mira.
+  const rol = rolDeCabecera(headers().get('authorization') ?? '');
   return (
     <html lang="es">
       <body className="min-h-screen">
-        <header className="border-b border-hueso/10">
-          <div className="mx-auto max-w-6xl px-5 py-4 flex items-baseline gap-6">
-            <a href="/" className="font-bold tracking-widest text-sm uppercase text-oro">
-              Reservas
-            </a>
-            <Nav />
-          </div>
-        </header>
+        <Cabecera rol={rol} />
         <main className="mx-auto max-w-6xl px-5 py-8">{children}</main>
       </body>
     </html>

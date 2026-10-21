@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { exigir } from '@/lib/permisos';
 import { guardarEquipoDelDia, leerTurnos } from '@/lib/datos';
 import { esFecha } from '@/lib/fechas';
 
@@ -15,6 +16,8 @@ export const dynamic = 'force-dynamic';
  * Lo que NO hace es tocar otros días: ver `guardarEquipoDelDia()`.
  */
 export async function PUT(req: Request) {
+  const no = exigir(req, 'equipo');
+  if (no) return no;
   try {
     const { fecha, turnos } = await req.json();
     if (!esFecha(fecha)) {

@@ -214,6 +214,32 @@ Lo único que **no** se cambia desde el panel es la clave de acceso: vive en
 Vercel. Guardarla en la planilla sería dejar la contraseña del panel en un
 documento compartido.
 
+## Los accesos: administrador, encargado y trabajador
+
+**Variables de entorno en Vercel:**
+
+| Variable | Para qué |
+|---|---|
+| `PANEL_USUARIO` / `PANEL_CLAVE` | El administrador. **Son las de siempre**, no hay que cambiarlas. |
+| `PANEL_ENCARGADO_USUARIO` / `PANEL_ENCARGADO_CLAVE` | El encargado. **Opcionales**: sin ellas simplemente no existe ese rol. |
+
+Un rol al que le falte el usuario o la clave **no existe**. El blanco cierra,
+no abre: dejar una variable a medias no deja una puerta entornada.
+
+El encargado hace el día a día —reservas, días, turnos y la lista de
+trabajadores— y no toca precios, configuración, puestos ni links. Si entra a
+una pantalla que no es suya, el panel se lo dice en vez de dejarlo guardar y
+fallar.
+
+**Los trabajadores no usan ninguna de estas credenciales.** Entran por
+`/mi/<token>`, un link personal que se crea en **/equipo**, columna *Link
+personal*, y se manda por WhatsApp. Ahí ven sus turnos y nada más.
+
+Para sacarle el acceso a alguien hay dos formas, y sirven para cosas
+distintas: **Quitar** el link (se fue del equipo) o **Renovar**lo (perdió el
+teléfono y hay que invalidar el anterior). Desmarcar *Activo* también le
+cierra la puerta.
+
 ## El equipo: tres pestañas más
 
 `Puestos`, `Trabajadores` y `Turnos`. Se editan en **/equipo**, salvo los
