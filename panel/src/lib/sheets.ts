@@ -188,3 +188,73 @@ export async function escribirBloque(hoja: string, filas: unknown[][]): Promise<
     requestBody: { values: filas }
   });
 }
+
+/**
+ * Agrega varias filas de una vez.
+ *
+ * Una llamada en vez de N: guardar el equipo de un día son diez o quince
+ * filas, y quince llamadas a la API serían quince oportunidades de quedar a
+ * medio camino.
+ */
+export async function agregarFilas(hoja: string, filas: unknown[][]): Promise<void> {
+  if (!filas.length) return;
+  await sheets().spreadsheets.values.append({
+    spreadsheetId: idPlanilla(),
+    range: `'${await nombreReal(hoja)}'`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: filas }
+  });
+}
+
+/**
+ * Borra varias filas de verdad, corriendo las de abajo.
+ *
+ * **Las ordena de mayor a menor antes de pedirlas**, y eso no es una
+ * optimización: borrar la fila 5 corre la 9 al lugar 8, así que borrar de
+ * arriba hacia abajo borraría filas equivocadas. De abajo hacia arriba, cada
+ * índice sigue siendo válido cuando le toca.
+ *
+ * Va todo en un batchUpdate, así que o se borran todas o no se borra
+ * ninguna: no puede quedar media reasignación aplicada.
+ */
+export async function borrarFilas(hoja: string, filas: number[]): Promise<void> {
+  const orden = [...new Set(filas)].filter((n) => n > 1).sort((a, b) => b - a);
+  if (!orden.length) return;
+
+  const libro = await sheets().spreadsheets.get({ spreadsheetId: idPlanilla() });
+  const real = await nombreReal(hoja);
+  const h = (libro.data.sheets ?? []).find((s) => s.properties?.title === real);
+  const sheetId = h?.properties?.sheetId;
+  if (sheetId == null) throw new Error(`No existe la hoja "${hoja}" en la planilla.`);
+
+  await sheets().spreadsheets.batchUpdate({
+    spreadsheetId: idPlanilla(),
+    requestBody: {
+      requests: orden.map((fila) => ({
+        deleteDimension: {
+          range: { sheetId, dimension: 'ROWS', startIndex: fila - 1, endIndex: fila }
+        }
+      }))
+    }
+  });
+}
+
+/**
+ * Deja la pestaña creada y con su encabezado, y devuelve las filas que tiene.
+ *
+ * Para las pestañas a las que se les agregan filas de a una, como `Turnos`:
+ * `escribirBloque` no sirve ahí porque reescribe desde A1, y acá lo que hace
+ * falta es que la primera fila diga los nombres de las columnas y nada más.
+ */
+export async function asegurarEncabezado(
+  hoja: string, encabezado: string[]
+): Promise<string[][]> {
+  await asegurarHoja(hoja);
+  const filas = await leerHoja(hoja);
+  if (filas.length > 0 && (filas[0] ?? []).some((c) => String(c).trim() !== '')) {
+    return filas;
+  }
+  await escribirFila(hoja, 1, encabezado);
+  return [encabezado];
+}

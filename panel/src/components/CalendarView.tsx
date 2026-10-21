@@ -9,58 +9,13 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
+import TarjetaDia from './TarjetaDia';
+import EquipoDialogo from './EquipoDialogo';
 import { POR_DEFECTO, type Config } from '@/lib/config';
-import { enPesos } from '@/lib/ocupacion';
 import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
+import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
-
-const COLOR: Record<Ocupacion['semaforo'], string> = {
-  verde: 'border-emerald-500/50 bg-emerald-500/5',
-  amarillo: 'border-amber-500/60 bg-amber-500/5',
-  rojo: 'border-red-500/60 bg-red-500/5'
-};
-const PUNTO: Record<Ocupacion['semaforo'], string> = {
-  verde: '🟢', amarillo: '🟡', rojo: '🔴'
-};
-
-/**
- * Qué porcentaje del cupo ocupa un número.
- *
- * Se recorta a 100 porque un día sobrevendido existe —el cupo se puede bajar
- * después de que la gente reservó— y una barra que se sale de su caja se ve
- * como un error de dibujo en vez de como un día lleno.
- */
-const pct = (n: number, de: number) =>
-  de > 0 ? Math.min(100, (n / de) * 100) : 0;
-
-/** Un día que existe pero al que nadie le puso cupo todavía. */
-const sinConfigurar = (d: Ocupacion) =>
-  d.capacidad === 0 && !d.bloqueada;
-
-/**
- * El color de la tarjeta, que dice de un vistazo **quién puede reservar**:
- *
- * - **verde / amarillo / rojo** — abierto al público, con su ocupación.
- * - **azul** — privado: recibe reservas pero no está en el sitio.
- * - **rojo apagado** — cerrado.
- * - **gris** — sin configurar. No es lo mismo que cerrado, y confundirlos
- *   era justo el error: un día que nadie tocó salía pintado de rojo como
- *   si alguien lo hubiera cerrado a propósito.
- */
-const COLOR_TARJETA = (d: Ocupacion) => {
-  if (d.bloqueada) return 'border-red-500/60 bg-red-500/5';
-  if (d.privada) return 'border-sky-400/50 bg-sky-400/5';
-  if (sinConfigurar(d)) return 'border-hueso/15 bg-hueso/[0.03]';
-  return COLOR[d.semaforo];
-};
-
-const PUNTO_TARJETA = (d: Ocupacion) => {
-  if (d.bloqueada) return '🔴';
-  if (d.privada) return '🔵';
-  if (sinConfigurar(d)) return '⚪';
-  return PUNTO[d.semaforo];
-};
 
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
@@ -75,6 +30,13 @@ export default function CalendarView() {
   const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [menus, setMenus] = useState<Menu[]>(POR_DEFECTO_MENUS);
+  // El equipo se carga aparte del calendario a propósito: si la planilla
+  // todavía no tiene las pestañas del equipo, el calendario se dibuja igual.
+  // Lo que no hay es el resumen, y el dorso de la tarjeta lo dice.
+  const [equipo, setEquipo] = useState<{
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
+  } | null>(null);
+  const [planificando, setPlanificando] = useState<Ocupacion | null>(null);
 
   const cargar = () => {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
@@ -98,6 +60,16 @@ export default function CalendarView() {
       .then((d) => {
         if (d.reservas) setReservas(d.reservas);
         if (d.menus) setMenus(d.menus);
+      })
+      .catch(() => {});
+    fetch('/api/equipo')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) return;
+        setEquipo({
+          puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
+          turnos: d.turnos ?? []
+        });
       })
       .catch(() => {});
   };
@@ -167,6 +139,18 @@ export default function CalendarView() {
         />
       )}
 
+      {planificando && equipo && (
+        <EquipoDialogo
+          fecha={planificando.fecha}
+          personas={planificando.tomadas}
+          puestos={equipo.puestos}
+          trabajadores={equipo.trabajadores}
+          turnos={equipo.turnos}
+          onListo={() => { setPlanificando(null); cargar(); }}
+          onCancelar={() => setPlanificando(null)}
+        />
+      )}
+
       {creando && (
         <ReservaForm
           fecha={dias[0]?.fecha ?? hoy()}
@@ -204,106 +188,12 @@ export default function CalendarView() {
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
-          <div key={d.fecha}
-             className={`rounded border p-4 transition ${COLOR_TARJETA(d)}`}>
-            <div className="flex items-start justify-between gap-2">
-              <a href={`/dia/${d.fecha}`} className="text-sm capitalize hover:text-oro">
-                {enPalabras(d.fecha)}
-              </a>
-              <span aria-hidden>{PUNTO_TARJETA(d)}</span>
-            </div>
-
-            {sinConfigurar(d) ? (
-              <>
-                {/* Un día que aparece solo porque tiene reservas: existe,
-                    pero nadie le puso cupo. Se muestran las personas igual
-                    —si no, una reserva quedaría invisible otra vez— y se
-                    dice qué falta. */}
-                <p className="mt-3 text-2xl font-bold">
-                  {d.tomadas}
-                  <span className="ml-1 text-xs font-normal text-hueso/50">
-                    {d.tomadas === 1 ? 'persona' : 'personas'}
-                  </span>
-                </p>
-                <p className="mt-2 text-xs text-hueso/60">
-                  Sin cupo definido. Apreta <strong>Editar</strong> para abrir
-                  este día o dejarlo privado.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-3 text-2xl font-bold">
-                  {d.tomadas}<span className="text-hueso/40">/{d.capacidad}</span>
-                  <span className="ml-1 text-xs font-normal text-hueso/50">personas</span>
-                </p>
-                {/* La barra: cuánto del cupo está cobrado y cuánto falta
-                    cobrar el mismo día. Verde es plata que ya está; ámbar
-                    es plata que hay que cobrar en la puerta. El resto de la
-                    barra es lo que queda libre. */}
-                <div className="mt-3 flex h-1.5 overflow-hidden rounded bg-hueso/10"
-                     role="img"
-                     aria-label={`${d.online} pagadas online, ${d.local} pagan en el local, de ${d.capacidad} lugares`}>
-                  <div className="bg-emerald-400"
-                       style={{ width: `${pct(d.online, d.capacidad)}%` }} />
-                  <div className="bg-amber-400"
-                       style={{ width: `${pct(d.local, d.capacidad)}%` }} />
-                </div>
-
-                <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  <span className="text-hueso/70">
-                    <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-400" />
-                    <strong className="tabular-nums text-hueso">{d.online}</strong> pagadas
-                  </span>
-                  <span className="text-hueso/70">
-                    <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-400" />
-                    <strong className="tabular-nums text-hueso">{d.local}</strong> en el local
-                  </span>
-                </p>
-
-                {(d.porCobrar > 0 || d.sinMonto > 0) && (
-                  <p className="mt-2 text-xs text-amber-300/90">
-                    {d.porCobrar > 0 && <>{enPesos(d.porCobrar)} por cobrar</>}
-                    {d.sinMonto > 0 && (
-                      <span className="text-hueso/50">
-                        {d.porCobrar > 0 ? ' · ' : ''}
-                        {d.sinMonto} sin monto
-                      </span>
-                    )}
-                  </p>
-                )}
-              </>
-            )}
-
-            {d.bloqueada && (
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-red-400">
-                Cerrado
-                {d.tomadas > 0 && (
-                  <span className="ml-1 font-normal normal-case tracking-normal text-hueso/60">
-                    · con {d.tomadas} {d.tomadas === 1 ? 'persona' : 'personas'} ya
-                    reservada{d.tomadas === 1 ? '' : 's'}: hay a quién avisarle
-                  </span>
-                )}
-              </p>
-            )}
-            {d.privada && !d.bloqueada && (
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-sky-300">
-                Privado
-                <span className="ml-1 font-normal text-hueso/50">· no está en el sitio</span>
-              </p>
-            )}
-            {d.notas && <p className="mt-1 text-xs text-hueso/50">{d.notas}</p>}
-
-            <div className="mt-3 flex items-center gap-3 border-t border-hueso/10 pt-3 text-xs">
-              <a href={`/dia/${d.fecha}`} className="text-hueso/60 hover:text-oro">
-                Ver quiénes vienen
-              </a>
-              <span className="flex-1" />
-              <button onClick={() => setEditando(d)}
-                className="text-hueso/60 hover:text-oro">
-                {d.capacidad === 0 && !d.bloqueada ? 'Abrir día' : 'Editar'}
-              </button>
-            </div>
-          </div>
+              <TarjetaDia key={d.fecha} d={d}
+                resumen={equipo
+                  ? resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas)
+                  : null}
+                onEditar={() => setEditando(d)}
+                onPlanificar={() => setPlanificando(d)} />
             ))}
             </div>
           </div>

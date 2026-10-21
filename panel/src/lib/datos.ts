@@ -9,7 +9,8 @@
  * continuo— pero es real. Por eso las reservas creadas acá llevan un id
  * MANUAL-<timestamp>: no pueden chocar con los ids numéricos de Shopify.
  */
-import { leerHoja, agregarFila, escribirFila, borrarFila, escribirBloque } from './sheets.ts';
+import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFilas,
+         escribirBloque, asegurarEncabezado } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
   indices, faltantes
@@ -21,7 +22,13 @@ import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
 import { camposDeShopify } from './shopify.ts';
 import { HOJA_MENUS, leerMenusDe, aFilasMenus, POR_DEFECTO_MENUS,
          type Menu } from './menus.ts';
-import { esFecha } from './fechas.ts';
+import { esFecha, type Fecha } from './fechas.ts';
+import {
+  HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS, ENCABEZADO_TURNOS,
+  leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
+  leerTurnosDe, filaTurno, normalizarPlan, COL_TURNOS,
+  POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno
+} from './equipo.ts';
 
 const num = (v: unknown): number => {
   const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
@@ -134,11 +141,20 @@ export async function borrarFecha(fila: number): Promise<void> {
  * vacía y el panel se ve bien con datos que no están.
  */
 export async function diagnostico() {
-  const [res, fec] = await Promise.all([
+  const [res, fec, tur] = await Promise.all([
     leerHoja(HOJA_RESERVAS).catch(() => [] as string[][]),
-    leerHoja(HOJA_FECHAS).catch(() => [] as string[][])
+    leerHoja(HOJA_FECHAS).catch(() => [] as string[][]),
+    // Los turnos también se leen por encabezado, así que también pueden
+    // fallar en silencio si alguien renombra una columna a mano.
+    leerHoja(HOJA_TURNOS).catch(() => [] as string[][])
   ]);
   return {
+    [HOJA_TURNOS]: {
+      existe: tur.length > 0,
+      encabezado: tur[0] ?? [],
+      faltan: faltantes(tur[0] ?? [], COL_TURNOS),
+      filas: Math.max(0, tur.length - 1)
+    },
     [HOJA_RESERVAS]: {
       existe: res.length > 0,
       encabezado: res[0] ?? [],
@@ -229,4 +245,80 @@ export async function leerMenus(): Promise<Menu[]> {
 /** Reescribe la pestaña entera, creándola si hace falta. */
 export async function guardarMenus(menus: Menu[]): Promise<void> {
   await escribirBloque(HOJA_MENUS, aFilasMenus(menus));
+}
+
+/* ---------- El equipo ---------- */
+
+/**
+ * Los puestos. Si la pestaña no existe, los siete de siempre.
+ *
+ * Mismo criterio que los menús y la configuración: el panel arranca contra
+ * una planilla recién creada, y la pestaña solo hace falta para cambiar algo.
+ */
+export async function leerPuestos(): Promise<Puesto[]> {
+  try {
+    const lista = leerPuestosDe(await leerHoja(HOJA_PUESTOS));
+    return lista.length ? lista : POR_DEFECTO_PUESTOS;
+  } catch {
+    return POR_DEFECTO_PUESTOS;
+  }
+}
+
+export async function guardarPuestos(puestos: Puesto[]): Promise<void> {
+  await escribirBloque(HOJA_PUESTOS, aFilasPuestos(puestos));
+}
+
+/**
+ * Los trabajadores. Acá NO hay lista por defecto: quiénes son es dato del
+ * negocio, y sembrar nombres inventados sería peor que una lista vacía.
+ */
+export async function leerTrabajadores(): Promise<Trabajador[]> {
+  try {
+    return leerTrabajadoresDe(await leerHoja(HOJA_TRABAJADORES));
+  } catch {
+    return [];
+  }
+}
+
+export async function guardarTrabajadores(gente: Trabajador[]): Promise<void> {
+  await escribirBloque(HOJA_TRABAJADORES, aFilasTrabajadores(gente));
+}
+
+/** Todos los turnos. Si la pestaña no existe todavía, ninguno. */
+export async function leerTurnos(): Promise<Turno[]> {
+  try {
+    return leerTurnosDe(await leerHoja(HOJA_TURNOS));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Reemplaza el equipo de UN día, sin tocar los demás.
+ *
+ * Borra las filas de esa fecha y escribe las nuevas. Se hace así —y no
+ * reescribiendo la pestaña entera— porque la pestaña entera son todos los
+ * fines de semana del año: un error al guardar el equipo de un sábado no
+ * puede llevarse por delante el historial de los otros.
+ *
+ * **El riesgo a asumir es el mismo que ya tiene el resto del panel**: entre
+ * leer y escribir no hay bloqueo, así que dos personas planificando el mismo
+ * día a la vez pueden pisarse. Con dos o tres personas y un día por vez es
+ * improbable; vale saber que es posible.
+ */
+export async function guardarEquipoDelDia(
+  fecha: Fecha, turnos: Omit<Turno, 'fila'>[]
+): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_TURNOS, ENCABEZADO_TURNOS);
+  const enc = filas[0] ?? ENCABEZADO_TURNOS;
+
+  const previas = leerTurnosDe(filas).filter((t) => t.fecha === fecha).map((t) => t.fila);
+  // Una persona, un puesto por día. Lo garantiza normalizarPlan(), no la
+  // interfaz: una llamada directa a la API tiene que obedecer la misma regla.
+  const nuevos = normalizarPlan(turnos.map((t) => ({ ...t, fecha })));
+
+  // Borrar PRIMERO y agregar después. Al revés, las filas nuevas moverían
+  // los índices de las viejas y se borrarían las equivocadas.
+  await borrarFilas(HOJA_TURNOS, previas);
+  await agregarFilas(HOJA_TURNOS, nuevos.map((t) => filaTurno(enc, t)));
 }

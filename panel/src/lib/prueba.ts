@@ -29,6 +29,10 @@ import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
 import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
          POR_DEFECTO_MENUS, type Menu } from './menus.ts';
+import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
+         leerTurnosDe, filaTurno, normalizarPlan, planDelDia, resumenEquipo,
+         sugeridos, sinFicha, esSi, aEntero, COL_TURNOS,
+         POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -900,6 +904,140 @@ ok(credencialValida(basic('brasas', 'a:b:c'), 'brasas', 'a:b:c'),
 
 ok(iguales('abc', 'abc') && !iguales('abc', 'abd') && !iguales('abc', 'abcd'),
    'la comparacion distingue contenido y largo');
+
+/* ---------- el equipo: puestos ---------- */
+ok(POR_DEFECTO_PUESTOS.length === 7, 'los siete puestos que nombró el cliente');
+ok(POR_DEFECTO_PUESTOS.every((p) => p.cadaCuantas === 0),
+   'y ninguno trae razón puesta: cuántos por comensal es dato del negocio');
+
+const puestos = leerPuestosDe([
+  ['Puesto', 'Uno cada N personas'],
+  ['Garzón', '10'],
+  ['Cocina', ''],
+  ['', '5'],                    // sin nombre: no es un puesto
+  ['garzon', '4'],              // el mismo de arriba escrito distinto
+  ['Barman', 'uno cada 20']     // basura con un número adentro
+]);
+ok(puestos.length === 3, 'ignora las filas sin nombre y los repetidos');
+ok(puestos[0].cadaCuantas === 10, 'lee la razón');
+ok(puestos[1].cadaCuantas === 0, 'una razón en blanco es cero, o sea sin poner');
+ok(puestos[2].cadaCuantas === 20, 'y rescata el número de un texto escrito a mano');
+ok(aEntero('0') === 0 && aEntero('-3') === 0 && aEntero('2,7') === 27,
+   'un entero escrito a mano nunca queda negativo');
+
+const idaYVuelta = leerPuestosDe(aFilasPuestos(puestos));
+ok(JSON.stringify(idaYVuelta) === JSON.stringify(puestos),
+   'los puestos sobreviven la ida y vuelta a filas');
+ok(aFilasPuestos([{ nombre: 'Barra', cadaCuantas: 0 }])[1][1] === '',
+   'una razón sin poner se escribe en blanco, no como "0"');
+
+/* ---------- el equipo: trabajadores ---------- */
+const gente = leerTrabajadoresDe([
+  ['Nombre', 'Teléfono', 'Puesto habitual', 'Activo'],
+  ['Ana Pérez', '+56 9 1111 1111', 'Garzón', 'Sí'],
+  ['Luis Soto', '', 'Cocina', ''],
+  ['Pedro Díaz', '', 'Runner', 'No'],
+  ['', '+56 9 2222 2222', 'Barra', 'Sí']
+]);
+ok(gente.length === 3, 'una fila sin nombre no es un trabajador');
+ok(gente[1].activo === true,
+   'la celda Activo en blanco cuenta como SÍ: existe la fila porque alguien lo agregó');
+ok(gente[2].activo === false, 'y un "No" explícito lo da de baja');
+ok(esSi('') && esSi('sí') && !esSi('NO') && !esSi('inactivo'),
+   'el sí/no aguanta lo que una persona escriba');
+ok(JSON.stringify(leerTrabajadoresDe(aFilasTrabajadores(gente))) === JSON.stringify(gente),
+   'los trabajadores sobreviven la ida y vuelta a filas');
+
+/* ---------- el equipo: turnos ---------- */
+const ENC_T = [COL_TURNOS.fecha, COL_TURNOS.trabajador, COL_TURNOS.puesto];
+const turnos = leerTurnosDe([
+  ENC_T,
+  ['2026-11-14', 'Ana Pérez', 'Garzón'],
+  ['2026-11-14', 'Luis Soto', 'Cocina'],
+  ['2026-11-14', 'Pedro Díaz', ''],
+  ['2026-11-15', 'Ana Pérez', 'Barra'],
+  ['no es fecha', 'Juan', 'Garzón'],
+  ['2026-11-14', '', 'Garzón']
+]);
+ok(turnos.length === 4, 'descarta las filas sin fecha válida y sin nombre');
+ok(turnos[2].puesto === '', 'un puesto en blanco sí se lee: viene, sin puesto definido');
+ok(turnos[0].fila === 2, 'y cada turno sabe en qué fila está, para poder borrarlo');
+ok(JSON.stringify(filaTurno(ENC_T,
+     { fecha: '2026-11-14', trabajador: 'Ana', puesto: 'Barra' }))
+   === JSON.stringify(['2026-11-14', 'Ana', 'Barra']), 'un turno se escribe en sus celdas');
+
+// Las columnas se buscan por ENCABEZADO, no por posición. Importa porque a
+// esta pestaña le van a crecer columnas —asistencia, horas, ajustes— y con
+// posiciones fijas agregar una obligaría a migrar las filas ya escritas.
+const ENC_REVUELTO = ['Puesto', 'Notas', 'Trabajador', 'Fecha'];
+const revueltos = leerTurnosDe([
+  ENC_REVUELTO,
+  ['Garzón', 'lo que sea', 'Ana Pérez', '2026-11-14']
+]);
+ok(revueltos.length === 1 && revueltos[0].trabajador === 'Ana Pérez'
+   && revueltos[0].puesto === 'Garzón' && revueltos[0].fecha === '2026-11-14',
+   'las columnas se encuentran en cualquier orden y con otras de por medio');
+const escrita = filaTurno(ENC_REVUELTO,
+  { fecha: '2026-11-14', trabajador: 'Ana', puesto: 'Barra' });
+ok(escrita[0] === 'Barra' && escrita[2] === 'Ana' && escrita[3] === '2026-11-14',
+   'y al escribir, cada valor cae en SU columna');
+ok(escrita[1] === '', 'una columna que no manejamos se escribe vacía, no se desplaza nada');
+ok(leerTurnosDe([['Trabajador'], ['Ana']]).length === 0,
+   'sin columna de fecha no se inventan turnos');
+
+/* ---------- una persona, un puesto por día ---------- */
+const plan = normalizarPlan([
+  { fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón' },
+  { fecha: '2026-11-14', trabajador: 'Luis Soto', puesto: 'Cocina' },
+  { fecha: '2026-11-14', trabajador: 'ANA PÉREZ', puesto: 'Barman' },
+  { fecha: '2026-11-14', trabajador: '  ', puesto: 'Barra' },
+  { fecha: 'cualquier cosa', trabajador: 'Juan', puesto: 'Barra' }
+]);
+ok(plan.length === 2, 'una persona no puede ocupar dos puestos el mismo día');
+ok(plan.find((t) => t.trabajador === 'ANA PÉREZ')?.puesto === 'Barman',
+   'y gana la última asignación, que es la que la persona acaba de hacer');
+ok(!plan.some((t) => t.trabajador.trim() === ''), 'un nombre en blanco no es un turno');
+
+/* ---------- ¿alcanza el equipo? ---------- */
+const conRazon: Puesto[] = [
+  { nombre: 'Garzón', cadaCuantas: 10 },
+  { nombre: 'Cocina', cadaCuantas: 0 },
+  { nombre: 'Barman', cadaCuantas: 40 }
+];
+ok(sugeridos(conRazon[0], 44) === 5, '44 personas con uno cada 10 son cinco');
+ok(sugeridos(conRazon[1], 44) === 0, 'sin razón puesta el panel no opina');
+ok(sugeridos(conRazon[0], 0) === 0, 'y con nadie reservado tampoco');
+
+const lineas = planDelDia(turnos, conRazon, '2026-11-14', 44);
+ok(lineas.length === 4, 'los tres puestos de la lista más el que no estaba en ella');
+ok(lineas[0].asignados.length === 1 && lineas[0].faltan === 4,
+   'un garzón para 44 personas: faltan cuatro');
+ok(lineas[1].faltan === 0, 'el puesto sin razón nunca dice que falta gente');
+ok(lineas[3].puesto === 'Sin puesto',
+   'el turno sin puesto igual se muestra: hay alguien asignado a trabajar');
+ok(planDelDia(turnos, conRazon, '2026-11-14', 44).every((l) => Array.isArray(l.asignados)),
+   'un puesto vacío aparece igual: es justo el que hay que ver');
+
+const resumen = resumenEquipo(turnos, conRazon, '2026-11-14', 44);
+ok(resumen.total === 3, 'tres personas asignadas ese día');
+ok(resumen.porPuesto.length === 3, 'y el resumen de la tarjeta omite los puestos vacíos');
+ok(resumen.faltan === 4 + 2,
+   'suma lo que falta en TODOS los puestos con razón: 4 garzones y 2 barman');
+ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
+   'un día sin nadie asignado no toma turnos de otro día');
+
+/* ---------- quién quedó sin ficha ---------- */
+const equipo: Trabajador[] = [
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true },
+  { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true }
+];
+const huerfanos = sinFicha(turnos, equipo);
+ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
+   'avisa de quien tiene turnos y no está en la lista: pasa al renombrar a alguien');
+ok(sinFicha(turnos, []).length === 3, 'sin lista de trabajadores, todos quedan sin ficha');
+ok(!sinFicha([{ fecha: '2026-11-14', trabajador: 'LUIS SOTO', puesto: 'Cocina', fila: 2 }],
+   equipo).length, 'y no se queja por mayúsculas ni tildes');
+
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

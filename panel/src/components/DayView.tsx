@@ -15,6 +15,8 @@ import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
+import EquipoDialogo from './EquipoDialogo';
+import { planDelDia, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 
 type Filtro = 'todas' | 'online' | 'local';
 
@@ -27,6 +29,10 @@ export default function DayView({ fecha }: { fecha: string }) {
   // El catalogo de menus. Distinto de `menus`, que mas abajo son los
   // totales por plato de este dia.
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
+  const [equipo, setEquipo] = useState<{
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
+  } | null>(null);
+  const [planificando, setPlanificando] = useState(false);
 
   const cargar = () =>
     fetch('/api/reservas')
@@ -38,7 +44,22 @@ export default function DayView({ fecha }: { fecha: string }) {
       })
       .catch((e) => setError(String(e)));
 
-  useEffect(() => { cargar(); }, []);
+  // Aparte de las reservas: si la planilla todavía no tiene las pestañas del
+  // equipo, esta página sigue mostrando quiénes vienen, que es para lo que
+  // se abre.
+  const cargarEquipo = () =>
+    fetch('/api/equipo')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) return;
+        setEquipo({
+          puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
+          turnos: d.turnos ?? []
+        });
+      })
+      .catch(() => {});
+
+  useEffect(() => { cargar(); cargarEquipo(); }, []);
 
   const delDia = useMemo(
     () => (todas ?? []).filter((r) => r.fecha === fecha),
@@ -124,6 +145,23 @@ export default function DayView({ fecha }: { fecha: string }) {
   if (error) return <Aviso error={error} />;
   if (!todas) return <p className="text-hueso/50">Cargando…</p>;
 
+  // **Contra el día completo, no contra el filtro.** `personas` cuenta solo
+  // las reservas visibles, así que mirar "pagan en el local" habría cambiado
+  // cuánto equipo sugiere el panel. Para cocinar y atender viene toda la
+  // gente del día, no la que calza con el filtro de la pantalla.
+  const personasDelDia = useMemo(
+    () => delDia.filter(ocupaLugar).reduce((s, r) => s + (Number(r.personas) || 0), 0),
+    [delDia]
+  );
+  const plan = useMemo(
+    () => (equipo ? planDelDia(equipo.turnos, equipo.puestos, fecha, personasDelDia) : []),
+    [equipo, fecha, personasDelDia]
+  );
+  // Solo los puestos con alguien: acá lo que importa es quién viene a
+  // trabajar, y los puestos vacíos se ven en el planificador.
+  const conGente = plan.filter((l) => l.asignados.length > 0);
+  const faltan = plan.reduce((n, l) => n + l.faltan, 0);
+
   return (
     <>
       <a href="/" className="text-sm text-hueso/60 hover:text-hueso">← Calendario</a>
@@ -169,6 +207,46 @@ export default function DayView({ fecha }: { fecha: string }) {
             </p>
           )}
         </div>
+      )}
+
+      {/* El equipo de este día. Va junto a lo que hay que preparar porque es
+          la otra mitad de la misma pregunta: para esta gente, con quién. */}
+      <div className="mt-3 rounded border border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-xs uppercase tracking-widest text-hueso/45">Equipo</span>
+          {conGente.length === 0 ? (
+            <span className="text-sm text-hueso/55">Nadie asignado todavía.</span>
+          ) : (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              {conGente.map((l) => (
+                <li key={l.puesto}>
+                  <span className="text-hueso/50">{l.puesto}:</span>{' '}
+                  <span className="text-hueso/85">{l.asignados.join(', ')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <span className="flex-1" />
+          {faltan > 0 && (
+            <span className="text-xs text-amber-300">Faltan {faltan}</span>
+          )}
+          <button onClick={() => setPlanificando(true)} disabled={!equipo}
+            className="text-sm text-oro hover:underline disabled:opacity-40">
+            Planificar equipo
+          </button>
+        </div>
+      </div>
+
+      {planificando && equipo && (
+        <EquipoDialogo
+          fecha={fecha}
+          personas={personasDelDia}
+          puestos={equipo.puestos}
+          trabajadores={equipo.trabajadores}
+          turnos={equipo.turnos}
+          onListo={() => { setPlanificando(false); cargarEquipo(); }}
+          onCancelar={() => setPlanificando(false)}
+        />
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
