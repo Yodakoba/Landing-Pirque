@@ -19,11 +19,18 @@
 import { useEffect, useRef } from 'react';
 
 export default function Dialogo({
-  titulo, onCerrar, children
+  titulo, onCerrar, children, ancho = 'max-w-lg'
 }: {
   titulo: string;
   onCerrar: () => void;
   children: React.ReactNode;
+  /**
+   * El ancho máximo, como clase de Tailwind. Lo trae configurable porque
+   * planificar el equipo son varias columnas y en `max-w-lg` quedarían
+   * apiladas de a una; los formularios de una columna siguen con el de
+   * siempre.
+   */
+  ancho?: string;
 }) {
   const fondo = useRef<HTMLDivElement>(null);
   const empezoEnElFondo = useRef(false);
@@ -52,7 +59,7 @@ export default function Dialogo({
       className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4"
       role="dialog" aria-modal="true" aria-label={titulo}>
       {/* El clic de adentro no llega al fondo, así que no cierra nada. */}
-      <div className="mx-auto mt-10 max-w-lg rounded border border-hueso/15 bg-panel p-5">
+      <div className={`mx-auto mt-10 ${ancho} rounded border border-hueso/15 bg-panel p-5`}>
         <h2 className="text-sm font-bold uppercase tracking-widest text-oro">{titulo}</h2>
         {children}
       </div>

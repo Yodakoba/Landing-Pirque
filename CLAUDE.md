@@ -799,6 +799,113 @@ navegador del cliente y traer la salida.
 - **No cancela ni reagenda.** Una cancelación en Shopify no borra la fila ni
   el evento: hoy eso se hace a mano en la planilla.
 
+## El equipo de trabajadores (panel)
+
+Desde el 2026-10-21 el panel también planifica **quién trabaja cada día**.
+Nació de una idea más grande del cliente —gestionar al equipo completo desde
+acá, incluidas las cuentas del día— que se partió en tres lotes para que cada
+uno sirviera por sí solo:
+
+1. **Planificar** (hecho): qué puestos existen, quién es el equipo, y quién
+   trabaja qué día.
+2. **Los accesos** (pendiente): admin / encargado / trabajador.
+3. **Las cuentas del día** (pendiente): asistencia del equipo, horas,
+   ajustes y propina.
+
+### Tres pestañas nuevas en la misma planilla
+
+| Pestaña | Qué guarda |
+|---|---|
+| `Puestos` | Garzón, cocina, barra, asistente, runner, barman, bar asistente — **editables**, más la regla "uno cada N personas" |
+| `Trabajadores` | Nombre, teléfono, puesto habitual, activo |
+| `Turnos` | Una fila por (fecha, trabajador, puesto) |
+
+Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
+el calendario. **Ninguna llega al sitio público**: `/api/publico/fechas`
+sigue devolviendo `fecha`, `quedan` y `pocos`, y hay una prueba que lo fija.
+Quién trabaja mañana no es dato de un visitante.
+
+### "Uno cada N personas", que es lo que hace útil al planificador
+
+Es lo único que le permite al panel contestar **"¿alcanza este equipo?"** en
+vez de mostrar una lista. Con 10 en garzón, un día de 44 personas sugiere 5.
+
+**Nace en blanco a propósito y el panel no opina mientras lo esté.** Cuántos
+garzones por comensal se atiende bien es dato del negocio y no está escrito
+en ninguna parte del proyecto; sembrarlo con un número plausible haría que el
+panel diera consejos que nadie dio. Mismo criterio que los precios de los
+menús.
+
+### Una persona ocupa un puesto, no dos
+
+Asignar a alguien a un segundo puesto el mismo día lo **mueve**, no lo
+duplica. No es una limitación técnica: una persona contada como garzón y como
+barman a la vez haría decir al panel que hay dos donde hay una, y este es
+justo el lugar donde se mira para saber si el equipo alcanza. Lo garantiza
+`normalizarPlan()` **en el servidor**, no la interfaz, porque una llamada
+directa a la API tiene que obedecer la misma regla.
+
+### Las columnas de `Turnos` se leen por nombre, no por posición
+
+Al revés de `Puestos` y `Trabajadores`. La diferencia no es gusto: esas dos
+se reescriben enteras al guardar, así que la posición la fija el panel. A
+`Turnos` se le agregan y se le borran filas de a una, **y le van a crecer
+columnas en el lote 3** —asistencia, horas, ajustes—: con posiciones fijas,
+agregar una obligaría a reescribir todas las filas ya guardadas. Es el mismo
+criterio que usa `Reservas`.
+
+Guardar el equipo de un día **borra las filas de esa fecha y escribe las
+nuevas**, sin tocar los otros días: la pestaña entera son todos los fines de
+semana del año, y un error guardando un sábado no puede llevarse por delante
+el historial.
+
+### La tarjeta se da vuelta
+
+Cada día del calendario tiene **Equipo** al pie: la tarjeta gira en 3D y
+muestra el resumen —cuánta gente, cuántos por puesto, cuántos faltan— con el
+botón **Planificar equipo**. Dos detalles de implementación que arreglan
+trampas conocidas:
+
+- **Las dos caras van en la misma celda de una grilla**, no con
+  `position:absolute`. Así el alto de la tarjeta es el de la cara más alta,
+  sin fijarlo a mano — y una medida fija es justo lo que queda viejo cuando
+  el contenido cambia. El pie va con `mt-auto` para que el aire sobrante
+  quede en el medio y no colgando bajo los botones.
+- **La cara de espaldas se apaga para todo el mundo**: `aria-hidden`,
+  `pointer-events-none` y `tabIndex -1` en sus botones.
+  `backface-visibility` esconde el dibujo pero **deja los enlaces
+  alcanzables con el tabulador**, así que sin esto se podría tabular hacia
+  botones invisibles.
+
+El pie del frente dice ahora **"Ver reservas"** y no "Ver quiénes vienen":
+con tres acciones, el texto largo se partía en dos líneas en una tarjeta de
+cuatro columnas. La fecha del título lleva al mismo lugar.
+
+### Baja a alguien desmarcando "activo", no quitándolo
+
+Quitarlo de la lista no borra sus turnos pasados —esos son el registro de
+quién trabajó qué día— pero los deja con un nombre que ya no está, y
+`sinFicha()` lo reclama en amarillo. Es el mismo mecanismo que `desconocidos()`
+usa para los menús, y por el mismo motivo: sin alias ni equivalencias, lo
+único que mantiene alineadas dos listas es que alguien se entere cuando dejan
+de estarlo.
+
+### Lo que falta decidir
+
+- **El reparto de la propina.** El cliente lo dejó para más adelante
+  (2026-10-21), así que **no hay ninguna regla escrita**: nada se inventó. Se
+  agrega después sobre los turnos.
+- **El pago** va a ser **jornada + valor hora extra** (decidido el
+  2026-10-21), y todavía no está construido.
+- **Los accesos** van a ser tres: admin, encargado y trabajador. El
+  trabajador entra con un **link personal** que se manda por WhatsApp — sin
+  contraseña ni correo— y ve solo sus días. Se eligió sobre una clave
+  compartida de solo lectura por una razón concreta: **con sueldos y ajustes
+  en el panel, una clave compartida dejaría que cualquier trabajador viera lo
+  que gana y lo que le descontaron a todos los demás.**
+- El **encargado sí puede agregar trabajadores**, además de reservas,
+  asistencia y equipo. No toca precios ni configuración.
+
 ## Estilo y marca
 
 - Estética: fondo negro/casi negro, sans-serif en mayúsculas con tracking

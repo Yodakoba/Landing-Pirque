@@ -214,6 +214,25 @@ Lo único que **no** se cambia desde el panel es la clave de acceso: vive en
 Vercel. Guardarla en la planilla sería dejar la contraseña del panel en un
 documento compartido.
 
+## El equipo: tres pestañas más
+
+`Puestos`, `Trabajadores` y `Turnos`. Se editan en **/equipo**, salvo los
+turnos, que se asignan desde el calendario: en cada día, **Equipo → Planificar
+equipo**.
+
+**No hay que crear ninguna a mano.** Si no existen, el panel usa los siete
+puestos por defecto y una lista de trabajadores vacía, y las crea al guardar.
+
+La columna **`Uno cada N personas`** de `Puestos` es la que permite que el
+panel diga si el equipo alcanza: con 10 en garzón, un día de 44 personas
+sugiere 5. **En blanco el panel no opina**, que es lo correcto mientras el
+número no lo haya puesto el cliente.
+
+`Turnos` busca sus columnas **por nombre de encabezado**, así que se le
+pueden agregar columnas propias sin romper nada. Si alguna no calza,
+`/api/diagnostico` lo dice columna por columna, igual que con las otras
+pestañas.
+
 ## Los menús: un solo nombre, el mismo en los tres lados
 
 Viven en la pestaña **`Menús`** de la planilla y se editan en **/menus**:

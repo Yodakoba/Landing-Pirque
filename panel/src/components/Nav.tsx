@@ -14,6 +14,7 @@ import { usePathname } from 'next/navigation';
 
 const PAGINAS = [
   { href: '/', texto: 'Calendario' },
+  { href: '/equipo', texto: 'Equipo' },
   { href: '/menus', texto: 'Menús' },
   { href: '/config', texto: 'Configuración' }
 ];
