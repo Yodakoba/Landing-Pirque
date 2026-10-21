@@ -17,7 +17,7 @@ import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
          camposDeShopify,
          type PedidoShopify } from './shopify.ts';
-import { ESTADO_PAGO } from './columnas.ts';
+import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
@@ -742,6 +742,44 @@ ok(ev.description.includes('$88.000'), 'y el monto en formato chileno');
 ok(ev.description.includes('+56 9 1111 1111'), 'y el telefono, para llamar desde el evento');
 ok(eventoDe(r({ monto: null })).description.includes('sin anotar'),
    'una reserva sin monto lo dice, en vez de mostrar un cero que parece gratis');
+
+/* ---------- el dia privado: abierto para nosotros, no para el sitio ------ */
+// Es el dia del evento privado: se vendio entero, hay que verlo en el panel
+// con su reserva y su cupo, y NO puede aparecer en el calendario del sitio,
+// porque ahi significaria que cualquiera puede comprar un lugar en el
+// cumpleanos de otro.
+ok(esPrivada('Privada') && esPrivada('privado') && esPrivada('PRIVADA'),
+   'se reconoce escrito de varias formas');
+ok(esPrivada('Evento privado'), 'y como lo escribiria alguien a mano');
+ok(!esPrivada('Abierta') && !esPrivada('Cerrada') && !esPrivada(''),
+   'y no se confunde con los otros dos estados');
+
+// LA distincion que importa: privada NO es cerrada.
+ok(!estaCerrado(ESTADO_DIA.privada),
+   'un dia privado NO esta cerrado: recibe reservas, tiene cupo, hay que cocinar');
+ok(estaCerrado(ESTADO_DIA.cerrada), 'cerrada si lo esta');
+
+const privado = ocupacionDe(
+  [r({ fecha: '2026-11-18', personas: 40 })],
+  dia({ fecha: '2026-11-18', estado: ESTADO_DIA.privada })
+);
+ok(privado.privada === true, 'la ocupacion lo marca');
+ok(privado.bloqueada === false, 'y NO lo marca como bloqueado');
+ok(privado.tomadas === 40 && privado.quedan === 20,
+   'cuenta sus reservas y su cupo como cualquier otro dia');
+ok(privado.semaforo !== 'rojo', 'y su semaforo sale de la ocupacion, no de estar privado');
+
+// Y lo que de verdad hay que garantizar: que el sitio NO lo ofrezca.
+ok(paraElSitio([privado]).length === 0,
+   'un dia privado NO se le manda al sitio, aunque le queden 20 lugares');
+
+const abierto = ocupacionDe(
+  [r({ fecha: '2026-11-21', personas: 40 })],
+  dia({ fecha: '2026-11-21', estado: ESTADO_DIA.abierta })
+);
+ok(paraElSitio([abierto]).length === 1, 'y uno abierto si, para que la prueba signifique algo');
+ok(paraElSitio([privado, abierto])[0].fecha === '2026-11-21',
+   'mezclados, solo pasa el abierto');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

@@ -14,12 +14,17 @@ export const dynamic = 'force-dynamic';
  * panel mostraba cuatro fines de semana y los 90 días configurados no se
  * veían por ninguna parte.
  *
- * Los días salen de dos lugares que se unen:
+ * Los días salen de TRES lugares que se unen:
  *
  *   1. La regla —qué días de la semana se abre— dentro de la ventana.
  *   2. **Lo que haya en la hoja dentro de esa ventana**, aunque no calce con
  *      la regla. Un viernes abierto a mano para un feriado es justamente lo
  *      que no hay que esconder.
+ *   3. **Los días que tienen alguna reserva**, aunque no estén en ninguna de
+ *      las dos listas. Faltaba, y el síntoma era feo: una reserva anotada a
+ *      mano para un miércoles —un evento privado, por ejemplo— quedaba
+ *      invisible en el panel. La reserva existía en la planilla y el día
+ *      simplemente no se dibujaba.
  *
  * Un día que la regla abre pero que todavía no está en la hoja se muestra
  * igual, en gris y con capacidad 0: así se ve cuáles faltan por abrir, en
@@ -39,12 +44,16 @@ export async function GET(req: Request) {
 
     const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
     const porRegla = diasAbiertosEntre(desde, hasta, cfg.diasAbiertos);
-    // Lo de la hoja que cae en la ventana y que la regla no habría incluido.
-    const aMano = fechas
-      .map((f) => f.fecha)
-      .filter((f) => f >= desde && f <= hasta && !porRegla.includes(f));
 
-    const dias: FechaHabil[] = [...new Set([...porRegla, ...aMano])].sort().map(
+    const enLaVentana = (f: string) => f >= desde && f <= hasta;
+    // Lo de la hoja que cae en la ventana y que la regla no habría incluido.
+    const aMano = fechas.map((f) => f.fecha).filter(enLaVentana);
+    // Y los días que tienen reservas, estén donde estén. Una reserva sin su
+    // día dibujado es una reserva que nadie va a ver.
+    const conReservas = reservas.map((r) => r.fecha).filter(enLaVentana);
+
+    const dias: FechaHabil[] = [...new Set([...porRegla, ...aMano, ...conReservas])]
+      .sort().map(
       (f) => porFecha.get(f) ?? {
         // Capacidad 0 a propósito, no el cupo normal: un día que todavía no
         // está en la hoja no está abierto, y mostrarlo con 60 lugares diría

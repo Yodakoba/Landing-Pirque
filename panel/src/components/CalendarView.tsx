@@ -162,7 +162,10 @@ export default function CalendarView() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
           <div key={d.fecha}
-             className={`rounded border p-4 transition ${COLOR[d.semaforo]}`}>
+             className={`rounded border p-4 transition ${
+               d.privada && !d.bloqueada
+                 ? 'border-sky-400/50 bg-sky-400/5'
+                 : COLOR[d.semaforo]}`}>
             <div className="flex items-start justify-between gap-2">
               <a href={`/dia/${d.fecha}`} className="text-sm capitalize hover:text-oro">
                 {enPalabras(d.fecha)}
@@ -218,7 +221,13 @@ export default function CalendarView() {
 
             {d.bloqueada && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-red-400">
-                Bloqueado
+                Cerrado
+              </p>
+            )}
+            {d.privada && !d.bloqueada && (
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-sky-300">
+                Solo nosotros
+                <span className="ml-1 font-normal text-hueso/50">· no está en el sitio</span>
               </p>
             )}
             {d.notas && <p className="mt-1 text-xs text-hueso/50">{d.notas}</p>}

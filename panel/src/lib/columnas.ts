@@ -86,6 +86,18 @@ export const ASISTENCIA = {
  */
 export const ESTADO_DIA = {
   abierta: 'Abierta',
+  /**
+   * Abierto para nosotros, **no ofrecido en el sitio**.
+   *
+   * Es el día del evento privado: se vendió entero, hay que verlo en el
+   * panel con su reserva y su cupo, pero **no puede aparecer en el
+   * calendario del sitio**, porque ahí significaría que cualquiera puede
+   * comprar un lugar en el cumpleaños de otro.
+   *
+   * Sin este estado la única forma de ver ese día en el panel era abrirlo,
+   * y abrirlo lo publicaba. Eran dos cosas que no tenían por qué ir juntas.
+   */
+  privada: 'Privada',
   cerrada: 'Cerrada'
 } as const;
 
@@ -97,8 +109,24 @@ export const ESTADO_DIA = {
  * mismo escribía antes, para que las filas viejas sigan leéndose.
  */
 const ABIERTOS = new Set([
-  'activa', 'activo', 'abierta', 'abierto', 'disponible', 'habil', 'si', 'ok'
+  'activa', 'activo', 'abierta', 'abierto', 'disponible', 'habil', 'si', 'ok',
+  // Un día privado NO está cerrado: recibe reservas, solo que no se ofrece.
+  'privada', 'privado'
 ]);
+
+/** Las formas de escribir "privada". Mismo criterio tolerante que el resto. */
+const PRIVADOS = new Set(['privada', 'privado', 'evento privado', 'cerrado al publico']);
+
+/**
+ * Si el día NO se ofrece en el sitio, aunque sí reciba reservas.
+ *
+ * Se pregunta aparte de estaCerrado() porque son dos cosas distintas: un
+ * día privado está **abierto** —tiene cupo, tiene reservas, hay que
+ * cocinar— y lo único que no hace es aparecer en el calendario público.
+ */
+export function esPrivada(estado: unknown): boolean {
+  return PRIVADOS.has(normalizar(String(estado ?? '')));
+}
 
 /**
  * Si un día NO recibe reservas.

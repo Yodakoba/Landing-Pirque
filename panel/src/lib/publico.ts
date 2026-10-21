@@ -29,7 +29,7 @@ export interface FechaPublica {
 /**
  * Filtra y recorta la ocupación para el sitio.
  *
- * Se omiten los días cerrados y los llenos. Un día lleno no se manda como
+ * Se omiten los días cerrados, los privados y los llenos. Un día lleno no se manda como
  * "quedan 0": simplemente no está, porque el calendario del sitio solo
  * dibuja lo que se puede reservar y un cero invita a intentarlo.
  */
@@ -43,6 +43,10 @@ export function paraElSitio(
   const salida: FechaPublica[] = [];
   for (const d of dias) {
     if (d.bloqueada) continue;
+    // Un día privado existe y tiene reservas, pero no se ofrece: ahí
+    // significaría que cualquiera puede comprar un lugar en el evento de
+    // otro.
+    if (d.privada) continue;
     if (d.quedan <= 0) continue;
     salida.push({
       fecha: d.fecha,
