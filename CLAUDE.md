@@ -370,8 +370,8 @@ de Shopify.
 
 **Cowlendar quedó descartado el 2026-10-13.** En su lugar se construye un
 sistema propio: **Shopify cobra, nosotros agendamos.** El código vive en
-`backend/` y corre en Google Apps Script, pegado a una planilla del cliente.
-Ver `backend/README.md`.
+`panel/`, una aplicación Next.js desplegada en Vercel, sobre una planilla
+del cliente. Ver `panel/DESPLIEGUE.md`.
 
 **La razón del descarte, anotada el 2026-10-15 porque no estaba escrita en
 ninguna parte:** Cowlendar no tiene un widget integrable al 100% con el
@@ -416,20 +416,21 @@ El reparto queda así:
 | Cobro y checkout | Shopify |
 | Calendario, cupo y registro | El panel (`panel/`), sobre la planilla |
 | Panel de administración | `panel/`, una app Next.js en Vercel |
-| Agenda visible | Google Calendar (lo escribía el Apps Script) |
+| Agenda visible | Google Calendar, escrito por el panel |
 
-### El Apps Script está siendo reemplazado por `panel/` (2026-10-21)
+### El Apps Script se jubiló (2026-10-21)
+
+Ya no existe. Lo reemplazó `panel/` por completo, incluida la escritura a
+Google Calendar, que fue lo último en portarse. El porqué largo está en
+`backend/README.md`; lo que hay que saber acá es esto:
 
 **Hubo un tiempo con DOS planillas que no se hablaban**, y conviene saberlo
 porque explica medio archivo: el Apps Script usaba una, con pestañas
 `Reservas` y `Excepciones`, y el panel otra, con `Reservas` y `Fechas
 Hábiles`. El sitio obedecía al Apps Script. O sea que cerrar un día en el
 panel no llegaba al cliente final, y las reservas de Shopify no aparecían en
-el panel. Se decidió que **sobreviva el panel** y se partió limpio: no se
+el panel. Se decidió que sobreviviera el panel y se partió limpio: no se
 migraron datos porque las reservas que había eran de prueba.
-
-**`CONFIG.backend` apunta al panel desde el 2026-10-21**, así que ya hay una
-sola verdad. Lo que queda del Apps Script es la escritura a Google Calendar.
 
 **Por qué el Apps Script consultaba a Shopify en vez de recibir un webhook:**
 los Web Apps **no dan acceso a las cabeceras** de la petición, así que era
@@ -444,10 +445,10 @@ tareas una vez al día**. Quedaron las dos cosas —webhook para inmediatez,
 reconciliación diaria para rellenar lo perdido— que es más robusto que
 cualquiera de las dos sola. Ver `panel/DESPLIEGUE.md`.
 
-**El token de Admin API del backend no contradice la regla de este
-proyecto.** "Un token de Admin API jamás" es sobre el **sitio**, donde
-quedaría en un archivo público. En Apps Script corre del lado del servidor y
-se guarda en las propiedades del script, que nunca salen al navegador.
+**El token de Admin API del panel no contradice la regla de este proyecto.**
+"Un token de Admin API jamás" es sobre el **sitio**, donde quedaría en un
+archivo público. En el panel es una variable de entorno de Vercel, del lado
+del servidor, que nunca sale al navegador.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
   `assets/js/reserva.js`: token, dominio, versión de API y la URL del
@@ -462,11 +463,12 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   cliente, que primero recomendó `2025-01` — esa lleva como un año fuera de
   soporte. Shopify soporta cada versión unos 12 meses; la `2026-10` hasta
   octubre de 2027.
-- **Un Web App de Apps Script no puede elegir el código HTTP**: responde 200
-  incluso cuando falla, con `{error: ...}` en el cuerpo. Por eso
-  `cargarFechas()` revisa el campo `error` y no solo `response.ok` — sin
-  eso, una falla del backend se vería en pantalla como "no hay fechas", que
-  es otra cosa y manda a buscar el problema donde no está.
+- **`cargarFechas()` revisa el campo `error` además de `response.ok`.** Hoy
+  el panel sí devuelve un 500 de verdad, pero el campo se mantiene: venía de
+  que un Web App de Apps Script responde 200 aunque falle, y conservarlo no
+  cuesta nada y cubre al próximo backend que tenga esa limitación. Sin
+  revisarlo, una falla se vería en pantalla como "no hay fechas", que es
+  otra cosa y manda a buscar el problema donde no está.
 - **`CONFIG.token` es el interruptor de toda la integración, y está
   encendido desde el 2026-10-14.** Lo decidió el cliente para poder probar
   la cadena completa mientras el sitio todavía no se difunde: el token del
@@ -522,12 +524,12 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   otro dejaría crear dos carritos seguidos y la persona terminaría en el
   checkout del segundo sin entender por qué cambió el precio.
 - **Las reservas sin pagar se anotan igual y toman cupo** (2026-10-14). El
-  backend dejó de filtrar por `financial_status=paid`; ver `backend/README.md`.
+  panel no filtra por `financial_status=paid`.
   Una cancelada libera su cupo, una por pagar no.
-- **No hay `doPost`: un webhook apuntado al Web App no hace nada**, y
-  Shopify igual lo da por entregado porque Apps Script responde 200 aunque
-  la función no exista. Si aparece uno configurado en la tienda, se borra.
-  El backend pregunta, no recibe; ver `backend/README.md`.
+- **Los webhooks de Shopify apuntan al panel**, a
+  `/api/shopify/webhook`. Si aparece alguno apuntando al Web App viejo de
+  Apps Script, se borra: esa URL ya no existe, y Shopify igual lo daría por
+  entregado porque Apps Script respondía 200 aunque la función no existiera.
 - **`order.phone` viene vacío casi siempre.** El checkout pide el teléfono
   dentro de la dirección, así que el número está en
   `billing_address.phone`. `telefonoDe()` mira los cuatro lugares.
@@ -548,42 +550,38 @@ se guarda en las propiedades del script, que nunca salen al navegador.
   distingue "falta un permiso" de "ese pedido no tenía el dato". En #1007,
   `shipping_address` vino en `null` (correcto: una reserva no tiene envío)
   mientras que `customer` y `billing_address` traían datos **sin las
-  llaves** de nombre, correo y teléfono. Ver `backend/README.md`.
-- **El panel de administración vive DENTRO de la planilla** (menú
-  `Brasas`), y no es una página aparte a propósito: la autenticación sale
-  gratis de la planilla, no hay segunda copia de los datos y no hay nada
-  nuevo que desplegar. Una página suelta tendría que escribirle al Web App,
-  que está publicado como "cualquier usuario".
-- **Lo que se mira vive en pestañas, lo que se toca vive en ventanas**
-  (2026-10-14). Una pestaña de Sheets es una grilla y no puede tener
-  botones, pero está siempre ahí, se ve en el celular y se imprime; una
-  ventana tiene botones pero hay que abrirla. Pestañas: `Panel`
-  (ocupación) y `Día` (quiénes vienen). Ventanas: el formulario de reserva
-  a mano y el calendario de abrir/cerrar días. Ver `backend/README.md`.
-- **Las dos pestañas se redibujan enteras**: lo que alguien escriba ahí se
-  pierde, y por eso no guardan nada que no esté en `Reservas` o
-  `Excepciones`.
-- **El calendario escribe EXCEPCIONES, no días.** Volver un día a su
-  estado normal **borra** su fila, y un cupo igual al general no se
-  escribe. Si `Excepciones` crece hasta tener un día por fila, el diseño
-  se rompió: eran 104 filas al año, que es lo que se evitó. Hay nueve
-  pruebas que lo fijan.
-- **Una reserva a mano lleva `pedido` = `MANUAL-…`.** No es cosmético:
-  `sincronizarPedidos()` usa esa columna para saber qué pedidos de Shopify
-  ya anotó, y los ids de Shopify son números, así que no pueden chocar. Su
-  `total` queda en blanco a propósito: los precios viven en el HTML del
-  sitio y el backend no los conoce.
-- **El panel y el sitio salen de la misma función**, `diasAbiertos()`. El
-  sitio recibe deliberadamente menos: solo fecha, lugares que quedan y si
-  son pocos. Cuánta gente reservó, cuánto pagó y el tamaño del local no son
-  datos de un visitante. Hay una prueba que lo fija.
-- **Los títulos de las cuatro pestañas de la planilla no se escriben a
-  mano**: los deja `prepararPlanilla()`, que se corre una vez desde el
-  editor de Apps Script y es segura de repetir. No es comodidad: el script
-  busca cada valor por el **nombre** de su columna, y la normalización
-  arregla mayúsculas y espacios pero **no tildes**, así que un `Menú` o un
-  `Niños` escritos a mano no calzan con `menu` y `ninos`. Y no da error:
-  deja la columna vacía, o la duplica al lado.
+  llaves** de nombre, correo y teléfono.
+- **El panel de administración es una página aparte** (`panel/`, en
+  Vercel), y antes vivía dentro de la planilla. Se cambió el 2026-10-21: una
+  pestaña de Sheets no puede tener botones, los diálogos HTML de Apps Script
+  daban problemas, y hubo funciones que nunca aparecieron en el menú sin que
+  se supiera por qué. Ver `backend/README.md`.
+- **El panel no usa una pestaña `Excepciones`.** El Apps Script armaba las
+  fechas con una regla más excepciones, para no escribir 104 filas al año;
+  el panel usa `Fechas Hábiles`, una fila por día. Es más simple de leer
+  para una persona y el volumen no molesta, pero vale saber que el modelo
+  cambió: la planilla vieja no sirve tal cual.
+- **Una reserva a mano lleva `ID Orden` = `MANUAL-…`.** No es cosmético: el
+  sincronizador usa esa columna para saber qué pedidos ya anotó, y los ids
+  de Shopify son números, así que no pueden chocar.
+- **Una reserva a mano SÍ lleva monto** (cambió el 2026-10-21). Antes no,
+  con el argumento de que los precios viven en Shopify. Eso vale para un
+  pedido de Shopify, que trae su total y ese manda; pero en una reserva a
+  mano no hay pedido de dónde sacarlo, así que no son dos verdades, es la
+  única que hay. Sale de los precios de la pestaña `Menús` según la
+  modalidad, y se puede corregir.
+- **El panel y el sitio salen de la misma ocupación**, y el sitio recibe
+  deliberadamente menos: solo fecha, lugares que quedan y si son pocos.
+  Cuánta gente reservó, cuánto pagó, cuánto hay que cobrar y el tamaño del
+  local no son datos de un visitante. El recorte vive en
+  `panel/src/lib/publico.ts` y hay una prueba que lo fija.
+- **Los encabezados de la planilla se buscan por nombre, sin distinguir
+  mayúsculas ni tildes.** Un `Menu` escrito a mano encuentra a `Menú`. Y
+  los nombres de pestaña en la API de Sheets **sí** distinguen mayúsculas,
+  así que `nombreReal()` resuelve el título verdadero una vez. Si algo no
+  calza, el modo de falla natural es quedarse callado —la columna se lee
+  vacía y el panel se ve bien con datos que no están— y por eso existe
+  `/api/diagnostico`, que dice columna por columna qué faltó.
 - **La fecha se elige en un calendario mensual**, no en un desplegable
   (2026-10-13). Lo dibuja `reserva.js` con lo que entrega el backend, y la
   fecha elegida queda en el input oculto `#r-fecha`. **El sitio no decide
@@ -775,7 +773,8 @@ navegador del cliente y traer la salida.
   comprobó que sobreviven en el carrito; falta verlas en un pedido real,
   porque de ahí las lee `leerReserva()`. Requiere completar una compra de
   prueba en la tienda de desarrollo.
-- **Que el Web App de Apps Script se pueda leer desde el sitio.** El
+- ~~Que el Web App de Apps Script se pueda leer desde el sitio~~ — ya no
+  aplica: el sitio le pide las fechas al panel. El
   endpoint ya está desplegado y conectado en `CONFIG.backend`, y el sitio
   está probado de punta a punta contra un backend simulado en local: pinta
   el mes, marca los días por llenarse, escribe la fecha en `#r-fecha`,

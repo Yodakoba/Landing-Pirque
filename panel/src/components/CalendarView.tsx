@@ -10,6 +10,7 @@ import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
 import { POR_DEFECTO, type Config } from '@/lib/config';
+import { enPesos } from '@/lib/ocupacion';
 import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
@@ -200,6 +201,18 @@ export default function CalendarView() {
                     <strong className="tabular-nums text-hueso">{d.local}</strong> en el local
                   </span>
                 </p>
+
+                {(d.porCobrar > 0 || d.sinMonto > 0) && (
+                  <p className="mt-2 text-xs text-amber-300/90">
+                    {d.porCobrar > 0 && <>{enPesos(d.porCobrar)} por cobrar</>}
+                    {d.sinMonto > 0 && (
+                      <span className="text-hueso/50">
+                        {d.porCobrar > 0 ? ' · ' : ''}
+                        {d.sinMonto} sin monto
+                      </span>
+                    )}
+                  </p>
+                )}
               </>
             )}
 

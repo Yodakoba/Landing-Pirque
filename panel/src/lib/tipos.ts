@@ -33,6 +33,8 @@ export interface Ocupacion {
   quedan: number;
   online: number;        // personas que ya pagaron
   local: number;         // personas que pagan al llegar
+  porCobrar: number;     // pesos a cobrar el mismo día
+  sinMonto: number;      // reservas por cobrar SIN monto anotado
   semaforo: Semaforo;
   bloqueada: boolean;
   notas: string;

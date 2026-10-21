@@ -43,6 +43,25 @@ export function ocupaLugar(r: Reserva): boolean {
          e !== ESTADO_PAGO.cancelado;
 }
 
+/**
+ * Si todavía hay que cobrarle a esta reserva.
+ *
+ * **Se decide por el ESTADO DEL PAGO, no por la modalidad comprada**, y esa
+ * diferencia importa: una fila que diga "Pago directo" junto a "pending"
+ * significa que la regla de medios de pago de Shopify no aplicó y la persona
+ * eligió pagar en el local igual. Mirando la modalidad, esa plata no
+ * aparecería en ninguna parte y nadie se la cobraría en la puerta.
+ */
+export function faltaCobrar(r: Reserva): boolean {
+  if (!ocupaLugar(r)) return false;
+  return String(r.estadoPago || '').trim().toLowerCase() !== ESTADO_PAGO.pagado;
+}
+
+/** Un monto en pesos, en formato chileno: 218000 -> "$218.000". */
+export function enPesos(n: number): string {
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+
 export function deEseDia(reservas: Reserva[], fecha: Fecha): Reserva[] {
   return reservas.filter((r) => r.fecha === fecha);
 }
@@ -66,6 +85,17 @@ export function ocupacionDe(
     else online += n;
   }
   const tomadas = online + local;
+
+  // La plata que hay que cobrar el mismo día, y cuántas reservas no tienen
+  // monto. Las segundas se cuentan aparte a propósito: un total que omite
+  // filas en silencio es peor que uno que dice cuántas le faltan.
+  let porCobrar = 0;
+  let sinMonto = 0;
+  for (const r of delDia) {
+    if (!faltaCobrar(r)) continue;
+    if (r.monto == null) sinMonto++;
+    else porCobrar += Number(r.monto) || 0;
+  }
   // Una sola definición de "cerrado", compartida con la pantalla de fechas.
   // Ver estaCerrado(): falla cerrando a propósito.
   const bloqueada = estaCerrado(dia.estado);
@@ -77,6 +107,8 @@ export function ocupacionDe(
     quedan: Math.max(0, dia.capacidad - tomadas),
     online,
     local,
+    porCobrar,
+    sinMonto,
     semaforo: bloqueada ? 'rojo' : semaforo(tomadas, dia.capacidad, cortes),
     bloqueada,
     notas: dia.notas || ''

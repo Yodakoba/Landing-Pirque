@@ -5,7 +5,16 @@
 import { google } from 'googleapis';
 import type { sheets_v4 } from 'googleapis';
 
-const ALCANCE = ['https://www.googleapis.com/auth/spreadsheets'];
+// La planilla, y los eventos del calendario. El segundo se agregó el
+// 2026-10-21 al jubilar el Apps Script, que era quien los creaba.
+//
+// Es `calendar.events` y no `calendar` a propósito: alcanza para crear y
+// editar eventos del calendario que se nos haya compartido, y no para
+// crear, borrar ni listar calendarios de la cuenta.
+const ALCANCE = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/calendar.events'
+];
 
 let cliente: sheets_v4.Sheets | null = null;
 
@@ -15,8 +24,16 @@ export function idPlanilla(): string {
   return id;
 }
 
-export function sheets(): sheets_v4.Sheets {
-  if (cliente) return cliente;
+let credencial: InstanceType<typeof google.auth.JWT> | null = null;
+
+/**
+ * La cuenta de servicio, una sola para la planilla y el calendario.
+ *
+ * Está aparte porque el calendario también la usa: tener dos credenciales
+ * con la misma clave privada sería dos lugares donde equivocarse.
+ */
+export function autenticacion() {
+  if (credencial) return credencial;
 
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const clave = process.env.GOOGLE_PRIVATE_KEY;
@@ -26,7 +43,7 @@ export function sheets(): sheets_v4.Sheets {
     );
   }
 
-  const auth = new google.auth.JWT({
+  credencial = new google.auth.JWT({
     email,
     // En un .env los saltos de línea van como \n literales. Si no se
     // deshacen, la librería falla con un error de clave inválida que no
@@ -34,8 +51,12 @@ export function sheets(): sheets_v4.Sheets {
     key: clave.replace(/\\n/g, '\n'),
     scopes: ALCANCE
   });
+  return credencial;
+}
 
-  cliente = google.sheets({ version: 'v4', auth });
+export function sheets(): sheets_v4.Sheets {
+  if (cliente) return cliente;
+  cliente = google.sheets({ version: 'v4', auth: autenticacion() });
   return cliente;
 }
 
