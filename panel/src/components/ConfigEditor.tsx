@@ -29,6 +29,35 @@ export default function ConfigEditor() {
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState('');
+  const [revisando, setRevisando] = useState(false);
+  const [resumen, setResumen] = useState('');
+
+  /**
+   * Le pide a Shopify los pedidos recientes y anota lo que falte.
+   *
+   * Es la misma reconciliación que corre sola una vez al día, y vive acá y
+   * no en el calendario porque **no es una herramienta de gestión**: la
+   * gestión pasa por el panel y las reservas llegan solas por el webhook.
+   * Esto se aprieta cuando se sospecha que algo falta, que es de vez en
+   * cuando y no todos los días.
+   *
+   * Es seguro apretarlo de más: guardarPedido() es idempotente.
+   */
+  async function revisarShopify() {
+    setRevisando(true);
+    setResumen('');
+    try {
+      const r = await fetch('/api/shopify/sincronizar', { headers: { 'x-panel': 'si' } });
+      const d = await r.json();
+      setResumen(d.error
+        ? d.error
+        : `${d.revisados} pedidos revisados · ${d.creadas} nuevas · ${d.actualizadas} al día`);
+    } catch (e) {
+      setResumen(String(e));
+    } finally {
+      setRevisando(false);
+    }
+  }
 
   async function cargar() {
     const r = await fetch('/api/config');
