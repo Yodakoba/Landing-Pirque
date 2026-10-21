@@ -151,6 +151,24 @@ export default function ConfigEditor() {
               'rojo')} />)}
       </div>
 
+      {/* Mantenimiento: lo que se toca cuando algo parece faltar, no a diario. */}
+      <section className="mt-10 border-t border-hueso/10 pt-6">
+        <h2 className="text-sm font-bold uppercase tracking-wide">Mantenimiento</h2>
+        <p className="mt-1 max-w-2xl text-sm text-hueso/60">
+          Las reservas llegan solas apenas se paga en Shopify, y una vez al día
+          se revisa que no falte ninguna. Este botón hace esa revisión ahora,
+          sin esperar: sirve si sospechas que una reserva no apareció.
+          Apretarlo de más no duplica nada.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button onClick={revisarShopify} disabled={revisando}
+            className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro disabled:opacity-50">
+            {revisando ? 'Revisando…' : 'Revisar Shopify ahora'}
+          </button>
+          {resumen && <span className="text-xs text-hueso/60">{resumen}</span>}
+        </div>
+      </section>
+
       <p className="text-xs text-hueso/40 mt-6 max-w-2xl">
         La clave del panel no se cambia acá: vive en Vercel como variable de
         entorno. Guardarla en la planilla sería dejar la contraseña del panel en
