@@ -146,8 +146,6 @@ export function tipoPagoDe(p: PedidoShopify): string {
   return vistas.join(' + ');
 }
 
-const ES_NINO = /ni[nñ]/i;
-
 /**
  * Las personas del pedido: adultos más niños.
  *
@@ -160,15 +158,81 @@ export function personasDe(p: PedidoShopify): number {
   return total;
 }
 
-/** Los menús de adultos, que es lo que distingue una reserva de otra. */
+/** El separador entre la cantidad y el menú. Un solo lugar, para leer y escribir. */
+export const POR = ' × ';
+
+/**
+ * Qué se pidió y cuánto de cada cosa: `"2 × Menú Tradiciones + 1 × Menú Niños"`.
+ *
+ * **Antes decía solo `"Menú Tradiciones"`**, sin cantidades y **sin el menú
+ * de niños**, que quedaba fuera a propósito por pensarse como "qué comen los
+ * adultos". Con eso un pedido de 2 Tradiciones + 1 Niños se veía igual que
+ * uno de 3 Tradiciones, y **la cocina no podía saber qué preparar**. Las
+ * personas ya iban juntas en su columna; lo que faltaba era el desglose.
+ *
+ * Va como texto y no en columnas nuevas porque los menús cambian —hoy son
+ * tres, mañana pueden ser cuatro— y una columna por menú obligaría a tocar
+ * la planilla cada vez. Así también se lee solo para quien abra la hoja.
+ */
 export function menuDe(p: PedidoShopify): string {
-  const vistos: string[] = [];
+  // Se acumula por título: dos líneas del mismo menú en modalidades distintas
+  // son el mismo plato para la cocina.
+  const porMenu = new Map<string, number>();
   for (const l of p.line_items ?? []) {
     const t = texto(l.title);
-    if (!t || ES_NINO.test(t)) continue;
-    if (!vistos.includes(t)) vistos.push(t);
+    if (!t) continue;
+    porMenu.set(t, (porMenu.get(t) ?? 0) + (Number(l.quantity) || 0));
   }
-  return vistos.join(' + ');
+  return [...porMenu]
+    .filter(([, n]) => n > 0)
+    .map(([t, n]) => `${n}${POR}${t}`)
+    .join(' + ');
+}
+
+/**
+ * Lo contrario: de `"2 × Menú Tradiciones + 1 × Menú Niños"` a la lista.
+ *
+ * **Tolera el formato viejo y lo escrito a mano.** Una entrada sin cantidad
+ * —`"Menú Tradiciones"`, que es como quedaron las filas anteriores a este
+ * cambio y como alguien lo escribiría en la planilla— cuenta como 1. Es
+ * preferible contar de menos que no contar: una fila vieja sigue sumando al
+ * total del día en vez de desaparecer de él.
+ *
+ * Se aceptan `×` y `x`, porque en un teclado se escribe la equis.
+ */
+export function desglosarMenu(texto: unknown): { menu: string; cantidad: number }[] {
+  const salida: { menu: string; cantidad: number }[] = [];
+  for (const parte of String(texto ?? '').split('+')) {
+    const t = parte.trim();
+    if (!t) continue;
+    const m = /^(\d+)\s*[×x]\s*(.+)$/i.exec(t);
+    const menu = (m ? m[2] : t).trim();
+    const cantidad = m ? Number(m[1]) : 1;
+    if (!menu) continue;
+    const ya = salida.find((x) => x.menu === menu);
+    if (ya) ya.cantidad += cantidad;
+    else salida.push({ menu, cantidad });
+  }
+  return salida;
+}
+
+/**
+ * El total por menú de un conjunto de reservas: lo que mira la cocina.
+ *
+ * Ordenado de mayor a menor, que es como se lee una lista de preparación.
+ */
+export function menusDe(
+  reservas: { menu: string }[]
+): { menu: string; cantidad: number }[] {
+  const total = new Map<string, number>();
+  for (const r of reservas) {
+    for (const { menu, cantidad } of desglosarMenu(r.menu)) {
+      total.set(menu, (total.get(menu) ?? 0) + cantidad);
+    }
+  }
+  return [...total]
+    .map(([menu, cantidad]) => ({ menu, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad || a.menu.localeCompare(b.menu));
 }
 
 /**
