@@ -29,9 +29,13 @@ export async function POST(req: Request) {
     const id = await crearReserva({
       fecha: b.fecha, nombre: b.nombre, email: b.email ?? '',
       telefono: b.telefono ?? '', menu: b.menu ?? '', personas: Number(b.personas),
-      // El monto queda en blanco a propósito: los precios viven en Shopify y
-      // en el sitio. Que el panel los fije sería una segunda verdad.
-      monto: null, tipoPago: b.tipoPago ?? '', estadoPago: b.estadoPago ?? '',
+      // El monto viene del formulario, calculado con los precios de /menus y
+      // corregible a mano. Antes esta línea era un `null` fijo, de cuando el
+      // monto no se pedía: con eso el precio se perdía al crear y solo se
+      // guardaba al editar. Vacío sigue siendo válido — es lo que pasa si
+      // nadie puso precios todavía.
+      monto: b.monto == null || b.monto === '' ? null : Number(b.monto),
+      tipoPago: b.tipoPago ?? '', estadoPago: b.estadoPago ?? '',
       // Sin marcar: a una reserva que se acaba de crear todavía no se le
       // puede saber si la persona apareció.
       asistencia: ASISTENCIA.sinMarcar
