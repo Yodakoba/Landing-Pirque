@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { leerMenus, guardarMenus } from '@/lib/datos';
 import type { Menu } from '@/lib/menus';
+import { normalizar } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +16,11 @@ export async function GET() {
 /**
  * Guarda la lista entera.
  *
- * Se limpia antes de escribir: nombres vacíos fuera, alias sin repetir, y un
- * alias que sea igual al nombre se descarta porque no aporta nada. Es la
- * misma idea que en la configuración — lo que se guarda es exactamente lo
- * que se va a volver a leer.
+ * Se limpia antes de escribir: nombres vacíos fuera y sin repetidos, donde
+ * "repetido" se decide normalizado, para que no convivan `Tradiciones` y
+ * `TRADICIONES` como si fueran dos menús. Es la misma idea que en la
+ * configuración: lo que se guarda es exactamente lo que se va a volver a
+ * leer.
  */
 export async function PUT(req: Request) {
   try {
@@ -27,16 +29,12 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Falta la lista de menús.' }, { status: 400 });
     }
     const limpia: Menu[] = [];
+    const vistos = new Set<string>();
     for (const m of menus) {
       const nombre = String(m?.nombre ?? '').trim();
-      if (!nombre || limpia.some((x) => x.nombre === nombre)) continue;
-      const crudos: unknown[] = Array.isArray(m?.alias)
-        ? m.alias
-        : String(m?.alias ?? '').split(',');
-      const alias: string[] = [...new Set(
-        crudos.map((a) => String(a).trim()).filter((a) => a && a !== nombre)
-      )];
-      limpia.push({ nombre, alias });
+      if (!nombre || vistos.has(normalizar(nombre))) continue;
+      vistos.add(normalizar(nombre));
+      limpia.push({ nombre });
     }
     await guardarMenus(limpia);
     return NextResponse.json({ menus: limpia });

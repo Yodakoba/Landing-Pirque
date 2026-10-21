@@ -1,11 +1,13 @@
 'use client';
 
 /**
- * La lista de menús: qué existe y cómo se llama de verdad.
+ * Qué menús existen.
  *
- * Vive en la planilla, así que agregar un menú o arreglar un rename de
- * Shopify no necesita un despliegue. Ver src/lib/menus.ts para el porqué de
- * los alias.
+ * Vive en la planilla, así que agregar uno no necesita un despliegue.
+ *
+ * **El aviso amarillo es la pieza importante de esta pantalla**, no la
+ * tabla. Sin alias, lo único que mantiene alineados a Shopify, al sitio y al
+ * panel es enterarse cuando dejan de estarlo. Ver src/lib/menus.ts.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
@@ -58,10 +60,9 @@ export default function MenusEditor() {
   if (error) return <Aviso error={error} />;
   if (!menus) return <p className="text-hueso/50">Cargando…</p>;
 
-  const cambiar = (i: number, campo: 'nombre' | 'alias', valor: string) => {
-    const copia = menus.map((m) => ({ ...m, alias: [...m.alias] }));
-    if (campo === 'nombre') copia[i].nombre = valor;
-    else copia[i].alias = valor.split(',').map((a) => a.trim()).filter(Boolean);
+  const cambiar = (i: number, valor: string) => {
+    const copia = menus.map((m) => ({ ...m }));
+    copia[i].nombre = valor;
     setMenus(copia);
     setSucio(true);
   };
@@ -70,11 +71,10 @@ export default function MenusEditor() {
     <section>
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">Menús</h1>
       <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
-        Qué menús existen y cómo se llaman. Los <strong>alias</strong> son otras
-        formas de escribir lo mismo, separadas por coma: sirven para que una
-        reserva vieja que dice <code className="text-hueso/80">Menú Tradiciones</code> y
-        una nueva que dice <code className="text-hueso/80">Tradiciones</code> cuenten
-        como el mismo plato.
+        Qué menús existen. <strong>El nombre tiene que ser exactamente el
+        mismo acá, en Shopify y en el sitio</strong>: no hay equivalencias.
+        Solo se perdonan mayúsculas, tildes y espacios de sobra, que es el
+        mismo nombre escrito con descuido y no otro menú.
       </p>
 
       {sinRegistrar.length > 0 && (
@@ -84,8 +84,9 @@ export default function MenusEditor() {
             no está{sinRegistrar.length === 1 ? '' : 'n'} en esta lista.
           </p>
           <p className="mt-1 text-sm text-hueso/70">
-            Agrégalo como menú nuevo, o como alias del que corresponda si es el
-            mismo plato con otro nombre.
+            O Shopify está vendiendo algo que no está registrado acá, o alguien
+            renombró un producto en la tienda. Agrégalo abajo con ese nombre
+            exacto, o arregla el nombre en Shopify para que vuelvan a calzar.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {sinRegistrar.map((m) => (
@@ -99,9 +100,8 @@ export default function MenusEditor() {
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
             <tr className="border-b border-hueso/10">
-              <th className="py-2 pr-3 w-64">Menú</th>
-              <th className="py-2 pr-3">Alias, separados por coma</th>
-              <th className="py-2" />
+              <th className="py-2 pr-3">Menú</th>
+              <th className="py-2 w-24" />
             </tr>
           </thead>
           <tbody>
@@ -109,12 +109,8 @@ export default function MenusEditor() {
               <tr key={i} className="border-b border-hueso/5">
                 <td className="py-2 pr-3">
                   <input type="text" value={m.nombre} className={ENTRADA}
-                    onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
-                </td>
-                <td className="py-2 pr-3">
-                  <input type="text" value={m.alias.join(', ')} className={ENTRADA}
-                    placeholder="—"
-                    onChange={(e) => cambiar(i, 'alias', e.target.value)} />
+                    placeholder="Como se llama en Shopify"
+                    onChange={(e) => cambiar(i, e.target.value)} />
                 </td>
                 <td className="py-2 text-right whitespace-nowrap">
                   <button onClick={() => { setMenus(menus.filter((_, k) => k !== i)); setSucio(true); }}
@@ -128,7 +124,7 @@ export default function MenusEditor() {
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
-          onClick={() => { setMenus([...menus, { nombre: '', alias: [] }]); setSucio(true); }}
+          onClick={() => { setMenus([...menus, { nombre: '' }]); setSucio(true); }}
           className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
           Agregar menú
         </button>
@@ -142,8 +138,11 @@ export default function MenusEditor() {
 
       <p className="mt-6 max-w-2xl text-xs text-hueso/50">
         Quitar un menú de acá no borra ninguna reserva: solo deja de ofrecerse
-        al anotar a mano, y sus filas viejas vuelven a contarse con el nombre
-        crudo que tengan escrito.
+        al anotar a mano, y vuelve a aparecer en el aviso de arriba si todavía
+        se está vendiendo.{' '}
+        <strong>Ojo al renombrar en Shopify:</strong> los pedidos ya hechos
+        guardan el nombre que tenían, así que sus reservas van a contarse
+        aparte hasta que se corrijan esas filas en la planilla.
       </p>
     </section>
   );
