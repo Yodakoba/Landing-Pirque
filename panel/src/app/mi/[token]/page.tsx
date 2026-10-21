@@ -25,9 +25,10 @@
 import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
          leerMenus } from '@/lib/datos';
 import { menusDe } from '@/lib/shopify';
-import { trabajadorPorToken, turnosDe } from '@/lib/equipo';
+import { trabajadorPorToken, turnosDe, pagoDe, esContratado, VINO } from '@/lib/equipo';
+import { enPesos } from '@/lib/ocupacion';
 import { ocupaLugar } from '@/lib/ocupacion';
-import { enPalabras, hoy } from '@/lib/fechas';
+import { enPalabras, hoy, sumarDias } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,14 @@ export default async function Pagina({ params }: { params: { token: string } }) 
 
   const desde = hoy();
   const mios = turnosDe(turnos, quien.nombre, desde);
+
+  // Lo ya trabajado, para poder contestar "¿cuánto llevo?" sin tener que
+  // preguntarle a nadie. Treinta días: lo que normalmente se cobra junto.
+  const hace30 = sumarDias(desde, -30);
+  const pasados = turnosDe(turnos, quien.nombre, hace30)
+    .filter((t) => t.fecha < desde && t.asistencia)
+    .reverse();
+  const ganado = pasados.reduce((s, t) => s + pagoDe(t), 0);
   const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
   const delDia = (fecha: string) => reservas.filter((r) => r.fecha === fecha && ocupaLugar(r));
   const personasDe = (fecha: string) =>
@@ -139,6 +148,43 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             );
           })}
         </ul>
+      )}
+
+      {pasados.length > 0 && (
+        <>
+          <h2 className="mt-10 text-xs uppercase tracking-widest text-hueso/45">
+            Tus últimos 30 días
+          </h2>
+          <ul className="mt-3 space-y-1.5">
+            {pasados.map((t) => (
+              <li key={t.fecha + t.puesto}
+                  className="flex items-baseline justify-between gap-3 border-b
+                             border-hueso/5 pb-1.5 text-sm">
+                <span className="capitalize text-hueso/70">{enPalabras(t.fecha)}</span>
+                <span className="text-xs text-hueso/40">{t.puesto}</span>
+                <span className="flex-1" />
+                {t.asistencia === VINO.no ? (
+                  <span className="text-xs text-hueso/35">no viniste</span>
+                ) : esContratado(t.modalidad) && pagoDe(t) === 0 ? (
+                  <span className="text-xs text-hueso/35">contratado</span>
+                ) : (
+                  <strong className="tabular-nums">{enPesos(pagoDe(t))}</strong>
+                )}
+              </li>
+            ))}
+          </ul>
+          {ganado > 0 && (
+            <p className="mt-3 text-sm">
+              <span className="text-hueso/55">En total: </span>
+              <strong className="tabular-nums text-oro">{enPesos(ganado)}</strong>
+            </p>
+          )}
+          <p className="mt-2 text-xs text-hueso/40">
+            {esContratado(quien.modalidad)
+              ? 'Tu sueldo no sale de acá: lo que aparece son horas extra y ajustes del día.'
+              : 'Es lo que quedó anotado al pasar lista. Si ves algo raro, dilo.'}
+          </p>
+        </>
       )}
 
       <p className="mt-8 text-xs text-hueso/40">

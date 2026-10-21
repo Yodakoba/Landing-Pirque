@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import {
   leerPuestos, guardarPuestos, leerTrabajadores, guardarTrabajadores, leerTurnos
 } from '@/lib/datos';
-import { aEntero, esSi, sinFicha, type Puesto, type Trabajador } from '@/lib/equipo';
+import { aEntero, esSi, sinFicha, esContratado, MODALIDAD,
+         type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { anotar } from '@/lib/datos';
@@ -26,7 +27,15 @@ export const dynamic = 'force-dynamic';
  * malo con ellas: es que no las necesita, y una credencial que viaja a
  * quien no la necesita es una credencial de más dando vueltas.
  */
-const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({ ...t, token: '' }));
+const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({
+  ...t, token: '',
+  // Los sueldos tampoco bajan al navegador de un encargado. No es que vaya a
+  // hacer algo malo con ellos: es que no los necesita para asignar turnos, y
+  // cuánto gana cada compañero no es dato suyo.
+  pagoJornada: 0, valorHora: 0
+  // La modalidad SÍ baja: el encargado necesita saber a quién no se le paga
+  // por turno cuando pasa lista, y eso no dice cuánto gana nadie.
+}));
 
 export async function GET(req: Request) {
   const no = await exigir(req, 'ver');
@@ -88,8 +97,11 @@ export async function PUT(req: Request) {
       // Los tokens que vengan del navegador se IGNORAN salvo que escriba el
       // administrador. Para los demás se arrastra el que ya estaba, buscado
       // por nombre: así guardar la lista no le borra el acceso a nadie.
+      // Se arrastra la ficha entera anterior, no solo el token: los sueldos
+      // también son del administrador, y un encargado guardando la lista no
+      // puede cambiarlos ni borrarlos por el camino.
       const previos = new Map(
-        (await leerTrabajadores()).map((t) => [normalizar(t.nombre), t.token])
+        (await leerTrabajadores()).map((t) => [normalizar(t.nombre), t])
       );
       const limpia: Trabajador[] = [];
       const vistos = new Set<string>();
@@ -107,7 +119,18 @@ export async function PUT(req: Request) {
           activo: t?.activo === undefined ? true : esSi(t.activo),
           token: esAdmin
             ? String(t?.token ?? '').trim()
-            : (previos.get(normalizar(nombre)) ?? '')
+            : (previos.get(normalizar(nombre))?.token ?? ''),
+          // La modalidad la fija el administrador, igual que los montos:
+          // marcar a alguien como contratado cambia lo que cuesta el día.
+          modalidad: esAdmin
+            ? (esContratado(t?.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno)
+            : (previos.get(normalizar(nombre))?.modalidad ?? MODALIDAD.porTurno),
+          pagoJornada: esAdmin
+            ? aEntero(t?.pagoJornada)
+            : (previos.get(normalizar(nombre))?.pagoJornada ?? 0),
+          valorHora: esAdmin
+            ? aEntero(t?.valorHora)
+            : (previos.get(normalizar(nombre))?.valorHora ?? 0)
         });
       }
       await guardarTrabajadores(limpia);
