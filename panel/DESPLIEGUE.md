@@ -329,7 +329,7 @@ de cambiar un cupo se toma mirando la ocupación.
 |---|---|---|
 | **Abierta** | se ve, recibe reservas | se ofrece |
 | **Privada** | se ve, recibe reservas | **no se ofrece** |
-| **Cerrada** | se ve en rojo | no se ofrece |
+| **Cerrada** | **no se ve**, salvo que tenga reservas | no se ofrece |
 
 **El estado "Privada" existe por un caso concreto**: un día vendido entero
 como evento privado. Hay que verlo en el panel con su cupo y sus reservas,
@@ -339,9 +339,41 @@ que cualquiera puede comprar un lugar en el evento de otro.
 Sin ese estado, la única forma de ver ese día en el panel era abrirlo, y
 abrirlo lo publicaba. Eran dos cosas que no tenían por qué ir juntas.
 
+**Un día cerrado desaparece del calendario.** Cerrarlo es decir "este día
+no existe para nosotros", y dejarlo a la vista ensucia la pantalla con algo
+que no hay que hacer. Se reabre desde **"Agregar fecha"**, eligiendo esa
+fecha: la ventana avisa que ya estaba y deja cambiarle el estado.
+
+**Salvo que tenga reservas.** Ahí sí se muestra, en rojo y diciendo a
+cuánta gente hay que avisarle. Esconder ese día escondería a personas que
+ya reservaron, que es el único resultado peor que una vista sucia.
+
 **Privada no es cerrada**, y el código lo distingue: un día privado cuenta
 su cupo, suma sus menús en el total de la cocina y aparece en la plata por
 cobrar. Lo único que no hace es llegar al sitio.
+
+### Anotar una reserva a mano abre el día, en privado
+
+Si se anota una reserva para un día que no está abierto, **el día se abre
+solo, como privado**, con el cupo de siempre. Antes quedaba gris y con cupo
+0: visible pero inservible, y había que acordarse de abrirlo aparte.
+
+**Siempre privado, nunca público.** Es la regla que hace que esto se pueda
+hacer sin pensarlo cada vez: abrir un día al público es una decisión
+comercial —lo ve cualquiera, cualquiera compra— y **no puede ser el efecto
+secundario de anotar una reserva de teléfono**.
+
+Lo que nunca hace:
+
+- **Despublicar un día que ya era público.** Si el día ya estaba abierto,
+  no se toca.
+- **Pisar un cupo puesto a mano.** Si alguien le puso 30 a propósito, se
+  queda en 30.
+- **Hacer público nada.** Hay una prueba que recorre los caminos posibles y
+  comprueba que ninguno termina en un día abierto al público.
+
+Si el día tenía que ser público, se cambia a mano en el calendario, que es
+donde esa decisión corresponde.
 
 ### Un día con reservas siempre se ve
 
