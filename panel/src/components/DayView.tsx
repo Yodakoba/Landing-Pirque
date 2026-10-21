@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
+import { menusDe } from '@/lib/shopify';
 import { enPalabras } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar } from '@/lib/ocupacion';
@@ -45,6 +46,13 @@ export default function DayView({ fecha }: { fecha: string }) {
   const personas = visibles.filter(ocupaLugar)
     .reduce((s, r) => s + (Number(r.personas) || 0), 0);
   const noShows = visibles.filter((r) => r.asistencia === ASISTENCIA.noVino).length;
+
+  // Lo que mira la cocina: cuántos de cada menú hay que preparar ese día.
+  // Solo de las reservas que ocupan lugar: una cancelada no se cocina.
+  const menus = useMemo(
+    () => menusDe(visibles.filter(ocupaLugar)),
+    [visibles]
+  );
 
   function exportar() {
     const csv = aCSV(
@@ -93,6 +101,21 @@ export default function DayView({ fecha }: { fecha: string }) {
           <span className="text-red-400"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
         )}
       </p>
+
+      {/* Lo que hay que preparar. Va arriba y grande porque es el dato por el
+          que se abre esta página el sábado en la mañana. */}
+      {menus.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {menus.map(({ menu, cantidad }) => (
+            <span key={menu}
+              className="rounded border border-hueso/15 bg-hueso/5 px-3 py-1.5 text-sm">
+              <strong className="text-oro tabular-nums">{cantidad}</strong>
+              <span className="text-hueso/70"> × </span>
+              {menu}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         {(['todas','online','local'] as Filtro[]).map((f) => (

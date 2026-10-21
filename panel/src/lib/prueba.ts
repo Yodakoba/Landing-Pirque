@@ -11,7 +11,8 @@ import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
-         camposDeShopify, type PedidoShopify } from './shopify.ts';
+         desglosarMenu, menusDe, camposDeShopify,
+         type PedidoShopify } from './shopify.ts';
 import { ESTADO_PAGO } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
@@ -224,7 +225,8 @@ let res = aReserva(pedido())!;
 ok(res !== null, 'un pedido con _booking_date es una reserva');
 ok(res.fecha === '2026-11-14', 'la fecha sale de _booking_date, no de cuando se compro');
 ok(res.personas === 3, 'personas son adultos MAS ninos: el cupo son personas totales');
-ok(res.menu === 'Tradiciones', 'el menu de ninos no entra en la columna Menu');
+ok(res.menu === '2 × Tradiciones + 1 × Menú de niños',
+   'el menu lista TODO lo pedido con su cantidad, ninos incluidos');
 ok(res.monto === 107000 && res.estadoPago === ESTADO_PAGO.pagado, 'monto y estado');
 ok(res.asistencia === '', 'la asistencia nace en blanco: la marca una persona, no Shopify');
 
@@ -407,6 +409,58 @@ ok(buscarFilaPorId([encR], encR, '1007') === -1, 'una hoja con solo encabezado n
 ok(buscarFilaPorId([], [], '1007') === -1, 'ni una hoja vacia');
 ok(buscarFilaPorId(hoja, ['Otra', 'Cosa'], '1007') === -1,
    'y si la planilla no tiene la columna ID Orden, no se inventa una fila');
+
+/* ---------- que la cocina sepa que preparar ---------- */
+// Antes la columna Menu decia solo "Menu Tradiciones", sin cantidades y sin
+// el menu de ninos. Un pedido de 2 Tradiciones + 1 Ninos se veia IGUAL que
+// uno de 3 Tradiciones, asi que el sabado en la manana no habia como saber
+// que cocinar. Encontrado con las dos primeras compras de prueba reales.
+const mixto = pedido({ line_items: [
+  linea('Menú Tradiciones', 2),
+  linea('Menú Niños', 1)
+]});
+ok(menuDe(mixto) === '2 × Menú Tradiciones + 1 × Menú Niños',
+   'el menu lleva CANTIDADES y ya no esconde el de ninos');
+ok(aReserva(mixto)!.personas === 3, 'y las personas siguen siendo el total');
+
+// Dos lineas del mismo menu en modalidades distintas son el mismo plato.
+ok(menuDe(pedido({ line_items: [
+     linea('Menú Tradiciones', 2, 'Pago directo'),
+     linea('Menú Tradiciones', 1, 'Solo reserva')
+   ]})) === '3 × Menú Tradiciones',
+   'dos modalidades del mismo menu se suman: para la cocina es el mismo plato');
+
+ok(menuDe(pedido({ line_items: [] })) === '', 'un pedido sin lineas no revienta');
+
+/* ---------- leerlo de vuelta ---------- */
+let d = desglosarMenu('2 × Menú Tradiciones + 1 × Menú Niños');
+ok(d.length === 2 && d[0].cantidad === 2 && d[0].menu === 'Menú Tradiciones',
+   'se vuelve a leer lo que se escribio');
+ok(desglosarMenu('2 x Menú Tradiciones')[0].cantidad === 2,
+   'se acepta la equis del teclado, no solo el signo de multiplicar');
+
+// Las filas que ya estaban escritas con el formato viejo.
+d = desglosarMenu('Menú Tradiciones');
+ok(d.length === 1 && d[0].cantidad === 1,
+   'una entrada SIN cantidad cuenta como 1: las filas viejas siguen sumando en vez de desaparecer');
+ok(desglosarMenu('')[0] === undefined, 'una celda vacia no aporta nada');
+ok(desglosarMenu(null).length === 0, 'ni una celda ausente');
+
+/* ---------- el total del dia, que es el dato ---------- */
+const delDia = menusDe([
+  { menu: '2 × Menú Tradiciones + 1 × Menú Niños' },
+  { menu: '4 × Menú A Brasas abiertas' },
+  { menu: '3 × Menú Tradiciones' },
+  { menu: 'Menú Niños' }          // fila vieja, sin cantidad
+]);
+ok(delDia[0].menu === 'Menú Tradiciones' && delDia[0].cantidad === 5,
+   'suma el mismo menu entre reservas distintas');
+ok(delDia.find((m) => m.menu === 'Menú A Brasas abiertas')!.cantidad === 4, 'y los demas');
+ok(delDia.find((m) => m.menu === 'Menú Niños')!.cantidad === 2,
+   'y mezcla el formato nuevo con el viejo sin perder nada');
+ok(delDia[0].cantidad >= delDia[delDia.length - 1].cantidad,
+   'ordenado de mayor a menor, que es como se lee una lista de preparacion');
+ok(menusDe([]).length === 0, 'un dia sin reservas no muestra menus');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
