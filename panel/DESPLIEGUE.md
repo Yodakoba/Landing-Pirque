@@ -313,9 +313,17 @@ mirándolo.
 ## Los tres estados de un día
 
 Se editan en el calendario del panel, apretando **Editar** en la tarjeta del
-día. Antes había una página aparte, "Fechas hábiles", que se fue el
-2026-10-21: dos pantallas con los mismos días obligaban a saber cuál abrir,
-y la decisión de cambiar un cupo se toma mirando la ocupación.
+día. Y para uno que todavía no aparece, **"Agregar fecha"** arriba: se elige
+la fecha, el cupo viene con el valor general ya puesto, y se elige si es
+pública o privada.
+
+Es la **misma ventana** que editar, a propósito: los campos son los mismos y
+la validación también, así que no hay dos lugares que mantener. Lo único que
+cambia es si la fecha se elige o viene dada.
+
+Antes había una página aparte, "Fechas hábiles", que se fue el 2026-10-21:
+dos pantallas con los mismos días obligaban a saber cuál abrir, y la decisión
+de cambiar un cupo se toma mirando la ocupación.
 
 | Estado | En el panel | En el sitio |
 |---|---|---|
