@@ -414,16 +414,35 @@ El reparto queda así:
 | | Quién |
 |---|---|
 | Cobro y checkout | Shopify |
-| Calendario, cupo y registro | Nuestro backend |
-| Panel de administración | Un panel dentro de la misma planilla |
-| Agenda visible | Google Calendar |
+| Calendario, cupo y registro | El panel (`panel/`), sobre la planilla |
+| Panel de administración | `panel/`, una app Next.js en Vercel |
+| Agenda visible | Google Calendar (lo escribía el Apps Script) |
 
-**Por qué consultamos a Shopify en vez de recibir un webhook:** los Web Apps
-de Apps Script **no dan acceso a las cabeceras** de la petición, así que es
+### El Apps Script está siendo reemplazado por `panel/` (2026-10-21)
+
+**Hubo un tiempo con DOS planillas que no se hablaban**, y conviene saberlo
+porque explica medio archivo: el Apps Script usaba una, con pestañas
+`Reservas` y `Excepciones`, y el panel otra, con `Reservas` y `Fechas
+Hábiles`. El sitio obedecía al Apps Script. O sea que cerrar un día en el
+panel no llegaba al cliente final, y las reservas de Shopify no aparecían en
+el panel. Se decidió que **sobreviva el panel** y se partió limpio: no se
+migraron datos porque las reservas que había eran de prueba.
+
+**`CONFIG.backend` apunta al panel desde el 2026-10-21**, así que ya hay una
+sola verdad. Lo que queda del Apps Script es la escritura a Google Calendar.
+
+**Por qué el Apps Script consultaba a Shopify en vez de recibir un webhook:**
+los Web Apps **no dan acceso a las cabeceras** de la petición, así que era
 imposible verificar la firma HMAC con la que Shopify firma sus webhooks. Sin
-eso, cualquiera que descubriera la URL podría inventar reservas. Preguntando
-nosotros cada 5 minutos, nadie nos escribe. El costo es unos minutos de
-atraso; la ganancia es que además se recupera solo de caídas.
+eso, cualquiera que descubriera la URL podría inventar reservas.
+
+**Ese impedimento era de la plataforma, no de la idea.** En Vercel sí hay
+cabeceras, así que el panel **sí usa webhooks** y verifica la firma
+(`panel/src/lib/firma.ts`). Pero no solo webhooks: copiar la consulta cada 5
+minutos tampoco era opción, porque **el plan gratuito de Vercel solo permite
+tareas una vez al día**. Quedaron las dos cosas —webhook para inmediatez,
+reconciliación diaria para rellenar lo perdido— que es más robusto que
+cualquiera de las dos sola. Ver `panel/DESPLIEGUE.md`.
 
 **El token de Admin API del backend no contradice la regla de este
 proyecto.** "Un token de Admin API jamás" es sobre el **sitio**, donde
@@ -433,12 +452,16 @@ se guarda en las propiedades del script, que nunca salen al navegador.
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
   `assets/js/reserva.js`: token, dominio, versión de API y la URL del
   backend. Los precios ya no están ahí, se fueron al HTML.
-- **`CONFIG.backend` ya está conectado** (2026-10-13): apunta al Web App de
-  Apps Script desplegado en la cuenta del cliente, así que el calendario
-  muestra las fechas reales de la planilla. Ojo al redesplegar: una
-  **implementación nueva** en Apps Script cambia la URL y hay que
-  actualizar esa línea; publicar una **versión nueva de la misma**
-  implementación la conserva.
+- **`CONFIG.backend` apunta al panel** desde el 2026-10-21:
+  `https://landing-pirque-alpha.vercel.app/api/publico/fechas`. Antes era el
+  Web App de Apps Script. Si el panel cambia de URL en Vercel, hay que
+  cambiar esa línea **y volver a correr `tools/traducir.py`**, porque toca
+  el JS y con eso cambia el `?v=` de las tres páginas de reserva.
+- **La versión de la API es `2026-10`** (antes `2024-10`, vencida), tanto en
+  el sitio como en el panel. Confirmada con el agente de Shopify del
+  cliente, que primero recomendó `2025-01` — esa lleva como un año fuera de
+  soporte. Shopify soporta cada versión unos 12 meses; la `2026-10` hasta
+  octubre de 2027.
 - **Un Web App de Apps Script no puede elegir el código HTTP**: responde 200
   incluso cuando falla, con `{error: ...}` en el cuerpo. Por eso
   `cargarFechas()` revisa el campo `error` y no solo `response.ok` — sin

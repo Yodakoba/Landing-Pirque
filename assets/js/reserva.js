@@ -49,21 +49,30 @@
     dominio: 'brasas-de-lo-pirque-development.myshopify.com',
 
     // Shopify publica una versión por trimestre y las soporta unos 12
-    // meses. Esta es de octubre de 2024, así que ya está fuera de ese
-    // plazo: hay que confirmar con la tienda cuál usar antes de
-    // conectar.
-    version: '2024-10',
+    // meses. La 2026-10 es la estable al 2026-10-20 y está soportada hasta
+    // octubre de 2027. Confirmada con el agente de Shopify del cliente,
+    // que primero había recomendado la 2025-01: esa lleva como un año
+    // fuera de soporte. Antes acá decía 2024-10, igual de vencida.
+    version: '2026-10',
 
-    // URL del Web App de Apps Script que entrega las fechas abiertas.
-    // Ver backend/README.md. Vacío significa que el calendario no tiene
-    // de dónde sacar fechas: lo dice en pantalla y deja el botón apagado,
-    // en vez de inventar un calendario que no corresponde a la realidad.
+    // URL que entrega las fechas abiertas. Vacío significa que el
+    // calendario no tiene de dónde sacar fechas: lo dice en pantalla y
+    // deja el botón apagado, en vez de inventar un calendario que no
+    // corresponde a la realidad.
     //
-    // Ojo al redesplegar el backend: si en Apps Script se crea una
-    // implementación NUEVA en vez de una versión nueva de la misma, la
-    // URL cambia y hay que actualizar esta línea. Publicar una versión
-    // nueva de la implementación existente conserva la URL.
-    backend: 'https://script.google.com/macros/s/AKfycbxBBvz2b_C3VbKuXg75r-BCYNgPvgEjyT9YiYrhPeW6xsXZIKQRlAoFoXhuacVG6C7F/exec'
+    // APUNTA AL PANEL desde el 2026-10-21. Antes apuntaba al Web App de
+    // Apps Script, y durante un tiempo hubo DOS planillas que no se
+    // hablaban: el sitio obedecía al Apps Script y el panel otra,
+    // así que cerrar un día en el panel no llegaba al cliente final y las
+    // reservas de Shopify no aparecían en el panel. Ahora hay una sola
+    // verdad. Ver panel/DESPLIEGUE.md.
+    //
+    // Esta línea es toda la costura con el backend: de la respuesta se
+    // consumen tres campos, {fecha, quedan, pocos}. Cambiar de backend es
+    // cambiar esta URL más permitir CORS en el nuevo endpoint. Conviene no
+    // engordar ese contrato: cada campo que se agregue es un campo que
+    // cualquier reemplazo futuro tendrá que imitar.
+    backend: 'https://landing-pirque-alpha.vercel.app/api/publico/fechas'
   };
 
   // Los precios y los IDs de variante NO están acá: viven en el HTML.

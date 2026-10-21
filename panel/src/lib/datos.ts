@@ -9,13 +9,16 @@
  * continuo— pero es real. Por eso las reservas creadas acá llevan un id
  * MANUAL-<timestamp>: no pueden chocar con los ids numéricos de Shopify.
  */
-import { leerHoja, agregarFila, escribirFila, borrarFila } from './sheets.ts';
+import { leerHoja, agregarFila, escribirFila, borrarFila, escribirBloque } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
   indices, faltantes
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
-import { filaReserva, filaFecha } from './filas.ts';
+import { filaReserva, filaFecha, buscarFilaPorId } from './filas.ts';
+import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
+         type Config } from './config.ts';
+import { camposDeShopify } from './shopify.ts';
 import { esFecha } from './fechas.ts';
 
 const num = (v: unknown): number => {
@@ -96,7 +99,9 @@ export async function leerFechas(): Promise<FechaHabil[]> {
       fecha,
       capacidad: num(en(f, i.capacidad)),
       apertura: String(en(f, i.apertura)) || '13:00',
-      estado: String(en(f, i.estado)) || 'Abierta',
+      // Se pasa tal cual lo que diga la celda, incluso en blanco: quien decide
+      // si eso es abierto o cerrado es estaCerrado(), en un solo lugar.
+      estado: String(en(f, i.estado)),
       notas: String(en(f, i.notas)),
       fila: n + 1
     });
@@ -145,4 +150,59 @@ export async function diagnostico() {
       filas: Math.max(0, fec.length - 1)
     }
   };
+}
+
+/* ---------- Configuración ---------- */
+
+/**
+ * Los parámetros del negocio.
+ *
+ * **Si la pestaña `Config` no existe, devuelve los valores por defecto en
+ * vez de fallar.** Es deliberado: el panel tiene que arrancar contra una
+ * planilla recién creada, y esa pestaña solo hace falta para cambiar algo.
+ */
+export async function leerConfig(): Promise<Config> {
+  try {
+    return leerConfigDe(await leerHoja(HOJA_CONFIG));
+  } catch {
+    return POR_DEFECTO;
+  }
+}
+
+/** Reescribe la pestaña entera, creándola si hace falta. */
+export async function guardarConfig(c: Config): Promise<void> {
+  await escribirBloque(HOJA_CONFIG, aFilasConfig(c));
+}
+
+/* ---------- Guardar un pedido de Shopify ---------- */
+
+/**
+ * Anota o actualiza la reserva de un pedido, buscándola por `ID Orden`.
+ *
+ * **Es idempotente, y eso no es un lujo: Shopify REINTENTA.** Si nuestra
+ * respuesta tarda o falla, manda el mismo webhook otra vez, y además
+ * `orders/updated` llega cada vez que el pedido cambia. Sin buscar primero,
+ * la misma reserva se anotaría dos, tres o diez veces, y cada copia
+ * descontaría cupo de un día real.
+ *
+ * Al actualizar solo se escriben las columnas de Shopify: la asistencia que
+ * alguien marcó a mano no se pisa. Ver `camposDeShopify()`.
+ *
+ * Devuelve qué pasó, para poder contarlo en el registro sin tener que
+ * adivinarlo después.
+ */
+export async function guardarPedido(
+  r: Omit<Reserva, 'fila'>
+): Promise<'creada' | 'actualizada'> {
+  const filas = await leerHoja(HOJA_RESERVAS);
+  const enc = filas[0] ?? [];
+  const fila = buscarFilaPorId(filas, enc, r.id);
+
+  if (fila > 1) {
+    await escribirFila(HOJA_RESERVAS, fila,
+      filaReserva(enc, camposDeShopify(r), filas[fila - 1]));
+    return 'actualizada';
+  }
+  await agregarFila(HOJA_RESERVAS, filaReserva(enc, r));
+  return 'creada';
 }

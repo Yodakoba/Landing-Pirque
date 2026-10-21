@@ -1,0 +1,220 @@
+/**
+ * Traducir un pedido de Shopify a una fila de la planilla.
+ *
+ * Esto es un puerto de lo que ya hacía `leerReserva()` en el Apps Script
+ * (backend/Codigo.gs), y las decisiones vienen de ahí: no son nuevas, están
+ * pagadas con horas de mirar pedidos reales. Lo que cambia es el destino
+ * —las 12 columnas del panel en vez de las 15 de la planilla vieja— y que
+ * acá se puede probar.
+ *
+ * No hay nada de red en este archivo, a propósito: recibe el objeto del
+ * pedido y devuelve la reserva. Así las reglas raras de Shopify se prueban
+ * con pedidos de mentira en vez de descubrirse en producción.
+ */
+import { TIPO_PAGO, ESTADO_PAGO } from './columnas.ts';
+import type { Reserva } from './tipos.ts';
+import { esFecha } from './fechas.ts';
+
+/** Lo que nos importa de un pedido. El resto del objeto de Shopify es enorme. */
+export interface PedidoShopify {
+  id?: number | string;
+  name?: string;
+  email?: string;
+  contact_email?: string;
+  phone?: string;
+  total_price?: string | number;
+  created_at?: string;
+  cancelled_at?: string | null;
+  financial_status?: string;
+  customer?: Record<string, unknown> | null;
+  billing_address?: Record<string, unknown> | null;
+  shipping_address?: Record<string, unknown> | null;
+  line_items?: LineaShopify[];
+}
+
+export interface LineaShopify {
+  title?: string;
+  variant_title?: string;
+  quantity?: number | string;
+  properties?: { name?: string; value?: string }[];
+}
+
+const texto = (v: unknown): string => (v == null ? '' : String(v)).trim();
+
+/**
+ * En qué está el pedido.
+ *
+ * Una cancelación gana sobre cualquier estado de pago: un pedido anulado
+ * conserva su `financial_status`, así que mirar solo ese campo deja una
+ * reserva cancelada tomando cupo hasta que alguien procese la devolución.
+ *
+ * Que `authorized` quede como pendiente es a propósito: la tarjeta está
+ * retenida pero la plata no se cobró. Equivocarse hacia "falta cobrar" hace
+ * que alguien lo revise; equivocarse hacia "pagada" hace que nadie lo
+ * revise.
+ */
+export function estadoDe(p: PedidoShopify): string {
+  if (p.cancelled_at) return ESTADO_PAGO.cancelado;
+  const f = texto(p.financial_status).toLowerCase();
+  if (f === 'refunded') return ESTADO_PAGO.reembolsado;
+  if (f === 'voided') return ESTADO_PAGO.anulado;
+  if (f === 'paid') return ESTADO_PAGO.pagado;
+  return ESTADO_PAGO.pendiente;
+}
+
+/**
+ * El nombre, mirando los tres lugares donde Shopify lo puede tener.
+ *
+ * No es paranoia: `customer` viene vacío en dos casos distintos. Uno, que
+ * el pedido no tenga cliente asociado. Dos, y más común, que la app no
+ * tenga el permiso de datos protegidos del cliente — `read_orders` por sí
+ * solo no alcanza, y Shopify devuelve el pedido completo **omitiendo las
+ * llaves** del nombre, el correo y el teléfono, sin avisar que los censuró.
+ *
+ * En ese segundo caso las direcciones también vienen censuradas y este
+ * respaldo no salva nada, pero en el primero sí, y cuesta seis líneas.
+ */
+export function nombreDe(p: PedidoShopify): string {
+  const c = (p.customer ?? {}) as Record<string, unknown>;
+  const porCliente = `${texto(c.first_name)} ${texto(c.last_name)}`.trim();
+  if (porCliente) return porCliente;
+
+  const dir = ((p.billing_address ?? p.shipping_address) ?? {}) as Record<string, unknown>;
+  const porDireccion = texto(dir.name);
+  if (porDireccion) return porDireccion;
+
+  return `${texto(dir.first_name)} ${texto(dir.last_name)}`.trim();
+}
+
+/**
+ * El correo. `email` es el que la persona escribió en el checkout y es el
+ * que corresponde; `customer.email` es el de la ficha del cliente y puede
+ * ser otro si reservó con un correo distinto al de su cuenta.
+ */
+export function emailDe(p: PedidoShopify): string {
+  const c = (p.customer ?? {}) as Record<string, unknown>;
+  return texto(p.email) || texto(p.contact_email) || texto(c.email);
+}
+
+/**
+ * El teléfono, y acá estaba el hueco: `order.phone` viene vacío casi
+ * siempre. El checkout no pide un teléfono suelto, lo pide DENTRO de la
+ * dirección, así que el número está en `billing_address.phone`.
+ *
+ * Mirar solo `order.phone` y `customer.phone` era quedarse con los dos
+ * lugares que normalmente están vacíos.
+ */
+export function telefonoDe(p: PedidoShopify): string {
+  const c = (p.customer ?? {}) as Record<string, unknown>;
+  const fact = (p.billing_address ?? {}) as Record<string, unknown>;
+  const envio = (p.shipping_address ?? {}) as Record<string, unknown>;
+  return texto(p.phone) || texto(fact.phone) || texto(envio.phone) || texto(c.phone);
+}
+
+/** La fecha viaja en `_booking_date`, que el sitio pone en cada línea. */
+export function fechaDe(p: PedidoShopify): string | null {
+  for (const l of p.line_items ?? []) {
+    for (const prop of l.properties ?? []) {
+      if (prop.name === '_booking_date' && prop.value) {
+        const f = texto(prop.value).slice(0, 10);
+        if (esFecha(f)) return f;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Qué modalidad se compró, sacada del nombre de la variante.
+ *
+ * Se anota porque **el sitio no controla cómo se paga**: el medio de pago
+ * se elige en el checkout de Shopify. Alguien puede comprar la variante con
+ * descuento y después elegir pagar en el local. Eso lo cierran las reglas
+ * de la tienda, que son del lado de Shopify y **si dejan de aplicar no
+ * avisan**: una fila que diga "Pago directo" junto a "pending" es
+ * exactamente ese caso, y es la única forma de enterarse.
+ */
+export function tipoPagoDe(p: PedidoShopify): string {
+  const vistas: string[] = [];
+  for (const l of p.line_items ?? []) {
+    const v = texto(l.variant_title);
+    if (v && !vistas.includes(v)) vistas.push(v);
+  }
+  if (!vistas.length) return '';
+  // Un pedido con las dos modalidades no debería existir, pero si existe se
+  // anota tal cual en vez de elegir una: inventar una sola esconde el caso.
+  return vistas.join(' + ');
+}
+
+const ES_NINO = /ni[nñ]/i;
+
+/**
+ * Las personas del pedido: adultos más niños.
+ *
+ * **El cupo son personas totales, niños incluidos** — es lo que limita
+ * sillas, mesas y comida. Por eso va un solo número y no dos columnas.
+ */
+export function personasDe(p: PedidoShopify): number {
+  let total = 0;
+  for (const l of p.line_items ?? []) total += Number(l.quantity) || 0;
+  return total;
+}
+
+/** Los menús de adultos, que es lo que distingue una reserva de otra. */
+export function menuDe(p: PedidoShopify): string {
+  const vistos: string[] = [];
+  for (const l of p.line_items ?? []) {
+    const t = texto(l.title);
+    if (!t || ES_NINO.test(t)) continue;
+    if (!vistos.includes(t)) vistos.push(t);
+  }
+  return vistos.join(' + ');
+}
+
+/**
+ * El pedido completo como fila de la planilla.
+ *
+ * Devuelve `null` si el pedido no trae `_booking_date`: entonces no es una
+ * reserva —puede ser cualquier otra cosa vendida en la tienda— y anotarlo
+ * descontaría cupo de un día que nadie reservó.
+ *
+ * `asistencia` va en blanco siempre: es una marca que pone una persona el
+ * día del evento, no un dato de Shopify. Y por eso mismo **el
+ * sincronizador no puede escribirla**: ver `camposDeShopify()`.
+ */
+export function aReserva(p: PedidoShopify): Omit<Reserva, 'fila'> | null {
+  const fecha = fechaDe(p);
+  if (!fecha) return null;
+
+  return {
+    id: texto(p.id),
+    fecha,
+    nombre: nombreDe(p),
+    email: emailDe(p),
+    telefono: telefonoDe(p),
+    menu: menuDe(p),
+    personas: personasDe(p),
+    monto: p.total_price == null || texto(p.total_price) === ''
+      ? null
+      : Number(p.total_price),
+    tipoPago: tipoPagoDe(p) as Reserva['tipoPago'],
+    estadoPago: estadoDe(p),
+    creada: texto(p.created_at),
+    asistencia: ''
+  };
+}
+
+/**
+ * Lo que el sincronizador escribe al actualizar una fila que ya existe.
+ *
+ * **Deja fuera `asistencia` a propósito, y esa omisión es el punto.** Si
+ * Shopify pisara esa columna, un pedido que se actualiza —un pago que se
+ * confirma, una devolución— borraría el no-show que alguien marcó a mano el
+ * sábado. Los datos de Shopify son de Shopify; la asistencia es nuestra.
+ *
+ * Tampoco se reescribe `creada`: la fecha en que entró el pedido no cambia.
+ */
+export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
+  const { asistencia, creada, ...resto } = r;
+  return resto;
+}

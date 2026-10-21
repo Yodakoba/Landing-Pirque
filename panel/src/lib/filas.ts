@@ -58,3 +58,31 @@ export function filaFecha(
   poner(i.notas, f.notas);
   return fila;
 }
+
+/**
+ * En qué fila está el pedido con ese id, o -1 si no está.
+ *
+ * Vive acá, separado de la escritura, porque **es la pieza que hace
+ * idempotente al sincronizador** y por eso hay que poder probarla. Si esta
+ * búsqueda falla, Shopify reintenta un webhook y la misma reserva se anota
+ * dos veces, descontando cupo dos veces de un día real.
+ *
+ * Compara como texto y sin espacios: el id de Shopify es numérico, y la
+ * planilla lo devuelve como número o como cadena según cómo quedó
+ * formateada la celda. Un `1007` y un `"1007 "` son el mismo pedido.
+ *
+ * Devuelve la fila 1-based como la ve la planilla, igual que `Reserva.fila`.
+ */
+export function buscarFilaPorId(
+  filas: string[][], enc: string[], id: unknown
+): number {
+  const i = indices(enc, COL_RESERVAS);
+  const buscado = String(id ?? '').trim();
+  // Un id vacío no puede calzar con las filas sin id, que son justamente
+  // las que hay que ignorar.
+  if (i.id === -1 || buscado === '') return -1;
+  for (let n = 1; n < filas.length; n++) {
+    if (String(filas[n]?.[i.id] ?? '').trim() === buscado) return n + 1;
+  }
+  return -1;
+}

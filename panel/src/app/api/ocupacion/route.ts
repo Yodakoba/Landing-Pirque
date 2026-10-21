@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { leerReservas, leerFechas } from '@/lib/datos';
+import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { proximosFinesDeSemana, hoy } from '@/lib/fechas';
 import type { FechaHabil } from '@/lib/tipos';
@@ -17,16 +17,24 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     const cuantos = Number(new URL(req.url).searchParams.get('dias')) || 8;
-    const [reservas, fechas] = await Promise.all([leerReservas(), leerFechas()]);
+    const [reservas, fechas, cfg] = await Promise.all([
+      leerReservas(), leerFechas(), leerConfig()
+    ]);
 
     const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
-    const dias: FechaHabil[] = proximosFinesDeSemana(hoy(), cuantos).map(
+    const dias: FechaHabil[] = proximosFinesDeSemana(hoy(), cuantos, cfg.diasAbiertos).map(
       (f) => porFecha.get(f) ?? {
-        fecha: f, capacidad: 0, apertura: '13:00',
+        // Capacidad 0 a propósito, no el cupo normal: un día que todavía no
+        // está en la hoja no está abierto, y mostrarlo con 60 lugares diría
+        // que se puede reservar.
+        fecha: f, capacidad: 0, apertura: cfg.horaApertura,
         estado: 'Sin definir', notas: '', fila: -1
       }
     );
-    return NextResponse.json({ ocupacion: ocupacionDeTodos(reservas, dias) });
+    return NextResponse.json({
+      ocupacion: ocupacionDeTodos(reservas, dias, cfg.cortes),
+      config: cfg
+    });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
