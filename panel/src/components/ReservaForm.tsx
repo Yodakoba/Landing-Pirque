@@ -17,21 +17,30 @@
  *   que Shopify escribió. No hay una lista escrita a mano que se
  *   desincronice el día que la tienda renombre un producto.
  *
- * El MONTO no se pide a propósito. Los precios viven en Shopify y en el
- * sitio; que el panel los fije sería una segunda verdad que mañana no
- * coincide. Una reserva manual queda con el monto en blanco.
+ * **El MONTO sí se pide** (cambió el 2026-10-21). Antes no, con el argumento
+ * de que los precios viven en Shopify y que fijarlos acá sería una segunda
+ * verdad. Eso vale para un pedido de Shopify, que trae su total y ese manda.
+ * Pero **en una reserva a mano no hay pedido de Shopify de dónde sacarlo**:
+ * no son dos verdades, es la única que hay.
+ *
+ * Se propone sumando los precios de /menus según la modalidad, y se puede
+ * corregir encima: un grupo con un acuerdo distinto es justamente el tipo de
+ * reserva que se anota a mano.
  */
 import { useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO } from '@/lib/columnas';
 import { desglosarMenu, componerMenu, personasDeCuenta } from '@/lib/shopify';
+import { precioDe, aMonto, type Menu } from '@/lib/menus';
+import Dialogo from './Dialogo';
 
 export default function ReservaForm({
-  fecha, reserva, menusConocidos, onListo, onCancelar
+  fecha, reserva, menusConocidos, catalogo, onListo, onCancelar
 }: {
   fecha: string;
   reserva: Reserva | null;
   menusConocidos: string[];
+  catalogo: Menu[];
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -63,6 +72,24 @@ export default function ReservaForm({
   );
   const personas = personasDeCuenta(cuenta);
 
+  // El total que proponen los precios de /menus, segun la modalidad elegida.
+  const enElLocal = f.tipoPago === TIPO_PAGO.local;
+  const sugerido = useMemo(() => {
+    let suma = 0;
+    for (const [nombre, n] of Object.entries(cuenta)) {
+      suma += precioDe(catalogo.find((m) => m.nombre === nombre), enElLocal) * n;
+    }
+    return suma;
+  }, [cuenta, catalogo, enElLocal]);
+
+  // El monto escrito. Vacio significa "usa el sugerido": asi cambiar la
+  // modalidad o agregar una persona vuelve a calcularlo, y recien cuando
+  // alguien escribe un numero el formulario deja de pisarselo.
+  const [montoManual, setMontoManual] = useState<string>(
+    reserva?.monto != null ? String(reserva.monto) : ''
+  );
+  const monto = montoManual.trim() === '' ? sugerido : aMonto(montoManual);
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -89,7 +116,12 @@ export default function ReservaForm({
     if (personas < 1) return setError('Tiene que haber al menos una persona en algún menú.');
 
     setGuardando(true);
-    const cuerpo = { ...f, personas, menu: componerMenu(cuenta) };
+    const cuerpo = {
+      ...f, personas, menu: componerMenu(cuenta),
+      // Sin precios puestos el sugerido da 0; eso se guarda en blanco, que
+      // es lo mismo que hacia antes de pedir el monto.
+      monto: monto > 0 ? monto : null
+    };
     const res = reserva
       ? await fetch(`/api/reservas/${reserva.fila}`,
           { method: 'PATCH', headers: { 'content-type': 'application/json' },
@@ -103,12 +135,8 @@ export default function ReservaForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4"
-         role="dialog" aria-modal="true" aria-label="Reserva">
-      <div className="mx-auto mt-10 max-w-lg rounded border border-hueso/15 bg-panel p-5">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-oro">
-          {reserva ? 'Editar reserva' : 'Agregar reserva'}
-        </h2>
+    <Dialogo titulo={reserva ? 'Editar reserva' : 'Agregar reserva'} onCerrar={onCancelar}>
+      <>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Campo etiqueta="Fecha" ancho><input type="date" {...campo('fecha')} className={ENTRADA} /></Campo>
@@ -189,9 +217,32 @@ export default function ReservaForm({
           </p>
         </div>
 
-        <p className="mt-3 text-xs text-hueso/50">
-          El monto no se pide: los precios viven en Shopify y en el sitio.
-        </p>
+        <div className="mt-4 border-t border-hueso/10 pt-4">
+          <label className="block">
+            <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
+              Monto
+            </span>
+            <input type="number" min={0} step={1000} className={ENTRADA}
+              value={montoManual} placeholder={sugerido > 0 ? String(sugerido) : '—'}
+              onChange={(e) => setMontoManual(e.target.value)} />
+          </label>
+          <p className="mt-1 text-xs text-hueso/50">
+            {montoManual.trim() !== '' ? (
+              <>
+                Monto escrito a mano.{' '}
+                <button type="button" onClick={() => setMontoManual('')}
+                  className="text-oro hover:underline">Volver al calculado</button>
+                {sugerido > 0 && <> ({sugerido.toLocaleString('es-CL')})</>}.
+              </>
+            ) : sugerido > 0 ? (
+              <>Calculado con los precios de <a href="/menus" className="text-oro hover:underline">Menús</a>,
+              {enElLocal ? ' pagando en el local' : ' pagando por adelantado'}. Se puede corregir.</>
+            ) : (
+              <>No hay precios puestos en <a href="/menus" className="text-oro hover:underline">Menús</a>,
+              así que el monto queda en blanco salvo que lo escribas.</>
+            )}
+          </p>
+        </div>
         {error && <p className="mt-3 text-sm font-semibold text-red-400">{error}</p>}
 
         <div className="mt-5 flex gap-3">
@@ -202,8 +253,8 @@ export default function ReservaForm({
           <button onClick={onCancelar}
             className="rounded border border-hueso/20 px-4 py-2 text-sm">Cancelar</button>
         </div>
-      </div>
-    </div>
+      </>
+    </Dialogo>
   );
 }
 

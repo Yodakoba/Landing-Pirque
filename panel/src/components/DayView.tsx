@@ -235,6 +235,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         <ReservaForm
           fecha={fecha}
           menusConocidos={conocidos}
+          catalogo={catalogo}
           reserva={editando}
           onListo={() => { setCreando(false); setEditando(null); cargar(); }}
           onCancelar={() => { setCreando(false); setEditando(null); }}

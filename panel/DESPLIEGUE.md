@@ -213,38 +213,60 @@ Lo único que **no** se cambia desde el panel es la clave de acceso: vive en
 Vercel. Guardarla en la planilla sería dejar la contraseña del panel en un
 documento compartido.
 
-## Los menús: un nombre canónico con alias
+## Los menús: un solo nombre, el mismo en los tres lados
 
-Viven en la pestaña **`Menús`** de la planilla y se editan en **/menus**.
-Cada uno tiene un nombre y una lista de alias separados por coma.
+Viven en la pestaña **`Menús`** de la planilla y se editan en **/menus**:
+el nombre y los dos precios.
 
-**El problema que esto resuelve.** El nombre del menú era la llave, y Shopify
-guarda el título del producto **dentro de cada pedido** en el momento de la
-compra. Renombrar un producto no reescribe los pedidos viejos — y la
-reconciliación diaria, al releerlos, seguiría escribiendo el nombre antiguo
-para siempre. Con el nombre como llave, **un solo rename parte el total del
-día en dos platos que en realidad son uno**, y la cocina prepara mal.
+**Los precios solo rigen para las reservas hechas a mano.** Lo que entra por
+Shopify trae su propio total y ese manda, porque la tienda es la que cobra.
+Por eso esto no contradice la regla de que los precios viven en Shopify: en
+una reserva a mano **no hay pedido de Shopify de dónde sacarlo**, así que no
+son dos verdades, es la única que hay.
 
-Con alias, un rename se arregla **agregando una línea en /menus**, sin tocar
-las filas viejas y sin redesplegar.
+Son **dos precios** porque el negocio tiene dos modalidades: pagar por
+adelantado sale más barato que pagar en el local. El formulario manual elige
+según la modalidad, propone el total y **deja corregirlo encima**, que es
+justo lo que hace falta cuando un grupo tiene un acuerdo distinto.
 
-**Los nombres canónicos van sin el prefijo "Menú"** — `Tradiciones`,
+**Nacen en blanco a propósito.** Los montos existen escritos en el proyecto
+pero están incompletos —hay precio en línea para dos de los cinco menús— y
+son de la tienda de desarrollo. Sembrar una tabla a medias es peor que
+dejarla vacía: la mitad correcta hace confiar en la otra mitad.
+
+**El nombre tiene que ser exactamente el mismo en Shopify, en el sitio y en
+esta lista.** No hay equivalencias. Se descartó un sistema de alias el
+2026-10-21: una lista de equivalencias es tolerante, pero también permite
+que los nombres se desalineen sin que nadie se entere, y mantenerla es
+trabajo.
+
+**Lo que reemplaza al alias es un aviso.** `/menus` compara lo que Shopify
+está vendiendo contra la lista y lo que no calza sale en amarillo. Así la
+garantía de que los nombres coinciden deja de ser una promesa y pasa a ser
+una comprobación: el día que alguien renombre un producto en la tienda, el
+panel lo dice.
+
+Lo único que se perdona son **mayúsculas, tildes y espacios de sobra**. Eso
+no es un segundo nombre, es el mismo escrito con descuido.
+
+### La contra a asumir, que no es chica
+
+**Shopify guarda el título del producto DENTRO de cada pedido** en el momento
+de la compra, así que renombrar no reescribe los pedidos viejos. Tras un
+rename, las reservas anteriores se cuentan aparte con su nombre antiguo, y
+arreglarlo es **editar esas filas en la planilla a mano**.
+
+Por eso conviene **renombrar temprano**, y por eso el aviso importa: hace
+visible el momento exacto en que pasa, en vez de que se descubra cuando los
+totales del día no cuadren.
+
+Los nombres de hoy van **sin el prefijo "Menú"** — `Tradiciones`,
 `Lo Pirque`, `A Brasas abiertas`, `Sommelier`, `Niños` — que es como se
-llaman en el sitio público, en el landing y en `CLAUDE.md`. Los `Menú X` que
-usa Shopify entran como alias.
-
-**Se canoniza al escribir y al leer.** Al escribir, para que la planilla vaya
-quedando con un solo nombre por plato; al leer, porque las filas ya escritas
-y lo anotado a mano no pasaron por ahí.
+llaman en el sitio público y en el landing.
 
 **Un menú que no está en la lista no se descarta ni se fuerza al más
-parecido**: aparece tal cual, y /menus avisa en amarillo que conviene
-agregarlo. Así la lista crece sola en vez de que alguien lo descubra cuando
-los totales no cuadren.
-
-**No se guarda el id de variante**, que sería lo más sólido porque no cambia
-nunca. Convertiría esa columna en algo ilegible para una persona, y esa
-planilla la abre gente. Los alias dan casi toda la robustez sin ese costo.
+parecido**: aparece tal cual y se reporta. Inventar a cuál se parece sería
+peor que no saber.
 
 ## Antes de empujar un cambio
 

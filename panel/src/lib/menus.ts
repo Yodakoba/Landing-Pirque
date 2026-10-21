@@ -1,32 +1,55 @@
 /**
- * Qué menús existen, y cómo se llaman de verdad.
+ * Qué menús existen.
  *
- * **El problema que esto resuelve:** el nombre del menú era la llave. Shopify
- * guarda el título del producto DENTRO de cada pedido en el momento de la
- * compra, así que renombrar un producto no reescribe los pedidos viejos — y
- * la reconciliación diaria, al releerlos, seguiría escribiendo el nombre
- * antiguo para siempre. Con el nombre como llave, un solo rename parte el
- * total del día en dos platos que en realidad son uno.
+ * **Una sola forma de escribir cada menú, y tiene que ser la misma en
+ * Shopify, en el sitio y acá.** Se decidió así el 2026-10-21, descartando un
+ * sistema de alias: una lista de equivalencias es tolerante, pero también
+ * permite que los nombres se desalineen sin que nadie se entere, y
+ * mantenerla es trabajo.
  *
- * La solución es un nombre canónico con alias: todo lo que lee la columna
- * `Menú` traduce el texto crudo al menú de verdad. Un rename futuro se
- * arregla **agregando un alias**, sin tocar las filas viejas ni redesplegar.
+ * **Lo que reemplaza al alias es un aviso.** `desconocidos()` compara lo que
+ * Shopify está vendiendo contra esta lista, y el panel lo muestra en
+ * amarillo. Así la garantía de que los nombres coinciden deja de ser una
+ * promesa y pasa a ser una comprobación: el día que alguien renombre un
+ * producto en la tienda, el panel lo dice.
  *
- * **No se guarda el id de variante**, que sería lo técnicamente más sólido
- * porque no cambia nunca. Convertiría esa columna en algo ilegible para una
- * persona, y esa planilla la abre gente. Los alias dan casi toda la
- * robustez sin ese costo.
+ * **La contra a asumir, y no es chica:** Shopify guarda el título del
+ * producto DENTRO de cada pedido al momento de la compra, así que renombrar
+ * no reescribe los pedidos viejos. Tras un rename, las reservas anteriores
+ * van a contarse aparte, con su nombre antiguo, y arreglarlo es editar esas
+ * filas en la planilla. Por eso **conviene renombrar temprano**, y por eso
+ * el aviso importa: hace visible el momento en que pasa.
+ *
+ * Lo que sí se corrige solo son mayúsculas, tildes y espacios de sobra. Eso
+ * no es un segundo nombre, es el mismo escrito con descuido.
  */
 import { normalizar } from './columnas.ts';
 
 export const HOJA_MENUS = 'Menús';
-export const COL_MENUS = { menu: 'Menú', alias: 'Alias' } as const;
+export const COL_MENUS = {
+  menu: 'Menú',
+  precioEnLinea: 'Precio en línea',
+  precioEnLocal: 'Precio en el local'
+} as const;
 
 export interface Menu {
-  /** Como se escribe y como se muestra. */
+  /** Como se escribe, como se muestra, y como se llama en Shopify. */
   nombre: string;
-  /** Otras formas de escribir lo mismo. */
-  alias: string[];
+  /**
+   * Los dos precios, en pesos. Cero significa **sin precio puesto**, no
+   * gratis: así se distingue "nadie lo ha llenado" de "vale cero".
+   *
+   * **Son dos porque el negocio tiene dos modalidades**: pagar por
+   * adelantado sale más barato que pagar en el local. Un precio solo
+   * obligaría a elegir cuál de los dos mentir.
+   *
+   * **Solo rigen para las reservas hechas a mano.** Lo que viene de Shopify
+   * trae su propio total y ese manda: la tienda es la que cobra. Por eso
+   * esto no es una segunda verdad sobre el precio — es la única que hay
+   * cuando no hay pedido de Shopify de dónde sacarlo.
+   */
+  precioEnLinea: number;
+  precioEnLocal: number;
 }
 
 /**
@@ -34,77 +57,105 @@ export interface Menu {
  * que es uno solo y se suma a cualquiera.
  *
  * **Sin el prefijo "Menú"**, que es como se llaman en el sitio público, en el
- * landing y en CLAUDE.md. Los `Menú X` que hoy usa Shopify entran como alias,
- * así que las reservas ya anotadas se siguen entendiendo aunque la tienda
- * todavía no se renombre.
+ * landing y en CLAUDE.md. Esta lista es solo el punto de partida: vive en la
+ * planilla y se edita ahí.
+ */
+/**
+ * Los precios nacen en CERO a propósito, o sea sin poner.
  *
- * Esta lista es solo el punto de partida: vive en la planilla y se edita ahí.
+ * Los montos existen escritos en el proyecto, pero están incompletos —hay
+ * precio en línea para dos de los cinco y precio en el local para otros
+ * cuatro— y son de la tienda de desarrollo. Sembrar una tabla a medias es
+ * peor que dejarla vacía: la mitad correcta hace confiar en la otra mitad.
+ * Los llena el cliente en /menus, que es de donde salen los precios.
  */
 export const POR_DEFECTO_MENUS: Menu[] = [
-  { nombre: 'Tradiciones', alias: ['Menú Tradiciones'] },
-  { nombre: 'Lo Pirque', alias: ['Menú Lo Pirque'] },
-  { nombre: 'A Brasas abiertas', alias: ['Menú A Brasas abiertas', 'Brasas', 'Menú Brasas'] },
-  { nombre: 'Sommelier', alias: ['Menú Sommelier'] },
-  { nombre: 'Niños', alias: ['Menú Niños', 'Menú de niños', 'Niño'] }
+  { nombre: 'Tradiciones', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'Lo Pirque', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'A Brasas abiertas', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'Sommelier', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'Niños', precioEnLinea: 0, precioEnLocal: 0 }
 ];
 
-/** Las filas de la pestaña `Menús` como lista. Los alias van separados por coma. */
+/** Un monto escrito a mano. Aguanta "$44.000", "44000" y "44 000". */
+export function aMonto(v: unknown): number {
+  const n = Number(String(v ?? '').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}\b)/g, '')
+    .replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+}
+
+/** Las filas de la pestaña `Menús` como lista. */
 export function leerMenusDe(filas: string[][]): Menu[] {
   const salida: Menu[] = [];
+  const vistos = new Set<string>();
   for (let i = 1; i < filas.length; i++) {
     const nombre = String(filas[i]?.[0] ?? '').trim();
-    if (!nombre) continue;
-    const alias = String(filas[i]?.[1] ?? '')
-      .split(',').map((a) => a.trim()).filter(Boolean);
-    salida.push({ nombre, alias });
+    if (!nombre || vistos.has(normalizar(nombre))) continue;
+    vistos.add(normalizar(nombre));
+    salida.push({
+      nombre,
+      precioEnLinea: aMonto(filas[i]?.[1]),
+      precioEnLocal: aMonto(filas[i]?.[2])
+    });
   }
   return salida;
 }
 
 /** La lista como filas, para escribirla de vuelta. */
 export function aFilasMenus(menus: Menu[]): string[][] {
+  // Un precio en cero se escribe en blanco, no como "0": en la planilla un
+  // cero se lee como "vale cero" y lo que queremos decir es "sin poner".
+  const monto = (n: number) => (n > 0 ? String(n) : '');
   return [
-    [COL_MENUS.menu, COL_MENUS.alias],
-    ...menus.map((m) => [m.nombre, m.alias.join(', ')])
+    [COL_MENUS.menu, COL_MENUS.precioEnLinea, COL_MENUS.precioEnLocal],
+    ...menus.map((m) => [m.nombre, monto(m.precioEnLinea), monto(m.precioEnLocal)])
   ];
 }
 
 /**
- * El nombre de verdad de un menú escrito de cualquier forma.
+ * El precio que corresponde a un menú según cómo se paga.
  *
- * Compara normalizado —sin tildes, sin mayúsculas, sin espacios de sobra—
- * así que `MENU TRADICIONES`, `Menú Tradiciones` y `tradiciones ` caen todos
- * en `Tradiciones`.
+ * Devuelve 0 si no hay precio puesto, y quien llame decide qué hacer con
+ * eso. Acá no se adivina el otro precio ni se inventa un recargo: el
+ * recargo de pagar en el local es dato del negocio y puede cambiar.
+ */
+export function precioDe(menu: Menu | undefined, enElLocal: boolean): number {
+  if (!menu) return 0;
+  return enElLocal ? menu.precioEnLocal : menu.precioEnLinea;
+}
+
+/**
+ * El nombre tal como está escrito en la lista.
  *
- * **Lo que no reconoce lo devuelve tal cual, limpio.** No se descarta ni se
- * fuerza al más parecido: un menú nuevo que Shopify empezó a vender ayer
- * tiene que aparecer en el panel aunque nadie lo haya agregado todavía a la
- * lista. Inventar a cuál se parece sería peor que no saber.
+ * Solo arregla **mayúsculas, tildes y espacios de sobra**: `TRADICIONES`,
+ * `tradiciones ` y `Tradiciones` son el mismo menú escrito con más o menos
+ * cuidado, no dos menús. No hay equivalencias entre nombres distintos: para
+ * eso estaba el sistema de alias, que se descartó.
+ *
+ * **Lo que no está en la lista se devuelve tal cual.** No se descarta ni se
+ * fuerza al más parecido: un menú que la tienda empezó a vender ayer tiene
+ * que aparecer en el panel, y `desconocidos()` lo reporta para que se agregue.
+ * Inventar a cuál se parece sería peor que no saber.
  */
 export function canonizar(texto: unknown, menus: Menu[] = POR_DEFECTO_MENUS): string {
   const crudo = String(texto ?? '').trim();
   if (!crudo) return '';
   const buscado = normalizar(crudo);
-  for (const m of menus) {
-    if (normalizar(m.nombre) === buscado) return m.nombre;
-    for (const a of m.alias) if (normalizar(a) === buscado) return m.nombre;
-  }
+  for (const m of menus) if (normalizar(m.nombre) === buscado) return m.nombre;
   return crudo;
 }
 
 /**
  * Los menús que aparecen en las reservas y que NO están en la lista.
  *
- * Es lo que permite que la lista crezca sola: si Shopify empieza a vender
- * algo nuevo, el panel lo muestra y además avisa que conviene agregarlo con
- * sus alias, en vez de que alguien lo descubra cuando los totales no cuadren.
+ * **Es el mecanismo que reemplaza a los alias.** Sin equivalencias, lo único
+ * que mantiene alineados a Shopify, al sitio y al panel es que alguien se
+ * entere cuando dejan de estarlo. Esto es ese alguien: si la tienda renombra
+ * un producto o empieza a vender uno nuevo, el panel lo dice en amarillo en
+ * vez de que se descubra cuando los totales del día no cuadren.
  */
 export function desconocidos(vistos: string[], menus: Menu[]): string[] {
-  const conocidos = new Set<string>();
-  for (const m of menus) {
-    conocidos.add(normalizar(m.nombre));
-    for (const a of m.alias) conocidos.add(normalizar(a));
-  }
+  const conocidos = new Set(menus.map((m) => normalizar(m.nombre)));
   // Se deduplica por la forma NORMALIZADA y se conserva la primera
   // escritura. Si no, "Nuevo", "nuevo" y "NUEVO" se reportan como tres menus
   // distintos y el aviso dice que faltan tres cuando falta uno.

@@ -9,7 +9,8 @@
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
-         diasAbiertosEntre, mesDe, mesEnPalabras } from './fechas.ts';
+         diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe,
+         rangoEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
@@ -23,8 +24,8 @@ import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
 import { filaReserva, buscarFilaPorId } from './filas.ts';
 import { firmaValida } from './firma.ts';
-import { canonizar, desconocidos, leerMenusDe, aFilasMenus,
-         POR_DEFECTO_MENUS } from './menus.ts';
+import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
+         POR_DEFECTO_MENUS, type Menu } from './menus.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -222,7 +223,7 @@ const linea = (t: string, cant: number, variante = 'Pago directo', fecha = '2026
 const pedido = (p: Partial<PedidoShopify> = {}): PedidoShopify => ({
   id: 1007, name: '#1007', email: 'ana@x.cl', total_price: '107000',
   created_at: '2026-10-20T15:04:00-03:00', financial_status: 'paid',
-  line_items: [linea('Tradiciones', 2), linea('Menú de niños', 1)], ...p
+  line_items: [linea('Tradiciones', 2), linea('Niños', 1)], ...p
 });
 
 let res = aReserva(pedido())!;
@@ -420,8 +421,8 @@ ok(buscarFilaPorId(hoja, ['Otra', 'Cosa'], '1007') === -1,
 // uno de 3 Tradiciones, asi que el sabado en la manana no habia como saber
 // que cocinar. Encontrado con las dos primeras compras de prueba reales.
 const mixto = pedido({ line_items: [
-  linea('Menú Tradiciones', 2),
-  linea('Menú Niños', 1)
+  linea('Tradiciones', 2),
+  linea('Niños', 1)
 ]});
 ok(menuDe(mixto) === '2 × Tradiciones + 1 × Niños',
    'el menu lleva CANTIDADES, ya no esconde el de ninos, y queda con el nombre canonico');
@@ -429,22 +430,22 @@ ok(aReserva(mixto)!.personas === 3, 'y las personas siguen siendo el total');
 
 // Dos lineas del mismo menu en modalidades distintas son el mismo plato.
 ok(menuDe(pedido({ line_items: [
-     linea('Menú Tradiciones', 2, 'Pago directo'),
-     linea('Menú Tradiciones', 1, 'Solo reserva')
+     linea('Tradiciones', 2, 'Pago directo'),
+     linea('Tradiciones', 1, 'Solo reserva')
    ]})) === '3 × Tradiciones',
    'dos modalidades del mismo menu se suman: para la cocina es el mismo plato');
 
 ok(menuDe(pedido({ line_items: [] })) === '', 'un pedido sin lineas no revienta');
 
 /* ---------- leerlo de vuelta ---------- */
-let d = desglosarMenu('2 × Menú Tradiciones + 1 × Menú Niños');
+let d = desglosarMenu('2 × Tradiciones + 1 × Niños');
 ok(d.length === 2 && d[0].cantidad === 2 && d[0].menu === 'Tradiciones',
    'se vuelve a leer, y de paso se canoniza el nombre de Shopify');
-ok(desglosarMenu('2 x Menú Tradiciones')[0].cantidad === 2,
+ok(desglosarMenu('2 x Tradiciones')[0].cantidad === 2,
    'se acepta la equis del teclado, no solo el signo de multiplicar');
 
 // Las filas que ya estaban escritas con el formato viejo.
-d = desglosarMenu('Menú Tradiciones');
+d = desglosarMenu('Tradiciones');
 ok(d.length === 1 && d[0].cantidad === 1,
    'una entrada SIN cantidad cuenta como 1: las filas viejas siguen sumando en vez de desaparecer');
 ok(desglosarMenu('')[0] === undefined, 'una celda vacia no aporta nada');
@@ -452,10 +453,10 @@ ok(desglosarMenu(null).length === 0, 'ni una celda ausente');
 
 /* ---------- el total del dia, que es el dato ---------- */
 const delDia = menusDe([
-  { menu: '2 × Menú Tradiciones + 1 × Menú Niños' },
-  { menu: '4 × Menú A Brasas abiertas' },
-  { menu: '3 × Menú Tradiciones' },
-  { menu: 'Menú Niños' }          // fila vieja, sin cantidad
+  { menu: '2 × Tradiciones + 1 × Niños' },
+  { menu: '4 × A Brasas abiertas' },
+  { menu: '3 × Tradiciones' },
+  { menu: 'Niños' }          // fila vieja, sin cantidad
 ]);
 ok(delDia[0].menu === 'Tradiciones' && delDia[0].cantidad === 5,
    'suma el mismo menu entre reservas distintas');
@@ -508,9 +509,9 @@ ok([...porMes.keys()].join(',') === '2026-10,2026-11',
 // "Menu Tradiciones", el total del dia contaria dos platos distintos y la
 // cocina prepararia mal. Por eso los nombres salen de lo ya vendido.
 const yaVendidos = menusConocidos([
-  { menu: '2 × Menú Tradiciones + 1 × Menú Niños' },
-  { menu: '4 × Menú A Brasas abiertas' },
-  { menu: '1 × Menú Tradiciones' }
+  { menu: '2 × Tradiciones + 1 × Niños' },
+  { menu: '4 × A Brasas abiertas' },
+  { menu: '1 × Tradiciones' }
 ]);
 ok(yaVendidos.length === 3, 'los menus conocidos salen de las reservas que ya hay');
 ok(yaVendidos.includes('Tradiciones') && yaVendidos.includes('Niños'),
@@ -529,7 +530,7 @@ ok(personasDeCuenta(cuenta) === 3,
 
 // Y el viaje completo: lo que escribe el formulario lo entiende la cocina.
 const comoShopify = aReserva(pedido({ line_items: [
-  linea('Menú Tradiciones', 2), linea('Menú Niños', 1)
+  linea('Tradiciones', 2), linea('Niños', 1)
 ]}))!;
 ok(componerMenu(cuenta) === comoShopify.menu,
    'una reserva a mano y una de Shopify con lo mismo adentro quedan IDENTICAS');
@@ -545,58 +546,104 @@ ok(componerMenu(alEditar) === comoShopify.menu,
 ok(componerMenu({}) === '', 'sin nada elegido no se escribe un menu');
 ok(personasDeCuenta({}) === 0, 'y son cero personas, que el formulario no deja guardar');
 
-/* ---------- que el sistema entienda que hay UN solo menu Tradiciones ----- */
-// El nombre era la llave, y Shopify guarda el titulo DENTRO de cada pedido
-// al momento de la compra: renombrar un producto no reescribe los pedidos
-// viejos, y la reconciliacion diaria los relee. Sin alias, un solo rename
-// parte el total del dia en dos platos que son uno.
-ok(canonizar('Menú Tradiciones') === 'Tradiciones',
-   'el nombre de Shopify se traduce al canonico');
-ok(canonizar('Tradiciones') === 'Tradiciones', 'y el canonico se queda igual');
-ok(canonizar('MENU TRADICIONES') === 'Tradiciones', 'sin importar mayusculas ni tildes');
-ok(canonizar('  menú tradiciones  ') === 'Tradiciones', 'ni espacios de sobra');
-ok(canonizar('Brasas') === 'A Brasas abiertas', 'un alias corto tambien');
-ok(canonizar('Menú de niños') === 'Niños', 'y una forma distinta de escribir lo mismo');
-
-// Lo que NO se reconoce se deja tal cual, no se fuerza al mas parecido.
-ok(canonizar('Menú Degustacion') === 'Menú Degustacion',
-   'un menu nuevo que la tienda empezo a vender aparece TAL CUAL, no se inventa a cual se parece');
+/* ---------- un solo nombre por menu, sin equivalencias ---------- */
+// Se decidio no usar alias: el nombre tiene que ser el mismo en Shopify, en
+// el sitio y en el panel. Lo unico que se perdona es como se escribe.
+ok(canonizar('Tradiciones') === 'Tradiciones', 'el nombre de la lista se queda igual');
+ok(canonizar('TRADICIONES') === 'Tradiciones', 'las mayusculas se perdonan');
+ok(canonizar('  tradiciones  ') === 'Tradiciones', 'y los espacios de sobra');
+ok(canonizar('Niños') === 'Niños' && canonizar('ninos') === 'Niños',
+   'y las tildes: es el mismo nombre escrito con descuido, no otro menu');
 ok(canonizar('') === '' && canonizar(null) === '', 'y lo vacio sigue vacio');
 
-// LA prueba: dos filas escritas distinto se suman como un solo plato.
-const mezcla = menusDe([
-  { menu: '2 × Menú Tradiciones' },   // fila vieja, nombre de Shopify
-  { menu: '3 × Tradiciones' }         // fila nueva, ya canonizada
-]);
-ok(mezcla.length === 1 && mezcla[0].cantidad === 5,
-   'una fila vieja y una nueva del MISMO plato se cuentan juntas: 5, no 2 y 3');
-ok(mezcla[0].menu === 'Tradiciones', 'y bajo el nombre canonico');
+// YA NO hay equivalencias entre nombres distintos.
+ok(canonizar('Menú Tradiciones') === 'Menú Tradiciones',
+   'el nombre viejo de Shopify YA NO se traduce: sin alias es otro menu, y el aviso lo reporta');
 
-// Al escribir desde Shopify ya queda canonizado.
-ok(aReserva(pedido({ line_items: [linea('Menú Tradiciones', 2)] }))!.menu ===
-   '2 × Tradiciones',
-   'un pedido de Shopify se guarda con el nombre canonico, no con el de la tienda');
+// Lo que no esta en la lista se deja tal cual, no se fuerza al mas parecido.
+ok(canonizar('Menú Degustacion') === 'Menú Degustacion',
+   'un menu que la tienda empezo a vender aparece TAL CUAL, no se inventa a cual se parece');
 
-/* ---------- avisar de lo que falta en la lista ---------- */
-ok(desconocidos(['Menú Tradiciones', 'Tradiciones'], POR_DEFECTO_MENUS).length === 0,
-   'un nombre conocido o su alias no se reportan');
-ok(desconocidos(['Menú Degustacion'], POR_DEFECTO_MENUS).join('') === 'Menú Degustacion',
-   'uno que nadie registro si se reporta, para poder agregarlo');
+// Escrito con descuido, se suma igual.
+const mezcla = menusDe([{ menu: '2 × TRADICIONES' }, { menu: '3 × tradiciones' }]);
+ok(mezcla.length === 1 && mezcla[0].cantidad === 5 && mezcla[0].menu === 'Tradiciones',
+   'el mismo nombre escrito de dos formas descuidadas se cuenta junto: 5');
+
+// Pero dos nombres DISTINTOS se cuentan aparte, a proposito.
+const partido = menusDe([{ menu: '2 × Menú Tradiciones' }, { menu: '3 × Tradiciones' }]);
+ok(partido.length === 2,
+   'un rename en Shopify SI parte el total, y eso es visible: es el costo asumido de no tener alias');
+
+ok(aReserva(pedido({ line_items: [linea('Tradiciones', 2)] }))!.menu === '2 × Tradiciones',
+   'un pedido de Shopify se guarda con el nombre de la lista');
+
+/* ---------- el aviso, que es lo que reemplaza a los alias ---------- */
+ok(desconocidos(['Tradiciones', 'TRADICIONES'], POR_DEFECTO_MENUS).length === 0,
+   'un nombre de la lista no se reporta, ni escrito en mayusculas');
+ok(desconocidos(['Menú Tradiciones'], POR_DEFECTO_MENUS).join('') === 'Menú Tradiciones',
+   'un rename SI se reporta: es asi como alguien se entera de que dejaron de calzar');
 ok(desconocidos(['', '  '], POR_DEFECTO_MENUS).length === 0, 'lo vacio no se reporta');
 ok(desconocidos(['Nuevo', 'nuevo', 'NUEVO'], POR_DEFECTO_MENUS).length === 1,
    'y no se repite el mismo escrito de tres formas');
 
 /* ---------- ida y vuelta a la planilla ---------- */
 const filasMenus = aFilasMenus(POR_DEFECTO_MENUS);
-ok(filasMenus[0][0] === 'Menú' && filasMenus[0][1] === 'Alias', 'se escribe con su encabezado');
+ok(filasMenus[0].join('|') === 'Menú|Precio en línea|Precio en el local',
+   'tres columnas: el nombre y los dos precios');
 ok(filasMenus.length === POR_DEFECTO_MENUS.length + 1, 'una fila por menu, mas el encabezado');
-const vueltaMenus = leerMenusDe(filasMenus);
-ok(JSON.stringify(vueltaMenus) === JSON.stringify(POR_DEFECTO_MENUS),
+ok(JSON.stringify(leerMenusDe(filasMenus)) === JSON.stringify(POR_DEFECTO_MENUS),
    'escribir y volver a leer devuelve exactamente la misma lista');
-ok(leerMenusDe([['Menú', 'Alias'], ['', 'algo']]).length === 0,
+ok(leerMenusDe([['Menú'], ['']]).length === 0,
    'una fila sin nombre se ignora en vez de crear un menu vacio');
-ok(POR_DEFECTO_MENUS.length === 5,
-   'los cuatro niveles del landing mas el de ninos');
+ok(leerMenusDe([['Menú'], ['Tradiciones'], ['TRADICIONES']]).length === 1,
+   'y el mismo nombre dos veces no crea dos menus');
+ok(POR_DEFECTO_MENUS.length === 5, 'los cuatro niveles del landing mas el de ninos');
+
+/* ---------- los precios, que solo rigen para las reservas a mano ---------- */
+ok(POR_DEFECTO_MENUS.every((m) => m.precioEnLinea === 0 && m.precioEnLocal === 0),
+   'nacen SIN PRECIO: sembrar una tabla a medias es peor que dejarla vacia');
+
+ok(aMonto('$44.000') === 44000, 'un monto en formato chileno se entiende');
+ok(aMonto('44000') === 44000, 'y uno pelado');
+ok(aMonto('44 000') === 44000, 'y con espacio');
+ok(aMonto('') === 0 && aMonto(null) === 0, 'lo vacio es cero, o sea sin poner');
+ok(aMonto('-5000') === 0, 'un negativo no es un precio');
+ok(aMonto('abc') === 0, 'ni una palabra');
+
+const conPrecio: Menu[] = [
+  { nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
+  { nombre: 'Ni\u00f1os', precioEnLinea: 19000, precioEnLocal: 24000 }
+];
+ok(precioDe(conPrecio[0], false) === 44000, 'pagando por adelantado rige el precio en linea');
+ok(precioDe(conPrecio[0], true) === 49000, 'y pagando en el local, el otro');
+ok(precioDe(undefined, false) === 0, 'un menu que no esta en la lista no tiene precio');
+ok(precioDe({ nombre: 'X', precioEnLinea: 0, precioEnLocal: 0 }, false) === 0,
+   'y uno sin precio puesto devuelve cero, no un numero inventado');
+
+// Un cero no se escribe como "0" en la planilla: un cero se lee como
+// "vale cero" y lo que queremos decir es "sin poner".
+ok(aFilasMenus([{ nombre: 'X', precioEnLinea: 0, precioEnLocal: 5000 }])[1].join('|') ===
+   'X||5000',
+   'un precio en cero se guarda en blanco, no como cero');
+ok(leerMenusDe(aFilasMenus(conPrecio))[0].precioEnLinea === 44000,
+   'escribir y volver a leer conserva los precios');
+
+
+/* ---------- agrupar el calendario por semana ---------- */
+// La semana parte en LUNES, que es la convencion chilena y la que ya usa el
+// calendario del sitio.
+ok(semanaDe('2026-10-24') === '2026-10-19', 'un sabado cae en la semana que empezo el lunes 19');
+ok(semanaDe('2026-10-25') === '2026-10-19',
+   'y su domingo en la MISMA: un fin de semana no se parte en dos');
+ok(semanaDe('2026-10-19') === '2026-10-19', 'el lunes es su propio inicio de semana');
+ok(semanaDe('2026-10-26') === '2026-10-26', 'y el lunes siguiente ya es otra');
+
+ok(rangoEnPalabras(['2026-10-24', '2026-10-25']) === '24 – 25 de octubre',
+   'un fin de semana se nombra como rango');
+ok(rangoEnPalabras(['2026-10-31']) === '31 de octubre', 'un dia solo, sin rango');
+ok(rangoEnPalabras(['2026-10-31', '2026-11-01']) === '31 de octubre – 1 de noviembre',
+   'y si cruza de mes se nombran los dos, que es cuando no nombrarlos confunde');
+ok(rangoEnPalabras([]) === '', 'sin dias no se nombra nada');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
