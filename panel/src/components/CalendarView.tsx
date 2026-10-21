@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import { menusConocidos } from '@/lib/shopify';
+import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras, mesDe, mesEnPalabras, hoy } from '@/lib/fechas';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
@@ -25,6 +26,7 @@ export default function CalendarView() {
   const [error, setError] = useState('');
   const [creando, setCreando] = useState(false);
   const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [menus, setMenus] = useState<Menu[]>(POR_DEFECTO_MENUS);
 
   const cargar = () => {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
@@ -36,7 +38,10 @@ export default function CalendarView() {
     // calendario se dibuja igual y el formulario deja escribirlos a mano.
     fetch('/api/reservas')
       .then((r) => r.json())
-      .then((d) => d.reservas && setReservas(d.reservas))
+      .then((d) => {
+        if (d.reservas) setReservas(d.reservas);
+        if (d.menus) setMenus(d.menus);
+      })
       .catch(() => {});
   };
   useEffect(cargar, []);
@@ -84,7 +89,10 @@ export default function CalendarView() {
       {creando && (
         <ReservaForm
           fecha={dias[0]?.fecha ?? hoy()}
-          menusConocidos={menusConocidos(reservas)}
+          menusConocidos={[...new Set([
+            ...menus.map((m) => m.nombre),
+            ...menusConocidos(reservas, menus)
+          ])].sort((a, b) => a.localeCompare(b))}
           reserva={null}
           onListo={() => { setCreando(false); cargar(); }}
           onCancelar={() => setCreando(false)}

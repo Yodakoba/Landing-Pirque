@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { leerReservas, crearReserva } from '@/lib/datos';
+import { leerReservas, crearReserva, leerMenus } from '@/lib/datos';
 import { ASISTENCIA } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
 export async function GET() {
   try {
-    return NextResponse.json({ reservas: await leerReservas() });
+    // Los menus viajan junto a las reservas: las dos vistas que leen esto
+    // los necesitan para agrupar, y asi no hay una peticion mas.
+    const [reservas, menus] = await Promise.all([leerReservas(), leerMenus()]);
+    return NextResponse.json({ reservas, menus });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

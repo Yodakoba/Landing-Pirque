@@ -19,7 +19,7 @@
 import { NextResponse } from 'next/server';
 import { firmaValida } from '@/lib/firma';
 import { aReserva } from '@/lib/shopify';
-import { guardarPedido } from '@/lib/datos';
+import { guardarPedido, leerMenus } from '@/lib/datos';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +40,9 @@ export async function POST(req: Request) {
 
   try {
     const pedido = JSON.parse(cuerpo);
-    const reserva = aReserva(pedido);
+    // Con la lista de menus para que el nombre quede canonizado al escribir:
+    // "Menu Tradiciones" de la tienda se guarda como "Tradiciones".
+    const reserva = aReserva(pedido, await leerMenus());
 
     // Un pedido sin _booking_date no es una reserva: puede ser cualquier
     // otra cosa vendida en la tienda. Se responde 200 igual, porque para

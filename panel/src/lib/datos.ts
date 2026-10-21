@@ -19,6 +19,8 @@ import { filaReserva, filaFecha, buscarFilaPorId } from './filas.ts';
 import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
          type Config } from './config.ts';
 import { camposDeShopify } from './shopify.ts';
+import { HOJA_MENUS, leerMenusDe, aFilasMenus, POR_DEFECTO_MENUS,
+         type Menu } from './menus.ts';
 import { esFecha } from './fechas.ts';
 
 const num = (v: unknown): number => {
@@ -205,4 +207,26 @@ export async function guardarPedido(
   }
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, r));
   return 'creada';
+}
+
+/* ---------- Menús ---------- */
+
+/**
+ * La lista de menús. Si la pestaña no existe, los de siempre.
+ *
+ * Mismo criterio que la configuración: el panel arranca contra una planilla
+ * recién creada y la pestaña solo hace falta para cambiar algo.
+ */
+export async function leerMenus(): Promise<Menu[]> {
+  try {
+    const lista = leerMenusDe(await leerHoja(HOJA_MENUS));
+    return lista.length ? lista : POR_DEFECTO_MENUS;
+  } catch {
+    return POR_DEFECTO_MENUS;
+  }
+}
+
+/** Reescribe la pestaña entera, creándola si hace falta. */
+export async function guardarMenus(menus: Menu[]): Promise<void> {
+  await escribirBloque(HOJA_MENUS, aFilasMenus(menus));
 }

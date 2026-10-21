@@ -14,6 +14,7 @@
 import { TIPO_PAGO, ESTADO_PAGO } from './columnas.ts';
 import type { Reserva } from './tipos.ts';
 import { esFecha } from './fechas.ts';
+import { canonizar, type Menu } from './menus.ts';
 
 /** Lo que nos importa de un pedido. El resto del objeto de Shopify es enorme. */
 export interface PedidoShopify {
@@ -174,12 +175,16 @@ export const POR = ' × ';
  * tres, mañana pueden ser cuatro— y una columna por menú obligaría a tocar
  * la planilla cada vez. Así también se lee solo para quien abra la hoja.
  */
-export function menuDe(p: PedidoShopify): string {
+export function menuDe(p: PedidoShopify, menus?: Menu[]): string {
   // Se acumula por título: dos líneas del mismo menú en modalidades distintas
   // son el mismo plato para la cocina.
+  //
+  // Se canoniza al ESCRIBIR, para que la planilla vaya quedando con un solo
+  // nombre por plato. Y se vuelve a canonizar al leer, porque las filas ya
+  // escritas y lo anotado a mano no pasan por acá.
   const porMenu = new Map<string, number>();
   for (const l of p.line_items ?? []) {
-    const t = texto(l.title);
+    const t = canonizar(texto(l.title), menus);
     if (!t) continue;
     porMenu.set(t, (porMenu.get(t) ?? 0) + (Number(l.quantity) || 0));
   }
@@ -200,13 +205,17 @@ export function menuDe(p: PedidoShopify): string {
  *
  * Se aceptan `×` y `x`, porque en un teclado se escribe la equis.
  */
-export function desglosarMenu(texto: unknown): { menu: string; cantidad: number }[] {
+export function desglosarMenu(
+  texto: unknown, menus?: Menu[]
+): { menu: string; cantidad: number }[] {
   const salida: { menu: string; cantidad: number }[] = [];
   for (const parte of String(texto ?? '').split('+')) {
     const t = parte.trim();
     if (!t) continue;
     const m = /^(\d+)\s*[×x]\s*(.+)$/i.exec(t);
-    const menu = (m ? m[2] : t).trim();
+    // Canonizar acá es lo que hace que "Menú Tradiciones" de una fila vieja
+    // y "Tradiciones" de una nueva se sumen como el mismo plato.
+    const menu = canonizar((m ? m[2] : t).trim(), menus);
     const cantidad = m ? Number(m[1]) : 1;
     if (!menu) continue;
     const ya = salida.find((x) => x.menu === menu);
@@ -222,11 +231,11 @@ export function desglosarMenu(texto: unknown): { menu: string; cantidad: number 
  * Ordenado de mayor a menor, que es como se lee una lista de preparación.
  */
 export function menusDe(
-  reservas: { menu: string }[]
+  reservas: { menu: string }[], menus?: Menu[]
 ): { menu: string; cantidad: number }[] {
   const total = new Map<string, number>();
   for (const r of reservas) {
-    for (const { menu, cantidad } of desglosarMenu(r.menu)) {
+    for (const { menu, cantidad } of desglosarMenu(r.menu, menus)) {
       total.set(menu, (total.get(menu) ?? 0) + cantidad);
     }
   }
@@ -246,7 +255,7 @@ export function menusDe(
  * día del evento, no un dato de Shopify. Y por eso mismo **el
  * sincronizador no puede escribirla**: ver `camposDeShopify()`.
  */
-export function aReserva(p: PedidoShopify): Omit<Reserva, 'fila'> | null {
+export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'> | null {
   const fecha = fechaDe(p);
   if (!fecha) return null;
 
@@ -256,7 +265,7 @@ export function aReserva(p: PedidoShopify): Omit<Reserva, 'fila'> | null {
     nombre: nombreDe(p),
     email: emailDe(p),
     telefono: telefonoDe(p),
-    menu: menuDe(p),
+    menu: menuDe(p, menus),
     personas: personasDe(p),
     monto: p.total_price == null || texto(p.total_price) === ''
       ? null
@@ -296,8 +305,10 @@ export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
  * nombre a mano. Es la única forma honesta de empezar: los nombres de los
  * productos son dato de la tienda, no nuestro.
  */
-export function menusConocidos(reservas: { menu: string }[]): string[] {
-  return menusDe(reservas).map((m) => m.menu).sort((a, b) => a.localeCompare(b));
+export function menusConocidos(
+  reservas: { menu: string }[], menus?: Menu[]
+): string[] {
+  return menusDe(reservas, menus).map((m) => m.menu).sort((a, b) => a.localeCompare(b));
 }
 
 /** Arma el texto del menú desde un conteo por plato. Lo contrario de desglosarMenu(). */
