@@ -4,6 +4,9 @@ import {
 } from '@/lib/datos';
 import { aEntero, esSi, sinFicha, type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
+import { exigir, quienEs } from '@/lib/permisos';
+import { anotar } from '@/lib/datos';
+import { ROL } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,13 +17,28 @@ export const dynamic = 'force-dynamic';
  * el resumen de cada día, y tres peticiones para pintar una pantalla son tres
  * oportunidades de que una llegue tarde y la vista quede a medias.
  */
-export async function GET() {
+/**
+ * Los links personales **solo los ve el administrador.**
+ *
+ * Un encargado administra la lista de trabajadores —eso lo pidió el
+ * cliente— pero no tiene por qué recibir las llaves con las que cada
+ * persona entra a ver lo suyo. No es que un encargado vaya a hacer algo
+ * malo con ellas: es que no las necesita, y una credencial que viaja a
+ * quien no la necesita es una credencial de más dando vueltas.
+ */
+const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({ ...t, token: '' }));
+
+export async function GET(req: Request) {
+  const no = await exigir(req, 'ver');
+  if (no) return no;
   try {
     const [puestos, trabajadores, turnos] = await Promise.all([
       leerPuestos(), leerTrabajadores(), leerTurnos()
     ]);
+    const esAdmin = (await quienEs(req)).rol === ROL.admin;
     return NextResponse.json({
-      puestos, trabajadores, turnos,
+      puestos, trabajadores: esAdmin ? trabajadores : sinTokens(trabajadores), turnos,
+      esAdmin,
       // Quién tiene turnos y no está en la lista. Pasa al renombrar a
       // alguien que ya estaba asignado; el panel lo muestra en vez de que
       // se descubra cuando el conteo del día no cuadre.
@@ -40,11 +58,18 @@ export async function GET() {
  * que se guarda es exactamente lo que se va a volver a leer.
  */
 export async function PUT(req: Request) {
+  const no = await exigir(req, 'equipo');
+  if (no) return no;
+  const esAdmin = (await quienEs(req)).rol === ROL.admin;
   try {
     const cuerpo = await req.json();
     const salida: { puestos?: Puesto[]; trabajadores?: Trabajador[] } = {};
 
     if (Array.isArray(cuerpo?.puestos)) {
+      // Los puestos y su regla son del administrador: ahí se decide cuánta
+      // gente hace falta, que es una decisión del negocio y no del turno.
+      const noPuestos = await exigir(req, 'puestos');
+      if (noPuestos) return noPuestos;
       const limpia: Puesto[] = [];
       const vistos = new Set<string>();
       for (const p of cuerpo.puestos) {
@@ -55,9 +80,17 @@ export async function PUT(req: Request) {
       }
       await guardarPuestos(limpia);
       salida.puestos = limpia;
+      await anotar({ ...(await quienEs(req)), accion: 'Cambió los puestos',
+        detalle: limpia.map((p) => p.nombre).join(', ') });
     }
 
     if (Array.isArray(cuerpo?.trabajadores)) {
+      // Los tokens que vengan del navegador se IGNORAN salvo que escriba el
+      // administrador. Para los demás se arrastra el que ya estaba, buscado
+      // por nombre: así guardar la lista no le borra el acceso a nadie.
+      const previos = new Map(
+        (await leerTrabajadores()).map((t) => [normalizar(t.nombre), t.token])
+      );
       const limpia: Trabajador[] = [];
       const vistos = new Set<string>();
       for (const t of cuerpo.trabajadores) {
@@ -71,11 +104,17 @@ export async function PUT(req: Request) {
           // Si no viene el campo, activo. Es la misma regla que la celda en
           // blanco de la planilla, y por el mismo motivo: existe la fila
           // porque alguien agregó a esa persona al equipo.
-          activo: t?.activo === undefined ? true : esSi(t.activo)
+          activo: t?.activo === undefined ? true : esSi(t.activo),
+          token: esAdmin
+            ? String(t?.token ?? '').trim()
+            : (previos.get(normalizar(nombre)) ?? '')
         });
       }
       await guardarTrabajadores(limpia);
-      salida.trabajadores = limpia;
+      salida.trabajadores = esAdmin ? limpia : sinTokens(limpia);
+      await anotar({ ...(await quienEs(req)), accion: 'Cambió la lista de trabajadores',
+        detalle: `${limpia.length} en la lista · ` +
+                 `${limpia.filter((t) => t.activo).length} activos` });
     }
 
     if (!salida.puestos && !salida.trabajadores) {

@@ -808,7 +808,7 @@ uno sirviera por sí solo:
 
 1. **Planificar** (hecho): qué puestos existen, quién es el equipo, y quién
    trabaja qué día.
-2. **Los accesos** (pendiente): admin / encargado / trabajador.
+2. **Los accesos** (hecho): admin / encargado / trabajador.
 3. **Las cuentas del día** (pendiente): asistencia del equipo, horas,
    ajustes y propina.
 
@@ -890,6 +890,196 @@ usa para los menús, y por el mismo motivo: sin alias ni equivalencias, lo
 único que mantiene alineadas dos listas es que alguien se entere cuando dejan
 de estarlo.
 
+### Quién puede hacer qué (2026-10-21)
+
+Tres roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
+
+| | Administrador | Encargado | Trabajador |
+|---|---|---|---|
+| Ver el calendario y las reservas | sí | sí | — |
+| Anotar reservas, abrir y cerrar días | sí | sí | — |
+| Asignar turnos y editar la lista de trabajadores | sí | sí | — |
+| Puestos y su regla "uno cada N" | sí | — | — |
+| Precios, menús y configuración | sí | — | — |
+| Links personales, diagnóstico y Shopify a mano | sí | — | — |
+| Cuentas del panel y bitácora | sí | — | — |
+| Ver **sus propios** turnos | — | — | sí |
+
+**El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
+Lo que no toca es la plata, la configuración y las credenciales.
+
+**El trabajador no figura en ninguna fila de la tabla de permisos, y ese es
+el punto**: no hay una sola acción del panel que pueda ejecutar. Su acceso no
+pasa por ahí.
+
+### El middleware autentica, cada ruta autoriza
+
+Son dos preguntas distintas —"¿quién eres?" y "¿puedes hacer esto?"— y las
+contesta código distinto a propósito. Si el permiso se comprobara solo en el
+middleware, **cualquier forma de saltárselo abriría de una vez todas las
+rutas**: es la forma exacta del CVE-2025-29927, el que obligó a subir Next
+hace unos días.
+
+Por lo mismo, **el rol se vuelve a derivar de la cookie firmada en cada
+ruta**, en vez de leerlo de una cabecera que ponga el middleware: una
+cabecera la puede mandar cualquiera.
+
+De ahí salió un arreglo concreto: `/api/shopify/sincronizar` se contentaba
+con un `x-panel: si`, confiando en que el middleware ya había pedido la
+contraseña. **Eso dejó de alcanzar cuando el panel pasó a tener más de un
+rol**, porque un encargado podía agregar esa cabecera a mano. Ahora comprueba
+el permiso de verdad.
+
+`GET /api/config` y `GET /api/menus` también son de administrador: un
+encargado que entrara a esas pantallas las vería cargar y fallar en cada
+guardado. Ahora le dicen "esta parte no es tuya", que es lo que pasa.
+
+### Cuentas con nombre y sesión (2026-10-21)
+
+**La autenticación básica se jubiló.** Hasta ese día el panel usaba la
+ventanita del navegador con una clave por rol. La reemplazó una **cookie de
+sesión firmada**, y el motivo no es estético: **la bitácora la necesitaba.**
+Con una clave compartida, cada línea del registro decía "lo hizo un
+encargado" y no servía para preguntarle a nadie.
+
+Lo que se gana de paso, y que la autenticación básica nunca tuvo:
+
+- **Un botón de cerrar sesión.** Antes había que cerrar el navegador entero,
+  o sea que en un equipo que comparte dispositivos el turno siguiente
+  entraba como el anterior — justo lo que la bitácora necesita que no pase.
+- **Saber con qué cuenta estás adentro**: el nombre va en la barra.
+
+Las piezas y por qué están separadas así:
+
+| Archivo | Qué hace | Dónde corre |
+|---|---|---|
+| `sesion.ts` | Firma y lee el token (WebCrypto) | Middleware **y** rutas |
+| `usuarios.ts` | Verifica contraseñas (`scrypt`, `node:crypto`) | Solo rutas |
+| `permisos.ts` | Resuelve quién llama y si puede | Rutas |
+
+**`sesion.ts` usa WebCrypto y no `node:crypto` porque el middleware corre en
+Edge**, donde `node:crypto` no existe. Verificar una contraseña pasa una sola
+vez, al entrar, en una ruta normal; leer la sesión pasa en cada petición,
+también en el middleware. De ahí la división, y por eso todo en `sesion.ts`
+es asíncrono.
+
+**La misma trampa, del otro lado:** `ROLES_DE_CUENTA`, `LARGO_MINIMO_CLAVE` y
+`ENCARGADO_COMPARTIDO` viven en `auth.ts` y no en `usuarios.ts` porque los
+importa un componente de navegador, y un `import` desde el cliente arrastra
+`node:crypto` al bundle y tumba el build. **Lo que toque el navegador no
+puede importar `node:crypto`**, ni directo ni a través de otro archivo.
+
+Detalles que vale la pena tener escritos:
+
+- **La sesión dura 7 días** (decidido con el cliente el 2026-10-21).
+- **El rol viaja firmado dentro del token**, para no consultar la planilla en
+  cada petición. El costo a asumir: **desactivar a alguien no corta su sesión
+  en curso.** Para echar a alguien ya mismo hay que cambiar `PANEL_CLAVE` o
+  `SESION_SECRETO`, lo que cierra **todas** las sesiones.
+- **El token está firmado, no cifrado.** Cualquiera que lo tenga puede leer
+  qué usuario y qué rol dice; da lo mismo, porque esa persona ya tiene la
+  sesión entera. Lo que importa es que no pueda **cambiarlos**, y eso lo
+  impide la firma — hay una prueba que intenta ascenderse a admin editando el
+  payload y rebota.
+- **Si no hay `SESION_SECRETO`, se deriva de `PANEL_CLAVE`.** No es comodidad:
+  sin eso, el primer despliegue después del cambio habría dejado a todos
+  afuera hasta que alguien creara una variable nueva. La consecuencia:
+  **cambiar `PANEL_CLAVE` cierra todas las sesiones abiertas.**
+- **Las contraseñas se guardan como huella `scrypt`, nunca en claro**, ni
+  siquiera para el administrador. La huella vive en la planilla, así que un
+  SHA pelado se rompería con un diccionario; `scrypt` hace que cada intento
+  cueste.
+- **El panel no tiene límite de intentos.** Vercel no trae uno y montarlo con
+  funciones sin estado compartido daría una falsa sensación de protección.
+  El freno real es el **largo mínimo de 12 caracteres** al poner una
+  contraseña.
+- **Un usuario que no existe y una clave equivocada dan el mismo mensaje.**
+  Distinguirlos diría cuál de las dos mitades se acertó.
+- **`PANEL_USUARIO` / `PANEL_CLAVE` siguen siendo una cuenta de
+  administrador**, y no se quitan nunca: es la puerta de emergencia para el
+  día en que la planilla no responda o alguien borre la última cuenta.
+- **`PANEL_ENCARGADO_*` sigue funcionando**, para no romper lo que ya estaba
+  configurado, pero en la bitácora aparece como **"encargado (clave
+  compartida)"**. Es a propósito: una línea así no identifica a nadie y
+  conviene que se note.
+- **Desactivar a alguien es mejor que borrarlo**: sus líneas de la bitácora
+  siguen diciendo quién fue.
+
+### La bitácora
+
+Una pestaña `Bitácora` con cuándo, quién, rol, acción y detalle. Se lee en
+`/bitacora` (las últimas 200; el resto se busca en la planilla).
+
+- **Se escribe desde el servidor, nunca desde la interfaz.** Una llamada
+  directa a la API tiene que quedar registrada igual que un clic; si
+  dependiera del navegador, bastaría con no usarlo.
+- **Queda el rastro, no el valor anterior.** Guardar el antes y el después
+  sería un historial completo, otra cosa y mucho más pesada. Esto sirve para
+  saber a quién preguntarle, no para deshacer.
+- **Si la anotación falla, la acción NO se revierte.** Es una decisión con
+  filo: puede quedar un cambio hecho y sin registrar. La alternativa
+  —cancelar la reserva que alguien acaba de anotar porque la planilla no
+  aceptó una línea de registro— es peor para el negocio, y el fallo queda en
+  los logs de Vercel.
+- **Las horas son de Chile**, no UTC. Una línea que diga 03:40 cuando en el
+  local eran las 00:40 manda a buscar al turno equivocado, y el servidor de
+  Vercel no está en Chile.
+- **Los tokens de los links personales no se anotan**: la bitácora la lee
+  gente, y una credencial copiada ahí sería una credencial más dando vueltas.
+- El costo a asumir: **una escritura más a la planilla por cada acción.** Con
+  este volumen no se nota.
+
+### El link personal del trabajador
+
+`/mi/<token>`. Se manda por WhatsApp y no pide contraseña ni correo. Se
+administra desde `/equipo`, columna **Link personal**: crear, copiar, renovar
+y quitar — **solo el administrador**, aunque el encargado sí edite la lista.
+Un encargado ni siquiera recibe los tokens: la ruta se los borra de la
+respuesta.
+
+Se eligió sobre una clave compartida de solo lectura por una razón concreta:
+**cuando el panel tenga sueldos y ajustes, una clave compartida dejaría que
+cualquier trabajador viera lo que gana y lo que le descontaron a todos los
+demás.**
+
+- **El token se guarda tal cual en la planilla, no como hash, y es a
+  propósito.** No es una contraseña: es un link que el administrador tiene
+  que poder volver a copiar cuando alguien lo pierda. Con un hash habría que
+  renovarlo cada vez, o sea cambiarle el link a la persona por haberlo
+  extraviado. Quien ve la planilla ya es el administrador.
+- **Renovar invalida el anterior en el acto**, que es lo que hay que hacer
+  cuando alguien pierde el teléfono.
+- **Desmarcar "activo" también cierra la puerta.** Si no, alguien que se fue
+  seguiría viendo la planificación.
+- **Un token vacío no encuentra a nadie**, aunque haya trabajadores sin
+  token. Si calzara, entrar a `/mi/` sin nada detrás abriría la ficha del
+  primero de la lista.
+- **Un link inválido y uno revocado dicen lo mismo.** Decir "ese link ya no
+  sirve" confirmaría que existió, y a quien sí es trabajador no le sirve de
+  nada: la salida es la misma, pedir otro.
+- La página **lee la planilla directo, sin pasar por una ruta de API**, así
+  que no hay ningún endpoint nuevo que se pueda llamar con un token prestado
+  para sacar datos en bruto. Lo único que sale es el HTML de una persona.
+- **Degrada en vez de reventar**: si no se pueden leer las reservas o las
+  fechas, igual muestra los turnos. Y una lista de trabajadores vacía se
+  reporta como "no se pudo cargar", no como "tu link no sirve", porque no
+  existe el caso de un token válido con la lista en cero.
+- En `/mi/` **no se dibuja la barra del panel**: todos sus enlaces le
+  pedirían una contraseña que no tiene.
+
+**Lo que ve el trabajador**: qué día, a qué hora, en qué puesto, cuánta
+gente se espera y **qué menús hay que preparar** — "30 × Tradiciones · 8 ×
+Niños".
+
+El desglose por menú lo pidió el cliente el 2026-10-21 pensando en la
+cocina, y **va para todos los puestos por igual**, también por decisión
+suya: saber qué viene sirve lo mismo para montar las mesas que para calcular
+la parrilla, y hacer dos versiones de esta página sería mantener dos.
+
+**No ve reservas, ni nombres de clientes, ni montos, ni a los demás
+trabajadores.** Los totales por menú son cuánto hay que cocinar; quién lo
+pidió y cuánto pagó no es dato de un turno.
+
 ### Lo que falta decidir
 
 - **El reparto de la propina.** El cliente lo dejó para más adelante
@@ -897,14 +1087,12 @@ de estarlo.
   agrega después sobre los turnos.
 - **El pago** va a ser **jornada + valor hora extra** (decidido el
   2026-10-21), y todavía no está construido.
-- **Los accesos** van a ser tres: admin, encargado y trabajador. El
-  trabajador entra con un **link personal** que se manda por WhatsApp — sin
-  contraseña ni correo— y ve solo sus días. Se eligió sobre una clave
-  compartida de solo lectura por una razón concreta: **con sueldos y ajustes
-  en el panel, una clave compartida dejaría que cualquier trabajador viera lo
-  que gana y lo que le descontaron a todos los demás.**
-- El **encargado sí puede agregar trabajadores**, además de reservas,
-  asistencia y equipo. No toca precios ni configuración.
+- **La asistencia del equipo** —vino / no vino / vino alguien extra, horas y
+  ajustes con motivo— es el lote 3 y tampoco está.
+- **Ojo con los descuentos por atraso**: el panel puede registrarlos sin
+  problema, pero si ese monto se descuenta de una liquidación formal, los
+  descuentos al sueldo tienen reglas en Chile. Conviene confirmarlo con quien
+  les lleve la contabilidad antes de usarlo así.
 
 ## Estilo y marca
 

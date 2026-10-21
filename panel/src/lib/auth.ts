@@ -49,3 +49,168 @@ export function credencialValida(cabecera: string, usuario: string, clave: strin
   const okClave = iguales(plano.slice(corte + 1), clave);
   return okUsuario && okClave;
 }
+
+/* ---------- Los tres roles ---------- */
+
+/**
+ * Quién es quien entra.
+ *
+ * Son tres y no más porque son tres las relaciones distintas con el negocio:
+ * quien lo administra, quien hace el turno, y quien trabaja en él. Un cuarto
+ * nivel sería inventar una distinción que nadie pidió.
+ */
+export const ROL = {
+  /** Todo, incluida la plata y la configuración. */
+  admin: 'admin',
+  /** El día a día: reservas, días, asistencia, equipo. */
+  encargado: 'encargado',
+  /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
+  trabajador: 'trabajador',
+  /** No identificado. */
+  ninguno: ''
+} as const;
+
+export type Rol = (typeof ROL)[keyof typeof ROL];
+
+export interface Credenciales {
+  adminUsuario?: string;
+  adminClave?: string;
+  encargadoUsuario?: string;
+  encargadoClave?: string;
+}
+
+/**
+ * Qué rol trae una cabecera `Authorization`.
+ *
+ * **Se vuelve a calcular en cada ruta, a partir de la cabecera, en vez de
+ * confiar en algo que ponga el middleware.** Un middleware que escribe el rol
+ * en una cabecera y rutas que la leen es cómodo, pero deja abierta una
+ * pregunta incómoda: ¿y si alguien manda esa cabecera él mismo? Derivarlo de
+ * la credencial en cada ruta borra esa clase entera de error, y cuesta
+ * comparar dos strings.
+ *
+ * El middleware sigue existiendo y sigue cerrando el panel completo: eso
+ * autentica. Esto otro autoriza. Son dos preguntas distintas y conviene que
+ * las conteste código distinto.
+ */
+export function rolDe(cabecera: string, c: Credenciales): Rol {
+  // Un rol sin usuario o sin clave configurados NO existe. Si no, dejar la
+  // variable en blanco abriría la puerta en vez de cerrarla, que es
+  // exactamente al revés de lo que hay que hacer.
+  if (c.adminUsuario && c.adminClave &&
+      credencialValida(cabecera, c.adminUsuario, c.adminClave)) {
+    return ROL.admin;
+  }
+  if (c.encargadoUsuario && c.encargadoClave &&
+      credencialValida(cabecera, c.encargadoUsuario, c.encargadoClave)) {
+    return ROL.encargado;
+  }
+  return ROL.ninguno;
+}
+
+/**
+ * Qué puede hacer cada rol.
+ *
+ * Está como tabla y no como `if`s repartidos por las rutas **para poder
+ * leerla de una vez y para poder probarla**. Una regla de permisos escrita
+ * en quince lugares es quince lugares donde se puede olvidar una.
+ *
+ * El trabajador no aparece en ninguna fila: su acceso no pasa por acá, entra
+ * por su link personal a una página que solo lee lo suyo. Que no figure es
+ * el punto — no hay ninguna acción del panel que pueda ejecutar.
+ */
+export const PERMISOS = {
+  /** Ver el calendario, los días y las reservas. */
+  ver: [ROL.admin, ROL.encargado],
+  /** Anotar, editar y borrar reservas. */
+  reservas: [ROL.admin, ROL.encargado],
+  /** Abrir, cerrar y editar días. */
+  dias: [ROL.admin, ROL.encargado],
+  /** Asignar turnos y administrar la lista de trabajadores. */
+  equipo: [ROL.admin, ROL.encargado],
+  /** Cambiar los puestos y su regla de "uno cada N personas". */
+  puestos: [ROL.admin],
+  /** Crear, renovar y quitar los links personales de los trabajadores. */
+  links: [ROL.admin],
+  /** Las cuentas del panel y sus contraseñas. */
+  usuarios: [ROL.admin],
+  /** Leer la bitácora. */
+  bitacora: [ROL.admin],
+  /** Precios, menús y configuración del negocio. */
+  configurar: [ROL.admin],
+  /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
+  mantencion: [ROL.admin]
+} as const;
+
+export type Accion = keyof typeof PERMISOS;
+
+export function puede(rol: Rol, accion: Accion): boolean {
+  return (PERMISOS[accion] as readonly Rol[]).includes(rol);
+}
+
+/**
+ * Las credenciales del entorno.
+ *
+ * `PANEL_USUARIO` y `PANEL_CLAVE` siguen siendo las del administrador, con
+ * los mismos nombres de antes: cambiárselos habría dejado al cliente fuera
+ * de su propio panel en el primer despliegue, que es la peor forma de
+ * estrenar un sistema de permisos.
+ */
+export function credencialesDelEntorno(env: Record<string, string | undefined>): Credenciales {
+  return {
+    adminUsuario: env.PANEL_USUARIO,
+    adminClave: env.PANEL_CLAVE,
+    encargadoUsuario: env.PANEL_ENCARGADO_USUARIO,
+    encargadoClave: env.PANEL_ENCARGADO_CLAVE
+  };
+}
+
+/* ---------- Lo que la pantalla de cuentas necesita saber ---------- */
+
+/**
+ * Estas tres cosas viven acá y no en `usuarios.ts` **porque las usa un
+ * componente de navegador**, y `usuarios.ts` importa `node:crypto` para
+ * hashear contraseñas. Un `import` desde el cliente arrastra el módulo
+ * entero al bundle y el build se cae con "Reading from node:crypto is not
+ * handled" — pasó al escribir la pantalla de cuentas.
+ *
+ * La regla que deja esto: **lo que toque el navegador no puede importar
+ * `node:crypto`**, ni directo ni a través de otro archivo.
+ */
+
+/**
+ * Los roles que pueden entrar al panel.
+ *
+ * El trabajador no está: él entra por su link personal, no por acá. Una
+ * cuenta con rol `trabajador` sería una puerta que no lleva a ninguna parte.
+ */
+export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado];
+
+export function esRolDeCuenta(v: unknown): v is Rol {
+  return ROLES_DE_CUENTA.includes(
+    String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .trim().toLowerCase() as Rol
+  );
+}
+
+/**
+ * Con qué nombre queda anotada la clave compartida de encargado.
+ *
+ * **Dice que es compartida a propósito.** Una línea de bitácora firmada así
+ * no identifica a nadie, y es mejor que eso se lea de corrido a que parezca
+ * una persona llamada "encargado".
+ */
+export const ENCARGADO_COMPARTIDO = 'encargado (clave compartida)';
+
+/**
+ * El largo mínimo de una contraseña nueva.
+ *
+ * **Es el único freno real contra probar claves a lo bruto**, porque el
+ * panel no tiene límite de intentos: Vercel no trae uno y montarlo con
+ * funciones sin estado compartido daría una falsa sensación de protección.
+ * Doce caracteres hacen que adivinar por la red deje de ser realista.
+ *
+ * Largo antes que raro: tres o cuatro palabras pegadas aguantan más que
+ * ocho caracteres con símbolos, y se pueden dictar por teléfono.
+ */
+export const LARGO_MINIMO_CLAVE = 12;

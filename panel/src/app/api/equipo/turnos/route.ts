@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { guardarEquipoDelDia, leerTurnos } from '@/lib/datos';
+import { exigir, quienEs } from '@/lib/permisos';
+import { guardarEquipoDelDia, leerTurnos, anotar } from '@/lib/datos';
 import { esFecha } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,8 @@ export const dynamic = 'force-dynamic';
  * Lo que NO hace es tocar otros días: ver `guardarEquipoDelDia()`.
  */
 export async function PUT(req: Request) {
+  const no = await exigir(req, 'equipo');
+  if (no) return no;
   try {
     const { fecha, turnos } = await req.json();
     if (!esFecha(fecha)) {
@@ -39,7 +42,11 @@ export async function PUT(req: Request) {
     // no lo que se mandó: si algo se descartó por repetido, la vista tiene
     // que mostrar lo que quedó guardado y no lo que se intentó guardar.
     const todos = await leerTurnos();
-    return NextResponse.json({ turnos: todos.filter((t) => t.fecha === fecha) });
+    const delDia = todos.filter((t) => t.fecha === fecha);
+    await anotar({ ...(await quienEs(req)), accion: 'Planificó el equipo',
+      detalle: `${fecha} · ${delDia.length} personas · ` +
+               delDia.map((t) => `${t.trabajador} (${t.puesto || 'sin puesto'})`).join(', ') });
+    return NextResponse.json({ turnos: delDia });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

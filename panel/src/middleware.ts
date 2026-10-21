@@ -1,34 +1,36 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { credencialValida } from './lib/auth.ts';
+import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from './lib/sesion.ts';
+
 
 /**
- * Autenticación básica HTTP sobre todo el panel.
+ * El cierre del panel: nadie entra sin sesión.
  *
- * Es Basic auth y no un sistema de cuentas a propósito: son una o dos
- * personas del local, no una organización. El navegador muestra el diálogo
- * solo, no hay pantalla de login que mantener, y son treinta líneas sin
- * una sola dependencia.
+ * **Desde el 2026-10-21 es una cookie firmada y no autenticación básica.**
+ * El cambio lo pidió la bitácora: con una clave por rol, el registro solo
+ * podía decir "lo hizo un encargado". Con cuentas hace falta una sesión, y
+ * con una sesión aparecen dos cosas que la autenticación básica nunca tuvo:
+ * un botón de **cerrar sesión** y saber **con qué cuenta** estás adentro.
  *
  * Lo que hay que saber de esta elección:
  *
- * - **No hay botón de cerrar sesión.** El navegador recuerda la credencial
- *   hasta que se cierra. Para "salir" hay que cerrar el navegador o usar
- *   una ventana privada.
- * - **No hay usuarios distintos.** Una sola credencial compartida; no queda
- *   registro de quién hizo cada cambio.
- * - **Va sobre HTTPS obligatoriamente.** En Vercel eso es automático. Por
- *   HTTP plano, la credencial viaja legible en cada petición.
+ * - **La sesión dura 7 días** (decidido con el cliente). Pasado ese plazo se
+ *   vuelve a pedir la contraseña.
+ * - **Desactivar a alguien no corta su sesión en curso.** El rol viaja
+ *   firmado dentro del token para no consultar la planilla en cada
+ *   petición; ver `sesion.ts`. Para echar a alguien ya mismo hay que
+ *   cambiar `PANEL_CLAVE` o `SESION_SECRETO`, lo que invalida todas.
+ * - **`PANEL_USUARIO` / `PANEL_CLAVE` siguen siendo una cuenta válida**, de
+ *   administrador. Es la puerta de emergencia para el día en que la planilla
+ *   no responda o alguien borre la última cuenta.
  *
- * Si algún día hacen falta cuentas separadas o un registro de quién tocó
- * qué, esto se reemplaza por Auth.js. Para hoy sería desproporcionado.
+ * Este archivo corre en el runtime **Edge**, así que no puede importar
+ * `node:crypto` — por eso la firma usa WebCrypto y las contraseñas se
+ * verifican en otro lado, en la ruta de entrada.
  */
+
 /**
- * La única ruta pública del panel: la que consume el sitio.
- *
- * Está exenta a mano y no por un patrón, para que agregar una ruta nueva
- * no la deje expuesta por accidente. Lo que devuelve son tres campos
- * recortados en src/lib/publico.ts; ahí está escrito por qué y hay una
- * prueba que lo fija.
+ * Lo que se sirve sin sesión. **Va enumerado a mano y no por un patrón**,
+ * para que agregar una ruta nueva no la deje expuesta por accidente.
  */
 const PUBLICAS = [
   // Las fechas que dibuja el calendario del sitio.
@@ -36,34 +38,68 @@ const PUBLICAS = [
   // El webhook de Shopify. Público por fuerza: Shopify no puede
   // autenticarse con nuestra contraseña. Lo que lo protege es la firma
   // HMAC, que se verifica dentro de la ruta; ver src/lib/firma.ts.
-  '/api/shopify/webhook'
+  '/api/shopify/webhook',
+  // La pantalla de entrada y la ruta que la atiende. Si pidieran sesión,
+  // no habría forma de conseguir una.
+  '/login',
+  '/api/sesion'
 ];
 
-export function middleware(req: NextRequest) {
-  if (PUBLICAS.includes(req.nextUrl.pathname)) return NextResponse.next();
+/**
+ * La única excepción por prefijo, y va aparte de PUBLICAS para que se vea.
+ *
+ * `/mi/<token>` es la página del trabajador. No puede pedir contraseña
+ * —justamente la gracia es que entra con un link y nada más— así que lo que
+ * la protege es el token de la URL, que la página verifica contra la lista
+ * de trabajadores antes de mostrar nada.
+ *
+ * `/mi` a secas, sin token, no abre nada: `trabajadorPorToken()` no
+ * encuentra a nadie con un token vacío.
+ */
+const PREFIJO_TRABAJADOR = '/mi/';
 
-  const usuario = process.env.PANEL_USUARIO;
-  const clave = process.env.PANEL_CLAVE;
+export async function middleware(req: NextRequest) {
+  const ruta = req.nextUrl.pathname;
+  if (PUBLICAS.includes(ruta)) return NextResponse.next();
+  if (ruta.startsWith(PREFIJO_TRABAJADOR)) return NextResponse.next();
 
-  // Sin credenciales configuradas: en producción se CIERRA, no se abre.
-  // Desplegar sin contraseña y quedar expuesto en internet es justo el
-  // accidente que esto tiene que impedir.
-  if (!usuario || !clave) {
+  const secreto = secretoDeSesion(process.env);
+
+  // Sin nada con qué firmar, en producción se CIERRA, no se abre. Desplegar
+  // sin contraseña y quedar expuesto en internet es justo el accidente que
+  // esto tiene que impedir.
+  if (!secreto) {
     if (process.env.NODE_ENV === 'development') return NextResponse.next();
     return new NextResponse(
-      'El panel no tiene PANEL_USUARIO y PANEL_CLAVE configurados. ' +
-      'Está cerrado hasta que los tenga.',
+      'El panel no tiene PANEL_CLAVE configurada. Está cerrado hasta que la tenga.',
       { status: 503 }
     );
   }
 
-  const cabecera = req.headers.get('authorization') ?? '';
-  if (credencialValida(cabecera, usuario, clave)) return NextResponse.next();
+  const sesion = await leerSesion(
+    cookieDe(req.headers.get('cookie'), COOKIE_SESION), secreto
+  );
+  if (sesion) return NextResponse.next();
 
-  return new NextResponse('Necesitas autenticarte.', {
-    status: 401,
-    headers: { 'WWW-Authenticate': 'Basic realm="Panel de reservas", charset="UTF-8"' }
-  });
+  // Una página manda a entrar; una ruta de API responde 401 y no un
+  // redirect. Si redirigiera, un `fetch` recibiría el HTML de la pantalla de
+  // entrada con código 200 y la pantalla mostraría un error de JSON roto en
+  // vez de decir que la sesión caducó.
+  if (ruta.startsWith('/api/')) {
+    return NextResponse.json(
+      { error: 'Tu sesión caducó o no estás identificado. Vuelve a entrar.', sesion: false },
+      { status: 401 }
+    );
+  }
+
+  const entrada = req.nextUrl.clone();
+  entrada.pathname = '/login';
+  entrada.search = '';
+  // Para volver a donde iba después de entrar. Solo la ruta, nunca una URL
+  // completa: con una absoluta, un link preparado podría mandar a la persona
+  // a otro sitio después de que entre.
+  entrada.searchParams.set('volver', ruta);
+  return NextResponse.redirect(entrada);
 }
 
 export const config = {
@@ -71,9 +107,8 @@ export const config = {
   // muestra la estructura de la planilla. Quedan fuera solo los archivos
   // internos de Next y el favicon.
   //
-  // El endpoint del sitio NO se excluye acá sino dentro de middleware(),
-  // en PUBLICAS: así sigue pasando por esta función y la lista de lo
-  // abierto se lee en un solo lugar, en vez de quedar escondida en una
-  // expresión regular.
+  // Lo abierto NO se excluye acá sino dentro de middleware(), en PUBLICAS:
+  // así sigue pasando por esta función y la lista se lee en un solo lugar,
+  // en vez de quedar escondida en una expresión regular.
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
 };

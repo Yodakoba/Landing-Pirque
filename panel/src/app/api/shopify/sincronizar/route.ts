@@ -17,6 +17,8 @@
  * guardarPedido() es idempotente.
  */
 import { NextResponse } from 'next/server';
+import { exigir } from '@/lib/permisos';
+import { iguales } from '@/lib/auth';
 import { pedidosDesde, configurado } from '@/lib/admin';
 import { aReserva } from '@/lib/shopify';
 import { guardarPedido, leerMenus, leerConfig } from '@/lib/datos';
@@ -31,15 +33,23 @@ export const maxDuration = 60;
 const DIAS_ATRAS = 10;
 
 export async function GET(req: Request) {
-  // La tarea programada de Vercel llega con un secreto en la cabecera. A
-  // mano, desde el panel, llega con la contraseña del panel, que el
-  // middleware ya verificó antes de que esto corra.
+  // Dos formas legítimas de llegar acá, y ninguna más.
+  //
+  // 1. La tarea programada de Vercel, con su secreto en la cabecera.
+  // 2. Un administrador apretando el botón del panel.
+  //
+  // **Antes bastaba con mandar `x-panel: si`**, confiando en que el
+  // middleware ya había pedido la contraseña. Eso dejó de alcanzar cuando el
+  // panel pasó a tener más de un rol: cualquiera que entrara —un encargado,
+  // por ejemplo— podía agregar esa cabecera a mano y disparar la
+  // reconciliación. Ahora se comprueba el permiso de verdad, y la cabecera
+  // inventada ya no sirve de nada.
   const esperado = process.env.CRON_SECRET;
-  const cabecera = req.headers.get('authorization');
-  const deVercel = !!esperado && cabecera === `Bearer ${esperado}`;
-  const delPanel = req.headers.get('x-panel') === 'si';
-  if (!deVercel && !delPanel) {
-    return new NextResponse('No autorizado.', { status: 401 });
+  const cabecera = req.headers.get('authorization') ?? '';
+  const deVercel = !!esperado && iguales(cabecera, `Bearer ${esperado}`);
+  if (!deVercel) {
+    const no = await exigir(req, 'mantencion');
+    if (no) return no;
   }
 
   if (!configurado()) {

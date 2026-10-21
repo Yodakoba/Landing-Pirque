@@ -26,6 +26,11 @@ export default function EquipoEditor() {
   const [puestos, setPuestos] = useState<Puesto[] | null>(null);
   const [gente, setGente] = useState<Trabajador[]>([]);
   const [sinFicha, setSinFicha] = useState<string[]>([]);
+  // Lo manda el servidor; la interfaz no lo adivina. Los puestos y los links
+  // personales son del administrador, y si el encargado viera esos controles
+  // el panel le estaría mintiendo: la ruta se los va a negar igual.
+  const [esAdmin, setEsAdmin] = useState(false);
+  const [avisoLink, setAvisoLink] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [sucio, setSucio] = useState(false);
@@ -37,6 +42,7 @@ export default function EquipoEditor() {
         setPuestos(d.puestos);
         setGente(d.trabajadores);
         setSinFicha(d.sinFicha ?? []);
+        setEsAdmin(!!d.esAdmin);
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -46,7 +52,11 @@ export default function EquipoEditor() {
     try {
       const r = await fetch('/api/equipo', {
         method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ puestos, trabajadores: gente })
+        // Los puestos solo viajan si quien guarda puede cambiarlos. Mandarlos
+        // igual haría fallar la petición entera y se perderían también los
+        // cambios de la lista de trabajadores, que sí puede hacer.
+        body: JSON.stringify(esAdmin ? { puestos, trabajadores: gente }
+                                     : { trabajadores: gente })
       });
       const d = await r.json();
       if (d.error) setError(d.error);
@@ -61,6 +71,41 @@ export default function EquipoEditor() {
 
   if (error) return <Aviso error={error} />;
   if (!puestos) return <p className="text-hueso/50">Cargando…</p>;
+
+  /**
+   * Crear, renovar o quitar el link de alguien.
+   *
+   * **Solo con la lista guardada.** Esta llamada escribe la pestaña entera
+   * desde lo que hay en la planilla, así que si quedaran ediciones sin
+   * guardar en pantalla, al recargar se perderían. Por eso los botones se
+   * apagan mientras haya cambios pendientes, en vez de que el trabajo
+   * desaparezca sin explicación.
+   */
+  async function link(nombre: string, accion: 'crear' | 'renovar' | 'quitar') {
+    if (accion === 'quitar' &&
+        !confirm(`¿Quitarle el acceso a ${nombre}? Su link deja de servir al instante.`)) {
+      return;
+    }
+    setAvisoLink('');
+    const r = await fetch('/api/equipo/link', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre, accion })
+    });
+    const d = await r.json();
+    if (d.error) return setAvisoLink(d.error);
+    setGente((antes) => antes.map((t) => (t.nombre === d.nombre ? { ...t, token: d.token } : t)));
+    if (accion !== 'quitar') copiar(d.token, nombre);
+    else setAvisoLink(`${nombre} ya no tiene acceso.`);
+  }
+
+  function copiar(token: string, nombre: string) {
+    const url = `${window.location.origin}/mi/${token}`;
+    navigator.clipboard?.writeText(url)
+      .then(() => setAvisoLink(`Link de ${nombre} copiado. Mándaselo por WhatsApp.`))
+      // Sin portapapeles —pasa en algunos navegadores sin HTTPS— se muestra
+      // para copiarlo a mano, en vez de no hacer nada.
+      .catch(() => window.prompt(`Link de ${nombre}:`, url));
+  }
 
   const cambiarPuesto = (i: number, campo: keyof Puesto, valor: string) => {
     const copia = puestos.map((p) => ({ ...p }));
@@ -107,6 +152,20 @@ export default function EquipoEditor() {
       <h2 className="mb-3 text-xs uppercase tracking-widest text-hueso/45">
         Trabajadores
       </h2>
+      {esAdmin && (
+        <p className="mb-4 max-w-2xl text-sm text-hueso/60">
+          <strong>El link personal</strong> le deja ver sus turnos y nada más:
+          qué día, a qué hora y en qué puesto. No ve reservas, ni montos, ni a
+          los demás. Se manda por WhatsApp y no necesita contraseña, así que
+          quien lo tenga ve esa página — si alguien pierde el teléfono,{' '}
+          <strong>Renovar</strong> deja el anterior inservible al instante.
+        </p>
+      )}
+      {avisoLink && (
+        <p className="mb-4 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
+          {avisoLink}
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
@@ -115,6 +174,7 @@ export default function EquipoEditor() {
               <th className="w-44 py-2 pr-3">Teléfono</th>
               <th className="w-44 py-2 pr-3">Puesto habitual</th>
               <th className="w-20 py-2 pr-3">Activo</th>
+              {esAdmin && <th className="w-52 py-2 pr-3">Link personal</th>}
               <th className="w-20 py-2" />
             </tr>
           </thead>
@@ -154,6 +214,28 @@ export default function EquipoEditor() {
                     className="h-4 w-4 accent-oro"
                     onChange={(e) => cambiarPersona(i, 'activo', e.target.checked)} />
                 </td>
+                {esAdmin && (
+                  <td className="whitespace-nowrap py-2 pr-3 text-xs">
+                    {!t.nombre.trim() ? (
+                      <span className="text-hueso/35">Ponle nombre y guarda</span>
+                    ) : sucio ? (
+                      <span className="text-hueso/40">Guarda para administrar el link</span>
+                    ) : t.token ? (
+                      <span className="flex gap-2">
+                        <button onClick={() => copiar(t.token, t.nombre)}
+                          className="text-oro hover:underline">Copiar</button>
+                        <button onClick={() => link(t.nombre, 'renovar')}
+                          className="text-hueso/55 hover:text-oro"
+                          title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
+                        <button onClick={() => link(t.nombre, 'quitar')}
+                          className="text-hueso/55 hover:text-red-400">Quitar</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => link(t.nombre, 'crear')}
+                        className="text-oro hover:underline">Crear link</button>
+                    )}
+                  </td>
+                )}
                 <td className="whitespace-nowrap py-2 text-right">
                   <button
                     onClick={() => { setGente(gente.filter((_, k) => k !== i)); setSucio(true); }}
@@ -162,7 +244,7 @@ export default function EquipoEditor() {
               </tr>
             ))}
             {gente.length === 0 && (
-              <tr><td colSpan={5} className="py-6 text-sm text-hueso/50">
+              <tr><td colSpan={esAdmin ? 6 : 5} className="py-6 text-sm text-hueso/50">
                 Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
               </td></tr>
             )}
@@ -171,7 +253,7 @@ export default function EquipoEditor() {
       </div>
       <button
         onClick={() => {
-          setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true }]);
+          setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true, token: '' }]);
           setSucio(true);
         }}
         className="mt-4 rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
@@ -181,6 +263,12 @@ export default function EquipoEditor() {
       <h2 className="mb-3 mt-10 text-xs uppercase tracking-widest text-hueso/45">
         Puestos
       </h2>
+      {!esAdmin && (
+        <p className="mb-4 max-w-2xl text-sm text-hueso/60">
+          Los puestos y su regla los cambia el administrador. Acá se ven para
+          poder asignar turnos.
+        </p>
+      )}
       <p className="mb-4 max-w-2xl text-sm text-hueso/60">
         <strong>Uno cada N personas</strong> es cuánta gente hace falta en ese
         puesto según cuántos comensales haya. Con 10 en garzón, un día de 44
@@ -201,18 +289,20 @@ export default function EquipoEditor() {
               <tr key={i} className="border-b border-hueso/5">
                 <td className="py-2 pr-3">
                   <input type="text" value={p.nombre} className={ENTRADA}
-                    placeholder="Garzón, cocina, barra…"
+                    placeholder="Garzón, cocina, barra…" disabled={!esAdmin}
                     onChange={(e) => cambiarPuesto(i, 'nombre', e.target.value)} />
                 </td>
                 <td className="py-2 pr-3">
                   <input type="number" min={0} step={1} className={ENTRADA}
-                    value={p.cadaCuantas || ''} placeholder="— sin regla"
+                    value={p.cadaCuantas || ''} placeholder="— sin regla" disabled={!esAdmin}
                     onChange={(e) => cambiarPuesto(i, 'cadaCuantas', e.target.value)} />
                 </td>
                 <td className="whitespace-nowrap py-2 text-right">
-                  <button
-                    onClick={() => { setPuestos(puestos.filter((_, k) => k !== i)); setSucio(true); }}
-                    className="text-hueso/60 hover:text-red-400">Quitar</button>
+                  {esAdmin && (
+                    <button
+                      onClick={() => { setPuestos(puestos.filter((_, k) => k !== i)); setSucio(true); }}
+                      className="text-hueso/60 hover:text-red-400">Quitar</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -221,11 +311,13 @@ export default function EquipoEditor() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => { setPuestos([...puestos, { nombre: '', cadaCuantas: 0 }]); setSucio(true); }}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
-          Agregar puesto
-        </button>
+        {esAdmin && (
+          <button
+            onClick={() => { setPuestos([...puestos, { nombre: '', cadaCuantas: 0 }]); setSucio(true); }}
+            className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+            Agregar puesto
+          </button>
+        )}
         <span className="flex-1" />
         {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
         <button onClick={guardar} disabled={guardando || !sucio}

@@ -12,19 +12,27 @@
  */
 import { usePathname } from 'next/navigation';
 
+/**
+ * `soloAdmin` esconde el enlace para el encargado. Es cortesía, no
+ * seguridad: quien escriba /config a mano igual recibe un 403 de la ruta,
+ * que es donde esto se decide de verdad.
+ */
 const PAGINAS = [
-  { href: '/', texto: 'Calendario' },
-  { href: '/equipo', texto: 'Equipo' },
-  { href: '/menus', texto: 'Menús' },
-  { href: '/config', texto: 'Configuración' }
+  { href: '/', texto: 'Calendario', soloAdmin: false },
+  { href: '/equipo', texto: 'Equipo', soloAdmin: false },
+  { href: '/menus', texto: 'Menús', soloAdmin: true },
+  { href: '/config', texto: 'Configuración', soloAdmin: true },
+  { href: '/usuarios', texto: 'Cuentas', soloAdmin: true },
+  { href: '/bitacora', texto: 'Bitácora', soloAdmin: true }
 ];
 
-export default function Nav() {
+export default function Nav({ rol }: { rol: string }) {
   const ruta = usePathname();
 
   return (
     <nav className="flex gap-5 text-sm">
-      {PAGINAS.map(({ href, texto }) => {
+      {PAGINAS.filter((p) => !p.soloAdmin || rol === 'admin')
+              .map(({ href, texto }) => {
         // La raíz calza exacto; las demás también con lo que cuelgue de
         // ellas. /dia/2026-11-14 no es ninguna de las tres, así que ahí no
         // se marca nada, que es correcto: no es una página del menú.

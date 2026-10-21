@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { exigir, quienEs } from '@/lib/permisos';
+import { anotar } from '@/lib/datos';
 import { leerReservas, crearReserva, leerMenus, leerFechas, leerConfig,
          guardarFecha } from '@/lib/datos';
 import { diaParaReservaManual } from '@/lib/dias';
@@ -6,7 +8,9 @@ import { ASISTENCIA } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
-export async function GET() {
+export async function GET(req: Request) {
+  const no = await exigir(req, 'ver');
+  if (no) return no;
   try {
     // Los menus viajan junto a las reservas: las dos vistas que leen esto
     // los necesitan para agrupar, y asi no hay una peticion mas.
@@ -18,6 +22,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const no = await exigir(req, 'reservas');
+  if (no) return no;
   try {
     const b = await req.json();
     if (!b.fecha || !b.nombre) {
@@ -43,6 +49,10 @@ export async function POST(req: Request) {
       asistencia: ASISTENCIA.sinMarcar
     });
     await abrirElDiaSiHaceFalta(b.fecha);
+
+    const quien = await quienEs(req);
+    await anotar({ ...quien, accion: 'Anotó una reserva',
+      detalle: `${b.nombre} · ${b.fecha} · ${b.personas} personas · ${b.menu ?? 'sin menú'}` });
 
     return NextResponse.json({ id });
   } catch (e) {
