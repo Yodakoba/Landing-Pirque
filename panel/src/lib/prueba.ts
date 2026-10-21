@@ -25,6 +25,7 @@ import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
 import { filaReserva, buscarFilaPorId } from './filas.ts';
 import { firmaValida } from './firma.ts';
+import { eventoDe, idDeEvento } from './calendario.ts';
 import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
          POR_DEFECTO_MENUS, type Menu } from './menus.ts';
 import { createHmac } from 'node:crypto';
@@ -680,6 +681,67 @@ ok(enPesos(0) === '$0', 'y el cero tambien se escribe');
 const conDinero = paraElSitio([conPlata]);
 ok(Object.keys(conDinero[0]).sort().join(',') === 'fecha,pocos,quedan',
    'agregar plata a la ocupacion NO la filtra al sitio: siguen siendo tres campos');
+
+/* ---------- el evento del calendario, portado del Apps Script ---------- */
+// El id sale del pedido, asi NO hace falta guardarlo en la planilla. Shopify
+// manda orders/updated cada vez que el pedido cambia: sin un id estable,
+// cada aviso crearia un evento nuevo y el calendario se llenaria de copias.
+ok(idDeEvento('1009') === idDeEvento('1009'),
+   'es SIEMPRE el mismo para el mismo pedido: eso es lo que evita los duplicados');
+ok(idDeEvento('1009') !== idDeEvento('1010'), 'pedidos distintos, eventos distintos');
+
+// Google solo acepta minusculas de la a a la v, y digitos. Esta prueba
+// encontro un error de verdad: el primer intento reemplazaba los caracteres
+// invalidos por una "w", que TAMPOCO esta permitida.
+for (const id of ['1009', 'MANUAL-123', '', 'Ñandú #7', '0']) {
+  ok(/^[a-v0-9]{5,1024}$/.test(idDeEvento(id)),
+     `el id de "${id}" cae dentro del alfabeto que Google acepta`);
+}
+
+// Y limpiar no puede hacer chocar dos ids distintos: dos reservas
+// compartiendo evento es peor que un id ilegible.
+ok(idDeEvento('MANUAL-1') !== idDeEvento('MANUAL-2'), 'dos ids manuales parecidos no chocan');
+ok(idDeEvento('MANUAL-123') !== idDeEvento('MANUALx123'),
+   'ni un caracter invalido se confunde con otro valido');
+ok(idDeEvento('1') !== idDeEvento('10'),
+   'ni un id corto con uno mas largo, que es donde fallaria un relleno');
+
+/* ---------- lo que se lee en el celular ---------- */
+// En el celular se ve el titulo del evento y nada mas, asi que ahi va lo
+// que hay que tener en la mano cuando llega la gente.
+let ev = eventoDe(r({ personas: 4, nombre: 'Ana Perez', estadoPago: 'pending' }));
+ok(ev.summary === '4 personas · Ana Perez · POR COBRAR',
+   'el titulo dice cuantos, quien, y que falta cobrarles');
+
+ev = eventoDe(r({ personas: 4, nombre: 'Ana Perez', estadoPago: 'paid' }));
+ok(ev.summary === '4 personas · Ana Perez',
+   'una pagada NO dice POR COBRAR: el titulo deja de avisar cuando deja de hacer falta');
+
+ev = eventoDe(r({ personas: 1, nombre: '', estadoPago: 'paid' }));
+ok(ev.summary === '1 persona · Sin nombre',
+   'sin nombre se dice "Sin nombre", y el singular esta bien escrito');
+
+/* ---------- la hora, con la zona por NOMBRE ---------- */
+ev = eventoDe(r({ fecha: '2026-11-14' }), '13:00', '18:00');
+ok(ev.start.dateTime === '2026-11-14T13:00:00' && ev.end.dateTime === '2026-11-14T18:00:00',
+   'empieza y termina en el horario configurado');
+ok(ev.start.timeZone === 'America/Santiago',
+   'la zona va por NOMBRE y no como desfase: el horario de verano lo resuelve Google y no nosotros');
+
+ev = eventoDe(r({}), '9', '20:30');
+ok(ev.start.dateTime.endsWith('T09:00:00') && ev.end.dateTime.endsWith('T20:30:00'),
+   'se entiende una hora sin minutos y una con ellos');
+ev = eventoDe(r({}), 'a las tres', '');
+ok(ev.start.dateTime.endsWith('T13:00:00') && ev.end.dateTime.endsWith('T18:00:00'),
+   'y una hora que no se entiende cae en el horario de siempre, no en medianoche');
+
+/* ---------- la descripcion ---------- */
+ev = eventoDe(r({ menu: '2 × Tradiciones', monto: 88000, telefono: '+56 9 1111 1111' }));
+ok(ev.description.includes('2 × Tradiciones'), 'la descripcion lleva el menu');
+ok(ev.description.includes('$88.000'), 'y el monto en formato chileno');
+ok(ev.description.includes('+56 9 1111 1111'), 'y el telefono, para llamar desde el evento');
+ok(eventoDe(r({ monto: null })).description.includes('sin anotar'),
+   'una reserva sin monto lo dice, en vez de mostrar un cero que parece gratis');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

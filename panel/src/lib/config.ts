@@ -22,6 +22,11 @@ export interface Config {
   cupoNormal: number;
   /** La hora a la que abre, como texto. */
   horaApertura: string;
+  /**
+   * La hora a la que cierra. Hoy solo la usa el evento de Google Calendar,
+   * para saber hasta cuándo dura. El sitio no la muestra.
+   */
+  horaCierre: string;
   /** Qué días de la semana se abre. 0 es domingo y 6 sábado, como getDay(). */
   diasAbiertos: number[];
   /** Hasta cuántos días adelante se puede reservar. */
@@ -41,6 +46,8 @@ export const POR_DEFECTO: Config = {
   avisoPocosLugares: 10,
   cupoNormal: 60,
   horaApertura: '13:00',
+  // 13:00 a 18:00 es el horario del negocio, una sola jornada por día.
+  horaCierre: '18:00',
   diasAbiertos: [6, 0],          // sábado y domingo
   diasAFuturo: 90,
   cortes: { amarillo: 0.6, rojo: 0.85 }
@@ -51,6 +58,7 @@ export const CLAVES = {
   avisoPocosLugares: 'aviso_pocos_lugares',
   cupoNormal: 'cupo_normal',
   horaApertura: 'hora_apertura',
+  horaCierre: 'hora_cierre',
   diasAbiertos: 'dias_abiertos',
   diasAFuturo: 'dias_a_futuro',
   corteAmarillo: 'corte_amarillo',
@@ -148,6 +156,7 @@ export function leerConfigDe(filas: string[][]): Config {
       POR_DEFECTO.avisoPocosLugares, 0, 10000),
     cupoNormal: numero(v(CLAVES.cupoNormal), POR_DEFECTO.cupoNormal, 1, 100000),
     horaApertura: String(v(CLAVES.horaApertura) ?? '').trim() || POR_DEFECTO.horaApertura,
+    horaCierre: String(v(CLAVES.horaCierre) ?? '').trim() || POR_DEFECTO.horaCierre,
     diasAbiertos: aDiasSemana(v(CLAVES.diasAbiertos)) ?? POR_DEFECTO.diasAbiertos,
     diasAFuturo: numero(v(CLAVES.diasAFuturo), POR_DEFECTO.diasAFuturo, 1, 3650),
     cortes
@@ -161,6 +170,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.avisoPocosLugares, String(c.avisoPocosLugares)],
     [CLAVES.cupoNormal, String(c.cupoNormal)],
     [CLAVES.horaApertura, c.horaApertura],
+    [CLAVES.horaCierre, c.horaCierre],
     [CLAVES.diasAbiertos, deDiasSemana(c.diasAbiertos)],
     [CLAVES.diasAFuturo, String(c.diasAFuturo)],
     [CLAVES.corteAmarillo, String(Math.round(c.cortes.amarillo * 100))],

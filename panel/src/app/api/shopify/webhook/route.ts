@@ -19,7 +19,11 @@
 import { NextResponse } from 'next/server';
 import { firmaValida } from '@/lib/firma';
 import { aReserva } from '@/lib/shopify';
-import { guardarPedido, leerMenus } from '@/lib/datos';
+import { guardarPedido, leerMenus, leerConfig } from '@/lib/datos';
+import { eventoDe, idDeEvento } from '@/lib/calendario';
+import { guardarEvento, borrarEvento, hayCalendario } from '@/lib/google-calendar';
+import { ocupaLugar } from '@/lib/ocupacion';
+import type { Reserva } from '@/lib/tipos';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +58,9 @@ export async function POST(req: Request) {
 
     const que = await guardarPedido(reserva);
     console.log(`[webhook] ${req.headers.get('x-shopify-topic')} pedido ${reserva.id}: ${que}`);
+
+    await anotarEnElCalendario(reserva);
+
     return NextResponse.json({ ok: true, [que]: reserva.id });
   } catch (e) {
     // Acá sí conviene fallar: un 500 hace que Shopify reintente, y si la
@@ -61,5 +68,34 @@ export async function POST(req: Request) {
     // es idempotente, así que reintentar no duplica nada.
     console.error('[webhook]', e);
     return NextResponse.json({ error: 'No pudimos anotar la reserva.' }, { status: 500 });
+  }
+}
+
+/**
+ * El evento del calendario, que es una comodidad y no la verdad.
+ *
+ * **Si falla, se registra y se sigue.** La planilla ya tiene la reserva; que
+ * Google no responda, o que nadie haya compartido el calendario con la
+ * cuenta de servicio, no puede hacer que el webhook devuelva error y que
+ * Shopify lo reintente para siempre. Es la misma regla que traía el Apps
+ * Script.
+ *
+ * Una reserva que deja de ocupar lugar —cancelada, reembolsada— **borra su
+ * evento**: una cancelada que sigue en el calendario es peor que ninguna,
+ * porque alguien cuenta sillas mirándolo.
+ */
+async function anotarEnElCalendario(reserva: Omit<Reserva, 'fila'>) {
+  if (!hayCalendario()) return;
+  try {
+    if (!ocupaLugar(reserva as Reserva)) {
+      await borrarEvento(idDeEvento(reserva.id));
+      console.log(`[webhook] evento borrado: ${reserva.id}`);
+      return;
+    }
+    const cfg = await leerConfig();
+    const que = await guardarEvento(eventoDe(reserva, cfg.horaApertura, cfg.horaCierre));
+    console.log(`[webhook] evento ${que}: ${reserva.id}`);
+  } catch (e) {
+    console.error('[webhook] calendario', e);
   }
 }

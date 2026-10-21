@@ -170,6 +170,7 @@ plataforma, no de la idea.
 | `SHOPIFY_VERSION` | `2026-10` (estable al 2026-10-20, soportada hasta oct. 2027) |
 | `SHOPIFY_WEBHOOK_SECRET` | el **Client secret** de la app, que es lo que firma |
 | `CRON_SECRET` | una cadena larga al azar, para la tarea programada |
+| `GOOGLE_CALENDAR_ID` | el calendario donde van los eventos (opcional) |
 
 **El token de Admin API no se guarda en el repositorio ni viaja por una
 conversación.** Va del admin de Shopify al campo de Vercel y a ningún otro
@@ -267,6 +268,47 @@ llaman en el sitio público y en el landing.
 **Un menú que no está en la lista no se descarta ni se fuerza al más
 parecido**: aparece tal cual y se reporta. Inventar a cuál se parece sería
 peor que no saber.
+
+## Google Calendar: un evento por reserva
+
+Lo hacía el Apps Script y era lo último que le quedaba. Se portó al panel el
+2026-10-21.
+
+Cada reserva crea un evento del horario del día, con **cuántos son, quién y
+si falta cobrarles en el título**. Eso no es capricho: en el celular se ve
+el título del evento y nada más, así que ahí va lo que hay que tener en la
+mano cuando llega la gente. El menú, el monto y el teléfono van en la
+descripción.
+
+### Lo que hay que hacer una vez
+
+1. **Compartir el calendario con la cuenta de servicio**, la misma que lee
+   la planilla, con permiso de **hacer cambios en los eventos**. Es el mismo
+   trámite que con la planilla, y el mismo error silencioso si se olvida:
+   Google responde 403 y en el panel no se ve nada, solo en el log.
+2. Poner **`GOOGLE_CALENDAR_ID`** en Vercel. Está en la configuración del
+   calendario, en "Integrar calendario"; en el principal suele ser el correo
+   de la cuenta.
+
+**Sin esa variable el panel simplemente no escribe eventos**, y todo lo
+demás funciona igual.
+
+### Dos decisiones que evitan problemas conocidos
+
+**El id del evento sale del id del pedido**, así que no hay que guardarlo en
+la planilla. Shopify manda `orders/updated` cada vez que un pedido cambia:
+sin un id estable, cada aviso crearía un evento nuevo y el calendario se
+llenaría de duplicados. Como Google deja elegir el id al crear, el primero
+crea y los demás actualizan.
+
+**Si falla el calendario, la reserva se guarda igual.** La planilla es la
+fuente de verdad y el evento es una comodidad; un error de Google se
+registra y se sigue. Si el webhook devolviera error por esto, Shopify lo
+reintentaría para siempre.
+
+Una reserva cancelada o reembolsada **borra su evento**: una cancelada que
+sigue en el calendario es peor que ninguna, porque alguien cuenta sillas
+mirándolo.
 
 ## Antes de empujar un cambio
 
