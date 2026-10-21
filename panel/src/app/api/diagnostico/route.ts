@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * único fallo que esto tiene y que de otro modo pasa callado.
  */
 export async function GET(req: Request) {
-  const no = exigir(req, 'mantencion');
+  const no = await exigir(req, 'mantencion');
   if (no) return no;
   try {
     return NextResponse.json(await diagnostico());

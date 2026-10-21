@@ -32,7 +32,7 @@ export const dynamic = 'force-dynamic';
  * vez de que simplemente no aparezcan.
  */
 export async function GET(req: Request) {
-  const no = exigir(req, 'ver');
+  const no = await exigir(req, 'ver');
   if (no) return no;
   try {
     // El parámetro sigue existiendo para poder pedir otra ventana a mano,

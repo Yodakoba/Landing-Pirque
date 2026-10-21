@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   const cabecera = req.headers.get('authorization') ?? '';
   const deVercel = !!esperado && iguales(cabecera, `Bearer ${esperado}`);
   if (!deVercel) {
-    const no = exigir(req, 'mantencion');
+    const no = await exigir(req, 'mantencion');
     if (no) return no;
   }
 

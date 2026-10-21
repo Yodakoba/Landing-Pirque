@@ -132,6 +132,10 @@ export const PERMISOS = {
   puestos: [ROL.admin],
   /** Crear, renovar y quitar los links personales de los trabajadores. */
   links: [ROL.admin],
+  /** Las cuentas del panel y sus contraseñas. */
+  usuarios: [ROL.admin],
+  /** Leer la bitácora. */
+  bitacora: [ROL.admin],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
@@ -160,3 +164,53 @@ export function credencialesDelEntorno(env: Record<string, string | undefined>):
     encargadoClave: env.PANEL_ENCARGADO_CLAVE
   };
 }
+
+/* ---------- Lo que la pantalla de cuentas necesita saber ---------- */
+
+/**
+ * Estas tres cosas viven acá y no en `usuarios.ts` **porque las usa un
+ * componente de navegador**, y `usuarios.ts` importa `node:crypto` para
+ * hashear contraseñas. Un `import` desde el cliente arrastra el módulo
+ * entero al bundle y el build se cae con "Reading from node:crypto is not
+ * handled" — pasó al escribir la pantalla de cuentas.
+ *
+ * La regla que deja esto: **lo que toque el navegador no puede importar
+ * `node:crypto`**, ni directo ni a través de otro archivo.
+ */
+
+/**
+ * Los roles que pueden entrar al panel.
+ *
+ * El trabajador no está: él entra por su link personal, no por acá. Una
+ * cuenta con rol `trabajador` sería una puerta que no lleva a ninguna parte.
+ */
+export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado];
+
+export function esRolDeCuenta(v: unknown): v is Rol {
+  return ROLES_DE_CUENTA.includes(
+    String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .trim().toLowerCase() as Rol
+  );
+}
+
+/**
+ * Con qué nombre queda anotada la clave compartida de encargado.
+ *
+ * **Dice que es compartida a propósito.** Una línea de bitácora firmada así
+ * no identifica a nadie, y es mejor que eso se lea de corrido a que parezca
+ * una persona llamada "encargado".
+ */
+export const ENCARGADO_COMPARTIDO = 'encargado (clave compartida)';
+
+/**
+ * El largo mínimo de una contraseña nueva.
+ *
+ * **Es el único freno real contra probar claves a lo bruto**, porque el
+ * panel no tiene límite de intentos: Vercel no trae uno y montarlo con
+ * funciones sin estado compartido daría una falsa sensación de protección.
+ * Doce caracteres hacen que adivinar por la red deje de ser realista.
+ *
+ * Largo antes que raro: tres o cuatro palabras pegadas aguantan más que
+ * ocho caracteres con símbolos, y se pueden dictar por teléfono.
+ */
+export const LARGO_MINIMO_CLAVE = 12;

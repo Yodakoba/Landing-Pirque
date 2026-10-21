@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { exigir } from '@/lib/permisos';
-import { leerMenus, guardarMenus } from '@/lib/datos';
+import { exigir, quienEs } from '@/lib/permisos';
+import { leerMenus, guardarMenus , anotar } from '@/lib/datos';
 import { aMonto, type Menu } from '@/lib/menus';
 import { normalizar } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const no = exigir(req, 'configurar');
+  const no = await exigir(req, 'configurar');
   if (no) return no;
   try {
     return NextResponse.json({ menus: await leerMenus() });
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
  * leer.
  */
 export async function PUT(req: Request) {
-  const no = exigir(req, 'configurar');
+  const no = await exigir(req, 'configurar');
   if (no) return no;
   try {
     const { menus } = await req.json();
@@ -46,6 +46,9 @@ export async function PUT(req: Request) {
       });
     }
     await guardarMenus(limpia);
+    await anotar({ ...(await quienEs(req)), accion: 'Cambió los menús',
+      detalle: limpia.map((m) => `${m.nombre} ${m.precioEnLinea || '—'}/${m.precioEnLocal || '—'}`)
+                     .join(' · ') });
     return NextResponse.json({ menus: limpia });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

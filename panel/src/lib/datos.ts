@@ -23,6 +23,11 @@ import { camposDeShopify } from './shopify.ts';
 import { HOJA_MENUS, leerMenusDe, aFilasMenus, POR_DEFECTO_MENUS,
          type Menu } from './menus.ts';
 import { esFecha, type Fecha } from './fechas.ts';
+import { HOJA_USUARIOS, leerUsuariosDe, aFilasUsuarios, type Usuario } from './usuarios.ts';
+import {
+  HOJA_BITACORA, ENCABEZADO_BITACORA, filaBitacora, leerBitacoraDe,
+  ahoraEnChile, recortar, type Anotacion
+} from './bitacora.ts';
 import {
   HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS, ENCABEZADO_TURNOS,
   leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
@@ -321,4 +326,67 @@ export async function guardarEquipoDelDia(
   // los índices de las viejas y se borrarían las equivocadas.
   await borrarFilas(HOJA_TURNOS, previas);
   await agregarFilas(HOJA_TURNOS, nuevos.map((t) => filaTurno(enc, t)));
+}
+
+/* ---------- Las cuentas del panel ---------- */
+
+/**
+ * Los usuarios. Si la pestaña no existe, ninguno.
+ *
+ * **Que no haya usuarios no deja a nadie afuera**: `PANEL_USUARIO` y
+ * `PANEL_CLAVE` siguen siendo una cuenta de administrador que vive en el
+ * entorno. Es la puerta de emergencia, y existe justamente para el día en
+ * que la planilla no responda o alguien borre la última cuenta.
+ */
+export async function leerUsuarios(): Promise<Usuario[]> {
+  try {
+    return leerUsuariosDe(await leerHoja(HOJA_USUARIOS));
+  } catch {
+    return [];
+  }
+}
+
+export async function guardarUsuarios(lista: Usuario[]): Promise<void> {
+  await escribirBloque(HOJA_USUARIOS, aFilasUsuarios(lista));
+}
+
+/* ---------- La bitácora ---------- */
+
+/**
+ * Anota una acción.
+ *
+ * **Si falla, no voltea la acción.** Es una decisión con filo: significa que
+ * en teoría puede quedar un cambio hecho y sin registrar. La alternativa
+ * —cancelar la reserva que alguien acaba de anotar porque la planilla no
+ * aceptó una línea de registro— es peor para el negocio, y el fallo queda en
+ * los logs de Vercel para que no desaparezca del todo.
+ */
+export async function anotar(a: {
+  /** Quién lo hizo. Es el mismo campo que devuelve `quienEs()`, para que
+      una ruta pueda escribir `{ ...quien, accion }` sin traducir nada. */
+  usuario: string; rol: string; accion: string; detalle?: unknown;
+}): Promise<void> {
+  try {
+    await asegurarEncabezado(HOJA_BITACORA, ENCABEZADO_BITACORA);
+    await agregarFila(HOJA_BITACORA, filaBitacora({
+      cuando: ahoraEnChile(),
+      quien: a.usuario,
+      rol: a.rol,
+      accion: a.accion,
+      detalle: recortar(a.detalle)
+    }));
+  } catch (e) {
+    console.error('No se pudo anotar en la bitácora:', (e as Error).message, a);
+  }
+}
+
+/** Las últimas anotaciones, de la más reciente a la más antigua. */
+export async function leerBitacora(cuantas = 200): Promise<Anotacion[]> {
+  try {
+    const todas = leerBitacoraDe(await leerHoja(HOJA_BITACORA));
+    // Se agregan al final, así que las últimas filas son las más nuevas.
+    return todas.slice(-cuantas).reverse();
+  } catch {
+    return [];
+  }
 }

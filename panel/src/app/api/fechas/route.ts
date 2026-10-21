@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { exigir } from '@/lib/permisos';
-import { leerFechas, guardarFecha } from '@/lib/datos';
+import { exigir, quienEs } from '@/lib/permisos';
+import { leerFechas, guardarFecha , anotar } from '@/lib/datos';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const no = exigir(req, 'ver');
+  const no = await exigir(req, 'ver');
   if (no) return no;
   try {
     return NextResponse.json({ fechas: await leerFechas() });
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const no = exigir(req, 'dias');
+  const no = await exigir(req, 'dias');
   if (no) return no;
   try {
     const b = await req.json();
@@ -27,6 +27,9 @@ export async function POST(req: Request) {
       estado: b.estado || 'Abierta',
       notas: b.notas ?? ''
     });
+    const quien = await quienEs(req);
+    await anotar({ ...quien, accion: 'Cambió un día',
+      detalle: `${b.fecha} · ${b.estado || 'Abierta'} · cupo ${Number(b.capacidad) || 0}` });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

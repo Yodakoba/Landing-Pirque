@@ -24,7 +24,14 @@ import { diaParaReservaManual } from './dias.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
-         ROL, PERMISOS, type Rol, type Accion } from './auth.ts';
+         ROL, PERMISOS, ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE,
+         type Rol, type Accion } from './auth.ts';
+import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION } from './sesion.ts';
+import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
+         buscarUsuario, type Usuario } from './usuarios.ts';
+import { ahoraEnChile, filaBitacora, leerBitacoraDe, recortar,
+         ENCABEZADO_BITACORA } from './bitacora.ts';
+import { cookieDe } from './sesion.ts';
 import { filaReserva, buscarFilaPorId } from './filas.ts';
 import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
@@ -1145,6 +1152,122 @@ ok(turnosDe(agenda, 'ANA PEREZ', '2026-11-10').length === 2,
 ok(turnosDe(agenda, 'Ana Pérez', '2026-11-14')[0].fecha === '2026-11-14',
    'el día de hoy cuenta: un turno de hoy todavía no pasó');
 ok(turnosDe(agenda, 'Nadie', '2026-01-01').length === 0, 'alguien sin turnos no recibe los de otro');
+
+
+/* ---------- la sesión firmada ---------- */
+const SECRETO_SESION = 'un-secreto-cualquiera';
+const AHORA = 1_800_000_000;
+
+const token = await firmarSesion({ usuario: 'Ana Pérez', rol: ROL.encargado }, SECRETO_SESION, AHORA);
+const abierta = await leerSesion(token, SECRETO_SESION, AHORA);
+ok(abierta?.usuario === 'Ana Pérez', 'la sesión conserva el nombre');
+ok(abierta?.rol === ROL.encargado, 'y el rol');
+ok(abierta?.expira === AHORA + DURACION_SESION, 'caduca a los siete días');
+
+// Lo que protege la firma no es que el token sea ilegible —no lo es— sino
+// que nadie pueda CAMBIARLO. Un encargado que se ascienda a admin editando
+// el payload tiene que rebotar.
+const [payload] = token.split('.');
+const falsificado = btoa(JSON.stringify({ usuario: 'Ana Pérez', rol: 'admin',
+                                          expira: AHORA + 1000 }))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+ok(await leerSesion(`${falsificado}.${token.split('.')[1]}`, SECRETO_SESION, AHORA) === null,
+   'cambiarse el rol a mano invalida la firma');
+ok(await leerSesion(`${payload}.firmafalsa`, SECRETO_SESION, AHORA) === null, 'una firma inventada no pasa');
+ok(await leerSesion(token, 'otro-secreto', AHORA) === null, 'otro secreto no la abre');
+ok(await leerSesion(token, '', AHORA) === null, 'sin secreto no se abre nada');
+ok(await leerSesion('', SECRETO_SESION, AHORA) === null, 'una cookie vacía no es una sesión');
+ok(await leerSesion('sin-punto', SECRETO_SESION, AHORA) === null, 'ni un texto cualquiera');
+ok(await leerSesion('%%%.%%%', SECRETO_SESION, AHORA) === null, 'ni base64 roto: no revienta, no pasa');
+
+ok(await leerSesion(token, SECRETO_SESION, AHORA + DURACION_SESION + 1) === null,
+   'una sesión caducada deja de valer');
+ok(await leerSesion(token, SECRETO_SESION, AHORA + DURACION_SESION - 1) !== null,
+   'y un segundo antes todavía vale');
+
+const sinRol = await firmarSesion({ usuario: 'Ana', rol: '' }, SECRETO_SESION, AHORA);
+ok(await leerSesion(sinRol, SECRETO_SESION, AHORA) === null,
+   'una sesión sin rol no sirve, aunque esté bien firmada');
+
+ok(secretoDeSesion({ SESION_SECRETO: 'propio', PANEL_CLAVE: 'otra' }) === 'propio',
+   'manda SESION_SECRETO cuando existe');
+ok(secretoDeSesion({ PANEL_CLAVE: 'la-clave' }) === 'sesion:la-clave',
+   'sin ella se deriva de PANEL_CLAVE, para no dejar a nadie afuera en el primer despliegue');
+ok(secretoDeSesion({}) === '', 'y sin ninguna de las dos no hay con qué firmar: el panel se cierra');
+
+/* ---------- la cookie ---------- */
+ok(cookieDe('a=1; sesion=abc; b=2', 'sesion') === 'abc', 'encuentra la cookie entre otras');
+ok(cookieDe('sesion=abc', 'otra') === '', 'y no devuelve la equivocada');
+ok(cookieDe('', 'sesion') === '' && cookieDe(null, 'sesion') === '',
+   'sin cabecera no hay cookie');
+ok(cookieDe('sesion=a%20b', 'sesion') === 'a b', 'desescapa el valor');
+ok(cookieDe('sesionista=no; sesion=si', 'sesion') === 'si',
+   'un nombre que EMPIEZA igual no cuenta como la cookie');
+
+/* ---------- las contraseñas ---------- */
+const huella = hashDeClave('tres-palabras-pegadas');
+ok(huella.startsWith('scrypt$'), 'la huella dice con qué se hizo');
+ok(!huella.includes('tres-palabras-pegadas'), 'y no contiene la contraseña');
+ok(claveCalza('tres-palabras-pegadas', huella), 'la contraseña correcta calza');
+ok(!claveCalza('tres-palabras-pegada', huella), 'una letra menos no calza');
+ok(hashDeClave('misma-clave') !== hashDeClave('misma-clave'),
+   'dos huellas de la misma clave son distintas: cada una lleva su sal');
+
+// El vacío nunca abre: una cuenta sin clave puesta no es una cuenta que se
+// abre con nada, es una cuenta que todavía no se puede usar.
+ok(!claveCalza('', huella), 'una contraseña vacía no calza');
+ok(!claveCalza('lo-que-sea', ''), 'una cuenta sin huella no se abre con nada');
+ok(!claveCalza('lo-que-sea', 'basura'), 'una huella con formato raro tampoco');
+ok(!claveCalza('lo-que-sea', 'scrypt$sal$'), 'ni una a medio escribir');
+ok(LARGO_MINIMO_CLAVE >= 12, 'el mínimo es el único freno real al ensayo y error');
+
+/* ---------- las cuentas ---------- */
+const cuentas = leerUsuariosDe([
+  ['Nombre', 'Usuario', 'Rol', 'Activo', 'Clave (huella)'],
+  ['Ana Pérez', 'ana', 'admin', 'Sí', huella],
+  ['Luis Soto', 'luis', 'encargado', '', ''],
+  ['Pedro Díaz', 'pedro', 'encargado', 'No', huella],
+  ['Sin Rol', 'raro', 'jefazo', 'Sí', huella],
+  ['', 'ana', 'admin', 'Sí', huella],
+  ['Sin usuario', '', 'admin', 'Sí', huella]
+]);
+ok(cuentas.length === 4, 'descarta la repetida y la que no tiene usuario');
+ok(cuentas[1].activo === true, 'la celda Activo en blanco deja entrar');
+ok(cuentas[3].rol === ROL.encargado,
+   'un rol que no se reconoce cae a encargado, NO a administrador');
+ok(ROLES_DE_CUENTA.length === 2 && !ROLES_DE_CUENTA.includes(ROL.trabajador),
+   'el trabajador no es una cuenta del panel: entra por su link');
+ok(esRolDeCuenta('ADMIN') && esRolDeCuenta('encargado') && !esRolDeCuenta('trabajador'),
+   'los roles de cuenta se reconocen sin importar mayúsculas');
+
+ok(buscarUsuario(cuentas, 'ANA')?.nombre === 'Ana Pérez',
+   'el usuario no distingue mayúsculas');
+ok(buscarUsuario(cuentas, 'pedro') === undefined,
+   'una cuenta desactivada no se encuentra: es la forma de echar a alguien sin borrar su historia');
+ok(buscarUsuario(cuentas, '') === undefined, 'un usuario vacío no encuentra a nadie');
+
+const cuentasIdaYVuelta = leerUsuariosDe(aFilasUsuarios(cuentas));
+ok(JSON.stringify(cuentasIdaYVuelta) === JSON.stringify(cuentas),
+   'las cuentas sobreviven la ida y cuentasIdaYVuelta a filas, huella incluida');
+
+/* ---------- la bitácora ---------- */
+// En hora de Chile y no en UTC: una línea que diga 03:40 cuando en el local
+// eran las 00:40 manda a buscar al turno equivocado.
+const instante = new Date('2026-10-21T23:40:00Z');       // 20:40 en Santiago
+ok(ahoraEnChile(instante) === '2026-10-21 20:40', 'la hora se anota en hora de Chile');
+ok(ahoraEnChile(instante, 'UTC') === '2026-10-21 23:40', 'y la zona se puede cambiar para probarla');
+
+const anotada = filaBitacora({ cuando: '2026-10-21 20:40', quien: 'Ana', rol: 'admin',
+                               accion: 'Anotó una reserva', detalle: 'x' });
+ok(anotada.length === ENCABEZADO_BITACORA.length, 'una anotación llena todas sus columnas');
+const leidas = leerBitacoraDe([ENCABEZADO_BITACORA, anotada, ['', '', '', '', '']]);
+ok(leidas.length === 1, 'una fila sin fecha no es una anotación');
+ok(leidas[0].quien === 'Ana' && leidas[0].accion === 'Anotó una reserva', 'y se lee entera');
+
+ok(recortar('  hola   mundo  ') === 'hola mundo', 'el detalle se limpia de espacios de sobra');
+ok(recortar('x'.repeat(400)).length === 300, 'y se recorta para que una línea no sea ilegible');
+ok(recortar('x'.repeat(400)).endsWith('…'), 'con puntos suspensivos, para que se note que había más');
+ok(recortar(null) === '', 'un detalle que no vino es texto vacío, no "null"');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

@@ -902,6 +902,7 @@ Tres roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Puestos y su regla "uno cada N" | sí | — | — |
 | Precios, menús y configuración | sí | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — |
+| Cuentas del panel y bitácora | sí | — | — |
 | Ver **sus propios** turnos | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
@@ -919,31 +920,114 @@ middleware, **cualquier forma de saltárselo abriría de una vez todas las
 rutas**: es la forma exacta del CVE-2025-29927, el que obligó a subir Next
 hace unos días.
 
-Por lo mismo, **el rol se vuelve a derivar de la cabecera `Authorization` en
-cada ruta**, en vez de leerlo de una cabecera que ponga el middleware: una
-cabecera la puede mandar cualquiera. Cuesta comparar dos strings y borra esa
-clase entera de error.
+Por lo mismo, **el rol se vuelve a derivar de la cookie firmada en cada
+ruta**, en vez de leerlo de una cabecera que ponga el middleware: una
+cabecera la puede mandar cualquiera.
 
 De ahí salió un arreglo concreto: `/api/shopify/sincronizar` se contentaba
 con un `x-panel: si`, confiando en que el middleware ya había pedido la
-contraseña. **Eso dejó de alcanzar cuando el panel pasó a tener dos roles**,
-porque un encargado podía agregar esa cabecera a mano. Ahora comprueba el
-permiso de verdad.
+contraseña. **Eso dejó de alcanzar cuando el panel pasó a tener más de un
+rol**, porque un encargado podía agregar esa cabecera a mano. Ahora comprueba
+el permiso de verdad.
 
-`GET /api/config` y `GET /api/menus` también pasaron a ser de administrador:
-un encargado que entrara a esas pantallas las vería cargar y fallar en cada
+`GET /api/config` y `GET /api/menus` también son de administrador: un
+encargado que entrara a esas pantallas las vería cargar y fallar en cada
 guardado. Ahora le dicen "esta parte no es tuya", que es lo que pasa.
 
-**Las credenciales son dos pares de variables de entorno**: `PANEL_USUARIO` y
-`PANEL_CLAVE` siguen siendo las del administrador —con los mismos nombres de
-antes, para no dejar al cliente fuera de su propio panel en el primer
-despliegue— y `PANEL_ENCARGADO_USUARIO` / `PANEL_ENCARGADO_CLAVE` son las del
-encargado. **Un rol al que le falte el usuario o la clave no existe**: el
-blanco cierra, no abre.
+### Cuentas con nombre y sesión (2026-10-21)
 
-Dentro de un rol la credencial es compartida, así que **no queda registro de
-cuál de los dos encargados hizo cada cambio**. Es el costo de no montar un
-sistema de cuentas, y se puede pagar con dos o tres personas.
+**La autenticación básica se jubiló.** Hasta ese día el panel usaba la
+ventanita del navegador con una clave por rol. La reemplazó una **cookie de
+sesión firmada**, y el motivo no es estético: **la bitácora la necesitaba.**
+Con una clave compartida, cada línea del registro decía "lo hizo un
+encargado" y no servía para preguntarle a nadie.
+
+Lo que se gana de paso, y que la autenticación básica nunca tuvo:
+
+- **Un botón de cerrar sesión.** Antes había que cerrar el navegador entero,
+  o sea que en un equipo que comparte dispositivos el turno siguiente
+  entraba como el anterior — justo lo que la bitácora necesita que no pase.
+- **Saber con qué cuenta estás adentro**: el nombre va en la barra.
+
+Las piezas y por qué están separadas así:
+
+| Archivo | Qué hace | Dónde corre |
+|---|---|---|
+| `sesion.ts` | Firma y lee el token (WebCrypto) | Middleware **y** rutas |
+| `usuarios.ts` | Verifica contraseñas (`scrypt`, `node:crypto`) | Solo rutas |
+| `permisos.ts` | Resuelve quién llama y si puede | Rutas |
+
+**`sesion.ts` usa WebCrypto y no `node:crypto` porque el middleware corre en
+Edge**, donde `node:crypto` no existe. Verificar una contraseña pasa una sola
+vez, al entrar, en una ruta normal; leer la sesión pasa en cada petición,
+también en el middleware. De ahí la división, y por eso todo en `sesion.ts`
+es asíncrono.
+
+**La misma trampa, del otro lado:** `ROLES_DE_CUENTA`, `LARGO_MINIMO_CLAVE` y
+`ENCARGADO_COMPARTIDO` viven en `auth.ts` y no en `usuarios.ts` porque los
+importa un componente de navegador, y un `import` desde el cliente arrastra
+`node:crypto` al bundle y tumba el build. **Lo que toque el navegador no
+puede importar `node:crypto`**, ni directo ni a través de otro archivo.
+
+Detalles que vale la pena tener escritos:
+
+- **La sesión dura 7 días** (decidido con el cliente el 2026-10-21).
+- **El rol viaja firmado dentro del token**, para no consultar la planilla en
+  cada petición. El costo a asumir: **desactivar a alguien no corta su sesión
+  en curso.** Para echar a alguien ya mismo hay que cambiar `PANEL_CLAVE` o
+  `SESION_SECRETO`, lo que cierra **todas** las sesiones.
+- **El token está firmado, no cifrado.** Cualquiera que lo tenga puede leer
+  qué usuario y qué rol dice; da lo mismo, porque esa persona ya tiene la
+  sesión entera. Lo que importa es que no pueda **cambiarlos**, y eso lo
+  impide la firma — hay una prueba que intenta ascenderse a admin editando el
+  payload y rebota.
+- **Si no hay `SESION_SECRETO`, se deriva de `PANEL_CLAVE`.** No es comodidad:
+  sin eso, el primer despliegue después del cambio habría dejado a todos
+  afuera hasta que alguien creara una variable nueva. La consecuencia:
+  **cambiar `PANEL_CLAVE` cierra todas las sesiones abiertas.**
+- **Las contraseñas se guardan como huella `scrypt`, nunca en claro**, ni
+  siquiera para el administrador. La huella vive en la planilla, así que un
+  SHA pelado se rompería con un diccionario; `scrypt` hace que cada intento
+  cueste.
+- **El panel no tiene límite de intentos.** Vercel no trae uno y montarlo con
+  funciones sin estado compartido daría una falsa sensación de protección.
+  El freno real es el **largo mínimo de 12 caracteres** al poner una
+  contraseña.
+- **Un usuario que no existe y una clave equivocada dan el mismo mensaje.**
+  Distinguirlos diría cuál de las dos mitades se acertó.
+- **`PANEL_USUARIO` / `PANEL_CLAVE` siguen siendo una cuenta de
+  administrador**, y no se quitan nunca: es la puerta de emergencia para el
+  día en que la planilla no responda o alguien borre la última cuenta.
+- **`PANEL_ENCARGADO_*` sigue funcionando**, para no romper lo que ya estaba
+  configurado, pero en la bitácora aparece como **"encargado (clave
+  compartida)"**. Es a propósito: una línea así no identifica a nadie y
+  conviene que se note.
+- **Desactivar a alguien es mejor que borrarlo**: sus líneas de la bitácora
+  siguen diciendo quién fue.
+
+### La bitácora
+
+Una pestaña `Bitácora` con cuándo, quién, rol, acción y detalle. Se lee en
+`/bitacora` (las últimas 200; el resto se busca en la planilla).
+
+- **Se escribe desde el servidor, nunca desde la interfaz.** Una llamada
+  directa a la API tiene que quedar registrada igual que un clic; si
+  dependiera del navegador, bastaría con no usarlo.
+- **Queda el rastro, no el valor anterior.** Guardar el antes y el después
+  sería un historial completo, otra cosa y mucho más pesada. Esto sirve para
+  saber a quién preguntarle, no para deshacer.
+- **Si la anotación falla, la acción NO se revierte.** Es una decisión con
+  filo: puede quedar un cambio hecho y sin registrar. La alternativa
+  —cancelar la reserva que alguien acaba de anotar porque la planilla no
+  aceptó una línea de registro— es peor para el negocio, y el fallo queda en
+  los logs de Vercel.
+- **Las horas son de Chile**, no UTC. Una línea que diga 03:40 cuando en el
+  local eran las 00:40 manda a buscar al turno equivocado, y el servidor de
+  Vercel no está en Chile.
+- **Los tokens de los links personales no se anotan**: la bitácora la lee
+  gente, y una credencial copiada ahí sería una credencial más dando vueltas.
+- El costo a asumir: **una escritura más a la planilla por cada acción.** Con
+  este volumen no se nota.
 
 ### El link personal del trabajador
 

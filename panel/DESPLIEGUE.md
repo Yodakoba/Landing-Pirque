@@ -214,26 +214,59 @@ Lo único que **no** se cambia desde el panel es la clave de acceso: vive en
 Vercel. Guardarla en la planilla sería dejar la contraseña del panel en un
 documento compartido.
 
-## Los accesos: administrador, encargado y trabajador
+## Los accesos: cuentas, roles y bitácora
+
+Desde el 2026-10-21 el panel **pide entrar en su propia pantalla**, no en la
+ventanita del navegador, y tiene botón de **Salir**. La sesión dura 7 días.
 
 **Variables de entorno en Vercel:**
 
 | Variable | Para qué |
 |---|---|
-| `PANEL_USUARIO` / `PANEL_CLAVE` | El administrador. **Son las de siempre**, no hay que cambiarlas. |
-| `PANEL_ENCARGADO_USUARIO` / `PANEL_ENCARGADO_CLAVE` | El encargado. **Opcionales**: sin ellas simplemente no existe ese rol. |
+| `PANEL_USUARIO` / `PANEL_CLAVE` | El administrador. **Son las de siempre**, no hay que cambiarlas. Es además la puerta de emergencia: funciona aunque la planilla no responda. |
+| `PANEL_ENCARGADO_USUARIO` / `PANEL_ENCARGADO_CLAVE` | Opcionales. La clave compartida de encargado, de antes de que hubiera cuentas. |
+| `SESION_SECRETO` | Opcional. Con qué se firman las sesiones. Si no está, se deriva de `PANEL_CLAVE`. |
 
-Un rol al que le falte el usuario o la clave **no existe**. El blanco cierra,
-no abre: dejar una variable a medias no deja una puerta entornada.
+**Ojo con dos cosas:**
 
-El encargado hace el día a día —reservas, días, turnos y la lista de
-trabajadores— y no toca precios, configuración, puestos ni links. Si entra a
-una pantalla que no es suya, el panel se lo dice en vez de dejarlo guardar y
-fallar.
+- **Cambiar `PANEL_CLAVE` cierra todas las sesiones abiertas.** Es la forma
+  de echar a todo el mundo de una vez, y sorprende si no se espera.
+- **La clave compartida de encargado aparece en la bitácora como "encargado
+  (clave compartida)"**, a propósito: no identifica a nadie. Si quieres saber
+  quién hizo qué, crea cuentas.
 
-**Los trabajadores no usan ninguna de estas credenciales.** Entran por
-`/mi/<token>`, un link personal que se crea en **/equipo**, columna *Link
-personal*, y se manda por WhatsApp. Ahí ven sus turnos y nada más.
+### Las cuentas, en **/usuarios**
+
+Una fila por persona: nombre, usuario, rol (`admin` o `encargado`), activo y
+contraseña. **La contraseña se pone aparte de guardar la lista**, para que
+guardar un cambio de nombre no pueda dejar a nadie sin poder entrar.
+
+En la planilla queda una pestaña `Usuarios`, y la columna de la clave guarda
+**una huella scrypt, no la contraseña**: ni abriéndola se puede leer. Si
+alguien la pierde, se pone una nueva.
+
+Mínimo **12 caracteres**. Largo antes que raro: tres o cuatro palabras
+pegadas aguantan más que ocho caracteres con símbolos y se pueden dictar por
+teléfono.
+
+**Para sacar a alguien**: desmarca *Activo* (mejor que quitarlo — sus líneas
+de la bitácora siguen diciendo quién fue). Su sesión abierta sigue viva hasta
+que caduque; para cortarla ya mismo, cambia `PANEL_CLAVE` en Vercel.
+
+### La bitácora, en **/bitacora**
+
+Qué se hizo, quién lo hizo y cuándo, en hora de Chile. La pestaña `Bitácora`
+se crea sola con la primera acción. La pantalla muestra las últimas 200; para
+ir más atrás, el buscador de la planilla.
+
+**Queda el rastro, no el valor anterior**: sirve para saber a quién
+preguntarle, no para deshacer un cambio.
+
+### Los trabajadores no usan nada de esto
+
+Entran por `/mi/<token>`, un link personal que se crea en **/equipo**,
+columna *Link personal*, y se manda por WhatsApp. Ahí ven sus turnos y nada
+más.
 
 Para sacarle el acceso a alguien hay dos formas, y sirven para cosas
 distintas: **Quitar** el link (se fue del equipo) o **Renovar**lo (perdió el

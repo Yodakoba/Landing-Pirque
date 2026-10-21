@@ -4,7 +4,8 @@ import {
 } from '@/lib/datos';
 import { aEntero, esSi, sinFicha, type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
-import { exigir, rolDePeticion } from '@/lib/permisos';
+import { exigir, quienEs } from '@/lib/permisos';
+import { anotar } from '@/lib/datos';
 import { ROL } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -28,13 +29,13 @@ export const dynamic = 'force-dynamic';
 const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({ ...t, token: '' }));
 
 export async function GET(req: Request) {
-  const no = exigir(req, 'ver');
+  const no = await exigir(req, 'ver');
   if (no) return no;
   try {
     const [puestos, trabajadores, turnos] = await Promise.all([
       leerPuestos(), leerTrabajadores(), leerTurnos()
     ]);
-    const esAdmin = rolDePeticion(req) === ROL.admin;
+    const esAdmin = (await quienEs(req)).rol === ROL.admin;
     return NextResponse.json({
       puestos, trabajadores: esAdmin ? trabajadores : sinTokens(trabajadores), turnos,
       esAdmin,
@@ -57,9 +58,9 @@ export async function GET(req: Request) {
  * que se guarda es exactamente lo que se va a volver a leer.
  */
 export async function PUT(req: Request) {
-  const no = exigir(req, 'equipo');
+  const no = await exigir(req, 'equipo');
   if (no) return no;
-  const esAdmin = rolDePeticion(req) === ROL.admin;
+  const esAdmin = (await quienEs(req)).rol === ROL.admin;
   try {
     const cuerpo = await req.json();
     const salida: { puestos?: Puesto[]; trabajadores?: Trabajador[] } = {};
@@ -67,7 +68,7 @@ export async function PUT(req: Request) {
     if (Array.isArray(cuerpo?.puestos)) {
       // Los puestos y su regla son del administrador: ahí se decide cuánta
       // gente hace falta, que es una decisión del negocio y no del turno.
-      const noPuestos = exigir(req, 'puestos');
+      const noPuestos = await exigir(req, 'puestos');
       if (noPuestos) return noPuestos;
       const limpia: Puesto[] = [];
       const vistos = new Set<string>();
@@ -79,6 +80,8 @@ export async function PUT(req: Request) {
       }
       await guardarPuestos(limpia);
       salida.puestos = limpia;
+      await anotar({ ...(await quienEs(req)), accion: 'Cambió los puestos',
+        detalle: limpia.map((p) => p.nombre).join(', ') });
     }
 
     if (Array.isArray(cuerpo?.trabajadores)) {
@@ -109,6 +112,9 @@ export async function PUT(req: Request) {
       }
       await guardarTrabajadores(limpia);
       salida.trabajadores = esAdmin ? limpia : sinTokens(limpia);
+      await anotar({ ...(await quienEs(req)), accion: 'Cambió la lista de trabajadores',
+        detalle: `${limpia.length} en la lista · ` +
+                 `${limpia.filter((t) => t.activo).length} activos` });
     }
 
     if (!salida.puestos && !salida.trabajadores) {

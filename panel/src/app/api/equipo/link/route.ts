@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { leerTrabajadores, guardarTrabajadores } from '@/lib/datos';
+import { leerTrabajadores, guardarTrabajadores, anotar } from '@/lib/datos';
 import { nuevoToken } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
-import { exigir } from '@/lib/permisos';
+import { exigir, quienEs } from '@/lib/permisos';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
  * Es lo que hay que hacer cuando alguien pierde el teléfono.
  */
 export async function POST(req: Request) {
-  const no = exigir(req, 'links');
+  const no = await exigir(req, 'links');
   if (no) return no;
 
   try {
@@ -46,6 +46,13 @@ export async function POST(req: Request) {
     gente[i] = { ...gente[i], token };
     await guardarTrabajadores(gente);
 
+    // El token NO se anota: la bitácora la lee gente, y una credencial
+    // copiada ahí sería una credencial más dando vueltas.
+    await anotar({ ...(await quienEs(req)),
+      accion: accion === 'quitar' ? 'Quitó un link personal'
+            : accion === 'renovar' ? 'Renovó un link personal'
+            : 'Creó un link personal',
+      detalle: gente[i].nombre });
     return NextResponse.json({ nombre: gente[i].nombre, token });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

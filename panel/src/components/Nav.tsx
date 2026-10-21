@@ -21,7 +21,9 @@ const PAGINAS = [
   { href: '/', texto: 'Calendario', soloAdmin: false },
   { href: '/equipo', texto: 'Equipo', soloAdmin: false },
   { href: '/menus', texto: 'Menús', soloAdmin: true },
-  { href: '/config', texto: 'Configuración', soloAdmin: true }
+  { href: '/config', texto: 'Configuración', soloAdmin: true },
+  { href: '/usuarios', texto: 'Cuentas', soloAdmin: true },
+  { href: '/bitacora', texto: 'Bitácora', soloAdmin: true }
 ];
 
 export default function Nav({ rol }: { rol: string }) {
