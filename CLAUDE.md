@@ -809,16 +809,16 @@ uno sirviera por sí solo:
 1. **Planificar** (hecho): qué puestos existen, quién es el equipo, y quién
    trabaja qué día.
 2. **Los accesos** (hecho): admin / encargado / trabajador.
-3. **Las cuentas del día** (pendiente): asistencia del equipo, horas,
-   ajustes y propina.
+3. **Las cuentas del día** (hecho, salvo la propina): asistencia del equipo,
+   horas extra, ajustes, y el link de la planilla semanal.
 
 ### Tres pestañas nuevas en la misma planilla
 
 | Pestaña | Qué guarda |
 |---|---|
 | `Puestos` | Garzón, cocina, barra, asistente, runner, barman, bar asistente — **editables**, más la regla "uno cada N personas" |
-| `Trabajadores` | Nombre, teléfono, puesto habitual, activo |
-| `Turnos` | Una fila por (fecha, trabajador, puesto) |
+| `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad y sus dos montos |
+| `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia y lo que se le pagó |
 
 Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
 el calendario. **Ninguna llega al sitio público**: `/api/publico/fechas`
@@ -889,6 +889,111 @@ quién trabajó qué día— pero los deja con un nombre que ya no está, y
 usa para los menús, y por el mismo motivo: sin alias ni equivalencias, lo
 único que mantiene alineadas dos listas es que alguien se entere cuando dejan
 de estarlo.
+
+### Pasar lista, y lo que cuesta un día (2026-10-21)
+
+Planificar dice quién **debería** venir; pasar lista dice quién vino y cuánto
+se le paga. Son dos cosas y el panel las trata distinto: **un turno sin pasar
+lista no suma nada.** Antes de que alguien lo diga, el panel no da por venida
+a una persona ni por pagada una jornada.
+
+Se pasa lista desde la página del día, botón **Pasar lista**. Por cada
+persona: vino / no vino, la jornada, horas extra, un ajuste con su motivo, y
+el total de esa fila.
+
+**Lo que se guarda queda congelado, y eso es la decisión importante.** El
+monto de la jornada y la modalidad viajan **dentro del turno**, no se
+recalculan desde la ficha del trabajador. Si en marzo se le sube el sueldo a
+alguien, los turnos de noviembre no pueden cambiar solos: las cuentas de
+meses cerrados dejarían de cuadrar.
+
+**Los sueldos los propone el servidor, no el navegador.** Un turno sin pasar
+lista hereda los valores de la ficha al guardarse (`guardarEquipoDelDia`).
+Así el encargado puede pasar lista y corregir montos sin que su pantalla
+reciba nunca la tabla de sueldos del equipo entero — que no necesita, y que
+no es dato suyo. Pasada la lista, lo que venga manda: ahí el monto ya es un
+hecho del día y no una propuesta.
+
+Un descuento mayor que la jornada deja el día en **cero, nunca en negativo**.
+Si de verdad hay que cobrarle algo a alguien, eso no es un turno con monto
+negativo, es otra conversación.
+
+### Por turno o contratado (2026-10-21)
+
+Lo pidió el cliente porque **los contratados se comportan distinto**:
+
+- **Por turno** — se le paga por jornada trabajada, y cada turno suma al
+  costo del día.
+- **Contratado** — tiene sueldo, y ese sueldo no sale de acá. Sus turnos
+  **no suman jornada**: contarlos sería pagar dos veces lo mismo, una en la
+  liquidación y otra en la caja del sábado. Sí se le anotan **horas extra y
+  ajustes**, que son del día y se pagan aparte.
+
+La celda en blanco es **Por turno**, para que las fichas escritas antes de
+esta distinción sigan significando lo mismo. La modalidad se congela en el
+turno junto con el monto, y además explica por qué una fila vale cero:
+"contratado" se entiende, un cero pelado parece un error.
+
+El total del día se muestra como **"por turnos de este día"** y los
+contratados se cuentan aparte, con su propia glosa.
+
+### Crear un trabajador desde el planificador
+
+El desplegable de cada puesto tiene debajo **+ Nuevo trabajador**. Abre una
+ventana con lo mismo que pide la pantalla de Equipo, lo crea y lo deja
+asignado a ese puesto en ese día.
+
+Existe porque sin él la lista vacía era un callejón: no se podía planificar
+sin irse a `/equipo`, agregar a alguien, volver y empezar de nuevo. **Lo que
+crea no es un caso especial**: queda en la lista como cualquier otro.
+
+Va por `POST /api/equipo/trabajador`, que agrega **una fila** en vez de
+guardar la lista entera. No es un detalle: la pantalla del planificador no
+tiene la lista completa en la mano —puede estar desactualizada— y mandarla
+entera sería arriesgarse a pisar el cambio de otra persona. Si el nombre ya
+existe no falla: devuelve el que hay y lo dice.
+
+**Dos ventanas abiertas a la vez obligaron a arreglar `Dialogo`**: las dos
+escuchaban Escape en el documento, así que una tecla cerraba las dos de
+golpe y se perdía lo escrito en la de atrás. Ahora hay una pila y solo
+responde la de encima.
+
+### La planilla semanal, el link que se manda al grupo
+
+En el calendario, junto al rango de cada semana, **Enviar planilla semanal**
+copia un link a `/semana/<llave>?semana=<lunes>`.
+
+**Muestra lo mínimo para organizarse**: quién trabaja cada día en qué
+puesto, a qué hora abre, cuánta gente se espera y cuántas reservas son.
+
+**Y nada más: ni un peso, ni un menú, ni un nombre de cliente.** Está hecho
+con la idea de que va a circular más de lo que uno quisiera. Lo que un
+trabajador necesita de su propio día —los menús que hay que preparar, lo que
+gana— vive en **su link personal**, que es de una sola persona. Separarlos es
+justamente lo que permite mandar este sin pensarlo dos veces.
+
+- La llave vive en `Config` (`token_planilla`) y **no se genera sola**: que
+  exista un link que abre sin contraseña tiene que ser decisión de alguien.
+  Se crea al apretar el botón la primera vez.
+- **Renovarla invalida todas las copias** que anden dando vueltas, que es lo
+  que hay que hacer cuando alguien deja el equipo. El costo a asumir: también
+  deja de servir el link de quien sí trabaja, así que hay que volver a
+  mandarlo.
+- Muestra solo los días **con alguien asignado**: siete columnas para un
+  negocio que abre dos es una tabla llena de huecos, y esto se lee en un
+  teléfono.
+- Un nombre **tachado** es alguien que no llegó ese día.
+- Como `/mi/`, no dibuja la barra del panel.
+
+### Lo que ve cada quien, de un vistazo
+
+| | Planilla semanal | Link personal |
+|---|---|---|
+| Quién trabaja, en qué puesto | toda la semana | solo sus días |
+| Personas y reservas del día | sí | sí |
+| Menús a preparar | **no** | sí |
+| Plata | **no** | solo la suya |
+| A quién se manda | al grupo | a una persona |
 
 ### Quién puede hacer qué (2026-10-21)
 
@@ -1084,15 +1189,14 @@ pidió y cuánto pagó no es dato de un turno.
 
 - **El reparto de la propina.** El cliente lo dejó para más adelante
   (2026-10-21), así que **no hay ninguna regla escrita**: nada se inventó. Se
-  agrega después sobre los turnos.
-- **El pago** va a ser **jornada + valor hora extra** (decidido el
-  2026-10-21), y todavía no está construido.
-- **La asistencia del equipo** —vino / no vino / vino alguien extra, horas y
-  ajustes con motivo— es el lote 3 y tampoco está.
-- **Ojo con los descuentos por atraso**: el panel puede registrarlos sin
-  problema, pero si ese monto se descuenta de una liquidación formal, los
-  descuentos al sueldo tienen reglas en Chile. Conviene confirmarlo con quien
-  les lleve la contabilidad antes de usarlo así.
+  agrega después sobre los turnos, que ya tienen dónde colgarla.
+- **Ojo con los descuentos por atraso**: el panel los registra sin problema,
+  pero si ese monto se descuenta de una liquidación formal, los descuentos al
+  sueldo tienen reglas en Chile. Conviene confirmarlo con quien les lleve la
+  contabilidad antes de usarlo así.
+- **No hay un informe por persona ni por mes.** El link personal muestra los
+  últimos 30 días de cada uno, y la planilla tiene todo; una vista de
+  "cuánto se pagó en octubre" todavía no existe.
 
 ## Estilo y marca
 

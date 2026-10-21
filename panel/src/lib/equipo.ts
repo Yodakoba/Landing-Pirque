@@ -29,14 +29,53 @@ export const COL_TRABAJADORES = {
   telefono: 'Teléfono',
   puesto: 'Puesto habitual',
   activo: 'Activo',
-  token: 'Token de acceso'
+  token: 'Token de acceso',
+  modalidad: 'Modalidad',
+  pagoJornada: 'Pago por jornada',
+  valorHora: 'Valor hora extra'
 } as const;
+
+/**
+ * Cómo se le paga a alguien, que no es lo mismo que cuánto.
+ *
+ * - **Por turno** — se le paga por jornada trabajada. Cada turno suma al
+ *   costo del día.
+ * - **Contratado** — tiene sueldo, y ese sueldo no sale de acá. Sus turnos
+ *   **no suman jornada** al costo del día: contarlos sería sumar dos veces
+ *   lo mismo, una en la liquidación y otra en la caja del sábado.
+ *
+ * Lo que sí se le puede anotar a un contratado son **horas extra y
+ * ajustes**, porque esos sí son del día y se pagan aparte.
+ *
+ * La celda en blanco es **Por turno**, que es como funcionaba el panel antes
+ * de que existiera esta distinción: así las fichas ya escritas siguen
+ * significando lo mismo.
+ */
+export const MODALIDAD = { porTurno: 'Por turno', contratado: 'Contratado' } as const;
+
+export function esContratado(v: unknown): boolean {
+  const s = normalizar(String(v ?? ''));
+  return s === 'contratado' || s === 'contratada' || s === 'contrato';
+}
 
 export const COL_TURNOS = {
   fecha: 'Fecha',
   trabajador: 'Trabajador',
-  puesto: 'Puesto'
+  puesto: 'Puesto',
+  asistencia: 'Asistencia',
+  modalidad: 'Modalidad',
+  pagoJornada: 'Pago jornada',
+  horasExtra: 'Horas extra',
+  valorHora: 'Valor hora',
+  ajuste: 'Ajuste',
+  motivo: 'Motivo del ajuste'
 } as const;
+
+/**
+ * La asistencia de un trabajador. Vacío es **todavía no se pasó lista**, que
+ * no es lo mismo que no haber venido: antes del día no se puede saber.
+ */
+export const VINO = { sinMarcar: '', si: 'Sí', no: 'No' } as const;
 
 export interface Puesto {
   /** Como se escribe y como se muestra. */
@@ -65,6 +104,20 @@ export interface Trabajador {
    */
   activo: boolean;
   /**
+   * Lo que gana por una jornada, y lo que vale su hora extra. En pesos.
+   *
+   * **Son el valor de HOY**, el que se propone al pasar lista. Lo que
+   * efectivamente se le pagó un día queda anotado en el turno, no acá: si
+   * en marzo le subes la jornada, los turnos de noviembre no pueden cambiar
+   * de monto solos.
+   *
+   * Cero significa **sin poner**, no gratis. El panel no inventa sueldos.
+   */
+  pagoJornada: number;
+  valorHora: number;
+  /** `Por turno` o `Contratado`. Ver MODALIDAD. */
+  modalidad: string;
+  /**
    * La llave de su link personal, o vacío si todavía no tiene acceso.
    *
    * **Se guarda tal cual, no como hash, y es a propósito.** Un hash sería
@@ -85,8 +138,67 @@ export interface Turno {
   fecha: Fecha;
   trabajador: string;
   puesto: string;
+  /** '' sin pasar lista · 'Sí' vino · 'No' no llegó. */
+  asistencia: string;
+  /**
+   * Cómo se le pagaba a esta persona **ese día**.
+   *
+   * Se congela igual que el monto, y por el mismo motivo: si alguien pasa de
+   * pagado por turno a contratado, los turnos de antes no pueden dejar de
+   * contar solos. Además explica por qué una fila vale cero — "contratado"
+   * se entiende, un cero pelado parece un error.
+   */
+  modalidad: string;
+  /**
+   * Lo que se le pagó ese día, **congelado al pasar lista**.
+   *
+   * No se recalcula desde la ficha del trabajador. Si se recalculara,
+   * cambiarle el sueldo a alguien reescribiría su historia completa, y las
+   * cuentas de meses cerrados dejarían de cuadrar.
+   */
+  pagoJornada: number;
+  horasExtra: number;
+  valorHora: number;
+  /** Suma o resta suelta, en pesos. Negativa para un descuento. */
+  ajuste: number;
+  motivo: string;
   /** Fila en la planilla, para poder borrarla. */
   fila: number;
+}
+
+/**
+ * Lo que suma un turno: jornada + horas extra + ajuste.
+ *
+ * **Un turno sin pasar lista vale cero**, igual que uno marcado "no vino".
+ * Antes de que alguien diga que la persona llegó, el panel no tiene por qué
+ * dar por pagada una jornada; lo que se anota al pasar lista es lo que
+ * manda, y ahí el monto se puede corregir.
+ *
+ * Nunca baja de cero: un descuento mayor que la jornada deja el día en cero,
+ * no en negativo. Si de verdad hay que cobrarle algo a alguien, eso no es un
+ * turno con monto negativo, es otra conversación.
+ */
+export function pagoDe(t: Pick<Turno,
+  'asistencia' | 'modalidad' | 'pagoJornada' | 'horasExtra' | 'valorHora' | 'ajuste'>
+): number {
+  if (t.asistencia !== VINO.si) return 0;
+  // Un contratado no suma jornada: su sueldo no sale de esta caja. Sus horas
+  // extra y sus ajustes sí, porque esos son del día y se pagan aparte.
+  const jornada = esContratado(t.modalidad) ? 0 : (t.pagoJornada || 0);
+  const bruto = jornada + (t.horasExtra || 0) * (t.valorHora || 0) + (t.ajuste || 0);
+  return Math.max(0, Math.round(bruto));
+}
+
+/** Cuántos contratados vinieron ese día. Se cuentan aparte porque no suman. */
+export function contratadosDelDia(turnos: Turno[], fecha: Fecha): number {
+  return turnos.filter(
+    (t) => t.fecha === fecha && t.asistencia === VINO.si && esContratado(t.modalidad)
+  ).length;
+}
+
+/** Lo que cuesta el equipo de un día. Solo cuenta a quien vino. */
+export function costoDelDia(turnos: Turno[], fecha: Fecha): number {
+  return turnos.filter((t) => t.fecha === fecha).reduce((s, t) => s + pagoDe(t), 0);
 }
 
 /**
@@ -111,10 +223,20 @@ export const POR_DEFECTO_PUESTOS: Puesto[] = [
   { nombre: 'Bar asistente', cadaCuantas: 0 }
 ];
 
-/** Un número escrito a mano en la planilla. Lo que no sea un entero ≥ 0 es 0. */
-export function aEntero(v: unknown): number {
-  const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
-  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+/**
+ * Un número escrito a mano en la planilla.
+ *
+ * Por defecto lo que no sea un entero mayor que cero es 0: casi todos los
+ * campos del equipo son cuentas o montos que no tienen sentido en negativo.
+ * **El ajuste es la excepción** —un descuento es justamente un número
+ * negativo— y por eso pide `conSigno`.
+ */
+export function aEntero(v: unknown, conSigno = false): number {
+  const limpio = String(v ?? '').trim().replace(/\.(?=\d{3}\b)/g, '');
+  const n = Number(limpio.replace(/[^\d.-]/g, ''));
+  if (!Number.isFinite(n)) return 0;
+  if (conSigno) return Math.round(n);
+  return n > 0 ? Math.round(n) : 0;
 }
 
 /**
@@ -171,7 +293,10 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
       activo: esSi(filas[i]?.[3]),
       // La columna puede no existir todavía: una planilla escrita antes de
       // que hubiera links personales se lee igual, con todos sin acceso.
-      token: String(filas[i]?.[4] ?? '').trim()
+      token: String(filas[i]?.[4] ?? '').trim(),
+      modalidad: esContratado(filas[i]?.[5]) ? MODALIDAD.contratado : MODALIDAD.porTurno,
+      pagoJornada: aEntero(filas[i]?.[6]),
+      valorHora: aEntero(filas[i]?.[7])
     });
   }
   return salida;
@@ -180,9 +305,15 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
 export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
   return [
     [COL_TRABAJADORES.nombre, COL_TRABAJADORES.telefono,
-     COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo, COL_TRABAJADORES.token],
+     COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo, COL_TRABAJADORES.token,
+     COL_TRABAJADORES.modalidad,
+     COL_TRABAJADORES.pagoJornada, COL_TRABAJADORES.valorHora],
+    // Un monto en cero se escribe en blanco: en la planilla un "0" se lee
+    // como "gana cero" y lo que queremos decir es "sin poner".
     ...gente.map((t) => [t.nombre, t.telefono, t.puesto,
-                         t.activo ? 'Sí' : 'No', t.token])
+                         t.activo ? 'Sí' : 'No', t.token, t.modalidad,
+                         t.pagoJornada > 0 ? String(t.pagoJornada) : '',
+                         t.valorHora > 0 ? String(t.valorHora) : ''])
   ];
 }
 
@@ -214,7 +345,20 @@ export function leerTurnosDe(filas: string[][]): Turno[] {
     // Una fila sin fecha válida o sin nombre es basura o una fila vacía.
     // Un puesto en blanco sí se lee: significa "viene, sin puesto definido".
     if (!esFecha(fecha) || !trabajador) continue;
-    salida.push({ fecha, trabajador, puesto: en(f, i.puesto).trim(), fila: n + 1 });
+    salida.push({
+      fecha, trabajador, puesto: en(f, i.puesto).trim(),
+      asistencia: en(f, i.asistencia).trim(),
+      modalidad: esContratado(en(f, i.modalidad))
+        ? MODALIDAD.contratado : MODALIDAD.porTurno,
+      pagoJornada: aEntero(en(f, i.pagoJornada)),
+      horasExtra: aEntero(en(f, i.horasExtra)),
+      valorHora: aEntero(en(f, i.valorHora)),
+      // El ajuste SÍ puede ser negativo: es lo que lo distingue de los demás
+      // montos. `aEntero()` recorta en cero, así que acá se lee aparte.
+      ajuste: aEntero(en(f, i.ajuste), true),
+      motivo: en(f, i.motivo).trim(),
+      fila: n + 1
+    });
   }
   return salida;
 }
@@ -226,16 +370,25 @@ export function leerTurnosDe(filas: string[][]): Turno[] {
  */
 export function filaTurno(encabezado: string[], t: Omit<Turno, 'fila'>): string[] {
   const i = indices(encabezado, COL_TURNOS);
-  const fila = new Array(Math.max(encabezado.length, 3)).fill('');
+  const fila = new Array(Math.max(encabezado.length, ENCABEZADO_TURNOS.length)).fill('');
   const poner = (k: number, v: string) => { if (k !== -1) fila[k] = v; };
+  // Un monto en cero va en blanco, igual que en las demás pestañas: "0" se
+  // lee como un valor puesto, y lo que decimos es que no lo pusieron.
+  const monto = (n: number) => (n ? String(n) : '');
   poner(i.fecha, t.fecha);
   poner(i.trabajador, t.trabajador);
   poner(i.puesto, t.puesto);
+  poner(i.asistencia, t.asistencia);
+  poner(i.modalidad, t.modalidad);
+  poner(i.pagoJornada, monto(t.pagoJornada));
+  poner(i.horasExtra, monto(t.horasExtra));
+  poner(i.valorHora, monto(t.valorHora));
+  poner(i.ajuste, monto(t.ajuste));
+  poner(i.motivo, t.motivo);
   return fila;
 }
 
-export const ENCABEZADO_TURNOS: string[] =
-  [COL_TURNOS.fecha, COL_TURNOS.trabajador, COL_TURNOS.puesto];
+export const ENCABEZADO_TURNOS: string[] = Object.values(COL_TURNOS);
 
 /**
  * Deja un plan del día listo para guardar: **una persona, un puesto.**
@@ -254,7 +407,7 @@ export function normalizarPlan(turnos: Omit<Turno, 'fila'>[]): Omit<Turno, 'fila
     const nombre = String(t.trabajador ?? '').trim();
     if (!nombre || !esFecha(t.fecha)) continue;
     porPersona.set(normalizar(nombre),
-      { fecha: t.fecha, trabajador: nombre, puesto: String(t.puesto ?? '').trim() });
+      { ...t, fecha: t.fecha, trabajador: nombre, puesto: String(t.puesto ?? '').trim() });
   }
   return [...porPersona.values()];
 }

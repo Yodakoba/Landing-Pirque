@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { guardarEquipoDelDia, leerTurnos, anotar } from '@/lib/datos';
 import { esFecha } from '@/lib/fechas';
+import { aEntero, esContratado, MODALIDAD } from '@/lib/equipo';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,15 @@ export async function PUT(req: Request) {
     await guardarEquipoDelDia(fecha, turnos.map((t) => ({
       fecha,
       trabajador: String(t?.trabajador ?? '').trim(),
-      puesto: String(t?.puesto ?? '').trim()
+      puesto: String(t?.puesto ?? '').trim(),
+      asistencia: String(t?.asistencia ?? '').trim(),
+      modalidad: esContratado(t?.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno,
+      pagoJornada: aEntero(t?.pagoJornada),
+      horasExtra: aEntero(t?.horasExtra),
+      valorHora: aEntero(t?.valorHora),
+      // Con signo: un descuento es justamente un número negativo.
+      ajuste: aEntero(t?.ajuste, true),
+      motivo: String(t?.motivo ?? '').trim()
     })));
 
     // Se devuelven los turnos de ese día ya leídos de vuelta de la planilla,

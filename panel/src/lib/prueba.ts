@@ -40,7 +40,8 @@ import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
 import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          leerTurnosDe, filaTurno, normalizarPlan, planDelDia, resumenEquipo,
          sugeridos, sinFicha, esSi, aEntero, COL_TURNOS,
-         nuevoToken, trabajadorPorToken, turnosDe,
+         nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia,
+         contratadosDelDia, esContratado, MODALIDAD, VINO,
          POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
@@ -53,6 +54,12 @@ const r = (p: Partial<Reserva>): Reserva => ({
   id: 'x', fecha: '2026-11-14', nombre: '', email: '', telefono: '',
   menu: 'Tradiciones', personas: 1, monto: null, tipoPago: TIPO_PAGO.directo, asistencia: '',
   estadoPago: 'paid', creada: '', fila: 2, ...p
+});
+const tu = (p: Partial<Turno>): Turno => ({
+  fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
+  asistencia: '', modalidad: MODALIDAD.porTurno,
+  pagoJornada: 0, horasExtra: 0, valorHora: 0,
+  ajuste: 0, motivo: '', fila: 2, ...p
 });
 const dia = (p: Partial<FechaHabil>): FechaHabil => ({
   fecha: '2026-11-14', capacidad: 60, apertura: '13:00',
@@ -971,9 +978,11 @@ const turnos = leerTurnosDe([
 ok(turnos.length === 4, 'descarta las filas sin fecha válida y sin nombre');
 ok(turnos[2].puesto === '', 'un puesto en blanco sí se lee: viene, sin puesto definido');
 ok(turnos[0].fila === 2, 'y cada turno sabe en qué fila está, para poder borrarlo');
-ok(JSON.stringify(filaTurno(ENC_T,
-     { fecha: '2026-11-14', trabajador: 'Ana', puesto: 'Barra' }))
-   === JSON.stringify(['2026-11-14', 'Ana', 'Barra']), 'un turno se escribe en sus celdas');
+{
+  const { fila, ...sinFila } = tu({ trabajador: 'Ana', puesto: 'Barra' });
+  ok(JSON.stringify(filaTurno(ENC_T, sinFila).slice(0, 3))
+     === JSON.stringify(['2026-11-14', 'Ana', 'Barra']), 'un turno se escribe en sus celdas');
+}
 
 // Las columnas se buscan por ENCABEZADO, no por posición. Importa porque a
 // esta pestaña le van a crecer columnas —asistencia, horas, ajustes— y con
@@ -986,8 +995,8 @@ const revueltos = leerTurnosDe([
 ok(revueltos.length === 1 && revueltos[0].trabajador === 'Ana Pérez'
    && revueltos[0].puesto === 'Garzón' && revueltos[0].fecha === '2026-11-14',
    'las columnas se encuentran en cualquier orden y con otras de por medio');
-const escrita = filaTurno(ENC_REVUELTO,
-  { fecha: '2026-11-14', trabajador: 'Ana', puesto: 'Barra' });
+const { fila: _sinUsar, ...paraEscribir } = tu({ trabajador: 'Ana', puesto: 'Barra' });
+const escrita = filaTurno(ENC_REVUELTO, paraEscribir);
 ok(escrita[0] === 'Barra' && escrita[2] === 'Ana' && escrita[3] === '2026-11-14',
    'y al escribir, cada valor cae en SU columna');
 ok(escrita[1] === '', 'una columna que no manejamos se escribe vacía, no se desplaza nada');
@@ -996,11 +1005,11 @@ ok(leerTurnosDe([['Trabajador'], ['Ana']]).length === 0,
 
 /* ---------- una persona, un puesto por día ---------- */
 const plan = normalizarPlan([
-  { fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón' },
-  { fecha: '2026-11-14', trabajador: 'Luis Soto', puesto: 'Cocina' },
-  { fecha: '2026-11-14', trabajador: 'ANA PÉREZ', puesto: 'Barman' },
-  { fecha: '2026-11-14', trabajador: '  ', puesto: 'Barra' },
-  { fecha: 'cualquier cosa', trabajador: 'Juan', puesto: 'Barra' }
+  tu({ trabajador: 'Ana Pérez', puesto: 'Garzón' }),
+  tu({ trabajador: 'Luis Soto', puesto: 'Cocina' }),
+  tu({ trabajador: 'ANA PÉREZ', puesto: 'Barman' }),
+  tu({ trabajador: '  ', puesto: 'Barra' }),
+  tu({ fecha: 'cualquier cosa', trabajador: 'Juan', puesto: 'Barra' })
 ]);
 ok(plan.length === 2, 'una persona no puede ocupar dos puestos el mismo día');
 ok(plan.find((t) => t.trabajador === 'ANA PÉREZ')?.puesto === 'Barman',
@@ -1037,15 +1046,17 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '' },
-  { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '' }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '',
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 },
+  { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '',
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
    'avisa de quien tiene turnos y no está en la lista: pasa al renombrar a alguien');
 ok(sinFicha(turnos, []).length === 3, 'sin lista de trabajadores, todos quedan sin ficha');
-ok(!sinFicha([{ fecha: '2026-11-14', trabajador: 'LUIS SOTO', puesto: 'Cocina', fila: 2 }],
-   equipo).length, 'y no se queja por mayúsculas ni tildes');
+ok(!sinFicha([tu({ trabajador: 'LUIS SOTO', puesto: 'Cocina' })], equipo).length,
+   'y no se queja por mayúsculas ni tildes');
 
 
 /* ---------- los tres roles ---------- */
@@ -1109,9 +1120,9 @@ ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
 ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
 
 const conAcceso: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana' },
-  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '' },
-  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro' }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 }
 ];
 ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
    'el token encuentra a su dueño');
@@ -1139,10 +1150,10 @@ ok(leerTrabajadoresDe([['Nombre', 'Teléfono', 'Puesto habitual', 'Activo'],
 
 /* ---------- los turnos de una persona ---------- */
 const agenda: Turno[] = [
-  { fecha: '2026-11-15', trabajador: 'Ana Pérez', puesto: 'Barra', fila: 3 },
-  { fecha: '2026-11-14', trabajador: 'ana perez', puesto: 'Garzón', fila: 2 },
-  { fecha: '2026-11-01', trabajador: 'Ana Pérez', puesto: 'Garzón', fila: 4 },
-  { fecha: '2026-11-14', trabajador: 'Luis Soto', puesto: 'Cocina', fila: 5 }
+  tu({ fecha: '2026-11-15', trabajador: 'Ana Pérez', puesto: 'Barra', fila: 3 }),
+  tu({ fecha: '2026-11-14', trabajador: 'ana perez', puesto: 'Garzón', fila: 2 }),
+  tu({ fecha: '2026-11-01', trabajador: 'Ana Pérez', puesto: 'Garzón', fila: 4 }),
+  tu({ fecha: '2026-11-14', trabajador: 'Luis Soto', puesto: 'Cocina', fila: 5 })
 ];
 const deAna = turnosDe(agenda, 'Ana Pérez', '2026-11-10');
 ok(deAna.length === 2, 'solo los suyos, y solo de la fecha en adelante');
@@ -1268,6 +1279,62 @@ ok(recortar('  hola   mundo  ') === 'hola mundo', 'el detalle se limpia de espac
 ok(recortar('x'.repeat(400)).length === 300, 'y se recorta para que una línea no sea ilegible');
 ok(recortar('x'.repeat(400)).endsWith('…'), 'con puntos suspensivos, para que se note que había más');
 ok(recortar(null) === '', 'un detalle que no vino es texto vacío, no "null"');
+
+
+/* ---------- lo que vale un turno ---------- */
+const jornada = { pagoJornada: 30000, valorHora: 4000 };
+
+// **Planificar no es pagar.** Hasta que alguien diga que la persona llegó,
+// el turno no suma: un día que nadie cerró no puede dar por pagadas quince
+// jornadas.
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.sinMarcar })) === 0,
+   'un turno sin pasar lista no vale nada todavía');
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.no })) === 0, 'y quien no llegó, tampoco');
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si })) === 30000, 'quien vino cobra su jornada');
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, horasExtra: 2 })) === 38000,
+   'las horas extra se multiplican por su valor hora');
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: -5000 })) === 25000,
+   'un ajuste negativo descuenta');
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: 7000 })) === 37000,
+   'y uno positivo suma');
+
+// Un descuento mayor que la jornada deja el día en cero, no en negativo: si
+// de verdad hay que cobrarle algo a alguien, eso no es un turno.
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: -90000 })) === 0,
+   'nunca queda en negativo');
+
+/* ---------- contratado vs. por turno ---------- */
+ok(esContratado('Contratado') && esContratado('contratada') && esContratado('CONTRATO'),
+   'la modalidad se reconoce como la escriba una persona');
+ok(!esContratado('') && !esContratado('Por turno'),
+   'y en blanco es por turno, que es como funcionaba antes de la distinción');
+
+const fijo = tu({ ...jornada, asistencia: VINO.si, modalidad: MODALIDAD.contratado });
+ok(pagoDe(fijo) === 0,
+   'un contratado no suma jornada: su sueldo no sale de esta caja');
+ok(pagoDe({ ...fijo, horasExtra: 3 }) === 12000,
+   'pero sus horas extra sí, que se pagan aparte');
+ok(pagoDe({ ...fijo, ajuste: 5000 }) === 5000, 'y sus ajustes también');
+
+const turnosDelSabado: Turno[] = [
+  tu({ ...jornada, trabajador: 'Ana', asistencia: VINO.si }),
+  tu({ ...jornada, trabajador: 'Luis', asistencia: VINO.si,
+       modalidad: MODALIDAD.contratado }),
+  tu({ ...jornada, trabajador: 'Pedro', asistencia: VINO.no }),
+  tu({ ...jornada, trabajador: 'Juan', asistencia: VINO.sinMarcar }),
+  tu({ ...jornada, trabajador: 'Otra', fecha: '2026-11-15', asistencia: VINO.si })
+];
+ok(costoDelDia(turnosDelSabado, '2026-11-14') === 30000,
+   'el costo del día cuenta solo a quien vino y se le paga por turno');
+ok(contratadosDelDia(turnosDelSabado, '2026-11-14') === 1,
+   'y los contratados se cuentan aparte, porque no suman');
+ok(costoDelDia(turnosDelSabado, '2026-11-15') === 30000, 'cada día cuenta lo suyo');
+ok(costoDelDia(turnosDelSabado, '2026-12-25') === 0, 'un día sin turnos no cuesta nada');
+
+/* ---------- el ajuste es el único monto con signo ---------- */
+ok(aEntero('-5000') === 0, 'por defecto un monto negativo se recorta a cero');
+ok(aEntero('-5000', true) === -5000, 'el ajuste sí admite negativos: un descuento lo es');
+ok(aEntero('$44.000') === 44000, 'y se le entiende a un monto escrito a la chilena');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

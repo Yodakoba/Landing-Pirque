@@ -33,6 +33,18 @@ export interface Config {
   diasAFuturo: number;
   /** Desde qué fracción de ocupación un día pasa a amarillo y a rojo. */
   cortes: { amarillo: number; rojo: number };
+  /**
+   * La llave del link de la planilla semanal, la que se manda al grupo.
+   *
+   * Vive acá y no en el entorno porque **se renueva desde el panel**: cuando
+   * alguien deja el equipo y conviene que su copia del link deje de servir,
+   * se cambia con un botón y no con un despliegue.
+   *
+   * En blanco significa **todavía no se ha creado ninguno**, y entonces no
+   * hay link que funcione. No se genera solo: que exista un link público
+   * —aunque sea con llave— tiene que ser una decisión de alguien.
+   */
+  tokenPlanilla: string;
 }
 
 /**
@@ -50,7 +62,8 @@ export const POR_DEFECTO: Config = {
   horaCierre: '18:00',
   diasAbiertos: [6, 0],          // sábado y domingo
   diasAFuturo: 90,
-  cortes: { amarillo: 0.6, rojo: 0.85 }
+  cortes: { amarillo: 0.6, rojo: 0.85 },
+  tokenPlanilla: ''
 };
 
 /** Las claves como se escriben en la planilla, en el orden en que se muestran. */
@@ -62,7 +75,8 @@ export const CLAVES = {
   diasAbiertos: 'dias_abiertos',
   diasAFuturo: 'dias_a_futuro',
   corteAmarillo: 'corte_amarillo',
-  corteRojo: 'corte_rojo'
+  corteRojo: 'corte_rojo',
+  tokenPlanilla: 'token_planilla'
 } as const;
 
 /**
@@ -159,7 +173,8 @@ export function leerConfigDe(filas: string[][]): Config {
     horaCierre: String(v(CLAVES.horaCierre) ?? '').trim() || POR_DEFECTO.horaCierre,
     diasAbiertos: aDiasSemana(v(CLAVES.diasAbiertos)) ?? POR_DEFECTO.diasAbiertos,
     diasAFuturo: numero(v(CLAVES.diasAFuturo), POR_DEFECTO.diasAFuturo, 1, 3650),
-    cortes
+    cortes,
+    tokenPlanilla: String(v(CLAVES.tokenPlanilla) ?? '').trim()
   };
 }
 
@@ -174,6 +189,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.diasAbiertos, deDiasSemana(c.diasAbiertos)],
     [CLAVES.diasAFuturo, String(c.diasAFuturo)],
     [CLAVES.corteAmarillo, String(Math.round(c.cortes.amarillo * 100))],
-    [CLAVES.corteRojo, String(Math.round(c.cortes.rojo * 100))]
+    [CLAVES.corteRojo, String(Math.round(c.cortes.rojo * 100))],
+    [CLAVES.tokenPlanilla, c.tokenPlanilla]
   ];
 }

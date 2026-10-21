@@ -23,6 +23,7 @@ import { camposDeShopify } from './shopify.ts';
 import { HOJA_MENUS, leerMenusDe, aFilasMenus, POR_DEFECTO_MENUS,
          type Menu } from './menus.ts';
 import { esFecha, type Fecha } from './fechas.ts';
+import { normalizar } from './columnas.ts';
 import { HOJA_USUARIOS, leerUsuariosDe, aFilasUsuarios, type Usuario } from './usuarios.ts';
 import {
   HOJA_BITACORA, ENCABEZADO_BITACORA, filaBitacora, leerBitacoraDe,
@@ -321,6 +322,25 @@ export async function guardarEquipoDelDia(
   // Una persona, un puesto por día. Lo garantiza normalizarPlan(), no la
   // interfaz: una llamada directa a la API tiene que obedecer la misma regla.
   const nuevos = normalizarPlan(turnos.map((t) => ({ ...t, fecha })));
+
+  // **Los sueldos los propone el servidor, no el navegador.**
+  //
+  // Un turno al que todavía no se le pasó lista hereda los valores de la
+  // ficha del trabajador. Así el encargado puede pasar lista y corregir
+  // montos sin que su pantalla reciba nunca la tabla de sueldos del equipo
+  // entero — que no necesita y que no es dato suyo.
+  //
+  // **Solo mientras la asistencia esté sin marcar.** Pasada la lista, lo que
+  // venga manda: ahí el monto ya es un hecho del día y no una propuesta, y
+  // volver a aplicarle la ficha reescribiría una corrección hecha a mano.
+  const fichas = new Map((await leerTrabajadores()).map((t) => [normalizar(t.nombre), t]));
+  for (const t of nuevos) {
+    if (t.asistencia !== '') continue;
+    const ficha = fichas.get(normalizar(t.trabajador));
+    if (!ficha) continue;
+    if (!t.pagoJornada) t.pagoJornada = ficha.pagoJornada;
+    if (!t.valorHora) t.valorHora = ficha.valorHora;
+  }
 
   // Borrar PRIMERO y agregar después. Al revés, las filas nuevas moverían
   // los índices de las viejas y se borrarían las equivocadas.

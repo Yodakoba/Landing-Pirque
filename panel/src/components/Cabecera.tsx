@@ -19,7 +19,9 @@ import Nav from './Nav';
 
 export default function Cabecera({ rol, usuario }: { rol: string; usuario: string }) {
   const ruta = usePathname();
-  const esDeTrabajador = ruta.startsWith('/mi/');
+  // Ni la página del trabajador ni la planilla del grupo llevan barra:
+  // todos sus enlaces pedirían una contraseña que quien las abre no tiene.
+  const esDeTrabajador = ruta.startsWith('/mi/') || ruta.startsWith('/semana/');
   const esEntrada = ruta === '/login';
 
   async function salir() {

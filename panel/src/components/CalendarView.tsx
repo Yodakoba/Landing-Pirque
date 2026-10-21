@@ -34,9 +34,37 @@ export default function CalendarView() {
   // todavía no tiene las pestañas del equipo, el calendario se dibuja igual.
   // Lo que no hay es el resumen, y el dorso de la tarjeta lo dice.
   const [equipo, setEquipo] = useState<{
-    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
   } | null>(null);
   const [planificando, setPlanificando] = useState<Ocupacion | null>(null);
+  const [avisoPlanilla, setAvisoPlanilla] = useState('');
+
+  /**
+   * Copia el link de la planilla de una semana, para mandarlo al grupo.
+   *
+   * Lo que abre ese link es **quién trabaja cada día y los números del día**,
+   * sin un peso y sin menús: está hecho para circular. Lo que un trabajador
+   * necesita de su propio día vive en su link personal.
+   */
+  async function mandarPlanilla(lunes: string) {
+    let token = cfg.tokenPlanilla;
+    if (!token) {
+      // No existe hasta que alguien lo crea: un link público, aunque sea con
+      // llave, no puede aparecer solo.
+      const r = await fetch('/api/planilla', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accion: 'crear' })
+      });
+      const d = await r.json();
+      if (d.error) return setAvisoPlanilla(d.error);
+      token = d.tokenPlanilla;
+      setCfg({ ...cfg, tokenPlanilla: token });
+    }
+    const url = `${window.location.origin}/semana/${token}?semana=${lunes}`;
+    navigator.clipboard?.writeText(url)
+      .then(() => setAvisoPlanilla('Link de la planilla copiado. Mándalo al grupo.'))
+      .catch(() => window.prompt('Link de la planilla:', url));
+  }
 
   const cargar = () => {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
@@ -68,7 +96,7 @@ export default function CalendarView() {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? []
+          turnos: d.turnos ?? [], esAdmin: !!d.esAdmin
         });
       })
       .catch(() => {});
@@ -128,6 +156,12 @@ export default function CalendarView() {
         </button>
       </div>
 
+      {avisoPlanilla && (
+        <p className="mb-5 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
+          {avisoPlanilla}
+        </p>
+      )}
+
       {(editando || agregandoFecha) && (
         <DiaEditor
           dia={editando}
@@ -146,6 +180,7 @@ export default function CalendarView() {
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
+          esAdmin={equipo.esAdmin}
           onListo={() => { setPlanificando(null); cargar(); }}
           onCancelar={() => setPlanificando(null)}
         />
@@ -183,8 +218,12 @@ export default function CalendarView() {
           <div key={semana} className="mb-4 last:mb-0">
             {/* La semana se marca más suave que el mes: es una agrupación
                 para escanear, no una sección. */}
-            <p className="mb-2 text-xs text-hueso/35">
+            <p className="mb-2 flex flex-wrap items-baseline gap-3 text-xs text-hueso/35">
               {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
+              <button onClick={() => mandarPlanilla(semanaDe(deLaSemana[0].fecha))}
+                className="text-hueso/45 hover:text-oro">
+                Enviar planilla semanal
+              </button>
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (

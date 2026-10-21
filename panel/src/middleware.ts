@@ -58,10 +58,19 @@ const PUBLICAS = [
  */
 const PREFIJO_TRABAJADOR = '/mi/';
 
+/**
+ * La planilla semanal, el link que se manda al grupo. Misma idea que el del
+ * trabajador: no puede pedir contraseña, y lo que la protege es la llave de
+ * la URL, que la página compara contra la configuración antes de mostrar
+ * nada. Lo que enseña no lleva plata ni datos de clientes.
+ */
+const PREFIJO_PLANILLA = '/semana/';
+
 export async function middleware(req: NextRequest) {
   const ruta = req.nextUrl.pathname;
   if (PUBLICAS.includes(ruta)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_TRABAJADOR)) return NextResponse.next();
+  if (ruta.startsWith(PREFIJO_PLANILLA)) return NextResponse.next();
 
   const secreto = secretoDeSesion(process.env);
 

@@ -16,7 +16,8 @@
  */
 import { useEffect, useState } from 'react';
 import { Aviso } from './CalendarView';
-import { aEntero, type Puesto, type Trabajador } from '@/lib/equipo';
+import { aEntero, esContratado, MODALIDAD,
+         type Puesto, type Trabajador } from '@/lib/equipo';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -116,7 +117,14 @@ export default function EquipoEditor() {
   const cambiarPersona = (i: number, campo: keyof Trabajador, valor: string | boolean) => {
     const copia = gente.map((t) => ({ ...t }));
     if (campo === 'activo') copia[i].activo = Boolean(valor);
-    else copia[i][campo] = String(valor);
+    else if (campo === 'pagoJornada' || campo === 'valorHora') {
+      copia[i][campo] = aEntero(valor);
+    } else if (campo === 'modalidad') {
+      copia[i].modalidad = esContratado(valor) ? MODALIDAD.contratado : MODALIDAD.porTurno;
+      // Un contratado no cobra jornada: dejar el monto escrito sería dejar un
+      // número que ninguna cuenta usa, esperando a confundir a alguien.
+      if (esContratado(valor)) copia[i].pagoJornada = 0;
+    } else if (campo !== 'token') copia[i][campo] = String(valor);
     setGente(copia); setSucio(true);
   };
 
@@ -174,6 +182,9 @@ export default function EquipoEditor() {
               <th className="w-44 py-2 pr-3">Teléfono</th>
               <th className="w-44 py-2 pr-3">Puesto habitual</th>
               <th className="w-20 py-2 pr-3">Activo</th>
+              {esAdmin && <th className="w-32 py-2 pr-3">Modalidad</th>}
+              {esAdmin && <th className="w-32 py-2 pr-3">Jornada</th>}
+              {esAdmin && <th className="w-32 py-2 pr-3">Hora extra</th>}
               {esAdmin && <th className="w-52 py-2 pr-3">Link personal</th>}
               <th className="w-20 py-2" />
             </tr>
@@ -215,6 +226,35 @@ export default function EquipoEditor() {
                     onChange={(e) => cambiarPersona(i, 'activo', e.target.checked)} />
                 </td>
                 {esAdmin && (
+                  <td className="py-2 pr-3">
+                    <select value={t.modalidad} className={ENTRADA}
+                      aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
+                      onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
+                      <option value={MODALIDAD.porTurno}>Por turno</option>
+                      <option value={MODALIDAD.contratado}>Contratado</option>
+                    </select>
+                  </td>
+                )}
+                {esAdmin && (
+                  <td className="py-2 pr-3">
+                    {/* A un contratado no se le paga por jornada, así que el
+                        campo no se deja escribir: un monto ahí no se usaría
+                        en ninguna cuenta y haría creer que sí. */}
+                    <input type="number" min={0} step={1000} className={ENTRADA}
+                      value={esContratado(t.modalidad) ? '' : (t.pagoJornada || '')}
+                      placeholder={esContratado(t.modalidad) ? 'no aplica' : '—'}
+                      disabled={esContratado(t.modalidad)}
+                      onChange={(e) => cambiarPersona(i, 'pagoJornada', e.target.value)} />
+                  </td>
+                )}
+                {esAdmin && (
+                  <td className="py-2 pr-3">
+                    <input type="number" min={0} step={500} className={ENTRADA}
+                      value={t.valorHora || ''} placeholder="—"
+                      onChange={(e) => cambiarPersona(i, 'valorHora', e.target.value)} />
+                  </td>
+                )}
+                {esAdmin && (
                   <td className="whitespace-nowrap py-2 pr-3 text-xs">
                     {!t.nombre.trim() ? (
                       <span className="text-hueso/35">Ponle nombre y guarda</span>
@@ -244,7 +284,7 @@ export default function EquipoEditor() {
               </tr>
             ))}
             {gente.length === 0 && (
-              <tr><td colSpan={esAdmin ? 6 : 5} className="py-6 text-sm text-hueso/50">
+              <tr><td colSpan={esAdmin ? 9 : 5} className="py-6 text-sm text-hueso/50">
                 Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
               </td></tr>
             )}
@@ -253,12 +293,24 @@ export default function EquipoEditor() {
       </div>
       <button
         onClick={() => {
-          setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true, token: '' }]);
+          setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
+                                token: '', modalidad: MODALIDAD.porTurno,
+                                pagoJornada: 0, valorHora: 0 }]);
           setSucio(true);
         }}
         className="mt-4 rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
         Agregar trabajador
       </button>
+
+      {esAdmin && (
+        <p className="mt-4 max-w-2xl text-xs text-hueso/50">
+          <strong>Por turno</strong> se le paga por jornada trabajada, y cada
+          turno suma al costo del día. <strong>Contratado</strong> tiene
+          sueldo, y ese sueldo no sale de acá: sus turnos no suman jornada,
+          porque contarlos sería pagar dos veces lo mismo. A un contratado sí
+          se le pueden anotar horas extra y ajustes, que se pagan aparte.
+        </p>
+      )}
 
       <h2 className="mb-3 mt-10 text-xs uppercase tracking-widest text-hueso/45">
         Puestos

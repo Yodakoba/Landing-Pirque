@@ -16,7 +16,9 @@ import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import EquipoDialogo from './EquipoDialogo';
-import { planDelDia, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
+import ListaDialogo from './ListaDialogo';
+import { planDelDia, costoDelDia, pagoDe, VINO,
+         type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 
 type Filtro = 'todas' | 'online' | 'local';
 
@@ -30,9 +32,10 @@ export default function DayView({ fecha }: { fecha: string }) {
   // totales por plato de este dia.
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
   const [equipo, setEquipo] = useState<{
-    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
   } | null>(null);
   const [planificando, setPlanificando] = useState(false);
+  const [pasandoLista, setPasandoLista] = useState(false);
 
   const cargar = () =>
     fetch('/api/reservas')
@@ -54,7 +57,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? []
+          turnos: d.turnos ?? [], esAdmin: !!d.esAdmin
         });
       })
       .catch(() => {});
@@ -161,6 +164,11 @@ export default function DayView({ fecha }: { fecha: string }) {
   // trabajar, y los puestos vacíos se ven en el planificador.
   const conGente = plan.filter((l) => l.asignados.length > 0);
   const faltan = plan.reduce((n, l) => n + l.faltan, 0);
+  const turnosDelDia = (equipo?.turnos ?? []).filter((t) => t.fecha === fecha);
+  const vinieron = turnosDelDia.filter((t) => t.asistencia === VINO.si).length;
+  const faltaron = turnosDelDia.filter((t) => t.asistencia === VINO.no).length;
+  const costo = costoDelDia(turnosDelDia, fecha);
+  const sinPasarLista = turnosDelDia.filter((t) => !t.asistencia).length;
 
   return (
     <>
@@ -221,7 +229,20 @@ export default function DayView({ fecha }: { fecha: string }) {
               {conGente.map((l) => (
                 <li key={l.puesto}>
                   <span className="text-hueso/50">{l.puesto}:</span>{' '}
-                  <span className="text-hueso/85">{l.asignados.join(', ')}</span>
+                  {l.asignados.map((nombre, k) => {
+                    const t = turnosDelDia.find((x) => x.trabajador === nombre);
+                    return (
+                      <span key={nombre}
+                        className={t?.asistencia === VINO.no
+                          ? 'text-hueso/35 line-through'
+                          : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/85'}
+                        title={t?.asistencia === VINO.si
+                          ? `Vino · ${enPesos(pagoDe(t))}`
+                          : t?.asistencia === VINO.no ? 'No llegó' : 'Sin pasar lista'}>
+                        {nombre}{k < l.asignados.length - 1 ? ', ' : ''}
+                      </span>
+                    );
+                  })}
                 </li>
               ))}
             </ul>
@@ -234,8 +255,40 @@ export default function DayView({ fecha }: { fecha: string }) {
             className="text-sm text-oro hover:underline disabled:opacity-40">
             Planificar equipo
           </button>
+          {turnosDelDia.length > 0 && (
+            <button onClick={() => setPasandoLista(true)}
+              className="text-sm text-oro hover:underline">
+              Pasar lista
+            </button>
+          )}
         </div>
+
+        {/* Lo que costó el día. Aparece solo cuando se pasó lista por alguien:
+            antes de eso el total sería cero y se leería como "no se pagó
+            nada", que es otra cosa que "todavía no se sabe". */}
+        {turnosDelDia.length > 0 && sinPasarLista < turnosDelDia.length && (
+          <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
+            <strong className="tabular-nums text-oro">{enPesos(costo)}</strong>
+            <span className="text-hueso/55"> en el equipo de este día · </span>
+            <span className="text-hueso/55">{vinieron} vinieron</span>
+            {faltaron > 0 && (
+              <span className="text-red-300"> · {faltaron} no{faltaron === 1 ? '' : ''} llegaron</span>
+            )}
+            {sinPasarLista > 0 && (
+              <span className="text-amber-300"> · {sinPasarLista} sin marcar</span>
+            )}
+          </p>
+        )}
       </div>
+
+      {pasandoLista && (
+        <ListaDialogo
+          fecha={fecha}
+          turnos={turnosDelDia}
+          onListo={() => { setPasandoLista(false); cargarEquipo(); }}
+          onCancelar={() => setPasandoLista(false)}
+        />
+      )}
 
       {planificando && equipo && (
         <EquipoDialogo
@@ -244,6 +297,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
+          esAdmin={equipo.esAdmin}
           onListo={() => { setPlanificando(false); cargarEquipo(); }}
           onCancelar={() => setPlanificando(false)}
         />

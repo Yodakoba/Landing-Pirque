@@ -273,6 +273,39 @@ distintas: **Quitar** el link (se fue del equipo) o **Renovar**lo (perdió el
 teléfono y hay que invalidar el anterior). Desmarcar *Activo* también le
 cierra la puerta.
 
+## Pasar lista y las cuentas del día
+
+En la página de un día, **Pasar lista**: quién vino, horas extra, ajustes con
+su motivo, y el total. **Un turno sin pasar lista no suma nada** — planificar
+no es pagar.
+
+Los montos se **congelan en el turno** al guardarlos. Si después le subes el
+sueldo a alguien, sus turnos viejos no cambian: si cambiaran, las cuentas de
+meses ya cerrados dejarían de cuadrar.
+
+En **/equipo**, cada persona tiene su **modalidad**:
+
+- **Por turno** — cobra por jornada trabajada; cada turno suma al costo del día.
+- **Contratado** — tiene sueldo, y ese sueldo no sale de acá. Sus turnos no
+  suman jornada; sí se le anotan horas extra y ajustes.
+
+La celda en blanco cuenta como *Por turno*.
+
+### La planilla semanal
+
+En el calendario, junto al rango de cada semana: **Enviar planilla semanal**
+copia un link para mandar al grupo. Muestra quién trabaja cada día en qué
+puesto, la hora de apertura y los números del día — **sin plata, sin menús y
+sin datos de clientes**, porque es un link que va a circular.
+
+La primera vez el botón crea la llave. Para invalidar todas las copias que
+anden dando vueltas, hay un **Renovar** (y entonces hay que volver a mandar
+el link a quien sí trabaja).
+
+Lo que un trabajador necesita de su propio día —los menús que hay que
+preparar y lo que gana— está en **su link personal**, que es de una sola
+persona.
+
 ## El equipo: tres pestañas más
 
 `Puestos`, `Trabajadores` y `Turnos`. Se editan en **/equipo**, salvo los
