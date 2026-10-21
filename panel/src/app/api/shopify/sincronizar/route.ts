@@ -19,7 +19,11 @@
 import { NextResponse } from 'next/server';
 import { pedidosDesde, configurado } from '@/lib/admin';
 import { aReserva } from '@/lib/shopify';
-import { guardarPedido, leerMenus } from '@/lib/datos';
+import { guardarPedido, leerMenus, leerConfig } from '@/lib/datos';
+import { eventoDe, idDeEvento } from '@/lib/calendario';
+import { guardarEvento, borrarEvento, hayCalendario } from '@/lib/google-calendar';
+import { ocupaLugar } from '@/lib/ocupacion';
+import type { Reserva } from '@/lib/tipos';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -47,7 +51,9 @@ export async function GET(req: Request) {
 
   try {
     const desde = new Date(Date.now() - DIAS_ATRAS * 24 * 60 * 60 * 1000);
-    const [pedidos, menus] = await Promise.all([pedidosDesde(desde), leerMenus()]);
+    const [pedidos, menus, cfg] = await Promise.all([
+      pedidosDesde(desde), leerMenus(), leerConfig()
+    ]);
 
     let creadas = 0, actualizadas = 0, ignorados = 0;
     const fallidos: string[] = [];
@@ -61,6 +67,23 @@ export async function GET(req: Request) {
         // Veinte escrituras simultáneas se pisan entre ellas.
         if (await guardarPedido(reserva) === 'creada') creadas++;
         else actualizadas++;
+
+        // El calendario también se reconcilia. Sin esto, un webhook
+        // perdido dejaba la reserva recuperada pero su evento nunca
+        // aparecía, y la reconciliación no reconciliaba del todo.
+        if (hayCalendario()) {
+          try {
+            if (ocupaLugar(reserva as Reserva)) {
+              await guardarEvento(eventoDe(reserva, cfg.horaApertura, cfg.horaCierre));
+            } else {
+              await borrarEvento(idDeEvento(reserva.id));
+            }
+          } catch (e) {
+            // Igual que en el webhook: el calendario no puede hacer que se
+            // pierda una reserva, ni detener las que vienen después.
+            console.error('[sincronizar] calendario', reserva.id, e);
+          }
+        }
       } catch (e) {
         // Un pedido que falla no puede detener los demás.
         fallidos.push(String(reserva.id));
