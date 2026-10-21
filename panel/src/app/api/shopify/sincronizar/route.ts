@@ -19,7 +19,7 @@
 import { NextResponse } from 'next/server';
 import { pedidosDesde, configurado } from '@/lib/admin';
 import { aReserva } from '@/lib/shopify';
-import { guardarPedido } from '@/lib/datos';
+import { guardarPedido, leerMenus } from '@/lib/datos';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -47,13 +47,13 @@ export async function GET(req: Request) {
 
   try {
     const desde = new Date(Date.now() - DIAS_ATRAS * 24 * 60 * 60 * 1000);
-    const pedidos = await pedidosDesde(desde);
+    const [pedidos, menus] = await Promise.all([pedidosDesde(desde), leerMenus()]);
 
     let creadas = 0, actualizadas = 0, ignorados = 0;
     const fallidos: string[] = [];
 
     for (const p of pedidos) {
-      const reserva = aReserva(p);
+      const reserva = aReserva(p, menus);
       if (!reserva) { ignorados++; continue; }
       try {
         // En serie y no en paralelo: son dos escritores sobre la misma

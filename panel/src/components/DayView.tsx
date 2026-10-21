@@ -8,7 +8,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
-import { menusDe } from '@/lib/shopify';
+import { menusDe, menusConocidos } from '@/lib/shopify';
+import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar } from '@/lib/ocupacion';
@@ -23,11 +24,18 @@ export default function DayView({ fecha }: { fecha: string }) {
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [editando, setEditando] = useState<Reserva | null>(null);
   const [creando, setCreando] = useState(false);
+  // El catalogo de menus. Distinto de `menus`, que mas abajo son los
+  // totales por plato de este dia.
+  const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
 
   const cargar = () =>
     fetch('/api/reservas')
       .then((r) => r.json())
-      .then((d) => (d.error ? setError(d.error) : setTodas(d.reservas)))
+      .then((d) => {
+        if (d.error) return setError(d.error);
+        setTodas(d.reservas);
+        if (d.menus) setCatalogo(d.menus);
+      })
       .catch((e) => setError(String(e)));
 
   useEffect(() => { cargar(); }, []);
@@ -50,8 +58,22 @@ export default function DayView({ fecha }: { fecha: string }) {
   // Lo que mira la cocina: cuántos de cada menú hay que preparar ese día.
   // Solo de las reservas que ocupan lugar: una cancelada no se cocina.
   const menus = useMemo(
-    () => menusDe(visibles.filter(ocupaLugar)),
-    [visibles]
+    () => menusDe(visibles.filter(ocupaLugar), catalogo),
+    [visibles, catalogo]
+  );
+
+  // Los nombres de menú que ofrece el formulario manual. Salen de TODAS las
+  // reservas, no solo las de este día: un menú vendido otro fin de semana
+  // sigue siendo un nombre válido.
+  const conocidos = useMemo(
+    // La lista canonica primero, y despues lo que aparezca en las reservas
+    // y no este en ella: un menu que Shopify empezo a vender ayer tiene que
+    // poder anotarse a mano sin esperar a que alguien lo agregue.
+    () => [...new Set([
+      ...catalogo.map((m) => m.nombre),
+      ...menusConocidos(todas ?? [], catalogo)
+    ])].sort((a, b) => a.localeCompare(b)),
+    [todas, catalogo]
   );
 
   function exportar() {
@@ -212,6 +234,7 @@ export default function DayView({ fecha }: { fecha: string }) {
       {(creando || editando) && (
         <ReservaForm
           fecha={fecha}
+          menusConocidos={conocidos}
           reserva={editando}
           onListo={() => { setCreando(false); setEditando(null); cargar(); }}
           onCancelar={() => { setCreando(false); setEditando(null); }}

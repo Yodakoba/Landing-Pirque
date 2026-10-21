@@ -213,6 +213,39 @@ Lo único que **no** se cambia desde el panel es la clave de acceso: vive en
 Vercel. Guardarla en la planilla sería dejar la contraseña del panel en un
 documento compartido.
 
+## Los menús: un nombre canónico con alias
+
+Viven en la pestaña **`Menús`** de la planilla y se editan en **/menus**.
+Cada uno tiene un nombre y una lista de alias separados por coma.
+
+**El problema que esto resuelve.** El nombre del menú era la llave, y Shopify
+guarda el título del producto **dentro de cada pedido** en el momento de la
+compra. Renombrar un producto no reescribe los pedidos viejos — y la
+reconciliación diaria, al releerlos, seguiría escribiendo el nombre antiguo
+para siempre. Con el nombre como llave, **un solo rename parte el total del
+día en dos platos que en realidad son uno**, y la cocina prepara mal.
+
+Con alias, un rename se arregla **agregando una línea en /menus**, sin tocar
+las filas viejas y sin redesplegar.
+
+**Los nombres canónicos van sin el prefijo "Menú"** — `Tradiciones`,
+`Lo Pirque`, `A Brasas abiertas`, `Sommelier`, `Niños` — que es como se
+llaman en el sitio público, en el landing y en `CLAUDE.md`. Los `Menú X` que
+usa Shopify entran como alias.
+
+**Se canoniza al escribir y al leer.** Al escribir, para que la planilla vaya
+quedando con un solo nombre por plato; al leer, porque las filas ya escritas
+y lo anotado a mano no pasaron por ahí.
+
+**Un menú que no está en la lista no se descarta ni se fuerza al más
+parecido**: aparece tal cual, y /menus avisa en amarillo que conviene
+agregarlo. Así la lista crece sola en vez de que alguien lo descubra cuando
+los totales no cuadren.
+
+**No se guarda el id de variante**, que sería lo más sólido porque no cambia
+nunca. Convertiría esa columna en algo ilegible para una persona, y esa
+planilla la abre gente. Los alias dan casi toda la robustez sin ese costo.
+
 ## Antes de empujar un cambio
 
 **Corre esto, siempre:**
