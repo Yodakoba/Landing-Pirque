@@ -6,7 +6,8 @@
  * Cubre lo que puede romperse en silencio: el semáforo, qué reserva ocupa
  * lugar, el escape del CSV y el calce de los encabezados de la planilla.
  */
-import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './ocupacion.ts';
+import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, faltaCobrar,
+         enPesos, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
          diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe,
@@ -644,6 +645,41 @@ ok(rangoEnPalabras(['2026-10-31']) === '31 de octubre', 'un dia solo, sin rango'
 ok(rangoEnPalabras(['2026-10-31', '2026-11-01']) === '31 de octubre – 1 de noviembre',
    'y si cruza de mes se nombran los dos, que es cuando no nombrarlos confunde');
 ok(rangoEnPalabras([]) === '', 'sin dias no se nombra nada');
+
+/* ---------- la plata que hay que cobrar en la puerta ---------- */
+// Se decide por el ESTADO DEL PAGO, no por la modalidad comprada.
+ok(!faltaCobrar(r({ estadoPago: 'paid' })), 'una pagada no se cobra de nuevo');
+ok(faltaCobrar(r({ estadoPago: 'pending' })), 'una pendiente si');
+ok(!faltaCobrar(r({ estadoPago: 'refunded' })), 'una reembolsada no: ni viene ni paga');
+ok(!faltaCobrar(r({ estadoPago: 'cancelled' })), 'ni una cancelada');
+
+// ESTA es la que importa, y es el caso que el proyecto tiene documentado:
+// "Pago directo" + "pending" significa que la regla de medios de pago de
+// Shopify no aplico y la persona eligio pagar en el local igual.
+ok(faltaCobrar(r({ tipoPago: TIPO_PAGO.directo, estadoPago: 'pending' })),
+   'un "Pago directo" que quedo PENDIENTE si hay que cobrarlo: mirando la modalidad esa plata no aparecia');
+
+const conPlata = ocupacionDe([
+  r({ personas: 2, monto: 88000, estadoPago: 'paid' }),
+  r({ personas: 3, monto: 147000, estadoPago: 'pending' }),
+  r({ personas: 2, monto: 98000, estadoPago: 'pending', tipoPago: TIPO_PAGO.directo }),
+  r({ personas: 4, monto: 200000, estadoPago: 'refunded' }),
+  r({ personas: 1, monto: null, estadoPago: 'pending' })
+], dia({}));
+
+ok(conPlata.porCobrar === 245000,
+   'se suma solo lo pendiente: 147.000 + 98.000, sin lo pagado ni lo reembolsado');
+ok(conPlata.sinMonto === 1,
+   'y la reserva SIN monto se cuenta aparte: un total que omite filas en silencio es peor');
+ok(ocupacionDe([], dia({})).porCobrar === 0, 'un dia sin reservas no tiene nada que cobrar');
+
+ok(enPesos(218000) === '$218.000', 'el monto va en formato chileno');
+ok(enPesos(0) === '$0', 'y el cero tambien se escribe');
+
+// El sitio NO puede enterarse de la plata.
+const conDinero = paraElSitio([conPlata]);
+ok(Object.keys(conDinero[0]).sort().join(',') === 'fecha,pocos,quedan',
+   'agregar plata a la ocupacion NO la filtra al sitio: siguen siendo tres campos');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
