@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
-import { menusDe } from '@/lib/shopify';
+import { menusDe, menusConocidos } from '@/lib/shopify';
 import { enPalabras } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar } from '@/lib/ocupacion';
@@ -53,6 +53,11 @@ export default function DayView({ fecha }: { fecha: string }) {
     () => menusDe(visibles.filter(ocupaLugar)),
     [visibles]
   );
+
+  // Los nombres de menú que ofrece el formulario manual. Salen de TODAS las
+  // reservas, no solo las de este día: un menú vendido otro fin de semana
+  // sigue siendo un nombre válido.
+  const conocidos = useMemo(() => menusConocidos(todas ?? []), [todas]);
 
   function exportar() {
     const csv = aCSV(
@@ -212,6 +217,7 @@ export default function DayView({ fecha }: { fecha: string }) {
       {(creando || editando) && (
         <ReservaForm
           fecha={fecha}
+          menusConocidos={conocidos}
           reserva={editando}
           onListo={() => { setCreando(false); setEditando(null); cargar(); }}
           onCancelar={() => { setCreando(false); setEditando(null); }}

@@ -12,7 +12,8 @@ import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
          diasAbiertosEntre, mesDe, mesEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
-         desglosarMenu, menusDe, camposDeShopify,
+         desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
+         camposDeShopify,
          type PedidoShopify } from './shopify.ts';
 import { ESTADO_PAGO } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
@@ -499,6 +500,48 @@ const porMes = new Map<string, number>();
 for (const f of ventana) porMes.set(mesDe(f), (porMes.get(mesDe(f)) ?? 0) + 1);
 ok([...porMes.keys()].join(',') === '2026-10,2026-11',
    'una ventana a caballo entre dos meses da dos grupos, en orden');
+
+/* ---------- la reserva hecha a mano escribe IGUAL que Shopify ---------- */
+// Si el formulario manual escribiera "Tradiciones" donde Shopify escribe
+// "Menu Tradiciones", el total del dia contaria dos platos distintos y la
+// cocina prepararia mal. Por eso los nombres salen de lo ya vendido.
+const yaVendidos = menusConocidos([
+  { menu: '2 × Menú Tradiciones + 1 × Menú Niños' },
+  { menu: '4 × Menú A Brasas abiertas' },
+  { menu: '1 × Menú Tradiciones' }
+]);
+ok(yaVendidos.length === 3, 'los menus conocidos salen de las reservas que ya hay');
+ok(yaVendidos.includes('Menú Tradiciones') && yaVendidos.includes('Menú Niños'),
+   'con el nombre EXACTO que escribio Shopify, no uno parecido');
+ok(yaVendidos.join(',') === yaVendidos.slice().sort((a, b) => a.localeCompare(b)).join(','),
+   'ordenados, para que la lista no baile entre aperturas');
+ok(menusConocidos([]).length === 0,
+   'el dia uno no hay ninguno, y el formulario deja escribirlo a mano');
+
+// Lo que arma el formulario tiene que volver a leerse igual.
+const cuenta = { 'Menú Tradiciones': 2, 'Menú Niños': 1, 'Menú A Brasas abiertas': 0 };
+ok(componerMenu(cuenta) === '2 × Menú Tradiciones + 1 × Menú Niños',
+   'un menu en CERO no se escribe, igual que el sitio no agrega una linea vacia');
+ok(personasDeCuenta(cuenta) === 3,
+   'las personas se CALCULAN del conteo: ya no son un campo aparte que pueda no calzar');
+
+// Y el viaje completo: lo que escribe el formulario lo entiende la cocina.
+const comoShopify = aReserva(pedido({ line_items: [
+  linea('Menú Tradiciones', 2), linea('Menú Niños', 1)
+]}))!;
+ok(componerMenu(cuenta) === comoShopify.menu,
+   'una reserva a mano y una de Shopify con lo mismo adentro quedan IDENTICAS');
+ok(menusDe([{ menu: componerMenu(cuenta) }, comoShopify])[0].cantidad === 4,
+   'y por eso se suman juntas en el total del dia, en vez de contarse aparte');
+
+// Editar una reserva de Shopify no puede perder su desglose.
+const alEditar: Record<string, number> = {};
+for (const x of desglosarMenu(comoShopify.menu)) alEditar[x.menu] = x.cantidad;
+ok(componerMenu(alEditar) === comoShopify.menu,
+   'abrir una reserva de Shopify en el formulario y guardarla la deja igual');
+
+ok(componerMenu({}) === '', 'sin nada elegido no se escribe un menu');
+ok(personasDeCuenta({}) === 0, 'y son cero personas, que el formulario no deja guardar');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

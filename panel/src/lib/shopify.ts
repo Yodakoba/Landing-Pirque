@@ -282,3 +282,33 @@ export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
   const { asistencia, creada, ...resto } = r;
   return resto;
 }
+
+/**
+ * Los menús que ya se han vendido, sacados de las reservas que hay.
+ *
+ * **Para que el formulario manual ofrezca los nombres EXACTOS que usa
+ * Shopify, en vez de una lista escrita a mano que se desincroniza.** Si
+ * alguien anota "Tradiciones" donde Shopify escribe "Menú Tradiciones", el
+ * total del día los cuenta como dos platos distintos y la cocina prepara
+ * mal. Esto no puede pasar si los nombres salen del mismo lugar.
+ *
+ * El día uno, sin reservas, devuelve vacío y el formulario deja escribir el
+ * nombre a mano. Es la única forma honesta de empezar: los nombres de los
+ * productos son dato de la tienda, no nuestro.
+ */
+export function menusConocidos(reservas: { menu: string }[]): string[] {
+  return menusDe(reservas).map((m) => m.menu).sort((a, b) => a.localeCompare(b));
+}
+
+/** Arma el texto del menú desde un conteo por plato. Lo contrario de desglosarMenu(). */
+export function componerMenu(cuenta: Record<string, number>): string {
+  return Object.entries(cuenta)
+    .filter(([, n]) => n > 0)
+    .map(([menu, n]) => `${n}${POR}${menu}`)
+    .join(' + ');
+}
+
+/** Cuántas personas son, según el conteo por plato. */
+export function personasDeCuenta(cuenta: Record<string, number>): number {
+  return Object.values(cuenta).reduce((s, n) => s + (Number(n) || 0), 0);
+}
