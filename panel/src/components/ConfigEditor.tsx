@@ -29,6 +29,35 @@ export default function ConfigEditor() {
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState('');
+  const [revisando, setRevisando] = useState(false);
+  const [resumen, setResumen] = useState('');
+
+  /**
+   * Le pide a Shopify los pedidos recientes y anota lo que falte.
+   *
+   * Es la misma reconciliación que corre sola una vez al día, y vive acá y
+   * no en el calendario porque **no es una herramienta de gestión**: la
+   * gestión pasa por el panel y las reservas llegan solas por el webhook.
+   * Esto se aprieta cuando se sospecha que algo falta, que es de vez en
+   * cuando y no todos los días.
+   *
+   * Es seguro apretarlo de más: guardarPedido() es idempotente.
+   */
+  async function revisarShopify() {
+    setRevisando(true);
+    setResumen('');
+    try {
+      const r = await fetch('/api/shopify/sincronizar', { headers: { 'x-panel': 'si' } });
+      const d = await r.json();
+      setResumen(d.error
+        ? d.error
+        : `${d.revisados} pedidos revisados · ${d.creadas} nuevas · ${d.actualizadas} al día`);
+    } catch (e) {
+      setResumen(String(e));
+    } finally {
+      setRevisando(false);
+    }
+  }
 
   async function cargar() {
     const r = await fetch('/api/config');
@@ -150,6 +179,24 @@ export default function ConfigEditor() {
               { cortes: { ...config.cortes, rojo: Number(e.target.value) / 100 } },
               'rojo')} />)}
       </div>
+
+      {/* Mantenimiento: lo que se toca cuando algo parece faltar, no a diario. */}
+      <section className="mt-10 border-t border-hueso/10 pt-6">
+        <h2 className="text-sm font-bold uppercase tracking-wide">Mantenimiento</h2>
+        <p className="mt-1 max-w-2xl text-sm text-hueso/60">
+          Las reservas llegan solas apenas se paga en Shopify, y una vez al día
+          se revisa que no falte ninguna. Este botón hace esa revisión ahora,
+          sin esperar: sirve si sospechas que una reserva no apareció.
+          Apretarlo de más no duplica nada.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button onClick={revisarShopify} disabled={revisando}
+            className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro disabled:opacity-50">
+            {revisando ? 'Revisando…' : 'Revisar Shopify ahora'}
+          </button>
+          {resumen && <span className="text-xs text-hueso/60">{resumen}</span>}
+        </div>
+      </section>
 
       <p className="text-xs text-hueso/40 mt-6 max-w-2xl">
         La clave del panel no se cambia acá: vive en Vercel como variable de

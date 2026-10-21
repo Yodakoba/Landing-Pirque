@@ -310,6 +310,43 @@ Una reserva cancelada o reembolsada **borra su evento**: una cancelada que
 sigue en el calendario es peor que ninguna, porque alguien cuenta sillas
 mirándolo.
 
+## Los tres estados de un día
+
+Se editan en el calendario del panel, apretando **Editar** en la tarjeta del
+día. Antes había una página aparte, "Fechas hábiles", que se fue el
+2026-10-21: dos pantallas con los mismos días obligaban a saber cuál abrir,
+y la decisión de cambiar un cupo se toma mirando la ocupación.
+
+| Estado | En el panel | En el sitio |
+|---|---|---|
+| **Abierta** | se ve, recibe reservas | se ofrece |
+| **Privada** | se ve, recibe reservas | **no se ofrece** |
+| **Cerrada** | se ve en rojo | no se ofrece |
+
+**El estado "Privada" existe por un caso concreto**: un día vendido entero
+como evento privado. Hay que verlo en el panel con su cupo y sus reservas,
+y **no puede aparecer en el calendario del sitio**, porque ahí significaría
+que cualquiera puede comprar un lugar en el evento de otro.
+
+Sin ese estado, la única forma de ver ese día en el panel era abrirlo, y
+abrirlo lo publicaba. Eran dos cosas que no tenían por qué ir juntas.
+
+**Privada no es cerrada**, y el código lo distingue: un día privado cuenta
+su cupo, suma sus menús en el total de la cocina y aparece en la plata por
+cobrar. Lo único que no hace es llegar al sitio.
+
+### Un día con reservas siempre se ve
+
+El calendario del panel arma sus días de **tres** fuentes: la regla de días
+de la semana, lo que haya en `Fechas Hábiles`, y **los días que tengan
+alguna reserva**. Lo tercero faltaba, y el síntoma era feo: una reserva
+anotada a mano para un miércoles quedaba invisible: existía en la planilla
+y el día simplemente no se dibujaba.
+
+Un día que aparece solo por tener reservas viene con **cupo 0** hasta que
+alguien lo abra, y con cupo 0 el sitio nunca lo ofrece. O sea que anotar una
+reserva a mano **no publica nada**, que es justo lo que hay que cuidar.
+
 ## Antes de empujar un cambio
 
 **Corre esto, siempre:**

@@ -35,6 +35,7 @@ export interface Ocupacion {
   local: number;         // personas que pagan al llegar
   porCobrar: number;     // pesos a cobrar el mismo día
   sinMonto: number;      // reservas por cobrar SIN monto anotado
+  privada: boolean;      // recibe reservas, pero el sitio no la ofrece
   semaforo: Semaforo;
   bloqueada: boolean;
   notas: string;

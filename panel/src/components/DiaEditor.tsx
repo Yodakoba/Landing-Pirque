@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import Dialogo from './Dialogo';
 import type { Ocupacion } from '@/lib/tipos';
-import { ESTADO_DIA, estaCerrado } from '@/lib/columnas';
+import { ESTADO_DIA, estaCerrado, esPrivada } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
 
 const ENTRADA =
@@ -34,14 +34,14 @@ export default function DiaEditor({
   const [f, setF] = useState({
     capacidad: String(sinDefinir ? cupoNormal : dia.capacidad),
     apertura: apertura,
-    estado: estaCerrado(dia.bloqueada ? ESTADO_DIA.cerrada : '')
-      ? ESTADO_DIA.cerrada : ESTADO_DIA.abierta,
+    estado: dia.bloqueada ? ESTADO_DIA.cerrada
+          : dia.privada ? ESTADO_DIA.privada
+          : ESTADO_DIA.abierta,
     notas: dia.notas ?? ''
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
-  const cerrada = f.estado === ESTADO_DIA.cerrada;
 
   async function guardar(cambios?: Partial<typeof f>) {
     setGuardando(true);
@@ -104,32 +104,46 @@ export default function DiaEditor({
         )}
         {error && <p className="mt-3 text-sm font-semibold text-red-400">{error}</p>}
 
+        {/* Tres estados y no un interruptor, porque son tres cosas
+            distintas: abierta al público, abierta solo para nosotros, y
+            cerrada. Antes el botón solo alternaba entre la primera y la
+            tercera, y no había forma de tener la del medio. */}
+        <fieldset className="mt-5">
+          <legend className="mb-2 text-xs uppercase tracking-wide text-hueso/60">
+            Quién puede reservar
+          </legend>
+          <div className="space-y-2">
+            {([
+              [ESTADO_DIA.abierta, 'Abierta al público',
+               'Aparece en el calendario del sitio y cualquiera puede reservar.'],
+              [ESTADO_DIA.privada, 'Solo nosotros',
+               'No aparece en el sitio. Para un evento privado o algo vendido aparte: ' +
+               'se ve acá con su cupo y sus reservas, y nadie puede comprar un lugar.'],
+              [ESTADO_DIA.cerrada, 'Cerrada',
+               'No se ofrece ni se atiende. Las reservas que ya hubiera no se borran.']
+            ] as const).map(([valor, titulo, ayuda]) => (
+              <label key={valor} className="flex cursor-pointer gap-3">
+                <input type="radio" name="estado" value={valor} className="mt-1"
+                  checked={f.estado === valor}
+                  onChange={() => setF({ ...f, estado: valor })} />
+                <span>
+                  <span className="block text-sm">{titulo}</span>
+                  <span className="block text-xs text-hueso/50">{ayuda}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
         <div className="mt-5 flex flex-wrap gap-3">
           <button onClick={() => guardar()} disabled={guardando}
             className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta disabled:opacity-50">
             {guardando ? 'Guardando…' : 'Guardar'}
           </button>
-          <button
-            onClick={() => {
-              const nuevo = cerrada ? ESTADO_DIA.abierta : ESTADO_DIA.cerrada;
-              setF({ ...f, estado: nuevo });
-              guardar({ estado: nuevo });
-            }}
-            disabled={guardando}
-            className={`rounded border px-4 py-2 text-sm ${
-              cerrada ? 'border-emerald-500/60 text-emerald-300'
-                      : 'border-red-500/60 text-red-300'}`}>
-            {cerrada ? 'Abrir este día' : 'Cerrar este día'}
-          </button>
           <span className="flex-1" />
           <button onClick={onCancelar}
             className="rounded border border-hueso/20 px-4 py-2 text-sm">Cancelar</button>
         </div>
-
-        <p className="mt-4 text-xs text-hueso/50">
-          Cerrar un día no borra sus reservas: deja de ofrecerse en el sitio y
-          sale en rojo acá.
-        </p>
       </>
     </Dialogo>
   );

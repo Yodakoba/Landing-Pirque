@@ -3,7 +3,7 @@
  * lo que se puede probar de verdad, y por eso vive separada de las rutas.
  */
 import type { Reserva, FechaHabil, Ocupacion, Semaforo } from './tipos.ts';
-import { TIPO_PAGO, ESTADO_PAGO, estaCerrado } from './columnas.ts';
+import { TIPO_PAGO, ESTADO_PAGO, estaCerrado, esPrivada } from './columnas.ts';
 import type { Fecha } from './fechas.ts';
 import { POR_DEFECTO } from './config.ts';
 
@@ -99,6 +99,8 @@ export function ocupacionDe(
   // Una sola definición de "cerrado", compartida con la pantalla de fechas.
   // Ver estaCerrado(): falla cerrando a propósito.
   const bloqueada = estaCerrado(dia.estado);
+  // Distinto de cerrada: recibe reservas, pero el sitio no la ofrece.
+  const privada = esPrivada(dia.estado);
 
   return {
     fecha: dia.fecha,
@@ -109,6 +111,7 @@ export function ocupacionDe(
     local,
     porCobrar,
     sinMonto,
+    privada,
     semaforo: bloqueada ? 'rojo' : semaforo(tomadas, dia.capacidad, cortes),
     bloqueada,
     notas: dia.notas || ''

@@ -40,35 +40,6 @@ export default function CalendarView() {
   const [creando, setCreando] = useState(false);
   const [editando, setEditando] = useState<Ocupacion | null>(null);
   const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
-  const [sincronizando, setSincronizando] = useState(false);
-  const [resumen, setResumen] = useState('');
-
-  /**
-   * Le pide a Shopify los pedidos recientes y anota lo que falte.
-   *
-   * Es la misma reconciliación que corre sola una vez al día; esto solo
-   * sirve para no esperar. Como guardarPedido() es idempotente, apretarlo
-   * de más no duplica nada.
-   */
-  async function sincronizar() {
-    setSincronizando(true);
-    setResumen('');
-    try {
-      const r = await fetch('/api/shopify/sincronizar', { headers: { 'x-panel': 'si' } });
-      const d = await r.json();
-      if (d.error) setResumen(d.error);
-      else {
-        setResumen(
-          `${d.revisados} pedidos revisados · ${d.creadas} nuevas · ${d.actualizadas} al día`
-        );
-        cargar();
-      }
-    } catch (e) {
-      setResumen(String(e));
-    } finally {
-      setSincronizando(false);
-    }
-  }
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [menus, setMenus] = useState<Menu[]>(POR_DEFECTO_MENUS);
 
@@ -136,19 +107,11 @@ export default function CalendarView() {
       {/* También está en la vista de cada día, pero ahí hay que entrar
           primero. Una reserva que llega por teléfono se anota sin saber
           todavía de qué día es: la fecha se elige en el formulario. */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
+      <div className="mb-6">
         <button onClick={() => setCreando(true)}
           className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta">
           Agregar reserva
         </button>
-
-        {/* La reconciliación corre sola una vez al día. Este botón es para
-            no esperar hasta mañana cuando se sospecha que falta algo. */}
-        <button onClick={sincronizar} disabled={sincronizando}
-          className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro disabled:opacity-50">
-          {sincronizando ? 'Revisando…' : 'Revisar Shopify ahora'}
-        </button>
-        {resumen && <span className="text-xs text-hueso/60">{resumen}</span>}
       </div>
 
       {editando && (
@@ -199,7 +162,10 @@ export default function CalendarView() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
           <div key={d.fecha}
-             className={`rounded border p-4 transition ${COLOR[d.semaforo]}`}>
+             className={`rounded border p-4 transition ${
+               d.privada && !d.bloqueada
+                 ? 'border-sky-400/50 bg-sky-400/5'
+                 : COLOR[d.semaforo]}`}>
             <div className="flex items-start justify-between gap-2">
               <a href={`/dia/${d.fecha}`} className="text-sm capitalize hover:text-oro">
                 {enPalabras(d.fecha)}
@@ -255,7 +221,13 @@ export default function CalendarView() {
 
             {d.bloqueada && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-red-400">
-                Bloqueado
+                Cerrado
+              </p>
+            )}
+            {d.privada && !d.bloqueada && (
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-sky-300">
+                Solo nosotros
+                <span className="ml-1 font-normal text-hueso/50">· no está en el sitio</span>
               </p>
             )}
             {d.notas && <p className="mt-1 text-xs text-hueso/50">{d.notas}</p>}
