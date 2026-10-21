@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import Nav from '@/components/Nav';
 
 export const metadata: Metadata = {
   title: 'Reservas — Brasas de Lo Pirque',
@@ -16,11 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/" className="font-bold tracking-widest text-sm uppercase text-oro">
               Reservas
             </a>
-            <nav className="flex gap-5 text-sm text-hueso/70">
-              <a href="/" className="hover:text-hueso">Calendario</a>
-              <a href="/fechas" className="hover:text-hueso">Fechas hábiles</a>
-              <a href="/config" className="hover:text-hueso">Configuración</a>
-            </nav>
+            <Nav />
           </div>
         </header>
         <main className="mx-auto max-w-6xl px-5 py-8">{children}</main>
