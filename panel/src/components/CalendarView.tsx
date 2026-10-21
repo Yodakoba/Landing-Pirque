@@ -34,6 +34,34 @@ const PUNTO: Record<Ocupacion['semaforo'], string> = {
 const pct = (n: number, de: number) =>
   de > 0 ? Math.min(100, (n / de) * 100) : 0;
 
+/** Un día que existe pero al que nadie le puso cupo todavía. */
+const sinConfigurar = (d: Ocupacion) =>
+  d.capacidad === 0 && !d.bloqueada;
+
+/**
+ * El color de la tarjeta, que dice de un vistazo **quién puede reservar**:
+ *
+ * - **verde / amarillo / rojo** — abierto al público, con su ocupación.
+ * - **azul** — privado: recibe reservas pero no está en el sitio.
+ * - **rojo apagado** — cerrado.
+ * - **gris** — sin configurar. No es lo mismo que cerrado, y confundirlos
+ *   era justo el error: un día que nadie tocó salía pintado de rojo como
+ *   si alguien lo hubiera cerrado a propósito.
+ */
+const COLOR_TARJETA = (d: Ocupacion) => {
+  if (d.bloqueada) return 'border-red-500/60 bg-red-500/5';
+  if (d.privada) return 'border-sky-400/50 bg-sky-400/5';
+  if (sinConfigurar(d)) return 'border-hueso/15 bg-hueso/[0.03]';
+  return COLOR[d.semaforo];
+};
+
+const PUNTO_TARJETA = (d: Ocupacion) => {
+  if (d.bloqueada) return '🔴';
+  if (d.privada) return '🔵';
+  if (sinConfigurar(d)) return '⚪';
+  return PUNTO[d.semaforo];
+};
+
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const [error, setError] = useState('');
@@ -177,19 +205,31 @@ export default function CalendarView() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
           <div key={d.fecha}
-             className={`rounded border p-4 transition ${
-               d.privada && !d.bloqueada
-                 ? 'border-sky-400/50 bg-sky-400/5'
-                 : COLOR[d.semaforo]}`}>
+             className={`rounded border p-4 transition ${COLOR_TARJETA(d)}`}>
             <div className="flex items-start justify-between gap-2">
               <a href={`/dia/${d.fecha}`} className="text-sm capitalize hover:text-oro">
                 {enPalabras(d.fecha)}
               </a>
-              <span aria-hidden>{PUNTO[d.semaforo]}</span>
+              <span aria-hidden>{PUNTO_TARJETA(d)}</span>
             </div>
 
-            {d.capacidad === 0 && !d.bloqueada ? (
-              <p className="mt-3 text-sm text-hueso/50">Sin capacidad definida</p>
+            {sinConfigurar(d) ? (
+              <>
+                {/* Un día que aparece solo porque tiene reservas: existe,
+                    pero nadie le puso cupo. Se muestran las personas igual
+                    —si no, una reserva quedaría invisible otra vez— y se
+                    dice qué falta. */}
+                <p className="mt-3 text-2xl font-bold">
+                  {d.tomadas}
+                  <span className="ml-1 text-xs font-normal text-hueso/50">
+                    {d.tomadas === 1 ? 'persona' : 'personas'}
+                  </span>
+                </p>
+                <p className="mt-2 text-xs text-hueso/60">
+                  Sin cupo definido. Apreta <strong>Editar</strong> para abrir
+                  este día o dejarlo privado.
+                </p>
+              </>
             ) : (
               <>
                 <p className="mt-3 text-2xl font-bold">
@@ -241,7 +281,7 @@ export default function CalendarView() {
             )}
             {d.privada && !d.bloqueada && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-sky-300">
-                Solo nosotros
+                Privado
                 <span className="ml-1 font-normal text-hueso/50">· no está en el sitio</span>
               </p>
             )}

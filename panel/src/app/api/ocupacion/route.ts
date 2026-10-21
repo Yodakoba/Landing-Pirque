@@ -59,7 +59,11 @@ export async function GET(req: Request) {
         // está en la hoja no está abierto, y mostrarlo con 60 lugares diría
         // que se puede reservar.
         fecha: f, capacidad: 0, apertura: cfg.horaApertura,
-        estado: 'Sin definir', notas: '', fila: -1
+        // Estado VACIO, no "Sin definir": estaCerrado() cierra todo lo que
+        // no reconoce —a propósito, falla cerrando— y con ese texto un día
+        // que nadie configuró todavía salía marcado como CERRADO, que es
+        // otra cosa. En blanco se lee como "sin novedad", que es lo que es.
+        estado: '', notas: '', fila: -1
       }
     );
     return NextResponse.json({
