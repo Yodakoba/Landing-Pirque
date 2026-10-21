@@ -164,7 +164,7 @@ export default function DiaEditor({
             {([
               [ESTADO_DIA.abierta, 'Abierta al público',
                'Aparece en el calendario del sitio y cualquiera puede reservar.'],
-              [ESTADO_DIA.privada, 'Solo nosotros',
+              [ESTADO_DIA.privada, 'Privado',
                'No aparece en el sitio. Para un evento privado o algo vendido aparte: ' +
                'se ve acá con su cupo y sus reservas, y nadie puede comprar un lugar.'],
               [ESTADO_DIA.cerrada, 'Cerrada',

@@ -781,6 +781,26 @@ ok(paraElSitio([abierto]).length === 1, 'y uno abierto si, para que la prueba si
 ok(paraElSitio([privado, abierto])[0].fecha === '2026-11-21',
    'mezclados, solo pasa el abierto');
 
+/* ---------- sin configurar NO es cerrado ---------- */
+// Un dia que aparece solo porque tiene reservas no tiene fila en la hoja, y
+// le cae un estado vacio. estaCerrado() cierra todo lo que no reconoce --a
+// proposito-- asi que con el texto "Sin definir" que se usaba antes, un dia
+// que nadie habia tocado salia pintado de rojo como si alguien lo hubiera
+// cerrado. Son dos cosas distintas.
+const sinTocar = ocupacionDe(
+  [r({ fecha: '2026-10-21', personas: 2 })],
+  dia({ fecha: '2026-10-21', capacidad: 0, estado: '' })
+);
+ok(sinTocar.bloqueada === false,
+   'un dia sin fila en la hoja NO esta cerrado: esta sin configurar');
+ok(sinTocar.privada === false, 'ni privado');
+ok(sinTocar.tomadas === 2,
+   'y sus reservas se cuentan igual: si no, volverian a quedar invisibles');
+
+// Pero el sitio tampoco lo ofrece, que es la garantia que importa.
+ok(paraElSitio([sinTocar]).length === 0,
+   'sin cupo definido el sitio no lo ofrece: anotar una reserva a mano no publica nada');
+
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
 
