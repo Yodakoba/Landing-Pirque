@@ -20,6 +20,7 @@ import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
 import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
+import { diaParaReservaManual } from './dias.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
@@ -800,6 +801,56 @@ ok(sinTocar.tomadas === 2,
 // Pero el sitio tampoco lo ofrece, que es la garantia que importa.
 ok(paraElSitio([sinTocar]).length === 0,
    'sin cupo definido el sitio no lo ofrece: anotar una reserva a mano no publica nada');
+
+/* ---------- anotar una reserva a mano abre el dia, en PRIVADO ---------- */
+// Anotar una reserva para un dia que no esta abierto lo dejaba gris y con
+// cupo 0: visible pero inservible. Ahora se abre solo.
+//
+// SIEMPRE COMO PRIVADO, nunca como publico: abrir un dia al publico es una
+// decision comercial --lo ve cualquiera, cualquiera compra-- y no puede ser
+// el efecto secundario de anotar una reserva de telefono.
+const cfgBase = { ...POR_DEFECTO, cupoNormal: 60, horaApertura: '13:00' };
+
+let nuevo = diaParaReservaManual(undefined, '2026-10-21', cfgBase);
+ok(nuevo !== null && nuevo.estado === ESTADO_DIA.privada,
+   'un dia que no existe se crea PRIVADO, no publico');
+ok(nuevo!.capacidad === 60, 'con el cupo de siempre');
+ok(nuevo!.fecha === '2026-10-21', 'y en la fecha que se pidio');
+
+// Un dia cerrado se abre, pero solo para nosotros.
+nuevo = diaParaReservaManual(
+  dia({ fecha: '2026-10-21', capacidad: 30, estado: ESTADO_DIA.cerrada }),
+  '2026-10-21', cfgBase);
+ok(nuevo !== null && nuevo.estado === ESTADO_DIA.privada, 'un dia cerrado pasa a privado');
+ok(nuevo!.capacidad === 30,
+   'y se le RESPETA el cupo que tenia: si alguien puso 30 a proposito, no se pisa con 60');
+
+// Lo que NO puede pasar: que un dia publico deje de serlo, ni al reves.
+ok(diaParaReservaManual(
+     dia({ fecha: '2026-11-14', capacidad: 60, estado: ESTADO_DIA.abierta }),
+     '2026-11-14', cfgBase) === null,
+   'un dia abierto y con cupo no se toca: anotar una reserva no lo despublica');
+ok(diaParaReservaManual(
+     dia({ fecha: '2026-11-14', capacidad: 60, estado: ESTADO_DIA.privada }),
+     '2026-11-14', cfgBase) === null,
+   'ni uno privado que ya estaba listo');
+
+// Un dia con fila pero sin cupo: se le pone cupo y se le respeta el estado.
+nuevo = diaParaReservaManual(
+  dia({ fecha: '2026-11-14', capacidad: 0, estado: ESTADO_DIA.abierta }),
+  '2026-11-14', cfgBase);
+ok(nuevo !== null && nuevo.capacidad === 60, 'se le pone el cupo de siempre');
+ok(nuevo!.estado === ESTADO_DIA.abierta,
+   'y SIGUE SIENDO PUBLICO: no se le quita al sitio un dia que ya ofrecia');
+
+// Ningun camino puede devolver un dia abierto al publico que no lo fuera.
+for (const antes of [undefined,
+                     dia({ estado: ESTADO_DIA.cerrada }),
+                     dia({ capacidad: 0, estado: '' })]) {
+  const despues = diaParaReservaManual(antes, '2026-10-21', cfgBase);
+  ok(despues === null || despues.estado !== ESTADO_DIA.abierta,
+     'anotar una reserva NUNCA deja un dia abierto al publico');
+}
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
