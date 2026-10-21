@@ -42,6 +42,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          sugeridos, sinFicha, esSi, aEntero, COL_TURNOS,
          nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
+         informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
          POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
@@ -1335,6 +1336,82 @@ ok(costoDelDia(turnosDelSabado, '2026-12-25') === 0, 'un día sin turnos no cues
 ok(aEntero('-5000') === 0, 'por defecto un monto negativo se recorta a cero');
 ok(aEntero('-5000', true) === -5000, 'el ajuste sí admite negativos: un descuento lo es');
 ok(aEntero('$44.000') === 44000, 'y se le entiende a un monto escrito a la chilena');
+
+
+/* ---------- el rango de un periodo ---------- */
+ok(JSON.stringify(rangoDelPeriodo('2026-11')) ===
+   JSON.stringify({ desde: '2026-11-01', hasta: '2026-11-30' }),
+   'un mes de 30 días termina el 30');
+ok(rangoDelPeriodo('2026-12').hasta === '2026-12-31',
+   'diciembre cruza el año sin salirse del mes');
+ok(rangoDelPeriodo('2024-02').hasta === '2024-02-29', 'y febrero bisiesto tiene 29');
+ok(rangoDelPeriodo('2026-02').hasta === '2026-02-28', 'el que no lo es, 28');
+
+const semana = rangoDelPeriodo('2026-11-14');   // sábado
+ok(semana.desde === '2026-11-09' && semana.hasta === '2026-11-15',
+   'una semana va de lunes a domingo, aunque se pida con un sábado');
+ok(rangoDelPeriodo('2026-11-09').desde === '2026-11-09',
+   'y pedirla con su lunes da lo mismo');
+
+/* ---------- el informe por periodo ---------- */
+const mes: Turno[] = [
+  // Ana: dos días, uno con horas extra y otro con descuento.
+  tu({ trabajador: 'Ana', fecha: '2026-11-14', asistencia: VINO.si,
+       pagoJornada: 30000, horasExtra: 2, valorHora: 4000 }),
+  tu({ trabajador: 'Ana', fecha: '2026-11-15', asistencia: VINO.si,
+       pagoJornada: 30000, ajuste: -5000, motivo: 'llegó tarde' }),
+  // Luis contratado: su jornada no suma, sus horas extra sí.
+  tu({ trabajador: 'Luis', fecha: '2026-11-14', asistencia: VINO.si,
+       modalidad: MODALIDAD.contratado, pagoJornada: 30000,
+       horasExtra: 3, valorHora: 4000 }),
+  // Pedro no llegó, y tiene un turno que nadie cerró.
+  tu({ trabajador: 'Pedro', fecha: '2026-11-14', asistencia: VINO.no,
+       pagoJornada: 30000 }),
+  tu({ trabajador: 'Pedro', fecha: '2026-11-21', asistencia: VINO.sinMarcar,
+       pagoJornada: 30000 }),
+  // Otro mes: no entra.
+  tu({ trabajador: 'Ana', fecha: '2026-12-05', asistencia: VINO.si,
+       pagoJornada: 99000 })
+];
+
+const noviembre = informeDelPeriodo(mes, '2026-11-01', '2026-11-30');
+ok(noviembre.length === 3, 'una línea por persona con turnos en el periodo');
+ok(noviembre[0].trabajador === 'Ana', 'ordenado por lo que más se paga');
+ok(noviembre[0].total === 30000 + 8000 + 30000 - 5000,
+   'suma jornadas, horas extra y ajustes de los días que vino');
+ok(noviembre[0].dias === 2 && noviembre[0].horasExtra === 2,
+   'y cuenta los días y las horas');
+ok(noviembre[0].ajustes === -5000, 'los ajustes conservan su signo');
+
+const luis = noviembre.find((l) => l.trabajador === 'Luis')!;
+ok(luis.jornadas === 0, 'un contratado suma cero en jornadas');
+ok(luis.total === 12000, 'pero sus horas extra sí se le pagan');
+
+// Quien no vino y quien quedó sin marcar NO desaparecen: si desaparecieran,
+// un día que nadie cerró se leería como que esa persona no trabajó.
+const pedro = noviembre.find((l) => l.trabajador === 'Pedro')!;
+ok(pedro.total === 0 && pedro.dias === 0, 'quien no llegó no cobra');
+ok(pedro.noVino === 1 && pedro.sinMarcar === 1,
+   'pero aparece igual, con sus turnos no venidos y sin marcar a la vista');
+
+ok(informeDelPeriodo(mes, '2026-12-01', '2026-12-31')[0].total === 99000,
+   'otro mes cuenta lo suyo');
+ok(informeDelPeriodo(mes, '2026-11-09', '2026-11-15')
+     .find((l) => l.trabajador === 'Ana')!.dias === 2,
+   'la misma función sirve para una semana: es un rango de fechas');
+ok(informeDelPeriodo(mes, '2026-11-16', '2026-11-22')
+     .every((l) => l.dias === 0),
+   'una semana sin nadie trabajado no inventa días');
+ok(informeDelPeriodo([], '2026-11-01', '2026-11-30').length === 0,
+   'sin turnos no hay informe');
+
+/* ---------- los periodos que existen ---------- */
+ok(JSON.stringify(mesesConTurnos(mes)) === JSON.stringify(['2026-12', '2026-11']),
+   'los meses con turnos van del más nuevo al más viejo');
+const sem = semanasConTurnos(mes);
+ok(sem[0] === '2026-11-30' && sem.includes('2026-11-09'),
+   'y las semanas se listan por su lunes, también de la más nueva a la más vieja');
+ok(new Set(sem).size === sem.length, 'sin repetir una semana con varios turnos');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

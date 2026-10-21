@@ -995,6 +995,47 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 | Plata | **no** | solo la suya |
 | A quién se manda | al grupo | a una persona |
 
+### El informe del equipo, por semana o por mes (2026-10-21)
+
+`/informe`, solo administrador. Por cada persona del periodo: días que vino,
+jornadas, horas extra, ajustes y total. Abajo, el total del periodo.
+
+**La descarga es el punto, no un extra.** Quien paga tiene que juntar la
+información de todos y pasarla a quien corresponda, y que esa pega sea
+copiar una tabla a mano es justo lo que esto viene a evitar. Por eso el CSV
+trae el **detalle día por día con el motivo de cada ajuste**, no los totales:
+los totales se miran en pantalla, el detalle es lo que se entrega.
+
+**Semana y mes son el mismo cálculo.** Por dentro es un rango de fechas
+(`informeDelPeriodo`), así que no hay dos versiones de la misma suma
+esperando a desalinearse. `rangoDelPeriodo()` distingue las dos por el largo
+del texto: `AAAA-MM` es un mes, `AAAA-MM-DD` es la semana de ese lunes.
+
+**Muestra a quien no vino y a quien quedó sin marcar, con total cero.** Una
+persona que desaparece del informe se lee como que no trabajó, y lo que pudo
+pasar es que nadie cerró ese día. Por eso además hay un aviso arriba cuando
+quedan turnos sin pasar lista: el total está incompleto mientras tanto, y
+conviene que eso se vea antes de pagar.
+
+**Un contratado suma cero en jornadas** y lo dice en su fila, porque su
+sueldo no sale de acá; lo que aparece son sus horas extra y ajustes.
+
+### Dónde está la línea entre el encargado y el administrador, en la plata
+
+Vale tenerla escrita porque no es obvia:
+
+- **Los montos de un día son del encargado.** Los escribe él al pasar lista
+  y los ve en la página de ese día. Es su trabajo.
+- **El informe del periodo es del administrador.** Lo que el encargado
+  necesita para cerrar un turno es el día que tiene delante, no el historial
+  de sueldos de todo el equipo.
+
+**Queda una pregunta abierta**: si "el encargado de pagos" es una persona
+distinta del administrador, hoy tendría que entrar con la cuenta de
+administrador —que abre también precios, configuración y cuentas—. Si hace
+falta, se agrega un cuarto rol que solo lea el informe. No se inventó uno
+por las dudas.
+
 ### Quién puede hacer qué (2026-10-21)
 
 Tres roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
@@ -1007,7 +1048,7 @@ Tres roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Puestos y su regla "uno cada N" | sí | — | — |
 | Precios, menús y configuración | sí | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — |
-| Cuentas del panel y bitácora | sí | — | — |
+| Cuentas del panel, bitácora e informe | sí | — | — |
 | Ver **sus propios** turnos | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
@@ -1194,9 +1235,9 @@ pidió y cuánto pagó no es dato de un turno.
   pero si ese monto se descuenta de una liquidación formal, los descuentos al
   sueldo tienen reglas en Chile. Conviene confirmarlo con quien les lleve la
   contabilidad antes de usarlo así.
-- **No hay un informe por persona ni por mes.** El link personal muestra los
-  últimos 30 días de cada uno, y la planilla tiene todo; una vista de
-  "cuánto se pagó en octubre" todavía no existe.
+- **Si "el encargado de pagos" no es el administrador**, hace falta decidir
+  si se le da un cuarto rol que solo lea `/informe`. Hoy entraría con la
+  cuenta de administrador, que abre bastante más que eso.
 
 ## Estilo y marca
 

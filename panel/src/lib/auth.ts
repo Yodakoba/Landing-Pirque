@@ -136,6 +136,15 @@ export const PERMISOS = {
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
   bitacora: [ROL.admin],
+  /**
+   * El informe del mes: cuánto se le pagó a cada persona.
+   *
+   * Es del administrador, aunque el encargado sí vea los montos de un día
+   * —los escribe él al pasar lista—. La línea está puesta a propósito ahí:
+   * lo que necesita para cerrar un turno es el día que tiene delante, no el
+   * historial de sueldos de todo el equipo.
+   */
+  informe: [ROL.admin],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */

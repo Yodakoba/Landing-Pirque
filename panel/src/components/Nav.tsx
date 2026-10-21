@@ -22,6 +22,7 @@ const PAGINAS = [
   { href: '/equipo', texto: 'Equipo', soloAdmin: false },
   { href: '/menus', texto: 'Menús', soloAdmin: true },
   { href: '/config', texto: 'Configuración', soloAdmin: true },
+  { href: '/informe', texto: 'Informe', soloAdmin: true },
   { href: '/usuarios', texto: 'Cuentas', soloAdmin: true },
   { href: '/bitacora', texto: 'Bitácora', soloAdmin: true }
 ];

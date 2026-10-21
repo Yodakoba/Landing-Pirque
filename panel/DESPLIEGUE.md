@@ -306,6 +306,18 @@ Lo que un trabajador necesita de su propio día —los menús que hay que
 preparar y lo que gana— está en **su link personal**, que es de una sola
 persona.
 
+## El informe del equipo: la planilla de pagos
+
+En **/informe**, solo administrador. Eliges **por semana** o **por mes**, y
+muestra por persona: días trabajados, jornadas, horas extra, ajustes y total.
+
+**Descargar planilla** baja un CSV con el **detalle día por día** —incluido
+el motivo de cada ajuste—, que es lo que sirve para entregarle a quien lleva
+los pagos. Los totales se miran en pantalla; el detalle es lo que se pasa.
+
+Si quedan turnos **sin pasar lista**, el informe lo avisa arriba: esos no
+suman, así que el total está incompleto hasta que se cierren.
+
 ## El equipo: tres pestañas más
 
 `Puestos`, `Trabajadores` y `Turnos`. Se editan en **/equipo**, salvo los

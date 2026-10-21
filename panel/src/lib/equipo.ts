@@ -12,7 +12,7 @@
  * archivo simplemente no las lee esa ruta.
  */
 import { normalizar, indices } from './columnas.ts';
-import { esFecha, type Fecha } from './fechas.ts';
+import { esFecha, semanaDe, sumarDias, type Fecha } from './fechas.ts';
 import { iguales } from './auth.ts';
 
 export const HOJA_PUESTOS = 'Puestos';
@@ -585,4 +585,114 @@ export function turnosDe(turnos: Turno[], nombre: string, desde: Fecha): Turno[]
   return turnos
     .filter((t) => normalizar(t.trabajador) === quien && t.fecha >= desde)
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+/* ---------- El informe del mes ---------- */
+
+export interface LineaInforme {
+  trabajador: string;
+  /** Cómo se le pagó. Si cambió a mitad de mes, queda la del último turno. */
+  modalidad: string;
+  /** Turnos en los que vino. */
+  dias: number;
+  /** Turnos en los que no llegó. */
+  noVino: number;
+  /** Turnos del mes a los que nadie les pasó lista todavía. */
+  sinMarcar: number;
+  /** Suma de jornadas de los días que vino. Un contratado suma cero. */
+  jornadas: number;
+  /** Cuántas horas extra, y cuánto suman. */
+  horasExtra: number;
+  montoHorasExtra: number;
+  /** Ajustes, con su signo. */
+  ajustes: number;
+  total: number;
+}
+
+/**
+ * Lo que se le debe a cada persona en un periodo, de `desde` a `hasta`
+ * **inclusive**, los dos como `AAAA-MM-DD`.
+ *
+ * Es por periodo y no por mes porque quien paga a veces paga por semana:
+ * la misma cuenta sirve para las dos, y tener dos funciones habría sido
+ * tener dos lugares donde arreglar el mismo error.
+ *
+ * **Incluye a quien no vino y a quien está sin marcar, con total cero.** Es a
+ * propósito: una persona que desaparece del informe se lee como que no
+ * trabajó, y lo que pasó puede ser que nadie cerró ese día. Ver esas
+ * columnas es lo que permite darse cuenta a tiempo.
+ *
+ * Las sumas salen de lo que quedó **escrito en cada turno**, no de la ficha
+ * del trabajador. Es la misma razón de siempre: subirle el sueldo a alguien
+ * en marzo no puede cambiar lo que se le pagó en noviembre.
+ */
+export function informeDelPeriodo(
+  turnos: Turno[], desde: Fecha, hasta: Fecha
+): LineaInforme[] {
+  const porPersona = new Map<string, LineaInforme>();
+
+  for (const t of turnos) {
+    if (t.fecha < desde || t.fecha > hasta) continue;
+    const clave = normalizar(t.trabajador);
+    if (!clave) continue;
+
+    let l = porPersona.get(clave);
+    if (!l) {
+      l = {
+        trabajador: t.trabajador, modalidad: t.modalidad,
+        dias: 0, noVino: 0, sinMarcar: 0,
+        jornadas: 0, horasExtra: 0, montoHorasExtra: 0, ajustes: 0, total: 0
+      };
+      porPersona.set(clave, l);
+    }
+    l.modalidad = t.modalidad;
+
+    if (t.asistencia === VINO.no) { l.noVino++; continue; }
+    if (t.asistencia !== VINO.si) { l.sinMarcar++; continue; }
+
+    l.dias++;
+    if (!esContratado(t.modalidad)) l.jornadas += t.pagoJornada || 0;
+    l.horasExtra += t.horasExtra || 0;
+    l.montoHorasExtra += (t.horasExtra || 0) * (t.valorHora || 0);
+    l.ajustes += t.ajuste || 0;
+    l.total += pagoDe(t);
+  }
+
+  // De lo que más se paga a lo que menos, y a igual monto por nombre: quien
+  // lee esto está repartiendo plata, y lo primero que busca es el total.
+  return [...porPersona.values()].sort(
+    (a, b) => b.total - a.total || a.trabajador.localeCompare(b.trabajador)
+  );
+}
+
+/** Los meses que tienen algún turno, del más nuevo al más viejo. */
+export function mesesConTurnos(turnos: Turno[]): string[] {
+  return [...new Set(turnos.map((t) => t.fecha.slice(0, 7)))].sort().reverse();
+}
+
+/**
+ * Las semanas que tienen algún turno, del lunes de cada una, de la más nueva
+ * a la más vieja.
+ */
+export function semanasConTurnos(turnos: Turno[]): Fecha[] {
+  return [...new Set(turnos.map((t) => semanaDe(t.fecha)))].sort().reverse();
+}
+
+/**
+ * El primer y el último día de un periodo.
+ *
+ * Un mes se escribe `AAAA-MM` y una semana `AAAA-MM-DD` (su lunes). Se
+ * distinguen por el largo, que es feo de mirar pero evita arrastrar un
+ * segundo parámetro por media aplicación.
+ */
+export function rangoDelPeriodo(periodo: string): { desde: Fecha; hasta: Fecha } {
+  if (periodo.length === 7) {
+    // Fin de mes sin aritmética de fechas: el día 1 del mes siguiente, menos
+    // uno. Así febrero y los años bisiestos salen solos.
+    const [a, m] = periodo.split('-').map(Number);
+    const siguiente = m === 12 ? `${a + 1}-01-01` : `${a}-${String(m + 1).padStart(2, '0')}-01`;
+    return { desde: `${periodo}-01`, hasta: sumarDias(siguiente, -1) };
+  }
+  const lunes = semanaDe(periodo);
+  return { desde: lunes, hasta: sumarDias(lunes, 6) };
 }
