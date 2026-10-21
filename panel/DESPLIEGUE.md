@@ -329,7 +329,7 @@ de cambiar un cupo se toma mirando la ocupación.
 |---|---|---|
 | **Abierta** | se ve, recibe reservas | se ofrece |
 | **Privada** | se ve, recibe reservas | **no se ofrece** |
-| **Cerrada** | se ve en rojo | no se ofrece |
+| **Cerrada** | **no se ve**, salvo que tenga reservas | no se ofrece |
 
 **El estado "Privada" existe por un caso concreto**: un día vendido entero
 como evento privado. Hay que verlo en el panel con su cupo y sus reservas,
@@ -338,6 +338,15 @@ que cualquiera puede comprar un lugar en el evento de otro.
 
 Sin ese estado, la única forma de ver ese día en el panel era abrirlo, y
 abrirlo lo publicaba. Eran dos cosas que no tenían por qué ir juntas.
+
+**Un día cerrado desaparece del calendario.** Cerrarlo es decir "este día
+no existe para nosotros", y dejarlo a la vista ensucia la pantalla con algo
+que no hay que hacer. Se reabre desde **"Agregar fecha"**, eligiendo esa
+fecha: la ventana avisa que ya estaba y deja cambiarle el estado.
+
+**Salvo que tenga reservas.** Ahí sí se muestra, en rojo y diciendo a
+cuánta gente hay que avisarle. Esconder ese día escondería a personas que
+ya reservaron, que es el único resultado peor que una vista sucia.
 
 **Privada no es cerrada**, y el código lo distingue: un día privado cuenta
 su cupo, suma sus menús en el total de la cocina y aparece en la plata por

@@ -852,6 +852,34 @@ for (const antes of [undefined,
      'anotar una reserva NUNCA deja un dia abierto al publico');
 }
 
+/* ---------- un dia cerrado desaparece, salvo que tenga gente ---------- */
+// Cerrar un dia es decir "este dia no existe para nosotros", asi que
+// dejarlo en el calendario ensucia la vista con algo que no hay que hacer.
+// Se reabre desde "Agregar fecha", que avisa que esa fecha ya estaba.
+//
+// El filtro vive en la ruta; esto fija la REGLA que aplica.
+const visible = (o: { bloqueada: boolean; tomadas: number }) =>
+  !o.bloqueada || o.tomadas > 0;
+
+ok(!visible(ocupacionDe([], dia({ estado: 'Cerrada' }))),
+   'un dia cerrado y vacio NO se muestra');
+ok(visible(ocupacionDe([], dia({ estado: 'Abierta' }))), 'uno abierto si');
+ok(visible(ocupacionDe([], dia({ estado: ESTADO_DIA.privada }))),
+   'y uno privado tambien: privado no es cerrado');
+
+// LA excepcion, que es la que importa: hay gente a la que hay que llamar.
+const cerradoConGente = ocupacionDe(
+  [r({ fecha: '2026-11-14', personas: 8 })],
+  dia({ fecha: '2026-11-14', estado: 'Cerrada' })
+);
+ok(visible(cerradoConGente),
+   'un dia cerrado CON reservas si se muestra: esconderlo esconderia a esas personas');
+ok(cerradoConGente.tomadas === 8, 'y con sus personas a la vista, para saber a cuantos avisarle');
+
+// Y lo de siempre: cerrado nunca llega al sitio, se vea o no en el panel.
+ok(paraElSitio([cerradoConGente]).length === 0,
+   'que se vea en el panel no lo devuelve al sitio');
+
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');
 

@@ -277,6 +277,12 @@ export default function CalendarView() {
             {d.bloqueada && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-red-400">
                 Cerrado
+                {d.tomadas > 0 && (
+                  <span className="ml-1 font-normal normal-case tracking-normal text-hueso/60">
+                    · con {d.tomadas} {d.tomadas === 1 ? 'persona' : 'personas'} ya
+                    reservada{d.tomadas === 1 ? '' : 's'}: hay a quién avisarle
+                  </span>
+                )}
               </p>
             )}
             {d.privada && !d.bloqueada && (

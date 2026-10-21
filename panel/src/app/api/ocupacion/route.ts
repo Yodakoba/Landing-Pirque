@@ -66,10 +66,18 @@ export async function GET(req: Request) {
         estado: '', notas: '', fila: -1
       }
     );
-    return NextResponse.json({
-      ocupacion: ocupacionDeTodos(reservas, dias, cfg.cortes),
-      config: cfg
-    });
+    // Un día CERRADO no se muestra: cerrarlo es decir "este día no existe
+    // para nosotros", y dejarlo en el calendario es ensuciar la vista con
+    // algo que no hay que hacer. Se reabre desde "Agregar fecha", que
+    // avisa que esa fecha ya estaba.
+    //
+    // **Salvo que tenga reservas.** Ahí hay gente que ya reservó y a la
+    // que probablemente haya que llamar: esconder el día escondería a esas
+    // personas, que es el único resultado peor que una vista sucia.
+    const ocupacion = ocupacionDeTodos(reservas, dias, cfg.cortes)
+      .filter((o) => !o.bloqueada || o.tomadas > 0);
+
+    return NextResponse.json({ ocupacion, config: cfg });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
