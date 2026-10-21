@@ -1028,10 +1028,25 @@ publicar algo plausible pero falso.
 Trabajar en la rama `claude/migrate-project-claude-code-hfqsyc`. Rama por
 defecto: `main`.
 
-**Junta los cambios; el PR lo pide el cliente.** Commitea y empuja a la rama
-a medida que avanzas, para que nada se pierda si se cae el contenedor, pero
-**no abras un PR hasta que te lo pidan**. Cuando haya un lote que valga la
-pena mergear, avisa y deja que decidan.
+**Junta los cambios y abre el PR tú** (cambiado el 2026-10-21). Commitea y
+empuja a la rama a medida que avanzas, para que nada se pierda si se cae el
+contenedor, y **cuando termines un lote que valga la pena mergear, abre el
+PR en la misma pasada** en vez de avisar y esperar.
+
+Antes la regla era la contraria —no abrir ninguno hasta que lo pidieran— y
+en la práctica terminaba en los dos esperando: el trabajo empujado sin PR y
+el cliente mirando el aviso amarillo de GitHub sin saber que tenía que
+apretarlo.
+
+**Abrir el PR no decide nada**: mergear sigue siendo del cliente, y es ahí
+donde revisa. Lo que cambia es que la revisión tiene dónde ocurrir sin un
+paso extra. El PR lleva **qué cambió y por qué**, no un listado de archivos:
+es el lugar donde queda escrito el motivo de una decisión, y buena parte de
+este CLAUDE.md salió de ahí.
+
+Esto **no cambia** la regla de proponer antes de aplicar: los cambios al
+contenido se siguen conversando antes de hacerlos. Lo que se abre solo es el
+PR de lo que ya se acordó.
 
 Ojo con el orden: el cliente suele mergear el PR abierto antes de que llegue
 el commit siguiente. Si el PR de esta rama ya está mergeado, lo que quede
