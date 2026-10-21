@@ -8,7 +8,8 @@
  */
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
-import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona } from './fechas.ts';
+import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
+         diasAbiertosEntre, mesDe, mesEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, camposDeShopify,
@@ -461,6 +462,43 @@ ok(delDia.find((m) => m.menu === 'Menú Niños')!.cantidad === 2,
 ok(delDia[0].cantidad >= delDia[delDia.length - 1].cantidad,
    'ordenado de mayor a menor, que es como se lee una lista de preparacion');
 ok(menusDe([]).length === 0, 'un dia sin reservas no muestra menus');
+
+/* ---------- la ventana de fechas que muestra el panel ---------- */
+// Antes eran "los proximos 8 dias abiertos", fijos en el codigo, asi que los
+// 90 dias configurados no se veian por ninguna parte. Ahora manda el RANGO.
+let ventana = diasAbiertosEntre('2026-10-21', '2026-11-21', [6, 0]);
+ok(ventana.length === 9,
+   'nueve dias: el 22 queda FUERA porque el rango termina el 21, y eso es lo correcto');
+ok(ventana[0] === '2026-10-24' && ventana[ventana.length - 1] === '2026-11-21',
+   'empieza en el primer dia abierto y termina dentro del rango');
+ok(ventana.every((f) => [6, 0].includes(diaSemana(f))), 'y todos caen en los dias que se abre');
+
+// Los bordes, que son donde esto se equivoca.
+ok(diasAbiertosEntre('2026-11-14', '2026-11-14', [6, 0]).length === 1,
+   'desde y hasta el mismo dia abierto cuenta ese dia: el rango es inclusivo');
+ok(diasAbiertosEntre('2026-11-16', '2026-11-16', [6, 0]).length === 0,
+   'y si ese unico dia no se abre, no hay ninguno');
+ok(diasAbiertosEntre('2026-11-21', '2026-11-14', [6, 0]).length === 0,
+   'las fechas al reves dan vacio, no una vuelta infinita');
+ok(diasAbiertosEntre('2026-11-01', '2026-11-30', [2]).every((f) => diaSemana(f) === 2),
+   'abrir solo los martes tambien funciona: no esta cableado al fin de semana');
+ok(diasAbiertosEntre('2026-11-01', '2026-11-07', []).length === 2,
+   'sin dias configurados se vuelve a sabado y domingo en vez de dejar la pantalla vacia');
+
+// 90 dias, que es el valor por defecto, tienen que caber.
+ok(diasAbiertosEntre('2026-10-21', sumarDias('2026-10-21', 90), [6, 0]).length === 26,
+   'los 90 dias por defecto son 26 fechas: eso es lo que antes se cortaba en 8');
+
+/* ---------- agrupar por mes ---------- */
+ok(mesDe('2026-11-14') === '2026-11', 'el mes sale de la fecha, como texto');
+ok(mesEnPalabras('2026-11') === 'noviembre 2026', 'y se muestra legible');
+ok(mesEnPalabras('2027-01') === 'enero 2027', 'con el ano correcto al cruzar diciembre');
+
+// El agrupado de la vista conserva el orden y corta donde cambia el mes.
+const porMes = new Map<string, number>();
+for (const f of ventana) porMes.set(mesDe(f), (porMes.get(mesDe(f)) ?? 0) + 1);
+ok([...porMes.keys()].join(',') === '2026-10,2026-11',
+   'una ventana a caballo entre dos meses da dos grupos, en orden');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

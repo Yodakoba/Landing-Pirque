@@ -87,6 +87,32 @@ export function proximosFinesDeSemana(
   return salida;
 }
 
+/**
+ * Todos los días que se abren entre dos fechas, inclusive.
+ *
+ * Distinto de proximosFinesDeSemana(), que cuenta días abiertos: acá manda
+ * **el rango**. Es lo que hace falta para respetar `dias_a_futuro` de la
+ * configuración, que está en días de calendario y no en "los próximos ocho
+ * sábados".
+ */
+export function diasAbiertosEntre(
+  desde: Fecha, hasta: Fecha, diasAbiertos: number[] = [6, 0]
+): Fecha[] {
+  const abre = diasAbiertos.length ? diasAbiertos : [6, 0];
+  const salida: Fecha[] = [];
+  // El tope de 800 vueltas es una red por si llegan fechas al revés o un
+  // rango absurdo: más de dos años no se dibuja en una pantalla igual.
+  for (let f = desde, i = 0; f <= hasta && i < 800; f = sumarDias(f, 1), i++) {
+    if (abre.includes(diaSemana(f))) salida.push(f);
+  }
+  return salida;
+}
+
+/** "2026-11-14" -> "2026-11". Para agrupar. */
+export function mesDe(f: Fecha): string {
+  return f.slice(0, 7);
+}
+
 const MESES = ['enero','febrero','marzo','abril','mayo','junio',
                'julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -95,4 +121,10 @@ const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábad
 export function enPalabras(f: Fecha): string {
   const [, m, d] = f.split('-').map(Number);
   return `${DIAS[diaSemana(f)]} ${d} de ${MESES[m - 1]}`;
+}
+
+/** "2026-11" -> "noviembre 2026". Para los encabezados de mes. */
+export function mesEnPalabras(mes: string): string {
+  const [a, m] = mes.split('-').map(Number);
+  return `${MESES[m - 1] ?? mes} ${a}`;
 }

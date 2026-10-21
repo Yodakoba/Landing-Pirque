@@ -1,28 +1,50 @@
 import { NextResponse } from 'next/server';
 import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
-import { proximosFinesDeSemana, hoy } from '@/lib/fechas';
+import { diasAbiertosEntre, hoy, sumarDias } from '@/lib/fechas';
 import type { FechaHabil } from '@/lib/tipos';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * La ocupación de los próximos fines de semana.
+ * La ocupación de los días que vienen.
  *
- * Los días salen de la hoja "Fechas Hábiles". Los fines de semana que
- * todavía no están en esa hoja se muestran igual, en gris y con capacidad 0:
- * así se ve de inmediato cuáles faltan por abrir, en vez de que simplemente
- * no aparezcan.
+ * **Hasta dónde llega lo decide `dias_a_futuro` de la configuración**, no un
+ * número en el código. Antes eran "los próximos 8 días abiertos", fijos: el
+ * panel mostraba cuatro fines de semana y los 90 días configurados no se
+ * veían por ninguna parte.
+ *
+ * Los días salen de dos lugares que se unen:
+ *
+ *   1. La regla —qué días de la semana se abre— dentro de la ventana.
+ *   2. **Lo que haya en la hoja dentro de esa ventana**, aunque no calce con
+ *      la regla. Un viernes abierto a mano para un feriado es justamente lo
+ *      que no hay que esconder.
+ *
+ * Un día que la regla abre pero que todavía no está en la hoja se muestra
+ * igual, en gris y con capacidad 0: así se ve cuáles faltan por abrir, en
+ * vez de que simplemente no aparezcan.
  */
 export async function GET(req: Request) {
   try {
-    const cuantos = Number(new URL(req.url).searchParams.get('dias')) || 8;
+    // El parámetro sigue existiendo para poder pedir otra ventana a mano,
+    // pero el valor de siempre sale de la planilla.
+    const pedido = Number(new URL(req.url).searchParams.get('dias'));
     const [reservas, fechas, cfg] = await Promise.all([
       leerReservas(), leerFechas(), leerConfig()
     ]);
 
+    const desde = hoy();
+    const hasta = sumarDias(desde, pedido > 0 ? pedido : cfg.diasAFuturo);
+
     const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
-    const dias: FechaHabil[] = proximosFinesDeSemana(hoy(), cuantos, cfg.diasAbiertos).map(
+    const porRegla = diasAbiertosEntre(desde, hasta, cfg.diasAbiertos);
+    // Lo de la hoja que cae en la ventana y que la regla no habría incluido.
+    const aMano = fechas
+      .map((f) => f.fecha)
+      .filter((f) => f >= desde && f <= hasta && !porRegla.includes(f));
+
+    const dias: FechaHabil[] = [...new Set([...porRegla, ...aMano])].sort().map(
       (f) => porFecha.get(f) ?? {
         // Capacidad 0 a propósito, no el cupo normal: un día que todavía no
         // está en la hoja no está abierto, y mostrarlo con 60 lugares diría
