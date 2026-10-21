@@ -983,10 +983,18 @@ demás.**
 - En `/mi/` **no se dibuja la barra del panel**: todos sus enlaces le
   pedirían una contraseña que no tiene.
 
-**Lo que ve el trabajador**: qué día, a qué hora, en qué puesto y cuánta
-gente se espera. No ve reservas, ni montos, ni a los demás trabajadores.
-*(Lo de "cuánta gente se espera" lo decidí yo porque es útil para saber cómo
-viene el día; si el cliente prefiere que no lo vea, es una línea.)*
+**Lo que ve el trabajador**: qué día, a qué hora, en qué puesto, cuánta
+gente se espera y **qué menús hay que preparar** — "30 × Tradiciones · 8 ×
+Niños".
+
+El desglose por menú lo pidió el cliente el 2026-10-21 pensando en la
+cocina, y **va para todos los puestos por igual**, también por decisión
+suya: saber qué viene sirve lo mismo para montar las mesas que para calcular
+la parrilla, y hacer dos versiones de esta página sería mantener dos.
+
+**No ve reservas, ni nombres de clientes, ni montos, ni a los demás
+trabajadores.** Los totales por menú son cuánto hay que cocinar; quién lo
+pidió y cuánto pagó no es dato de un turno.
 
 ### Lo que falta decidir
 

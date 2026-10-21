@@ -11,11 +11,20 @@
  * pueda llamar con un token prestado para sacar datos en bruto: lo único que
  * sale de acá es el HTML ya recortado de una persona.
  *
- * Lo que muestra está elegido a la mano: qué día, a qué hora, en qué puesto
- * y cuánta gente se espera. **No muestra reservas, ni montos, ni a los demás
- * trabajadores.** Un turno no necesita saber quién viene a comer.
+ * Lo que muestra está elegido a la mano: qué día, a qué hora, en qué puesto,
+ * cuánta gente se espera y **qué menús hay que preparar**. Lo último lo pidió
+ * el cliente pensando en la cocina, y va para todos los puestos por igual:
+ * saber que vienen 30 Tradiciones y 8 de niños sirve lo mismo para montar
+ * las mesas que para calcular la parrilla, y hacer dos versiones de esta
+ * página sería mantener dos.
+ *
+ * **No muestra reservas, ni nombres de clientes, ni montos, ni a los demás
+ * trabajadores.** Los totales por menú son cuánto hay que cocinar; quién lo
+ * pidió y cuánto pagó no es dato de un turno.
  */
-import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas } from '@/lib/datos';
+import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
+         leerMenus } from '@/lib/datos';
+import { menusDe } from '@/lib/shopify';
 import { trabajadorPorToken, turnosDe } from '@/lib/equipo';
 import { ocupaLugar } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
@@ -23,7 +32,7 @@ import { enPalabras, hoy } from '@/lib/fechas';
 export const dynamic = 'force-dynamic';
 
 export default async function Pagina({ params }: { params: { token: string } }) {
-  const [gente, turnos, fechas, cfg, reservas] = await Promise.all([
+  const [gente, turnos, fechas, cfg, reservas, catalogo] = await Promise.all([
     leerTrabajadores(), leerTurnos(),
     // Igual que las reservas: la hora de apertura y las notas del día son un
     // extra. `leerFechas()` no atrapa sus errores —las pantallas del panel
@@ -32,7 +41,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
     // Cuánta gente se espera es un extra: si no se puede leer, la página
     // igual tiene que decirle a la persona qué día y en qué puesto trabaja.
     // Sin esto, una falla al leer las reservas le devolvía un error 500.
-    leerReservas().catch(() => [])
+    leerReservas().catch(() => []),
+    // El catálogo solo sirve para escribir bien los nombres de los menús.
+    // Si no se puede leer, los totales salen igual con el nombre crudo.
+    leerMenus().catch(() => [])
   ]);
 
   // La lista vacía no es "tu link no sirve": no existe el caso de un token
@@ -71,9 +83,9 @@ export default async function Pagina({ params }: { params: { token: string } }) 
   const desde = hoy();
   const mios = turnosDe(turnos, quien.nombre, desde);
   const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
-  const personasDe = (fecha: string) => reservas
-    .filter((r) => r.fecha === fecha && ocupaLugar(r))
-    .reduce((s, r) => s + (Number(r.personas) || 0), 0);
+  const delDia = (fecha: string) => reservas.filter((r) => r.fecha === fecha && ocupaLugar(r));
+  const personasDe = (fecha: string) =>
+    delDia(fecha).reduce((s, r) => s + (Number(r.personas) || 0), 0);
 
   return (
     <section className="mx-auto max-w-md">
@@ -90,6 +102,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           {mios.map((t) => {
             const dia = porFecha.get(t.fecha);
             const personas = personasDe(t.fecha);
+            const menus = menusDe(delDia(t.fecha), catalogo);
             return (
               <li key={t.fecha + t.puesto}
                   className="rounded border border-hueso/15 bg-hueso/[0.03] p-4">
@@ -104,6 +117,23 @@ export default async function Pagina({ params }: { params: { token: string } }) 
                       {personas === 1 ? '' : 's'}</>
                   )}
                 </p>
+                {menus.length > 0 && (
+                  <>
+                    <p className="mt-3 text-xs uppercase tracking-widest text-hueso/40">
+                      Qué se prepara
+                    </p>
+                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                      {menus.map(({ menu, cantidad }) => (
+                        <li key={menu}
+                            className="rounded border border-hueso/15 bg-hueso/5 px-2 py-1 text-xs">
+                          <strong className="tabular-nums text-oro">{cantidad}</strong>
+                          <span className="text-hueso/50"> × </span>
+                          <span className="text-hueso/80">{menu}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
                 {dia?.notas && <p className="mt-2 text-xs text-hueso/50">{dia.notas}</p>}
               </li>
             );
