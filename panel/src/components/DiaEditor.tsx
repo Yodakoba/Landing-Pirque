@@ -20,33 +20,51 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function DiaEditor({
-  dia, cupoNormal, apertura, onListo, onCancelar
+  dia, cupoNormal, apertura, fechasExistentes = [], onListo, onCancelar
 }: {
-  dia: Ocupacion;
+  /** El día a editar, o `null` para agregar uno que todavía no existe. */
+  dia: Ocupacion | null;
   cupoNormal: number;
   apertura: string;
+  /** Las fechas que ya están en la hoja, solo para avisar si se repite una. */
+  fechasExistentes?: string[];
   onListo: () => void;
   onCancelar: () => void;
 }) {
+  // Agregar una fecha y editar una existente son la misma ventana a
+  // propósito: los campos son los mismos y la validación también. Lo único
+  // que cambia es si la fecha se elige o viene dada.
+  const nueva = dia === null;
+
   // Un día que todavía no está en la hoja viene con capacidad 0: se propone
   // el cupo normal, que es lo que se va a querer casi siempre.
-  const sinDefinir = dia.capacidad === 0 && !dia.bloqueada;
+  const sinDefinir = !dia || (dia.capacidad === 0 && !dia.bloqueada);
   const [f, setF] = useState({
-    capacidad: String(sinDefinir ? cupoNormal : dia.capacidad),
+    fecha: dia?.fecha ?? '',
+    capacidad: String(sinDefinir ? cupoNormal : dia!.capacidad),
     apertura: apertura,
-    estado: dia.bloqueada ? ESTADO_DIA.cerrada
-          : dia.privada ? ESTADO_DIA.privada
+    estado: dia?.bloqueada ? ESTADO_DIA.cerrada
+          : dia?.privada ? ESTADO_DIA.privada
           : ESTADO_DIA.abierta,
-    notas: dia.notas ?? ''
+    notas: dia?.notas ?? ''
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
+  // Guardar una fecha que ya está en la hoja la REEMPLAZA, no la duplica.
+  // Es lo correcto, pero conviene decirlo antes y no después.
+  const yaEstaba = nueva && f.fecha !== '' && fechasExistentes.includes(f.fecha);
+
 
   async function guardar(cambios?: Partial<typeof f>) {
+    if (nueva && !f.fecha) return setError('Elige una fecha.');
     setGuardando(true);
     setError('');
-    const cuerpo = { fecha: dia.fecha, ...f, ...cambios, capacidad: Number((cambios ?? f).capacidad ?? f.capacidad) };
+    const cuerpo = {
+      ...f, ...cambios,
+      fecha: dia?.fecha ?? f.fecha,
+      capacidad: Number((cambios ?? f).capacidad ?? f.capacidad)
+    };
     try {
       const r = await fetch('/api/fechas', {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -60,15 +78,38 @@ export default function DiaEditor({
   }
 
   return (
-    <Dialogo titulo={enPalabras(dia.fecha)} onCerrar={onCancelar}>
+    <Dialogo
+      titulo={nueva ? 'Agregar fecha' : enPalabras(dia!.fecha)}
+      onCerrar={onCancelar}>
       <>
-        <p className="mt-2 text-sm text-hueso/60">
-          {dia.tomadas > 0
-            ? `${dia.tomadas} personas ya reservaron este día.`
-            : 'Todavía no hay reservas este día.'}
-        </p>
+        {nueva ? (
+          <p className="mt-2 text-sm text-hueso/60">
+            Para abrir un día que no cae en el horario de siempre: un feriado,
+            una fecha especial, o un evento privado.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-hueso/60">
+            {dia!.tomadas > 0
+              ? `${dia!.tomadas} personas ya reservaron este día.`
+              : 'Todavía no hay reservas este día.'}
+          </p>
+        )}
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {nueva && (
+            <label className="block sm:col-span-2">
+              <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
+                Fecha
+              </span>
+              <input type="date" className={ENTRADA} value={f.fecha} autoFocus
+                onChange={(e) => setF({ ...f, fecha: e.target.value })} />
+              {f.fecha && (
+                <span className="mt-1 block text-xs capitalize text-hueso/50">
+                  {enPalabras(f.fecha)}
+                </span>
+              )}
+            </label>
+          )}
           <label className="block">
             <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
               Cupo
@@ -96,9 +137,16 @@ export default function DiaEditor({
           </label>
         </div>
 
-        {Number(f.capacidad) > 0 && Number(f.capacidad) < dia.tomadas && (
+        {yaEstaba && (
           <p className="mt-3 rounded border border-amber-500/50 bg-amber-500/5 p-3 text-sm text-amber-200">
-            Ese cupo es menor que las {dia.tomadas} personas que ya reservaron.
+            Esa fecha ya está en la lista. Guardar va a reemplazar su cupo,
+            su hora y su estado por lo que pongas acá.
+          </p>
+        )}
+
+        {!nueva && Number(f.capacidad) > 0 && Number(f.capacidad) < dia!.tomadas && (
+          <p className="mt-3 rounded border border-amber-500/50 bg-amber-500/5 p-3 text-sm text-amber-200">
+            Ese cupo es menor que las {dia!.tomadas} personas que ya reservaron.
             Se puede guardar igual, pero el día va a quedar sobrevendido.
           </p>
         )}
@@ -138,7 +186,7 @@ export default function DiaEditor({
         <div className="mt-5 flex flex-wrap gap-3">
           <button onClick={() => guardar()} disabled={guardando}
             className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta disabled:opacity-50">
-            {guardando ? 'Guardando…' : 'Guardar'}
+            {guardando ? 'Guardando…' : nueva ? 'Agregar' : 'Guardar'}
           </button>
           <span className="flex-1" />
           <button onClick={onCancelar}

@@ -39,6 +39,11 @@ export default function CalendarView() {
   const [error, setError] = useState('');
   const [creando, setCreando] = useState(false);
   const [editando, setEditando] = useState<Ocupacion | null>(null);
+  // Agregar una fecha usa la MISMA ventana que editar una: `editando` en
+  // null no alcanza para distinguir "ninguna" de "una nueva", así que la
+  // intención va aparte.
+  const [agregandoFecha, setAgregandoFecha] = useState(false);
+  const [fechasEnLaHoja, setFechasEnLaHoja] = useState<string[]>([]);
   const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [menus, setMenus] = useState<Menu[]>(POR_DEFECTO_MENUS);
@@ -55,6 +60,11 @@ export default function CalendarView() {
       .catch((e) => setError(String(e)));
     // Solo para los nombres de menú del formulario manual; si falla, el
     // calendario se dibuja igual y el formulario deja escribirlos a mano.
+    // Solo para avisar si una fecha nueva ya estaba en la hoja.
+    fetch('/api/fechas')
+      .then((r) => r.json())
+      .then((d) => d.fechas && setFechasEnLaHoja(d.fechas.map((x: { fecha: string }) => x.fecha)))
+      .catch(() => {});
     fetch('/api/reservas')
       .then((r) => r.json())
       .then((d) => {
@@ -107,20 +117,25 @@ export default function CalendarView() {
       {/* También está en la vista de cada día, pero ahí hay que entrar
           primero. Una reserva que llega por teléfono se anota sin saber
           todavía de qué día es: la fecha se elige en el formulario. */}
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3">
         <button onClick={() => setCreando(true)}
           className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta">
           Agregar reserva
         </button>
+        <button onClick={() => setAgregandoFecha(true)}
+          className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro">
+          Agregar fecha
+        </button>
       </div>
 
-      {editando && (
+      {(editando || agregandoFecha) && (
         <DiaEditor
           dia={editando}
           cupoNormal={cfg.cupoNormal}
           apertura={cfg.horaApertura}
-          onListo={() => { setEditando(null); cargar(); }}
-          onCancelar={() => setEditando(null)}
+          fechasExistentes={fechasEnLaHoja}
+          onListo={() => { setEditando(null); setAgregandoFecha(false); cargar(); }}
+          onCancelar={() => { setEditando(null); setAgregandoFecha(false); }}
         />
       )}
 
