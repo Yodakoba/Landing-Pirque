@@ -26,11 +26,30 @@
 import { normalizar } from './columnas.ts';
 
 export const HOJA_MENUS = 'Menús';
-export const COL_MENUS = { menu: 'Menú' } as const;
+export const COL_MENUS = {
+  menu: 'Menú',
+  precioEnLinea: 'Precio en línea',
+  precioEnLocal: 'Precio en el local'
+} as const;
 
 export interface Menu {
   /** Como se escribe, como se muestra, y como se llama en Shopify. */
   nombre: string;
+  /**
+   * Los dos precios, en pesos. Cero significa **sin precio puesto**, no
+   * gratis: así se distingue "nadie lo ha llenado" de "vale cero".
+   *
+   * **Son dos porque el negocio tiene dos modalidades**: pagar por
+   * adelantado sale más barato que pagar en el local. Un precio solo
+   * obligaría a elegir cuál de los dos mentir.
+   *
+   * **Solo rigen para las reservas hechas a mano.** Lo que viene de Shopify
+   * trae su propio total y ese manda: la tienda es la que cobra. Por eso
+   * esto no es una segunda verdad sobre el precio — es la única que hay
+   * cuando no hay pedido de Shopify de dónde sacarlo.
+   */
+  precioEnLinea: number;
+  precioEnLocal: number;
 }
 
 /**
@@ -41,13 +60,29 @@ export interface Menu {
  * landing y en CLAUDE.md. Esta lista es solo el punto de partida: vive en la
  * planilla y se edita ahí.
  */
+/**
+ * Los precios nacen en CERO a propósito, o sea sin poner.
+ *
+ * Los montos existen escritos en el proyecto, pero están incompletos —hay
+ * precio en línea para dos de los cinco y precio en el local para otros
+ * cuatro— y son de la tienda de desarrollo. Sembrar una tabla a medias es
+ * peor que dejarla vacía: la mitad correcta hace confiar en la otra mitad.
+ * Los llena el cliente en /menus, que es de donde salen los precios.
+ */
 export const POR_DEFECTO_MENUS: Menu[] = [
-  { nombre: 'Tradiciones' },
-  { nombre: 'Lo Pirque' },
-  { nombre: 'A Brasas abiertas' },
-  { nombre: 'Sommelier' },
-  { nombre: 'Niños' }
+  { nombre: 'Tradiciones', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'Lo Pirque', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'A Brasas abiertas', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'Sommelier', precioEnLinea: 0, precioEnLocal: 0 },
+  { nombre: 'Niños', precioEnLinea: 0, precioEnLocal: 0 }
 ];
+
+/** Un monto escrito a mano. Aguanta "$44.000", "44000" y "44 000". */
+export function aMonto(v: unknown): number {
+  const n = Number(String(v ?? '').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}\b)/g, '')
+    .replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+}
 
 /** Las filas de la pestaña `Menús` como lista. */
 export function leerMenusDe(filas: string[][]): Menu[] {
@@ -57,14 +92,36 @@ export function leerMenusDe(filas: string[][]): Menu[] {
     const nombre = String(filas[i]?.[0] ?? '').trim();
     if (!nombre || vistos.has(normalizar(nombre))) continue;
     vistos.add(normalizar(nombre));
-    salida.push({ nombre });
+    salida.push({
+      nombre,
+      precioEnLinea: aMonto(filas[i]?.[1]),
+      precioEnLocal: aMonto(filas[i]?.[2])
+    });
   }
   return salida;
 }
 
 /** La lista como filas, para escribirla de vuelta. */
 export function aFilasMenus(menus: Menu[]): string[][] {
-  return [[COL_MENUS.menu], ...menus.map((m) => [m.nombre])];
+  // Un precio en cero se escribe en blanco, no como "0": en la planilla un
+  // cero se lee como "vale cero" y lo que queremos decir es "sin poner".
+  const monto = (n: number) => (n > 0 ? String(n) : '');
+  return [
+    [COL_MENUS.menu, COL_MENUS.precioEnLinea, COL_MENUS.precioEnLocal],
+    ...menus.map((m) => [m.nombre, monto(m.precioEnLinea), monto(m.precioEnLocal)])
+  ];
+}
+
+/**
+ * El precio que corresponde a un menú según cómo se paga.
+ *
+ * Devuelve 0 si no hay precio puesto, y quien llame decide qué hacer con
+ * eso. Acá no se adivina el otro precio ni se inventa un recargo: el
+ * recargo de pagar en el local es dato del negocio y puede cambiar.
+ */
+export function precioDe(menu: Menu | undefined, enElLocal: boolean): number {
+  if (!menu) return 0;
+  return enElLocal ? menu.precioEnLocal : menu.precioEnLinea;
 }
 
 /**

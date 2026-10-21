@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { leerMenus, guardarMenus } from '@/lib/datos';
-import type { Menu } from '@/lib/menus';
+import { aMonto, type Menu } from '@/lib/menus';
 import { normalizar } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,11 @@ export async function PUT(req: Request) {
       const nombre = String(m?.nombre ?? '').trim();
       if (!nombre || vistos.has(normalizar(nombre))) continue;
       vistos.add(normalizar(nombre));
-      limpia.push({ nombre });
+      limpia.push({
+        nombre,
+        precioEnLinea: aMonto(m?.precioEnLinea),
+        precioEnLocal: aMonto(m?.precioEnLocal)
+      });
     }
     await guardarMenus(limpia);
     return NextResponse.json({ menus: limpia });

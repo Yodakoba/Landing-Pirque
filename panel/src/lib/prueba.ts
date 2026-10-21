@@ -9,7 +9,8 @@
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
-         diasAbiertosEntre, mesDe, mesEnPalabras } from './fechas.ts';
+         diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe,
+         rangoEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
@@ -23,8 +24,8 @@ import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales } from './auth.ts';
 import { filaReserva, buscarFilaPorId } from './filas.ts';
 import { firmaValida } from './firma.ts';
-import { canonizar, desconocidos, leerMenusDe, aFilasMenus,
-         POR_DEFECTO_MENUS } from './menus.ts';
+import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
+         POR_DEFECTO_MENUS, type Menu } from './menus.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -587,8 +588,8 @@ ok(desconocidos(['Nuevo', 'nuevo', 'NUEVO'], POR_DEFECTO_MENUS).length === 1,
 
 /* ---------- ida y vuelta a la planilla ---------- */
 const filasMenus = aFilasMenus(POR_DEFECTO_MENUS);
-ok(filasMenus[0][0] === 'Menú' && filasMenus[0].length === 1,
-   'una sola columna: el nombre');
+ok(filasMenus[0].join('|') === 'Menú|Precio en línea|Precio en el local',
+   'tres columnas: el nombre y los dos precios');
 ok(filasMenus.length === POR_DEFECTO_MENUS.length + 1, 'una fila por menu, mas el encabezado');
 ok(JSON.stringify(leerMenusDe(filasMenus)) === JSON.stringify(POR_DEFECTO_MENUS),
    'escribir y volver a leer devuelve exactamente la misma lista');
@@ -597,6 +598,52 @@ ok(leerMenusDe([['Menú'], ['']]).length === 0,
 ok(leerMenusDe([['Menú'], ['Tradiciones'], ['TRADICIONES']]).length === 1,
    'y el mismo nombre dos veces no crea dos menus');
 ok(POR_DEFECTO_MENUS.length === 5, 'los cuatro niveles del landing mas el de ninos');
+
+/* ---------- los precios, que solo rigen para las reservas a mano ---------- */
+ok(POR_DEFECTO_MENUS.every((m) => m.precioEnLinea === 0 && m.precioEnLocal === 0),
+   'nacen SIN PRECIO: sembrar una tabla a medias es peor que dejarla vacia');
+
+ok(aMonto('$44.000') === 44000, 'un monto en formato chileno se entiende');
+ok(aMonto('44000') === 44000, 'y uno pelado');
+ok(aMonto('44 000') === 44000, 'y con espacio');
+ok(aMonto('') === 0 && aMonto(null) === 0, 'lo vacio es cero, o sea sin poner');
+ok(aMonto('-5000') === 0, 'un negativo no es un precio');
+ok(aMonto('abc') === 0, 'ni una palabra');
+
+const conPrecio: Menu[] = [
+  { nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
+  { nombre: 'Ni\u00f1os', precioEnLinea: 19000, precioEnLocal: 24000 }
+];
+ok(precioDe(conPrecio[0], false) === 44000, 'pagando por adelantado rige el precio en linea');
+ok(precioDe(conPrecio[0], true) === 49000, 'y pagando en el local, el otro');
+ok(precioDe(undefined, false) === 0, 'un menu que no esta en la lista no tiene precio');
+ok(precioDe({ nombre: 'X', precioEnLinea: 0, precioEnLocal: 0 }, false) === 0,
+   'y uno sin precio puesto devuelve cero, no un numero inventado');
+
+// Un cero no se escribe como "0" en la planilla: un cero se lee como
+// "vale cero" y lo que queremos decir es "sin poner".
+ok(aFilasMenus([{ nombre: 'X', precioEnLinea: 0, precioEnLocal: 5000 }])[1].join('|') ===
+   'X||5000',
+   'un precio en cero se guarda en blanco, no como cero');
+ok(leerMenusDe(aFilasMenus(conPrecio))[0].precioEnLinea === 44000,
+   'escribir y volver a leer conserva los precios');
+
+
+/* ---------- agrupar el calendario por semana ---------- */
+// La semana parte en LUNES, que es la convencion chilena y la que ya usa el
+// calendario del sitio.
+ok(semanaDe('2026-10-24') === '2026-10-19', 'un sabado cae en la semana que empezo el lunes 19');
+ok(semanaDe('2026-10-25') === '2026-10-19',
+   'y su domingo en la MISMA: un fin de semana no se parte en dos');
+ok(semanaDe('2026-10-19') === '2026-10-19', 'el lunes es su propio inicio de semana');
+ok(semanaDe('2026-10-26') === '2026-10-26', 'y el lunes siguiente ya es otra');
+
+ok(rangoEnPalabras(['2026-10-24', '2026-10-25']) === '24 – 25 de octubre',
+   'un fin de semana se nombra como rango');
+ok(rangoEnPalabras(['2026-10-31']) === '31 de octubre', 'un dia solo, sin rango');
+ok(rangoEnPalabras(['2026-10-31', '2026-11-01']) === '31 de octubre – 1 de noviembre',
+   'y si cruza de mes se nombran los dos, que es cuando no nombrarlos confunde');
+ok(rangoEnPalabras([]) === '', 'sin dias no se nombra nada');
 
 /* ---------- la credencial del panel ---------- */
 const basic = (u: string, c: string) => 'Basic ' + Buffer.from(u + ':' + c).toString('base64');

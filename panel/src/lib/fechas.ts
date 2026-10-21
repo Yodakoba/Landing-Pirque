@@ -128,3 +128,30 @@ export function mesEnPalabras(mes: string): string {
   const [a, m] = mes.split('-').map(Number);
   return `${MESES[m - 1] ?? mes} ${a}`;
 }
+
+/**
+ * El lunes de la semana de una fecha, como texto. Para agrupar.
+ *
+ * La semana parte en lunes, que es la convención chilena y la que ya usa el
+ * calendario del sitio.
+ */
+export function semanaDe(f: Fecha): Fecha {
+  const d = diaSemana(f);            // 0 domingo … 6 sábado
+  return sumarDias(f, -(d === 0 ? 6 : d - 1));
+}
+
+/**
+ * "24 – 25 de octubre" para un grupo de días, o "31 de octubre" si es uno
+ * solo. Si el grupo cruza de mes, se nombran los dos: "31 de octubre – 1 de
+ * noviembre", que es justo el caso en que no nombrarlos confunde.
+ */
+export function rangoEnPalabras(fechas: Fecha[]): string {
+  if (!fechas.length) return '';
+  const dia = (f: Fecha) => Number(f.slice(8, 10));
+  const mes = (f: Fecha) => MESES[Number(f.slice(5, 7)) - 1] ?? '';
+  const a = fechas[0];
+  const b = fechas[fechas.length - 1];
+  if (a === b) return `${dia(a)} de ${mes(a)}`;
+  if (mes(a) === mes(b)) return `${dia(a)} – ${dia(b)} de ${mes(a)}`;
+  return `${dia(a)} de ${mes(a)} – ${dia(b)} de ${mes(b)}`;
+}

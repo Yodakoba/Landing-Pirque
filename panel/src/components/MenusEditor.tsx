@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
-import { desconocidos, type Menu } from '@/lib/menus';
+import { desconocidos, aMonto, type Menu } from '@/lib/menus';
 import { menusConocidos } from '@/lib/shopify';
 import type { Reserva } from '@/lib/tipos';
 
@@ -60,9 +60,10 @@ export default function MenusEditor() {
   if (error) return <Aviso error={error} />;
   if (!menus) return <p className="text-hueso/50">Cargando…</p>;
 
-  const cambiar = (i: number, valor: string) => {
+  const cambiar = (i: number, campo: keyof Menu, valor: string) => {
     const copia = menus.map((m) => ({ ...m }));
-    copia[i].nombre = valor;
+    if (campo === 'nombre') copia[i].nombre = valor;
+    else copia[i][campo] = aMonto(valor);
     setMenus(copia);
     setSucio(true);
   };
@@ -71,10 +72,17 @@ export default function MenusEditor() {
     <section>
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">Menús</h1>
       <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
-        Qué menús existen. <strong>El nombre tiene que ser exactamente el
-        mismo acá, en Shopify y en el sitio</strong>: no hay equivalencias.
-        Solo se perdonan mayúsculas, tildes y espacios de sobra, que es el
-        mismo nombre escrito con descuido y no otro menú.
+        Qué menús existen y cuánto valen. <strong>El nombre tiene que ser
+        exactamente el mismo acá, en Shopify y en el sitio</strong>: no hay
+        equivalencias. Solo se perdonan mayúsculas, tildes y espacios de
+        sobra, que es el mismo nombre escrito con descuido y no otro menú.
+      </p>
+      <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
+        <strong>Los precios solo rigen para las reservas hechas a mano.</strong>{' '}
+        Lo que entra por Shopify trae su propio total y ese manda, porque la
+        tienda es la que cobra. Son dos porque pagar por adelantado sale más
+        barato que pagar en el local. En blanco significa sin poner: el
+        formulario manual va a pedir el monto a mano.
       </p>
 
       {sinRegistrar.length > 0 && (
@@ -101,6 +109,8 @@ export default function MenusEditor() {
           <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
             <tr className="border-b border-hueso/10">
               <th className="py-2 pr-3">Menú</th>
+              <th className="py-2 pr-3 w-36">Precio en línea</th>
+              <th className="py-2 pr-3 w-36">Precio en el local</th>
               <th className="py-2 w-24" />
             </tr>
           </thead>
@@ -110,7 +120,17 @@ export default function MenusEditor() {
                 <td className="py-2 pr-3">
                   <input type="text" value={m.nombre} className={ENTRADA}
                     placeholder="Como se llama en Shopify"
-                    onChange={(e) => cambiar(i, e.target.value)} />
+                    onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
+                </td>
+                <td className="py-2 pr-3">
+                  <input type="number" min={0} step={1000} className={ENTRADA}
+                    value={m.precioEnLinea || ''} placeholder="—"
+                    onChange={(e) => cambiar(i, 'precioEnLinea', e.target.value)} />
+                </td>
+                <td className="py-2 pr-3">
+                  <input type="number" min={0} step={1000} className={ENTRADA}
+                    value={m.precioEnLocal || ''} placeholder="—"
+                    onChange={(e) => cambiar(i, 'precioEnLocal', e.target.value)} />
                 </td>
                 <td className="py-2 text-right whitespace-nowrap">
                   <button onClick={() => { setMenus(menus.filter((_, k) => k !== i)); setSucio(true); }}
@@ -124,7 +144,10 @@ export default function MenusEditor() {
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
-          onClick={() => { setMenus([...menus, { nombre: '' }]); setSucio(true); }}
+          onClick={() => {
+            setMenus([...menus, { nombre: '', precioEnLinea: 0, precioEnLocal: 0 }]);
+            setSucio(true);
+          }}
           className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
           Agregar menú
         </button>

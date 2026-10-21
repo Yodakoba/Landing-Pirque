@@ -215,8 +215,24 @@ documento compartido.
 
 ## Los menús: un solo nombre, el mismo en los tres lados
 
-Viven en la pestaña **`Menús`** de la planilla y se editan en **/menus**. Una
-columna: el nombre.
+Viven en la pestaña **`Menús`** de la planilla y se editan en **/menus**:
+el nombre y los dos precios.
+
+**Los precios solo rigen para las reservas hechas a mano.** Lo que entra por
+Shopify trae su propio total y ese manda, porque la tienda es la que cobra.
+Por eso esto no contradice la regla de que los precios viven en Shopify: en
+una reserva a mano **no hay pedido de Shopify de dónde sacarlo**, así que no
+son dos verdades, es la única que hay.
+
+Son **dos precios** porque el negocio tiene dos modalidades: pagar por
+adelantado sale más barato que pagar en el local. El formulario manual elige
+según la modalidad, propone el total y **deja corregirlo encima**, que es
+justo lo que hace falta cuando un grupo tiene un acuerdo distinto.
+
+**Nacen en blanco a propósito.** Los montos existen escritos en el proyecto
+pero están incompletos —hay precio en línea para dos de los cinco menús— y
+son de la tienda de desarrollo. Sembrar una tabla a medias es peor que
+dejarla vacía: la mitad correcta hace confiar en la otra mitad.
 
 **El nombre tiene que ser exactamente el mismo en Shopify, en el sitio y en
 esta lista.** No hay equivalencias. Se descartó un sistema de alias el

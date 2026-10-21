@@ -8,9 +8,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
+import DiaEditor from './DiaEditor';
+import { POR_DEFECTO, type Config } from '@/lib/config';
 import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
-import { enPalabras, mesDe, mesEnPalabras, hoy } from '@/lib/fechas';
+import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
   verde: 'border-emerald-500/50 bg-emerald-500/5',
@@ -21,10 +23,22 @@ const PUNTO: Record<Ocupacion['semaforo'], string> = {
   verde: '🟢', amarillo: '🟡', rojo: '🔴'
 };
 
+/**
+ * Qué porcentaje del cupo ocupa un número.
+ *
+ * Se recorta a 100 porque un día sobrevendido existe —el cupo se puede bajar
+ * después de que la gente reservó— y una barra que se sale de su caja se ve
+ * como un error de dibujo en vez de como un día lleno.
+ */
+const pct = (n: number, de: number) =>
+  de > 0 ? Math.min(100, (n / de) * 100) : 0;
+
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const [error, setError] = useState('');
   const [creando, setCreando] = useState(false);
+  const [editando, setEditando] = useState<Ocupacion | null>(null);
+  const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [menus, setMenus] = useState<Menu[]>(POR_DEFECTO_MENUS);
 
@@ -32,7 +46,11 @@ export default function CalendarView() {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
     fetch('/api/ocupacion')
       .then((r) => r.json())
-      .then((d) => (d.error ? setError(d.error) : setDias(d.ocupacion)))
+      .then((d) => {
+        if (d.error) return setError(d.error);
+        setDias(d.ocupacion);
+        if (d.config) setCfg(d.config);
+      })
       .catch((e) => setError(String(e)));
     // Solo para los nombres de menú del formulario manual; si falla, el
     // calendario se dibuja igual y el formulario deja escribirlos a mano.
@@ -50,12 +68,21 @@ export default function CalendarView() {
   // grilla corrida se vuelve ilegible: el corte de mes es la referencia que
   // la gente usa para ubicarse.
   const meses = useMemo(() => {
-    const grupos: { mes: string; dias: Ocupacion[] }[] = [];
+    const grupos: { mes: string; semanas: { semana: string; dias: Ocupacion[] }[] }[] = [];
     for (const d of dias ?? []) {
       const mes = mesDe(d.fecha);
-      const ultimo = grupos[grupos.length - 1];
-      if (ultimo && ultimo.mes === mes) ultimo.dias.push(d);
-      else grupos.push({ mes, dias: [d] });
+      const semana = semanaDe(d.fecha);
+      let grupo = grupos[grupos.length - 1];
+      if (!grupo || grupo.mes !== mes) {
+        grupo = { mes, semanas: [] };
+        grupos.push(grupo);
+      }
+      const ultima = grupo.semanas[grupo.semanas.length - 1];
+      // Una semana que cruza de mes queda partida en dos grupos, a
+      // proposito: el encabezado de mes manda, y un sabado 31 con su domingo
+      // 1 se lee mejor separado que colgando del mes anterior.
+      if (ultima && ultima.semana === semana) ultima.dias.push(d);
+      else grupo.semanas.push({ semana, dias: [d] });
     }
     return grupos;
   }, [dias]);
@@ -86,6 +113,16 @@ export default function CalendarView() {
         </button>
       </div>
 
+      {editando && (
+        <DiaEditor
+          dia={editando}
+          cupoNormal={cfg.cupoNormal}
+          apertura={cfg.horaApertura}
+          onListo={() => { setEditando(null); cargar(); }}
+          onCancelar={() => setEditando(null)}
+        />
+      )}
+
       {creando && (
         <ReservaForm
           fecha={dias[0]?.fecha ?? hoy()}
@@ -93,13 +130,14 @@ export default function CalendarView() {
             ...menus.map((m) => m.nombre),
             ...menusConocidos(reservas, menus)
           ])].sort((a, b) => a.localeCompare(b))}
+          catalogo={menus}
           reserva={null}
           onListo={() => { setCreando(false); cargar(); }}
           onCancelar={() => setCreando(false)}
         />
       )}
 
-      {meses.map(({ mes, dias: delMes }) => (
+      {meses.map(({ mes, semanas }) => (
         <section key={mes} className="mb-8 last:mb-0">
           {/* Separador sutil: una línea y el mes en chico. No un título
               grande, que competiría con el dato de cada día. */}
@@ -109,16 +147,25 @@ export default function CalendarView() {
             </h2>
             <span className="h-px flex-1 bg-hueso/10" />
             <span className="text-xs text-hueso/35">
-              {delMes.length} {delMes.length === 1 ? 'día' : 'días'}
+              {semanas.reduce((n, s) => n + s.dias.length, 0)} días
             </span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {delMes.map((d) => (
-          <a key={d.fecha} href={`/dia/${d.fecha}`}
-             className={`block rounded border p-4 transition hover:border-oro ${COLOR[d.semaforo]}`}>
+          {semanas.map(({ semana, dias: deLaSemana }) => (
+          <div key={semana} className="mb-4 last:mb-0">
+            {/* La semana se marca más suave que el mes: es una agrupación
+                para escanear, no una sección. */}
+            <p className="mb-2 text-xs text-hueso/35">
+              {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {deLaSemana.map((d) => (
+          <div key={d.fecha}
+             className={`rounded border p-4 transition ${COLOR[d.semaforo]}`}>
             <div className="flex items-start justify-between gap-2">
-              <span className="text-sm capitalize">{enPalabras(d.fecha)}</span>
+              <a href={`/dia/${d.fecha}`} className="text-sm capitalize hover:text-oro">
+                {enPalabras(d.fecha)}
+              </a>
               <span aria-hidden>{PUNTO[d.semaforo]}</span>
             </div>
 
@@ -130,8 +177,28 @@ export default function CalendarView() {
                   {d.tomadas}<span className="text-hueso/40">/{d.capacidad}</span>
                   <span className="ml-1 text-xs font-normal text-hueso/50">personas</span>
                 </p>
-                <p className="mt-2 text-xs text-hueso/60">
-                  {d.online} pagadas online · {d.local} pagan en el local
+                {/* La barra: cuánto del cupo está cobrado y cuánto falta
+                    cobrar el mismo día. Verde es plata que ya está; ámbar
+                    es plata que hay que cobrar en la puerta. El resto de la
+                    barra es lo que queda libre. */}
+                <div className="mt-3 flex h-1.5 overflow-hidden rounded bg-hueso/10"
+                     role="img"
+                     aria-label={`${d.online} pagadas online, ${d.local} pagan en el local, de ${d.capacidad} lugares`}>
+                  <div className="bg-emerald-400"
+                       style={{ width: `${pct(d.online, d.capacidad)}%` }} />
+                  <div className="bg-amber-400"
+                       style={{ width: `${pct(d.local, d.capacidad)}%` }} />
+                </div>
+
+                <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                  <span className="text-hueso/70">
+                    <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-400" />
+                    <strong className="tabular-nums text-hueso">{d.online}</strong> pagadas
+                  </span>
+                  <span className="text-hueso/70">
+                    <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-400" />
+                    <strong className="tabular-nums text-hueso">{d.local}</strong> en el local
+                  </span>
                 </p>
               </>
             )}
@@ -142,9 +209,22 @@ export default function CalendarView() {
               </p>
             )}
             {d.notas && <p className="mt-1 text-xs text-hueso/50">{d.notas}</p>}
-          </a>
-            ))}
+
+            <div className="mt-3 flex items-center gap-3 border-t border-hueso/10 pt-3 text-xs">
+              <a href={`/dia/${d.fecha}`} className="text-hueso/60 hover:text-oro">
+                Ver quiénes vienen
+              </a>
+              <span className="flex-1" />
+              <button onClick={() => setEditando(d)}
+                className="text-hueso/60 hover:text-oro">
+                {d.capacidad === 0 && !d.bloqueada ? 'Abrir día' : 'Editar'}
+              </button>
+            </div>
           </div>
+            ))}
+            </div>
+          </div>
+          ))}
         </section>
       ))}
     </>
