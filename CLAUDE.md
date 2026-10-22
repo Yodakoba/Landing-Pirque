@@ -995,6 +995,22 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 | Plata | **no** | solo la suya |
 | A quién se manda | al grupo | a una persona |
 
+### Los hooks van todos arriba, antes de los `return` (2026-10-22)
+
+**La página del día estuvo caída y se vio como un "Application error" pelado.**
+`DayView` tiene dos `return` tempranos —el aviso de error y el "Cargando…"— y
+dos `useMemo` quedaron debajo de ellos. En la primera pasada, con las reservas
+todavía sin llegar, esos dos hooks no corrían; en la segunda sí, y React tumba
+el árbol completo con el error #310 (*rendered more hooks than during the
+previous render*).
+
+Vale la pena tenerlo escrito por **cómo se ve el fallo**, que es lo que lo hace
+caro: una pantalla negra con una línea de texto y un número de error minificado,
+sin nada que apunte al archivo. No se parece en nada a su causa.
+
+La regla, entonces: **en un componente, todos los hooks van antes del primer
+`return`.** Lo que va debajo son constantes derivadas, no hooks.
+
 ### La propina (2026-10-22)
 
 **Se reparte en partes iguales entre quienes vinieron ese día y participan.**
