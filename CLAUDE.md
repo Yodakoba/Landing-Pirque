@@ -933,6 +933,13 @@ resuelve con lo que ya existía: el **ajuste con su motivo** al pasar lista,
 que suma o resta sobre la jornada. No hizo falta nada nuevo; lo que faltaba
 era poder llegar.
 
+**La convención la fijó el cliente el 2026-10-22: se deja la jornada como
+está y la diferencia va en el ajuste**, no se edita la jornada. Los dos
+caminos dan el mismo total, pero solo uno deja escrito el porqué: una
+jornada editada no se distingue de un error de tipeo, y un ajuste con motivo
+se explica solo cuando alguien revise ese pago un mes después. Va dicho en la
+propia ventana de Pasar lista, que es donde se aplica.
+
 **Porque llegar era el problema**: `Pasar lista` vive en la página del día, y
 un día de preparación no aparece en el calendario de la portada. Por eso la
 ventana de planificación, cuando se abre **desde `/turnos`**, ofrece el
