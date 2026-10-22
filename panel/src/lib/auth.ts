@@ -139,6 +139,15 @@ export const PERMISOS = {
   dias: [ROL.admin, ROL.encargado],
   /** Asignar turnos y administrar la lista de trabajadores. */
   equipo: [ROL.admin, ROL.encargado],
+  /**
+   * Contratar actividades extras y anotar sus montos.
+   *
+   * Va con el encargado y no solo con el administrador porque **cerrar el
+   * día incluye decir si el jinete llegó y cuánto se le pagó**, igual que
+   * pasar lista. Lo que el encargado no ve son los montos habituales ni las
+   * cuentas bancarias de las fichas, que se filtran en la respuesta.
+   */
+  extras: [ROL.admin, ROL.encargado],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
   puestos: [ROL.admin],
   /** Crear, renovar y quitar los links personales de los trabajadores. */

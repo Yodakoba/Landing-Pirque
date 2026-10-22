@@ -30,7 +30,9 @@ import {
   informeDelPeriodo, mesesConTurnos, semanasConTurnos, rangoDelPeriodo,
   pagoDe, esContratado, type Turno
 } from '@/lib/equipo';
+import { informeDeExtras, costoDeExtra, type Extra } from '@/lib/extras';
 import { enPesos } from '@/lib/ocupacion';
+import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 
@@ -38,6 +40,11 @@ type Tipo = 'mes' | 'semana' | 'rango';
 
 export default function InformeEquipo() {
   const [turnos, setTurnos] = useState<Turno[] | null>(null);
+  // Las actividades extras van en su propia tabla y en el mismo CSV: quien
+  // paga hace un solo pago a la semana, pero un jinete no cobra una jornada
+  // ni recibe propina, así que sumarlos en una sola lista sería mentir.
+  const [extras, setExtras] = useState<Extra[]>([]);
+  const [cuentas, setCuentas] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   const [tipo, setTipo] = useState<Tipo>('mes');
@@ -55,6 +62,8 @@ export default function InformeEquipo() {
       .then((d) => {
         if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
         setTurnos(d.turnos ?? []);
+        setExtras(d.extras ?? []);
+        setCuentas(d.cuentas ?? {});
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -80,9 +89,24 @@ export default function InformeEquipo() {
   const lineas = useMemo(
     () => informeDelPeriodo(turnos ?? [], desde, hasta), [turnos, desde, hasta]
   );
+  const lineasExtras = useMemo(
+    () => informeDeExtras(extras, desde, hasta, new Map(Object.entries(cuentas))),
+    [extras, desde, hasta, cuentas]
+  );
   const total = lineas.reduce((s, l) => s + l.total, 0);
   const propina = lineas.reduce((s, l) => s + l.propina, 0);
   const sinMarcar = lineas.reduce((s, l) => s + l.sinMarcar, 0);
+  const totalExtras = lineasExtras.reduce((s, l) => s + l.total, 0);
+  const sinConfirmar = lineasExtras.reduce((s, l) => s + l.sinConfirmar, 0);
+  const cuentaDe = (nombre: string) => cuentas[normalizar(nombre)] ?? '';
+
+  // Quién aparece en el periodo y no tiene dónde recibir la plata. Se avisa
+  // acá porque es el momento en que importa: descubrirlo con la planilla ya
+  // descargada significa volver a entrar, completarla y bajarla de nuevo.
+  const sinCuenta = [
+    ...lineas.map((l) => l.trabajador),
+    ...lineasExtras.map((l) => l.colaborador)
+  ].filter((n) => !cuentaDe(n));
 
   const comoSeLlama = (p: string) => p.length === 7
     ? mesEnPalabras(p)
@@ -94,32 +118,67 @@ export default function InformeEquipo() {
     if (nuevo === 'semana') setPeriodo(semanaDe(hoy()));
   }
 
+  /**
+   * La planilla del pago: el equipo y las actividades extras, juntos.
+   *
+   * **Juntos porque quien paga hace un solo pago a la semana**, y separarlos
+   * en dos archivos le devolvería el trabajo que esto viene a evitar.
+   * **Distinguidos porque no son lo mismo**: la primera columna dice qué es
+   * cada fila, y las columnas que no aplican van en blanco y no en cero —un
+   * cero se lee como "le tocó cero propina", y lo que pasa es que un jinete
+   * no entra en el reparto.
+   *
+   * La cuenta bancaria va al final, en las dos. Es lo que falta para poder
+   * transferir sin cruzar esta planilla con otra lista a mano.
+   */
   function exportar() {
     const delPeriodo = (turnos ?? [])
       .filter((t) => t.fecha >= desde && t.fecha <= hasta)
       .sort((a, b) => a.trabajador.localeCompare(b.trabajador)
         || a.fecha.localeCompare(b.fecha));
+    const extrasDelPeriodo = extras
+      .filter((e) => e.fecha >= desde && e.fecha <= hasta)
+      .sort((a, b) => a.colaborador.localeCompare(b.colaborador)
+        || a.fecha.localeCompare(b.fecha));
     const csv = aCSV(
-      ['Trabajador', 'Fecha', 'Puesto', 'Modalidad', 'Vino', 'Jornada',
-       'Horas extra', 'Valor hora', 'Ajuste', 'Motivo', 'Total', 'Propina'],
-      delPeriodo.map((t) => [
-        t.trabajador, t.fecha, t.puesto, t.modalidad,
-        t.asistencia || 'sin marcar',
-        // Un contratado va en blanco, no en cero: cero se lee como "se le
-        // pagó cero", y lo que pasa es que esa columna no le aplica.
-        esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
-        t.horasExtra || '', t.valorHora || '', t.ajuste || '', t.motivo,
-        pagoDe(t),
-        // Última columna y aparte del total, igual que en pantalla: la
-        // propina no es sueldo, y quien reciba esta planilla tiene que poder
-        // sumar una cosa sin arrastrar la otra.
-        t.propina || ''
-      ])
+      ['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
+       'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo',
+       'Total', 'Propina', 'Cuenta bancaria'],
+      [
+        ...delPeriodo.map((t) => [
+          'Equipo',
+          t.trabajador, t.fecha, t.puesto, t.modalidad,
+          t.asistencia || 'sin marcar',
+          // Un contratado va en blanco, no en cero: cero se lee como "se le
+          // pagó cero", y lo que pasa es que esa columna no le aplica.
+          esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
+          t.horasExtra || '', t.valorHora || '', t.ajuste || '', t.motivo,
+          pagoDe(t),
+          // Aparte del total, igual que en pantalla: la propina no es
+          // sueldo, y quien reciba esta planilla tiene que poder sumar una
+          // cosa sin arrastrar la otra.
+          t.propina || '',
+          cuentaDe(t.trabajador)
+        ]),
+        ...extrasDelPeriodo.map((e) => [
+          'Actividad extra',
+          e.colaborador, e.fecha, e.actividad,
+          // Modalidad, horas extra y valor hora no le aplican a un extra:
+          // van en blanco para que se note que no aplican.
+          '', e.estado || 'sin confirmar',
+          e.monto || '', '', '', e.ajuste || '', e.motivo,
+          costoDeExtra(e),
+          // Propina en blanco, a propósito: un jinete no entra en el
+          // reparto, y un cero se leería como que le tocó cero.
+          '',
+          cuentaDe(e.colaborador)
+        ])
+      ]
     );
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `equipo-${
+    a.download = `pago-${
       tipo === 'mes' ? periodo
       : tipo === 'semana' ? `semana-${periodo}`
       : `${desde}-a-${hasta}`}.csv`;
@@ -173,7 +232,8 @@ export default function InformeEquipo() {
           </select>
         )}
         <span className="flex-1" />
-        <button onClick={exportar} disabled={lineas.length === 0}
+        <button onClick={exportar}
+          disabled={lineas.length === 0 && lineasExtras.length === 0}
           className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
                      disabled:opacity-40">
           Descargar planilla
@@ -193,13 +253,39 @@ export default function InformeEquipo() {
         </div>
       )}
 
-      {lineas.length === 0 ? (
+      {sinConfirmar > 0 && (
+        <div className="mb-6 rounded border border-amber-500/50 bg-amber-500/5 p-4">
+          <p className="text-sm font-semibold text-amber-300">
+            Hay {sinConfirmar} actividad{sinConfirmar === 1 ? '' : 'es'} extra
+            sin confirmar en este periodo.
+          </p>
+          <p className="mt-1 text-sm text-hueso/70">
+            Igual que un turno sin pasar lista, no suman: mientras nadie diga
+            si el jinete o la pintacaritas llegó, el total está incompleto. Se
+            confirma en{' '}
+            <a href="/extras" className="text-oro hover:underline">
+              actividades extras
+            </a>.
+          </p>
+        </div>
+      )}
+
+      {lineas.length === 0 && lineasExtras.length === 0 ? (
         <p className="text-sm text-hueso/50">
-          No hay turnos anotados entre el {desde} y el {hasta}.
+          No hay turnos ni actividades extras anotados entre el {desde} y el{' '}
+          {hasta}.
         </p>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-hueso/70">
+            Equipo del restaurante
+          </h2>
+          {lineas.length === 0 ? (
+            <p className="mb-8 text-sm text-hueso/50">
+              Sin turnos anotados en este periodo.
+            </p>
+          ) : (
+          <div className="mb-8 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
                 <tr className="border-b border-hueso/10">
@@ -276,15 +362,122 @@ export default function InformeEquipo() {
               </tfoot>
             </table>
           </div>
+          )}
+
+          {/* Las actividades extras van en su propia tabla y no mezcladas con
+              el equipo: un jinete no cobra una jornada ni entra en el reparto
+              de la propina, así que sumarlos en una sola lista haría ilegibles
+              las dos columnas donde eso se ve. Juntos aparecen en el total del
+              periodo y en el CSV, que es donde hacen falta juntos. */}
+          {lineasExtras.length > 0 && (
+            <>
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-hueso/70">
+                Actividades extras
+              </h2>
+              <div className="mb-8 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
+                    <tr className="border-b border-hueso/10">
+                      <th className="py-2 pr-3">Quién</th>
+                      <th className="w-48 py-2 pr-3">Actividad</th>
+                      <th className="w-40 py-2 pr-3">Días</th>
+                      <th className="w-28 py-2 pr-3 text-right">Montos</th>
+                      <th className="w-28 py-2 pr-3 text-right">Ajustes</th>
+                      <th className="w-28 py-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineasExtras.map((l) => (
+                      <tr key={l.colaborador} className="border-b border-hueso/5">
+                        <td className="py-2 pr-3">{l.colaborador}</td>
+                        <td className="py-2 pr-3 text-hueso/70">
+                          {l.actividad || <span className="text-hueso/25">—</span>}
+                        </td>
+                        <td className="py-2 pr-3 tabular-nums">
+                          {l.dias}
+                          {l.noVino > 0 && (
+                            <span className="ml-1 text-xs text-red-300/80">
+                              · {l.noVino} no vino
+                            </span>
+                          )}
+                          {l.sinConfirmar > 0 && (
+                            <span className="ml-1 text-xs text-amber-300/80">
+                              · {l.sinConfirmar} sin confirmar
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
+                          {l.montos ? enPesos(l.montos) : <span className="text-hueso/25">—</span>}
+                        </td>
+                        <td className={`py-2 pr-3 text-right tabular-nums ${
+                          l.ajustes < 0 ? 'text-red-300/80' : 'text-hueso/70'}`}>
+                          {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          <strong>{enPesos(l.total)}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-hueso/15">
+                      <td className="py-3 pr-3 text-xs uppercase tracking-wide text-hueso/45">
+                        {lineasExtras.length}{' '}
+                        {lineasExtras.length === 1 ? 'colaborador' : 'colaboradores'}
+                      </td>
+                      <td colSpan={3} />
+                      <td className="py-3 pr-3" />
+                      <td className="py-3 text-right tabular-nums">
+                        <strong className="text-oro">{enPesos(totalExtras)}</strong>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* El único número que contesta "¿cuánto pago esta semana?", que es
+              la pregunta con la que se entra acá. La propina queda fuera a
+              propósito: no sale del negocio. */}
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3
+                          rounded border border-oro/30 bg-oro/5 px-4 py-3">
+            <span className="text-xs uppercase tracking-wide text-hueso/60">
+              Total del periodo
+            </span>
+            <span className="text-lg font-semibold tabular-nums text-oro">
+              {enPesos(total + totalExtras)}
+            </span>
+            <span className="w-full text-xs text-hueso/50">
+              Equipo {enPesos(total)}
+              {' · '}Actividades extras {enPesos(totalExtras)}
+              {propina > 0 && <> · propina {enPesos(propina)}, que va aparte</>}
+            </span>
+          </div>
+
+          {sinCuenta.length > 0 && (
+            <p className="mb-6 max-w-2xl text-xs text-amber-300/80">
+              Sin cuenta bancaria anotada: {sinCuenta.join(' · ')}. La planilla
+              sale igual, con esa columna en blanco; se completa en{' '}
+              <a href="/equipo" className="hover:underline">equipo</a> o en{' '}
+              <a href="/extras" className="hover:underline">actividades extras</a>.
+            </p>
+          )}
 
           <p className="mt-6 max-w-2xl text-xs text-hueso/50">
             <strong>Un contratado suma cero en jornadas</strong>, porque su
             sueldo no sale de acá; lo que aparece en su fila son horas extra y
             ajustes. <strong>La propina va aparte y no se suma al total</strong>:
             esa plata no sale del negocio, pasa por él, así que juntarlas haría
-            imposible contestar cuánto costó el equipo. <strong>La planilla que se descarga trae el detalle día
-            por día</strong>, con el motivo de cada ajuste: es lo que sirve
-            para entregar, en vez de copiar totales a mano.
+            imposible contestar cuánto costó el equipo. <strong>Las actividades
+            extras no reciben propina</strong> y no cobran jornada: cobran lo
+            acordado para ese día, y por eso van en su propia tabla.
+          </p>
+          <p className="mt-3 max-w-2xl text-xs text-hueso/50">
+            <strong>La planilla que se descarga trae las dos cosas juntas</strong>,
+            día por día, con el motivo de cada ajuste y la cuenta bancaria de
+            cada uno: es un solo pago a la semana, pero cada fila dice si es
+            equipo o actividad extra.
           </p>
         </>
       )}

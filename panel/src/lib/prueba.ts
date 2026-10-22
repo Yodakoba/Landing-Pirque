@@ -46,6 +46,11 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          repartirPropina, propinaDelDia,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
+import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
+         leerExtrasDe, filaExtra, normalizarExtras, extrasDelDia,
+         costoExtrasDelDia, costoDeExtra, informeDeExtras,
+         COL_COLABORADORES, COL_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
+         type Colaborador, type Extra } from './extras.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -1078,9 +1083,9 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
   { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true },
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
   { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true }
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
@@ -1151,9 +1156,9 @@ ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
 ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
 
 const conAcceso: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true },
-  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true },
-  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' }
 ];
 ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
    'el token encuentra a su dueño');
@@ -1540,6 +1545,153 @@ const conPropinas = informeDelPeriodo([
 ], '2026-11-01', '2026-11-30');
 ok(conPropinas[0].propina === 12000 && conPropinas[0].total === 30000,
    'y en el informe va en su propia columna, aparte del total');
+
+
+/* ---------- Actividades extras: jinetes, pintacaritas, castillo ---------- */
+
+console.log('\nActividades extras');
+
+const co = (p: Partial<Colaborador>): Colaborador => ({
+  nombre: 'Jinete', actividad: 'Show ecuestre', telefono: '', activo: true,
+  monto: 0, cuenta: '', ...p
+});
+const ex = (p: Partial<Extra>): Extra => ({
+  fecha: '2026-11-14', colaborador: 'Jinete', actividad: 'Show ecuestre',
+  estado: VINO.si, monto: 50000, ajuste: 0, motivo: '', fila: 2, ...p
+});
+
+// **Las actividades extras NO reciben propina**, y eso se fija acá para que
+// agregar una columna a la planilla no se la regale sin que nadie se entere.
+ok(!Object.values(COL_ACTIVIDADES).some((c) => normalizar(c).includes('propina')),
+   'la pestaña Actividades no tiene columna de propina');
+ok(!Object.values(COL_COLABORADORES).some((c) => normalizar(c).includes('propina')),
+   'ni la ficha del colaborador: no participa del reparto');
+
+// Agendar no es pagar, igual que un turno sin pasar lista.
+ok(costoDeExtra(ex({ estado: '' })) === 0, 'sin confirmar no cuesta nada');
+ok(costoDeExtra(ex({ estado: VINO.no })) === 0, 'y si no vino, tampoco');
+ok(costoDeExtra(ex({ monto: 50000, ajuste: 10000 })) === 60000,
+   'confirmada cuesta el monto más el ajuste');
+ok(costoDeExtra(ex({ monto: 50000, ajuste: -80000 })) === 0,
+   'un descuento mayor que el monto deja el día en cero, nunca en negativo');
+
+// --- Las fichas (posicionales: la pestaña se reescribe entera) ---
+const fichas = leerColaboradoresDe([
+  Object.values(COL_COLABORADORES) as string[],
+  ['Pedro Soto', 'Show ecuestre', '+56 9 1111 1111', 'Sí', '50000', '123-456'],
+  ['Carla Díaz', 'Pintacaritas', '', 'No', '', ''],
+  ['', 'Castillo inflable', '', 'Sí', '80000', ''],
+  ['pedro soto', 'Otra cosa', '', 'Sí', '999', '']
+]);
+ok(fichas.length === 2, 'una fila sin nombre no es una ficha, y un nombre repetido no entra dos veces');
+ok(fichas[0].monto === 50000 && fichas[0].cuenta === '123-456',
+   'el monto habitual y la cuenta bancaria se leen de la ficha');
+ok(fichas[1].activo === false && fichas[1].monto === 0,
+   'un monto en blanco es "sin poner", que es cero, y "No" desactiva');
+
+// Una planilla escrita antes de que existiera la columna de cuenta se lee
+// igual: la cuenta queda en blanco en vez de reventar.
+const viejas = leerColaboradoresDe([
+  ['Nombre', 'Actividad', 'Teléfono', 'Activo', 'Monto habitual'],
+  ['Pedro Soto', 'Show ecuestre', '', 'Sí', '50000']
+]);
+ok(viejas.length === 1 && viejas[0].cuenta === '',
+   'sin la columna de cuenta la ficha se lee con la cuenta en blanco');
+
+const filasFichas = aFilasColaboradores([
+  co({ nombre: 'Pedro Soto', monto: 50000, cuenta: '123-456' }),
+  co({ nombre: 'Carla Díaz', actividad: 'Pintacaritas', activo: false, monto: 0 })
+]);
+ok(filasFichas[0].length === Object.keys(COL_COLABORADORES).length,
+   'el encabezado que se escribe tiene todas las columnas');
+ok(filasFichas[1][4] === '50000' && filasFichas[2][4] === '',
+   'un monto en cero se escribe en blanco, para que no se lea como "cobra cero"');
+const ida = leerColaboradoresDe(filasFichas);
+ok(ida.length === 2 && ida[0].cuenta === '123-456' && ida[1].activo === false,
+   'escribir y volver a leer da lo mismo');
+
+ok(JSON.stringify(actividadesConocidas([
+  co({ actividad: 'Pintacaritas' }), co({ actividad: 'pintacaritas' }),
+  co({ actividad: 'Castillo inflable' }), co({ actividad: '' })
+])) === JSON.stringify(['Castillo inflable', 'Pintacaritas']),
+   'las actividades salen de las fichas, sin repetir ni vacías');
+
+// --- Los días (por nombre de columna, como Turnos) ---
+// A propósito con las columnas en otro orden y una de más: así se guarda una
+// pestaña a la que le van a crecer columnas.
+const filasDias = [
+  ['Colaborador', 'Monto', 'Fecha', 'Vino', 'Nota del dueño', 'Ajuste',
+   'Motivo del ajuste', 'Actividad'],
+  ['Pedro Soto', '50000', '2026-11-14', 'Sí', 'lo que sea', '10000',
+   'montaje aparte', 'Show ecuestre'],
+  ['Carla Díaz', '40000', '2026-11-14', '', '', '', '', 'Pintacaritas'],
+  ['Pedro Soto', '50000', '2026-11-15', 'No', '', '', '', 'Show ecuestre'],
+  ['Sin fecha', '1', '', 'Sí', '', '', '', ''],
+  ['', '1', '2026-11-14', 'Sí', '', '', '', '']
+];
+const dias = leerExtrasDe(filasDias);
+ok(dias.length === 3, 'una fila sin fecha o sin nombre no es una actividad');
+ok(dias[0].monto === 50000 && dias[0].ajuste === 10000
+   && dias[0].motivo === 'montaje aparte',
+   'las columnas se encuentran por nombre, en cualquier orden');
+ok(dias[0].fila === 2 && dias[2].fila === 4,
+   'y cada una recuerda su fila, que es lo que permite borrarla');
+ok(leerExtrasDe([['Colaborador', 'Monto']]).length === 0,
+   'sin la columna Fecha no se interpreta nada, en vez de inventar actividades');
+
+const fila = filaExtra(filasDias[0], {
+  fecha: '2026-11-21', colaborador: 'Pedro Soto', actividad: 'Show ecuestre',
+  estado: VINO.si, monto: 50000, ajuste: 0, motivo: ''
+});
+ok(fila.length === filasDias[0].length && fila[2] === '2026-11-21'
+   && fila[0] === 'Pedro Soto' && fila[1] === '50000',
+   'y al escribir, cada valor va en la columna que le toca, no en la primera libre');
+ok(fila[4] === '' && fila[5] === '',
+   'una columna que el panel no conoce se deja en blanco, no se pisa');
+
+ok(extrasDelDia(dias, '2026-11-14').length === 2, 'el día trae sus dos actividades');
+ok(costoExtrasDelDia(dias, '2026-11-14') === 60000,
+   'y cuesta solo lo confirmado: la de Carla todavía no cuenta');
+ok(costoExtrasDelDia(dias, '2026-11-15') === 0, 'un día donde no vino nadie cuesta cero');
+
+const unaLinea = normalizarExtras([
+  { fecha: '2026-11-14', colaborador: 'Pedro Soto', actividad: 'Show ecuestre',
+    estado: '', monto: 50000, ajuste: 0, motivo: '' },
+  { fecha: '2026-11-14', colaborador: 'pedro  soto', actividad: 'Pintacaritas',
+    estado: VINO.si, monto: 70000, ajuste: 0, motivo: '' },
+  { fecha: '2026-11-14', colaborador: '  ', actividad: '', estado: '',
+    monto: 0, ajuste: 0, motivo: '' }
+]);
+ok(unaLinea.length === 1 && unaLinea[0].monto === 70000,
+   'una línea por colaborador y gana la última, como el plan del equipo');
+ok(unaLinea[0].colaborador === 'pedro  soto',
+   'y el nombre se guarda como se escribió, sin los espacios de los bordes');
+
+// --- El informe ---
+const informe = informeDeExtras([
+  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-14', monto: 50000, ajuste: 10000 }),
+  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-15', monto: 50000 }),
+  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-16', estado: VINO.no }),
+  ex({ colaborador: 'Carla Díaz', actividad: 'Pintacaritas', fecha: '2026-11-14',
+       estado: '', monto: 40000 }),
+  ex({ colaborador: 'Pedro Soto', fecha: '2026-10-31', monto: 999999 })
+], '2026-11-01', '2026-11-30', new Map([[normalizar('Pedro Soto'), '123-456']]));
+
+ok(informe.length === 2, 'una línea por colaborador');
+ok(informe[0].colaborador === 'Pedro Soto' && informe[0].total === 110000,
+   'suma los días confirmados del periodo y deja fuera lo de otro mes');
+ok(informe[0].dias === 2 && informe[0].noVino === 1 && informe[0].sinConfirmar === 0,
+   'cuenta los días que vino y los que no, por separado');
+ok(informe[0].montos === 100000 && informe[0].ajustes === 10000,
+   'los ajustes se ven aparte de los montos, igual que en el equipo');
+ok(informe[0].cuenta === '123-456' && informe[1].cuenta === '',
+   'la cuenta bancaria la pone quien llama, desde las fichas');
+ok(informe[1].total === 0 && informe[1].sinConfirmar === 1,
+   'quien quedó sin confirmar aparece con total cero, no desaparece');
+ok(informe[1].actividad === 'Pintacaritas',
+   'y cada línea dice qué hizo, que es lo que distingue a un jinete de una pintacaritas');
+ok(informeDeExtras([ex({ colaborador: '  ' })], '2026-11-01', '2026-11-30').length === 0,
+   'una actividad sin nombre no arma una línea');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

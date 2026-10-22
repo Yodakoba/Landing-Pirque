@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
  * quien no la necesita es una credencial de más dando vueltas.
  */
 const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({
-  ...t, token: '',
+  ...t, token: '', cuenta: '',
   // Los sueldos tampoco bajan al navegador de un encargado. No es que vaya a
   // hacer algo malo con ellos: es que no los necesita para asignar turnos, y
   // cuánto gana cada compañero no es dato suyo.
@@ -138,7 +138,13 @@ export async function PUT(req: Request) {
           // excepción y por eso se marca.
           propina: esAdmin
             ? (t?.propina === undefined ? true : esSi(t.propina))
-            : (previos.get(normalizar(nombre))?.propina ?? true)
+            : (previos.get(normalizar(nombre))?.propina ?? true),
+          // La cuenta bancaria la fija el administrador, igual que los
+          // montos: un encargado ni siquiera la recibe (ver sinTokens), así
+          // que si pudiera guardarla la borraría sin querer.
+          cuenta: esAdmin
+            ? String(t?.cuenta ?? '').trim()
+            : (previos.get(normalizar(nombre))?.cuenta ?? '')
         });
       }
       await guardarTrabajadores(limpia);
