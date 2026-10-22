@@ -589,6 +589,26 @@ export function resumenEquipo(
 }
 
 /**
+ * Un día en que se trabaja sin que entre nadie: preparación, montaje, cierre.
+ *
+ * **No es un dato que alguien marque.** Es lo que queda cuando un día tiene
+ * equipo asignado y no recibe público — se decidió así con el cliente el
+ * 2026-10-22, sobre la alternativa de agregar una columna y una casilla. Una
+ * marca a mano sería una segunda verdad que puede contradecir a la primera:
+ * un día marcado "preparación" que después se abre al público, o al revés.
+ *
+ * Vive acá, en una sola función, porque lo preguntan tres pantallas —el
+ * calendario del equipo, la planilla semanal y el link personal— y tres
+ * copias de la misma condición es justo lo que se desalinea cuando cambie.
+ */
+export function esPreparacion(
+  { conEquipo, abierto, personas }:
+  { conEquipo: boolean; abierto: boolean; personas: number }
+): boolean {
+  return conEquipo && !abierto && personas === 0;
+}
+
+/**
  * Los nombres que aparecen en los turnos y NO están en la lista de
  * trabajadores.
  *

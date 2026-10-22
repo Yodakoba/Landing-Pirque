@@ -20,9 +20,10 @@
 import { leerConfig, leerTurnos, leerPuestos, leerReservas, leerFechas } from '@/lib/datos';
 import { ocupaLugar } from '@/lib/ocupacion';
 import { iguales } from '@/lib/auth';
-import { normalizar } from '@/lib/columnas';
-import { VINO } from '@/lib/equipo';
-import { hoy, semanaDe, sumarDias, enPalabras, rangoEnPalabras, esFecha } from '@/lib/fechas';
+import { normalizar, estaCerrado } from '@/lib/columnas';
+import { VINO, esPreparacion } from '@/lib/equipo';
+import { hoy, semanaDe, sumarDias, enPalabras, rangoEnPalabras, esFecha,
+         diaSemana } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,13 @@ export default async function Pagina({
   const delDia = (f: string) => reservas.filter((r) => r.fecha === f && ocupaLugar(r));
   const personasDe = (f: string) =>
     delDia(f).reduce((s, r) => s + (Number(r.personas) || 0), 0);
+  const preparando = (f: string) => esPreparacion({
+    conEquipo: true,                       // la columna existe porque hay equipo
+    abierto: porFecha.has(f)
+      ? !estaCerrado(porFecha.get(f)!.estado)
+      : cfg.diasAbiertos.includes(diaSemana(f)),
+    personas: personasDe(f)
+  });
 
   // Los puestos de la lista primero, en su orden, y después los que aparecen
   // en los turnos sin estar en ella: alguien asignado no puede desaparecer
@@ -112,11 +120,22 @@ export default async function Pagina({
                       <span className="block capitalize text-hueso/85">{enPalabras(f)}</span>
                       <span className="block text-xs font-normal text-hueso/45">
                         {porFecha.get(f)?.apertura || cfg.horaApertura}
-                        {' · '}
-                        {personasDe(f)} personas
-                        <span className="text-hueso/30">
-                          {' · '}{delDia(f).length} reservas
-                        </span>
+                        {/* Un día sin público y con equipo es preparación, y
+                            decirlo importa más acá que en ninguna parte: esta
+                            es la tabla que se manda al grupo, y "0 personas"
+                            se lee como un día flojo y no como un día de
+                            montaje. */}
+                        {preparando(f) ? (
+                          <span className="text-oro"> · preparación</span>
+                        ) : (
+                          <>
+                            {' · '}
+                            {personasDe(f)} personas
+                            <span className="text-hueso/30">
+                              {' · '}{delDia(f).length} reservas
+                            </span>
+                          </>
+                        )}
                       </span>
                     </th>
                   ))}

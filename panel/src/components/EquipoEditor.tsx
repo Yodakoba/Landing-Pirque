@@ -147,10 +147,20 @@ export default function EquipoEditor() {
   return (
     <section>
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">Equipo</h1>
-      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
+      <p className="mb-4 max-w-2xl text-sm text-hueso/60">
         Quiénes trabajan y en qué puestos. Para asignar a alguien a un día,
         anda al calendario y apreta <strong>Equipo</strong> en la tarjeta de
         ese día.
+      </p>
+      {/* Los días que no reciben público no están en el calendario de la
+          portada, y hay trabajo igual: preparar, montar, cerrar. Por eso el
+          enlace va acá arriba y no escondido al final. */}
+      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
+        Para ver el <strong>mes completo</strong> y planificar también los
+        días cerrados —preparación, montaje—, anda a{' '}
+        <a href="/turnos" className="text-oro hover:underline">
+          Turnos · calendario del equipo
+        </a>.
       </p>
 
       {sinFicha.length > 0 && (

@@ -25,10 +25,12 @@
 import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
          leerMenus } from '@/lib/datos';
 import { menusDe } from '@/lib/shopify';
-import { trabajadorPorToken, turnosDe, pagoDe, esContratado, VINO } from '@/lib/equipo';
+import { trabajadorPorToken, turnosDe, pagoDe, esContratado, esPreparacion,
+         VINO } from '@/lib/equipo';
 import { enPesos } from '@/lib/ocupacion';
 import { ocupaLugar } from '@/lib/ocupacion';
-import { enPalabras, hoy, sumarDias } from '@/lib/fechas';
+import { enPalabras, hoy, sumarDias, diaSemana } from '@/lib/fechas';
+import { estaCerrado } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,6 +117,14 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             const dia = porFecha.get(t.fecha);
             const personas = personasDe(t.fecha);
             const menus = menusDe(delDia(t.fecha), catalogo);
+            // Un día sin público y con equipo es preparación. Sin esto se
+            // veía igual que un día de atención sin reservas, que es otra
+            // cosa: quien lo lee tiene que saber si va a atender o a montar.
+            const preparando = esPreparacion({
+              conEquipo: true,
+              abierto: dia ? !estaCerrado(dia.estado) : cfg.diasAbiertos.includes(diaSemana(t.fecha)),
+              personas
+            });
             return (
               <li key={t.fecha + t.puesto}
                   className="rounded border border-hueso/15 bg-hueso/[0.03] p-4">
@@ -127,6 +137,9 @@ export default async function Pagina({ params }: { params: { token: string } }) 
                   {personas > 0 && (
                     <> · {personas} {personas === 1 ? 'persona' : 'personas'} esperada
                       {personas === 1 ? '' : 's'}</>
+                  )}
+                  {preparando && (
+                    <span className="text-oro"> · día de preparación, no abre al público</span>
                   )}
                 </p>
                 {menus.length > 0 && (

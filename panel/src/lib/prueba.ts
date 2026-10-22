@@ -10,7 +10,7 @@ import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, faltaCobrar,
          enPesos, CORTES } from './ocupacion.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
-         diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe,
+         diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe, diasDelMes, sumarMeses,
          rangoEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
@@ -44,7 +44,8 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
          repartirPropina, propinaDelDia,
-         POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno } from './equipo.ts';
+         POR_DEFECTO_PUESTOS, esPreparacion,
+         type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -523,6 +524,21 @@ ok(mesDe('2026-11-14') === '2026-11', 'el mes sale de la fecha, como texto');
 ok(mesEnPalabras('2026-11') === 'noviembre 2026', 'y se muestra legible');
 ok(mesEnPalabras('2027-01') === 'enero 2027', 'con el ano correcto al cruzar diciembre');
 
+/* ---------- los dias de un mes, para la grilla del calendario ---------- */
+ok(diasDelMes('2026-11').length === 30, 'noviembre trae 30 dias');
+ok(diasDelMes('2026-11')[0] === '2026-11-01'
+   && diasDelMes('2026-11')[29] === '2026-11-30', 'del primero al ultimo, en orden');
+ok(diasDelMes('2026-02').length === 28 && diasDelMes('2028-02').length === 29,
+   'febrero sabe de anos bisiestos');
+ok(diasDelMes('2000-02').length === 29 && diasDelMes('1900-02').length === 28,
+   'incluida la regla de los siglos');
+ok(diasDelMes('2026-13').length === 0, 'un mes que no existe no trae dias');
+
+ok(sumarMeses('2026-11', 1) === '2026-12' && sumarMeses('2026-12', 1) === '2027-01',
+   'el mes siguiente cruza el ano');
+ok(sumarMeses('2027-01', -1) === '2026-12' && sumarMeses('2026-03', -3) === '2025-12',
+   'y el anterior tambien');
+
 // El agrupado de la vista conserva el orden y corta donde cambia el mes.
 const porMes = new Map<string, number>();
 for (const f of ventana) porMes.set(mesDe(f), (porMes.get(mesDe(f)) ?? 0) + 1);
@@ -922,6 +938,16 @@ ok(credencialValida(basic('brasas', 'a:b:c'), 'brasas', 'a:b:c'),
 
 ok(iguales('abc', 'abc') && !iguales('abc', 'abd') && !iguales('abc', 'abcd'),
    'la comparacion distingue contenido y largo');
+
+/* ---------- el equipo: dias de preparacion ---------- */
+ok(esPreparacion({ conEquipo: true, abierto: false, personas: 0 }),
+   'un dia cerrado con equipo asignado es preparacion');
+ok(!esPreparacion({ conEquipo: false, abierto: false, personas: 0 }),
+   'un dia cerrado y sin nadie asignado no es nada, no es preparacion');
+ok(!esPreparacion({ conEquipo: true, abierto: true, personas: 0 }),
+   'un dia abierto sin reservas es un dia flojo, no preparacion');
+ok(!esPreparacion({ conEquipo: true, abierto: false, personas: 12 }),
+   'y uno cerrado con gente adentro es un evento privado, tampoco');
 
 /* ---------- el equipo: puestos ---------- */
 ok(POR_DEFECTO_PUESTOS.length === 9, 'los nueve puestos que nombró el cliente');

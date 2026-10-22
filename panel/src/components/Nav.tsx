@@ -27,6 +27,7 @@ import { puede, type Rol, type Accion } from '@/lib/auth';
 const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/', texto: 'Calendario', accion: 'ver' },
   { href: '/equipo', texto: 'Equipo', accion: 'equipo' },
+  { href: '/turnos', texto: 'Turnos', accion: 'equipo' },
   { href: '/menus', texto: 'Menús', accion: 'configurar' },
   { href: '/config', texto: 'Configuración', accion: 'configurar' },
   { href: '/informe', texto: 'Informe', accion: 'informe' },
@@ -37,8 +38,12 @@ const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
 export default function Nav({ rol }: { rol: string }) {
   const ruta = usePathname();
 
+  // `flex-wrap`: la barra envuelve en vez de empujar. Con ocho páginas ya no
+  // cabe en un teléfono, y una barra que no cabe se lleva toda la página
+  // hacia el costado — el panel entero quedaba con scroll horizontal.
+
   return (
-    <nav className="flex gap-5 text-sm">
+    <nav className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
       {PAGINAS.filter((p) => puede(rol as Rol, p.accion))
               .map(({ href, texto }) => {
         // La raíz calza exacto; las demás también con lo que cuelgue de
