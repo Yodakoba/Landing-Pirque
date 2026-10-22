@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { leerTrabajadores, guardarTrabajadores, anotar } from '@/lib/datos';
-import { aEntero, esContratado, MODALIDAD, type Trabajador } from '@/lib/equipo';
+import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { ROL } from '@/lib/auth';
@@ -63,6 +63,8 @@ export async function POST(req: Request) {
       modalidad: esAdmin && esContratado(b?.modalidad)
         ? MODALIDAD.contratado : MODALIDAD.porTurno,
       pagoJornada: esAdmin ? aEntero(b?.pagoJornada) : 0,
+      // Participa salvo que se diga lo contrario: es la regla del negocio.
+      propina: b?.propina === undefined ? true : esSi(b.propina),
       valorHora: esAdmin ? aEntero(b?.valorHora) : 0
     };
 

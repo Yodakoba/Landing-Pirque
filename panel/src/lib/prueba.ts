@@ -43,6 +43,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
+         repartirPropina, propinaDelDia,
          POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
@@ -60,7 +61,7 @@ const tu = (p: Partial<Turno>): Turno => ({
   fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
   asistencia: '', modalidad: MODALIDAD.porTurno,
   pagoJornada: 0, horasExtra: 0, valorHora: 0,
-  ajuste: 0, motivo: '', fila: 2, ...p
+  ajuste: 0, motivo: '', propina: 0, fila: 2, ...p
 });
 const dia = (p: Partial<FechaHabil>): FechaHabil => ({
   fecha: '2026-11-14', capacidad: 60, apertura: '13:00',
@@ -1048,9 +1049,9 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
   { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 },
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true },
   { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 }
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
@@ -1121,9 +1122,9 @@ ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
 ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
 
 const conAcceso: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 },
-  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 },
-  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0 }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true }
 ];
 ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
    'el token encuentra a su dueño');
@@ -1433,6 +1434,73 @@ ok(!puede(ROL.pagos, 'ver') && !puede(ROL.pagos, 'reservas') &&
 ok(!puede(ROL.encargado, 'informe'),
    'y el encargado sigue sin ver el informe: lo suyo es el día que tiene delante');
 ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
+
+
+/* ---------- la propina ---------- */
+const todos = () => true;
+const equipoDelSabado = [
+  tu({ trabajador: 'Ana', asistencia: VINO.si }),
+  tu({ trabajador: 'Luis', asistencia: VINO.si }),
+  tu({ trabajador: 'Pedro', asistencia: VINO.si })
+];
+
+const repartida = repartirPropina(equipoDelSabado, 90000, todos);
+ok(repartida.every((t) => t.propina === 30000), 'se reparte en partes iguales');
+
+// **Hasta el último peso.** 100.000 entre tres da 33.333 y sobran 2: en vez
+// de perderlos o dejar decimales que nadie entrega en efectivo, se le da un
+// peso de más a los primeros.
+const conResto = repartirPropina(equipoDelSabado, 100000, todos);
+ok(conResto.reduce((s, t) => s + t.propina, 0) === 100000,
+   'la suma de las partes es exactamente el total');
+ok(conResto[0].propina === 33334 && conResto[2].propina === 33333,
+   'y el peso que sobra se le da a los primeros, no se pierde');
+
+// Las dos condiciones son distintas: no venir es un hecho del día, no
+// participar es una decisión sobre la persona.
+const conAusente = repartirPropina([
+  ...equipoDelSabado, tu({ trabajador: 'Juan', asistencia: VINO.no })
+], 90000, todos);
+ok(conAusente.find((t) => t.trabajador === 'Juan')!.propina === 0,
+   'quien no vino no recibe propina');
+ok(conAusente.find((t) => t.trabajador === 'Ana')!.propina === 30000,
+   'y los que vinieron siguen repartiéndose el total entre ellos');
+
+const sinPedro = repartirPropina(equipoDelSabado, 90000, (n) => n !== 'Pedro');
+ok(sinPedro.find((t) => t.trabajador === 'Pedro')!.propina === 0,
+   'quien no participa no recibe, aunque haya venido');
+ok(sinPedro.find((t) => t.trabajador === 'Ana')!.propina === 45000,
+   'y su parte se reparte entre los demás, no se guarda');
+
+ok(repartirPropina(equipoDelSabado, 0, todos).every((t) => t.propina === 0),
+   'sin propina nadie recibe nada');
+ok(repartirPropina(equipoDelSabado, -5000, todos).every((t) => t.propina === 0),
+   'una propina negativa no existe: queda en cero');
+ok(repartirPropina(equipoDelSabado, 90000, () => false).every((t) => t.propina === 0),
+   'si nadie participa, la propina no se le queda a nadie');
+ok(repartirPropina([tu({ trabajador: 'Ana', asistencia: VINO.sinMarcar })], 90000, todos)[0]
+   .propina === 0, 'sin pasar lista tampoco se reparte: todavía no se sabe quién vino');
+
+// Volver a repartir el mismo pozo tiene que dar lo mismo, no acumular.
+const dosVeces = repartirPropina(repartirPropina(equipoDelSabado, 90000, todos), 90000, todos);
+ok(dosVeces.every((t) => t.propina === 30000), 'repartir dos veces no acumula');
+
+ok(propinaDelDia(repartida.map((t) => ({ ...t, fila: 2 })), '2026-11-14') === 90000,
+   'el total del día se recupera sumando las partes');
+
+// **La propina NO es sueldo.** Si entrara en pagoDe(), el costo de un sábado
+// subiría porque los clientes dejaron más propina.
+ok(pagoDe(tu({ asistencia: VINO.si, pagoJornada: 30000, propina: 50000 })) === 30000,
+   'la propina no entra en lo que se le paga por el turno');
+ok(costoDelDia([tu({ asistencia: VINO.si, pagoJornada: 30000, propina: 50000 })],
+   '2026-11-14') === 30000, 'ni en lo que cuesta el equipo del día');
+
+const conPropinas = informeDelPeriodo([
+  tu({ trabajador: 'Ana', fecha: '2026-11-14', asistencia: VINO.si,
+       pagoJornada: 30000, propina: 12000 })
+], '2026-11-01', '2026-11-30');
+ok(conPropinas[0].propina === 12000 && conPropinas[0].total === 30000,
+   'y en el informe va en su propia columna, aparte del total');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

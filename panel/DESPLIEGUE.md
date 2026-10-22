@@ -306,6 +306,23 @@ Lo que un trabajador necesita de su propio día —los menús que hay que
 preparar y lo que gana— está en **su link personal**, que es de una sola
 persona.
 
+## La propina
+
+Al **pasar lista**, en la página del día, hay un campo **Propina del día**:
+escribes el **total** y el panel lo reparte en partes iguales entre quienes
+vinieron ese día y participan. No hay que calcular nada a mano.
+
+**Quién participa** se marca con una casilla en **/equipo**, una por persona.
+Viene marcada: la regla es que participa todo el equipo, y quedar fuera es la
+excepción.
+
+**La propina no es sueldo.** Va en su propia columna —en la vista del día, en
+el informe y en la planilla descargable— y **no se suma al costo del equipo**,
+porque esa plata no sale del negocio, pasa por él.
+
+Se reparte **hasta el último peso**: si la división no es exacta, el resto se
+le da a los primeros en vez de perderse.
+
 ## El informe del equipo: la planilla de pagos
 
 En **/informe**, para el administrador y para la cuenta de **pagos**. Eliges

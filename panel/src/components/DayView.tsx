@@ -17,7 +17,7 @@ import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import EquipoDialogo from './EquipoDialogo';
 import ListaDialogo from './ListaDialogo';
-import { planDelDia, costoDelDia, pagoDe, VINO,
+import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 
 type Filtro = 'todas' | 'online' | 'local';
@@ -168,6 +168,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   const vinieron = turnosDelDia.filter((t) => t.asistencia === VINO.si).length;
   const faltaron = turnosDelDia.filter((t) => t.asistencia === VINO.no).length;
   const costo = costoDelDia(turnosDelDia, fecha);
+  const propina = propinaDelDia(turnosDelDia, fecha);
   const sinPasarLista = turnosDelDia.filter((t) => !t.asistencia).length;
 
   return (
@@ -277,6 +278,15 @@ export default function DayView({ fecha }: { fecha: string }) {
             {sinPasarLista > 0 && (
               <span className="text-amber-300"> · {sinPasarLista} sin marcar</span>
             )}
+            {/* La propina va aparte del costo, no sumada: esa plata no sale
+                del negocio, pasa por él. */}
+            {propina > 0 && (
+              <>
+                <br />
+                <strong className="tabular-nums text-hueso/80">{enPesos(propina)}</strong>
+                <span className="text-hueso/55"> de propina, repartidos</span>
+              </>
+            )}
           </p>
         )}
       </div>
@@ -285,6 +295,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         <ListaDialogo
           fecha={fecha}
           turnos={turnosDelDia}
+          trabajadores={equipo?.trabajadores ?? []}
           onListo={() => { setPasandoLista(false); cargarEquipo(); }}
           onCancelar={() => setPasandoLista(false)}
         />

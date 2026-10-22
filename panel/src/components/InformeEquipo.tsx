@@ -81,6 +81,7 @@ export default function InformeEquipo() {
     () => informeDelPeriodo(turnos ?? [], desde, hasta), [turnos, desde, hasta]
   );
   const total = lineas.reduce((s, l) => s + l.total, 0);
+  const propina = lineas.reduce((s, l) => s + l.propina, 0);
   const sinMarcar = lineas.reduce((s, l) => s + l.sinMarcar, 0);
 
   const comoSeLlama = (p: string) => p.length === 7
@@ -100,7 +101,7 @@ export default function InformeEquipo() {
         || a.fecha.localeCompare(b.fecha));
     const csv = aCSV(
       ['Trabajador', 'Fecha', 'Puesto', 'Modalidad', 'Vino', 'Jornada',
-       'Horas extra', 'Valor hora', 'Ajuste', 'Motivo', 'Total'],
+       'Horas extra', 'Valor hora', 'Ajuste', 'Motivo', 'Total', 'Propina'],
       delPeriodo.map((t) => [
         t.trabajador, t.fecha, t.puesto, t.modalidad,
         t.asistencia || 'sin marcar',
@@ -108,7 +109,11 @@ export default function InformeEquipo() {
         // pagó cero", y lo que pasa es que esa columna no le aplica.
         esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
         t.horasExtra || '', t.valorHora || '', t.ajuste || '', t.motivo,
-        pagoDe(t)
+        pagoDe(t),
+        // Última columna y aparte del total, igual que en pantalla: la
+        // propina no es sueldo, y quien reciba esta planilla tiene que poder
+        // sumar una cosa sin arrastrar la otra.
+        t.propina || ''
       ])
     );
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -203,7 +208,8 @@ export default function InformeEquipo() {
                   <th className="w-28 py-2 pr-3 text-right">Jornadas</th>
                   <th className="w-32 py-2 pr-3 text-right">Horas extra</th>
                   <th className="w-28 py-2 pr-3 text-right">Ajustes</th>
-                  <th className="w-28 py-2 text-right">Total</th>
+                  <th className="w-28 py-2 pr-3 text-right">Total</th>
+                  <th className="w-28 py-2 text-right">Propina</th>
                 </tr>
               </thead>
               <tbody>
@@ -243,8 +249,11 @@ export default function InformeEquipo() {
                       l.ajustes < 0 ? 'text-red-300/80' : 'text-hueso/70'}`}>
                       {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
                     </td>
-                    <td className="py-2 text-right tabular-nums">
+                    <td className="py-2 pr-3 text-right tabular-nums">
                       <strong>{enPesos(l.total)}</strong>
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-hueso/70">
+                      {l.propina ? enPesos(l.propina) : <span className="text-hueso/25">—</span>}
                     </td>
                   </tr>
                 ))}
@@ -255,8 +264,13 @@ export default function InformeEquipo() {
                     {lineas.length} {lineas.length === 1 ? 'persona' : 'personas'}
                   </td>
                   <td colSpan={4} />
-                  <td className="py-3 text-right tabular-nums">
+                  <td className="py-3 pr-3 text-right tabular-nums">
                     <strong className="text-oro">{enPesos(total)}</strong>
+                  </td>
+                  <td className="py-3 text-right tabular-nums">
+                    {propina > 0
+                      ? <strong className="text-hueso/80">{enPesos(propina)}</strong>
+                      : <span className="text-hueso/25">—</span>}
                   </td>
                 </tr>
               </tfoot>
@@ -266,7 +280,9 @@ export default function InformeEquipo() {
           <p className="mt-6 max-w-2xl text-xs text-hueso/50">
             <strong>Un contratado suma cero en jornadas</strong>, porque su
             sueldo no sale de acá; lo que aparece en su fila son horas extra y
-            ajustes. <strong>La planilla que se descarga trae el detalle día
+            ajustes. <strong>La propina va aparte y no se suma al total</strong>:
+            esa plata no sale del negocio, pasa por él, así que juntarlas haría
+            imposible contestar cuánto costó el equipo. <strong>La planilla que se descarga trae el detalle día
             por día</strong>, con el motivo de cada ajuste: es lo que sirve
             para entregar, en vez de copiar totales a mano.
           </p>

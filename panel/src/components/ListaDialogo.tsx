@@ -20,7 +20,9 @@
  */
 import { useMemo, useState } from 'react';
 import Dialogo from './Dialogo';
-import { pagoDe, VINO, esContratado, type Turno } from '@/lib/equipo';
+import { pagoDe, repartirPropina, VINO, esContratado,
+         type Trabajador, type Turno } from '@/lib/equipo';
+import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 
@@ -29,11 +31,13 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function ListaDialogo({
-  fecha, turnos, onListo, onCancelar
+  fecha, turnos, trabajadores, onListo, onCancelar
 }: {
   fecha: string;
   /** Los turnos de ESTE día, ya filtrados. */
   turnos: Turno[];
+  /** Para saber quién entra en el reparto de la propina. */
+  trabajadores: Trabajador[];
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -44,6 +48,25 @@ export default function ListaDialogo({
   const [error, setError] = useState('');
 
   const total = useMemo(() => lista.reduce((s, t) => s + pagoDe(t), 0), [lista]);
+  // El total de propina del día se recupera sumando las partes: lo que se
+  // guarda es lo repartido, no el pozo. Ver repartirPropina().
+  const [propina, setPropina] = useState(
+    () => turnos.reduce((s, t) => s + (t.propina || 0), 0)
+  );
+  const participa = (nombre: string) => {
+    const ficha = trabajadores.find((t) => normalizar(t.nombre) === normalizar(nombre));
+    // Quien no tiene ficha participa: lo más probable es que sea alguien
+    // recién agregado, y dejarlo fuera del reparto en silencio sería peor
+    // que incluirlo de más y que alguien lo corrija.
+    return ficha ? ficha.propina : true;
+  };
+  const conPropina = useMemo(
+    () => repartirPropina(lista, propina, participa),
+    [lista, propina, trabajadores]
+  );
+  const reciben = conPropina.filter((t) => t.propina > 0).length;
+  const excluidos = lista.filter(
+    (t) => t.asistencia === VINO.si && !participa(t.trabajador)).length;
   const vinieron = lista.filter((t) => t.asistencia === VINO.si).length;
   const contratados = lista.filter(
     (t) => t.asistencia === VINO.si && esContratado(t.modalidad)).length;
@@ -67,7 +90,10 @@ export default function ListaDialogo({
     try {
       const r = await fetch('/api/equipo/turnos', {
         method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fecha, turnos: lista })
+        // Se manda lo repartido, no el pozo: el reparto se calcula acá y se
+        // guarda hecho, para que cambiar después quién participa no reescriba
+        // lo que ya se entregó.
+        body: JSON.stringify({ fecha, turnos: conPropina })
       });
       const d = await r.json();
       if (d.error) setError(d.error);
@@ -101,6 +127,7 @@ export default function ListaDialogo({
                   <th className="w-20 py-2 pr-3">Hs extra</th>
                   <th className="w-24 py-2 pr-3">Ajuste</th>
                   <th className="py-2 pr-3">Motivo</th>
+                  <th className="w-24 py-2 pr-3 text-right">Propina</th>
                   <th className="w-24 py-2 text-right">Total</th>
                 </tr>
               </thead>
@@ -149,6 +176,13 @@ export default function ListaDialogo({
                         placeholder={t.ajuste ? 'por qué' : ''}
                         onChange={(e) => cambiar(i, 'motivo', e.target.value)} />
                     </td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
+                      {conPropina[i]?.propina
+                        ? enPesos(conPropina[i].propina)
+                        : t.asistencia === VINO.si && !participa(t.trabajador)
+                          ? <span className="text-xs text-hueso/35">no participa</span>
+                          : <span className="text-hueso/25">—</span>}
+                    </td>
                     <td className="py-2 text-right tabular-nums">
                       {t.asistencia === VINO.si
                         ? <strong>{enPesos(pagoDe(t))}</strong>
@@ -158,6 +192,44 @@ export default function ListaDialogo({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 rounded border border-hueso/15 bg-hueso/[0.03] p-3">
+            <label className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-hueso/70">Propina del día</span>
+              <input type="number" min={0} step={1000} value={propina || ''}
+                placeholder="0"
+                onChange={(e) => {
+                  const n = Number(String(e.target.value).replace(/[^\d]/g, ''));
+                  setPropina(Number.isFinite(n) ? n : 0);
+                }}
+                className="w-36 rounded border border-hueso/20 bg-tinta px-2 py-1
+                           text-sm focus:border-oro focus:outline-none" />
+              {propina > 0 && (
+                <span className="text-xs text-hueso/55">
+                  {reciben > 0
+                    ? <>se reparte entre {reciben}{' '}
+                        {reciben === 1 ? 'persona' : 'personas'}</>
+                    : <span className="text-amber-300">
+                        no hay nadie a quien repartirla: marca quién vino
+                      </span>}
+                  {excluidos > 0 && (
+                    <span className="text-hueso/40">
+                      {' '}· {excluidos} no {excluidos === 1 ? 'participa' : 'participan'}
+                    </span>
+                  )}
+                </span>
+              )}
+            </label>
+            <p className="mt-2 text-xs text-hueso/45">
+              Pon el <strong>total</strong> del día y el panel lo reparte en
+              partes iguales entre quienes vinieron y participan. Quién
+              participa se marca en{' '}
+              <a href="/equipo" className="text-oro hover:underline">Equipo</a>.
+              <strong> La propina no es parte del sueldo</strong>: va en su
+              propia columna y no entra en lo que cuesta el equipo, porque esa
+              plata no sale del negocio.
+            </p>
           </div>
 
           <p className="mt-3 text-xs text-hueso/45">

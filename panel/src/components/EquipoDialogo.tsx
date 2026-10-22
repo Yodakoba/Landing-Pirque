@@ -150,7 +150,7 @@ export default function EquipoDialogo({
                   // lista; acá todavía no se le ha pagado nada a nadie.
                   pagoJornada: ficha?.pagoJornada ?? 0,
                   horasExtra: 0, valorHora: ficha?.valorHora ?? 0,
-                  ajuste: 0, motivo: ''
+                  ajuste: 0, motivo: '', propina: 0
                 }]);
               }}
               className="mt-3 w-full rounded border border-hueso/20 bg-tinta px-2 py-1
@@ -193,7 +193,7 @@ export default function EquipoDialogo({
                 fecha, trabajador: t.nombre, puesto: creandoEn,
                 asistencia: VINO.sinMarcar, modalidad: t.modalidad,
                 pagoJornada: t.pagoJornada, horasExtra: 0, valorHora: t.valorHora,
-                ajuste: 0, motivo: ''
+                ajuste: 0, motivo: '', propina: 0
               }]);
             setCreandoEn(null);
             if (aviso) setError(aviso);
