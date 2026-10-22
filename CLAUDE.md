@@ -924,6 +924,30 @@ usa para los menús, y por el mismo motivo: sin alias ni equivalencias, lo
 único que mantiene alineadas dos listas es que alguien se entere cuando dejan
 de estarlo.
 
+**Desde el 2026-10-22 eso lo decide el panel, no un consejo al pie.** Lo
+notó el cliente y tenía razón: la tabla ofrecía **Quitar** en cada fila, con
+el mismo peso visual que todo lo demás, y la advertencia de no usarlo vivía
+en letra chica debajo de la tabla. Un botón que no hay que apretar casi nunca
+no puede estar igual de a mano que el que sí, y menos confiando en que
+alguien lea el párrafo de abajo un sábado a las once de la noche.
+
+Ahora la última columna depende de si esa persona tiene turnos guardados:
+
+| | Qué ofrece |
+|---|---|
+| Sin ningún turno | **Quitar** — la fila escrita por error, que no tiene historia que proteger |
+| Con turnos, activa | **Desactivar** — la saca del planificador y le cierra su link, conservando sus turnos |
+| Con turnos, inactiva | **Desactivado**, sin acción: su ficha se queda |
+
+El costo a asumir: **ya no se puede borrar de un clic la ficha de alguien que
+sí trabajó.** Es justamente lo que no queremos que se pueda hacer sin
+pensarlo; si de verdad hay que sacarla, se edita la planilla a mano, que es
+un acto deliberado.
+
+De paso, el otro botón de esa misma fila pasó a decir **"Quitar link"**: dos
+"Quitar" con significados distintos a dos columnas de distancia eran una
+confusión esperando a pasar.
+
 ### Pasar lista, y lo que cuesta un día (2026-10-21)
 
 Planificar dice quién **debería** venir; pasar lista dice quién vino y cuánto

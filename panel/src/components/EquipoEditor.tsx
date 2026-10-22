@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import { Aviso } from './CalendarView';
 import { aEntero, esContratado, MODALIDAD,
          type Puesto, type Trabajador } from '@/lib/equipo';
+import { normalizar } from '@/lib/columnas';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -27,6 +28,14 @@ export default function EquipoEditor() {
   const [puestos, setPuestos] = useState<Puesto[] | null>(null);
   const [gente, setGente] = useState<Trabajador[]>([]);
   const [sinFicha, setSinFicha] = useState<string[]>([]);
+  /**
+   * Cuántos turnos guardados tiene cada persona.
+   *
+   * Es lo que decide si su ficha se puede quitar o solo desactivar. No se
+   * recalcula al guardar porque esta pantalla no toca los turnos: lo que se
+   * leyó al abrir sigue siendo cierto.
+   */
+  const [turnosDe, setTurnosDe] = useState<Map<string, number>>(new Map());
   // Lo manda el servidor; la interfaz no lo adivina. Los puestos y los links
   // personales son del administrador, y si el encargado viera esos controles
   // el panel le estaría mintiendo: la ruta se los va a negar igual.
@@ -43,6 +52,12 @@ export default function EquipoEditor() {
         setPuestos(d.puestos);
         setGente(d.trabajadores);
         setSinFicha(d.sinFicha ?? []);
+        const cuenta = new Map<string, number>();
+        for (const t of (d.turnos ?? []) as { trabajador: string }[]) {
+          const k = normalizar(t.trabajador);
+          cuenta.set(k, (cuenta.get(k) ?? 0) + 1);
+        }
+        setTurnosDe(cuenta);
         setEsAdmin(!!d.esAdmin);
       })
       .catch((e) => setError(String(e)));
@@ -277,8 +292,12 @@ export default function EquipoEditor() {
                         <button onClick={() => link(t.nombre, 'renovar')}
                           className="text-hueso/55 hover:text-oro"
                           title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
+                        {/* "Quitar link", con la palabra completa: en esta
+                            misma fila hay otro botón que quita a la persona,
+                            y dos "Quitar" distintos a dos columnas de
+                            distancia es una confusión esperando a pasar. */}
                         <button onClick={() => link(t.nombre, 'quitar')}
-                          className="text-hueso/55 hover:text-red-400">Quitar</button>
+                          className="text-hueso/55 hover:text-red-400">Quitar link</button>
                       </span>
                     ) : (
                       <button onClick={() => link(t.nombre, 'crear')}
@@ -286,10 +305,32 @@ export default function EquipoEditor() {
                     )}
                   </td>
                 )}
-                <td className="whitespace-nowrap py-2 text-right">
-                  <button
-                    onClick={() => { setGente(gente.filter((_, k) => k !== i)); setSucio(true); }}
-                    className="text-hueso/60 hover:text-red-400">Quitar</button>
+                {/* **Quitar solo a quien no tiene historia.** Borrar la ficha
+                    de alguien que ya trabajó dejaría sus turnos con un nombre
+                    que no está en ninguna parte, y esos turnos son el registro
+                    de quién trabajó qué día. Antes esto era un consejo en
+                    letra chica al pie de la tabla, al lado de un botón que
+                    decía lo contrario; ahora lo decide el panel. */}
+                <td className="whitespace-nowrap py-2 text-right text-xs">
+                  {(turnosDe.get(normalizar(t.nombre)) ?? 0) === 0 ? (
+                    <button
+                      onClick={() => { setGente(gente.filter((_, k) => k !== i)); setSucio(true); }}
+                      className="text-hueso/60 hover:text-red-400"
+                      title="Todavía no tiene ningún turno guardado">Quitar</button>
+                  ) : t.activo ? (
+                    <button
+                      onClick={() => cambiarPersona(i, 'activo', false)}
+                      className="text-hueso/60 hover:text-oro"
+                      title={`Tiene ${turnosDe.get(normalizar(t.nombre))} turnos guardados, `
+                             + 'así que su ficha no se quita: se desactiva y conserva su historia'}>
+                      Desactivar
+                    </button>
+                  ) : (
+                    <span className="text-hueso/30"
+                      title="Su ficha se conserva porque tiene turnos guardados">
+                      Desactivado
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -397,11 +438,11 @@ export default function EquipoEditor() {
       </div>
 
       <p className="mt-6 max-w-2xl text-xs text-hueso/50">
-        <strong>Desmarcar "activo" es mejor que quitar.</strong> Quitar a
-        alguien de la lista no borra sus turnos pasados —esos son el registro
-        de quién trabajó qué día— pero deja esos turnos con un nombre que ya
-        no está acá, y el aviso de arriba va a reclamarlo. Desmarcar "activo"
-        lo saca del planificador y conserva su historia.
+        <strong>A quien ya trabajó se le desactiva, no se le quita.</strong>{' '}
+        <em>Desactivar</em> lo saca del planificador y le cierra su link
+        personal, pero conserva sus turnos, que son el registro de quién
+        trabajó qué día. <em>Quitar</em> aparece solo mientras la persona no
+        tenga ningún turno guardado — la fila escrita por error, básicamente.
       </p>
     </section>
   );
