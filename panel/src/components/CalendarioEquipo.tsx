@@ -11,7 +11,8 @@
  * justamente eso— así que no había forma de asignarles equipo.
  *
  * Acá están **todos los días del mes**, los abiertos y los que no, y
- * cualquiera se puede planificar.
+ * cualquiera se puede planificar — y marcar quién llegó, que es lo que hace
+ * la jefa de turno con esta misma ventana abierta.
  *
  * **Un día de preparación no es un dato nuevo: se deduce.** Si un día no
  * recibe público y tiene gente asignada, es preparación. No hay columna que
@@ -58,15 +59,15 @@ export default function CalendarioEquipo() {
       })
       .catch((e) => setError(String(e)));
 
-  useEffect(() => {
-    cargarEquipo();
-    // La ocupación es solo para pintar el mes: si falla, el calendario se
-    // dibuja igual y se puede planificar. Lo que no se podría es saber
-    // cuánta gente viene, y eso se nota solo.
+  // La ocupación es solo para pintar el mes: si falla, el calendario se
+  // dibuja igual y se puede planificar. Lo que no se podría es saber cuánta
+  // gente viene, y eso se nota solo.
+  const cargarDias = () =>
     fetch('/api/ocupacion').then((r) => r.json())
       .then((d) => { if (d.ocupacion) setOcupacion(d.ocupacion); })
       .catch(() => {});
-  }, []);
+
+  useEffect(() => { cargarEquipo(); cargarDias(); }, []);
 
   const porFecha = useMemo(
     () => new Map(ocupacion.map((o) => [o.fecha, o])), [ocupacion]
@@ -98,8 +99,14 @@ export default function CalendarioEquipo() {
       <p className="mb-5 max-w-2xl text-sm text-hueso/60">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,
         incluidos los que no reciben público: los de preparación, montaje o
-        cierre. Planificar un día cerrado <strong>no lo abre al público</strong>
-        {' '}— eso se hace en el calendario, día por día.
+        cierre. <strong>Apreta el día</strong> —el que sea— y asígnale equipo;
+        ahí mismo se marca quién llegó.
+      </p>
+      <p className="mb-5 max-w-2xl text-sm text-hueso/60">
+        Planificar un día cerrado <strong>no lo abre al público</strong>, así
+        que un día de preparación no necesita nada más. Abrir un día para
+        recibir reservas se sigue haciendo en el{' '}
+        <a href="/" className="text-oro hover:underline">calendario</a>.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">

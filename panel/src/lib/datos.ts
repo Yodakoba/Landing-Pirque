@@ -337,12 +337,19 @@ export async function guardarEquipoDelDia(
   // montos sin que su pantalla reciba nunca la tabla de sueldos del equipo
   // entero — que no necesita y que no es dato suyo.
   //
-  // **Solo mientras la asistencia esté sin marcar.** Pasada la lista, lo que
-  // venga manda: ahí el monto ya es un hecho del día y no una propuesta, y
-  // volver a aplicarle la ficha reescribiría una corrección hecha a mano.
+  // **Pasada la lista, lo que venga manda**: ahí el monto ya es un hecho del
+  // día y no una propuesta, y volver a aplicarle la ficha reescribiría una
+  // corrección hecha a mano.
+  //
+  // **Salvo que el turno no traiga ningún monto**, y esa excepción no es un
+  // detalle: desde que la asistencia también se marca en el planificador, un
+  // turno puede nacer ya marcado "vino" y con los montos en cero —la pantalla
+  // del encargado no recibe los sueldos de nadie, así que manda ceros—. Sin
+  // esto esa persona quedaría congelada en $0 y el error aparecería recién el
+  // día de pagar, que es el peor momento para descubrirlo.
   const fichas = new Map((await leerTrabajadores()).map((t) => [normalizar(t.nombre), t]));
   for (const t of nuevos) {
-    if (t.asistencia !== '') continue;
+    if (t.asistencia !== '' && (t.pagoJornada || t.valorHora)) continue;
     const ficha = fichas.get(normalizar(t.trabajador));
     if (!ficha) continue;
     if (!t.pagoJornada) t.pagoJornada = ficha.pagoJornada;

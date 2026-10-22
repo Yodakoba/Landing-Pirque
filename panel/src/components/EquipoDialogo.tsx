@@ -81,6 +81,14 @@ export default function EquipoDialogo({
   );
   const faltan = lineas.reduce((n, l) => n + l.faltan, 0);
 
+  const marcar = (nombre: string, asistencia: string) => setPlan(plan.map(
+    (t) => (normalizar(t.trabajador) === normalizar(nombre)
+      ? { ...t, asistencia } : t)
+  ));
+
+  const vinieron = plan.filter((t) => t.asistencia === VINO.si).length;
+  const faltaron = plan.filter((t) => t.asistencia === VINO.no).length;
+
   async function guardar() {
     setGuardando(true);
     try {
@@ -126,20 +134,42 @@ export default function EquipoDialogo({
             </div>
 
             {l.asignados.length > 0 ? (
-              <ul className="mt-2 flex flex-wrap gap-1.5">
-                {l.asignados.map((nombre) => (
-                  <li key={nombre}>
-                    <button
-                      onClick={() => setPlan(plan.filter(
-                        (t) => normalizar(t.trabajador) !== normalizar(nombre)))}
-                      className="group rounded bg-hueso/10 px-2 py-1 text-xs hover:bg-red-500/20"
-                      title={`Quitar a ${nombre} de este día`}>
-                      {nombre}
-                      <span aria-hidden className="ml-1.5 text-hueso/50 group-hover:text-red-300">✕</span>
-                      <span className="sr-only">. Quitar de este día</span>
-                    </button>
-                  </li>
-                ))}
+              <ul className="mt-2 space-y-1">
+                {l.asignados.map((nombre) => {
+                  const t = plan.find(
+                    (x) => normalizar(x.trabajador) === normalizar(nombre));
+                  return (
+                    <li key={nombre} className="flex items-center gap-1.5 text-xs">
+                      {/* Marcar quién llegó **acá mismo**: quien abre el día a
+                          las once de la mañana es la jefa de turno, y lo que
+                          tiene delante es esta ventana. Los montos siguen
+                          siendo de Pasar lista — esto solo dice quién vino. */}
+                      <select value={t?.asistencia ?? VINO.sinMarcar}
+                        aria-label={`¿Vino ${nombre}?`}
+                        onChange={(e) => marcar(nombre, e.target.value)}
+                        className="rounded border border-hueso/20 bg-tinta px-1 py-0.5
+                                   text-xs focus:border-oro focus:outline-none">
+                        <option value={VINO.sinMarcar}>—</option>
+                        <option value={VINO.si}>Vino</option>
+                        <option value={VINO.no}>No vino</option>
+                      </select>
+                      <span className={
+                        t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
+                        : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}>
+                        {nombre}
+                      </span>
+                      <span className="flex-1" />
+                      <button
+                        onClick={() => setPlan(plan.filter(
+                          (x) => normalizar(x.trabajador) !== normalizar(nombre)))}
+                        className="px-1 text-hueso/40 hover:text-red-300"
+                        title={`Quitar a ${nombre} de este día`}>
+                        <span aria-hidden>✕</span>
+                        <span className="sr-only">Quitar a {nombre} de este día</span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="mt-2 text-xs text-hueso/40">Nadie asignado.</p>
@@ -217,6 +247,18 @@ export default function EquipoDialogo({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <span className="text-xs text-hueso/50">
           {plan.length} {plan.length === 1 ? 'persona' : 'personas'} en el equipo de este día.
+          {(vinieron > 0 || faltaron > 0) && (
+            <>
+              {' '}<strong className="text-hueso/70">
+                {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
+              </strong>
+              {faltaron > 0 && (
+                <span className="text-red-300">
+                  {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
+                </span>
+              )}.
+            </>
+          )}
           {' '}¿Falta alguien en la lista?{' '}
           <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
           {enlaceAlDia && plan.length > 0 && (

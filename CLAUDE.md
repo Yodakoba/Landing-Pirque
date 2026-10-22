@@ -961,6 +961,44 @@ Dos detalles de implementación que vale la pena tener escritos:
   ahora envuelve** (`flex-wrap`): con ocho páginas ya no cabía, y una barra
   que no cabe se lleva la página entera hacia el costado.
 
+### Marcar quién llegó, desde el propio planificador (2026-10-22)
+
+Lo pidió el cliente pensando en **la jefa de turno**: quien abre el día a las
+once de la mañana no va a pasar lista con montos, va a mirar quién llegó. Por
+eso cada persona asignada tiene ahí mismo un **— / Vino / No vino**, en la
+misma ventana donde se elige y se agrega gente. Quien no llegó queda tachado,
+y el pie dice cuántos vinieron.
+
+**Los montos siguen siendo de Pasar lista**, que no cambió: esta ventana solo
+dice quién vino. Son dos momentos distintos del día y conviene que sigan
+siéndolo — marcar presencia es de la mañana, cerrar las cuentas es de la
+noche.
+
+**Ojo con una trampa que esto abrió, y que costó cambiar una regla del
+servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
+mientras la asistencia estuviera sin marcar**; pasada la lista, lo que viniera
+del navegador mandaba. Con la asistencia marcándose en el planificador, un
+turno puede nacer ya en "vino" **y con los montos en cero**, porque la
+pantalla de un encargado nunca recibe los sueldos de nadie. Esa persona habría
+quedado congelada en **$0**, y el error habría aparecido el día de pagar.
+
+La regla ahora es: **lo que venga manda, salvo que el turno no traiga ningún
+monto.** Un turno con asistencia y sin montos no es un cero corregido a mano,
+es uno al que todavía nadie le puso precio. Con la convención de que las
+diferencias van en el ajuste, un cero deliberado en la jornada ya no existe.
+
+**El botón "Agregar fecha" se puso acá y se sacó el mismo día** (2026-10-22),
+y conviene que quede escrito para que a nadie le dé por reponerlo: **un día de
+preparación no se agrega, se planifica.** Se aprieta el día —el que sea— y se
+le asigna equipo; eso es todo, y no lo abre al público. *Agregar fecha* es
+otra cosa: pone el día en el calendario **para recibir reservas**, así que
+tenerlo en esta pantalla solo invitaba a usarlo para un montaje y abrirlo sin
+querer. Abrir un día sigue siendo del calendario de la portada.
+
+**La jefa de turno es un puesto, no un rol.** Para marcar asistencia necesita
+una cuenta de **encargado** en `/usuarios`; con su nombre, además, la bitácora
+dice quién marcó qué.
+
 ### Las columnas de `Turnos` se leen por nombre, no por posición
 
 Al revés de `Puestos` y `Trabajadores`. La diferencia no es gusto: esas dos
@@ -1029,6 +1067,25 @@ un acto deliberado.
 De paso, el otro botón de esa misma fila pasó a decir **"Quitar link"**: dos
 "Quitar" con significados distintos a dos columnas de distancia eran una
 confusión esperando a pasar.
+
+### La tabla de Equipo: los anchos van declarados (2026-10-22)
+
+Lo reclamó el cliente con una captura: el nombre se leía a seis letras
+—"Darinl"— mientras un teléfono de nueve dígitos sobraba media caja. La causa
+es simple y vale tenerla escrita: **el nombre era la única columna sin ancho**,
+así que en una tabla de diez columnas era la que cedía todo el espacio.
+
+Ahora cada columna declara el suyo, con `table-fixed`, y la tabla no baja de
+su mínimo: si no cabe, se desplaza de lado dentro de su marco, como las demás
+del panel. Los anchos salen de lo que cada celda muestra de verdad —un nombre
+y apellido, un teléfono, "Contratado", "no aplica"— y no de repartir parejo.
+
+**De paso, el marco del panel pasó de `max-w-6xl` a `max-w-7xl`.** Esta tabla
+es lo más denso que tiene y con 1152px terminaba cortando la última columna,
+que es justamente donde están *Crear link* y *Desactivar*. El costo a asumir:
+en el calendario, una semana de dos días deja más aire a la derecha, porque la
+grilla sigue siendo de cuatro columnas. Los textos no se estiran: siguen
+acotados a `max-w-2xl`.
 
 ### Pasar lista, y lo que cuesta un día (2026-10-21)
 
