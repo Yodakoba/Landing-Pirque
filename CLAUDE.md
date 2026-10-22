@@ -1068,6 +1068,25 @@ De paso, el otro botón de esa misma fila pasó a decir **"Quitar link"**: dos
 "Quitar" con significados distintos a dos columnas de distancia eran una
 confusión esperando a pasar.
 
+### La tabla de Equipo: los anchos van declarados (2026-10-22)
+
+Lo reclamó el cliente con una captura: el nombre se leía a seis letras
+—"Darinl"— mientras un teléfono de nueve dígitos sobraba media caja. La causa
+es simple y vale tenerla escrita: **el nombre era la única columna sin ancho**,
+así que en una tabla de diez columnas era la que cedía todo el espacio.
+
+Ahora cada columna declara el suyo, con `table-fixed`, y la tabla no baja de
+su mínimo: si no cabe, se desplaza de lado dentro de su marco, como las demás
+del panel. Los anchos salen de lo que cada celda muestra de verdad —un nombre
+y apellido, un teléfono, "Contratado", "no aplica"— y no de repartir parejo.
+
+**De paso, el marco del panel pasó de `max-w-6xl` a `max-w-7xl`.** Esta tabla
+es lo más denso que tiene y con 1152px terminaba cortando la última columna,
+que es justamente donde están *Crear link* y *Desactivar*. El costo a asumir:
+en el calendario, una semana de dos días deja más aire a la derecha, porque la
+grilla sigue siendo de cuatro columnas. Los textos no se estiran: siguen
+acotados a `max-w-2xl`.
+
 ### Pasar lista, y lo que cuesta un día (2026-10-21)
 
 Planificar dice quién **debería** venir; pasar lista dice quién vino y cuánto

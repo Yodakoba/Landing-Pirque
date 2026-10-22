@@ -31,7 +31,7 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
 
   return (
     <header className="border-b border-hueso/10">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-6 gap-y-2 px-5 py-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-baseline gap-x-6 gap-y-2 px-5 py-4">
         {esDeTrabajador || esEntrada ? (
           <span className="text-sm font-bold uppercase tracking-widest text-oro">
             Brasas de Lo Pirque

@@ -200,19 +200,25 @@ export default function EquipoEditor() {
           {avisoLink}
         </p>
       )}
+      {/* **Los anchos van declarados columna por columna**, y la tabla no baja
+          de su mínimo: sin eso, el nombre —la única columna sin ancho— era la
+          que cedía todo el espacio y quedaba en seis letras, mientras un
+          teléfono de nueve dígitos sobraba la mitad de su caja. Si no cabe,
+          la tabla se desplaza de lado dentro de su marco, que es lo que ya
+          hacen las demás del panel. */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[62rem] table-fixed text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
             <tr className="border-b border-hueso/10">
-              <th className="py-2 pr-3">Nombre</th>
-              <th className="w-44 py-2 pr-3">Teléfono</th>
-              <th className="w-44 py-2 pr-3">Puesto habitual</th>
-              <th className="w-20 py-2 pr-3">Activo</th>
+              <th className="w-52 py-2 pr-3">Nombre</th>
+              <th className="w-32 py-2 pr-3">Teléfono</th>
+              <th className="w-40 py-2 pr-3">Puesto habitual</th>
+              <th className="w-16 py-2 pr-3">Activo</th>
               {esAdmin && <th className="w-32 py-2 pr-3">Modalidad</th>}
-              {esAdmin && <th className="w-32 py-2 pr-3">Jornada</th>}
-              {esAdmin && <th className="w-32 py-2 pr-3">Hora extra</th>}
-              {esAdmin && <th className="w-24 py-2 pr-3">Propina</th>}
-              {esAdmin && <th className="w-52 py-2 pr-3">Link personal</th>}
+              {esAdmin && <th className="w-28 py-2 pr-3">Jornada</th>}
+              {esAdmin && <th className="w-24 py-2 pr-3">Hora extra</th>}
+              {esAdmin && <th className="w-20 py-2 pr-3">Propina</th>}
+              {esAdmin && <th className="w-44 py-2 pr-3">Link personal</th>}
               <th className="w-20 py-2" />
             </tr>
           </thead>
@@ -397,7 +403,7 @@ export default function EquipoEditor() {
         es lo correcto mientras el número no lo hayas puesto tú.
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[32rem] table-fixed text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
             <tr className="border-b border-hueso/10">
               <th className="py-2 pr-3">Puesto</th>
