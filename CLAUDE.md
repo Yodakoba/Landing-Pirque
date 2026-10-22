@@ -923,6 +923,24 @@ Dónde aparece un día de preparación, y cómo:
 | Link personal | "día de preparación, no abre al público", para que quien lo lee sepa si va a atender o a montar |
 | Calendario de la portada | **No aparece**, a propósito: ese día no recibe gente |
 
+**Un día de preparación se paga como cualquier otro, y entra al informe**
+(decidido el 2026-10-22). El informe no sabe —ni tiene por qué saber— si ese
+día abría: suma los turnos del periodo y ya. Hay una prueba que lo fija, para
+que a nadie se le ocurra filtrarlos después.
+
+Y como el monto de un día de montaje suele ser **un acuerdo aparte**, se
+resuelve con lo que ya existía: el **ajuste con su motivo** al pasar lista,
+que suma o resta sobre la jornada. No hizo falta nada nuevo; lo que faltaba
+era poder llegar.
+
+**Porque llegar era el problema**: `Pasar lista` vive en la página del día, y
+un día de preparación no aparece en el calendario de la portada. Por eso la
+ventana de planificación, cuando se abre **desde `/turnos`**, ofrece el
+enlace *"abre el día"*. Desde la página del día no lo ofrece: llevaría a
+donde ya se está. Sin ese enlace el circuito quedaba cortado justo antes de
+lo que importa — y un turno sin pasar lista no suma nada ni entra en el
+informe.
+
 Dos detalles de implementación que vale la pena tener escritos:
 
 - **`diasDelMes()` cuenta los días con una tabla y la regla de los

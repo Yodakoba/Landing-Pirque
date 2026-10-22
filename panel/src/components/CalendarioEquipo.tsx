@@ -213,6 +213,7 @@ export default function CalendarioEquipo() {
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
           esAdmin={equipo.esAdmin}
+          enlaceAlDia
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}
         />

@@ -1437,6 +1437,16 @@ ok(informeDelPeriodo(mes, '2026-11-16', '2026-11-22')
 ok(informeDelPeriodo([], '2026-11-01', '2026-11-30').length === 0,
    'sin turnos no hay informe');
 
+// Un dia de preparacion —martes, cerrado al publico— se paga igual que
+// cualquier otro: el informe no sabe ni tiene por que saber si el dia abria.
+// Lo fija una prueba para que a nadie se le ocurra filtrarlo despues.
+const preparacion = informeDelPeriodo([
+  tu({ trabajador: 'Ana', fecha: '2026-11-10', asistencia: VINO.si,  // martes
+       pagoJornada: 30000, ajuste: 10000, motivo: 'montaje, acuerdo aparte' })
+], '2026-11-01', '2026-11-30');
+ok(preparacion[0].dias === 1 && preparacion[0].total === 40000,
+   'un dia de preparacion entra al informe, con su ajuste por acuerdo especial');
+
 /* ---------- los periodos que existen ---------- */
 ok(JSON.stringify(mesesConTurnos(mes)) === JSON.stringify(['2026-12', '2026-11']),
    'los meses con turnos van del más nuevo al más viejo');
