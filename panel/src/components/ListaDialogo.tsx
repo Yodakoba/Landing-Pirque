@@ -245,6 +245,16 @@ export default function ListaDialogo({
             El ajuste suma o resta suelto: ponlo en negativo para descontar, y
             escribe el motivo — dentro de un mes nadie se acuerda.
           </p>
+          {/* La convención, dicha donde se aplica. Los dos caminos llegan al
+              mismo total, pero solo uno deja escrito por qué: una jornada
+              editada no se distingue de un error de tipeo, y un ajuste con
+              motivo se explica solo cuando alguien revise el pago. */}
+          <p className="mt-2 text-xs text-hueso/45">
+            Si un día se paga distinto de lo habitual —un montaje, media
+            jornada, un acuerdo aparte—, <strong>deja la jornada como está y
+            pon la diferencia en el ajuste</strong>, con su motivo. El total
+            es el mismo y queda dicho por qué.
+          </p>
         </>
       )}
 
