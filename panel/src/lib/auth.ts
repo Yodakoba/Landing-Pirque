@@ -64,6 +64,17 @@ export const ROL = {
   admin: 'admin',
   /** El día a día: reservas, días, asistencia, equipo. */
   encargado: 'encargado',
+  /**
+   * Quien hace los pagos. **Solo ve el informe del equipo.**
+   *
+   * Existe porque antes esa persona tenía que entrar con la cuenta de
+   * administrador, que abre también precios, configuración y las cuentas
+   * del panel. Juntar las cuentas del equipo no requiere nada de eso.
+   *
+   * No ve reservas, ni clientes, ni el calendario: lo suyo son los turnos
+   * ya cerrados y cuánto suman.
+   */
+  pagos: 'pagos',
   /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
   trabajador: 'trabajador',
   /** No identificado. */
@@ -136,6 +147,15 @@ export const PERMISOS = {
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
   bitacora: [ROL.admin],
+  /**
+   * El informe del mes: cuánto se le pagó a cada persona.
+   *
+   * Es del administrador, aunque el encargado sí vea los montos de un día
+   * —los escribe él al pasar lista—. La línea está puesta a propósito ahí:
+   * lo que necesita para cerrar un turno es el día que tiene delante, no el
+   * historial de sueldos de todo el equipo.
+   */
+  informe: [ROL.admin, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
@@ -184,7 +204,7 @@ export function credencialesDelEntorno(env: Record<string, string | undefined>):
  * El trabajador no está: él entra por su link personal, no por acá. Una
  * cuenta con rol `trabajador` sería una puerta que no lleva a ninguna parte.
  */
-export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado];
+export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado, ROL.pagos];
 
 export function esRolDeCuenta(v: unknown): v is Rol {
   return ROLES_DE_CUENTA.includes(

@@ -306,6 +306,26 @@ Lo que un trabajador necesita de su propio día —los menús que hay que
 preparar y lo que gana— está en **su link personal**, que es de una sola
 persona.
 
+## El informe del equipo: la planilla de pagos
+
+En **/informe**, para el administrador y para la cuenta de **pagos**. Eliges
+**por semana**, **por mes** o un **rango de fechas cualquiera**, y muestra por
+persona: días trabajados, jornadas, horas extra, ajustes y total.
+
+**Descargar planilla** baja un CSV con el **detalle día por día** —incluido
+el motivo de cada ajuste—, que es lo que sirve para entregarle a quien lleva
+los pagos. Los totales se miran en pantalla; el detalle es lo que se pasa.
+
+Si quedan turnos **sin pasar lista**, el informe lo avisa arriba: esos no
+suman, así que el total está incompleto hasta que se cierren.
+
+### La cuenta de pagos
+
+Se crea en **/usuarios** con el rol `pagos`. **Solo ve el informe**: ni
+calendario, ni reservas, ni clientes, ni equipo, ni configuración, ni
+cuentas. Es para que quien junta las cuentas no tenga que entrar con la
+credencial del administrador.
+
 ## El equipo: tres pestañas más
 
 `Puestos`, `Trabajadores` y `Turnos`. Se editan en **/equipo**, salvo los

@@ -995,20 +995,84 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 | Plata | **no** | solo la suya |
 | A quién se manda | al grupo | a una persona |
 
-### Quién puede hacer qué (2026-10-21)
+### El informe del equipo, por semana o por mes (2026-10-21)
 
-Tres roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
+`/informe`, solo administrador. Por cada persona del periodo: días que vino,
+jornadas, horas extra, ajustes y total. Abajo, el total del periodo.
 
-| | Administrador | Encargado | Trabajador |
-|---|---|---|---|
-| Ver el calendario y las reservas | sí | sí | — |
-| Anotar reservas, abrir y cerrar días | sí | sí | — |
-| Asignar turnos y editar la lista de trabajadores | sí | sí | — |
-| Puestos y su regla "uno cada N" | sí | — | — |
-| Precios, menús y configuración | sí | — | — |
-| Links personales, diagnóstico y Shopify a mano | sí | — | — |
-| Cuentas del panel y bitácora | sí | — | — |
-| Ver **sus propios** turnos | — | — | sí |
+**La descarga es el punto, no un extra.** Quien paga tiene que juntar la
+información de todos y pasarla a quien corresponda, y que esa pega sea
+copiar una tabla a mano es justo lo que esto viene a evitar. Por eso el CSV
+trae el **detalle día por día con el motivo de cada ajuste**, no los totales:
+los totales se miran en pantalla, el detalle es lo que se entrega.
+
+**Semana, mes y rango libre son el mismo cálculo.** Por dentro todo es un
+rango de fechas (`informeDelPeriodo`), así que no hay tres versiones de la
+misma suma esperando a desalinearse. `rangoDelPeriodo()` distingue semana de
+mes por el largo del texto: `AAAA-MM` es un mes, `AAAA-MM-DD` es la semana de
+ese lunes. El **rango libre** (2026-10-22) lleva sus dos fechas aparte,
+porque es justamente lo que no tiene nombre: una quincena, un fin de semana
+largo, lo que quedó pendiente de pagar. Si las fechas vienen al revés **se
+ordenan**, en vez de devolver un informe vacío que parece que no hubo turnos.
+
+**Muestra a quien no vino y a quien quedó sin marcar, con total cero.** Una
+persona que desaparece del informe se lee como que no trabajó, y lo que pudo
+pasar es que nadie cerró ese día. Por eso además hay un aviso arriba cuando
+quedan turnos sin pasar lista: el total está incompleto mientras tanto, y
+conviene que eso se vea antes de pagar.
+
+**Un contratado suma cero en jornadas** y lo dice en su fila, porque su
+sueldo no sale de acá; lo que aparece son sus horas extra y ajustes.
+
+### Dónde está la línea entre el encargado y el administrador, en la plata
+
+Vale tenerla escrita porque no es obvia:
+
+- **Los montos de un día son del encargado.** Los escribe él al pasar lista
+  y los ve en la página de ese día. Es su trabajo.
+- **El informe del periodo es del administrador.** Lo que el encargado
+  necesita para cerrar un turno es el día que tiene delante, no el historial
+  de sueldos de todo el equipo.
+
+Esa pregunta se contestó el **2026-10-22**: sí es otra persona, así que
+existe el rol **pagos**.
+
+### El rol de pagos (2026-10-22)
+
+**Una sola acción: leer el informe.** Nada más. Hay una prueba que lo fija
+contando cuántas acciones puede —una, no dos—, para que agregar un permiso
+nuevo a la tabla no se lo regale sin que nadie se entere.
+
+No ve el calendario, ni reservas, ni clientes, ni el equipo, ni la
+configuración, ni las cuentas, ni la bitácora. Existe precisamente para que
+quien junta las cuentas no tenga que entrar con la del administrador.
+
+Dos detalles que lo hacen funcionar:
+
+- **`/api/informe`, una ruta propia que devuelve solo turnos.** El informe
+  antes leía `/api/equipo`, por donde viajan reservas, trabajadores y
+  puestos. Darle "ver" a la cuenta de pagos para que pudiera sacar sus
+  cuentas habría sido abrirle el panel entero.
+- **El middleware la manda de `/` a `/informe`.** Sin eso aterrizaría en una
+  portada que carga y falla, y parecería que el panel está roto en vez de
+  que esa parte no es suya. El enlace de la marca sigue apuntando a `/`, que
+  para ella redirige — no hay callejón.
+
+### Quién puede hacer qué (2026-10-21, cuarto rol el 2026-10-22)
+
+Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
+
+| | Administrador | Encargado | Pagos | Trabajador |
+|---|---|---|---|---|
+| Ver el calendario y las reservas | sí | sí | — | — |
+| Anotar reservas, abrir y cerrar días | sí | sí | — | — |
+| Asignar turnos y editar la lista de trabajadores | sí | sí | — | — |
+| Puestos y su regla "uno cada N" | sí | — | — | — |
+| Precios, menús y configuración | sí | — | — | — |
+| Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
+| Cuentas del panel y bitácora | sí | — | — | — |
+| **El informe del equipo** | sí | — | **sí** | — |
+| Ver **sus propios** turnos | — | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
 Lo que no toca es la plata, la configuración y las credenciales.
@@ -1016,6 +1080,11 @@ Lo que no toca es la plata, la configuración y las credenciales.
 **El trabajador no figura en ninguna fila de la tabla de permisos, y ese es
 el punto**: no hay una sola acción del panel que pueda ejecutar. Su acceso no
 pasa por ahí.
+
+**El menú se dibuja consultando esa misma tabla**, no una lista aparte de
+"esto es de administrador". Con cuatro roles, una segunda lista era una
+segunda verdad: el día que alguien agregara un rol, el menú le ofrecería
+puertas cerradas o le escondería las suyas.
 
 ### El middleware autentica, cada ruta autoriza
 
@@ -1194,9 +1263,8 @@ pidió y cuánto pagó no es dato de un turno.
   pero si ese monto se descuenta de una liquidación formal, los descuentos al
   sueldo tienen reglas en Chile. Conviene confirmarlo con quien les lleve la
   contabilidad antes de usarlo así.
-- **No hay un informe por persona ni por mes.** El link personal muestra los
-  últimos 30 días de cada uno, y la planilla tiene todo; una vista de
-  "cuánto se pagó en octubre" todavía no existe.
+- ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
+  2026-10-22**: existe el rol `pagos`, que solo lee el informe.
 
 ## Estilo y marca
 
