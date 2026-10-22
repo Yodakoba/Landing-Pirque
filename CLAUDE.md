@@ -200,13 +200,18 @@ El texto de la tarjeta va **en el idioma que se ofrece**, no en el de la
 página: a alguien que lee inglés hay que ofrecerle el cambio en inglés. Los
 tres textos viven en el objeto `TEXTOS` del archivo.
 
-### Lo que queda en español pase lo que pase
+### Lo que no sigue al idioma de la página
 
-- **El checkout de Shopify.** El formulario de reserva se traduce, pero al
-  apretar "Complete booking" la persona cae en un checkout en español —
-  confirmado el 2026-10-13: el `checkoutUrl` que devuelve la tienda viene
-  con `/es/`. Se arregla con Shopify Markets, del lado de la tienda, no
-  desde acá.
+- **El checkout de Shopify, que además cambió de idioma solo.** El
+  formulario de reserva se traduce, pero el checkout no obedece a la página.
+  El 2026-10-13 el `checkoutUrl` venía con `/es/`, o sea que todos caían en
+  español; **el 2026-10-22 redirige a `/checkouts/cn/<token>/en-us`**, y
+  probado con `Accept-Language` en es-CL, en-US y pt-BR los tres terminan en
+  `en-us`. Nadie tocó el sitio: es configuración de la tienda. Así, hoy un
+  cliente chileno pagaría en una pantalla en inglés, que es peor que el
+  problema original. **Se arregla con Shopify Markets, del lado de la
+  tienda**, y conviene volver a mirarlo cada vez que se toque algo allá,
+  porque cambia sin avisar.
 - **Las conversaciones de WhatsApp.** El mensaje prellenado sí se traduce
   (el script lo decodifica del `?text=`), pero quien responde al otro lado
   escribe en el idioma que maneje. Vale la pena avisarle al cliente antes de
@@ -334,8 +339,11 @@ Chromium headless está preinstalado en este entorno:
   "file://$PWD/landing-afiliados.html"
 ```
 
-Las tipografías saldrán en fallback porque el sandbox bloquea
-`fonts.googleapis.com` — es del entorno, no de la página.
+**Las tipografías ya salen de verdad** (desde el 2026-10-22, cuando el
+cliente abrió `fonts.googleapis.com` y `fonts.gstatic.com` en Network
+access): una captura carga Fraunces y Work Sans en vez del fallback, así que
+ahora sirve para juzgar la tipografía y no solo el layout. Si alguna vez
+vuelven a salir en fallback, es el acceso del entorno y no la página.
 
 ## Landing de promociones (`promociones.html`)
 
@@ -480,7 +488,9 @@ del servidor, que nunca sale al navegador.
 - **Antes de difundir el sitio hay que cambiar las tres cosas juntas**:
   el token, `CONFIG.dominio` y los IDs de variante del HTML. Cambiar una
   sola deja el formulario apuntando a medias y falla en el checkout, que es
-  el peor lugar para fallar.
+  el peor lugar para fallar. **Y antes que eso hay que crear allá el modelo
+  de seis variantes**, que hoy no existe: ver "La tienda de producción,
+  mirada por su catálogo público".
 - **`CONFIG.dominio` apunta hoy a la tienda de desarrollo**
   (`brasas-de-lo-pirque-development.myshopify.com`). Al salir a producción
   hay que cambiar esa línea, el token, **y los IDs de variante del HTML**,
@@ -680,6 +690,41 @@ desaparece la diferencia de precio entre los dos entregables.
 
 **Los tres montos coinciden hoy**: tienda, sitio público y landing.
 
+### La tienda de producción, mirada por su catálogo público (2026-10-22)
+
+Con `brasasdelopirque.cl` alcanzable se pudo mirar **la tienda de verdad**,
+sin credenciales: Shopify publica el catálogo en `/products.json` y
+`/products/<handle>.js`. Esto era dato que faltaba para el cambio a
+producción, y cambia lo que hay que preparar.
+
+- **El dominio de producción es `lo-pirque.myshopify.com`** (shopId
+  63433277497, moneda CLP). Es el que hay que poner en `CONFIG.dominio` al
+  salir. Los otros `*.myshopify.com` que aparecen en el HTML del sitio viejo
+  son de apps de terceros incrustadas en el tema, no de la tienda.
+- **Hay un solo producto publicado: "Menú Tradiciones", con 39 variantes**
+  —13 fechas × 3 tipos—, que es el modelo viejo de una variante por fecha.
+  O sea: **"A Brasas abiertas" no existe como producto publicado en
+  producción**, y el modelo de seis variantes (3 menús × 2 modalidades) que
+  usa el sitio nuevo hay que crearlo allá. Hasta que eso exista, el cambio a
+  producción no se puede hacer aunque se cambien el token y el dominio.
+- **Los precios de producción hoy**: adultos $44.000, niños (4 a 12)
+  $19.000. Coinciden con los del sitio.
+- **Hay un tercer tramo que el sitio nuevo no tiene: "Pequeños (0 a 3 años)"
+  a $6.000.** No es un olvido de nadie: nunca se mencionó. Hay que
+  preguntarle al cliente si se mantiene, porque hoy `reservas.html` solo
+  ofrece adultos y niños de 4 a 12, y una familia con una guagua no tendría
+  cómo anotarla.
+- **Las tres variantes del viernes 23 de octubre están todas a $44.000**,
+  niños y pequeños incluidos. No alcanza a cobrarle de más a nadie —son
+  justo las 3 que están no disponibles de las 39— pero si se reabre ese día
+  sin corregir el precio, se cobra $44.000 por un niño.
+- **El sitio nuevo todavía no está publicado en el dominio**: `/reservas.html`,
+  `/landing-afiliados.html` y `/en/` dan 404. `brasasdelopirque.cl` sirve hoy
+  el sitio viejo de Shopify.
+- **El video del hero sigue vivo**: 63 MB, 1080p, servido por el CDN de
+  Shopify y con soporte de rango. El pendiente de "En pausa" sigue siendo
+  viable.
+
 ### Lo que devolvió la tienda de desarrollo (2026-10-13)
 
 Primera consulta real a la Storefront API, corrida desde el navegador del
@@ -775,35 +820,78 @@ caiga directo en el calendario y no arriba de la página.
 de Eventos: mandar a una agencia a la página de reserva sería mandarla al
 flujo del consumidor final.
 
-### Desde este entorno no se alcanza Shopify
+### Desde este entorno SÍ se alcanza Shopify (desde el 2026-10-22)
 
-La política de red del entorno niega `brasasdelopirque.cl`, `shopify.com`
-y `brasas-de-lo-pirque-development.myshopify.com` con 403 en el CONNECT. No es cosa del token: la conexión no llega a
-establecerse. Para probar la integración de verdad hay que agregar el
-dominio en **Network access** del entorno, o correr las consultas en el
-navegador del cliente y traer la salida.
+Antes no: el proxy negaba los tres dominios con 403 y había que correr las
+consultas en el navegador del cliente y traer la salida pegada. **El cliente
+los agregó en Network access del entorno**, y con eso se puede probar la
+integración de verdad desde acá.
+
+Lo que quedó abierto, y para qué sirve cada uno:
+
+| Host | Para qué |
+|---|---|
+| `brasas-de-lo-pirque-development.myshopify.com`, `shopify.com` | La Storefront API: consultar variantes y crear carritos |
+| `landing-pirque-alpha.vercel.app` | El panel en producción |
+| `brasasdelopirque.cl` | El sitio viejo, y el **catálogo público** de la tienda de producción |
+| `fonts.googleapis.com`, `fonts.gstatic.com` | Las capturas salen con Fraunces y Work Sans, ya no en fallback |
+
+Lo que **sigue cerrado** y conviene saberlo antes de intentarlo:
+`drive.google.com` y `googleusercontent.com` —o sea, las fotos del cliente
+siguen sin poder bajarse desde acá—, `script.google.com` (ya no importa: el
+Apps Script se jubiló) y `vercel.com` (el panel de Vercel, que tampoco hace
+falta).
+
+`sheets.googleapis.com` quedó abierto pero **no sirve de nada sin la llave
+de la service account**, que vive en las variables de Vercel y ahí se queda.
+No la pidas.
+
+### Probado desde acá contra la tienda de desarrollo (2026-10-22)
+
+Con el acceso abierto se corrió lo que antes no se podía, y **la cadena
+completa funciona con la versión `2026-10`**:
+
+- **Las seis variantes existen, están en CLP y disponibles**, y los seis
+  montos calzan exactamente con los que el HTML trae escritos (44.000 /
+  49.000 · 70.000 / 75.000 · 19.000 / 24.000).
+- **`cartCreate` con el payload del propio sitio** devolvió `userErrors: []`,
+  total `107000.0 CLP` —dos Tradiciones más un niño— y las dos líneas
+  conservando `_booking_date` y `_cowlendar_date`.
+- **Y `reservas.html` servido en local contra los servicios reales**: el
+  calendario se pintó con las fechas que entrega el panel en Vercel, elegir
+  un día escribió `#r-fecha`, y los botones quedaron en "Pagar ahora
+  $107.000" y "Solo reservar $122.000". Apretar creó el carrito y redirigió
+  al checkout.
+
+**Dos cosas salieron de esa corrida y las dos son de la tienda, no del
+sitio:**
+
+- **El checkout de la tienda de desarrollo está detrás de contraseña.** El
+  carrito se crea bien y redirige a `/checkouts/cn/…`, pero eso termina en
+  `/password` — *"This store is password protected"*. Al cliente no le pasó
+  el 2026-10-13 porque su navegador ya tenía la clave de la tienda; **quien
+  pruebe desde otro computador se estrella ahí y parece que falla el sitio**.
+- **El checkout sale hoy en `en-us`, no en español.** Probado con
+  `Accept-Language` en es-CL, en-US y pt-BR: los tres redirigen a
+  `/checkouts/cn/<token>/**en-us**`. El 2026-10-13 venía con `/es/`, así que
+  algo cambió en la configuración de idioma de la tienda. Así, un cliente
+  chileno pagaría en una pantalla en inglés.
 
 ### Lo que falta por verificar
 
 - **Que las propiedades `_booking_date` pasen del carrito al pedido.** Ya se
-  comprobó que sobreviven en el carrito; falta verlas en un pedido real,
-  porque de ahí las lee `leerReserva()`. Requiere completar una compra de
-  prueba en la tienda de desarrollo.
+  comprobó que sobreviven en el carrito —de nuevo el 2026-10-22, contra la
+  API `2026-10`—; falta verlas en un **pedido** real, porque de ahí las lee
+  `leerReserva()`. Requiere completar una compra, y para eso primero hay que
+  pasar la contraseña de la tienda.
 - ~~Que el Web App de Apps Script se pueda leer desde el sitio~~ — ya no
-  aplica: el sitio le pide las fechas al panel. El
-  endpoint ya está desplegado y conectado en `CONFIG.backend`, y el sitio
-  está probado de punta a punta contra un backend simulado en local: pinta
-  el mes, marca los días por llenarse, escribe la fecha en `#r-fecha`,
-  apaga el botón si piden más lugares de los que quedan, y muestra el aviso
-  de falla cuando el backend devuelve `error`. Lo que **no** se puede
-  probar desde este entorno es el endpoint de verdad: el proxy niega
-  `script.google.com` con 403. Los Web Apps responden con un redirect a
-  `googleusercontent.com` y eso tiene manías conocidas con CORS, así que
-  **hay que abrir `reservas.html` publicado y confirmar que el calendario
-  trae fechas**; si no, es CORS y no el código del sitio.
-- **Qué versión de la Storefront API usar.** La configurada es `2024-10` y
-  lleva como un año fuera del plazo de soporte de Shopify. Responde, pero hay
-  que confirmar cuál corresponde antes de salir a producción.
+  aplica: el sitio le pide las fechas al panel, y **eso quedó probado contra
+  el panel de verdad** el 2026-10-22: `reservas.html` corriendo en local
+  llamó a `landing-pirque-alpha.vercel.app/api/publico/fechas`, recibió 200
+  y pintó el mes con los días que el panel abre.
+- ~~Qué versión de la Storefront API usar~~ — **resuelto el 2026-10-22**: la
+  `2026-10` responde, devuelve las seis variantes y crea carritos. Ya no es
+  una pregunta abierta.
 
 ### Lo que este diseño no resuelve
 
@@ -1826,19 +1914,29 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   Se puede montar con `<video autoplay muted loop playsinline>` y la foto
   actual como `poster`, sin JavaScript. Dos reparos: es 1080p a 7,2 Mbps
   (conviene cargarlo solo sobre 900px de ancho y dejar la foto en móvil), y
-  depende de que Shopify siga ahí.
-- **Shopify.** El sitio antiguo vende con un Buy Button embebido: selector de
-  fecha, cantidad de adultos y niños, y carrito. No es un botón simple, es un
-  sistema de reservas — mandar al cliente fuera del sitio sería un retroceso.
-  Faltan el dominio `*.myshopify.com` y los IDs de producto, o el snippet que
-  ya usan. **Ojo: integrarlo rompe la regla de cero JavaScript**, y eso hay
-  que decidirlo explícitamente antes de hacerlo.
+  depende de que Shopify siga ahí. **Comprobado el 2026-10-22: sigue vivo**,
+  son 63 MB y el CDN acepta rangos, así que el `<video>` lo iría
+  transmitiendo en vez de bajarlo entero.
+- ~~**Shopify.** Faltan el dominio `*.myshopify.com` y los IDs de
+  producto~~ — **ya no faltan** (2026-10-22): la tienda de producción es
+  `lo-pirque.myshopify.com` y su catálogo se lee público; ver "La tienda de
+  producción, mirada por su catálogo público". Y la decisión de fondo
+  —integrar Shopify rompe la regla de cero JavaScript— **ya se tomó**: el
+  sitio nuevo vende con `reserva.js` y la Storefront API, que es la primera
+  de las dos excepciones. Lo que queda de este punto es que **en producción
+  todavía está el modelo viejo** de una variante por fecha.
 - **Logo.** El del sitio antiguo es negro sobre blanco y tiene una A invertida
   como rasgo distintivo. Nuestro fondo es negro, así que hace falta una
   versión clara o un SVG recoloreable. Hoy la marca se compone con tipografía.
 
 ## Decisiones abiertas
 
+- **¿Se mantiene el menú de "Pequeños (0 a 3 años)" a $6.000?** Existe en la
+  tienda de producción y el sitio nuevo no lo ofrece: hoy `reservas.html`
+  tiene adultos y niños de 4 a 12, y nada más. Nunca se habló de él —
+  apareció al mirar el catálogo el 2026-10-22. Si se mantiene, es una cuarta
+  fila en el formulario y su par de variantes; si no, no se hace nada, pero
+  conviene que sea una decisión y no un olvido.
 - **El nombre del negocio no calza.** Google Maps lo lista como "Lo Pirque
   Restaurant" y el email es `@lopirque.cl`, pero el sitio se llama "Brasas de
   Lo Pirque" y el dominio es `brasasdelopirque.cl`. Si alguien busca la marca
