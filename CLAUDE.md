@@ -1582,9 +1582,18 @@ semanal, pero claramente distinguido"*. Entonces:
 | Planilla semanal del grupo (`/semana/…`) | sí | **nunca** |
 | Link personal del trabajador (`/mi/…`) | sí | **nunca** |
 | Calendario de la portada | sí | no |
+| Página del día (`/dia/…`) | su bloque | **su propio bloque**, debajo |
 | `/informe` en pantalla | su tabla | **su propia tabla**, con su total |
 | El CSV que se descarga | sí | **sí, en el mismo archivo** |
 | `/api/publico/fechas` (el sitio) | no | **no** |
+
+**En la página del día van en un bloque aparte, no mezcladas con el equipo**
+(2026-10-22). Están ahí porque es donde se cierra un día, y "¿cuánto costó
+este sábado?" no se contesta sin el jinete: el bloque muestra quiénes vienen
+—tachado quien no llegó—, lo que costaron y, cuando hay las dos cosas, el
+total con el equipo. Aparte y no en la misma lista por lo mismo que son una
+página aparte: mezclarlas obligaría a explicar en cada línea cuál de las dos
+cosas es.
 
 La primera fila es textual del cliente: *"el resumen semanal que yo mando al
 equipo del restaurante nunca quiere ver el resumen de los jinetes y de los

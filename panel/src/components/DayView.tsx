@@ -16,9 +16,12 @@ import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import EquipoDialogo from './EquipoDialogo';
+import ExtrasDialogo from './ExtrasDialogo';
 import ListaDialogo from './ListaDialogo';
 import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
+import { extrasDelDia, costoExtrasDelDia, costoDeExtra,
+         type Colaborador, type Extra } from '@/lib/extras';
 
 type Filtro = 'todas' | 'online' | 'local';
 
@@ -39,6 +42,14 @@ export default function DayView({ fecha }: { fecha: string }) {
   // "Agregar" de la propina, que es la misma ventana con el cursor puesto en
   // ese campo. Un solo lugar donde se guarda, dos puertas para llegar.
   const [pasandoLista, setPasandoLista] = useState<'no' | 'lista' | 'propina'>('no');
+  // Las actividades extras de este día. Viven en su propia página, con su
+  // propio calendario, pero también acá: a cerrar un día se llega por esta
+  // pantalla, y la pregunta "¿cuánto costó este sábado?" no se contesta sin
+  // el jinete.
+  const [extras, setExtras] = useState<{
+    colaboradores: Colaborador[]; extras: Extra[]; esAdmin: boolean;
+  } | null>(null);
+  const [agendando, setAgendando] = useState(false);
 
   const cargar = () =>
     fetch('/api/reservas')
@@ -65,7 +76,21 @@ export default function DayView({ fecha }: { fecha: string }) {
       })
       .catch(() => {});
 
-  useEffect(() => { cargar(); cargarEquipo(); }, []);
+  // Igual que el equipo: si falla o la planilla todavía no tiene la pestaña,
+  // la página se dibuja sin este bloque en vez de no dibujarse.
+  const cargarExtras = () =>
+    fetch('/api/extras')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) return;
+        setExtras({
+          colaboradores: d.colaboradores ?? [], extras: d.extras ?? [],
+          esAdmin: !!d.esAdmin
+        });
+      })
+      .catch(() => {});
+
+  useEffect(() => { cargar(); cargarEquipo(); cargarExtras(); }, []);
 
   const delDia = useMemo(
     () => (todas ?? []).filter((r) => r.fecha === fecha),
@@ -179,6 +204,9 @@ export default function DayView({ fecha }: { fecha: string }) {
   const propina = propinaDelDia(turnosDelDia, fecha);
   const reciben = turnosDelDia.filter((t) => t.propina > 0).length;
   const sinPasarLista = turnosDelDia.filter((t) => !t.asistencia).length;
+  const extrasHoy = extrasDelDia(extras?.extras ?? [], fecha);
+  const costoExtras = costoExtrasDelDia(extras?.extras ?? [], fecha);
+  const extrasSinConfirmar = extrasHoy.filter((e) => !e.estado).length;
 
   return (
     <>
@@ -319,6 +347,82 @@ export default function DayView({ fecha }: { fecha: string }) {
           </p>
         )}
       </div>
+
+      {/* Las actividades extras de este día: el jinete, la pintacaritas, el
+          castillo. Bloque aparte del equipo y no una fila más adentro, por lo
+          mismo que son una página aparte: no cobran jornada, no se les pasa
+          lista con horas extra y no entran en el reparto de la propina.
+          Juntarlas con el equipo acá obligaría a explicar en cada línea cuál
+          de las dos cosas es.
+
+          Está igual en la página del día porque es donde se cierra un día, y
+          "¿cuánto costó este sábado?" no se contesta sin ellas. */}
+      <div className="mt-3 rounded border border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-xs uppercase tracking-widest text-hueso/45">
+            Actividades extras
+          </span>
+          {extrasHoy.length === 0 ? (
+            <span className="text-sm text-hueso/55">Ninguna este día.</span>
+          ) : (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              {extrasHoy.map((e) => (
+                <li key={e.colaborador}>
+                  <span className={e.estado === VINO.no
+                    ? 'text-hueso/35 line-through'
+                    : e.estado === VINO.si ? 'text-hueso' : 'text-hueso/85'}
+                    title={e.estado === VINO.si
+                      ? `Vino · ${enPesos(costoDeExtra(e))}`
+                      : e.estado === VINO.no ? 'No llegó' : 'Sin confirmar'}>
+                    {e.colaborador}
+                  </span>
+                  {e.actividad && (
+                    <span className="text-hueso/50"> · {e.actividad}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <span className="flex-1" />
+          {extrasSinConfirmar > 0 && (
+            <span className="text-xs text-amber-300">
+              {extrasSinConfirmar} sin confirmar
+            </span>
+          )}
+          <button onClick={() => setAgendando(true)} disabled={!extras}
+            className="text-sm text-oro hover:underline disabled:opacity-40">
+            {extrasHoy.length === 0 ? 'Agendar actividad' : 'Editar actividades'}
+          </button>
+        </div>
+
+        {/* Igual que el equipo: el total aparece cuando alguien confirmó,
+            porque antes de eso un cero se leería como "no costó nada" y lo
+            que pasa es que todavía no se sabe. Va en su propia línea y no
+            sumado al del equipo: son dos bolsillos y conviene que se vean
+            separados. */}
+        {costoExtras > 0 && (
+          <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
+            <strong className="tabular-nums text-oro">{enPesos(costoExtras)}</strong>
+            <span className="text-hueso/55"> en actividades de este día</span>
+            {costo > 0 && (
+              <span className="text-hueso/45">
+                {' '}· con el equipo, {enPesos(costo + costoExtras)} en total
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      {agendando && extras && (
+        <ExtrasDialogo
+          fecha={fecha}
+          extras={extras.extras}
+          colaboradores={extras.colaboradores}
+          esAdmin={extras.esAdmin}
+          onListo={() => { setAgendando(false); cargarExtras(); }}
+          onCancelar={() => setAgendando(false)}
+        />
+      )}
 
       {pasandoLista !== 'no' && (
         <ListaDialogo
