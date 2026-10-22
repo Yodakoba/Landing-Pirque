@@ -32,7 +32,8 @@ export const COL_TRABAJADORES = {
   token: 'Token de acceso',
   modalidad: 'Modalidad',
   pagoJornada: 'Pago por jornada',
-  valorHora: 'Valor hora extra'
+  valorHora: 'Valor hora extra',
+  propina: 'Participa en propina'
 } as const;
 
 /**
@@ -64,6 +65,7 @@ export const COL_TURNOS = {
   puesto: 'Puesto',
   asistencia: 'Asistencia',
   modalidad: 'Modalidad',
+  propina: 'Propina',
   pagoJornada: 'Pago jornada',
   horasExtra: 'Horas extra',
   valorHora: 'Valor hora',
@@ -118,6 +120,14 @@ export interface Trabajador {
   /** `Por turno` o `Contratado`. Ver MODALIDAD. */
   modalidad: string;
   /**
+   * Si entra en el reparto de la propina.
+   *
+   * **La celda en blanco es SÍ**, porque la regla del negocio es que la
+   * propina se reparte entre todo el equipo; quien no entra es la excepción,
+   * y una excepción se marca, no se asume.
+   */
+  propina: boolean;
+  /**
    * La llave de su link personal, o vacío si todavía no tiene acceso.
    *
    * **Se guarda tal cual, no como hash, y es a propósito.** Un hash sería
@@ -162,6 +172,16 @@ export interface Turno {
   /** Suma o resta suelta, en pesos. Negativa para un descuento. */
   ajuste: number;
   motivo: string;
+  /**
+   * Lo que le tocó de propina ese día, **ya repartido y congelado**.
+   *
+   * Se guarda la parte de cada uno y no el total del día, por dos razones:
+   * la parte es lo que la persona recibe y lo que tiene que poder mirar, y
+   * guardar lo repartido deja la suma cerrada — cambiar después quién
+   * participa no puede reescribir lo que ya se entregó. El total del día se
+   * recupera sumando las partes.
+   */
+  propina: number;
   /** Fila en la planilla, para poder borrarla. */
   fila: number;
 }
@@ -187,6 +207,53 @@ export function pagoDe(t: Pick<Turno,
   const jornada = esContratado(t.modalidad) ? 0 : (t.pagoJornada || 0);
   const bruto = jornada + (t.horasExtra || 0) * (t.valorHora || 0) + (t.ajuste || 0);
   return Math.max(0, Math.round(bruto));
+}
+
+/* ---------- La propina ---------- */
+
+/**
+ * Reparte la propina del día **en partes iguales** entre quienes la reciben.
+ *
+ * Recibe propina quien **vino** ese día y **participa**. Las dos condiciones
+ * importan y son distintas: no venir es un hecho del día, no participar es
+ * una decisión sobre la persona. Alguien puede estar en la planilla de
+ * trabajo todos los sábados y no entrar nunca en el reparto — eso es
+ * exactamente lo que pidió el cliente.
+ *
+ * **La división reparte hasta el último peso.** Dividir 100.000 entre tres
+ * da 33.333 y sobran 2: en vez de perderlos o de dejar decimales que nadie
+ * puede entregar en efectivo, se le da un peso de más a los primeros. La
+ * suma de las partes es siempre exactamente el total.
+ *
+ * **No se mezcla con el sueldo.** La propina no sale del negocio, pasa por
+ * él: meterla en `pagoDe()` haría que el costo de un sábado subiera porque
+ * los clientes dejaron más propina. Va en su propia columna, al lado.
+ */
+export function repartirPropina<
+  T extends { trabajador: string; asistencia: string; propina: number }
+>(turnos: T[], total: number, participa: (nombre: string) => boolean): T[] {
+  const reciben = turnos.filter((t) => t.asistencia === VINO.si && participa(t.trabajador));
+  const monto = Math.max(0, Math.round(total || 0));
+
+  if (reciben.length === 0 || monto === 0) {
+    // Sin nadie a quien repartirle, la propina no se queda en el aire a
+    // nombre de alguien que no la recibe: todos quedan en cero.
+    return turnos.map((t) => ({ ...t, propina: 0 }));
+  }
+
+  const base = Math.floor(monto / reciben.length);
+  const sobran = monto - base * reciben.length;
+  const extra = new Set(reciben.slice(0, sobran).map((t) => normalizar(t.trabajador)));
+
+  return turnos.map((t) => {
+    if (!reciben.includes(t)) return { ...t, propina: 0 };
+    return { ...t, propina: base + (extra.has(normalizar(t.trabajador)) ? 1 : 0) };
+  });
+}
+
+/** La propina total de un día: la suma de lo que se repartió. */
+export function propinaDelDia(turnos: Turno[], fecha: Fecha): number {
+  return turnos.filter((t) => t.fecha === fecha).reduce((s, t) => s + (t.propina || 0), 0);
 }
 
 /** Cuántos contratados vinieron ese día. Se cuentan aparte porque no suman. */
@@ -296,7 +363,8 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
       token: String(filas[i]?.[4] ?? '').trim(),
       modalidad: esContratado(filas[i]?.[5]) ? MODALIDAD.contratado : MODALIDAD.porTurno,
       pagoJornada: aEntero(filas[i]?.[6]),
-      valorHora: aEntero(filas[i]?.[7])
+      valorHora: aEntero(filas[i]?.[7]),
+      propina: esSi(filas[i]?.[8])
     });
   }
   return salida;
@@ -307,13 +375,15 @@ export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
     [COL_TRABAJADORES.nombre, COL_TRABAJADORES.telefono,
      COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo, COL_TRABAJADORES.token,
      COL_TRABAJADORES.modalidad,
-     COL_TRABAJADORES.pagoJornada, COL_TRABAJADORES.valorHora],
+     COL_TRABAJADORES.pagoJornada, COL_TRABAJADORES.valorHora,
+     COL_TRABAJADORES.propina],
     // Un monto en cero se escribe en blanco: en la planilla un "0" se lee
     // como "gana cero" y lo que queremos decir es "sin poner".
     ...gente.map((t) => [t.nombre, t.telefono, t.puesto,
                          t.activo ? 'Sí' : 'No', t.token, t.modalidad,
                          t.pagoJornada > 0 ? String(t.pagoJornada) : '',
-                         t.valorHora > 0 ? String(t.valorHora) : ''])
+                         t.valorHora > 0 ? String(t.valorHora) : '',
+                         t.propina ? 'Sí' : 'No'])
   ];
 }
 
@@ -357,6 +427,7 @@ export function leerTurnosDe(filas: string[][]): Turno[] {
       // montos. `aEntero()` recorta en cero, así que acá se lee aparte.
       ajuste: aEntero(en(f, i.ajuste), true),
       motivo: en(f, i.motivo).trim(),
+      propina: aEntero(en(f, i.propina)),
       fila: n + 1
     });
   }
@@ -385,6 +456,7 @@ export function filaTurno(encabezado: string[], t: Omit<Turno, 'fila'>): string[
   poner(i.valorHora, monto(t.valorHora));
   poner(i.ajuste, monto(t.ajuste));
   poner(i.motivo, t.motivo);
+  poner(i.propina, monto(t.propina));
   return fila;
 }
 
@@ -606,6 +678,14 @@ export interface LineaInforme {
   montoHorasExtra: number;
   /** Ajustes, con su signo. */
   ajustes: number;
+  /**
+   * Lo que le tocó de propina en el periodo.
+   *
+   * **Va aparte de `total`, no sumada**, por la misma razón por la que no
+   * entra en `pagoDe()`: esa plata no sale del negocio, pasa por él.
+   * Juntarlas haría imposible contestar "¿cuánto me costó el equipo?".
+   */
+  propina: number;
   total: number;
 }
 
@@ -641,7 +721,8 @@ export function informeDelPeriodo(
       l = {
         trabajador: t.trabajador, modalidad: t.modalidad,
         dias: 0, noVino: 0, sinMarcar: 0,
-        jornadas: 0, horasExtra: 0, montoHorasExtra: 0, ajustes: 0, total: 0
+        jornadas: 0, horasExtra: 0, montoHorasExtra: 0, ajustes: 0,
+        propina: 0, total: 0
       };
       porPersona.set(clave, l);
     }
@@ -655,6 +736,7 @@ export function informeDelPeriodo(
     l.horasExtra += t.horasExtra || 0;
     l.montoHorasExtra += (t.horasExtra || 0) * (t.valorHora || 0);
     l.ajustes += t.ajuste || 0;
+    l.propina += t.propina || 0;
     l.total += pagoDe(t);
   }
 

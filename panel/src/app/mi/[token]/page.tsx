@@ -91,6 +91,9 @@ export default async function Pagina({ params }: { params: { token: string } }) 
     .filter((t) => t.fecha < desde && t.asistencia)
     .reverse();
   const ganado = pasados.reduce((s, t) => s + pagoDe(t), 0);
+  // La propina va sumada en lo que recibe la persona —para ella sí es todo
+  // lo mismo— pero mostrada aparte, para que pueda revisar cada cosa.
+  const propinas = pasados.reduce((s, t) => s + (t.propina || 0), 0);
   const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
   const delDia = (fecha: string) => reservas.filter((r) => r.fecha === fecha && ocupaLugar(r));
   const personasDe = (fecha: string) =>
@@ -168,15 +171,27 @@ export default async function Pagina({ params }: { params: { token: string } }) 
                 ) : esContratado(t.modalidad) && pagoDe(t) === 0 ? (
                   <span className="text-xs text-hueso/35">contratado</span>
                 ) : (
-                  <strong className="tabular-nums">{enPesos(pagoDe(t))}</strong>
+                  <span className="tabular-nums">
+                    <strong>{enPesos(pagoDe(t))}</strong>
+                    {t.propina > 0 && (
+                      <span className="ml-1 text-xs text-hueso/50">
+                        + {enPesos(t.propina)} propina
+                      </span>
+                    )}
+                  </span>
                 )}
               </li>
             ))}
           </ul>
-          {ganado > 0 && (
+          {(ganado > 0 || propinas > 0) && (
             <p className="mt-3 text-sm">
               <span className="text-hueso/55">En total: </span>
-              <strong className="tabular-nums text-oro">{enPesos(ganado)}</strong>
+              <strong className="tabular-nums text-oro">{enPesos(ganado + propinas)}</strong>
+              {propinas > 0 && (
+                <span className="text-xs text-hueso/50">
+                  {' '}({enPesos(ganado)} de turnos + {enPesos(propinas)} de propina)
+                </span>
+              )}
             </p>
           )}
           <p className="mt-2 text-xs text-hueso/40">

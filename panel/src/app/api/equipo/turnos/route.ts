@@ -44,7 +44,8 @@ export async function PUT(req: Request) {
       valorHora: aEntero(t?.valorHora),
       // Con signo: un descuento es justamente un número negativo.
       ajuste: aEntero(t?.ajuste, true),
-      motivo: String(t?.motivo ?? '').trim()
+      motivo: String(t?.motivo ?? '').trim(),
+      propina: aEntero(t?.propina)
     })));
 
     // Se devuelven los turnos de ese día ya leídos de vuelta de la planilla,

@@ -117,6 +117,7 @@ export default function EquipoEditor() {
   const cambiarPersona = (i: number, campo: keyof Trabajador, valor: string | boolean) => {
     const copia = gente.map((t) => ({ ...t }));
     if (campo === 'activo') copia[i].activo = Boolean(valor);
+    else if (campo === 'propina') copia[i].propina = Boolean(valor);
     else if (campo === 'pagoJornada' || campo === 'valorHora') {
       copia[i][campo] = aEntero(valor);
     } else if (campo === 'modalidad') {
@@ -185,6 +186,7 @@ export default function EquipoEditor() {
               {esAdmin && <th className="w-32 py-2 pr-3">Modalidad</th>}
               {esAdmin && <th className="w-32 py-2 pr-3">Jornada</th>}
               {esAdmin && <th className="w-32 py-2 pr-3">Hora extra</th>}
+              {esAdmin && <th className="w-24 py-2 pr-3">Propina</th>}
               {esAdmin && <th className="w-52 py-2 pr-3">Link personal</th>}
               <th className="w-20 py-2" />
             </tr>
@@ -255,6 +257,14 @@ export default function EquipoEditor() {
                   </td>
                 )}
                 {esAdmin && (
+                  <td className="py-2 pr-3">
+                    <input type="checkbox" checked={t.propina}
+                      aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
+                      className="h-4 w-4 accent-oro"
+                      onChange={(e) => cambiarPersona(i, 'propina', e.target.checked)} />
+                  </td>
+                )}
+                {esAdmin && (
                   <td className="whitespace-nowrap py-2 pr-3 text-xs">
                     {!t.nombre.trim() ? (
                       <span className="text-hueso/35">Ponle nombre y guarda</span>
@@ -284,7 +294,7 @@ export default function EquipoEditor() {
               </tr>
             ))}
             {gente.length === 0 && (
-              <tr><td colSpan={esAdmin ? 9 : 5} className="py-6 text-sm text-hueso/50">
+              <tr><td colSpan={esAdmin ? 10 : 5} className="py-6 text-sm text-hueso/50">
                 Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
               </td></tr>
             )}
@@ -295,13 +305,21 @@ export default function EquipoEditor() {
         onClick={() => {
           setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
                                 token: '', modalidad: MODALIDAD.porTurno,
-                                pagoJornada: 0, valorHora: 0 }]);
+                                pagoJornada: 0, valorHora: 0, propina: true }]);
           setSucio(true);
         }}
         className="mt-4 rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
         Agregar trabajador
       </button>
 
+      {esAdmin && (
+        <p className="mt-4 max-w-2xl text-xs text-hueso/50">
+          <strong>La propina se reparte en partes iguales</strong> entre
+          quienes vinieron ese día y tienen esta casilla marcada. Desmarcarla
+          deja a alguien en la planilla de trabajo pero fuera del reparto,
+          que es la excepción que existe — por eso viene marcada por defecto.
+        </p>
+      )}
       {esAdmin && (
         <p className="mt-4 max-w-2xl text-xs text-hueso/50">
           <strong>Por turno</strong> se le paga por jornada trabajada, y cada

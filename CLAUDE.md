@@ -809,16 +809,16 @@ uno sirviera por sí solo:
 1. **Planificar** (hecho): qué puestos existen, quién es el equipo, y quién
    trabaja qué día.
 2. **Los accesos** (hecho): admin / encargado / trabajador.
-3. **Las cuentas del día** (hecho, salvo la propina): asistencia del equipo,
-   horas extra, ajustes, y el link de la planilla semanal.
+3. **Las cuentas del día** (hecho): asistencia del equipo, horas extra,
+   ajustes, propina, y el link de la planilla semanal.
 
 ### Tres pestañas nuevas en la misma planilla
 
 | Pestaña | Qué guarda |
 |---|---|
 | `Puestos` | Garzón, cocina, barra, asistente, runner, barman, bar asistente — **editables**, más la regla "uno cada N personas" |
-| `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad y sus dos montos |
-| `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia y lo que se le pagó |
+| `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad, sus dos montos y si participa en la propina |
+| `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia, lo que se le pagó y su parte de la propina |
 
 Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
 el calendario. **Ninguna llega al sitio público**: `/api/publico/fechas`
@@ -994,6 +994,49 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 | Menús a preparar | **no** | sí |
 | Plata | **no** | solo la suya |
 | A quién se manda | al grupo | a una persona |
+
+### La propina (2026-10-22)
+
+**Se reparte en partes iguales entre quienes vinieron ese día y participan.**
+Esa es la regla que dio el cliente, y la excepción que pidió es una casilla
+por persona en `/equipo`: quien la tiene desmarcada sigue en la planilla de
+trabajo pero fuera del reparto.
+
+**La casilla viene marcada por defecto** —en la planilla, la celda en blanco
+es "sí"— porque la regla es que participa todo el equipo; no entrar es la
+excepción, y una excepción se marca.
+
+El monto lo pone un encargado **al pasar lista**, en la página del día:
+escribe el **total** del día y el panel lo reparte. No hay que calcular nada
+a mano.
+
+**La regla vive en una sola función, `repartirPropina()`.** El cliente avisó
+que puede cambiar, así que cambiarla es tocar ahí y nada más — no hay un
+segundo lugar donde la división esté escrita.
+
+Decisiones que vale la pena tener escritas:
+
+- **La propina NO es sueldo y no entra en `pagoDe()`.** Esa plata no sale del
+  negocio, pasa por él: meterla en el total haría que el costo de un sábado
+  subiera porque los clientes dejaron más propina, y volvería imposible
+  contestar "¿cuánto me costó el equipo?". Va en su propia columna en el
+  informe, en la planilla descargable y en la vista del día.
+- **Se guarda lo repartido, no el pozo.** Cada turno lleva la parte de esa
+  persona. Así cambiar después quién participa no reescribe lo que ya se
+  entregó — el mismo criterio que los montos de la jornada. El total del día
+  se recupera sumando las partes.
+- **Se reparte hasta el último peso.** Dividir 100.000 entre tres da 33.333 y
+  sobran 2: en vez de perderlos o dejar decimales que nadie entrega en
+  efectivo, se le da un peso de más a los primeros. La suma de las partes es
+  siempre exactamente el total.
+- **Venir y participar son dos condiciones distintas**, y las dos se piden.
+  No venir es un hecho del día; no participar es una decisión sobre la
+  persona.
+- **Quien todavía no tiene ficha participa.** Lo más probable es que sea
+  alguien recién agregado, y dejarlo fuera en silencio sería peor que
+  incluirlo de más y que alguien lo corrija.
+- **En el link personal sí va sumada**, porque para quien la recibe es todo
+  lo mismo, pero mostrada aparte: "$30.000 + $12.000 propina".
 
 ### El informe del equipo, por semana o por mes (2026-10-21)
 
@@ -1256,9 +1299,10 @@ pidió y cuánto pagó no es dato de un turno.
 
 ### Lo que falta decidir
 
-- **El reparto de la propina.** El cliente lo dejó para más adelante
-  (2026-10-21), así que **no hay ninguna regla escrita**: nada se inventó. Se
-  agrega después sobre los turnos, que ya tienen dónde colgarla.
+- **De dónde sale el monto de la propina.** Hoy lo escribe a mano un
+  encargado al pasar lista, que es lo que pidió el cliente. Si alguna vez
+  llega por Shopify, habría que decidir si se lee de ahí o se sigue
+  escribiendo.
 - **Ojo con los descuentos por atraso**: el panel los registra sin problema,
   pero si ese monto se descuenta de una liquidación formal, los descuentos al
   sueldo tienen reglas en Chile. Conviene confirmarlo con quien les lleve la

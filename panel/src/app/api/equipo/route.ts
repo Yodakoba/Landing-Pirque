@@ -33,8 +33,9 @@ const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({
   // hacer algo malo con ellos: es que no los necesita para asignar turnos, y
   // cuánto gana cada compañero no es dato suyo.
   pagoJornada: 0, valorHora: 0
-  // La modalidad SÍ baja: el encargado necesita saber a quién no se le paga
-  // por turno cuando pasa lista, y eso no dice cuánto gana nadie.
+  // La modalidad y la participación en la propina SÍ bajan: el encargado
+  // las necesita al pasar lista —a quién no se le paga por turno, entre
+  // quiénes se reparte— y ninguna de las dos dice cuánto gana nadie.
 }));
 
 export async function GET(req: Request) {
@@ -130,7 +131,14 @@ export async function PUT(req: Request) {
             : (previos.get(normalizar(nombre))?.pagoJornada ?? 0),
           valorHora: esAdmin
             ? aEntero(t?.valorHora)
-            : (previos.get(normalizar(nombre))?.valorHora ?? 0)
+            : (previos.get(normalizar(nombre))?.valorHora ?? 0),
+          // Quién entra en el reparto de la propina también lo fija el
+          // administrador: decide a dónde va plata, aunque no sea del
+          // negocio. En blanco es SÍ, que es la regla; no entrar es la
+          // excepción y por eso se marca.
+          propina: esAdmin
+            ? (t?.propina === undefined ? true : esSi(t.propina))
+            : (previos.get(normalizar(nombre))?.propina ?? true)
         });
       }
       await guardarTrabajadores(limpia);
