@@ -987,13 +987,13 @@ monto.** Un turno con asistencia y sin montos no es un cero corregido a mano,
 es uno al que todavía nadie le puso precio. Con la convención de que las
 diferencias van en el ajuste, un cero deliberado en la jornada ya no existe.
 
-**"Agregar fecha" también está acá** (mismo botón que el calendario), porque
-desde este mes también se decide abrir un día. Pero son dos cosas distintas y
-la pantalla lo dice arriba, no al pie, porque confundirlas es caro: **un día
-de preparación no se agrega, se planifica** —se aprieta el día y se le asigna
-equipo—, mientras que *Agregar fecha* pone el día en el calendario **para
-recibir reservas**. Usar lo segundo para lo primero abriría al público un día
-de montaje.
+**El botón "Agregar fecha" se puso acá y se sacó el mismo día** (2026-10-22),
+y conviene que quede escrito para que a nadie le dé por reponerlo: **un día de
+preparación no se agrega, se planifica.** Se aprieta el día —el que sea— y se
+le asigna equipo; eso es todo, y no lo abre al público. *Agregar fecha* es
+otra cosa: pone el día en el calendario **para recibir reservas**, así que
+tenerlo en esta pantalla solo invitaba a usarlo para un montaje y abrirlo sin
+querer. Abrir un día sigue siendo del calendario de la portada.
 
 **La jefa de turno es un puesto, no un rol.** Para marcar asistencia necesita
 una cuenta de **encargado** en `/usuarios`; con su nombre, además, la bitácora
