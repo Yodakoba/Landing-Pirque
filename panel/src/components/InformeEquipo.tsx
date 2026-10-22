@@ -9,9 +9,11 @@
  * eso el CSV trae el **detalle día por día** y no solo los totales: los
  * totales se miran acá, el detalle es lo que se entrega.
  *
- * **Semana o mes son el mismo cálculo.** Internamente es un rango de fechas
- * (`informeDelPeriodo`), así que no hay dos versiones de la misma suma
- * esperando a desalinearse.
+ * **Semana, mes y rango libre son el mismo cálculo.** Internamente todo es un
+ * rango de fechas (`informeDelPeriodo`), así que no hay tres versiones de la
+ * misma suma esperando a desalinearse. Semana y mes son atajos para los dos
+ * periodos que se piden siempre; el rango libre cubre el resto —una quincena,
+ * un fin de semana largo, lo que haya quedado pendiente de pagar—.
  *
  * Las sumas salen de lo que quedó **escrito en cada turno**, no de la ficha
  * del trabajador: subirle el sueldo a alguien en marzo no puede cambiar lo
@@ -32,7 +34,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { mesEnPalabras, rangoEnPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 
-type Tipo = 'mes' | 'semana';
+type Tipo = 'mes' | 'semana' | 'rango';
 
 export default function InformeEquipo() {
   const [turnos, setTurnos] = useState<Turno[] | null>(null);
@@ -40,9 +42,16 @@ export default function InformeEquipo() {
   const [sinPermiso, setSinPermiso] = useState(false);
   const [tipo, setTipo] = useState<Tipo>('mes');
   const [periodo, setPeriodo] = useState(hoy().slice(0, 7));
+  // El rango libre lleva sus propias fechas: no se puede derivar de un
+  // periodo con nombre, que es justamente la gracia.
+  const [desdeLibre, setDesdeLibre] = useState(hoy().slice(0, 7) + '-01');
+  const [hastaLibre, setHastaLibre] = useState(hoy());
 
   useEffect(() => {
-    fetch('/api/equipo').then((r) => r.json())
+    // `/api/informe` y no `/api/equipo`: quien hace los pagos no tiene por
+    // qué recibir reservas, clientes ni la lista del equipo para sacar sus
+    // cuentas. Esa ruta devuelve turnos y nada más.
+    fetch('/api/informe').then((r) => r.json())
       .then((d) => {
         if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
         setTurnos(d.turnos ?? []);
@@ -60,7 +69,14 @@ export default function InformeEquipo() {
     return conTurnos.includes(actual) ? conTurnos : [actual, ...conTurnos];
   }, [turnos, tipo]);
 
-  const { desde, hasta } = rangoDelPeriodo(periodo);
+  const { desde, hasta } = tipo === 'rango'
+    // Al revés también vale: si alguien pone las fechas en el orden
+    // contrario, se ordenan en vez de devolver un informe vacío que parece
+    // que no hubo turnos.
+    ? (desdeLibre <= hastaLibre
+        ? { desde: desdeLibre, hasta: hastaLibre }
+        : { desde: hastaLibre, hasta: desdeLibre })
+    : rangoDelPeriodo(periodo);
   const lineas = useMemo(
     () => informeDelPeriodo(turnos ?? [], desde, hasta), [turnos, desde, hasta]
   );
@@ -73,7 +89,8 @@ export default function InformeEquipo() {
 
   function cambiarTipo(nuevo: Tipo) {
     setTipo(nuevo);
-    setPeriodo(nuevo === 'mes' ? hoy().slice(0, 7) : semanaDe(hoy()));
+    if (nuevo === 'mes') setPeriodo(hoy().slice(0, 7));
+    if (nuevo === 'semana') setPeriodo(semanaDe(hoy()));
   }
 
   function exportar() {
@@ -97,7 +114,10 @@ export default function InformeEquipo() {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `equipo-${tipo === 'mes' ? periodo : `semana-${periodo}`}.csv`;
+    a.download = `equipo-${
+      tipo === 'mes' ? periodo
+      : tipo === 'semana' ? `semana-${periodo}`
+      : `${desde}-a-${hasta}`}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -116,22 +136,37 @@ export default function InformeEquipo() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="flex gap-2">
-          {(['semana', 'mes'] as Tipo[]).map((t) => (
+          {(['semana', 'mes', 'rango'] as Tipo[]).map((t) => (
             <button key={t} onClick={() => cambiarTipo(t)}
-              className={`rounded border px-3 py-1.5 text-sm capitalize ${
+              className={`rounded border px-3 py-1.5 text-sm ${
                 tipo === t ? 'border-oro text-oro' : 'border-hueso/20 text-hueso/70'}`}>
-              Por {t}
+              {t === 'rango' ? 'Otro rango' : `Por ${t}`}
             </button>
           ))}
         </div>
-        <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}
-          aria-label="Periodo del informe"
-          className="rounded border border-hueso/20 bg-tinta px-3 py-1.5 text-sm
-                     capitalize focus:border-oro focus:outline-none">
-          {opciones.map((p) => (
-            <option key={p} value={p}>{comoSeLlama(p)}</option>
-          ))}
-        </select>
+
+        {tipo === 'rango' ? (
+          <span className="flex flex-wrap items-center gap-2 text-sm">
+            <input type="date" value={desdeLibre} aria-label="Desde"
+              onChange={(e) => setDesdeLibre(e.target.value)}
+              className="rounded border border-hueso/20 bg-tinta px-3 py-1.5 text-sm
+                         focus:border-oro focus:outline-none" />
+            <span className="text-hueso/40">a</span>
+            <input type="date" value={hastaLibre} aria-label="Hasta"
+              onChange={(e) => setHastaLibre(e.target.value)}
+              className="rounded border border-hueso/20 bg-tinta px-3 py-1.5 text-sm
+                         focus:border-oro focus:outline-none" />
+          </span>
+        ) : (
+          <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}
+            aria-label="Periodo del informe"
+            className="rounded border border-hueso/20 bg-tinta px-3 py-1.5 text-sm
+                       capitalize focus:border-oro focus:outline-none">
+            {opciones.map((p) => (
+              <option key={p} value={p}>{comoSeLlama(p)}</option>
+            ))}
+          </select>
+        )}
         <span className="flex-1" />
         <button onClick={exportar} disabled={lineas.length === 0}
           className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
@@ -155,7 +190,7 @@ export default function InformeEquipo() {
 
       {lineas.length === 0 ? (
         <p className="text-sm text-hueso/50">
-          No hay turnos anotados en este periodo.
+          No hay turnos anotados entre el {desde} y el {hasta}.
         </p>
       ) : (
         <>

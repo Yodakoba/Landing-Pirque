@@ -308,8 +308,9 @@ persona.
 
 ## El informe del equipo: la planilla de pagos
 
-En **/informe**, solo administrador. Eliges **por semana** o **por mes**, y
-muestra por persona: días trabajados, jornadas, horas extra, ajustes y total.
+En **/informe**, para el administrador y para la cuenta de **pagos**. Eliges
+**por semana**, **por mes** o un **rango de fechas cualquiera**, y muestra por
+persona: días trabajados, jornadas, horas extra, ajustes y total.
 
 **Descargar planilla** baja un CSV con el **detalle día por día** —incluido
 el motivo de cada ajuste—, que es lo que sirve para entregarle a quien lleva
@@ -317,6 +318,13 @@ los pagos. Los totales se miran en pantalla; el detalle es lo que se pasa.
 
 Si quedan turnos **sin pasar lista**, el informe lo avisa arriba: esos no
 suman, así que el total está incompleto hasta que se cierren.
+
+### La cuenta de pagos
+
+Se crea en **/usuarios** con el rol `pagos`. **Solo ve el informe**: ni
+calendario, ni reservas, ni clientes, ni equipo, ni configuración, ni
+cuentas. Es para que quien junta las cuentas no tenga que entrar con la
+credencial del administrador.
 
 ## El equipo: tres pestañas más
 

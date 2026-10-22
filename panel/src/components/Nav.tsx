@@ -11,20 +11,27 @@
  * subrayado. Quien no distinga el dorado del hueso igual ve cuál es.
  */
 import { usePathname } from 'next/navigation';
+import { puede, type Rol, type Accion } from '@/lib/auth';
 
 /**
- * `soloAdmin` esconde el enlace para el encargado. Es cortesía, no
- * seguridad: quien escriba /config a mano igual recibe un 403 de la ruta,
- * que es donde esto se decide de verdad.
+ * Cada página con el permiso que de verdad la abre.
+ *
+ * **Se consulta la misma tabla que usan las rutas**, no una lista aparte de
+ * "esto es de administrador". Con tres roles, una segunda lista era una
+ * segunda verdad: el día que alguien agregara un rol, el menú le ofrecería
+ * puertas cerradas o le escondería las suyas.
+ *
+ * Esconder un enlace es cortesía, no seguridad: quien escriba /config a mano
+ * igual recibe un 403 de la ruta, que es donde esto se decide.
  */
-const PAGINAS = [
-  { href: '/', texto: 'Calendario', soloAdmin: false },
-  { href: '/equipo', texto: 'Equipo', soloAdmin: false },
-  { href: '/menus', texto: 'Menús', soloAdmin: true },
-  { href: '/config', texto: 'Configuración', soloAdmin: true },
-  { href: '/informe', texto: 'Informe', soloAdmin: true },
-  { href: '/usuarios', texto: 'Cuentas', soloAdmin: true },
-  { href: '/bitacora', texto: 'Bitácora', soloAdmin: true }
+const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
+  { href: '/', texto: 'Calendario', accion: 'ver' },
+  { href: '/equipo', texto: 'Equipo', accion: 'equipo' },
+  { href: '/menus', texto: 'Menús', accion: 'configurar' },
+  { href: '/config', texto: 'Configuración', accion: 'configurar' },
+  { href: '/informe', texto: 'Informe', accion: 'informe' },
+  { href: '/usuarios', texto: 'Cuentas', accion: 'usuarios' },
+  { href: '/bitacora', texto: 'Bitácora', accion: 'bitacora' }
 ];
 
 export default function Nav({ rol }: { rol: string }) {
@@ -32,7 +39,7 @@ export default function Nav({ rol }: { rol: string }) {
 
   return (
     <nav className="flex gap-5 text-sm">
-      {PAGINAS.filter((p) => !p.soloAdmin || rol === 'admin')
+      {PAGINAS.filter((p) => puede(rol as Rol, p.accion))
               .map(({ href, texto }) => {
         // La raíz calza exacto; las demás también con lo que cuelgue de
         // ellas. /dia/2026-11-14 no es ninguna de las tres, así que ahí no

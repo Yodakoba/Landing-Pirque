@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from './lib/sesion.ts';
+import { puede, type Rol } from './lib/auth.ts';
 
 
 /**
@@ -88,7 +89,20 @@ export async function middleware(req: NextRequest) {
   const sesion = await leerSesion(
     cookieDe(req.headers.get('cookie'), COOKIE_SESION), secreto
   );
-  if (sesion) return NextResponse.next();
+  if (sesion) {
+    // Quien no puede ver el calendario no tiene nada que hacer en la
+    // portada: es el caso de la cuenta de pagos, que solo lee el informe.
+    // Sin esto aterrizaría en una pantalla que carga y falla, y parecería
+    // que el panel está roto en vez de que esa parte no es suya.
+    if (ruta === '/' && !puede(sesion.rol as Rol, 'ver')
+        && puede(sesion.rol as Rol, 'informe')) {
+      const informe = req.nextUrl.clone();
+      informe.pathname = '/informe';
+      informe.search = '';
+      return NextResponse.redirect(informe);
+    }
+    return NextResponse.next();
+  }
 
   // Una página manda a entrar; una ruta de API responde 401 y no un
   // redirect. Si redirigiera, un `fetch` recibiría el HTML de la pantalla de

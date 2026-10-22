@@ -1247,8 +1247,10 @@ ok(cuentas.length === 4, 'descarta la repetida y la que no tiene usuario');
 ok(cuentas[1].activo === true, 'la celda Activo en blanco deja entrar');
 ok(cuentas[3].rol === ROL.encargado,
    'un rol que no se reconoce cae a encargado, NO a administrador');
-ok(ROLES_DE_CUENTA.length === 2 && !ROLES_DE_CUENTA.includes(ROL.trabajador),
+ok(!ROLES_DE_CUENTA.includes(ROL.trabajador),
    'el trabajador no es una cuenta del panel: entra por su link');
+ok(ROLES_DE_CUENTA.every((r) => r !== ROL.ninguno),
+   'y "ninguno" tampoco es un rol que se pueda asignar');
 ok(esRolDeCuenta('ADMIN') && esRolDeCuenta('encargado') && !esRolDeCuenta('trabajador'),
    'los roles de cuenta se reconocen sin importar mayúsculas');
 
@@ -1412,6 +1414,25 @@ const sem = semanasConTurnos(mes);
 ok(sem[0] === '2026-11-30' && sem.includes('2026-11-09'),
    'y las semanas se listan por su lunes, también de la más nueva a la más vieja');
 ok(new Set(sem).size === sem.length, 'sin repetir una semana con varios turnos');
+
+
+/* ---------- el rol de pagos ---------- */
+ok(puede(ROL.pagos, 'informe'), 'quien hace los pagos lee el informe');
+ok(ROLES_DE_CUENTA.includes(ROL.pagos), 'y se le puede crear una cuenta');
+
+// Lo que NO puede es el punto del rol: existe para que esa persona no tenga
+// que entrar con la cuenta de administrador, que abre precios, configuración
+// y las cuentas del panel.
+const todas = Object.keys(PERMISOS) as Accion[];
+ok(todas.filter((a) => puede(ROL.pagos, a)).length === 1,
+   'y solo eso: una acción, no dos');
+ok(!puede(ROL.pagos, 'ver') && !puede(ROL.pagos, 'reservas') &&
+   !puede(ROL.pagos, 'equipo') && !puede(ROL.pagos, 'configurar') &&
+   !puede(ROL.pagos, 'usuarios') && !puede(ROL.pagos, 'bitacora'),
+   'no ve el calendario, ni reservas, ni equipo, ni configuración, ni cuentas');
+ok(!puede(ROL.encargado, 'informe'),
+   'y el encargado sigue sin ver el informe: lo suyo es el día que tiene delante');
+ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
