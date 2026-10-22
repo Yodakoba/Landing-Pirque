@@ -832,12 +832,13 @@ uno sirviera por sí solo:
 
 | Pestaña | Qué guarda |
 |---|---|
-| `Puestos` | Garzón, cocina, barra, asistente, runner, barman, bar asistente — **editables**, más la regla "uno cada N personas" |
+| `Puestos` | Jefe de turno, parrillero, asistente parrillero, jefe de cocina, asistente de cocina, garzón, runner, barman, asistente de bar — **editables**, más la regla "uno cada N personas" |
 | `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad, sus dos montos y si participa en la propina |
 | `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia, lo que se le pagó y su parte de la propina |
 
 Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
-el calendario. **Ninguna llega al sitio público**: `/api/publico/fechas`
+el calendario de la portada o desde **`/turnos`**, el calendario del equipo
+—que es el único que incluye los días cerrados, para los de preparación. **Ninguna llega al sitio público**: `/api/publico/fechas`
 sigue devolviendo `fecha`, `quedan` y `pocos`, y hay una prueba que lo fija.
 Quién trabaja mañana no es dato de un visitante.
 
@@ -852,6 +853,24 @@ en ninguna parte del proyecto; sembrarlo con un número plausible haría que el
 panel diera consejos que nadie dio. Mismo criterio que los precios de los
 menús.
 
+### La lista de arranque la corrigió el cliente (2026-10-22)
+
+Los puestos que trae el código al partir son hoy **nueve**: jefe de turno,
+parrillero, asistente parrillero, jefe de cocina, asistente de cocina,
+garzón, runner, barman y asistente de bar. Antes eran siete y el cambio no
+es cosmético: `Cocina`, `Barra` y `Asistente` juntaban en una palabra cosas
+que en el local son puestos distintos. Quien manda la parrilla no hace lo
+mismo que quien lo asiste, y `Asistente` a secas no dice de qué. Un puesto
+que no distingue no sirve para contestar si el equipo alcanza, que es para
+lo único que esta lista existe.
+
+**Eso es el arranque, no la verdad.** En cuanto alguien guarda los puestos
+en `/equipo`, manda la planilla y esta lista deja de mirarse. Renombrar un
+puesto tampoco toca lo ya asignado: cada turno guarda **el puesto con que se
+asignó ese día**, así que un turno viejo sigue mostrándose con su nombre
+aunque el puesto se llame distinto hoy (`planDelDia()` los agrega al final
+de la lista, con el nombre tal como se escribió).
+
 ### Una persona ocupa un puesto, no dos
 
 Asignar a alguien a un segundo puesto el mismo día lo **mueve**, no lo
@@ -860,6 +879,80 @@ barman a la vez haría decir al panel que hay dos donde hay una, y este es
 justo el lugar donde se mira para saber si el equipo alcanza. Lo garantiza
 `normalizarPlan()` **en el servidor**, no la interfaz, porque una llamada
 directa a la API tiene que obedecer la misma regla.
+
+### Los días de preparación, y el calendario del equipo (2026-10-22)
+
+**Hay días en que no entra nadie y se trabaja igual**: preparar un
+matrimonio, dejar la carne lista, montar el salón. Lo trajo el cliente, y el
+panel no tenía dónde anotarlos: el calendario de la portada muestra **solo
+los días que reciben público** —los que abre la regla, los que están en
+`Fechas Hábiles` y los que tienen reservas— así que un martes cualquiera
+sencillamente no existía y no se le podía asignar equipo.
+
+Por eso existe **`/turnos`, el calendario del equipo**: el mes completo, día
+por día, y cualquiera se puede planificar. Se llega desde el menú y desde un
+enlace arriba en `/equipo`.
+
+**No reemplaza al calendario de la portada, y eso se decidió así.** Ese es el
+comercial, el que contesta cómo va la ocupación de un fin de semana; llenarlo
+de martes vacíos le quitaría justamente eso. Son dos preguntas distintas
+—"¿cómo venimos de reservas?" y "¿quién trabaja?"— y cada una tiene su
+pantalla.
+
+**Un día de preparación no es un dato nuevo: se deduce.** Si un día tiene
+equipo asignado y no recibe público, es preparación. Se decidió así con el
+cliente sobre la alternativa de agregar una columna y una casilla que marcar:
+una marca a mano sería una segunda verdad capaz de contradecir a la primera
+—un día marcado "preparación" que después se abre, o al revés—. La regla vive
+en una sola función, `esPreparacion()`, porque la preguntan tres pantallas y
+tres copias de la misma condición es lo que se desalinea cuando cambie.
+
+**Planificar un día cerrado no lo abre.** Los turnos viven en su propia
+pestaña y no tocan `Fechas Hábiles`, así que `/api/publico/fechas` sigue sin
+ofrecer ese día. Estructuralmente no puede pasar —ese endpoint se arma desde
+la ocupación y no mira los turnos— y además se comprobó a mano: con un
+martes planificado, el sitio sigue ofreciendo solo el sábado y el domingo.
+La pantalla lo dice igual, porque es la duda razonable al usarla.
+
+Dónde aparece un día de preparación, y cómo:
+
+| | Qué muestra |
+|---|---|
+| `/turnos` | La celda en dorado, con **preparación** y cuánta gente hay asignada |
+| Planilla semanal | La columna dice **preparación** en vez de "0 personas · 0 reservas", que se leería como un día flojo |
+| Link personal | "día de preparación, no abre al público", para que quien lo lee sepa si va a atender o a montar |
+| Calendario de la portada | **No aparece**, a propósito: ese día no recibe gente |
+
+**Un día de preparación se paga como cualquier otro, y entra al informe**
+(decidido el 2026-10-22). El informe no sabe —ni tiene por qué saber— si ese
+día abría: suma los turnos del periodo y ya. Hay una prueba que lo fija, para
+que a nadie se le ocurra filtrarlos después.
+
+Y como el monto de un día de montaje suele ser **un acuerdo aparte**, se
+resuelve con lo que ya existía: el **ajuste con su motivo** al pasar lista,
+que suma o resta sobre la jornada. No hizo falta nada nuevo; lo que faltaba
+era poder llegar.
+
+**Porque llegar era el problema**: `Pasar lista` vive en la página del día, y
+un día de preparación no aparece en el calendario de la portada. Por eso la
+ventana de planificación, cuando se abre **desde `/turnos`**, ofrece el
+enlace *"abre el día"*. Desde la página del día no lo ofrece: llevaría a
+donde ya se está. Sin ese enlace el circuito quedaba cortado justo antes de
+lo que importa — y un turno sin pasar lista no suma nada ni entra en el
+informe.
+
+Dos detalles de implementación que vale la pena tener escritos:
+
+- **`diasDelMes()` cuenta los días con una tabla y la regla de los
+  bisiestos**, no pidiéndole el último día a un `Date`. Es la misma razón por
+  la que todo este proyecto trata las fechas como texto: una fecha que pasa
+  por `Date` se corre de día según el huso del servidor, y Vercel no está en
+  Chile.
+- **Siete columnas no caben en un teléfono**, así que el mes se desplaza de
+  lado dentro de su caja, como las tablas del panel. Es preferible a achicar
+  el texto hasta que "preparación" no se lea. De paso, **la barra de arriba
+  ahora envuelve** (`flex-wrap`): con ocho páginas ya no cabía, y una barra
+  que no cabe se lleva la página entera hacia el costado.
 
 ### Las columnas de `Turnos` se leen por nombre, no por posición
 
@@ -905,6 +998,30 @@ quién trabajó qué día— pero los deja con un nombre que ya no está, y
 usa para los menús, y por el mismo motivo: sin alias ni equivalencias, lo
 único que mantiene alineadas dos listas es que alguien se entere cuando dejan
 de estarlo.
+
+**Desde el 2026-10-22 eso lo decide el panel, no un consejo al pie.** Lo
+notó el cliente y tenía razón: la tabla ofrecía **Quitar** en cada fila, con
+el mismo peso visual que todo lo demás, y la advertencia de no usarlo vivía
+en letra chica debajo de la tabla. Un botón que no hay que apretar casi nunca
+no puede estar igual de a mano que el que sí, y menos confiando en que
+alguien lea el párrafo de abajo un sábado a las once de la noche.
+
+Ahora la última columna depende de si esa persona tiene turnos guardados:
+
+| | Qué ofrece |
+|---|---|
+| Sin ningún turno | **Quitar** — la fila escrita por error, que no tiene historia que proteger |
+| Con turnos, activa | **Desactivar** — la saca del planificador y le cierra su link, conservando sus turnos |
+| Con turnos, inactiva | **Desactivado**, sin acción: su ficha se queda |
+
+El costo a asumir: **ya no se puede borrar de un clic la ficha de alguien que
+sí trabajó.** Es justamente lo que no queremos que se pueda hacer sin
+pensarlo; si de verdad hay que sacarla, se edita la planilla a mano, que es
+un acto deliberado.
+
+De paso, el otro botón de esa misma fila pasó a decir **"Quitar link"**: dos
+"Quitar" con significados distintos a dos columnas de distancia eran una
+confusión esperando a pasar.
 
 ### Pasar lista, y lo que cuesta un día (2026-10-21)
 

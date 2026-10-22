@@ -123,6 +123,32 @@ export function enPalabras(f: Fecha): string {
   return `${DIAS[diaSemana(f)]} ${d} de ${MESES[m - 1]}`;
 }
 
+const LARGO_DE_MES = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/**
+ * Todos los días de un mes `AAAA-MM`, en orden.
+ *
+ * Cuenta los días con una tabla y la regla de los bisiestos en vez de pedirle
+ * el último día a un `Date`, por lo mismo que todo este archivo: una fecha
+ * que pasa por `Date` se corre de día según el huso del servidor, y Vercel no
+ * está en Chile.
+ */
+export function diasDelMes(mes: string): Fecha[] {
+  const [a, m] = mes.split('-').map(Number);
+  if (!a || !m || m < 1 || m > 12) return [];
+  const bisiesto = (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+  const cuantos = m === 2 && bisiesto ? 29 : LARGO_DE_MES[m - 1];
+  return Array.from({ length: cuantos },
+    (_, i) => `${mes}-${String(i + 1).padStart(2, '0')}`);
+}
+
+/** Corre un mes `AAAA-MM` hacia adelante o hacia atrás, cruzando el año. */
+export function sumarMeses(mes: string, n: number): string {
+  const [a, m] = mes.split('-').map(Number);
+  const total = a * 12 + (m - 1) + n;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+}
+
 /** "2026-11" -> "noviembre 2026". Para los encabezados de mes. */
 export function mesEnPalabras(mes: string): string {
   const [a, m] = mes.split('-').map(Number);

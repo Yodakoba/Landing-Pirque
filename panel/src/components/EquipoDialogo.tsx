@@ -24,7 +24,7 @@ import { enPalabras } from '@/lib/fechas';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, esAdmin = false,
-  onListo, onCancelar
+  enlaceAlDia = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -35,6 +35,17 @@ export default function EquipoDialogo({
   turnos: Turno[];
   /** Si puede fijar sueldos al crear a alguien. */
   esAdmin?: boolean;
+  /**
+   * Ofrece el enlace a la página de ese día.
+   *
+   * Va solo cuando esta ventana se abrió desde el calendario del equipo:
+   * desde la página del día el enlace llevaría a donde ya se está. Lo que
+   * resuelve es un callejón real — **un día de preparación no aparece en el
+   * calendario de la portada**, así que sin esto no había cómo llegar a
+   * pasarle lista, y un turno sin pasar lista no suma nada ni entra en el
+   * informe.
+   */
+  enlaceAlDia?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -208,6 +219,14 @@ export default function EquipoDialogo({
           {plan.length} {plan.length === 1 ? 'persona' : 'personas'} en el equipo de este día.
           {' '}¿Falta alguien en la lista?{' '}
           <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
+          {enlaceAlDia && plan.length > 0 && (
+            <>
+              {' '}Para pasar lista y anotar montos,{' '}
+              <a href={`/dia/${fecha}`} className="text-oro hover:underline">
+                abre el día
+              </a>.
+            </>
+          )}
         </span>
         <span className="flex-1" />
         <button onClick={onCancelar}
