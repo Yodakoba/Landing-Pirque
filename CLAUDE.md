@@ -1010,6 +1010,19 @@ El monto lo pone un encargado **al pasar lista**, en la página del día:
 escribe el **total** del día y el panel lo reparte. No hay que calcular nada
 a mano.
 
+**Se llega por dos puertas y las dos dan al mismo campo** (2026-10-22). En la
+página del día, el bloque Equipo muestra siempre una línea "Propina del día",
+con el monto repartido o un **sin anotar**, y su botón abre la misma ventana
+de Pasar lista con el cursor puesto en ese campo. No es un segundo formulario:
+es el mismo, y se guarda en el mismo lugar.
+
+El motivo es que se llega a ese día por los dos lados —a cerrar el turno, o a
+acordarse de la propina— y la propina vivía al final de una tabla dentro de
+una ventana que hay que abrir, o sea invisible hasta que alguien supiera que
+estaba ahí. Por lo mismo la línea aparece **desde que hay alguien asignado**,
+no solo cuando ya se pasó lista: un "sin anotar" es lo que hace que se note
+que falta.
+
 **La regla vive en una sola función, `repartirPropina()`.** El cliente avisó
 que puede cambiar, así que cambiarla es tocar ahí y nada más — no hay un
 segundo lugar donde la división esté escrita.
