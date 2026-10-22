@@ -582,6 +582,22 @@ del servidor, que nunca sale al navegador.
   calza, el modo de falla natural es quedarse callado —la columna se lee
   vacía y el panel se ve bien con datos que no están— y por eso existe
   `/api/diagnostico`, que dice columna por columna qué faltó.
+- **Esa lista de pestañas se recuerda, y una que no esté en lo recordado se
+  vuelve a buscar antes de darla por inexistente** (2026-10-22). No es una
+  precaución teórica: así se rompió el planificador de equipo. El panel corre
+  en varias instancias en Vercel y cada una recuerda lo suyo mientras vive;
+  la que creó la pestaña `Turnos` la primera vez no es la misma que atiende
+  la petición siguiente. Para una instancia con la lista vieja, esa pestaña
+  **no existe**: leer turnos devolvía vacío en silencio —el día se veía sin
+  equipo aunque estuviera guardado— y guardar reventaba con `addSheet: A
+  sheet with the name "Turnos" already exists`, la pestaña que la planilla ya
+  tenía. Volver a mirar cuesta una llamada y solo cuando no se encontró.
+- **Un lector con valor por defecto distingue "no existe la pestaña" de "no
+  pude leerla"** (`esPestanaQueNoExiste()`). Puestos, trabajadores y turnos
+  devuelven su defecto solo en el primer caso; cualquier otra falla se
+  propaga. Devolver "no hay trabajadores" cuando en realidad no se pudo leer
+  manda a buscar el problema donde no está, y además deja guardar la lista
+  encima de una que nadie alcanzó a leer.
 - **La fecha se elige en un calendario mensual**, no en un desplegable
   (2026-10-13). Lo dibuja `reserva.js` con lo que entrega el backend, y la
   fecha elegida queda en el input oculto `#r-fecha`. **El sitio no decide

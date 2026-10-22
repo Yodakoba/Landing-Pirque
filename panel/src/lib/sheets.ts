@@ -69,7 +69,23 @@ export function sheets(): sheets_v4.Sheets {
  * con "Unable to parse range", que no dice nada sobre la hache. Pasó en la
  * primera conexión real.
  *
- * Se consulta una vez y se recuerda.
+ * Se consulta una vez y se recuerda. **Pero una pestaña que no está en lo
+ * recordado se vuelve a buscar antes de darla por inexistente**, y eso no es
+ * una precaución teórica: arregla un error que se vio en producción el
+ * 2026-10-22.
+ *
+ * El panel corre en varias instancias a la vez y cada una recuerda lo suyo
+ * mientras vive. La instancia A crea la pestaña `Turnos` la primera vez que
+ * se guarda un equipo; la instancia B ya había mirado el libro antes y sigue
+ * creyendo que no existe. Desde ahí, en B:
+ *
+ * - leer turnos devuelve vacío **en silencio** —el `catch` de `leerTurnos()`
+ *   no distingue "no hay pestaña" de "no pude leerla"—, así que el día se ve
+ *   sin equipo aunque esté guardado;
+ * - y guardar falla con `addSheet: A sheet with the name "Turnos" already
+ *   exists`, que es la pestaña que la propia planilla ya tiene.
+ *
+ * Volver a mirar cuesta una llamada, y solo cuando no se encontró.
  */
 let titulos: Map<string, string> | null = null;
 
@@ -77,21 +93,48 @@ function clave(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 }
 
+async function leerTitulos(): Promise<Map<string, string>> {
+  const libro = await sheets().spreadsheets.get({ spreadsheetId: idPlanilla() });
+  titulos = new Map(
+    (libro.data.sheets ?? [])
+      .map((s) => s.properties?.title)
+      .filter((t): t is string => !!t)
+      .map((t) => [clave(t), t])
+  );
+  return titulos;
+}
+
+/**
+ * Si el error es "esa pestaña no existe" y no otra cosa.
+ *
+ * Lo usan los lectores que tienen un valor por defecto —puestos, menús,
+ * configuración— para distinguir **una planilla recién creada**, donde la
+ * pestaña todavía no está y el defecto es correcto, de **una falla de
+ * verdad**, donde devolver el defecto sería mostrar datos que no son.
+ */
+export function esPestanaQueNoExiste(e: unknown): boolean {
+  return e instanceof Error && e.message.startsWith('No hay ninguna pestaña llamada');
+}
+
 export async function nombreReal(hoja: string): Promise<string> {
-  if (!titulos) {
-    const libro = await sheets().spreadsheets.get({ spreadsheetId: idPlanilla() });
-    titulos = new Map(
-      (libro.data.sheets ?? [])
-        .map((s) => s.properties?.title)
-        .filter((t): t is string => !!t)
-        .map((t) => [clave(t), t])
-    );
+  let mapa = titulos;
+  // Si hubo que leer el libro recién, lo que dice es de ahora mismo y no hay
+  // nada que volver a mirar.
+  let alDia = false;
+  if (!mapa) { mapa = await leerTitulos(); alDia = true; }
+
+  let real = mapa.get(clave(hoja));
+  // No estaba en lo que recordábamos. Puede que la pestaña se haya creado
+  // después —otra instancia, o alguien a mano en la planilla—, así que se
+  // mira una vez más antes de decir que no existe.
+  if (!real && !alDia) {
+    mapa = await leerTitulos();
+    real = mapa.get(clave(hoja));
   }
-  const real = titulos.get(clave(hoja));
   if (!real) {
     throw new Error(
       `No hay ninguna pestaña llamada "${hoja}" en la planilla. ` +
-      `Las que hay: ${[...titulos.values()].join(', ')}.`
+      `Las que hay: ${[...mapa.values()].join(', ')}.`
     );
   }
   return real;
@@ -165,10 +208,18 @@ export async function asegurarHoja(hoja: string): Promise<string> {
   try {
     return await nombreReal(hoja);
   } catch {
-    await sheets().spreadsheets.batchUpdate({
-      spreadsheetId: idPlanilla(),
-      requestBody: { requests: [{ addSheet: { properties: { title: hoja } } }] }
-    });
+    try {
+      await sheets().spreadsheets.batchUpdate({
+        spreadsheetId: idPlanilla(),
+        requestBody: { requests: [{ addSheet: { properties: { title: hoja } } }] }
+      });
+    } catch (e) {
+      // "A sheet with the name X already exists": alguien la creó entremedio.
+      // Eso es justo lo que queríamos, así que no es un error — pero sí hay
+      // que volver a mirar el libro, porque lo que recordábamos ya no sirve.
+      titulos = null;
+      return await nombreReal(hoja);
+    }
     titulos = null;          // el cache quedó viejo: ahora hay una pestaña más
     return hoja;
   }

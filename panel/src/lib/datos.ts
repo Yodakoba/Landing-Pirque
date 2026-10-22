@@ -10,7 +10,7 @@
  * MANUAL-<timestamp>: no pueden chocar con los ids numéricos de Shopify.
  */
 import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFilas,
-         escribirBloque, asegurarEncabezado } from './sheets.ts';
+         escribirBloque, asegurarEncabezado, esPestanaQueNoExiste } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
   indices, faltantes
@@ -265,8 +265,9 @@ export async function leerPuestos(): Promise<Puesto[]> {
   try {
     const lista = leerPuestosDe(await leerHoja(HOJA_PUESTOS));
     return lista.length ? lista : POR_DEFECTO_PUESTOS;
-  } catch {
-    return POR_DEFECTO_PUESTOS;
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return POR_DEFECTO_PUESTOS;
+    throw e;
   }
 }
 
@@ -281,8 +282,13 @@ export async function guardarPuestos(puestos: Puesto[]): Promise<void> {
 export async function leerTrabajadores(): Promise<Trabajador[]> {
   try {
     return leerTrabajadoresDe(await leerHoja(HOJA_TRABAJADORES));
-  } catch {
-    return [];
+  } catch (e) {
+    // Lista vacía SOLO si la pestaña todavía no existe. Cualquier otra falla
+    // se propaga: un "no hay trabajadores" cuando en realidad no se pudo leer
+    // manda a buscar el problema donde no está, y además deja guardar la
+    // lista encima de una que no se alcanzó a leer.
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
   }
 }
 
@@ -294,8 +300,9 @@ export async function guardarTrabajadores(gente: Trabajador[]): Promise<void> {
 export async function leerTurnos(): Promise<Turno[]> {
   try {
     return leerTurnosDe(await leerHoja(HOJA_TURNOS));
-  } catch {
-    return [];
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
   }
 }
 
