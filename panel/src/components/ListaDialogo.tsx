@@ -31,13 +31,19 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function ListaDialogo({
-  fecha, turnos, trabajadores, onListo, onCancelar
+  fecha, turnos, trabajadores, enfocarPropina = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Los turnos de ESTE día, ya filtrados. */
   turnos: Turno[];
   /** Para saber quién entra en el reparto de la propina. */
   trabajadores: Trabajador[];
+  /**
+   * Abre con el cursor en la propina. Es para quien llegó acá desde el
+   * "Agregar" del día: la propina está al final de una tabla que puede ser
+   * larga, y hacerlo buscar el campo sería mandarlo a dos lugares.
+   */
+  enfocarPropina?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -198,7 +204,7 @@ export default function ListaDialogo({
             <label className="flex flex-wrap items-center gap-3 text-sm">
               <span className="text-hueso/70">Propina del día</span>
               <input type="number" min={0} step={1000} value={propina || ''}
-                placeholder="0"
+                placeholder="0" autoFocus={enfocarPropina}
                 onChange={(e) => {
                   const n = Number(String(e.target.value).replace(/[^\d]/g, ''));
                   setPropina(Number.isFinite(n) ? n : 0);

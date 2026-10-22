@@ -35,7 +35,10 @@ export default function DayView({ fecha }: { fecha: string }) {
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
   } | null>(null);
   const [planificando, setPlanificando] = useState(false);
-  const [pasandoLista, setPasandoLista] = useState(false);
+  // Pasar lista se abre de dos lados: por el botón de siempre, y por el
+  // "Agregar" de la propina, que es la misma ventana con el cursor puesto en
+  // ese campo. Un solo lugar donde se guarda, dos puertas para llegar.
+  const [pasandoLista, setPasandoLista] = useState<'no' | 'lista' | 'propina'>('no');
 
   const cargar = () =>
     fetch('/api/reservas')
@@ -169,6 +172,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   const faltaron = turnosDelDia.filter((t) => t.asistencia === VINO.no).length;
   const costo = costoDelDia(turnosDelDia, fecha);
   const propina = propinaDelDia(turnosDelDia, fecha);
+  const reciben = turnosDelDia.filter((t) => t.propina > 0).length;
   const sinPasarLista = turnosDelDia.filter((t) => !t.asistencia).length;
 
   return (
@@ -257,7 +261,7 @@ export default function DayView({ fecha }: { fecha: string }) {
             Planificar equipo
           </button>
           {turnosDelDia.length > 0 && (
-            <button onClick={() => setPasandoLista(true)}
+            <button onClick={() => setPasandoLista('lista')}
               className="text-sm text-oro hover:underline">
               Pasar lista
             </button>
@@ -273,31 +277,52 @@ export default function DayView({ fecha }: { fecha: string }) {
             <span className="text-hueso/55"> en el equipo de este día · </span>
             <span className="text-hueso/55">{vinieron} vinieron</span>
             {faltaron > 0 && (
-              <span className="text-red-300"> · {faltaron} no{faltaron === 1 ? '' : ''} llegaron</span>
+              <span className="text-red-300">
+                {' '}· {faltaron} {faltaron === 1 ? 'no llegó' : 'no llegaron'}
+              </span>
             )}
             {sinPasarLista > 0 && (
               <span className="text-amber-300"> · {sinPasarLista} sin marcar</span>
             )}
-            {/* La propina va aparte del costo, no sumada: esa plata no sale
-                del negocio, pasa por él. */}
-            {propina > 0 && (
+          </p>
+        )}
+
+        {/* La propina, a la vista desde que hay alguien asignado y no solo
+            cuando ya se pasó lista: es el dato que se olvida, y a este día se
+            llega tanto para cerrar el turno como para anotarla sola. Va
+            aparte del costo, no sumada: esa plata no sale del negocio, pasa
+            por él. */}
+        {turnosDelDia.length > 0 && (
+          <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
+            <span className="text-hueso/55">Propina del día: </span>
+            {propina > 0 ? (
               <>
-                <br />
-                <strong className="tabular-nums text-hueso/80">{enPesos(propina)}</strong>
-                <span className="text-hueso/55"> de propina, repartidos</span>
+                <strong className="tabular-nums text-hueso/85">{enPesos(propina)}</strong>
+                <span className="text-hueso/55">
+                  , repartidos entre {reciben}{' '}
+                  {reciben === 1 ? 'persona' : 'personas'}
+                </span>
               </>
+            ) : (
+              <span className="text-hueso/45">sin anotar</span>
             )}
+            <span className="text-hueso/30"> · </span>
+            <button onClick={() => setPasandoLista('propina')}
+              className="text-oro hover:underline">
+              {propina > 0 ? 'Editar' : 'Agregar'}
+            </button>
           </p>
         )}
       </div>
 
-      {pasandoLista && (
+      {pasandoLista !== 'no' && (
         <ListaDialogo
           fecha={fecha}
           turnos={turnosDelDia}
           trabajadores={equipo?.trabajadores ?? []}
-          onListo={() => { setPasandoLista(false); cargarEquipo(); }}
-          onCancelar={() => setPasandoLista(false)}
+          enfocarPropina={pasandoLista === 'propina'}
+          onListo={() => { setPasandoLista('no'); cargarEquipo(); }}
+          onCancelar={() => setPasandoLista('no')}
         />
       )}
 
