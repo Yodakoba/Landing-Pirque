@@ -33,7 +33,8 @@ export const COL_TRABAJADORES = {
   modalidad: 'Modalidad',
   pagoJornada: 'Pago por jornada',
   valorHora: 'Valor hora extra',
-  propina: 'Participa en propina'
+  propina: 'Participa en propina',
+  cuenta: 'Cuenta bancaria'
 } as const;
 
 /**
@@ -127,6 +128,16 @@ export interface Trabajador {
    * y una excepción se marca, no se asume.
    */
   propina: boolean;
+  /**
+   * Dónde se le transfiere. **Vive en la ficha y no en el turno**: si alguien
+   * cambia de banco, se le paga a la cuenta nueva, también lo que quedó
+   * pendiente de semanas anteriores. No es un hecho de un día, es un dato de
+   * la persona.
+   *
+   * Existe para que la planilla que descarga quien paga traiga todo lo que
+   * necesita y no haya que cruzarla con otra lista a mano.
+   */
+  cuenta: string;
   /**
    * La llave de su link personal, o vacío si todavía no tiene acceso.
    *
@@ -373,7 +384,10 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
       modalidad: esContratado(filas[i]?.[5]) ? MODALIDAD.contratado : MODALIDAD.porTurno,
       pagoJornada: aEntero(filas[i]?.[6]),
       valorHora: aEntero(filas[i]?.[7]),
-      propina: esSi(filas[i]?.[8])
+      propina: esSi(filas[i]?.[8]),
+      // Igual que el token: la columna puede no existir todavía y se lee en
+      // blanco, sin romper una planilla escrita antes de que esto existiera.
+      cuenta: String(filas[i]?.[9] ?? '').trim()
     });
   }
   return salida;
@@ -385,14 +399,14 @@ export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
      COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo, COL_TRABAJADORES.token,
      COL_TRABAJADORES.modalidad,
      COL_TRABAJADORES.pagoJornada, COL_TRABAJADORES.valorHora,
-     COL_TRABAJADORES.propina],
+     COL_TRABAJADORES.propina, COL_TRABAJADORES.cuenta],
     // Un monto en cero se escribe en blanco: en la planilla un "0" se lee
     // como "gana cero" y lo que queremos decir es "sin poner".
     ...gente.map((t) => [t.nombre, t.telefono, t.puesto,
                          t.activo ? 'Sí' : 'No', t.token, t.modalidad,
                          t.pagoJornada > 0 ? String(t.pagoJornada) : '',
                          t.valorHora > 0 ? String(t.valorHora) : '',
-                         t.propina ? 'Sí' : 'No'])
+                         t.propina ? 'Sí' : 'No', t.cuenta])
   ];
 }
 

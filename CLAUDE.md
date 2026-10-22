@@ -833,8 +833,11 @@ uno sirviera por sí solo:
 | Pestaña | Qué guarda |
 |---|---|
 | `Puestos` | Jefe de turno, parrillero, asistente parrillero, jefe de cocina, asistente de cocina, garzón, runner, barman, asistente de bar — **editables**, más la regla "uno cada N personas" |
-| `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad, sus dos montos y si participa en la propina |
+| `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad, sus dos montos, si participa en la propina y su cuenta bancaria |
 | `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia, lo que se le pagó y su parte de la propina |
+
+A esas tres se sumaron después `Colaboradores` y `Actividades`, que son las
+de los jinetes y las pintacaritas — ver "Las actividades extras".
 
 Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
 el calendario de la portada o desde **`/turnos`**, el calendario del equipo
@@ -1080,6 +1083,14 @@ su mínimo: si no cabe, se desplaza de lado dentro de su marco, como las demás
 del panel. Los anchos salen de lo que cada celda muestra de verdad —un nombre
 y apellido, un teléfono, "Contratado", "no aplica"— y no de repartir parejo.
 
+**La cuenta bancaria, que llegó después, NO es una columna más** (2026-10-22):
+va en **una segunda línea bajo cada persona**, de ancho completo. Con diez
+columnas, la once dejaba *Crear link* y *Desactivar* fuera del borde, que es
+exactamente lo que esta tabla acababa de arreglar. Y un número de cuenta con
+banco, tipo y RUT necesita ancho de verdad: en una celda angosta se leería de
+a seis caracteres, el mismo problema del nombre pero en el campo donde un
+error se paga caro.
+
 **De paso, el marco del panel pasó de `max-w-6xl` a `max-w-7xl`.** Esta tabla
 es lo más denso que tiene y con 1152px terminaba cortando la última columna,
 que es justamente donde están *Crear link* y *Desactivar*. El costo a asumir:
@@ -1190,6 +1201,7 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 | Personas y reservas del día | sí | sí |
 | Menús a preparar | **no** | sí |
 | Plata | **no** | solo la suya |
+| Actividades extras (jinetes, pintacaritas) | **no** | **no** |
 | A quién se manda | al grupo | a una persona |
 
 ### Los hooks van todos arriba, antes de los `return` (2026-10-22)
@@ -1275,6 +1287,11 @@ copiar una tabla a mano es justo lo que esto viene a evitar. Por eso el CSV
 trae el **detalle día por día con el motivo de cada ajuste**, no los totales:
 los totales se miran en pantalla, el detalle es lo que se entrega.
 
+**Desde el 2026-10-22 trae además las actividades extras y las cuentas
+bancarias**, en su propia tabla en pantalla y en el mismo archivo al
+descargar: un solo pago a la semana, con cada fila diciendo si es equipo o
+actividad extra. Ver "Las actividades extras".
+
 **Semana, mes y rango libre son el mismo cálculo.** Por dentro todo es un
 rango de fechas (`informeDelPeriodo`), así que no hay tres versiones de la
 misma suma esperando a desalinearse. `rangoDelPeriodo()` distingue semana de
@@ -1336,6 +1353,8 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Ver el calendario y las reservas | sí | sí | — | — |
 | Anotar reservas, abrir y cerrar días | sí | sí | — | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | — | — |
+| Agendar actividades extras y confirmarlas | sí | sí | — | — |
+| Montos habituales y cuentas bancarias | sí | — | — | — |
 | Puestos y su regla "uno cada N" | sí | — | — | — |
 | Precios, menús y configuración | sí | — | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
@@ -1535,6 +1554,131 @@ pidió y cuánto pagó no es dato de un turno.
   contabilidad antes de usarlo así.
 - ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
   2026-10-22**: existe el rol `pagos`, que solo lee el informe.
+
+## Las actividades extras (2026-10-22)
+
+Lo que se contrata aparte del equipo y por día: **jinetes** —cada uno con su
+monto—, **pintacaritas**, el **castillo inflable**. Lo pidió el cliente con
+una frase que fija todo el diseño: hay que tratarlas *"como los del personal,
+pero separado de él"*.
+
+Viven en **`/extras`**, su propia página con su propio calendario del mes, su
+propia ventana por día y su propia lista de fichas. El código está en
+`panel/src/lib/extras.ts`, espejo de `equipo.ts`.
+
+### Por qué separadas, y dónde se juntan
+
+Separadas porque **no son lo mismo**: un jinete no cobra una jornada, no se
+le pasa lista con horas extra, y —lo más importante— **no entra en el reparto
+de la propina**. Juntarlos en una sola lista haría ilegibles justamente las
+dos columnas donde eso se ve.
+
+Se juntan en **un solo lugar, que es el que lo necesita**: la planilla que
+descarga quien paga. El cliente lo dijo así: *"él quiere hacer solo un pago
+semanal, pero claramente distinguido"*. Entonces:
+
+| | Equipo | Actividades extras |
+|---|---|---|
+| Planilla semanal del grupo (`/semana/…`) | sí | **nunca** |
+| Link personal del trabajador (`/mi/…`) | sí | **nunca** |
+| Calendario de la portada | sí | no |
+| Página del día (`/dia/…`) | su bloque | **su propio bloque**, debajo |
+| `/informe` en pantalla | su tabla | **su propia tabla**, con su total |
+| El CSV que se descarga | sí | **sí, en el mismo archivo** |
+| `/api/publico/fechas` (el sitio) | no | **no** |
+
+**En la página del día van en un bloque aparte, no mezcladas con el equipo**
+(2026-10-22). Están ahí porque es donde se cierra un día, y "¿cuánto costó
+este sábado?" no se contesta sin el jinete: el bloque muestra quiénes vienen
+—tachado quien no llegó—, lo que costaron y, cuando hay las dos cosas, el
+total con el equipo. Aparte y no en la misma lista por lo mismo que son una
+página aparte: mezclarlas obligaría a explicar en cada línea cuál de las dos
+cosas es.
+
+La primera fila es textual del cliente: *"el resumen semanal que yo mando al
+equipo del restaurante nunca quiere ver el resumen de los jinetes y de los
+pintacaritas"*.
+
+**En el CSV cada fila dice qué es** —`Equipo` o `Actividad extra`— y las
+columnas que no aplican van **en blanco, no en cero**: un cero en la columna
+de propina se leería como "le tocó cero", y lo que pasa es que esa persona no
+entra en el reparto. Lo mismo con la modalidad, las horas extra y el valor
+hora de un jinete.
+
+### Dos pestañas nuevas en la misma planilla
+
+| Pestaña | Qué guarda |
+|---|---|
+| `Colaboradores` | Nombre, actividad, teléfono, activo, monto habitual y **cuenta bancaria** |
+| `Actividades` | Una fila por (fecha, colaborador), con si vino, el monto, el ajuste y su motivo |
+
+Se decidió abrir pestañas propias y no agregar una columna "tipo" a
+`Trabajadores` y `Turnos`: las columnas de un turno —modalidad, horas extra,
+propina— no significan nada para un castillo inflable, y una tabla con media
+fila vacía es la forma más segura de que alguien sume lo que no debe.
+
+**`Colaboradores` es posicional y `Actividades` va por nombre de columna**,
+por lo mismo que `Trabajadores` y `Turnos`: la primera se reescribe entera al
+guardar, y a la segunda se le agregan y se le borran filas de a una.
+
+### Se guardan como fichas porque se repiten
+
+Lo dijo el cliente: *"los jinetes se van a repetir, las personas se van a
+repetir"*. Una ficha trae su **monto habitual**, que es lo que se propone al
+agregarla a un día y **se congela ahí**: subirle la tarifa a alguien en marzo
+no reescribe lo que se le pagó en noviembre. Mismo criterio que los sueldos
+del equipo, y por el mismo motivo.
+
+**Una actividad sin confirmar no suma.** Agendar no es pagar: hasta que
+alguien diga que el jinete llegó, el panel no da por gastada esa plata. Es la
+misma regla que un turno sin pasar lista, y el informe avisa arriba cuando
+quedan actividades sin confirmar en el periodo.
+
+**Una línea por colaborador y por día** (`normalizarExtras()`, en el
+servidor). Si de verdad hay que pagarle dos cosas distintas al mismo
+proveedor, va en una línea con el monto sumado y el detalle en el motivo.
+
+### La cuenta bancaria, que es lo que cierra el circuito
+
+El cliente la pidió para el equipo **y** para los extras: *"cuando el
+encargado de pago descarga la planilla del pago semanal, ya tiene hasta las
+cuentas bancarias dentro de este resumen"*. Entonces:
+
+- `Trabajadores` tiene una columna **`Cuenta bancaria`** más, y
+  `Colaboradores` nace con ella. Una planilla escrita antes se lee igual: la
+  columna llega en blanco en vez de reventar.
+- **Vive en la ficha y no en la línea del día.** Si alguien cambia de banco
+  se le transfiere a la cuenta nueva, también lo que quedó pendiente: no es
+  un hecho de ese día, es un dato de la persona.
+- **La ve el administrador y quien paga, nadie más.** `/api/extras` se la
+  recorta al encargado junto con los montos habituales, igual que los sueldos
+  del equipo. Y `/api/informe` —que lee la cuenta de pagos— **devuelve de las
+  fichas solo la cuenta bancaria**: ni teléfonos, ni sueldos de hoy, ni
+  tokens.
+- El informe **avisa en pantalla a quién le falta**, antes de descargar. Es
+  el momento en que importa: descubrirlo con la planilla ya bajada significa
+  volver a entrar, completarla y bajarla de nuevo.
+
+### Quién puede qué
+
+**Igual que los turnos** (lo eligió el cliente): administrador y encargado
+planifican y confirman; **los montos habituales y las cuentas son solo del
+administrador**, y el encargado nunca los recibe. Como en el equipo, **el
+monto del día lo propone el servidor** desde la ficha al guardar, así que un
+encargado puede agendar y confirmar sin haber visto nunca la tarifa de nadie.
+
+La cuenta de **pagos** no entra a `/extras` —no es suya— pero sí ve las
+actividades en su informe y en su planilla, porque es quien las paga.
+
+### Lo que no hace, a propósito
+
+- **No reparte propina**, y no hay dónde anotarla. Hay una prueba que lo fija
+  contando que ninguna de las dos pestañas tiene esa columna.
+- **No cobra jornada ni horas extra.** Un extra cobra lo acordado para ese
+  día; una diferencia por un acuerdo aparte va en el **ajuste con su motivo**,
+  la misma convención que el equipo.
+- **No aparece en el calendario de la portada.** Esa pantalla contesta cómo
+  viene la ocupación; quién hace el show es otra pregunta y tiene su página.
 
 ## Estilo y marca
 

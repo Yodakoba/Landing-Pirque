@@ -28,6 +28,7 @@ const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/', texto: 'Calendario', accion: 'ver' },
   { href: '/equipo', texto: 'Equipo', accion: 'equipo' },
   { href: '/turnos', texto: 'Turnos', accion: 'equipo' },
+  { href: '/extras', texto: 'Extras', accion: 'extras' },
   { href: '/menus', texto: 'Menús', accion: 'configurar' },
   { href: '/config', texto: 'Configuración', accion: 'configurar' },
   { href: '/informe', texto: 'Informe', accion: 'informe' },

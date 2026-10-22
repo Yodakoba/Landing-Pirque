@@ -14,7 +14,7 @@
  * comensal se atiende bien es dato del negocio, y un número inventado haría
  * que el panel diera consejos que nadie dio.
  */
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Aviso } from './CalendarView';
 import { aEntero, esContratado, MODALIDAD,
          type Puesto, type Trabajador } from '@/lib/equipo';
@@ -224,7 +224,8 @@ export default function EquipoEditor() {
           </thead>
           <tbody>
             {gente.map((t, i) => (
-              <tr key={i} className="border-b border-hueso/5">
+              <Fragment key={i}>
+              <tr className={esAdmin ? '' : 'border-b border-hueso/5'}>
                 <td className="py-2 pr-3">
                   <input type="text" value={t.nombre} className={ENTRADA}
                     placeholder="Nombre y apellido"
@@ -349,6 +350,29 @@ export default function EquipoEditor() {
                   )}
                 </td>
               </tr>
+
+              {/* **La cuenta bancaria va en su propia línea, no en una
+                  columna más.** Con diez columnas, la once dejaba *Crear
+                  link* y *Desactivar* fuera del borde — justo lo que se
+                  arregló cuando la tabla pasó a declarar sus anchos. Y un
+                  número de cuenta con banco, tipo y RUT necesita ancho de
+                  verdad, no una celda angosta donde se lea de a seis
+                  caracteres. */}
+              {esAdmin && (
+                <tr className="border-b border-hueso/5">
+                  <td className="pb-2 align-middle text-xs uppercase tracking-wide
+                                 text-hueso/40">
+                    Cuenta bancaria
+                  </td>
+                  <td colSpan={9} className="pb-2">
+                    <input type="text" value={t.cuenta} className={ENTRADA}
+                      placeholder="banco, tipo de cuenta, número, RUT — para la planilla del pago"
+                      aria-label={`Cuenta bancaria de ${t.nombre || 'esta persona'}`}
+                      onChange={(e) => cambiarPersona(i, 'cuenta', e.target.value)} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
             {gente.length === 0 && (
               <tr><td colSpan={esAdmin ? 10 : 5} className="py-6 text-sm text-hueso/50">
@@ -362,7 +386,8 @@ export default function EquipoEditor() {
         onClick={() => {
           setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
                                 token: '', modalidad: MODALIDAD.porTurno,
-                                pagoJornada: 0, valorHora: 0, propina: true }]);
+                                pagoJornada: 0, valorHora: 0, propina: true,
+                                cuenta: '' }]);
           setSucio(true);
         }}
         className="mt-4 rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">

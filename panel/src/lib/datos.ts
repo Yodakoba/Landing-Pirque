@@ -35,6 +35,11 @@ import {
   leerTurnosDe, filaTurno, normalizarPlan, COL_TURNOS,
   POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno
 } from './equipo.ts';
+import {
+  HOJA_COLABORADORES, HOJA_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
+  leerColaboradoresDe, aFilasColaboradores, leerExtrasDe, filaExtra,
+  normalizarExtras, type Colaborador, type Extra
+} from './extras.ts';
 
 const num = (v: unknown): number => {
   const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
@@ -360,6 +365,71 @@ export async function guardarEquipoDelDia(
   // los índices de las viejas y se borrarían las equivocadas.
   await borrarFilas(HOJA_TURNOS, previas);
   await agregarFilas(HOJA_TURNOS, nuevos.map((t) => filaTurno(enc, t)));
+}
+
+/* ---------- Las actividades extras ---------- */
+
+/**
+ * Quiénes hacen las actividades extras. Acá tampoco hay lista por defecto:
+ * quién es el jinete es dato del negocio.
+ */
+export async function leerColaboradores(): Promise<Colaborador[]> {
+  try {
+    return leerColaboradoresDe(await leerHoja(HOJA_COLABORADORES));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+export async function guardarColaboradores(gente: Colaborador[]): Promise<void> {
+  await escribirBloque(HOJA_COLABORADORES, aFilasColaboradores(gente));
+}
+
+/** Todas las actividades contratadas, de todos los días. */
+export async function leerExtras(): Promise<Extra[]> {
+  try {
+    return leerExtrasDe(await leerHoja(HOJA_ACTIVIDADES));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Guarda las actividades de UN día: borra las de esa fecha y escribe las
+ * nuevas, sin tocar los otros días.
+ *
+ * Mismo criterio que `guardarEquipoDelDia()`, y por el mismo motivo: la
+ * pestaña entera es el año completo, y un error guardando un sábado no puede
+ * llevarse por delante el historial.
+ *
+ * **El monto también lo propone el servidor.** Una línea sin confirmar
+ * hereda el monto habitual de la ficha, así el encargado puede agendar y
+ * corregir sin que su pantalla reciba nunca la lista de lo que cobra cada
+ * proveedor. Y una línea que ya viene confirmada pero sin monto también lo
+ * hereda: no es un cero corregido a mano, es uno al que nadie le puso
+ * precio todavía — la misma excepción que en los turnos.
+ */
+export async function guardarExtrasDelDia(
+  fecha: Fecha, lista: Omit<Extra, 'fila'>[]
+): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_ACTIVIDADES, ENCABEZADO_ACTIVIDADES);
+  const enc = filas[0] ?? ENCABEZADO_ACTIVIDADES;
+
+  const previas = leerExtrasDe(filas).filter((e) => e.fecha === fecha).map((e) => e.fila);
+  const nuevas = normalizarExtras(lista.map((e) => ({ ...e, fecha })));
+
+  const fichas = new Map((await leerColaboradores()).map((c) => [normalizar(c.nombre), c]));
+  for (const e of nuevas) {
+    const ficha = fichas.get(normalizar(e.colaborador));
+    if (!ficha) continue;
+    if (!e.monto) e.monto = ficha.monto;
+    if (!e.actividad) e.actividad = ficha.actividad;
+  }
+
+  await borrarFilas(HOJA_ACTIVIDADES, previas);
+  await agregarFilas(HOJA_ACTIVIDADES, nuevas.map((e) => filaExtra(enc, e)));
 }
 
 /* ---------- Las cuentas del panel ---------- */
