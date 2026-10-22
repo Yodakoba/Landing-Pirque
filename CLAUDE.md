@@ -961,6 +961,44 @@ Dos detalles de implementación que vale la pena tener escritos:
   ahora envuelve** (`flex-wrap`): con ocho páginas ya no cabía, y una barra
   que no cabe se lleva la página entera hacia el costado.
 
+### Marcar quién llegó, desde el propio planificador (2026-10-22)
+
+Lo pidió el cliente pensando en **la jefa de turno**: quien abre el día a las
+once de la mañana no va a pasar lista con montos, va a mirar quién llegó. Por
+eso cada persona asignada tiene ahí mismo un **— / Vino / No vino**, en la
+misma ventana donde se elige y se agrega gente. Quien no llegó queda tachado,
+y el pie dice cuántos vinieron.
+
+**Los montos siguen siendo de Pasar lista**, que no cambió: esta ventana solo
+dice quién vino. Son dos momentos distintos del día y conviene que sigan
+siéndolo — marcar presencia es de la mañana, cerrar las cuentas es de la
+noche.
+
+**Ojo con una trampa que esto abrió, y que costó cambiar una regla del
+servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
+mientras la asistencia estuviera sin marcar**; pasada la lista, lo que viniera
+del navegador mandaba. Con la asistencia marcándose en el planificador, un
+turno puede nacer ya en "vino" **y con los montos en cero**, porque la
+pantalla de un encargado nunca recibe los sueldos de nadie. Esa persona habría
+quedado congelada en **$0**, y el error habría aparecido el día de pagar.
+
+La regla ahora es: **lo que venga manda, salvo que el turno no traiga ningún
+monto.** Un turno con asistencia y sin montos no es un cero corregido a mano,
+es uno al que todavía nadie le puso precio. Con la convención de que las
+diferencias van en el ajuste, un cero deliberado en la jornada ya no existe.
+
+**"Agregar fecha" también está acá** (mismo botón que el calendario), porque
+desde este mes también se decide abrir un día. Pero son dos cosas distintas y
+la pantalla lo dice arriba, no al pie, porque confundirlas es caro: **un día
+de preparación no se agrega, se planifica** —se aprieta el día y se le asigna
+equipo—, mientras que *Agregar fecha* pone el día en el calendario **para
+recibir reservas**. Usar lo segundo para lo primero abriría al público un día
+de montaje.
+
+**La jefa de turno es un puesto, no un rol.** Para marcar asistencia necesita
+una cuenta de **encargado** en `/usuarios`; con su nombre, además, la bitácora
+dice quién marcó qué.
+
 ### Las columnas de `Turnos` se leen por nombre, no por posición
 
 Al revés de `Puestos` y `Trabajadores`. La diferencia no es gusto: esas dos

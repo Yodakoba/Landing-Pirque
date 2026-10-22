@@ -11,7 +11,8 @@
  * justamente eso— así que no había forma de asignarles equipo.
  *
  * Acá están **todos los días del mes**, los abiertos y los que no, y
- * cualquiera se puede planificar.
+ * cualquiera se puede planificar — y marcar quién llegó, que es lo que hace
+ * la jefa de turno con esta misma ventana abierta.
  *
  * **Un día de preparación no es un dato nuevo: se deduce.** Si un día no
  * recibe público y tiene gente asignada, es preparación. No hay columna que
@@ -26,6 +27,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
+import DiaEditor from './DiaEditor';
+import { POR_DEFECTO, type Config } from '@/lib/config';
 import { COLOR_TARJETA, PUNTO_TARJETA } from './TarjetaDia';
 import { resumenEquipo, esPreparacion,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
@@ -44,7 +47,10 @@ export default function CalendarioEquipo() {
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
   } | null>(null);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
+  const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
+  const [fechasEnLaHoja, setFechasEnLaHoja] = useState<string[]>([]);
   const [planificando, setPlanificando] = useState<string | null>(null);
+  const [agregandoFecha, setAgregandoFecha] = useState(false);
   const [error, setError] = useState('');
 
   const cargarEquipo = () =>
@@ -58,15 +64,24 @@ export default function CalendarioEquipo() {
       })
       .catch((e) => setError(String(e)));
 
-  useEffect(() => {
-    cargarEquipo();
-    // La ocupación es solo para pintar el mes: si falla, el calendario se
-    // dibuja igual y se puede planificar. Lo que no se podría es saber
-    // cuánta gente viene, y eso se nota solo.
+  // La ocupación es solo para pintar el mes: si falla, el calendario se
+  // dibuja igual y se puede planificar. Lo que no se podría es saber cuánta
+  // gente viene, y eso se nota solo.
+  const cargarDias = () => {
     fetch('/api/ocupacion').then((r) => r.json())
-      .then((d) => { if (d.ocupacion) setOcupacion(d.ocupacion); })
+      .then((d) => {
+        if (d.ocupacion) setOcupacion(d.ocupacion);
+        if (d.config) setCfg(d.config);
+      })
       .catch(() => {});
-  }, []);
+    // Solo para avisar si una fecha nueva ya estaba en la hoja.
+    fetch('/api/fechas').then((r) => r.json())
+      .then((d) => d.fechas
+        && setFechasEnLaHoja(d.fechas.map((x: { fecha: string }) => x.fecha)))
+      .catch(() => {});
+  };
+
+  useEffect(() => { cargarEquipo(); cargarDias(); }, []);
 
   const porFecha = useMemo(
     () => new Map(ocupacion.map((o) => [o.fecha, o])), [ocupacion]
@@ -98,8 +113,17 @@ export default function CalendarioEquipo() {
       <p className="mb-5 max-w-2xl text-sm text-hueso/60">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,
         incluidos los que no reciben público: los de preparación, montaje o
-        cierre. Planificar un día cerrado <strong>no lo abre al público</strong>
-        {' '}— eso se hace en el calendario, día por día.
+        cierre. <strong>Apreta el día</strong> —el que sea— y asígnale equipo;
+        ahí mismo se marca quién llegó.
+      </p>
+      {/* Las dos cosas se confunden fácil y la confusión es cara: usar
+          "Agregar fecha" para un día de preparación lo pondría a recibir
+          reservas. Por eso la diferencia va dicha arriba y no al pie. */}
+      <p className="mb-5 max-w-2xl text-sm text-hueso/60">
+        Planificar un día cerrado <strong>no lo abre al público</strong>, así
+        que un día de preparación no necesita nada más.{' '}
+        <strong>Agregar fecha</strong> es otra cosa: pone el día en el
+        calendario <em>para recibir reservas</em>.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -115,6 +139,14 @@ export default function CalendarioEquipo() {
           Mes siguiente ›
         </button>
         <span className="flex-1" />
+        {/* El mismo botón del calendario, porque desde acá también se mira el
+            mes y se decide abrir un día. **No es para los de preparación**:
+            esos se asignan apretando el día, sin pasar por acá — usar esto
+            para uno los abriría al público, que es justo lo contrario. */}
+        <button onClick={() => setAgregandoFecha(true)}
+          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          Agregar fecha
+        </button>
         <span className="text-xs text-hueso/50">
           {conEquipo.length} {conEquipo.length === 1 ? 'día' : 'días'} con equipo
           {preparacion.length > 0 && (
@@ -204,6 +236,17 @@ export default function CalendarioEquipo() {
         ocupación, azul privado, rojo cerrado, gris sin configurar — y un día
         sin borde de color simplemente no abre.
       </p>
+
+      {agregandoFecha && (
+        <DiaEditor
+          dia={null}
+          cupoNormal={cfg.cupoNormal}
+          apertura={cfg.horaApertura}
+          fechasExistentes={fechasEnLaHoja}
+          onListo={() => { setAgregandoFecha(false); cargarDias(); }}
+          onCancelar={() => setAgregandoFecha(false)}
+        />
+      )}
 
       {planificando && equipo && (
         <EquipoDialogo
