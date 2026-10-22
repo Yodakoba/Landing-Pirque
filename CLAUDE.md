@@ -832,7 +832,7 @@ uno sirviera por sí solo:
 
 | Pestaña | Qué guarda |
 |---|---|
-| `Puestos` | Garzón, cocina, barra, asistente, runner, barman, bar asistente — **editables**, más la regla "uno cada N personas" |
+| `Puestos` | Jefe de turno, parrillero, asistente parrillero, jefe de cocina, asistente de cocina, garzón, runner, barman, asistente de bar — **editables**, más la regla "uno cada N personas" |
 | `Trabajadores` | Nombre, teléfono, puesto habitual, activo, token, modalidad, sus dos montos y si participa en la propina |
 | `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia, lo que se le pagó y su parte de la propina |
 
@@ -851,6 +851,24 @@ garzones por comensal se atiende bien es dato del negocio y no está escrito
 en ninguna parte del proyecto; sembrarlo con un número plausible haría que el
 panel diera consejos que nadie dio. Mismo criterio que los precios de los
 menús.
+
+### La lista de arranque la corrigió el cliente (2026-10-22)
+
+Los puestos que trae el código al partir son hoy **nueve**: jefe de turno,
+parrillero, asistente parrillero, jefe de cocina, asistente de cocina,
+garzón, runner, barman y asistente de bar. Antes eran siete y el cambio no
+es cosmético: `Cocina`, `Barra` y `Asistente` juntaban en una palabra cosas
+que en el local son puestos distintos. Quien manda la parrilla no hace lo
+mismo que quien lo asiste, y `Asistente` a secas no dice de qué. Un puesto
+que no distingue no sirve para contestar si el equipo alcanza, que es para
+lo único que esta lista existe.
+
+**Eso es el arranque, no la verdad.** En cuanto alguien guarda los puestos
+en `/equipo`, manda la planilla y esta lista deja de mirarse. Renombrar un
+puesto tampoco toca lo ya asignado: cada turno guarda **el puesto con que se
+asignó ese día**, así que un turno viejo sigue mostrándose con su nombre
+aunque el puesto se llame distinto hoy (`planDelDia()` los agrega al final
+de la lista, con el nombre tal como se escribió).
 
 ### Una persona ocupa un puesto, no dos
 

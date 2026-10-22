@@ -275,19 +275,28 @@ export function costoDelDia(turnos: Turno[], fecha: Fecha): number {
  * se editan en /equipo. Están en el código solo para que el panel arranque
  * contra una planilla recién creada, igual que los menús.
  *
+ * Los corrigió el cliente el 2026-10-22, y el cambio no es cosmético: la
+ * lista de antes —`Cocina`, `Barra`, `Asistente`— juntaba en una palabra
+ * cosas que en el local son puestos distintos. Quien manda la parrilla no
+ * hace lo mismo que quien lo asiste, y `Asistente` a secas no dice de qué.
+ * Un puesto que no distingue no sirve para contestar si el equipo alcanza,
+ * que es para lo único que existe esta lista.
+ *
  * Las razones nacen en CERO, o sea sin poner. Cuántos garzones por comensal
  * es dato del negocio y no está escrito en ninguna parte del proyecto;
  * sembrarlo con un número plausible haría que el panel diera consejos que
  * nadie dio.
  */
 export const POR_DEFECTO_PUESTOS: Puesto[] = [
+  { nombre: 'Jefe de turno', cadaCuantas: 0 },
+  { nombre: 'Parrillero', cadaCuantas: 0 },
+  { nombre: 'Asistente parrillero', cadaCuantas: 0 },
+  { nombre: 'Jefe de cocina', cadaCuantas: 0 },
+  { nombre: 'Asistente de cocina', cadaCuantas: 0 },
   { nombre: 'Garzón', cadaCuantas: 0 },
-  { nombre: 'Cocina', cadaCuantas: 0 },
-  { nombre: 'Barra', cadaCuantas: 0 },
-  { nombre: 'Asistente', cadaCuantas: 0 },
   { nombre: 'Runner', cadaCuantas: 0 },
   { nombre: 'Barman', cadaCuantas: 0 },
-  { nombre: 'Bar asistente', cadaCuantas: 0 }
+  { nombre: 'Asistente de bar', cadaCuantas: 0 }
 ];
 
 /**

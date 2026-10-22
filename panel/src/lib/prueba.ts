@@ -924,7 +924,10 @@ ok(iguales('abc', 'abc') && !iguales('abc', 'abd') && !iguales('abc', 'abcd'),
    'la comparacion distingue contenido y largo');
 
 /* ---------- el equipo: puestos ---------- */
-ok(POR_DEFECTO_PUESTOS.length === 7, 'los siete puestos que nombró el cliente');
+ok(POR_DEFECTO_PUESTOS.length === 9, 'los nueve puestos que nombró el cliente');
+ok(POR_DEFECTO_PUESTOS.some((p) => p.nombre === 'Parrillero')
+   && POR_DEFECTO_PUESTOS.some((p) => p.nombre === 'Jefe de turno'),
+   'con la parrilla y el jefe de turno, que antes no estaban');
 ok(POR_DEFECTO_PUESTOS.every((p) => p.cadaCuantas === 0),
    'y ninguno trae razón puesta: cuántos por comensal es dato del negocio');
 
