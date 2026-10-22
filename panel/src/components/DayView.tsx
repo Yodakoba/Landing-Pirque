@@ -116,6 +116,23 @@ export default function DayView({ fecha }: { fecha: string }) {
     [todas, catalogo]
   );
 
+  // **Contra el día completo, no contra el filtro.** `personas` cuenta solo
+  // las reservas visibles, así que mirar "pagan en el local" habría cambiado
+  // cuánto equipo sugiere el panel. Para cocinar y atender viene toda la
+  // gente del día, no la que calza con el filtro de la pantalla.
+  const personasDelDia = useMemo(
+    () => delDia.filter(ocupaLugar).reduce((s, r) => s + (Number(r.personas) || 0), 0),
+    [delDia]
+  );
+  // OJO: los hooks van todos acá arriba, antes de los `return` de error y de
+  // "Cargando…". Un useMemo debajo de esos returns se salta en la primera
+  // pasada y corre en la segunda, y React tumba la página entera con el
+  // error #310 — que es exactamente lo que pasó con estos dos.
+  const plan = useMemo(
+    () => (equipo ? planDelDia(equipo.turnos, equipo.puestos, fecha, personasDelDia) : []),
+    [equipo, fecha, personasDelDia]
+  );
+
   function exportar() {
     const csv = aCSV(
       ['ID Orden','Nombre','Email','Teléfono','Menú','Personas','Tipo Pago',
@@ -151,18 +168,6 @@ export default function DayView({ fecha }: { fecha: string }) {
   if (error) return <Aviso error={error} />;
   if (!todas) return <p className="text-hueso/50">Cargando…</p>;
 
-  // **Contra el día completo, no contra el filtro.** `personas` cuenta solo
-  // las reservas visibles, así que mirar "pagan en el local" habría cambiado
-  // cuánto equipo sugiere el panel. Para cocinar y atender viene toda la
-  // gente del día, no la que calza con el filtro de la pantalla.
-  const personasDelDia = useMemo(
-    () => delDia.filter(ocupaLugar).reduce((s, r) => s + (Number(r.personas) || 0), 0),
-    [delDia]
-  );
-  const plan = useMemo(
-    () => (equipo ? planDelDia(equipo.turnos, equipo.puestos, fecha, personasDelDia) : []),
-    [equipo, fecha, personasDelDia]
-  );
   // Solo los puestos con alguien: acá lo que importa es quién viene a
   // trabajar, y los puestos vacíos se ven en el planificador.
   const conGente = plan.filter((l) => l.asignados.length > 0);
