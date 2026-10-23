@@ -21,7 +21,7 @@
 import { useMemo, useState } from 'react';
 import Dialogo from './Dialogo';
 import { pagoDe, repartirPropina, VINO, esContratado,
-         type Trabajador, type Turno } from '@/lib/equipo';
+         type Trabajador, type Turno, totalAjustes } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
@@ -79,15 +79,37 @@ export default function ListaDialogo({
 
   const cambiar = (i: number, campo: keyof Omit<Turno, 'fila'>, valor: string) => {
     const copia = lista.map((t) => ({ ...t }));
-    if (campo === 'asistencia' || campo === 'motivo') {
+    if (campo === 'asistencia') {
       (copia[i] as Record<string, unknown>)[campo] = valor;
     } else {
-      // El ajuste admite negativos; los demás montos no.
+      // Ninguno de los montos de la fila admite negativos: el que sí los
+      // admite es el ajuste, y ese tiene su propio cambiador.
       const n = Number(String(valor).replace(/[^\d.-]/g, ''));
       const limpio = Number.isFinite(n) ? Math.round(n) : 0;
-      (copia[i] as Record<string, unknown>)[campo] =
-        campo === 'ajuste' ? limpio : Math.max(0, limpio);
+      (copia[i] as Record<string, unknown>)[campo] = Math.max(0, limpio);
     }
+    setLista(copia);
+  };
+
+  /** Los ajustes se editan de a uno, y el monto SÍ puede ser negativo. */
+  const cambiarAjuste = (i: number, k: number, campo: 'monto' | 'motivo', valor: string) => {
+    const copia = lista.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
+    if (campo === 'motivo') copia[i].ajustes[k].motivo = valor;
+    else {
+      const n = Number(String(valor).replace(/[^\d.-]/g, ''));
+      copia[i].ajustes[k].monto = Number.isFinite(n) ? Math.round(n) : 0;
+    }
+    setLista(copia);
+  };
+
+  const agregarAjuste = (i: number) => {
+    const copia = lista.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
+    copia[i].ajustes.push({ monto: 0, motivo: '' });
+    setLista(copia);
+  };
+
+  const quitarAjuste = (i: number, k: number) => {
+    const copia = lista.map((t) => ({ ...t, ajustes: t.ajustes.filter((_, j) => j !== k) }));
     setLista(copia);
   };
 
@@ -131,8 +153,7 @@ export default function ListaDialogo({
                   <th className="w-28 py-2 pr-3">Vino</th>
                   <th className="w-24 py-2 pr-3">Jornada</th>
                   <th className="w-20 py-2 pr-3">Hs extra</th>
-                  <th className="w-24 py-2 pr-3">Ajuste</th>
-                  <th className="py-2 pr-3">Motivo</th>
+                  <th className="min-w-[18rem] py-2 pr-3">Ajustes</th>
                   <th className="w-24 py-2 pr-3 text-right">Propina</th>
                   <th className="w-24 py-2 text-right">Total</th>
                 </tr>
@@ -172,15 +193,38 @@ export default function ListaDialogo({
                         value={t.horasExtra || ''} placeholder="0"
                         onChange={(e) => cambiar(i, 'horasExtra', e.target.value)} />
                     </td>
-                    <td className="py-2 pr-3">
-                      <input type="number" step={1000} className={ENTRADA}
-                        value={t.ajuste || ''} placeholder="0"
-                        onChange={(e) => cambiar(i, 'ajuste', e.target.value)} />
-                    </td>
-                    <td className="py-2 pr-3">
-                      <input type="text" className={ENTRADA} value={t.motivo}
-                        placeholder={t.ajuste ? 'por qué' : ''}
-                        onChange={(e) => cambiar(i, 'motivo', e.target.value)} />
+                    {/* **Varios ajustes, cada uno con su motivo.** Antes era
+                        uno solo, y con uno solo había que sumar a mano el
+                        extra de la hora y el adelanto, y escribir un motivo
+                        que explicara los dos — o sea perder justo lo que el
+                        ajuste sirve para dejar: el porqué de cada peso. */}
+                    <td className="py-2 pr-3 align-top">
+                      {t.ajustes.map((a, k) => (
+                        <div key={k} className="mb-1 flex items-center gap-1">
+                          <input type="number" step={1000}
+                            className={`${ENTRADA} w-24`}
+                            value={a.monto || ''} placeholder="0"
+                            aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
+                            onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
+                          <input type="text" className={ENTRADA} value={a.motivo}
+                            placeholder="por qué"
+                            aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
+                            onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
+                          <button onClick={() => quitarAjuste(i, k)}
+                            className="px-1 text-hueso/40 hover:text-red-400"
+                            aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
+                            title="Quitar este ajuste">✕</button>
+                        </div>
+                      ))}
+                      <button onClick={() => agregarAjuste(i)}
+                        className="text-xs text-oro hover:underline">
+                        + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
+                      </button>
+                      {t.ajustes.length > 1 && (
+                        <span className="ml-2 text-xs tabular-nums text-hueso/45">
+                          suman {enPesos(totalAjustes(t.ajustes))}
+                        </span>
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
                       {conPropina[i]?.propina

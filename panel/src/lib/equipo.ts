@@ -162,6 +162,68 @@ export interface Trabajador {
   token: string;
 }
 
+/**
+ * Una suma o una resta del día, con su motivo.
+ *
+ * **Van varios por turno** y se guardan en las dos columnas que ya existían
+ * —`Ajuste` y `Motivo del ajuste`—, como dos listas en paralelo separadas
+ * por `|`. Se decidió así sobre abrir una pestaña nueva por una razón
+ * concreta: el caso corriente es **un** ajuste, y en ese caso la celda se
+ * ve exactamente como antes (`-5000` · `llegó tarde`), así que la planilla
+ * sigue siendo legible y editable a mano para quien no sepa de esto. Con
+ * dos, dice `5000|-20000` · `hora extra|adelanto`, que también se entiende.
+ *
+ * **Manda la lista de montos**: si alguien edita una celda y no la otra, los
+ * motivos que falten se leen vacíos en vez de desalinear los pares.
+ */
+export interface Ajuste {
+  monto: number;
+  motivo: string;
+}
+
+/** Lo que separa un ajuste del siguiente dentro de la celda. */
+const SEPARADOR = '|';
+
+/** Lo que suman todos los ajustes de un turno. */
+export const totalAjustes = (a: Ajuste[] | undefined) =>
+  (a ?? []).reduce((n, x) => n + (x.monto || 0), 0);
+
+/** Los motivos de los que tienen algo que decir, para mostrarlos juntos. */
+export const motivosDe = (a: Ajuste[] | undefined) =>
+  (a ?? []).map((x) => x.motivo.trim()).filter(Boolean).join(' · ');
+
+/**
+ * Lee las dos celdas como una lista de ajustes.
+ *
+ * Un ajuste en cero **con motivo** se conserva: alguien lo escribió, y
+ * borrárselo por valer cero sería decidir por esa persona. Uno en cero y
+ * sin motivo, en cambio, es una fila que quedó vacía y no se guarda.
+ */
+export function leerAjustes(montos: string, motivos: string): Ajuste[] {
+  const m = String(montos ?? '').split(SEPARADOR);
+  const r = String(motivos ?? '').split(SEPARADOR);
+  const salida: Ajuste[] = [];
+  for (let i = 0; i < m.length; i++) {
+    const monto = aEntero(m[i], true);
+    const motivo = String(r[i] ?? '').trim();
+    if (!monto && !motivo) continue;
+    salida.push({ monto, motivo });
+  }
+  return salida;
+}
+
+/** Las dos celdas, en el orden en que se leen. */
+export function escribirAjustes(a: Ajuste[] | undefined): [string, string] {
+  const lista = (a ?? []).filter((x) => x.monto || x.motivo.trim());
+  if (!lista.length) return ['', ''];
+  return [
+    lista.map((x) => (x.monto ? String(x.monto) : '0')).join(SEPARADOR),
+    // El separador se saca de los motivos: si alguien lo escribe, partiría
+    // su propio ajuste en dos al volver a leerlo.
+    lista.map((x) => x.motivo.replace(/\|/g, ' ').trim()).join(SEPARADOR)
+  ];
+}
+
 export interface Turno {
   fecha: Fecha;
   trabajador: string;
@@ -187,9 +249,19 @@ export interface Turno {
   pagoJornada: number;
   horasExtra: number;
   valorHora: number;
-  /** Suma o resta suelta, en pesos. Negativa para un descuento. */
-  ajuste: number;
-  motivo: string;
+  /**
+   * **Los ajustes del día, que pueden ser varios.**
+   *
+   * Lo pidió el cliente con el ejemplo exacto: *"extra positivo por hora
+   * extra y extra negativo por adelanto"*. Con un solo ajuste había que
+   * sumarlos a mano y escribir un motivo que explicara los dos, o sea
+   * perder justo lo que hace útil al ajuste: **que quede escrito el
+   * porqué**, uno por uno, para quien revise ese pago un mes después.
+   *
+   * Cada uno es una suma o una resta en pesos, con su motivo. Negativo es
+   * un descuento.
+   */
+  ajustes: Ajuste[];
   /**
    * Lo que le tocó de propina ese día, **ya repartido y congelado**.
    *
@@ -217,13 +289,14 @@ export interface Turno {
  * turno con monto negativo, es otra conversación.
  */
 export function pagoDe(t: Pick<Turno,
-  'asistencia' | 'modalidad' | 'pagoJornada' | 'horasExtra' | 'valorHora' | 'ajuste'>
+  'asistencia' | 'modalidad' | 'pagoJornada' | 'horasExtra' | 'valorHora' | 'ajustes'>
 ): number {
   if (t.asistencia !== VINO.si) return 0;
   // Un contratado no suma jornada: su sueldo no sale de esta caja. Sus horas
   // extra y sus ajustes sí, porque esos son del día y se pagan aparte.
   const jornada = esContratado(t.modalidad) ? 0 : (t.pagoJornada || 0);
-  const bruto = jornada + (t.horasExtra || 0) * (t.valorHora || 0) + (t.ajuste || 0);
+  const bruto = jornada + (t.horasExtra || 0) * (t.valorHora || 0)
+                + totalAjustes(t.ajustes);
   return Math.max(0, Math.round(bruto));
 }
 
@@ -458,8 +531,7 @@ export function leerTurnosDe(filas: string[][]): Turno[] {
       valorHora: aEntero(en(f, i.valorHora)),
       // El ajuste SÍ puede ser negativo: es lo que lo distingue de los demás
       // montos. `aEntero()` recorta en cero, así que acá se lee aparte.
-      ajuste: aEntero(en(f, i.ajuste), true),
-      motivo: en(f, i.motivo).trim(),
+      ajustes: leerAjustes(en(f, i.ajuste), en(f, i.motivo)),
       propina: aEntero(en(f, i.propina)),
       fila: n + 1
     });
@@ -487,8 +559,9 @@ export function filaTurno(encabezado: string[], t: Omit<Turno, 'fila'>): string[
   poner(i.pagoJornada, monto(t.pagoJornada));
   poner(i.horasExtra, monto(t.horasExtra));
   poner(i.valorHora, monto(t.valorHora));
-  poner(i.ajuste, monto(t.ajuste));
-  poner(i.motivo, t.motivo);
+  const [montos, motivos] = escribirAjustes(t.ajustes);
+  poner(i.ajuste, montos);
+  poner(i.motivo, motivos);
   poner(i.propina, monto(t.propina));
   return fila;
 }
@@ -788,7 +861,7 @@ export function informeDelPeriodo(
     if (!esContratado(t.modalidad)) l.jornadas += t.pagoJornada || 0;
     l.horasExtra += t.horasExtra || 0;
     l.montoHorasExtra += (t.horasExtra || 0) * (t.valorHora || 0);
-    l.ajustes += t.ajuste || 0;
+    l.ajustes += totalAjustes(t.ajustes);
     l.propina += t.propina || 0;
     l.total += pagoDe(t);
   }

@@ -35,6 +35,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
+import { totalAjustes, motivosDe } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
          type Banco } from '@/lib/banco';
 
@@ -168,7 +169,8 @@ export default function InformeEquipo() {
           // Un contratado va en blanco, no en cero: cero se lee como "se le
           // pagó cero", y lo que pasa es que esa columna no le aplica.
           esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
-          t.horasExtra || '', t.valorHora || '', t.ajuste || '', t.motivo,
+          t.horasExtra || '', t.valorHora || '',
+          totalAjustes(t.ajustes) || '', motivosDe(t.ajustes),
           pagoDe(t),
           // Aparte del total, igual que en pantalla: la propina no es
           // sueldo, y quien reciba esta planilla tiene que poder sumar una

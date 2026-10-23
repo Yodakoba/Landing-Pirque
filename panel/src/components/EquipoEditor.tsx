@@ -132,6 +132,28 @@ export default function EquipoEditor() {
     else copia[i].cadaCuantas = aEntero(valor);
     setPuestos(copia); setSucio(true);
   };
+  /**
+   * El mismo botón de guardar, arriba y abajo.
+   *
+   * **Arriba es el que se usa de verdad**: se corrige el sueldo de alguien
+   * en la primera fila y el único botón quedaba al final de la página, con
+   * la tabla de puestos en medio. Lo pidió el cliente y tenía razón — un
+   * guardado al que hay que irlo a buscar es un guardado que se olvida.
+   *
+   * Los dos hacen lo mismo porque **el panel guarda las dos listas juntas**,
+   * en una sola petición: no son dos formularios, es uno con dos tablas.
+   */
+  const botonGuardar = (
+    <>
+      {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
+      <button onClick={guardar} disabled={guardando || !sucio}
+        className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
+                   disabled:opacity-40">
+        {guardando ? 'Guardando…' : 'Guardar'}
+      </button>
+    </>
+  );
+
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = gente.map((t) => ({ ...t }));
     copia[i].banco = banco;
@@ -219,19 +241,15 @@ export default function EquipoEditor() {
           la tabla se desplaza de lado dentro de su marco, que es lo que ya
           hacen las demás del panel. */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[62rem] table-fixed text-sm">
+        <table className="w-full min-w-[56rem] table-fixed text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
             <tr className="border-b border-hueso/10">
-              <th className="w-52 py-2 pr-3">Nombre</th>
-              <th className="w-32 py-2 pr-3">Teléfono</th>
-              <th className="w-40 py-2 pr-3">Puesto habitual</th>
+              <th className="w-56 py-2 pr-3">Nombre</th>
+              <th className="w-44 py-2 pr-3">Teléfono</th>
+              <th className="w-44 py-2 pr-3">Puesto habitual</th>
               <th className="w-16 py-2 pr-3">Activo</th>
-              {esAdmin && <th className="w-32 py-2 pr-3">Modalidad</th>}
-              {esAdmin && <th className="w-28 py-2 pr-3">Jornada</th>}
-              {esAdmin && <th className="w-24 py-2 pr-3">Hora extra</th>}
-              {esAdmin && <th className="w-20 py-2 pr-3">Propina</th>}
-              {esAdmin && <th className="w-44 py-2 pr-3">Link personal</th>}
-              <th className="w-20 py-2" />
+              {esAdmin && <th className="w-48 py-2 pr-3">Link personal</th>}
+              <th className="w-24 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -271,43 +289,6 @@ export default function EquipoEditor() {
                     className="h-4 w-4 accent-oro"
                     onChange={(e) => cambiarPersona(i, 'activo', e.target.checked)} />
                 </td>
-                {esAdmin && (
-                  <td className="py-2 pr-3">
-                    <select value={t.modalidad} className={ENTRADA}
-                      aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
-                      onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
-                      <option value={MODALIDAD.porTurno}>Por turno</option>
-                      <option value={MODALIDAD.contratado}>Contratado</option>
-                    </select>
-                  </td>
-                )}
-                {esAdmin && (
-                  <td className="py-2 pr-3">
-                    {/* A un contratado no se le paga por jornada, así que el
-                        campo no se deja escribir: un monto ahí no se usaría
-                        en ninguna cuenta y haría creer que sí. */}
-                    <input type="number" min={0} step={1000} className={ENTRADA}
-                      value={esContratado(t.modalidad) ? '' : (t.pagoJornada || '')}
-                      placeholder={esContratado(t.modalidad) ? 'no aplica' : '—'}
-                      disabled={esContratado(t.modalidad)}
-                      onChange={(e) => cambiarPersona(i, 'pagoJornada', e.target.value)} />
-                  </td>
-                )}
-                {esAdmin && (
-                  <td className="py-2 pr-3">
-                    <input type="number" min={0} step={500} className={ENTRADA}
-                      value={t.valorHora || ''} placeholder="—"
-                      onChange={(e) => cambiarPersona(i, 'valorHora', e.target.value)} />
-                  </td>
-                )}
-                {esAdmin && (
-                  <td className="py-2 pr-3">
-                    <input type="checkbox" checked={t.propina}
-                      aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
-                      className="h-4 w-4 accent-oro"
-                      onChange={(e) => cambiarPersona(i, 'propina', e.target.checked)} />
-                  </td>
-                )}
                 {esAdmin && (
                   <td className="whitespace-nowrap py-2 pr-3 text-xs">
                     {!t.nombre.trim() ? (
@@ -363,6 +344,66 @@ export default function EquipoEditor() {
                 </td>
               </tr>
 
+              {/* **El pago va en su propia línea, no en cuatro columnas
+                  más.** Con todo en una fila, la tabla pasaba de los 1200px
+                  y la última columna —donde están *Crear link* y
+                  *Desactivar*— quedaba cortada en un notebook. Repartido en
+                  líneas, además, cada bloque se lee por lo que es: arriba
+                  quién es la persona, acá cuánto gana, abajo dónde se le
+                  paga. */}
+              {esAdmin && (
+                <tr>
+                  <td className="pb-2 align-top text-xs uppercase tracking-wide
+                                 text-hueso/40">
+                    Pago
+                  </td>
+                  <td colSpan={5} className="pb-2">
+                    <div className="flex flex-wrap items-start gap-2">
+                      <label className="block w-40">
+                        <span className="mb-0.5 block text-[10px] uppercase
+                                         tracking-wide text-hueso/35">Modalidad</span>
+                        <select value={t.modalidad} className={ENTRADA}
+                          aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
+                          onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
+                          <option value={MODALIDAD.porTurno}>Por turno</option>
+                          <option value={MODALIDAD.contratado}>Contratado</option>
+                        </select>
+                      </label>
+                      <label className="block w-32">
+                        <span className="mb-0.5 block text-[10px] uppercase
+                                         tracking-wide text-hueso/35">Jornada</span>
+                        {/* A un contratado no se le paga por jornada, así que
+                            el campo no se deja escribir: un monto ahí no se
+                            usaría en ninguna cuenta y haría creer que sí. */}
+                        <input type="number" min={0} step={1000} className={ENTRADA}
+                          value={esContratado(t.modalidad) ? '' : (t.pagoJornada || '')}
+                          placeholder={esContratado(t.modalidad) ? 'no aplica' : '—'}
+                          disabled={esContratado(t.modalidad)}
+                          aria-label={`Jornada de ${t.nombre || 'esta persona'}`}
+                          onChange={(e) => cambiarPersona(i, 'pagoJornada', e.target.value)} />
+                      </label>
+                      <label className="block w-32">
+                        <span className="mb-0.5 block text-[10px] uppercase
+                                         tracking-wide text-hueso/35">Hora extra</span>
+                        <input type="number" min={0} step={500} className={ENTRADA}
+                          value={t.valorHora || ''} placeholder="—"
+                          aria-label={`Valor de la hora extra de ${t.nombre || 'esta persona'}`}
+                          onChange={(e) => cambiarPersona(i, 'valorHora', e.target.value)} />
+                      </label>
+                      <label className="flex items-center gap-2 self-end pb-1.5">
+                        <input type="checkbox" checked={t.propina}
+                          className="h-4 w-4 accent-oro"
+                          aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
+                          onChange={(e) => cambiarPersona(i, 'propina', e.target.checked)} />
+                        <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+                          Entra en la propina
+                        </span>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
               {/* **Los datos de la transferencia van en su propia línea, no
                   en columnas más.** Con diez columnas, la once ya dejaba
                   *Crear link* y *Desactivar* fuera del borde; seis la
@@ -375,7 +416,7 @@ export default function EquipoEditor() {
                                  text-hueso/40">
                     Transferencia
                   </td>
-                  <td colSpan={9} className="pb-2">
+                  <td colSpan={5} className="pb-2">
                     <DatosBancarios
                       banco={t.banco} nombre={t.nombre}
                       onCambio={(b) => cambiarBanco(i, b)} />
@@ -385,24 +426,28 @@ export default function EquipoEditor() {
               </Fragment>
             ))}
             {gente.length === 0 && (
-              <tr><td colSpan={esAdmin ? 10 : 5} className="py-6 text-sm text-hueso/50">
+              <tr><td colSpan={esAdmin ? 6 : 5} className="py-6 text-sm text-hueso/50">
                 Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
               </td></tr>
             )}
           </tbody>
         </table>
       </div>
-      <button
-        onClick={() => {
-          setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
-                                token: '', modalidad: MODALIDAD.porTurno,
-                                pagoJornada: 0, valorHora: 0, propina: true,
-                                banco: bancoVacio() }]);
-          setSucio(true);
-        }}
-        className="mt-4 rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
-        Agregar trabajador
-      </button>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => {
+            setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
+                                  token: '', modalidad: MODALIDAD.porTurno,
+                                  pagoJornada: 0, valorHora: 0, propina: true,
+                                  banco: bancoVacio() }]);
+            setSucio(true);
+          }}
+          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          Agregar trabajador
+        </button>
+        <span className="flex-1" />
+        {botonGuardar}
+      </div>
 
       {esAdmin && (
         <p className="mt-4 max-w-2xl text-xs text-hueso/50">
@@ -481,11 +526,7 @@ export default function EquipoEditor() {
           </button>
         )}
         <span className="flex-1" />
-        {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
-        <button onClick={guardar} disabled={guardando || !sucio}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar'}
-        </button>
+        {botonGuardar}
       </div>
 
       <p className="mt-6 max-w-2xl text-xs text-hueso/50">

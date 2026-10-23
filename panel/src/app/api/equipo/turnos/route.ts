@@ -42,9 +42,16 @@ export async function PUT(req: Request) {
       pagoJornada: aEntero(t?.pagoJornada),
       horasExtra: aEntero(t?.horasExtra),
       valorHora: aEntero(t?.valorHora),
-      // Con signo: un descuento es justamente un número negativo.
-      ajuste: aEntero(t?.ajuste, true),
-      motivo: String(t?.motivo ?? '').trim(),
+      // Varios ajustes por turno, cada uno con su motivo. Con signo: un
+      // descuento es justamente un número negativo. Los que quedan en cero
+      // y sin motivo se descartan acá —son filas que alguien abrió y no
+      // llenó—, para que no viajen a la planilla.
+      ajustes: (Array.isArray(t?.ajustes) ? t.ajustes : [])
+        .map((a: unknown) => ({
+          monto: aEntero((a as Record<string, unknown>)?.monto, true),
+          motivo: String((a as Record<string, unknown>)?.motivo ?? '').trim()
+        }))
+        .filter((a: { monto: number; motivo: string }) => a.monto || a.motivo),
       propina: aEntero(t?.propina)
     })));
 

@@ -44,6 +44,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
          repartirPropina, propinaDelDia,
+         totalAjustes, motivosDe, leerAjustes, escribirAjustes,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
@@ -73,7 +74,7 @@ const tu = (p: Partial<Turno>): Turno => ({
   fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
   asistencia: '', modalidad: MODALIDAD.porTurno,
   pagoJornada: 0, horasExtra: 0, valorHora: 0,
-  ajuste: 0, motivo: '', propina: 0, fila: 2, ...p
+  ajustes: [], propina: 0, fila: 2, ...p
 });
 const dia = (p: Partial<FechaHabil>): FechaHabil => ({
   fecha: '2026-11-14', capacidad: 60, apertura: '13:00',
@@ -1337,14 +1338,14 @@ ok(pagoDe(tu({ ...jornada, asistencia: VINO.no })) === 0, 'y quien no llegó, ta
 ok(pagoDe(tu({ ...jornada, asistencia: VINO.si })) === 30000, 'quien vino cobra su jornada');
 ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, horasExtra: 2 })) === 38000,
    'las horas extra se multiplican por su valor hora');
-ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: -5000 })) === 25000,
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajustes: [{ monto: -5000, motivo: '' }] })) === 25000,
    'un ajuste negativo descuenta');
-ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: 7000 })) === 37000,
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajustes: [{ monto: 7000, motivo: '' }] })) === 37000,
    'y uno positivo suma');
 
 // Un descuento mayor que la jornada deja el día en cero, no en negativo: si
 // de verdad hay que cobrarle algo a alguien, eso no es un turno.
-ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: -90000 })) === 0,
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajustes: [{ monto: -90000, motivo: '' }] })) === 0,
    'nunca queda en negativo');
 
 /* ---------- contratado vs. por turno ---------- */
@@ -1358,7 +1359,7 @@ ok(pagoDe(fijo) === 0,
    'un contratado no suma jornada: su sueldo no sale de esta caja');
 ok(pagoDe({ ...fijo, horasExtra: 3 }) === 12000,
    'pero sus horas extra sí, que se pagan aparte');
-ok(pagoDe({ ...fijo, ajuste: 5000 }) === 5000, 'y sus ajustes también');
+ok(pagoDe({ ...fijo, ajustes: [{ monto: 5000, motivo: '' }] }) === 5000, 'y sus ajustes también');
 
 const turnosDelSabado: Turno[] = [
   tu({ ...jornada, trabajador: 'Ana', asistencia: VINO.si }),
@@ -1402,7 +1403,7 @@ const mes: Turno[] = [
   tu({ trabajador: 'Ana', fecha: '2026-11-14', asistencia: VINO.si,
        pagoJornada: 30000, horasExtra: 2, valorHora: 4000 }),
   tu({ trabajador: 'Ana', fecha: '2026-11-15', asistencia: VINO.si,
-       pagoJornada: 30000, ajuste: -5000, motivo: 'llegó tarde' }),
+       pagoJornada: 30000, ajustes: [{ monto: -5000, motivo: 'llegó tarde' }] }),
   // Luis contratado: su jornada no suma, sus horas extra sí.
   tu({ trabajador: 'Luis', fecha: '2026-11-14', asistencia: VINO.si,
        modalidad: MODALIDAD.contratado, pagoJornada: 30000,
@@ -1453,7 +1454,7 @@ ok(informeDelPeriodo([], '2026-11-01', '2026-11-30').length === 0,
 // Lo fija una prueba para que a nadie se le ocurra filtrarlo despues.
 const preparacion = informeDelPeriodo([
   tu({ trabajador: 'Ana', fecha: '2026-11-10', asistencia: VINO.si,  // martes
-       pagoJornada: 30000, ajuste: 10000, motivo: 'montaje, acuerdo aparte' })
+       pagoJornada: 30000, ajustes: [{ monto: 10000, motivo: 'montaje, acuerdo aparte' }] })
 ], '2026-11-01', '2026-11-30');
 ok(preparacion[0].dias === 1 && preparacion[0].total === 40000,
    'un dia de preparacion entra al informe, con su ajuste por acuerdo especial');
@@ -1576,9 +1577,9 @@ ok(!Object.values(COL_COLABORADORES).some((c) => normalizar(c).includes('propina
 // Agendar no es pagar, igual que un turno sin pasar lista.
 ok(costoDeExtra(ex({ estado: '' })) === 0, 'sin confirmar no cuesta nada');
 ok(costoDeExtra(ex({ estado: VINO.no })) === 0, 'y si no vino, tampoco');
-ok(costoDeExtra(ex({ monto: 50000, ajuste: 10000 })) === 60000,
+ok(costoDeExtra(ex({ monto: 50000, ajuste: 10000, motivo: '' })) === 60000,
    'confirmada cuesta el monto más el ajuste');
-ok(costoDeExtra(ex({ monto: 50000, ajuste: -80000 })) === 0,
+ok(costoDeExtra(ex({ monto: 50000, ajuste: -80000, motivo: '' })) === 0,
    'un descuento mayor que el monto deja el día en cero, nunca en negativo');
 
 // --- Las fichas (posicionales: la pestaña se reescribe entera) ---
@@ -1683,7 +1684,7 @@ ok(unaLinea[0].colaborador === 'pedro  soto',
 
 // --- El informe ---
 const informe = informeDeExtras([
-  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-14', monto: 50000, ajuste: 10000 }),
+  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-14', monto: 50000, ajuste: 10000, motivo: '' }),
   ex({ colaborador: 'Pedro Soto', fecha: '2026-11-15', monto: 50000 }),
   ex({ colaborador: 'Pedro Soto', fecha: '2026-11-16', estado: VINO.no }),
   ex({ colaborador: 'Carla Díaz', actividad: 'Pintacaritas', fecha: '2026-11-14',
@@ -1853,6 +1854,75 @@ ok(telefonoDe({ phone: '987654321' } as PedidoShopify) === '+56 9 8765 4321',
    'aunque el cliente lo haya escrito pelado en el checkout');
 ok(emailDe({ email: 'Ana@Ejemplo.CL' } as PedidoShopify) === 'ana@ejemplo.cl',
    'y el correo en minúsculas');
+
+
+/* ---------- Varios ajustes por turno ---------- */
+
+console.log('\nAjustes de un turno');
+
+// Lo pidió el cliente con este ejemplo exacto: un extra positivo por hora
+// extra y uno negativo por un adelanto, **cada uno con su motivo**.
+const conDos = tu({
+  asistencia: VINO.si, pagoJornada: 30000,
+  ajustes: [{ monto: 5000, motivo: 'hora extra del montaje' },
+            { monto: -20000, motivo: 'adelanto del viernes' }]
+});
+ok(totalAjustes(conDos.ajustes) === -15000, 'los ajustes se suman entre ellos');
+ok(pagoDe(conDos) === 15000, 'y el turno paga la jornada más esa suma');
+ok(motivosDe(conDos.ajustes) === 'hora extra del montaje · adelanto del viernes',
+   'los motivos se muestran juntos, sin perder ninguno');
+
+// La regla de siempre: un descuento mayor que todo deja el día en cero.
+ok(pagoDe(tu({ asistencia: VINO.si, pagoJornada: 30000,
+               ajustes: [{ monto: -50000, motivo: 'adelanto' }] })) === 0,
+   'un descuento mayor que la jornada deja el día en cero, nunca en negativo');
+
+// --- La ida y vuelta por las dos celdas de la planilla ---
+ok(JSON.stringify(escribirAjustes([{ monto: -5000, motivo: 'llegó tarde' }]))
+   === JSON.stringify(['-5000', 'llegó tarde']),
+   'con UN ajuste la celda se ve igual que siempre: legible y editable a mano');
+ok(JSON.stringify(escribirAjustes(conDos.ajustes))
+   === JSON.stringify(['5000|-20000', 'hora extra del montaje|adelanto del viernes']),
+   'con dos, las dos celdas quedan en paralelo');
+
+const vueltaAjustes = leerAjustes('5000|-20000', 'hora extra|adelanto');
+ok(vueltaAjustes.length === 2 && vueltaAjustes[1].monto === -20000
+   && vueltaAjustes[1].motivo === 'adelanto',
+   'y se leen de vuelta tal cual, con su signo y su motivo');
+
+// **Lo que ya estaba escrito se sigue leyendo.** Una planilla anterior tiene
+// un solo ajuste por celda y tiene que abrirse sin que nadie migre nada.
+const viejo = leerAjustes('-5000', 'llegó tarde');
+ok(viejo.length === 1 && viejo[0].monto === -5000 && viejo[0].motivo === 'llegó tarde',
+   'una celda escrita cuando el ajuste era uno solo se lee como un ajuste');
+ok(leerAjustes('', '').length === 0, 'y una celda vacía no inventa ninguno');
+
+// Manda la lista de montos: si alguien edita a mano una celda y no la otra,
+// los motivos que falten se leen vacíos en vez de desalinear los pares.
+const cojo = leerAjustes('5000|-20000', 'hora extra');
+ok(cojo.length === 2 && cojo[1].motivo === '' && cojo[1].monto === -20000,
+   'si faltan motivos, los montos igual se leen en su posición');
+
+// Un ajuste en cero y sin motivo es una fila que alguien abrió y no llenó.
+ok(escribirAjustes([{ monto: 0, motivo: '' }])[0] === '',
+   'un ajuste vacío no se guarda');
+ok(leerAjustes('0', 'se le perdonó el atraso').length === 1,
+   'pero uno en cero CON motivo sí: alguien lo escribió a propósito');
+
+// El separador no puede venir dentro de un motivo, o partiría el ajuste en
+// dos al volver a leerlo.
+ok(!escribirAjustes([{ monto: 1000, motivo: 'a|b' }])[1].includes('|'),
+   'el separador se saca de los motivos antes de guardar');
+
+// Y el informe suma los ajustes de todos los turnos del periodo.
+const conAjustes = informeDelPeriodo([
+  tu({ trabajador: 'Ana', fecha: '2026-11-14', asistencia: VINO.si,
+       pagoJornada: 30000,
+       ajustes: [{ monto: 5000, motivo: 'hora extra' },
+                 { monto: -20000, motivo: 'adelanto' }] })
+], '2026-11-01', '2026-11-30');
+ok(conAjustes[0].ajustes === -15000 && conAjustes[0].total === 15000,
+   'el informe los suma en su columna y en el total');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
