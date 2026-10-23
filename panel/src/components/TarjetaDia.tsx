@@ -24,7 +24,6 @@
 import { useState } from 'react';
 import type { Ocupacion } from '@/lib/tipos';
 import type { ResumenEquipo } from '@/lib/equipo';
-import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
@@ -160,17 +159,19 @@ export default function TarjetaDia({
                 </span>
               </p>
 
-              {(d.porCobrar > 0 || d.sinMonto > 0) && (
-                <p className="mt-2 text-xs text-amber-300/90">
-                  {d.porCobrar > 0 && <>{enPesos(d.porCobrar)} por cobrar</>}
-                  {d.sinMonto > 0 && (
-                    <span className="text-hueso/50">
-                      {d.porCobrar > 0 ? ' · ' : ''}
-                      {d.sinMonto} sin monto
-                    </span>
-                  )}
-                </p>
-              )}
+              {/* **Acá iba "$X por cobrar", y se sacó el 2026-10-23 a pedido
+                  del cliente.** El número era la suma de las reservas que
+                  pagan en el local, y en el local se paga otra cosa: una
+                  bebida más, un postre, lo que sea que se consuma ese día.
+                  O sea que nunca iba a ser lo que hay que cobrar, y un total
+                  que no es el total no sirve para cuadrar la caja ni para
+                  nada más — solo para que alguien lo crea.
+
+                  El dato se sigue calculando (`porCobrar`, `sinMonto` en
+                  `ocupacion.ts`) y se sigue viendo en la página del día, que
+                  es donde se mira una reserva de a una. Lo que se liberó es
+                  este espacio de la tarjeta, para cuando aparezca algo que de
+                  verdad ayude a decidir mirando el mes. */}
             </>
           )}
 

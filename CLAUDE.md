@@ -1137,6 +1137,16 @@ El pie del frente dice ahora **"Ver reservas"** y no "Ver quiénes vienen":
 con tres acciones, el texto largo se partía en dos líneas en una tarjeta de
 cuatro columnas. La fecha del título lleva al mismo lugar.
 
+**La línea de "$X por cobrar" se sacó de la tarjeta** (2026-10-23, a pedido
+del cliente). Era la suma de las reservas que pagan en el local, y **en el
+local se paga otra cosa**: una bebida más, un postre, lo que se consuma ese
+día. O sea que ese número nunca iba a ser lo que hay que cobrar, y un total
+que no es el total no sirve para cuadrar nada — solo para que alguien lo
+crea. El dato se sigue calculando (`porCobrar` y `sinMonto` en
+`ocupacion.ts`, con sus pruebas) y se sigue viendo en la página del día, que
+es donde se mira reserva por reserva; lo que se liberó es ese espacio de la
+tarjeta, para cuando aparezca algo que de verdad ayude mirando el mes.
+
 ### Baja a alguien desmarcando "activo", no quitándolo
 
 Quitarlo de la lista no borra sus turnos pasados —esos son el registro de
@@ -1190,6 +1200,20 @@ ficha desactivada se ve apagada, sin tener que leer la casilla.
 
 **Lo mismo en `/extras`** para los colaboradores, por lo mismo y para que
 las dos pantallas se parezcan: quien aprende una sabe usar la otra.
+
+**Y el guardado va dentro de la ficha** (2026-10-23). Lo pidió el cliente:
+se corrige el teléfono de alguien arriba y el botón quedaba al final de la
+página, con todas las demás fichas en medio. Un guardado al que hay que irlo
+a buscar es un guardado que se olvida — y se olvida con algo escrito a
+medias. Apenas hay un cambio, cada tarjeta muestra **Guardar cambios** en su
+esquina, y de paso ese botón reemplazó al aviso en gris que decía *"Guarda
+para administrar el link"*: dice lo mismo y además lo hace.
+
+Aparece **en todas las fichas, no solo en la que se editó**, porque guardar
+manda las dos listas completas en una sola petición: no es el guardado de
+esa persona, es el de la pantalla, y tenerlo a mano donde sea que estés
+editando es justamente el punto. Los botones de abajo y de arriba siguen
+donde estaban.
 
 ### La tabla de Equipo: los anchos van declarados (2026-10-22)
 
@@ -1245,6 +1269,16 @@ lo que se eliminó es la obligación de pasar por ahí.
 a alguien que falte, marcar **— / Vino / No vino**, escribir la jornada, las
 horas extra y los **ajustes con su motivo**, poner la **propina del día** —
 que el panel reparte— y **cerrar el día**.
+
+**Abajo, las tres acciones van en una sola línea** (2026-10-23). Antes
+compartían fila con el resumen y la fila envolvía, así que *Guardar* quedaba
+en un renglón y *Guardar y cerrar el día* en el siguiente: se leían como dos
+cosas de distinta categoría, cuando justamente lo que hay que entender de un
+vistazo es la diferencia entre **anotar un cambio** y **declarar cerrado el
+día**. Ahora el resumen va arriba en su propia línea y los botones abajo sin
+envolver —delineado el que solo guarda, relleno el que cierra—, y en un
+teléfono el tercero se recorta a "Guardar y cerrar", que dice lo mismo en
+menos espacio.
 
 ### Cerrar el día
 
@@ -1414,6 +1448,30 @@ sin nada que apunte al archivo. No se parece en nada a su causa.
 
 La regla, entonces: **en un componente, todos los hooks van antes del primer
 `return`.** Lo que va debajo son constantes derivadas, no hooks.
+
+### Un componente declarado dentro de otro se lleva el foco (2026-10-23)
+
+La hermana de la regla anterior, y se vio en la misma semana: **en `/equipo`
+no se podía escribir un nombre.** Se tecleaba la primera letra y el foco se
+iba a `body`; el resto se perdía en el vacío.
+
+La causa es una línea que parece inofensiva: `Campo` —el rótulo encima del
+input— estaba declarado **dentro** del componente. Una función nueva en cada
+dibujado es, para React, **otro tipo de elemento**: desmonta lo que había y
+monta uno nuevo. Con un `input` adentro, eso es perder el foco a cada letra.
+
+Vale tenerlo escrito porque el síntoma no se parece a la causa —se lee como
+un problema del teclado o del navegador— y porque llegó con el cambio a
+tarjetas, o sea con un cambio puramente visual. La regla: **un componente se
+declara al nivel del módulo, nunca dentro de otro componente.** `Campo` vive
+hoy en `EquipoEditor.tsx` y `/extras` lo importa de ahí.
+
+**El mismo día apareció el hermano en el guardado**: para un encargado, la
+respuesta de `PUT /api/equipo` no trae `puestos` —no los puede cambiar—, y
+la pantalla los tomaba igual. Con eso `puestos` quedaba en `undefined` y
+toda la página caía al "Cargando…" del primer `return`: un guardado que
+salía bien se veía peor que uno que falla. Ahora solo se reemplaza lo que el
+servidor dice haber guardado.
 
 ### La propina (2026-10-22)
 
