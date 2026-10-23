@@ -1050,6 +1050,16 @@ se cierra ahí. Ver "Una sola ventana para el día".
 
 Dos detalles de implementación que vale la pena tener escritos:
 
+- **El número del día va pegado arriba, y eso hay que pedirlo** (2026-10-23,
+  lo reclamó el cliente mirando `/extras`). Las celdas de una fila se
+  estiran todas a la más alta, y **el contenido de un `<button>` se centra
+  en vertical por defecto** —es comportamiento propio del botón, no del CSS
+  de la página—, así que el número quedaba a media altura y a distinta
+  altura en cada celda según cuántas líneas trajera: el mes se veía
+  desordenado sin que ninguna regla del CSS dijera nada raro. Con
+  `flex-col` + `justify-start` el número queda siempre en la primera línea y
+  lo demás se acumula debajo. Vale para los dos calendarios de celdas
+  (`/turnos` y `/extras`).
 - **`diasDelMes()` cuenta los días con una tabla y la regla de los
   bisiestos**, no pidiéndole el último día a un `Date`. Es la misma razón por
   la que todo este proyecto trata las fechas como texto: una fecha que pasa
@@ -1137,15 +1147,18 @@ El pie del frente dice ahora **"Ver reservas"** y no "Ver quiénes vienen":
 con tres acciones, el texto largo se partía en dos líneas en una tarjeta de
 cuatro columnas. La fecha del título lleva al mismo lugar.
 
-**La línea de "$X por cobrar" se sacó de la tarjeta** (2026-10-23, a pedido
-del cliente). Era la suma de las reservas que pagan en el local, y **en el
-local se paga otra cosa**: una bebida más, un postre, lo que se consuma ese
-día. O sea que ese número nunca iba a ser lo que hay que cobrar, y un total
-que no es el total no sirve para cuadrar nada — solo para que alguien lo
-crea. El dato se sigue calculando (`porCobrar` y `sinMonto` en
-`ocupacion.ts`, con sus pruebas) y se sigue viendo en la página del día, que
-es donde se mira reserva por reserva; lo que se liberó es ese espacio de la
-tarjeta, para cuando aparezca algo que de verdad ayude mirando el mes.
+**La línea de "$X por cobrar" se sacó** (2026-10-23, a pedido del cliente),
+de la tarjeta del calendario **y del bloque de la página del día**. Era la
+suma de las reservas que pagan en el local, y **en el local se paga otra
+cosa**: una bebida más, un postre, lo que se consuma ese día. O sea que ese
+número nunca iba a ser lo que hay que cobrar, y un total que no es el total
+no sirve para cuadrar nada — solo para que alguien lo crea.
+
+Lo que sí sirve, el monto de cada reserva, sigue en su fila de la tabla. Y
+el cálculo tampoco se borró: `faltaCobrar()` y los campos `porCobrar` /
+`sinMonto` de la ocupación siguen ahí con sus pruebas, por si algún día se
+muestra de otra forma. Lo que se liberó es el espacio, para cuando aparezca
+algo que de verdad ayude mirando el mes.
 
 ### Baja a alguien desmarcando "activo", no quitándolo
 
