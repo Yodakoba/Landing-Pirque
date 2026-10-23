@@ -21,7 +21,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA, PUNTO_TARJETA } from './TarjetaDia';
-import { costoDeExtra, extrasDelDia, costoExtrasDelDia,
+import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
 import { VINO } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
@@ -92,6 +92,18 @@ export default function CalendarioExtras() {
       else { setColaboradores(d.colaboradores); setError(''); setSucio(false); }
     } finally { setGuardando(false); }
   }
+
+  /** Un campo con su rótulo encima. Igual que en Equipo, y por lo mismo. */
+  const Campo = ({ etiqueta, ancho, children }: {
+    etiqueta: string; ancho: string; children: React.ReactNode;
+  }) => (
+    <label className={`block ${ancho}`}>
+      <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
+        {etiqueta}
+      </span>
+      {children}
+    </label>
+  );
 
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = (colaboradores ?? []).map((c) => ({ ...c }));
@@ -268,108 +280,116 @@ export default function CalendarioExtras() {
         )}
       </p>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[48rem] table-fixed text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
-            <tr className="border-b border-hueso/10">
-              <th className="w-52 py-2 pr-3">Nombre</th>
-              <th className="w-44 py-2 pr-3">Actividad</th>
-              <th className="w-36 py-2 pr-3">Teléfono</th>
-              <th className="w-16 py-2 pr-3">Activo</th>
-              {esAdmin && <th className="w-32 py-2 pr-3">Monto habitual</th>}
-              <th className="w-20 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {colaboradores.map((c, i) => {
-              const tieneDias = extras.some(
-                (e) => normalizar(e.colaborador) === normalizar(c.nombre));
-              return (
-                <Fragment key={i}>
-                <tr className={esAdmin ? '' : 'border-b border-hueso/5'}>
-                  <td className="py-2 pr-3">
-                    <input type="text" value={c.nombre} className={ENTRADA}
-                      placeholder="Nombre o empresa"
-                      onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input type="text" value={c.actividad} className={ENTRADA}
-                      placeholder="show ecuestre…"
-                      onChange={(e) => cambiar(i, 'actividad', e.target.value)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <CampoTelefono valor={c.telefono} className={ENTRADA}
-                      etiqueta={`Teléfono de ${c.nombre || 'esta persona'}`}
-                      onCambio={(v) => cambiar(i, 'telefono', v)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input type="checkbox" checked={c.activo}
-                      aria-label={`${c.nombre || 'Sin nombre'} se sigue contratando`}
-                      className="h-4 w-4 accent-oro"
-                      onChange={(e) => cambiar(i, 'activo', e.target.checked)} />
-                  </td>
-                  {esAdmin && (
-                    <td className="py-2 pr-3">
-                      <input type="number" min={0} step={1000} className={ENTRADA}
-                        value={c.monto || ''} placeholder="—"
-                        aria-label={`Monto habitual de ${c.nombre || 'esta persona'}`}
-                        onChange={(e) => cambiar(i, 'monto', e.target.value)} />
-                    </td>
-                  )}
-                  {/* Quitar solo a quien no tiene días contratados, igual
-                      que en Equipo: borrar la ficha de alguien que ya vino
-                      dejaría sus días con un nombre que no está en ninguna
-                      parte, y esos días son el registro de lo que se pagó. */}
-                  <td className="whitespace-nowrap py-2 text-right text-xs">
-                    {!tieneDias ? (
-                      <button
-                        onClick={() => {
-                          setColaboradores(colaboradores.filter((_, k) => k !== i));
-                          setSucio(true);
-                        }}
-                        className="text-hueso/60 hover:text-red-400"
-                        title="Todavía no tiene ningún día contratado">Quitar</button>
-                    ) : c.activo ? (
-                      <button onClick={() => cambiar(i, 'activo', false)}
-                        className="text-hueso/60 hover:text-oro"
-                        title="Tiene días contratados: su ficha no se quita, se desactiva">
-                        Desactivar
-                      </button>
-                    ) : (
-                      <span className="text-hueso/30">Desactivado</span>
-                    )}
-                  </td>
-                </tr>
+      {/* **Una tarjeta por colaborador**, igual que en Equipo y por el
+          mismo motivo: con los datos del banco en una segunda línea, una
+          tabla dejaba las líneas de uno pegadas a las del siguiente y no se
+          veía dónde terminaba cada ficha. */}
+      <ul className="space-y-3">
+        {(colaboradores ?? []).map((c, i) => {
+          const tieneDias = extras.some(
+            (e) => normalizar(e.colaborador) === normalizar(c.nombre));
+          return (
+            <li key={i}
+              className={`rounded border p-3 ${c.activo
+                ? 'border-hueso/15 bg-hueso/[0.02]'
+                : 'border-hueso/10 bg-transparent opacity-60'}`}>
 
-                {/* Los datos de la transferencia, en su propia línea y no en
-                    columnas más — el mismo criterio que la tabla de Equipo, y
-                    el mismo bloque. */}
+              <div className="flex flex-wrap items-start gap-3">
+                <Campo etiqueta="Nombre" ancho="w-52">
+                  <input type="text" value={c.nombre} className={ENTRADA}
+                    placeholder="Nombre o empresa"
+                    aria-label={`Nombre del colaborador ${i + 1}`}
+                    onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
+                </Campo>
+                <Campo etiqueta="Actividad" ancho="w-44">
+                  <input type="text" value={c.actividad} className={ENTRADA}
+                    list="actividades-de-fichas" placeholder="show ecuestre…"
+                    aria-label={`Actividad de ${c.nombre || 'esta persona'}`}
+                    onChange={(e) => cambiar(i, 'actividad', e.target.value)} />
+                </Campo>
+                <Campo etiqueta="Teléfono" ancho="w-44">
+                  <CampoTelefono valor={c.telefono} className={ENTRADA}
+                    etiqueta={`Teléfono de ${c.nombre || 'esta persona'}`}
+                    onCambio={(v) => cambiar(i, 'telefono', v)} />
+                </Campo>
                 {esAdmin && (
-                  <tr className="border-b border-hueso/5">
-                    <td className="pb-2 align-top text-xs uppercase tracking-wide
-                                   text-hueso/40">
-                      Transferencia
-                    </td>
-                    <td colSpan={5} className="pb-2">
+                  <Campo etiqueta="Monto habitual" ancho="w-32">
+                    <input type="number" min={0} step={1000} className={ENTRADA}
+                      value={c.monto || ''} placeholder="—"
+                      aria-label={`Monto habitual de ${c.nombre || 'esta persona'}`}
+                      onChange={(e) => cambiar(i, 'monto', e.target.value)} />
+                  </Campo>
+                )}
+                <label className="flex items-center gap-2 self-center pt-4">
+                  <input type="checkbox" checked={c.activo}
+                    aria-label={`${c.nombre || 'Sin nombre'} se sigue contratando`}
+                    className="h-4 w-4 accent-oro"
+                    onChange={(e) => cambiar(i, 'activo', e.target.checked)} />
+                  <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+                    Activo
+                  </span>
+                </label>
+
+                <span className="flex-1" />
+
+                {/* Quitar solo a quien no tiene días contratados, igual que
+                    en Equipo: borrar la ficha de alguien que ya vino dejaría
+                    sus días con un nombre que no está en ninguna parte. */}
+                <div className="self-center pt-4 text-xs">
+                  {!tieneDias ? (
+                    <button
+                      onClick={() => {
+                        setColaboradores((colaboradores ?? []).filter((_, k) => k !== i));
+                        setSucio(true);
+                      }}
+                      className="text-hueso/60 hover:text-red-400"
+                      title="Todavía no tiene ningún día contratado">Quitar</button>
+                  ) : c.activo ? (
+                    <button
+                      onClick={() => cambiar(i, 'activo', false)}
+                      className="text-hueso/60 hover:text-oro"
+                      title="Tiene días guardados, así que su ficha no se quita: se desactiva">
+                      Desactivar
+                    </button>
+                  ) : (
+                    <span className="text-hueso/30"
+                      title="Su ficha se conserva porque tiene días guardados">
+                      Desactivado
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {esAdmin && (
+                <div className="mt-3 border-t border-hueso/10 pt-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
+                                     text-hueso/35">Transferencia</span>
+                    <div className="min-w-[20rem] flex-1">
                       <DatosBancarios
                         banco={c.banco} nombre={c.nombre}
                         onCambio={(b) => cambiarBanco(i, b)} />
-                    </td>
-                  </tr>
-                )}
-                </Fragment>
-              );
-            })}
-            {colaboradores.length === 0 && (
-              <tr><td colSpan={esAdmin ? 6 : 5} className="py-6 text-sm text-hueso/50">
-                Todavía no hay nadie. Apreta <strong>Agregar colaborador</strong>, o
-                créalo desde un día.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+        {(colaboradores ?? []).length === 0 && (
+          <li className="rounded border border-dashed border-hueso/15 p-6 text-sm text-hueso/50">
+            Todavía no hay nadie. Apreta <strong>Agregar colaborador</strong>, o
+            créalo desde un día.
+          </li>
+        )}
+      </ul>
 
+      {/* Las actividades que ya hace alguien, para sugerirlas al escribir. */}
+      <datalist id="actividades-de-fichas">
+        {actividadesConocidas(colaboradores ?? []).map((a) => (
+          <option key={a} value={a} />
+        ))}
+      </datalist>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           onClick={() => {

@@ -154,6 +154,24 @@ export default function EquipoEditor() {
     </>
   );
 
+  /**
+   * Un campo con su rótulo encima.
+   *
+   * El rótulo va pegado al campo y no en una cabecera de tabla lejana: con
+   * una tarjeta por persona, una fila de encabezados arriba del todo
+   * obligaría a contar columnas para saber qué es cada caja.
+   */
+  const Campo = ({ etiqueta, ancho, children }: {
+    etiqueta: string; ancho: string; children: React.ReactNode;
+  }) => (
+    <label className={`block ${ancho}`}>
+      <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
+        {etiqueta}
+      </span>
+      {children}
+    </label>
+  );
+
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = gente.map((t) => ({ ...t }));
     copia[i].banco = banco;
@@ -234,43 +252,45 @@ export default function EquipoEditor() {
           {avisoLink}
         </p>
       )}
-      {/* **Los anchos van declarados columna por columna**, y la tabla no baja
-          de su mínimo: sin eso, el nombre —la única columna sin ancho— era la
-          que cedía todo el espacio y quedaba en seis letras, mientras un
-          teléfono de nueve dígitos sobraba la mitad de su caja. Si no cabe,
-          la tabla se desplaza de lado dentro de su marco, que es lo que ya
-          hacen las demás del panel. */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[56rem] table-fixed text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
-            <tr className="border-b border-hueso/10">
-              <th className="w-56 py-2 pr-3">Nombre</th>
-              <th className="w-44 py-2 pr-3">Teléfono</th>
-              <th className="w-44 py-2 pr-3">Puesto habitual</th>
-              <th className="w-16 py-2 pr-3">Activo</th>
-              {esAdmin && <th className="w-48 py-2 pr-3">Link personal</th>}
-              <th className="w-24 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {gente.map((t, i) => (
-              <Fragment key={i}>
-              <tr className={esAdmin ? '' : 'border-b border-hueso/5'}>
-                <td className="py-2 pr-3">
+      {/* **Una tarjeta por persona, no una tabla.**
+          Fue tabla mientras cada trabajador era una fila. Al repartir los
+          datos en tres líneas —quién es, cuánto gana, dónde se le paga— la
+          tabla dejó de ayudar: las líneas de uno y las del siguiente se
+          tocaban, y sin un borde que las separe no se ve dónde termina cada
+          persona. Esto además no es una tabla de datos para comparar, es un
+          formulario por ficha, y una tarjeta es lo que corresponde.
+
+          Cada campo lleva su rótulo encima y su ancho propio, que es lo que
+          evita el problema de siempre: el nombre cediéndole el espacio a
+          todo lo demás. */}
+      <ul className="space-y-3">
+        {gente.map((t, i) => {
+          const turnos = turnosDe.get(normalizar(t.nombre)) ?? 0;
+          return (
+            <li key={i}
+              className={`rounded border p-3 ${t.activo
+                ? 'border-hueso/15 bg-hueso/[0.02]'
+                : 'border-hueso/10 bg-transparent opacity-60'}`}>
+
+              {/* Quién es, y cómo se entra a su link. */}
+              <div className="flex flex-wrap items-start gap-3">
+                <Campo etiqueta="Nombre" ancho="w-56">
                   <input type="text" value={t.nombre} className={ENTRADA}
                     placeholder="Nombre y apellido"
+                    aria-label={`Nombre de la persona ${i + 1}`}
                     onChange={(e) => cambiarPersona(i, 'nombre', e.target.value)} />
-                </td>
-                <td className="py-2 pr-3">
+                </Campo>
+                <Campo etiqueta="Teléfono" ancho="w-44">
                   <CampoTelefono valor={t.telefono} className={ENTRADA}
                     etiqueta={`Teléfono de ${t.nombre || 'esta persona'}`}
                     onCambio={(v) => cambiarPersona(i, 'telefono', v)} />
-                </td>
-                <td className="py-2 pr-3">
+                </Campo>
+                <Campo etiqueta="Puesto habitual" ancho="w-44">
                   {/* Un select y no texto libre: el puesto habitual solo
                       preselecciona en el planificador, y si está escrito de
                       otra forma no preselecciona nada. */}
                   <select value={t.puesto} className={ENTRADA}
+                    aria-label={`Puesto habitual de ${t.nombre || 'esta persona'}`}
                     onChange={(e) => cambiarPersona(i, 'puesto', e.target.value)}>
                     <option value="">—</option>
                     {puestos.map((p) => (
@@ -282,47 +302,51 @@ export default function EquipoEditor() {
                       <option value={t.puesto}>{t.puesto} (ya no existe)</option>
                     )}
                   </select>
-                </td>
-                <td className="py-2 pr-3">
+                </Campo>
+                <label className="flex items-center gap-2 self-center pt-4">
                   <input type="checkbox" checked={t.activo}
                     aria-label={`${t.nombre || 'Sin nombre'} sigue en el equipo`}
                     className="h-4 w-4 accent-oro"
                     onChange={(e) => cambiarPersona(i, 'activo', e.target.checked)} />
-                </td>
-                {esAdmin && (
-                  <td className="whitespace-nowrap py-2 pr-3 text-xs">
-                    {!t.nombre.trim() ? (
+                  <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+                    Activo
+                  </span>
+                </label>
+
+                <span className="flex-1" />
+
+                <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-xs">
+                  {esAdmin && (
+                    !t.nombre.trim() ? (
                       <span className="text-hueso/35">Ponle nombre y guarda</span>
                     ) : sucio ? (
                       <span className="text-hueso/40">Guarda para administrar el link</span>
                     ) : t.token ? (
-                      <span className="flex gap-2">
+                      <>
                         <button onClick={() => copiar(t.token, t.nombre)}
-                          className="text-oro hover:underline">Copiar</button>
+                          className="text-oro hover:underline">Copiar link</button>
                         <button onClick={() => link(t.nombre, 'renovar')}
                           className="text-hueso/55 hover:text-oro"
                           title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
                         {/* "Quitar link", con la palabra completa: en esta
-                            misma fila hay otro botón que quita a la persona,
-                            y dos "Quitar" distintos a dos columnas de
-                            distancia es una confusión esperando a pasar. */}
+                            misma tarjeta hay otro botón que quita a la
+                            persona, y dos "Quitar" a dos centímetros de
+                            distancia son una confusión esperando a pasar. */}
                         <button onClick={() => link(t.nombre, 'quitar')}
                           className="text-hueso/55 hover:text-red-400">Quitar link</button>
-                      </span>
+                      </>
                     ) : (
                       <button onClick={() => link(t.nombre, 'crear')}
                         className="text-oro hover:underline">Crear link</button>
-                    )}
-                  </td>
-                )}
-                {/* **Quitar solo a quien no tiene historia.** Borrar la ficha
-                    de alguien que ya trabajó dejaría sus turnos con un nombre
-                    que no está en ninguna parte, y esos turnos son el registro
-                    de quién trabajó qué día. Antes esto era un consejo en
-                    letra chica al pie de la tabla, al lado de un botón que
-                    decía lo contrario; ahora lo decide el panel. */}
-                <td className="whitespace-nowrap py-2 text-right text-xs">
-                  {(turnosDe.get(normalizar(t.nombre)) ?? 0) === 0 ? (
+                    )
+                  )}
+                  {/* **Quitar solo a quien no tiene historia.** Borrar la
+                      ficha de alguien que ya trabajó dejaría sus turnos con
+                      un nombre que no está en ninguna parte, y esos turnos
+                      son el registro de quién trabajó qué día. Antes esto era
+                      un consejo en letra chica al pie, al lado de un botón
+                      que decía lo contrario; ahora lo decide el panel. */}
+                  {turnos === 0 ? (
                     <button
                       onClick={() => { setGente(gente.filter((_, k) => k !== i)); setSucio(true); }}
                       className="text-hueso/60 hover:text-red-400"
@@ -331,8 +355,8 @@ export default function EquipoEditor() {
                     <button
                       onClick={() => cambiarPersona(i, 'activo', false)}
                       className="text-hueso/60 hover:text-oro"
-                      title={`Tiene ${turnosDe.get(normalizar(t.nombre))} turnos guardados, `
-                             + 'así que su ficha no se quita: se desactiva y conserva su historia'}>
+                      title={`Tiene ${turnos} turnos guardados, así que su ficha `
+                             + 'no se quita: se desactiva y conserva su historia'}>
                       Desactivar
                     </button>
                   ) : (
@@ -341,98 +365,76 @@ export default function EquipoEditor() {
                       Desactivado
                     </span>
                   )}
-                </td>
-              </tr>
+                </div>
+              </div>
 
-              {/* **El pago va en su propia línea, no en cuatro columnas
-                  más.** Con todo en una fila, la tabla pasaba de los 1200px
-                  y la última columna —donde están *Crear link* y
-                  *Desactivar*— quedaba cortada en un notebook. Repartido en
-                  líneas, además, cada bloque se lee por lo que es: arriba
-                  quién es la persona, acá cuánto gana, abajo dónde se le
-                  paga. */}
+              {/* Cuánto gana. Solo el administrador. */}
               {esAdmin && (
-                <tr>
-                  <td className="pb-2 align-top text-xs uppercase tracking-wide
-                                 text-hueso/40">
-                    Pago
-                  </td>
-                  <td colSpan={5} className="pb-2">
-                    <div className="flex flex-wrap items-start gap-2">
-                      <label className="block w-40">
-                        <span className="mb-0.5 block text-[10px] uppercase
-                                         tracking-wide text-hueso/35">Modalidad</span>
-                        <select value={t.modalidad} className={ENTRADA}
-                          aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
-                          onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
-                          <option value={MODALIDAD.porTurno}>Por turno</option>
-                          <option value={MODALIDAD.contratado}>Contratado</option>
-                        </select>
-                      </label>
-                      <label className="block w-32">
-                        <span className="mb-0.5 block text-[10px] uppercase
-                                         tracking-wide text-hueso/35">Jornada</span>
-                        {/* A un contratado no se le paga por jornada, así que
-                            el campo no se deja escribir: un monto ahí no se
-                            usaría en ninguna cuenta y haría creer que sí. */}
-                        <input type="number" min={0} step={1000} className={ENTRADA}
-                          value={esContratado(t.modalidad) ? '' : (t.pagoJornada || '')}
-                          placeholder={esContratado(t.modalidad) ? 'no aplica' : '—'}
-                          disabled={esContratado(t.modalidad)}
-                          aria-label={`Jornada de ${t.nombre || 'esta persona'}`}
-                          onChange={(e) => cambiarPersona(i, 'pagoJornada', e.target.value)} />
-                      </label>
-                      <label className="block w-32">
-                        <span className="mb-0.5 block text-[10px] uppercase
-                                         tracking-wide text-hueso/35">Hora extra</span>
-                        <input type="number" min={0} step={500} className={ENTRADA}
-                          value={t.valorHora || ''} placeholder="—"
-                          aria-label={`Valor de la hora extra de ${t.nombre || 'esta persona'}`}
-                          onChange={(e) => cambiarPersona(i, 'valorHora', e.target.value)} />
-                      </label>
-                      <label className="flex items-center gap-2 self-end pb-1.5">
-                        <input type="checkbox" checked={t.propina}
-                          className="h-4 w-4 accent-oro"
-                          aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
-                          onChange={(e) => cambiarPersona(i, 'propina', e.target.checked)} />
-                        <span className="text-[10px] uppercase tracking-wide text-hueso/35">
-                          Entra en la propina
-                        </span>
-                      </label>
+                <div className="mt-3 border-t border-hueso/10 pt-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
+                                     text-hueso/35">Pago</span>
+                    <Campo etiqueta="Modalidad" ancho="w-40">
+                      <select value={t.modalidad} className={ENTRADA}
+                        aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
+                        onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
+                        <option value={MODALIDAD.porTurno}>Por turno</option>
+                        <option value={MODALIDAD.contratado}>Contratado</option>
+                      </select>
+                    </Campo>
+                    <Campo etiqueta="Jornada" ancho="w-32">
+                      {/* A un contratado no se le paga por jornada, así que
+                          el campo no se deja escribir: un monto ahí no se
+                          usaría en ninguna cuenta y haría creer que sí. */}
+                      <input type="number" min={0} step={1000} className={ENTRADA}
+                        value={esContratado(t.modalidad) ? '' : (t.pagoJornada || '')}
+                        placeholder={esContratado(t.modalidad) ? 'no aplica' : '—'}
+                        disabled={esContratado(t.modalidad)}
+                        aria-label={`Jornada de ${t.nombre || 'esta persona'}`}
+                        onChange={(e) => cambiarPersona(i, 'pagoJornada', e.target.value)} />
+                    </Campo>
+                    <Campo etiqueta="Hora extra" ancho="w-32">
+                      <input type="number" min={0} step={500} className={ENTRADA}
+                        value={t.valorHora || ''} placeholder="—"
+                        aria-label={`Valor de la hora extra de ${t.nombre || 'esta persona'}`}
+                        onChange={(e) => cambiarPersona(i, 'valorHora', e.target.value)} />
+                    </Campo>
+                    <label className="flex items-center gap-2 self-center pt-4">
+                      <input type="checkbox" checked={t.propina}
+                        className="h-4 w-4 accent-oro"
+                        aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
+                        onChange={(e) => cambiarPersona(i, 'propina', e.target.checked)} />
+                      <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+                        Entra en la propina
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Dónde se le transfiere. También solo el administrador. */}
+              {esAdmin && (
+                <div className="mt-3 border-t border-hueso/10 pt-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
+                                     text-hueso/35">Transferencia</span>
+                    <div className="min-w-[20rem] flex-1">
+                      <DatosBancarios
+                        banco={t.banco} nombre={t.nombre}
+                        onCambio={(b) => cambiarBanco(i, b)} />
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               )}
-
-              {/* **Los datos de la transferencia van en su propia línea, no
-                  en columnas más.** Con diez columnas, la once ya dejaba
-                  *Crear link* y *Desactivar* fuera del borde; seis la
-                  habrían mandado al otro lado del país. Y acá abajo cada
-                  campo tiene el ancho que le corresponde — un número de
-                  cuenta no es del mismo largo que un tipo. */}
-              {esAdmin && (
-                <tr className="border-b border-hueso/5">
-                  <td className="pb-2 align-top text-xs uppercase tracking-wide
-                                 text-hueso/40">
-                    Transferencia
-                  </td>
-                  <td colSpan={5} className="pb-2">
-                    <DatosBancarios
-                      banco={t.banco} nombre={t.nombre}
-                      onCambio={(b) => cambiarBanco(i, b)} />
-                  </td>
-                </tr>
-              )}
-              </Fragment>
-            ))}
-            {gente.length === 0 && (
-              <tr><td colSpan={esAdmin ? 6 : 5} className="py-6 text-sm text-hueso/50">
-                Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </li>
+          );
+        })}
+        {gente.length === 0 && (
+          <li className="rounded border border-dashed border-hueso/15 p-6 text-sm text-hueso/50">
+            Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
+          </li>
+        )}
+      </ul>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           onClick={() => {

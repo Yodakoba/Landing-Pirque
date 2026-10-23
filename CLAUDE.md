@@ -1170,6 +1170,27 @@ De paso, el otro botón de esa misma fila pasó a decir **"Quitar link"**: dos
 "Quitar" con significados distintos a dos columnas de distancia eran una
 confusión esperando a pasar.
 
+### Una tarjeta por persona, no una tabla (2026-10-23)
+
+Lo reclamó el cliente con una captura y tenía razón: con los datos
+repartidos en tres líneas —quién es, cuánto gana, dónde se le paga—, las
+líneas de uno y las del siguiente se tocaban y no se veía dónde terminaba
+cada ficha.
+
+**Fue tabla mientras cada trabajador era una fila**, y dejó de serlo cuando
+dejó de serlo. Además esto no es una tabla de datos para comparar entre
+filas: es **un formulario por ficha**, y una tarjeta con su borde es lo que
+corresponde. Cada campo lleva su rótulo encima, pegado al campo, porque con
+tarjetas una fila de encabezados allá arriba obligaría a contar columnas
+para saber qué es cada caja.
+
+Dentro de cada tarjeta, tres bloques separados por una línea: **quién es**
+(con sus acciones de link a la derecha), **Pago** y **Transferencia**. Una
+ficha desactivada se ve apagada, sin tener que leer la casilla.
+
+**Lo mismo en `/extras`** para los colaboradores, por lo mismo y para que
+las dos pantallas se parezcan: quien aprende una sabe usar la otra.
+
 ### La tabla de Equipo: los anchos van declarados (2026-10-22)
 
 Lo reclamó el cliente con una captura: el nombre se leía a seis letras
@@ -1177,10 +1198,12 @@ Lo reclamó el cliente con una captura: el nombre se leía a seis letras
 es simple y vale tenerla escrita: **el nombre era la única columna sin ancho**,
 así que en una tabla de diez columnas era la que cedía todo el espacio.
 
-Ahora cada columna declara el suyo, con `table-fixed`, y la tabla no baja de
-su mínimo: si no cabe, se desplaza de lado dentro de su marco, como las demás
-del panel. Los anchos salen de lo que cada celda muestra de verdad —un nombre
-y apellido, un teléfono, "Contratado", "no aplica"— y no de repartir parejo.
+Se arregló declarando el ancho de cada columna, con `table-fixed`. **Esa
+tabla ya no existe** —al día siguiente pasó a ser una tarjeta por persona,
+ver arriba— pero la lección se mantiene y vale para cualquier otra: los
+anchos salen de lo que cada campo muestra de verdad —un nombre y apellido,
+un teléfono, "Contratado", "no aplica"— y no de repartir parejo. Un campo
+sin ancho declarado es el que termina cediéndoselo todo a los demás.
 
 **La cuenta bancaria, que llegó después, NO es una columna más** (2026-10-22):
 va en **una segunda línea bajo cada persona**, de ancho completo. Con diez
