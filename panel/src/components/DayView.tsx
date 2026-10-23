@@ -17,7 +17,7 @@ import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
-import ListaDialogo from './ListaDialogo';
+import { estaCerrado, type Cierre } from '@/lib/cierres';
 import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { extrasDelDia, costoExtrasDelDia, costoDeExtra,
@@ -35,13 +35,13 @@ export default function DayView({ fecha }: { fecha: string }) {
   // totales por plato de este dia.
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
   const [equipo, setEquipo] = useState<{
-    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
+    cierres: Cierre[]; esAdmin: boolean;
   } | null>(null);
-  const [planificando, setPlanificando] = useState(false);
-  // Pasar lista se abre de dos lados: por el botón de siempre, y por el
-  // "Agregar" de la propina, que es la misma ventana con el cursor puesto en
-  // ese campo. Un solo lugar donde se guarda, dos puertas para llegar.
-  const [pasandoLista, setPasandoLista] = useState<'no' | 'lista' | 'propina'>('no');
+  // **Ya no hay "Pasar lista".** Los dos caminos —planificar y anotar la
+  // propina— abren la MISMA ventana, que es la del día completo; lo único
+  // que cambia es dónde queda el cursor al abrirla.
+  const [planificando, setPlanificando] = useState<'no' | 'equipo' | 'propina'>('no');
   // Las actividades extras de este día. Viven en su propia página, con su
   // propio calendario, pero también acá: a cerrar un día se llega por esta
   // pantalla, y la pregunta "¿cuánto costó este sábado?" no se contesta sin
@@ -71,7 +71,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], esAdmin: !!d.esAdmin
+          turnos: d.turnos ?? [], cierres: d.cierres ?? [], esAdmin: !!d.esAdmin
         });
       })
       .catch(() => {});
@@ -203,7 +203,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   const costo = costoDelDia(turnosDelDia, fecha);
   const propina = propinaDelDia(turnosDelDia, fecha);
   const reciben = turnosDelDia.filter((t) => t.propina > 0).length;
-  const sinPasarLista = turnosDelDia.filter((t) => !t.asistencia).length;
+  const sinMarcar = turnosDelDia.filter((t) => !t.asistencia).length;
   const extrasHoy = extrasDelDia(extras?.extras ?? [], fecha);
   const costoExtras = costoExtrasDelDia(extras?.extras ?? [], fecha);
   const extrasSinConfirmar = extrasHoy.filter((e) => !e.estado).length;
@@ -276,7 +276,7 @@ export default function DayView({ fecha }: { fecha: string }) {
                           : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/85'}
                         title={t?.asistencia === VINO.si
                           ? `Vino · ${enPesos(pagoDe(t))}`
-                          : t?.asistencia === VINO.no ? 'No llegó' : 'Sin pasar lista'}>
+                          : t?.asistencia === VINO.no ? 'No llegó' : 'Sin marcar'}>
                         {nombre}{k < l.asignados.length - 1 ? ', ' : ''}
                       </span>
                     );
@@ -289,22 +289,16 @@ export default function DayView({ fecha }: { fecha: string }) {
           {faltan > 0 && (
             <span className="text-xs text-amber-300">Faltan {faltan}</span>
           )}
-          <button onClick={() => setPlanificando(true)} disabled={!equipo}
+          <button onClick={() => setPlanificando('equipo')} disabled={!equipo}
             className="text-sm text-oro hover:underline disabled:opacity-40">
-            Planificar equipo
+            {turnosDelDia.length > 0 ? 'Equipo y cuentas del día' : 'Planificar equipo'}
           </button>
-          {turnosDelDia.length > 0 && (
-            <button onClick={() => setPasandoLista('lista')}
-              className="text-sm text-oro hover:underline">
-              Pasar lista
-            </button>
-          )}
         </div>
 
         {/* Lo que costó el día. Aparece solo cuando se pasó lista por alguien:
             antes de eso el total sería cero y se leería como "no se pagó
             nada", que es otra cosa que "todavía no se sabe". */}
-        {turnosDelDia.length > 0 && sinPasarLista < turnosDelDia.length && (
+        {turnosDelDia.length > 0 && sinMarcar < turnosDelDia.length && (
           <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
             <strong className="tabular-nums text-oro">{enPesos(costo)}</strong>
             <span className="text-hueso/55"> en el equipo de este día · </span>
@@ -314,8 +308,8 @@ export default function DayView({ fecha }: { fecha: string }) {
                 {' '}· {faltaron} {faltaron === 1 ? 'no llegó' : 'no llegaron'}
               </span>
             )}
-            {sinPasarLista > 0 && (
-              <span className="text-amber-300"> · {sinPasarLista} sin marcar</span>
+            {sinMarcar > 0 && (
+              <span className="text-amber-300"> · {sinMarcar} sin marcar</span>
             )}
           </p>
         )}
@@ -340,7 +334,7 @@ export default function DayView({ fecha }: { fecha: string }) {
               <span className="text-hueso/45">sin anotar</span>
             )}
             <span className="text-hueso/30"> · </span>
-            <button onClick={() => setPasandoLista('propina')}
+            <button onClick={() => setPlanificando('propina')}
               className="text-oro hover:underline">
               {propina > 0 ? 'Editar' : 'Agregar'}
             </button>
@@ -424,27 +418,19 @@ export default function DayView({ fecha }: { fecha: string }) {
         />
       )}
 
-      {pasandoLista !== 'no' && (
-        <ListaDialogo
-          fecha={fecha}
-          turnos={turnosDelDia}
-          trabajadores={equipo?.trabajadores ?? []}
-          enfocarPropina={pasandoLista === 'propina'}
-          onListo={() => { setPasandoLista('no'); cargarEquipo(); }}
-          onCancelar={() => setPasandoLista('no')}
-        />
-      )}
-
-      {planificando && equipo && (
+      {planificando !== 'no' && equipo && (
         <EquipoDialogo
           fecha={fecha}
           personas={personasDelDia}
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
+          extras={extras?.extras ?? []}
+          cerrado={estaCerrado(equipo.cierres, fecha)}
           esAdmin={equipo.esAdmin}
-          onListo={() => { setPlanificando(false); cargarEquipo(); }}
-          onCancelar={() => setPlanificando(false)}
+          enfocarPropina={planificando === 'propina'}
+          onListo={() => { setPlanificando('no'); cargarEquipo(); }}
+          onCancelar={() => setPlanificando('no')}
         />
       )}
 

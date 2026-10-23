@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
-  leerPuestos, guardarPuestos, leerTrabajadores, guardarTrabajadores, leerTurnos
+  leerPuestos, guardarPuestos, leerTrabajadores, guardarTrabajadores, leerTurnos,
+  leerCierres, leerExtras
 } from '@/lib/datos';
 import { aEntero, esSi, sinFicha, esContratado, MODALIDAD,
          type Puesto, type Trabajador } from '@/lib/equipo';
@@ -44,13 +45,17 @@ export async function GET(req: Request) {
   const no = await exigir(req, 'ver');
   if (no) return no;
   try {
-    const [puestos, trabajadores, turnos] = await Promise.all([
-      leerPuestos(), leerTrabajadores(), leerTurnos()
+    // Los cierres y las actividades extras viajan con el resto porque las
+    // dos pantallas que planifican necesitan saber qué días están cerrados
+    // y qué falta por confirmar. Son dos listas chicas: una fila por día
+    // cerrado y una por actividad.
+    const [puestos, trabajadores, turnos, cierres, extras] = await Promise.all([
+      leerPuestos(), leerTrabajadores(), leerTurnos(), leerCierres(), leerExtras()
     ]);
     const esAdmin = (await quienEs(req)).rol === ROL.admin;
     return NextResponse.json({
       puestos, trabajadores: esAdmin ? trabajadores : sinTokens(trabajadores), turnos,
-      esAdmin,
+      cierres, extras, esAdmin,
       // Quién tiene turnos y no está en la lista. Pasa al renombrar a
       // alguien que ya estaba asignado; el panel lo muestra en vez de que
       // se descubra cuando el conteo del día no cuadre.

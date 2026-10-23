@@ -935,7 +935,8 @@ uno sirviera por sí solo:
 | `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia, lo que se le pagó y su parte de la propina |
 
 A esas tres se sumaron después `Colaboradores` y `Actividades`, que son las
-de los jinetes y las pintacaritas — ver "Las actividades extras".
+de los jinetes y las pintacaritas —ver "Las actividades extras"—, y
+**`Cierres`**, una fila por día cerrado — ver "Cerrar el día".
 
 Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
 el calendario de la portada o desde **`/turnos`**, el calendario del equipo
@@ -1039,15 +1040,13 @@ está y la diferencia va en el ajuste**, no se edita la jornada. Los dos
 caminos dan el mismo total, pero solo uno deja escrito el porqué: una
 jornada editada no se distingue de un error de tipeo, y un ajuste con motivo
 se explica solo cuando alguien revise ese pago un mes después. Va dicho en la
-propia ventana de Pasar lista, que es donde se aplica.
+propia ventana del día, que es donde se aplica.
 
-**Porque llegar era el problema**: `Pasar lista` vive en la página del día, y
-un día de preparación no aparece en el calendario de la portada. Por eso la
-ventana de planificación, cuando se abre **desde `/turnos`**, ofrece el
-enlace *"abre el día"*. Desde la página del día no lo ofrece: llevaría a
-donde ya se está. Sin ese enlace el circuito quedaba cortado justo antes de
-lo que importa — y un turno sin pasar lista no suma nada ni entra en el
-informe.
+**Llegar era el problema**, y por un tiempo se resolvió con un enlace *"abre
+el día"* dentro de la ventana de planificación. El 2026-10-23 dejó de hacer
+falta: los montos y la propina se escriben en esa misma ventana, así que a
+un día de preparación ya no hay que llegar por ningún lado — se planifica y
+se cierra ahí. Ver "Una sola ventana para el día".
 
 Dos detalles de implementación que vale la pena tener escritos:
 
@@ -1070,10 +1069,12 @@ eso cada persona asignada tiene ahí mismo un **— / Vino / No vino**, en la
 misma ventana donde se elige y se agrega gente. Quien no llegó queda tachado,
 y el pie dice cuántos vinieron.
 
-**Los montos siguen siendo de Pasar lista**, que no cambió: esta ventana solo
-dice quién vino. Son dos momentos distintos del día y conviene que sigan
-siéndolo — marcar presencia es de la mañana, cerrar las cuentas es de la
-noche.
+**Desde el 2026-10-23 los montos están en esa misma ventana**, debajo. La
+idea de separarlos —marcar presencia es de la mañana, cerrar las cuentas es
+de la noche— era razonable y no sobrevivió al uso: obligaba a entrar dos
+veces y a pasar por una pantalla que para un día de preparación ni siquiera
+existe. Quien marca en la mañana deja los montos como están y listo; quien
+cierra en la noche los llena. Ver "Una sola ventana para el día".
 
 **Ojo con una trampa que esto abrió, y que costó cambiar una regla del
 servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
@@ -1196,33 +1197,106 @@ en el calendario, una semana de dos días deja más aire a la derecha, porque la
 grilla sigue siendo de cuatro columnas. Los textos no se estiran: siguen
 acotados a `max-w-2xl`.
 
-### Pasar lista, y lo que cuesta un día (2026-10-21)
+### Una sola ventana para el día, y el cierre (2026-10-23)
 
-Planificar dice quién **debería** venir; pasar lista dice quién vino y cuánto
-se le paga. Son dos cosas y el panel las trata distinto: **un turno sin pasar
-lista no suma nada.** Antes de que alguien lo diga, el panel no da por venida
-a una persona ni por pagada una jornada.
+**"Pasar lista" se jubiló como paso aparte.** Hasta el 2026-10-22 había tres
+pantallas para un mismo día: se planificaba en el calendario, se marcaba
+quién llegó en el planificador, y los montos y la propina vivían en otra
+ventana —*Pasar lista*— que solo se abría desde la página del día. A un día
+de preparación no se llega por ahí, así que el circuito quedaba cortado
+justo antes de lo que importa: un turno sin montos no suma nada ni entra en
+el informe.
 
-Se pasa lista desde la página del día, botón **Pasar lista**. Por cada
-persona: vino / no vino, la jornada, horas extra, un ajuste con su motivo, y
-el total de esa fila.
+El cliente lo pidió al revés, y así quedó:
 
-**Lo que se guarda queda congelado, y eso es la decisión importante.** El
+| Dónde | Qué se hace |
+|---|---|
+| **Calendario de la portada** | Se **planifica**, con las reservas a la vista: cuánta gente viene, cuántos menús, entonces cuánto equipo |
+| **`/turnos`** | Se **confirma todo**: quién vino, los montos, los ajustes, la propina — cualquier día, abierto, privado o de preparación |
+
+Son la **misma ventana**; lo único que cambia es desde dónde se abre. La
+página del día la abre también, con el mismo botón, así que nada se perdió:
+lo que se eliminó es la obligación de pasar por ahí.
+
+**Lo que la ventana hace ahora**, de arriba abajo: asignar por puesto, crear
+a alguien que falte, marcar **— / Vino / No vino**, escribir la jornada, las
+horas extra y los **ajustes con su motivo**, poner la **propina del día** —
+que el panel reparte— y **cerrar el día**.
+
+### Cerrar el día
+
+**Cerrar es una declaración, no un cálculo.** Se podría decir que un día
+está cerrado cuando nadie quedó sin marcar, pero eso confunde dos cosas: que
+no falte nada por marcar es una condición, y que alguien **haya revisado y
+dado por cerrado** es un hecho. Un día sin equipo cumpliría la condición sin
+que nadie lo mirara, y un día al que falta agregarle a quien llegó de más se
+vería completo justamente porque falta. Por eso el cierre se guarda con el
+**nombre de quien cerró y la hora**: es lo que después permite preguntarle.
+
+- Vive en una pestaña propia, **`Cierres`** (Fecha · Cerrado por · Cuándo),
+  una fila por día cerrado. Cerrar dos veces no agrega dos filas.
+- **Se puede reabrir**: aparece un ajuste olvidado, alguien reclama su
+  propina. Queda en la bitácora como cualquier otra acción.
+- **Lo único que bloquea el cierre es la asistencia sin marcar**, y se
+  comprueba en el servidor además de en la pantalla. Un turno sin marcar no
+  suma, así que cerrar con turnos a medias sería cerrar con el total mal.
+- **La propina y las actividades extras avisan pero no bloquean.** Un día
+  sin propina existe —no todos los días dejan— y una actividad sin confirmar
+  es plata de otro bolsillo que se arregla en su propia página. Bloquear por
+  ellas obligaría a inventar un cero para poder cerrar, y un cero inventado
+  es peor que un aviso.
+
+**`/turnos` muestra arriba lo que falta por cerrar**, que es lo que el
+cliente pidió: *"una vez que el día pasó, el panel puede mostrar: oiga,
+falta confirmar tantos trabajadores y actividades extras para cerrar el
+día"*. Cada día pendiente es un botón que abre su ventana, y dice qué le
+falta: cuánta gente sin marcar, cuántas extras sin confirmar, si nadie anotó
+propina. **Un día que todavía no llega no aparece**: nadie puede decir quién
+vino a un sábado que no ha ocurrido.
+
+### Lo que cuesta un día
+
+**Un turno sin marcar no suma nada.** Antes de que alguien diga si vino o
+no, el panel no da por venida a una persona ni por pagada una jornada. Esa
+regla no cambió con el rediseño; lo que cambió es dónde se marca.
+
+**Lo que se guarda queda congelado, y esa es la decisión importante.** El
 monto de la jornada y la modalidad viajan **dentro del turno**, no se
 recalculan desde la ficha del trabajador. Si en marzo se le sube el sueldo a
 alguien, los turnos de noviembre no pueden cambiar solos: las cuentas de
 meses cerrados dejarían de cuadrar.
 
-**Los sueldos los propone el servidor, no el navegador.** Un turno sin pasar
-lista hereda los valores de la ficha al guardarse (`guardarEquipoDelDia`).
-Así el encargado puede pasar lista y corregir montos sin que su pantalla
-reciba nunca la tabla de sueldos del equipo entero — que no necesita, y que
-no es dato suyo. Pasada la lista, lo que venga manda: ahí el monto ya es un
-hecho del día y no una propuesta.
+**Los sueldos los propone el servidor, no el navegador.** Un turno sin
+montos los hereda de la ficha al guardarse (`guardarEquipoDelDia`). Así el
+encargado puede confirmar y corregir sin que su pantalla reciba nunca la
+tabla de sueldos del equipo entero — que no necesita, y que no es dato suyo.
+Con montos ya escritos manda lo que venga: ahí el monto es un hecho del día
+y no una propuesta.
 
 Un descuento mayor que la jornada deja el día en **cero, nunca en negativo**.
 Si de verdad hay que cobrarle algo a alguien, eso no es un turno con monto
 negativo, es otra conversación.
+
+### Los ajustes son varios, y cada uno con su motivo (2026-10-23)
+
+Lo pidió el cliente con el ejemplo exacto: *"extra positivo por hora extra y
+extra negativo por adelanto"*. Con un solo ajuste había que sumarlos a mano
+y escribir un motivo que explicara los dos, o sea perder justo lo que el
+ajuste sirve para dejar: **el porqué de cada peso**, para quien revise ese
+pago un mes después.
+
+Se guardan en las **dos columnas que ya existían** —`Ajuste` y `Motivo del
+ajuste`— como dos listas en paralelo separadas por `|`. Se decidió así sobre
+abrir una pestaña nueva por una razón concreta: el caso corriente es **uno**,
+y entonces la celda se ve exactamente como antes (`-5000` · `llegó tarde`),
+así que **lo ya escrito se sigue leyendo sin migrar nada** y la planilla
+sigue siendo editable a mano por alguien que no sepa de esto. Con dos dice
+`5000|-20000` · `hora extra|adelanto`, que también se entiende.
+
+**Manda la lista de montos**: si alguien edita una celda y no la otra, los
+motivos que falten se leen vacíos en vez de desalinear los pares. Y el
+separador se saca de los motivos al guardar, porque un motivo con `|`
+partiría su propio ajuste en dos al volver a leerlo.
 
 ### Por turno o contratado (2026-10-21)
 
@@ -1329,15 +1403,15 @@ trabajo pero fuera del reparto.
 es "sí"— porque la regla es que participa todo el equipo; no entrar es la
 excepción, y una excepción se marca.
 
-El monto lo pone un encargado **al pasar lista**, en la página del día:
-escribe el **total** del día y el panel lo reparte. No hay que calcular nada
-a mano.
+El monto lo pone un encargado **en la ventana del día**, junto con la
+asistencia: escribe el **total** y el panel lo reparte. No hay que calcular
+nada a mano.
 
 **Se llega por dos puertas y las dos dan al mismo campo** (2026-10-22). En la
 página del día, el bloque Equipo muestra siempre una línea "Propina del día",
-con el monto repartido o un **sin anotar**, y su botón abre la misma ventana
-de Pasar lista con el cursor puesto en ese campo. No es un segundo formulario:
-es el mismo, y se guarda en el mismo lugar.
+con el monto repartido o un **sin anotar**, y su botón abre la ventana del
+día con el cursor puesto en ese campo. No es un segundo formulario: es el
+mismo, y se guarda en el mismo lugar.
 
 El motivo es que se llega a ese día por los dos lados —a cerrar el turno, o a
 acordarse de la propina— y la propina vivía al final de una tabla dentro de
@@ -1451,6 +1525,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Ver el calendario y las reservas | sí | sí | — | — |
 | Anotar reservas, abrir y cerrar días | sí | sí | — | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | — | — |
+| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | — | — |
 | Agendar actividades extras y confirmarlas | sí | sí | — | — |
 | Montos habituales y cuentas bancarias | sí | — | — | — |
 | Puestos y su regla "uno cada N" | sí | — | — | — |

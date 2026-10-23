@@ -55,6 +55,8 @@ import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
 import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
          avisoTelefono, correoNormal, correoValido, avisoCorreo,
          FORMATO_TELEFONO } from './contacto.ts';
+import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
+         diasPorCerrar, leerCierresDe, type Cierre } from './cierres.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -1923,6 +1925,63 @@ const conAjustes = informeDelPeriodo([
 ], '2026-11-01', '2026-11-30');
 ok(conAjustes[0].ajustes === -15000 && conAjustes[0].total === 15000,
    'el informe los suma en su columna y en el total');
+
+
+/* ---------- Cerrar un día ---------- */
+
+console.log('\nCierre del día');
+
+const ce = (p: Partial<Cierre>): Cierre =>
+  ({ fecha: '2026-11-14', quien: 'jefe', cuando: '2026-11-14 23:40', fila: 2, ...p });
+
+ok(diaCerrado([ce({})], '2026-11-14'), 'un día con su fila está cerrado');
+ok(!diaCerrado([ce({})], '2026-11-15'), 'y el de al lado no');
+ok(cierreDe([ce({ quien: 'ana' })], '2026-11-14')?.quien === 'ana',
+   'queda con el nombre de quien lo cerró, que es lo que permite preguntar');
+
+const delSabado = [
+  tu({ fecha: '2026-11-14', trabajador: 'Ana', asistencia: VINO.si, pagoJornada: 30000 }),
+  tu({ fecha: '2026-11-14', trabajador: 'Luis', asistencia: VINO.sinMarcar })
+];
+const exDelSabado = [{ fecha: '2026-11-14', colaborador: 'Pedro',
+  actividad: 'Show ecuestre', estado: '', monto: 50000, ajuste: 0, motivo: '', fila: 2 }];
+
+const pendiente = faltaParaCerrar(delSabado, exDelSabado, '2026-11-14');
+ok(pendiente.sinMarcar === 1, 'dice cuánta gente quedó sin marcar');
+ok(pendiente.extrasSinConfirmar === 1, 'y cuántas actividades extras sin confirmar');
+ok(pendiente.sinPropina, 'y avisa si vino gente y nadie anotó propina');
+
+// **Lo único que bloquea es la asistencia.** Un turno sin marcar no suma
+// nada, así que cerrar con turnos a medias sería cerrar con el total mal.
+ok(!sePuedeCerrar(delSabado, exDelSabado, '2026-11-14'),
+   'con alguien sin marcar no se puede cerrar');
+const marcados = delSabado.map((t) => ({ ...t, asistencia: VINO.no }));
+ok(sePuedeCerrar(marcados, exDelSabado, '2026-11-14'),
+   'una vez marcados todos, sí — aunque queden extras sin confirmar');
+ok(!sePuedeCerrar([], [], '2026-11-14'),
+   'y un día sin nadie asignado no se cierra: no hay nada que cerrar');
+
+// Lo que el calendario muestra arriba: días pasados, con equipo, sin cerrar.
+const porCerrar = diasPorCerrar(
+  [tu({ fecha: '2026-11-14' }), tu({ fecha: '2026-11-15' }), tu({ fecha: '2026-11-21' })],
+  [], [ce({ fecha: '2026-11-15' })], '2026-11-20'
+);
+ok(JSON.stringify(porCerrar) === JSON.stringify(['2026-11-14']),
+   'el 15 ya está cerrado y el 21 todavía no pasa: queda solo el 14');
+ok(diasPorCerrar([tu({ fecha: '2026-11-21' })], [], [], '2026-11-20').length === 0,
+   'un día que no ha llegado no está pendiente: nadie puede decir quién vino');
+
+// La ida y vuelta por la planilla.
+const filasCierre = [
+  ['Fecha', 'Cerrado por', 'Cuándo'],
+  ['2026-11-14', 'jefe', '2026-11-14 23:40'],
+  ['', 'nadie', '']
+];
+const leidos = leerCierresDe(filasCierre);
+ok(leidos.length === 1 && leidos[0].quien === 'jefe' && leidos[0].fila === 2,
+   'se lee una fila por día cerrado, y una sin fecha no cuenta');
+ok(leerCierresDe([['Cerrado por']]).length === 0,
+   'sin la columna Fecha no se interpreta nada');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
