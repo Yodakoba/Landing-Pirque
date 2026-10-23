@@ -457,44 +457,58 @@ export default function EquipoDialogo({
 
       {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <span className="text-xs text-hueso/50">
-          {plan.length} {plan.length === 1 ? 'persona' : 'personas'} en el equipo de este día.
-          {(vinieron > 0 || faltaron > 0) && (
-            <>
-              {' '}<strong className="text-hueso/70">
-                {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
-              </strong>
-              {faltaron > 0 && (
-                <span className="text-red-300">
-                  {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
-                </span>
-              )}.
-            </>
-          )}
-          {' '}¿Falta alguien en la lista?{' '}
-          <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
-          {falta.extrasSinConfirmar > 0 && (
-            <>
-              {' '}
-              <span className="text-amber-300">
-                {falta.extrasSinConfirmar === 1
-                  ? 'Queda 1 actividad extra sin confirmar'
-                  : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
+      {/* **El resumen arriba y las acciones en una sola línea abajo.**
+          Antes compartían una fila que envolvía, así que con el resumen
+          largo "Guardar" quedaba en un renglón y "Guardar y cerrar el día"
+          en el siguiente. La diferencia entre anotar un cambio y declarar
+          el día cerrado tiene que leerse de un vistazo, y dos renglones la
+          esconden: lo que se ve es un botón, y el otro parece otra cosa. */}
+      <p className="mt-6 text-xs text-hueso/50">
+        {plan.length} {plan.length === 1 ? 'persona' : 'personas'} en el equipo de este día.
+        {(vinieron > 0 || faltaron > 0) && (
+          <>
+            {' '}<strong className="text-hueso/70">
+              {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
+            </strong>
+            {faltaron > 0 && (
+              <span className="text-red-300">
+                {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
               </span>
-              {' '}—{' '}
-              <a href="/extras" className="text-oro hover:underline">míralas acá</a>.
-            </>
-          )}
-        </span>
-        <span className="flex-1" />
+            )}.
+          </>
+        )}
+        {' '}¿Falta alguien en la lista?{' '}
+        <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
+        {falta.extrasSinConfirmar > 0 && (
+          <>
+            {' '}
+            <span className="text-amber-300">
+              {falta.extrasSinConfirmar === 1
+                ? 'Queda 1 actividad extra sin confirmar'
+                : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
+            </span>
+            {' '}—{' '}
+            <a href="/extras" className="text-oro hover:underline">míralas acá</a>.
+          </>
+        )}
+      </p>
+
+      {/* `flex-nowrap`: los tres botones se quedan en la línea pase lo que
+          pase. En un teléfono el día se recorta a "Guardar y cerrar", que
+          dice lo mismo en menos espacio. */}
+      <div className="mt-3 flex flex-nowrap items-center gap-2">
         <button onClick={onCancelar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
+          className="whitespace-nowrap rounded border border-hueso/20 px-3 py-1.5
+                     text-sm hover:border-hueso/40">
           Cancelar
         </button>
+        <span className="flex-1" />
+        {/* Delineado el que solo guarda, relleno el que cierra: son dos
+            cosas distintas y la forma lo dice antes que el texto. */}
         <button onClick={() => guardar(false)} disabled={guardando}
-          className="rounded border border-oro/60 px-4 py-1.5 text-sm font-semibold
-                     text-oro disabled:opacity-40">
+          className="whitespace-nowrap rounded border border-oro/60 px-4 py-1.5
+                     text-sm font-semibold text-oro disabled:opacity-40"
+          title="Anota los cambios y deja el día abierto">
           {guardando ? 'Guardando…' : 'Guardar'}
         </button>
         {/* **Cerrar es una declaración, no un cálculo.** El botón guarda y
@@ -503,22 +517,22 @@ export default function EquipoDialogo({
             alguien sin marcar no se puede, y el botón explica por qué. */}
         {cerrado ? (
           <button onClick={() => guardar(false)} disabled={guardando}
-            className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                       disabled:opacity-40"
+            className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
+                       font-semibold text-tinta disabled:opacity-40"
             title="Vuelve a dejar el día abierto para corregirlo">
             Guardar y reabrir
           </button>
         ) : (
           <button onClick={() => guardar(true)} disabled={guardando || !listo}
-            className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                       disabled:opacity-40"
+            className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
+                       font-semibold text-tinta disabled:opacity-40"
             title={listo
-              ? 'Guarda y deja el día cerrado'
+              ? 'Guarda y deja el día cerrado, con tu nombre y la hora'
               : falta.conEquipo === 0
                 ? 'Primero asigna a alguien'
                 : `Falta marcar si ${falta.sinMarcar === 1 ? 'una persona vino' :
                     `${falta.sinMarcar} personas vinieron`} o no`}>
-            Guardar y cerrar el día
+            Guardar y cerrar<span className="hidden sm:inline"> el día</span>
           </button>
         )}
       </div>

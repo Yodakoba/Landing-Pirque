@@ -12,7 +12,7 @@ import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
-import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
+import { ocupaLugar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import EquipoDialogo from './EquipoDialogo';
@@ -106,19 +106,6 @@ export default function DayView({ fecha }: { fecha: string }) {
   const personas = visibles.filter(ocupaLugar)
     .reduce((s, r) => s + (Number(r.personas) || 0), 0);
   const noShows = visibles.filter((r) => r.asistencia === ASISTENCIA.noVino).length;
-
-  // La plata de la puerta. Se decide por el estado del pago y no por la
-  // modalidad: ver faltaCobrar().
-  const cobrar = useMemo(() => {
-    let total = 0, sinMonto = 0, personas = 0;
-    for (const r of visibles) {
-      if (!faltaCobrar(r)) continue;
-      personas += Number(r.personas) || 0;
-      if (r.monto == null) sinMonto++;
-      else total += Number(r.monto) || 0;
-    }
-    return { total, sinMonto, personas };
-  }, [visibles]);
 
   // Lo que mira la cocina: cuántos de cada menú hay que preparar ese día.
   // Solo de las reservas que ocupan lugar: una cancelada no se cocina.
@@ -236,24 +223,16 @@ export default function DayView({ fecha }: { fecha: string }) {
         </div>
       )}
 
-      {(cobrar.total > 0 || cobrar.sinMonto > 0) && (
-        <div className="mt-3 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2">
-          <p className="text-sm">
-            <strong className="text-amber-300 tabular-nums">{enPesos(cobrar.total)}</strong>
-            <span className="text-hueso/70"> por cobrar en el local</span>
-            <span className="text-hueso/50"> · {cobrar.personas}{' '}
-              {cobrar.personas === 1 ? 'persona' : 'personas'}</span>
-          </p>
-          {cobrar.sinMonto > 0 && (
-            <p className="mt-1 text-xs text-hueso/50">
-              {cobrar.sinMonto} {cobrar.sinMonto === 1 ? 'reserva' : 'reservas'} sin
-              monto anotado, así que no{cobrar.sinMonto === 1 ? '' : ' se'}{' '}
-              {cobrar.sinMonto === 1 ? 'está' : 'están'} sumada{cobrar.sinMonto === 1 ? '' : 's'}{' '}
-              en ese total.
-            </p>
-          )}
-        </div>
-      )}
+      {/* **Acá iba "$X por cobrar en el local", y se sacó el 2026-10-23**,
+          igual que de la tarjeta del calendario y por el mismo motivo: en
+          el local se paga otra cosa —una bebida más, un postre—, así que
+          esa suma nunca iba a ser lo que hay que cobrar. Un total que no es
+          el total no sirve para cuadrar la caja; lo que sí sirve es el monto
+          de cada reserva, que sigue estando en su fila de la tabla.
+
+          `faltaCobrar()` y los campos `porCobrar`/`sinMonto` de la ocupación
+          siguen existiendo, con sus pruebas: lo que se sacó es mostrarlos
+          sumados. */}
 
       {/* El equipo de este día. Va junto a lo que hay que preparar porque es
           la otra mitad de la misma pregunta: para esta gente, con quién. */}

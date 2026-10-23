@@ -27,6 +27,32 @@ const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
   'focus:border-oro focus:outline-none';
 
+/**
+ * Un campo con su rótulo encima.
+ *
+ * El rótulo va pegado al campo y no en una cabecera de tabla lejana: con una
+ * tarjeta por persona, una fila de encabezados arriba del todo obligaría a
+ * contar columnas para saber qué es cada caja.
+ *
+ * **Va acá afuera y no dentro del componente, y eso no es estilo.** Un
+ * componente declarado dentro de otro es una función nueva en cada dibujado,
+ * así que para React es **otro tipo de elemento**: desmonta lo que había y
+ * monta uno nuevo. Con un `input` adentro eso significa que se pierde el
+ * foco a la primera letra — se escribía una y el resto del nombre se iba al
+ * vacío. Así se rompió esta pantalla el día que pasó a tarjetas, y el
+ * síntoma no se parece en nada a su causa.
+ */
+export const Campo = ({ etiqueta, ancho, children }: {
+  etiqueta: string; ancho: string; children: React.ReactNode;
+}) => (
+  <label className={`block ${ancho}`}>
+    <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
+      {etiqueta}
+    </span>
+    {children}
+  </label>
+);
+
 export default function EquipoEditor() {
   const [puestos, setPuestos] = useState<Puesto[] | null>(null);
   const [gente, setGente] = useState<Trabajador[]>([]);
@@ -80,8 +106,14 @@ export default function EquipoEditor() {
       const d = await r.json();
       if (d.error) setError(d.error);
       else {
-        setPuestos(d.puestos);
-        setGente(d.trabajadores);
+        // **Solo se reemplaza lo que el servidor dice haber guardado.** La
+        // respuesta trae `puestos` únicamente si venían en la petición, o
+        // sea nunca cuando guarda un encargado; tomarlo igual dejaba
+        // `puestos` en `undefined` y la pantalla entera caía al "Cargando…"
+        // del primer `return`, como si se hubiera roto. Un guardado que sale
+        // bien no puede verse peor que uno que falla.
+        if (d.puestos) setPuestos(d.puestos);
+        if (d.trabajadores) setGente(d.trabajadores);
         setError('');
         setSucio(false);
       }
@@ -155,22 +187,29 @@ export default function EquipoEditor() {
   );
 
   /**
-   * Un campo con su rótulo encima.
+   * El mismo guardado, dentro de la tarjeta.
    *
-   * El rótulo va pegado al campo y no en una cabecera de tabla lejana: con
-   * una tarjeta por persona, una fila de encabezados arriba del todo
-   * obligaría a contar columnas para saber qué es cada caja.
+   * Lo pidió el cliente: se corrige el teléfono de alguien arriba y el botón
+   * quedaba al final de la página, con todas las demás fichas en medio. Un
+   * guardado al que hay que irlo a buscar es un guardado que se olvida — y se
+   * olvida con algo escrito a medias, que es la peor forma de perderlo.
+   *
+   * **Reemplaza el aviso en gris** que decía "Guarda para administrar el
+   * link": el botón dice lo mismo y además lo hace.
+   *
+   * Aparece en todas las fichas y no solo en la que se editó, porque guardar
+   * manda **las dos listas completas** en una sola petición: no es el
+   * guardado de esta persona, es el de la pantalla. Tenerlo a mano en
+   * cualquier ficha es justamente el punto.
    */
-  const Campo = ({ etiqueta, ancho, children }: {
-    etiqueta: string; ancho: string; children: React.ReactNode;
-  }) => (
-    <label className={`block ${ancho}`}>
-      <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
-        {etiqueta}
-      </span>
-      {children}
-    </label>
-  );
+  const guardarEnTarjeta = sucio ? (
+    <button onClick={guardar} disabled={guardando}
+      className="rounded bg-oro px-3 py-1 text-xs font-semibold text-tinta
+                 disabled:opacity-40"
+      title="Guarda los cambios de esta pantalla">
+      {guardando ? 'Guardando…' : 'Guardar cambios'}
+    </button>
+  ) : null;
 
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = gente.map((t) => ({ ...t }));
@@ -316,12 +355,16 @@ export default function EquipoEditor() {
                 <span className="flex-1" />
 
                 <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-xs">
+                  {guardarEnTarjeta}
+                  {/* Los links se administran **con la lista guardada**: esta
+                      llamada reescribe la pestaña entera desde la planilla,
+                      así que con ediciones en pantalla se perderían. Mientras
+                      haya cambios, en su lugar está el botón de guardar — que
+                      es lo que hay que hacer para volver a tenerlos. */}
                   {esAdmin && (
                     !t.nombre.trim() ? (
                       <span className="text-hueso/35">Ponle nombre y guarda</span>
-                    ) : sucio ? (
-                      <span className="text-hueso/40">Guarda para administrar el link</span>
-                    ) : t.token ? (
+                    ) : sucio ? null : t.token ? (
                       <>
                         <button onClick={() => copiar(t.token, t.nombre)}
                           className="text-oro hover:underline">Copiar link</button>

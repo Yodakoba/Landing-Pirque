@@ -207,10 +207,18 @@ export default function CalendarioEquipo() {
           const res = resumenDe(f);
           const preparando = prepara(f);
           const esHoy = f === hoy();
+          // **El contenido va pegado arriba, y eso hay que pedirlo.** Las celdas
+          // de una fila se estiran todas a la más alta, y el contenido de un
+          // `<button>` se centra en vertical por defecto —es comportamiento propio
+          // del botón, no del CSS de la página—, así que el número del día quedaba
+          // a media altura, distinto en cada celda según cuántas líneas trajera.
+          // Con `flex-col` y `justify-start` queda siempre en la primera línea y
+          // lo demás se va acumulando debajo.
           return (
             <button key={f} onClick={() => setPlanificando(f)} disabled={!equipo}
               title={`${enPalabras(f)} · planificar el equipo`}
-              className={`min-h-[82px] overflow-hidden rounded border p-1.5
+              className={`flex min-h-[92px] flex-col items-stretch justify-start
+                          overflow-hidden rounded border p-1.5
                           text-left align-top
                           text-[11px] leading-tight transition
                           hover:border-oro disabled:opacity-40

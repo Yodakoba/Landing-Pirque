@@ -28,6 +28,10 @@ import { normalizar } from '@/lib/columnas';
 import type { Ocupacion } from '@/lib/tipos';
 import { enPesos } from '@/lib/ocupacion';
 import DatosBancarios from './DatosBancarios';
+// El mismo campo con rótulo de Equipo: una sola definición, y **fuera de
+// todo componente**, porque uno declarado adentro se remonta en cada
+// dibujado y se lleva el foco de lo que se esté escribiendo.
+import { Campo } from './EquipoEditor';
 import { bancoVacio, type Banco } from '@/lib/banco';
 import CampoTelefono from './CampoTelefono';
 import { diasDelMes, sumarMeses, mesDe, mesEnPalabras, diaSemana, hoy,
@@ -93,17 +97,15 @@ export default function CalendarioExtras() {
     } finally { setGuardando(false); }
   }
 
-  /** Un campo con su rótulo encima. Igual que en Equipo, y por lo mismo. */
-  const Campo = ({ etiqueta, ancho, children }: {
-    etiqueta: string; ancho: string; children: React.ReactNode;
-  }) => (
-    <label className={`block ${ancho}`}>
-      <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
-        {etiqueta}
-      </span>
-      {children}
-    </label>
-  );
+  /** El guardado dentro de la ficha, igual que en Equipo y por lo mismo. */
+  const guardarEnTarjeta = sucio ? (
+    <button onClick={guardarFichas} disabled={guardando}
+      className="rounded bg-oro px-3 py-1 text-xs font-semibold text-tinta
+                 disabled:opacity-40"
+      title="Guarda los cambios de esta pantalla">
+      {guardando ? 'Guardando…' : 'Guardar cambios'}
+    </button>
+  ) : null;
 
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = (colaboradores ?? []).map((c) => ({ ...c }));
@@ -187,10 +189,18 @@ export default function CalendarioExtras() {
             const costo = costoExtrasDelDia(extras, f);
             const sinConfirmar = delDia.filter((e) => !e.estado).length;
             const esHoy = f === hoy();
+            // **El contenido va pegado arriba, y eso hay que pedirlo.** Las celdas
+            // de una fila se estiran todas a la más alta, y el contenido de un
+            // `<button>` se centra en vertical por defecto —es comportamiento propio
+            // del botón, no del CSS de la página—, así que el número del día quedaba
+            // a media altura, distinto en cada celda según cuántas líneas trajera.
+            // Con `flex-col` y `justify-start` queda siempre en la primera línea y
+            // lo demás se va acumulando debajo.
             return (
               <button key={f} onClick={() => setEditando(f)}
                 title={`${enPalabras(f)} · actividades extras`}
-                className={`min-h-[82px] overflow-hidden rounded border p-1.5
+                className={`flex min-h-[92px] flex-col items-stretch justify-start
+                            overflow-hidden rounded border p-1.5
                             text-left align-top text-[11px] leading-tight transition
                             hover:border-oro
                             ${delDia.length > 0 ? 'border-oro/40 bg-oro/5'
@@ -335,7 +345,8 @@ export default function CalendarioExtras() {
                 {/* Quitar solo a quien no tiene días contratados, igual que
                     en Equipo: borrar la ficha de alguien que ya vino dejaría
                     sus días con un nombre que no está en ninguna parte. */}
-                <div className="self-center pt-4 text-xs">
+                <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-xs">
+                  {guardarEnTarjeta}
                   {!tieneDias ? (
                     <button
                       onClick={() => {
