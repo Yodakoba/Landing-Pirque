@@ -7,6 +7,8 @@ import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { ROL } from '@/lib/auth';
 import type { Colaborador } from '@/lib/extras';
+import { bancoVacio, limpiarBanco } from '@/lib/banco';
+import { telefonoNormal } from '@/lib/contacto';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +27,7 @@ export const dynamic = 'force-dynamic';
  * de lo que cobra cada proveedor ni dónde se le transfiere.
  */
 const sinPlata = (gente: Colaborador[]) => gente.map((c) => ({
-  ...c, monto: 0, cuenta: ''
+  ...c, monto: 0, banco: bancoVacio()
 }));
 
 export async function GET(req: Request) {
@@ -80,12 +82,12 @@ export async function PUT(req: Request) {
       limpia.push({
         nombre,
         actividad: String(c?.actividad ?? '').trim(),
-        telefono: String(c?.telefono ?? '').trim(),
+        telefono: telefonoNormal(c?.telefono),
         // Si no viene el campo, activo: existe la fila porque alguien lo
         // agregó. Misma regla que la celda en blanco de la planilla.
         activo: c?.activo === undefined ? true : esSi(c.activo),
         monto: esAdmin ? aEntero(c?.monto) : (antes?.monto ?? 0),
-        cuenta: esAdmin ? String(c?.cuenta ?? '').trim() : (antes?.cuenta ?? '')
+        banco: esAdmin ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio())
       });
     }
 

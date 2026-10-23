@@ -202,16 +202,20 @@ tres textos viven en el objeto `TEXTOS` del archivo.
 
 ### Lo que no sigue al idioma de la página
 
-- **El checkout de Shopify, que además cambió de idioma solo.** El
-  formulario de reserva se traduce, pero el checkout no obedece a la página.
-  El 2026-10-13 el `checkoutUrl` venía con `/es/`, o sea que todos caían en
-  español; **el 2026-10-22 redirige a `/checkouts/cn/<token>/en-us`**, y
-  probado con `Accept-Language` en es-CL, en-US y pt-BR los tres terminan en
-  `en-us`. Nadie tocó el sitio: es configuración de la tienda. Así, hoy un
-  cliente chileno pagaría en una pantalla en inglés, que es peor que el
-  problema original. **Se arregla con Shopify Markets, del lado de la
-  tienda**, y conviene volver a mirarlo cada vez que se toque algo allá,
-  porque cambia sin avisar.
+- **El checkout de Shopify, que sale en español y no sigue a la página.**
+  El formulario de reserva se traduce, pero el checkout tiene su propio
+  idioma, fijado en la tienda. **Hoy sale en español para todos**: redirige
+  a `/checkouts/cn/<token>/es-us`, probado con `Accept-Language` en es-CL,
+  en-US, pt-BR y sin cabecera — los cuatro dan `es-us`. Un visitante que leyó
+  el sitio en inglés paga en español, y eso es lo que hay.
+
+  **Vale la pena saber que esto cambió dos veces en un día**, porque es el
+  motivo para volver a mirarlo cada vez que se toque la tienda: el
+  2026-10-13 venía con `/es/`; el 2026-10-22 en la mañana salía en **`en-us`**
+  —o sea, un cliente chileno pagando en inglés—, y esa misma tarde el cliente
+  lo dejó en español. **Nadie tocó el sitio en el intertanto**: es
+  configuración de Shopify, se cambia sola y no avisa. Si alguna vez hay que
+  servirlo en tres idiomas de verdad, eso es Shopify Markets.
 - **Las conversaciones de WhatsApp.** El mensaje prellenado sí se traduce
   (el script lo decodifica del `?text=`), pero quien responde al otro lado
   escribe en el idioma que maneje. Vale la pena avisarle al cliente antes de
@@ -866,16 +870,22 @@ completa funciona con la versión `2026-10`**:
 **Dos cosas salieron de esa corrida y las dos son de la tienda, no del
 sitio:**
 
-- **El checkout de la tienda de desarrollo está detrás de contraseña.** El
-  carrito se crea bien y redirige a `/checkouts/cn/…`, pero eso termina en
-  `/password` — *"This store is password protected"*. Al cliente no le pasó
-  el 2026-10-13 porque su navegador ya tenía la clave de la tienda; **quien
+- **El checkout de la tienda de desarrollo está detrás de contraseña**, y
+  **sigue estándolo** (vuelto a comprobar el 2026-10-22 por la tarde). El
+  carrito se crea bien y redirige a `/checkouts/cn/<token>/es-us`, pero eso
+  termina en `/password` — *"Esta tienda está protegida con contraseña"*. Al
+  cliente no le pasa porque su navegador ya tiene la clave guardada; **quien
   pruebe desde otro computador se estrella ahí y parece que falla el sitio**.
-- **El checkout sale hoy en `en-us`, no en español.** Probado con
-  `Accept-Language` en es-CL, en-US y pt-BR: los tres redirigen a
-  `/checkouts/cn/<token>/**en-us**`. El 2026-10-13 venía con `/es/`, así que
-  algo cambió en la configuración de idioma de la tienda. Así, un cliente
-  chileno pagaría en una pantalla en inglés.
+  Se quita en Shopify → Online Store → Preferences, y **es el mismo paso que
+  falta para poder completar una compra de prueba** y cerrar el pendiente de
+  `_booking_date` en el pedido.
+- ~~El checkout sale en `en-us`, no en español~~ — **lo arregló el cliente
+  ese mismo día.** En la mañana los cuatro `Accept-Language` probados
+  redirigían a `/checkouts/cn/<token>/en-us`; en la tarde, a **`es-us`**, y
+  la propia pantalla de contraseña pasó a estar en español. Queda anotado
+  porque enseña algo: **el idioma del checkout cambia del lado de la tienda,
+  sin tocar el sitio y sin avisar**, así que conviene comprobarlo cada vez
+  que se toque algo allá.
 
 ### Lo que falta por verificar
 
@@ -1726,26 +1736,104 @@ quedan actividades sin confirmar en el periodo.
 servidor). Si de verdad hay que pagarle dos cosas distintas al mismo
 proveedor, va en una línea con el monto sumado y el detalle en el motivo.
 
-### La cuenta bancaria, que es lo que cierra el circuito
+### Los datos de la transferencia, que son lo que cierra el circuito
 
 El cliente la pidió para el equipo **y** para los extras: *"cuando el
 encargado de pago descarga la planilla del pago semanal, ya tiene hasta las
 cuentas bancarias dentro de este resumen"*. Entonces:
 
-- `Trabajadores` tiene una columna **`Cuenta bancaria`** más, y
-  `Colaboradores` nace con ella. Una planilla escrita antes se lee igual: la
-  columna llega en blanco en vez de reventar.
+- `Trabajadores` y `Colaboradores` llevan los campos que pide un banco en
+  Chile: **titular, RUT, banco, tipo de cuenta, número y un correo para el
+  comprobante**, más una **nota de pago** para lo que no cabe en ninguno.
+  Viven en `panel/src/lib/banco.ts`.
 - **Vive en la ficha y no en la línea del día.** Si alguien cambia de banco
   se le transfiere a la cuenta nueva, también lo que quedó pendiente: no es
   un hecho de ese día, es un dato de la persona.
-- **La ve el administrador y quien paga, nadie más.** `/api/extras` se la
+- **La ve el administrador y quien paga, nadie más.** `/api/extras` se los
   recorta al encargado junto con los montos habituales, igual que los sueldos
   del equipo. Y `/api/informe` —que lee la cuenta de pagos— **devuelve de las
-  fichas solo la cuenta bancaria**: ni teléfonos, ni sueldos de hoy, ni
-  tokens.
+  fichas solo eso**: ni teléfonos, ni sueldos de hoy, ni tokens.
 - El informe **avisa en pantalla a quién le falta**, antes de descargar. Es
   el momento en que importa: descubrirlo con la planilla ya bajada significa
   volver a entrar, completarla y bajarla de nuevo.
+
+#### Por qué campos y no una sola columna de texto (2026-10-22)
+
+Nació como **una columna de texto libre** donde cada quien escribía "Banco
+Estado, cta rut 11.111.111-1" a su manera. Eso sirve para que una persona lo
+lea y **no sirve para generar una transferencia**: quien paga tiene que
+volver a separarlo a mano, banco por banco, y un dígito mal copiado manda la
+plata a otra cuenta. Con un campo por dato, la planilla del informe **se
+pega en la carga masiva del banco** sin tocar nada.
+
+Decisiones que vale la pena tener escritas:
+
+- **El titular en blanco es la propia persona.** Lo normal es que la cuenta
+  sea suya; el campo existe para cuando no lo es —la cuenta de la señora, la
+  del hermano— y obligar a repetir el nombre en cada ficha sería pedir
+  trabajo para decir lo que ya se sabe. En el CSV sale resuelto: si está en
+  blanco, va el nombre de la persona.
+- **El tipo de cuenta es una lista cerrada y el banco no.** Los tipos son
+  cuatro y se acabó; los bancos cambian de nombre, se fusionan y aparecen
+  cooperativas, así que ahí hay texto libre con sugerencias. Un tipo que no
+  está en la lista **se descarta en el servidor**, porque un valor inventado
+  llegaría hasta la planilla del banco.
+- **El RUT se empareja pero no se valida** (`rutLimpio()`): sin puntos y con
+  guion, para que la carga masiva lo acepte. Lo que no parece un RUT se
+  devuelve tal cual — el panel no está para corregirle el RUT a nadie.
+- **Falta algo = banco, tipo, número o RUT.** El titular y el correo no
+  entran en esa cuenta: uno tiene valor por defecto y el otro es para el
+  comprobante, no para la transferencia.
+- **La columna vieja de texto libre no se borró: pasó a llamarse `Nota de
+  pago`** y se quedó en su lugar. Lo que alguien hubiera escrito ahí sigue
+  estando y se lee como lo que siempre fue, una nota; y de paso queda un
+  campo útil para "transferir los lunes" o "avisar por WhatsApp".
+- **En la tabla van en una segunda línea**, no en seis columnas más — ver
+  "La tabla de Equipo: los anchos van declarados".
+
+### Teléfonos y correos con forma, no texto libre (2026-10-23)
+
+Lo pidió el cliente con el porqué incluido: *"donde guardamos números de
+teléfono o correos electrónicos deberíamos aplicar un control de formato…
+luego podremos automatizar más tareas (enviar link por WhatsApp o correo)"*.
+
+Es el mismo argumento que los campos del banco. Un teléfono guardado como
+`+56 9 1234 5678`, como `912345678` y como `9 1234-5678` es el mismo número
+y tres cadenas distintas; mientras sean texto libre **nada se puede
+automatizar encima**. La regla vive en `panel/src/lib/contacto.ts`:
+
+- **Se escribe el celular con el 9 y sin el +56** — `9 1234 5678`, que es lo
+  que la gente tiene en la cabeza y en su agenda. El código de país lo pone
+  el panel. Pedir el `+56` es pedir que lo escriba mal dos de cada tres
+  veces.
+- **Se guarda siempre como `+56 9 1234 5678`**, venga escrito con puntos,
+  guiones, paréntesis, con `+56`, con `56` o pelado. Y para un enlace sale
+  `56912345678`, que es lo que quiere WhatsApp: `enlaceWhatsApp()` ya está
+  escrito, esperando la pantalla que lo use.
+- **No se inventa el 9.** Ocho dígitos no son un celular al que le falte el
+  nueve: son un número que no sabemos leer, y completarlo mandaría un
+  mensaje a un desconocido. La pantalla lo dice —"parece que le falta el 9"—
+  y guarda lo que se escribió.
+- **Avisa, no corrige ni bloquea.** Un fijo o un número extranjero se
+  guardan tal cual con una marca en ámbar que dice que con ese no se va a
+  poder automatizar. El panel no está para discutirle a nadie el teléfono de
+  su primo; está para que lo que **sí** tiene forma de celular quede parejo.
+- **Se ordena al salir del campo, no mientras se escribe.** Un `+56` que
+  aparece solo bajo los dedos desconcierta; al terminar, ver el número
+  ordenado confirma que quedó bien. Mismo criterio que el RUT.
+- **El correo se guarda en minúsculas y sin espacios**, y la validación es
+  a propósito simple: algo, una arroba, algo con un punto. La expresión
+  "completa" del estándar es ilegible, acepta cosas que ningún proveedor
+  entrega y aun así no dice si la casilla existe. Lo único que se puede
+  atrapar es un error de tipeo evidente.
+- **Lo normaliza el servidor, no solo la pantalla**, en las cinco puertas:
+  trabajadores, colaboradores, los dos diálogos de creación y las reservas
+  a mano. Una llamada directa a la API tiene que dejar el dato igual de
+  parejo que un formulario.
+- **También lo que llega de Shopify.** `telefonoDe()` y `emailDe()`
+  normalizan antes de escribir en `Reservas`: una reserva comprada y una
+  anotada a mano tienen que ser indistinguibles, o el día que se automatice
+  algo habría que adivinar el formato fila por fila.
 
 ### Quién puede qué
 

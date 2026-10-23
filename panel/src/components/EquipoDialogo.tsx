@@ -21,6 +21,7 @@ import { planDelDia, VINO, MODALIDAD,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
+import CampoTelefono from './CampoTelefono';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, esAdmin = false,
@@ -351,9 +352,8 @@ function NuevoTrabajador({
           <span className="text-xs uppercase tracking-wide text-hueso/50">
             Teléfono <span className="normal-case text-hueso/35">(opcional)</span>
           </span>
-          <input type="tel" value={telefono} className={`${campo} mt-1`}
-            placeholder="+56 9 …"
-            onChange={(e) => setTelefono(e.target.value)} />
+          <CampoTelefono valor={telefono} className={`${campo} mt-1`}
+            etiqueta="Teléfono del trabajador nuevo" onCambio={setTelefono} />
         </label>
         <label className="block">
           <span className="text-xs uppercase tracking-wide text-hueso/50">Puesto habitual</span>

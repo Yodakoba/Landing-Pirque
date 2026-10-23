@@ -14,6 +14,8 @@
 import { normalizar, indices } from './columnas.ts';
 import { esFecha, semanaDe, sumarDias, type Fecha } from './fechas.ts';
 import { iguales } from './auth.ts';
+import { bancoVacio, leerBanco, filaBanco, COL_BANCO,
+         type Banco } from './banco.ts';
 
 export const HOJA_PUESTOS = 'Puestos';
 export const HOJA_TRABAJADORES = 'Trabajadores';
@@ -34,7 +36,12 @@ export const COL_TRABAJADORES = {
   pagoJornada: 'Pago por jornada',
   valorHora: 'Valor hora extra',
   propina: 'Participa en propina',
-  cuenta: 'Cuenta bancaria'
+  // La columna que hasta el 2026-10-22 era toda la cuenta bancaria en texto
+  // libre. **Se queda en su lugar y cambia de nombre**: lo que alguien haya
+  // escrito ahí no se pierde, pasa a leerse como lo que siempre fue, una
+  // nota. Los datos de la transferencia van en los seis campos de después.
+  nota: 'Nota de pago',
+  ...COL_BANCO
 } as const;
 
 /**
@@ -129,15 +136,15 @@ export interface Trabajador {
    */
   propina: boolean;
   /**
-   * Dónde se le transfiere. **Vive en la ficha y no en el turno**: si alguien
-   * cambia de banco, se le paga a la cuenta nueva, también lo que quedó
-   * pendiente de semanas anteriores. No es un hecho de un día, es un dato de
-   * la persona.
+   * Dónde se le transfiere, con los campos que pide un banco. **Vive en la
+   * ficha y no en el turno**: si alguien cambia de banco, se le paga a la
+   * cuenta nueva, también lo que quedó pendiente de semanas anteriores. No
+   * es un hecho de un día, es un dato de la persona.
    *
-   * Existe para que la planilla que descarga quien paga traiga todo lo que
-   * necesita y no haya que cruzarla con otra lista a mano.
+   * Existe para que la planilla que descarga quien paga **se pueda pegar en
+   * la carga masiva del banco** sin separar nada a mano. Ver `banco.ts`.
    */
-  cuenta: string;
+  banco: Banco;
   /**
    * La llave de su link personal, o vacío si todavía no tiene acceso.
    *
@@ -385,9 +392,10 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
       pagoJornada: aEntero(filas[i]?.[6]),
       valorHora: aEntero(filas[i]?.[7]),
       propina: esSi(filas[i]?.[8]),
-      // Igual que el token: la columna puede no existir todavía y se lee en
-      // blanco, sin romper una planilla escrita antes de que esto existiera.
-      cuenta: String(filas[i]?.[9] ?? '').trim()
+      // Igual que el token: las columnas pueden no existir todavía y se leen
+      // en blanco, sin romper una planilla escrita antes de que esto
+      // existiera. La nota es la 9, que era la cuenta en texto libre.
+      banco: leerBanco(filas[i] ?? [], 10, 9)
     });
   }
   return salida;
@@ -399,14 +407,16 @@ export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
      COL_TRABAJADORES.puesto, COL_TRABAJADORES.activo, COL_TRABAJADORES.token,
      COL_TRABAJADORES.modalidad,
      COL_TRABAJADORES.pagoJornada, COL_TRABAJADORES.valorHora,
-     COL_TRABAJADORES.propina, COL_TRABAJADORES.cuenta],
+     COL_TRABAJADORES.propina, COL_TRABAJADORES.nota,
+     ...Object.values(COL_BANCO)],
     // Un monto en cero se escribe en blanco: en la planilla un "0" se lee
     // como "gana cero" y lo que queremos decir es "sin poner".
     ...gente.map((t) => [t.nombre, t.telefono, t.puesto,
                          t.activo ? 'Sí' : 'No', t.token, t.modalidad,
                          t.pagoJornada > 0 ? String(t.pagoJornada) : '',
                          t.valorHora > 0 ? String(t.valorHora) : '',
-                         t.propina ? 'Sí' : 'No', t.cuenta])
+                         t.propina ? 'Sí' : 'No', t.banco.nota,
+                         ...filaBanco(t.banco)])
   ];
 }
 

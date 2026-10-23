@@ -19,6 +19,9 @@ import { Aviso } from './CalendarView';
 import { aEntero, esContratado, MODALIDAD,
          type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
+import DatosBancarios from './DatosBancarios';
+import { bancoVacio, type Banco } from '@/lib/banco';
+import CampoTelefono from './CampoTelefono';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -129,6 +132,12 @@ export default function EquipoEditor() {
     else copia[i].cadaCuantas = aEntero(valor);
     setPuestos(copia); setSucio(true);
   };
+  const cambiarBanco = (i: number, banco: Banco) => {
+    const copia = gente.map((t) => ({ ...t }));
+    copia[i].banco = banco;
+    setGente(copia); setSucio(true);
+  };
+
   const cambiarPersona = (i: number, campo: keyof Trabajador, valor: string | boolean) => {
     const copia = gente.map((t) => ({ ...t }));
     if (campo === 'activo') copia[i].activo = Boolean(valor);
@@ -140,7 +149,10 @@ export default function EquipoEditor() {
       // Un contratado no cobra jornada: dejar el monto escrito sería dejar un
       // número que ninguna cuenta usa, esperando a confundir a alguien.
       if (esContratado(valor)) copia[i].pagoJornada = 0;
-    } else if (campo !== 'token') copia[i][campo] = String(valor);
+      // `banco` no pasa por acá: es un objeto y tiene su propio cambiador.
+    } else if (campo !== 'token' && campo !== 'banco') {
+      copia[i][campo] = String(valor) as never;
+    }
     setGente(copia); setSucio(true);
   };
 
@@ -232,9 +244,9 @@ export default function EquipoEditor() {
                     onChange={(e) => cambiarPersona(i, 'nombre', e.target.value)} />
                 </td>
                 <td className="py-2 pr-3">
-                  <input type="tel" value={t.telefono} className={ENTRADA}
-                    placeholder="+56 9 …"
-                    onChange={(e) => cambiarPersona(i, 'telefono', e.target.value)} />
+                  <CampoTelefono valor={t.telefono} className={ENTRADA}
+                    etiqueta={`Teléfono de ${t.nombre || 'esta persona'}`}
+                    onCambio={(v) => cambiarPersona(i, 'telefono', v)} />
                 </td>
                 <td className="py-2 pr-3">
                   {/* Un select y no texto libre: el puesto habitual solo
@@ -351,24 +363,22 @@ export default function EquipoEditor() {
                 </td>
               </tr>
 
-              {/* **La cuenta bancaria va en su propia línea, no en una
-                  columna más.** Con diez columnas, la once dejaba *Crear
-                  link* y *Desactivar* fuera del borde — justo lo que se
-                  arregló cuando la tabla pasó a declarar sus anchos. Y un
-                  número de cuenta con banco, tipo y RUT necesita ancho de
-                  verdad, no una celda angosta donde se lea de a seis
-                  caracteres. */}
+              {/* **Los datos de la transferencia van en su propia línea, no
+                  en columnas más.** Con diez columnas, la once ya dejaba
+                  *Crear link* y *Desactivar* fuera del borde; seis la
+                  habrían mandado al otro lado del país. Y acá abajo cada
+                  campo tiene el ancho que le corresponde — un número de
+                  cuenta no es del mismo largo que un tipo. */}
               {esAdmin && (
                 <tr className="border-b border-hueso/5">
-                  <td className="pb-2 align-middle text-xs uppercase tracking-wide
+                  <td className="pb-2 align-top text-xs uppercase tracking-wide
                                  text-hueso/40">
-                    Cuenta bancaria
+                    Transferencia
                   </td>
                   <td colSpan={9} className="pb-2">
-                    <input type="text" value={t.cuenta} className={ENTRADA}
-                      placeholder="banco, tipo de cuenta, número, RUT — para la planilla del pago"
-                      aria-label={`Cuenta bancaria de ${t.nombre || 'esta persona'}`}
-                      onChange={(e) => cambiarPersona(i, 'cuenta', e.target.value)} />
+                    <DatosBancarios
+                      banco={t.banco} nombre={t.nombre}
+                      onCambio={(b) => cambiarBanco(i, b)} />
                   </td>
                 </tr>
               )}
@@ -387,7 +397,7 @@ export default function EquipoEditor() {
           setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
                                 token: '', modalidad: MODALIDAD.porTurno,
                                 pagoJornada: 0, valorHora: 0, propina: true,
-                                cuenta: '' }]);
+                                banco: bancoVacio() }]);
           setSucio(true);
         }}
         className="mt-4 rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">

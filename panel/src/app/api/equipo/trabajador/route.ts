@@ -4,6 +4,8 @@ import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/e
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { ROL } from '@/lib/auth';
+import { bancoVacio } from '@/lib/banco';
+import { telefonoNormal } from '@/lib/contacto';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
     const esAdmin = (await quienEs(req)).rol === ROL.admin;
     const nuevo: Trabajador = {
       nombre,
-      telefono: String(b?.telefono ?? '').trim(),
+      telefono: telefonoNormal(b?.telefono),
       puesto: String(b?.puesto ?? '').trim(),
       activo: true,
       // El link personal no se crea acá: repartir credenciales es del
@@ -63,10 +65,10 @@ export async function POST(req: Request) {
       modalidad: esAdmin && esContratado(b?.modalidad)
         ? MODALIDAD.contratado : MODALIDAD.porTurno,
       pagoJornada: esAdmin ? aEntero(b?.pagoJornada) : 0,
-      // La cuenta bancaria no se pide acá: crear a alguien en mitad de la
+      // Los datos bancarios no se piden acá: crear a alguien en mitad de la
       // planificación es apurado, y un número de cuenta mal tecleado es de
-      // las cosas que no conviene apurar. Se agrega después, en Equipo.
-      cuenta: '',
+      // las cosas que no conviene apurar. Se agregan después, en Equipo.
+      banco: bancoVacio(),
       // Participa salvo que se diga lo contrario: es la regla del negocio.
       propina: b?.propina === undefined ? true : esSi(b.propina),
       valorHora: esAdmin ? aEntero(b?.valorHora) : 0

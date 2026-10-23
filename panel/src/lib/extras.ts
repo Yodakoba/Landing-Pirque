@@ -27,6 +27,8 @@
 import { normalizar, indices } from './columnas.ts';
 import { aEntero, esSi, VINO } from './equipo.ts';
 import type { Fecha } from './fechas.ts';
+import { bancoVacio, leerBanco, filaBanco, COL_BANCO,
+         type Banco } from './banco.ts';
 
 export const HOJA_COLABORADORES = 'Colaboradores';
 export const HOJA_ACTIVIDADES = 'Actividades';
@@ -42,7 +44,10 @@ export const COL_COLABORADORES = {
   telefono: 'Teléfono',
   activo: 'Activo',
   monto: 'Monto habitual',
-  cuenta: 'Cuenta bancaria'
+  // Lo mismo que en `Trabajadores`: la columna que era la cuenta en texto
+  // libre se queda donde está y pasa a ser la nota.
+  nota: 'Nota de pago',
+  ...COL_BANCO
 } as const;
 
 /**
@@ -84,11 +89,12 @@ export interface Colaborador {
    */
   monto: number;
   /**
-   * Dónde se le transfiere. Vive en la ficha y no en la línea del día: si
-   * alguien cambia de banco, se le paga a la cuenta nueva, también lo que
-   * quedó pendiente. No es un hecho del día, es un dato de la persona.
+   * Dónde se le transfiere, con los campos que pide un banco (ver
+   * `banco.ts`). Vive en la ficha y no en la línea del día: si alguien
+   * cambia de banco, se le paga a la cuenta nueva, también lo que quedó
+   * pendiente. No es un hecho del día, es un dato de la persona.
    */
-  cuenta: string;
+  banco: Banco;
 }
 
 export interface Extra {
@@ -139,9 +145,10 @@ export function leerColaboradoresDe(filas: string[][]): Colaborador[] {
       telefono: String(filas[i]?.[2] ?? '').trim(),
       activo: esSi(filas[i]?.[3]),
       monto: aEntero(filas[i]?.[4]),
-      // La columna puede no existir todavía: una planilla escrita antes de
-      // que hubiera cuentas bancarias se lee igual, con todas en blanco.
-      cuenta: String(filas[i]?.[5] ?? '').trim()
+      // Las columnas pueden no existir todavía: una planilla escrita antes
+      // de que hubiera datos bancarios se lee igual, con todo en blanco. La
+      // nota es la 5, que era la cuenta en texto libre.
+      banco: leerBanco(filas[i] ?? [], 6, 5)
     });
   }
   return salida;
@@ -155,7 +162,7 @@ export function aFilasColaboradores(gente: Colaborador[]): string[][] {
     ...gente.map((c) => [c.nombre, c.actividad, c.telefono,
                          c.activo ? 'Sí' : 'No',
                          c.monto > 0 ? String(c.monto) : '',
-                         c.cuenta])
+                         c.banco.nota, ...filaBanco(c.banco)])
   ];
 }
 
@@ -268,7 +275,7 @@ export interface LineaExtra {
   ajustes: number;
   total: number;
   /** Dónde pagarle. Sale de la ficha, no de los días. */
-  cuenta: string;
+  banco: Banco;
 }
 
 /**
@@ -279,11 +286,11 @@ export interface LineaExtra {
  * se lee como que no se contrató a nadie, y lo que pudo pasar es que nadie
  * cerró ese día.
  *
- * La cuenta bancaria la pone quien llama, desde las fichas: no viaja en la
- * línea del día porque no es un hecho de ese día.
+ * Los datos bancarios los pone quien llama, desde las fichas: no viajan en
+ * la línea del día porque no son un hecho de ese día.
  */
 export function informeDeExtras(
-  lista: Extra[], desde: Fecha, hasta: Fecha, cuentas = new Map<string, string>()
+  lista: Extra[], desde: Fecha, hasta: Fecha, cuentas = new Map<string, Banco>()
 ): LineaExtra[] {
   const porNombre = new Map<string, LineaExtra>();
 
@@ -298,7 +305,7 @@ export function informeDeExtras(
         colaborador: e.colaborador, actividad: e.actividad,
         dias: 0, noVino: 0, sinConfirmar: 0,
         montos: 0, ajustes: 0, total: 0,
-        cuenta: cuentas.get(clave) ?? ''
+        banco: cuentas.get(clave) ?? bancoVacio()
       };
       porNombre.set(clave, l);
     }

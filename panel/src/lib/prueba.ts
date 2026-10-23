@@ -13,7 +13,7 @@ import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
          diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe, diasDelMes, sumarMeses,
          rangoEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
-import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
+import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
          camposDeShopify,
          type PedidoShopify } from './shopify.ts';
@@ -51,9 +51,15 @@ import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
          costoExtrasDelDia, costoDeExtra, informeDeExtras,
          COL_COLABORADORES, COL_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
          type Colaborador, type Extra } from './extras.ts';
+import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
+         avisoTelefono, correoNormal, correoValido, avisoCorreo,
+         FORMATO_TELEFONO } from './contacto.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
+import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
+         sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
+         type Banco } from './banco.ts';
 
 let fallos = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA: ' + m); } };
@@ -1083,9 +1089,9 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
   { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
   { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' }
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
@@ -1156,9 +1162,9 @@ ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
 ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
 
 const conAcceso: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
-  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
-  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() }
 ];
 ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
    'el token encuentra a su dueño');
@@ -1553,7 +1559,7 @@ console.log('\nActividades extras');
 
 const co = (p: Partial<Colaborador>): Colaborador => ({
   nombre: 'Jinete', actividad: 'Show ecuestre', telefono: '', activo: true,
-  monto: 0, cuenta: '', ...p
+  monto: 0, banco: bancoVacio(), ...p
 });
 const ex = (p: Partial<Extra>): Extra => ({
   fecha: '2026-11-14', colaborador: 'Jinete', actividad: 'Show ecuestre',
@@ -1578,28 +1584,35 @@ ok(costoDeExtra(ex({ monto: 50000, ajuste: -80000 })) === 0,
 // --- Las fichas (posicionales: la pestaña se reescribe entera) ---
 const fichas = leerColaboradoresDe([
   Object.values(COL_COLABORADORES) as string[],
-  ['Pedro Soto', 'Show ecuestre', '+56 9 1111 1111', 'Sí', '50000', '123-456'],
+  ['Pedro Soto', 'Show ecuestre', '+56 9 1111 1111', 'Sí', '50000',
+   'transferir los lunes', 'Juana Soto', '11.111.111-1', 'BancoEstado',
+   'Cuenta vista', '123-456', 'juana@ejemplo.cl'],
   ['Carla Díaz', 'Pintacaritas', '', 'No', '', ''],
   ['', 'Castillo inflable', '', 'Sí', '80000', ''],
   ['pedro soto', 'Otra cosa', '', 'Sí', '999', '']
 ]);
 ok(fichas.length === 2, 'una fila sin nombre no es una ficha, y un nombre repetido no entra dos veces');
-ok(fichas[0].monto === 50000 && fichas[0].cuenta === '123-456',
-   'el monto habitual y la cuenta bancaria se leen de la ficha');
+ok(fichas[0].monto === 50000 && fichas[0].banco.numero === '123-456'
+   && fichas[0].banco.titular === 'Juana Soto'
+   && fichas[0].banco.nota === 'transferir los lunes',
+   'el monto habitual y los datos de la transferencia se leen de la ficha');
 ok(fichas[1].activo === false && fichas[1].monto === 0,
    'un monto en blanco es "sin poner", que es cero, y "No" desactiva');
 
-// Una planilla escrita antes de que existiera la columna de cuenta se lee
-// igual: la cuenta queda en blanco en vez de reventar.
+// Una planilla escrita antes de que existieran las columnas del banco se
+// lee igual: quedan en blanco en vez de reventar.
 const viejas = leerColaboradoresDe([
   ['Nombre', 'Actividad', 'Teléfono', 'Activo', 'Monto habitual'],
   ['Pedro Soto', 'Show ecuestre', '', 'Sí', '50000']
 ]);
-ok(viejas.length === 1 && viejas[0].cuenta === '',
-   'sin la columna de cuenta la ficha se lee con la cuenta en blanco');
+ok(viejas.length === 1 && viejas[0].banco.numero === ''
+   && viejas[0].banco.nota === '',
+   'sin las columnas del banco la ficha se lee con todo en blanco');
 
 const filasFichas = aFilasColaboradores([
-  co({ nombre: 'Pedro Soto', monto: 50000, cuenta: '123-456' }),
+  co({ nombre: 'Pedro Soto', monto: 50000,
+       banco: { ...bancoVacio(), numero: '123-456', banco: 'BancoEstado',
+                tipo: 'Cuenta vista', rut: '11.111.111-1' } }),
   co({ nombre: 'Carla Díaz', actividad: 'Pintacaritas', activo: false, monto: 0 })
 ]);
 ok(filasFichas[0].length === Object.keys(COL_COLABORADORES).length,
@@ -1607,7 +1620,8 @@ ok(filasFichas[0].length === Object.keys(COL_COLABORADORES).length,
 ok(filasFichas[1][4] === '50000' && filasFichas[2][4] === '',
    'un monto en cero se escribe en blanco, para que no se lea como "cobra cero"');
 const ida = leerColaboradoresDe(filasFichas);
-ok(ida.length === 2 && ida[0].cuenta === '123-456' && ida[1].activo === false,
+ok(ida.length === 2 && ida[0].banco.numero === '123-456'
+   && ida[0].banco.tipo === 'Cuenta vista' && ida[1].activo === false,
    'escribir y volver a leer da lo mismo');
 
 ok(JSON.stringify(actividadesConocidas([
@@ -1675,7 +1689,8 @@ const informe = informeDeExtras([
   ex({ colaborador: 'Carla Díaz', actividad: 'Pintacaritas', fecha: '2026-11-14',
        estado: '', monto: 40000 }),
   ex({ colaborador: 'Pedro Soto', fecha: '2026-10-31', monto: 999999 })
-], '2026-11-01', '2026-11-30', new Map([[normalizar('Pedro Soto'), '123-456']]));
+], '2026-11-01', '2026-11-30', new Map([[normalizar('Pedro Soto'),
+     { ...bancoVacio(), numero: '123-456' }]]));
 
 ok(informe.length === 2, 'una línea por colaborador');
 ok(informe[0].colaborador === 'Pedro Soto' && informe[0].total === 110000,
@@ -1684,14 +1699,160 @@ ok(informe[0].dias === 2 && informe[0].noVino === 1 && informe[0].sinConfirmar =
    'cuenta los días que vino y los que no, por separado');
 ok(informe[0].montos === 100000 && informe[0].ajustes === 10000,
    'los ajustes se ven aparte de los montos, igual que en el equipo');
-ok(informe[0].cuenta === '123-456' && informe[1].cuenta === '',
-   'la cuenta bancaria la pone quien llama, desde las fichas');
+ok(informe[0].banco.numero === '123-456' && informe[1].banco.numero === '',
+   'los datos del banco los pone quien llama, desde las fichas');
 ok(informe[1].total === 0 && informe[1].sinConfirmar === 1,
    'quien quedó sin confirmar aparece con total cero, no desaparece');
 ok(informe[1].actividad === 'Pintacaritas',
    'y cada línea dice qué hizo, que es lo que distingue a un jinete de una pintacaritas');
 ok(informeDeExtras([ex({ colaborador: '  ' })], '2026-11-01', '2026-11-30').length === 0,
    'una actividad sin nombre no arma una línea');
+
+
+/* ---------- Los datos de la transferencia ---------- */
+
+console.log('\nDatos bancarios');
+
+const bc = (p: Partial<Banco>): Banco => ({ ...bancoVacio(), ...p });
+
+// **Lo que falta para transferir**, que es lo que el informe avisa antes de
+// que alguien se siente a pagar con la planilla ya bajada.
+ok(!sePuedeTransferir(bancoVacio()), 'una ficha vacía no permite transferir');
+ok(JSON.stringify(faltaParaTransferir(bancoVacio()))
+   === JSON.stringify(['banco', 'tipo de cuenta', 'número', 'RUT']),
+   'y dice exactamente qué le falta, en palabras');
+const bancoCompleto = bc({ banco: 'BancoEstado', tipo: 'Cuenta vista',
+                      numero: '12345678', rut: '11.111.111-1' });
+ok(sePuedeTransferir(bancoCompleto), 'con banco, tipo, número y RUT ya se puede');
+ok(faltaParaTransferir(bancoCompleto).length === 0, 'y no falta nada');
+
+// **El titular y el correo NO son obligatorios**, y por motivos distintos.
+ok(sePuedeTransferir({ ...bancoCompleto, titular: '', correo: '' }),
+   'sin titular ni correo se transfiere igual');
+ok(titularDe(bancoCompleto, 'Ana Soto') === 'Ana Soto',
+   'el titular en blanco es la propia persona: es el caso normal');
+ok(titularDe({ ...bancoCompleto, titular: 'Juana Soto' }, 'Ana Soto') === 'Juana Soto',
+   'y cuando la cuenta es de otra persona, manda el titular');
+
+// El RUT se empareja para que la carga masiva del banco lo acepte, pero no
+// se valida: el panel no está para corregirle el RUT a nadie.
+ok(rutLimpio('12.345.678-9') === '12345678-9', 'se le quitan los puntos');
+ok(rutLimpio('123456789') === '12345678-9', 'y se le pone el guion si no venía');
+ok(rutLimpio('9.876.543-k') === '9876543-K', 'la K va en mayúscula');
+ok(rutLimpio('  7.654.321-0 ') === '7654321-0', 'los espacios de los bordes no cuentan');
+ok(rutLimpio('no es un rut') === 'no es un rut',
+   'lo que no parece un RUT se devuelve tal cual, sin inventar');
+ok(rutLimpio('') === '', 'y un RUT vacío sigue vacío');
+
+// **El tipo de cuenta es una lista cerrada.** Un valor inventado llegaría
+// hasta la planilla del banco, así que se descarta en el servidor.
+ok(limpiarBanco({ tipo: 'Cuenta corriente' }).tipo === 'Cuenta corriente',
+   'un tipo de la lista se guarda');
+ok(limpiarBanco({ tipo: 'cuenta de la abuela' }).tipo === '',
+   'y uno inventado se descarta, en vez de viajar a la planilla del banco');
+ok(TIPOS_CUENTA.length === 4, 'los tipos de cuenta en Chile son cuatro');
+ok(limpiarBanco({ numero: '  123  ', banco: ' BancoEstado ' }).numero === '123'
+   && limpiarBanco({ banco: ' BancoEstado ' }).banco === 'BancoEstado',
+   'lo que venga del navegador se recorta');
+ok(limpiarBanco(undefined).numero === '' && limpiarBanco(null).rut === '',
+   'y si no viene nada, la ficha queda vacía en vez de reventar');
+
+// Ida y deLaFila por la planilla, con la nota en su columna aparte —la que
+// antes era toda la cuenta bancaria en texto libre—.
+const filaBco = [
+  'Pedro Soto', 'Show ecuestre', 'Sí',      // lo de la ficha, antes
+  'la nota',                                 // la columna vieja de texto libre
+  ...filaBanco(bc({
+    titular: 'Juana Soto', rut: '11111111-1', banco: 'BancoEstado',
+    tipo: 'Cuenta RUT', numero: '11111111', correo: 'juana@ejemplo.cl'
+  }))
+];
+const deLaFila = leerBanco(filaBco, 4, 3);
+ok(deLaFila.titular === 'Juana Soto' && deLaFila.numero === '11111111'
+   && deLaFila.tipo === 'Cuenta RUT' && deLaFila.correo === 'juana@ejemplo.cl',
+   'escribir y volver a leer devuelve los mismos campos');
+ok(deLaFila.nota === 'la nota',
+   'y la nota se lee de su propia columna, que es la vieja de texto libre');
+ok(leerBanco([], 3, 2).banco === '',
+   'una fila que no existe se lee vacía, no explota');
+ok(Object.keys(COL_BANCO).length === 6 && filaBanco(bancoVacio()).length === 6,
+   'seis campos y seis columnas: el encabezado y la fila no se pueden desalinear');
+
+// **Los datos del banco son del administrador.** Igual que los sueldos: no
+// hay ninguna pantalla de encargado que los reciba, y hay una prueba de la
+// tabla de permisos que lo fija más arriba.
+ok(!puede(ROL.encargado, 'configurar') && puede(ROL.admin, 'configurar'),
+   'la plata y la configuración siguen siendo solo del administrador');
+
+
+/* ---------- Teléfonos y correos con forma ---------- */
+
+console.log('\nTeléfonos y correos');
+
+// **La regla que se le pide a quien escribe**: el celular con el 9 y sin
+// el +56. Pero se acepta como la gente lo escribe de verdad.
+for (const escrito of ['912345678', '9 1234 5678', '+56912345678',
+                       '+56 9 1234 5678', '56 9 1234-5678', '(9) 1234 5678',
+                       '0 9 1234 5678', '  912345678  ']) {
+  ok(telefonoNormal(escrito) === '+56 9 1234 5678',
+     `"${escrito}" se guarda como +56 9 1234 5678`);
+}
+ok(telefonoParaEnlace('9 1234 5678') === '56912345678',
+   'y para un enlace sale sin signos, como lo quiere WhatsApp');
+ok(enlaceWhatsApp('9 1234 5678') === 'https://wa.me/56912345678',
+   'de ahí sale el link directo a su conversación');
+ok(enlaceWhatsApp('9 1234 5678', 'Hola Ana')
+   === 'https://wa.me/56912345678?text=Hola%20Ana',
+   'con el mensaje ya codificado, si se le pone uno');
+
+// **No se inventa el 9.** Ocho dígitos no son un celular al que le falte
+// el nueve: son un número que no sabemos leer, y completarlo mandaría un
+// mensaje a un desconocido.
+ok(celularChileno('12345678') === '', 'ocho dígitos no se completan solos');
+ok(/falta el 9/.test(avisoTelefono('1234 5678')),
+   'y la pantalla dice justamente eso: que parece faltarle el 9');
+
+// Lo que no es un celular chileno se guarda tal cual, con su marca.
+ok(telefonoNormal('22 2345 6789') === '22 2345 6789',
+   'un fijo se guarda como se escribió, sin que el panel lo corrija');
+ok(telefonoNormal('+1 415 555 0132') === '+1 415 555 0132',
+   'y un número extranjero también');
+ok(avisoTelefono('+1 415 555 0132').includes('WhatsApp'),
+   'pero se avisa que con ese no se va a poder automatizar');
+ok(enlaceWhatsApp('22 2345 6789') === '',
+   'un fijo no da link: vacío es la señal de que no hay nada que ofrecer');
+ok(telefonoNormal('') === '' && avisoTelefono('') === '',
+   'un campo vacío no es un error: todavía no lo han llenado');
+ok(telefonoNormal('pregunta por Juan') === 'pregunta por Juan',
+   'y lo que claramente no es un número tampoco se toca');
+
+// Un número ya normalizado no cambia al volver a guardarse: si cambiara,
+// cada guardado movería el dato y las comparaciones fallarían.
+ok(telefonoNormal(telefonoNormal('912345678')) === telefonoNormal('912345678'),
+   'normalizar dos veces da lo mismo que normalizar una');
+
+// Correos: minúsculas y sin bordes, y una validación deliberadamente simple
+// —lo único que se puede atrapar acá es un error de tipeo evidente—.
+ok(correoNormal('  Ana@Ejemplo.CL ') === 'ana@ejemplo.cl',
+   'el correo se guarda en minúsculas y sin espacios');
+ok(correoValido('ana@ejemplo.cl') && correoValido('a.b+c@sub.dominio.com'),
+   'un correo normal pasa');
+for (const malo of ['ana@ejemplo', 'ana ejemplo.cl', '@ejemplo.cl',
+                    'ana@.cl', 'ana@ejemplo.c', 'a@b.cl, c@d.cl']) {
+  ok(!correoValido(malo), `"${malo}" no pasa por correo`);
+}
+ok(avisoCorreo('') === '', 'un correo vacío no reclama');
+ok(avisoCorreo('ana@ejemplo') !== '', 'uno a medio escribir sí');
+
+// **La misma forma venga de donde venga.** Una reserva de Shopify y una
+// anotada a mano tienen que quedar indistinguibles, que es lo que permite
+// automatizar algo después sin adivinar el formato fila por fila.
+ok(telefonoDe({ billing_address: { phone: '+56 9 8765 4321' } } as PedidoShopify)
+   === '+56 9 8765 4321', 'el teléfono de un pedido se guarda normalizado');
+ok(telefonoDe({ phone: '987654321' } as PedidoShopify) === '+56 9 8765 4321',
+   'aunque el cliente lo haya escrito pelado en el checkout');
+ok(emailDe({ email: 'Ana@Ejemplo.CL' } as PedidoShopify) === 'ana@ejemplo.cl',
+   'y el correo en minúsculas');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

@@ -8,6 +8,8 @@ import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { anotar } from '@/lib/datos';
 import { ROL } from '@/lib/auth';
+import { bancoVacio, limpiarBanco } from '@/lib/banco';
+import { telefonoNormal } from '@/lib/contacto';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +30,7 @@ export const dynamic = 'force-dynamic';
  * quien no la necesita es una credencial de más dando vueltas.
  */
 const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({
-  ...t, token: '', cuenta: '',
+  ...t, token: '', banco: bancoVacio(),
   // Los sueldos tampoco bajan al navegador de un encargado. No es que vaya a
   // hacer algo malo con ellos: es que no los necesita para asignar turnos, y
   // cuánto gana cada compañero no es dato suyo.
@@ -112,7 +114,7 @@ export async function PUT(req: Request) {
         vistos.add(normalizar(nombre));
         limpia.push({
           nombre,
-          telefono: String(t?.telefono ?? '').trim(),
+          telefono: telefonoNormal(t?.telefono),
           puesto: String(t?.puesto ?? '').trim(),
           // Si no viene el campo, activo. Es la misma regla que la celda en
           // blanco de la planilla, y por el mismo motivo: existe la fila
@@ -139,12 +141,12 @@ export async function PUT(req: Request) {
           propina: esAdmin
             ? (t?.propina === undefined ? true : esSi(t.propina))
             : (previos.get(normalizar(nombre))?.propina ?? true),
-          // La cuenta bancaria la fija el administrador, igual que los
-          // montos: un encargado ni siquiera la recibe (ver sinTokens), así
-          // que si pudiera guardarla la borraría sin querer.
-          cuenta: esAdmin
-            ? String(t?.cuenta ?? '').trim()
-            : (previos.get(normalizar(nombre))?.cuenta ?? '')
+          // Los datos bancarios los fija el administrador, igual que los
+          // montos: un encargado ni siquiera los recibe (ver sinTokens), así
+          // que si pudiera guardarlos los borraría sin querer.
+          banco: esAdmin
+            ? limpiarBanco(t?.banco)
+            : (previos.get(normalizar(nombre))?.banco ?? bancoVacio())
         });
       }
       await guardarTrabajadores(limpia);
