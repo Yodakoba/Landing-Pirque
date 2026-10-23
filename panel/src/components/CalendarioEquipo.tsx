@@ -27,7 +27,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
-import { COLOR_TARJETA, PUNTO_TARJETA } from './TarjetaDia';
+import { COLOR_TARJETA } from './TarjetaDia';
+import PuntoDia from './PuntoDia';
 import { resumenEquipo, esPreparacion,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import type { Ocupacion } from '@/lib/tipos';
@@ -230,7 +231,10 @@ export default function CalendarioEquipo() {
                 <span className={oc || preparando ? 'font-semibold' : 'text-hueso/45'}>
                   {Number(f.slice(8, 10))}
                 </span>
-                {oc && <span aria-hidden>{PUNTO_TARJETA(oc)}</span>}
+                {/* El punto con su palabra debajo: la misma regla en los
+                    tres calendarios, para que un día se lea igual en
+                    cualquier pantalla. */}
+                <PuntoDia d={oc} preparacion={preparando} />
               </span>
 
               {oc && !oc.bloqueada && (
@@ -240,19 +244,9 @@ export default function CalendarioEquipo() {
                     : <span className="text-hueso/35">sin reservas</span>}
                 </span>
               )}
-              {oc?.bloqueada && (
-                <span className="mt-1 block text-red-300/70">cerrado</span>
-              )}
-              {oc?.privada && (
-                <span className="mt-1 block text-sky-300/80">privado</span>
-              )}
 
               {res.total > 0 && (
                 <span className="mt-1 block text-oro">
-                  {preparando && (
-                    <span className="block text-[10px] uppercase tracking-wide
-                                     text-oro/70">preparación</span>
-                  )}
                   {res.total} en el equipo
                 </span>
               )}

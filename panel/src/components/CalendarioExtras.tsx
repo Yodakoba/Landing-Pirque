@@ -20,7 +20,8 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
-import { COLOR_TARJETA, PUNTO_TARJETA } from './TarjetaDia';
+import { COLOR_TARJETA } from './TarjetaDia';
+import PuntoDia from './PuntoDia';
 import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
 import { VINO } from '@/lib/equipo';
@@ -28,10 +29,7 @@ import { normalizar } from '@/lib/columnas';
 import type { Ocupacion } from '@/lib/tipos';
 import { enPesos } from '@/lib/ocupacion';
 import DatosBancarios from './DatosBancarios';
-// El mismo campo con rótulo de Equipo: una sola definición, y **fuera de
-// todo componente**, porque uno declarado adentro se remonta en cada
-// dibujado y se lleva el foco de lo que se esté escribiendo.
-import { Campo } from './EquipoEditor';
+import Campo from './Campo';
 import { bancoVacio, type Banco } from '@/lib/banco';
 import CampoTelefono from './CampoTelefono';
 import { diasDelMes, sumarMeses, mesDe, mesEnPalabras, diaSemana, hoy,
@@ -211,7 +209,7 @@ export default function CalendarioExtras() {
                   <span className={oc || delDia.length ? 'font-semibold' : 'text-hueso/45'}>
                     {Number(f.slice(8, 10))}
                   </span>
-                  {oc && <span aria-hidden>{PUNTO_TARJETA(oc)}</span>}
+                  <PuntoDia d={oc} />
                 </span>
 
                 {oc && !oc.bloqueada && (
@@ -220,9 +218,6 @@ export default function CalendarioExtras() {
                       ? <>{oc.tomadas} <span className="text-hueso/45">personas</span></>
                       : <span className="text-hueso/35">sin reservas</span>}
                   </span>
-                )}
-                {oc?.bloqueada && (
-                  <span className="mt-1 block text-red-300/70">cerrado</span>
                 )}
 
                 {delDia.length > 0 && (

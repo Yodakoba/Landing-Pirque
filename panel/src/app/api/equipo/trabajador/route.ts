@@ -4,7 +4,7 @@ import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/e
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { ROL } from '@/lib/auth';
-import { bancoVacio } from '@/lib/banco';
+import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
 
 export const dynamic = 'force-dynamic';
@@ -65,10 +65,14 @@ export async function POST(req: Request) {
       modalidad: esAdmin && esContratado(b?.modalidad)
         ? MODALIDAD.contratado : MODALIDAD.porTurno,
       pagoJornada: esAdmin ? aEntero(b?.pagoJornada) : 0,
-      // Los datos bancarios no se piden acá: crear a alguien en mitad de la
-      // planificación es apurado, y un número de cuenta mal tecleado es de
-      // las cosas que no conviene apurar. Se agregan después, en Equipo.
-      banco: bancoVacio(),
+      // **Los datos bancarios SÍ se piden al crear** (2026-10-23). Hasta ese
+      // día no: el argumento era que crear a alguien en mitad de la
+      // planificación es apurado y un número de cuenta mal tecleado no
+      // conviene apurarlo. Suena razonable y no resistió el uso — nadie
+      // volvía después a `/equipo` a completarlos, así que la planilla del
+      // pago semanal salía sin cuentas. Lo pidió el cliente al revés: que se
+      // pidan acá, para que la ficha quede completa de entrada.
+      banco: esAdmin ? limpiarBanco(b?.banco) : bancoVacio(),
       // Participa salvo que se diga lo contrario: es la regla del negocio.
       propina: b?.propina === undefined ? true : esSi(b.propina),
       valorHora: esAdmin ? aEntero(b?.valorHora) : 0
@@ -78,7 +82,80 @@ export async function POST(req: Request) {
     await anotar({ ...(await quienEs(req)), accion: 'Agregó un trabajador',
       detalle: `${nuevo.nombre}${nuevo.puesto ? ` · ${nuevo.puesto}` : ''}` });
 
-    return NextResponse.json({ trabajador: { ...nuevo, token: '' } });
+    // El token nunca viaja de vuelta a quien no es administrador, y acá no
+    // hay ninguno: repartir credenciales es una decisión aparte.
+    return NextResponse.json({
+      trabajador: esAdmin ? { ...nuevo, token: '' }
+                          : { ...nuevo, token: '', banco: bancoVacio() }
+    });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
+}
+
+/**
+ * Edita la ficha de UN trabajador, sin tocar al resto.
+ *
+ * Se abre desde el planificador, con el botón **ficha** de cada persona
+ * asignada: así el teléfono, el sueldo habitual o la cuenta bancaria se
+ * completan sin salir de lo que se está haciendo. Misma razón que el POST
+ * de arriba, y misma forma: una fila, no la lista entera.
+ *
+ * **El nombre no se cambia por acá**: los turnos guardados apuntan a la
+ * persona por su nombre, y renombrarla desde la ventana de un día dejaría
+ * los turnos de los otros días huérfanos. Eso se hace en `/equipo`, que es
+ * donde el panel avisa del daño.
+ */
+export async function PATCH(req: Request) {
+  const no = await exigir(req, 'equipo');
+  if (no) return no;
+
+  try {
+    const b = await req.json();
+    const nombre = String(b?.nombre ?? '').trim();
+    if (!nombre) {
+      return NextResponse.json({ error: 'Falta el nombre.' }, { status: 400 });
+    }
+
+    const gente = await leerTrabajadores();
+    const antes = gente.find((t) => normalizar(t.nombre) === normalizar(nombre));
+    if (!antes) {
+      return NextResponse.json(
+        { error: `${nombre} no está en la lista del equipo.` }, { status: 404 }
+      );
+    }
+
+    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    const nueva: Trabajador = {
+      // El nombre se conserva como está escrito en la planilla: un cambio de
+      // mayúsculas no puede desenganchar sus turnos.
+      nombre: antes.nombre,
+      telefono: telefonoNormal(b?.telefono),
+      puesto: String(b?.puesto ?? '').trim(),
+      activo: b?.activo === undefined ? antes.activo : esSi(b.activo),
+      // El token no viene nunca del navegador: se administra en `/equipo`.
+      token: antes.token,
+      modalidad: esAdmin
+        ? (esContratado(b?.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno)
+        : antes.modalidad,
+      pagoJornada: esAdmin ? aEntero(b?.pagoJornada) : antes.pagoJornada,
+      valorHora: esAdmin ? aEntero(b?.valorHora) : antes.valorHora,
+      propina: esAdmin
+        ? (b?.propina === undefined ? antes.propina : esSi(b.propina))
+        : antes.propina,
+      banco: esAdmin ? limpiarBanco(b?.banco) : antes.banco
+    };
+
+    await guardarTrabajadores(
+      gente.map((t) => (normalizar(t.nombre) === normalizar(nombre) ? nueva : t))
+    );
+    await anotar({ ...(await quienEs(req)), accion: 'Editó la ficha de un trabajador',
+      detalle: nueva.nombre });
+
+    return NextResponse.json({
+      trabajador: esAdmin ? { ...nueva, token: '' }
+                          : { ...nueva, token: '', banco: bancoVacio() }
+    });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
