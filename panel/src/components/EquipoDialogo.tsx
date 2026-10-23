@@ -29,7 +29,7 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
-import CampoTelefono from './CampoTelefono';
+import FichaTrabajador from './FichaTrabajador';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
@@ -73,7 +73,13 @@ export default function EquipoDialogo({
   // acá tiene que dejarlo disponible en TODOS los puestos de esta misma
   // ventana, sin cerrarla ni recargar.
   const [gente, setGente] = useState<Trabajador[]>(trabajadores);
-  const [creandoEn, setCreandoEn] = useState<string | null>(null);
+  /**
+   * La ficha abierta: `{ puesto }` para crear a alguien ahí, `{ t }` para
+   * editar la de quien ya está. Una sola ventana, porque es el mismo
+   * formulario — ver `FichaTrabajador`.
+   */
+  const [ficha, setFicha] = useState<
+    null | { puesto?: string; t?: Trabajador; nombre?: string }>(null);
 
   const asignados = useMemo(
     () => new Set(plan.map((t) => normalizar(t.trabajador))), [plan]
@@ -233,6 +239,23 @@ export default function EquipoDialogo({
                         {nombre}
                       </span>
                       <span className="flex-1" />
+                      {/* **La ficha, desde acá.** Lo que no cambia de un día
+                          a otro —teléfono, sueldo habitual, cuenta
+                          bancaria— vivía solo en `/equipo`, y quien arma un
+                          sábado no pasa por ahí. */}
+                      <button
+                        // Si no tiene ficha —pasa al renombrar a alguien que
+                        // ya tenía turnos— se abre para crearla con su
+                        // nombre, en vez de con el formulario en blanco.
+                        onClick={() => setFicha({
+                          t: gente.find(
+                            (x) => normalizar(x.nombre) === normalizar(nombre)),
+                          nombre
+                        })}
+                        className="px-1 text-[11px] text-hueso/40 hover:text-oro"
+                        title={`Teléfono, pago y datos bancarios de ${nombre}`}>
+                        ficha
+                      </button>
                       <button
                         onClick={() => setPlan(plan.filter(
                           (x) => normalizar(x.trabajador) !== normalizar(nombre)))}
@@ -283,7 +306,7 @@ export default function EquipoDialogo({
             {/* Crear a alguien sin salir de acá. Es lo que destraba el caso
                 en que la lista está vacía: sin esto hay que irse a /equipo,
                 agregarlo, volver y empezar la planificación de nuevo. */}
-            <button onClick={() => setCreandoEn(l.puesto)}
+            <button onClick={() => setFicha({ puesto: l.puesto })}
               className="mt-2 w-full rounded border border-dashed border-hueso/20
                          px-2 py-1 text-xs text-hueso/55 hover:border-oro hover:text-oro">
               + Nuevo trabajador
@@ -292,25 +315,31 @@ export default function EquipoDialogo({
         ))}
       </div>
 
-      {creandoEn !== null && (
-        <NuevoTrabajador
-          puesto={creandoEn}
-          esAdmin={esAdmin}
-          onCancelar={() => setCreandoEn(null)}
-          onCreado={(t, aviso) => {
-            // Queda en la lista como cualquier otro, y además asignado al
-            // puesto desde el que se creó: es lo que la persona estaba
-            // haciendo cuando se dio cuenta de que faltaba.
+      {ficha && (
+        <FichaTrabajador
+          ficha={ficha.t} puesto={ficha.puesto ?? ''}
+          nombreSugerido={ficha.nombre ?? ''} esAdmin={esAdmin}
+          onCancelar={() => setFicha(null)}
+          onListo={(t, aviso) => {
             setGente((antes) => antes.some(
-              (x) => normalizar(x.nombre) === normalizar(t.nombre)) ? antes : [...antes, t]);
-            setPlan((antes) => antes.some(
-              (x) => normalizar(x.trabajador) === normalizar(t.nombre)) ? antes : [...antes, {
-                fecha, trabajador: t.nombre, puesto: creandoEn,
-                asistencia: VINO.sinMarcar, modalidad: t.modalidad,
-                pagoJornada: t.pagoJornada, horasExtra: 0, valorHora: t.valorHora,
-                ajustes: [], propina: 0
-              }]);
-            setCreandoEn(null);
+              (x) => normalizar(x.nombre) === normalizar(t.nombre))
+                ? antes.map((x) =>
+                    (normalizar(x.nombre) === normalizar(t.nombre) ? t : x))
+                : [...antes, t]);
+            // Quien se crea desde un puesto queda además asignado ahí: es lo
+            // que la persona estaba haciendo cuando se dio cuenta de que
+            // faltaba. Editar una ficha no asigna a nadie.
+            if (ficha.puesto !== undefined) {
+              const puesto = ficha.puesto;
+              setPlan((antes) => antes.some(
+                (x) => normalizar(x.trabajador) === normalizar(t.nombre)) ? antes : [...antes, {
+                  fecha, trabajador: t.nombre, puesto,
+                  asistencia: VINO.sinMarcar, modalidad: t.modalidad,
+                  pagoJornada: t.pagoJornada, horasExtra: 0, valorHora: t.valorHora,
+                  ajustes: [], propina: 0
+                }]);
+            }
+            setFicha(null);
             if (aviso) setError(aviso);
           }}
         />
@@ -540,125 +569,3 @@ export default function EquipoDialogo({
   );
 }
 
-/**
- * Crear un trabajador sin salir de la planificación.
- *
- * Pide lo mismo que la pantalla de Equipo, y lo que crea **no es un caso
- * especial**: queda en la lista como cualquier otro y desde ahí se le pone
- * link o se le edita el sueldo.
- *
- * El puesto habitual viene prellenado con el panel desde el que se abrió
- * —si estás llenando garzones, lo más probable es que el que falte sea un
- * garzón— pero se puede cambiar: el puesto de ESTE turno es el del panel, y
- * el habitual es solo lo que va a proponer la próxima vez.
- */
-function NuevoTrabajador({
-  puesto, esAdmin, onCreado, onCancelar
-}: {
-  puesto: string;
-  esAdmin: boolean;
-  onCreado: (t: Trabajador, aviso?: string) => void;
-  onCancelar: () => void;
-}) {
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [habitual, setHabitual] = useState(puesto);
-  const [modalidad, setModalidad] = useState<string>(MODALIDAD.porTurno);
-  const [pagoJornada, setPagoJornada] = useState('');
-  const [valorHora, setValorHora] = useState('');
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState('');
-
-  const campo = 'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
-                'focus:border-oro focus:outline-none';
-
-  async function crear() {
-    setGuardando(true);
-    setError('');
-    try {
-      const r = await fetch('/api/equipo/trabajador', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ nombre, telefono, puesto: habitual, modalidad,
-                               pagoJornada, valorHora })
-      });
-      const d = await r.json();
-      if (d.error) return setError(d.error);
-      onCreado(d.trabajador, d.aviso);
-    } catch (e) {
-      setError(String(e));
-    } finally { setGuardando(false); }
-  }
-
-  return (
-    <Dialogo titulo="Nuevo trabajador" onCerrar={onCancelar}>
-      <p className="mt-3 text-sm text-hueso/60">
-        Queda en la lista del equipo, y asignado a{' '}
-        <strong>{puesto}</strong> en este día.
-      </p>
-
-      <div className="mt-4 space-y-3">
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-hueso/50">Nombre</span>
-          <input type="text" value={nombre} autoFocus className={`${campo} mt-1`}
-            placeholder="Nombre y apellido"
-            onChange={(e) => setNombre(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-hueso/50">
-            Teléfono <span className="normal-case text-hueso/35">(opcional)</span>
-          </span>
-          <CampoTelefono valor={telefono} className={`${campo} mt-1`}
-            etiqueta="Teléfono del trabajador nuevo" onCambio={setTelefono} />
-        </label>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-hueso/50">Puesto habitual</span>
-          <input type="text" value={habitual} className={`${campo} mt-1`}
-            onChange={(e) => setHabitual(e.target.value)} />
-        </label>
-        {esAdmin && (
-          <label className="block">
-            <span className="text-xs uppercase tracking-wide text-hueso/50">Cómo se le paga</span>
-            <select value={modalidad} className={`${campo} mt-1`}
-              onChange={(e) => setModalidad(e.target.value)}>
-              <option value={MODALIDAD.porTurno}>Por turno</option>
-              <option value={MODALIDAD.contratado}>Contratado (tiene sueldo)</option>
-            </select>
-          </label>
-        )}
-        {esAdmin && (
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs uppercase tracking-wide text-hueso/50">Jornada</span>
-              <input type="number" min={0} step={1000} value={pagoJornada}
-                className={`${campo} mt-1`}
-                disabled={modalidad === MODALIDAD.contratado}
-                placeholder={modalidad === MODALIDAD.contratado ? 'no aplica' : '—'}
-                onChange={(e) => setPagoJornada(e.target.value)} />
-            </label>
-            <label className="block">
-              <span className="text-xs uppercase tracking-wide text-hueso/50">Hora extra</span>
-              <input type="number" min={0} step={500} value={valorHora}
-                className={`${campo} mt-1`} placeholder="—"
-                onChange={(e) => setValorHora(e.target.value)} />
-            </label>
-          </div>
-        )}
-      </div>
-
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
-
-      <div className="mt-5 flex items-center gap-3">
-        <span className="flex-1" />
-        <button onClick={onCancelar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
-          Cancelar
-        </button>
-        <button onClick={crear} disabled={guardando || !nombre.trim()}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
-          {guardando ? 'Creando…' : 'Crear y asignar'}
-        </button>
-      </div>
-    </Dialogo>
-  );
-}

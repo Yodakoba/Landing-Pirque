@@ -25,6 +25,7 @@ import { useState } from 'react';
 import type { Ocupacion } from '@/lib/tipos';
 import type { ResumenEquipo } from '@/lib/equipo';
 import { enPalabras } from '@/lib/fechas';
+import PuntoDia from './PuntoDia';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
   verde: 'border-emerald-500/50 bg-emerald-500/5',
@@ -109,7 +110,12 @@ export default function TarjetaDia({
                className="text-sm capitalize hover:text-oro">
               {enPalabras(d.fecha)}
             </a>
-            <span aria-hidden>{PUNTO_TARJETA(d)}</span>
+            {/* El punto y, debajo, la palabra: público, privado, cerrado.
+                Antes eso era una línea más abajo del contenido, y una línea
+                de más cambia el alto de la tarjeta — o sea que los días de
+                una misma semana dejaban de medir lo mismo según su estado.
+                Acá el aire ya estaba. */}
+            <PuntoDia d={d} />
           </div>
 
           {sinConfigurar(d) ? (
@@ -175,21 +181,14 @@ export default function TarjetaDia({
             </>
           )}
 
-          {d.bloqueada && (
-            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-red-400">
-              Cerrado
-              {d.tomadas > 0 && (
-                <span className="ml-1 font-normal normal-case tracking-normal text-hueso/60">
-                  · con {d.tomadas} {d.tomadas === 1 ? 'persona' : 'personas'} ya
-                  reservada{d.tomadas === 1 ? '' : 's'}: hay a quién avisarle
-                </span>
-              )}
-            </p>
-          )}
-          {d.privada && !d.bloqueada && (
-            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-sky-300">
-              Privado
-              <span className="ml-1 font-normal text-hueso/50">· no está en el sitio</span>
+          {/* Que el día esté cerrado o privado ya lo dice la palabra bajo
+              el punto. Lo único que sobrevive como línea es el aviso de un
+              día cerrado **con gente ya reservada**, porque eso no es un
+              estado: es algo que hay que hacer. */}
+          {d.bloqueada && d.tomadas > 0 && (
+            <p className="mt-2 text-xs text-amber-300/90">
+              Con {d.tomadas} {d.tomadas === 1 ? 'persona' : 'personas'} ya
+              reservada{d.tomadas === 1 ? '' : 's'}: hay a quién avisarle.
             </p>
           )}
           {d.notas && <p className="mt-1 text-xs text-hueso/50">{d.notas}</p>}

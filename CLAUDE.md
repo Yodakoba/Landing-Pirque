@@ -1160,6 +1160,30 @@ el cálculo tampoco se borró: `faltaCobrar()` y los campos `porCobrar` /
 muestra de otra forma. Lo que se liberó es el espacio, para cuando aparezca
 algo que de verdad ayude mirando el mes.
 
+### La palabra bajo el punto: público, privado, cerrado, preparación (2026-10-23)
+
+**En los tres calendarios, el estado de un día se lee bajo su punto de
+color**, en letra chica: *público*, *privado*, *cerrado*, *preparación* o
+*sin cupo*. Antes era una línea más, debajo del contenido —"PRIVADO · no
+está en el sitio"—, y ahí está el problema que lo cambió: **una línea de más
+cambia el alto de la tarjeta**, así que los días de una misma semana dejaban
+de medir lo mismo según su estado. Bajo el punto, en cambio, el aire ya
+estaba: la palabra no mueve nada.
+
+Lo pidió el cliente **como regla general** —"en el calendario, en donde sea:
+calendario, turnos, o actividades extras"—, y por eso vive en un solo
+componente, `PuntoDia`, que dibuja el punto y su palabra. Un día se lee
+igual en cualquier pantalla, y agregar un estado es tocar un archivo.
+
+Dos cosas que no cambiaron, y conviene que se note:
+
+- **Un día de preparación sigue sin aparecer en el calendario de la
+  portada.** Esa pantalla es la comercial; la palabra solo se lee donde el
+  día ya aparecía.
+- **El aviso de un día cerrado CON gente ya reservada sigue siendo una
+  línea.** No es un estado, es algo que hay que hacer —avisarle a esa
+  gente—, así que no se puede esconder en una palabra de nueve píxeles.
+
 ### Baja a alguien desmarcando "activo", no quitándolo
 
 Quitarlo de la lista no borra sus turnos pasados —esos son el registro de
@@ -1387,21 +1411,45 @@ turno junto con el monto, y además explica por qué una fila vale cero:
 El total del día se muestra como **"por turnos de este día"** y los
 contratados se cuentan aparte, con su propia glosa.
 
-### Crear un trabajador desde el planificador
+### La ficha, desde el día: crear y completar sin salir (2026-10-23)
 
-El desplegable de cada puesto tiene debajo **+ Nuevo trabajador**. Abre una
-ventana con lo mismo que pide la pantalla de Equipo, lo crea y lo deja
-asignado a ese puesto en ese día.
+El desplegable de cada puesto tiene debajo **+ Nuevo trabajador**, y cada
+persona ya asignada tiene al lado un **ficha**. Las dos abren **la misma
+ventana**, porque es el mismo formulario: lo único que cambia es si la
+persona ya existe. En `/extras` es igual, con los colaboradores.
 
 Existe porque sin él la lista vacía era un callejón: no se podía planificar
 sin irse a `/equipo`, agregar a alguien, volver y empezar de nuevo. **Lo que
 crea no es un caso especial**: queda en la lista como cualquier otro.
 
-Va por `POST /api/equipo/trabajador`, que agrega **una fila** en vez de
+**Y desde el 2026-10-23 pide también los datos de pago** —teléfono, montos,
+correo del comprobante y cuenta bancaria—, al crear y al editar. Antes no:
+el argumento escrito era que crear a alguien en mitad de la planificación es
+apurado y un número de cuenta mal tecleado no conviene apurarlo. Suena
+razonable y no resistió el uso. El cliente lo dijo sin rodeos —*"aún no
+puedo agregar los datos personales de las actividades extras"*—: los campos
+existían, pero **solo en `/equipo` y en `/extras`**, y quien arma un sábado
+no pasa por ahí. Resultado: fichas a medias y la planilla del pago semanal
+sin cuentas. Ahora se piden donde se está trabajando, *"y así todos los
+colaboradores están completos directo"*.
+
+**El nombre no se edita desde el día, a propósito.** Los turnos y las
+actividades ya guardadas apuntan a la persona por su nombre; renombrarla
+desde la ventana de un día dejaría los otros días apuntando a nadie. Eso se
+hace en `/equipo` o en `/extras`, que es donde el panel avisa del daño
+(`sinFicha()`).
+
+Va por `POST /api/equipo/trabajador` para crear y `PATCH` para editar —y sus
+gemelos en `/api/extras/colaborador`—, que tocan **una fila** en vez de
 guardar la lista entera. No es un detalle: la pantalla del planificador no
 tiene la lista completa en la mano —puede estar desactualizada— y mandarla
 entera sería arriesgarse a pisar el cambio de otra persona. Si el nombre ya
 existe no falla: devuelve el que hay y lo dice.
+
+**Lo que un encargado no recibe, tampoco lo puede pisar.** Su ventana no
+trae montos ni cuenta bancaria, y el `PATCH` conserva los que ya estaban en
+vez de escribir lo que venga: si no fuera así, que un encargado corrigiera
+un teléfono borraría el sueldo y la cuenta de esa persona.
 
 **Dos ventanas abiertas a la vez obligaron a arreglar `Dialogo`**: las dos
 escuchaban Escape en el documento, así que una tecla cerraba las dos de
@@ -1477,7 +1525,8 @@ Vale tenerlo escrito porque el síntoma no se parece a la causa —se lee como
 un problema del teclado o del navegador— y porque llegó con el cambio a
 tarjetas, o sea con un cambio puramente visual. La regla: **un componente se
 declara al nivel del módulo, nunca dentro de otro componente.** `Campo` vive
-hoy en `EquipoEditor.tsx` y `/extras` lo importa de ahí.
+hoy en su propio archivo, `Campo.tsx`, y lo importan las cuatro pantallas
+que lo usan.
 
 **El mismo día apareció el hermano en el guardado**: para un encargado, la
 respuesta de `PUT /api/equipo` no trae `puestos` —no los puede cambiar—, y

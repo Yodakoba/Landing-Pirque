@@ -19,7 +19,7 @@ import { costoDeExtra, actividadesConocidas,
 import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
-import CampoTelefono from './CampoTelefono';
+import FichaColaborador from './FichaColaborador';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -46,7 +46,14 @@ export default function ExtrasDialogo({
   // La lista de fichas se guarda en estado y no se lee del prop: crear a
   // alguien desde acá tiene que dejarlo disponible sin cerrar la ventana.
   const [gente, setGente] = useState<Colaborador[]>(colaboradores);
-  const [creando, setCreando] = useState(false);
+  /**
+   * La ficha abierta: `{}` para crear una nueva, `{ c }` para editar la de
+   * alguien, `{ nombre }` para crear la que le falta a quien está asignado
+   * sin tenerla. Una sola ventana para los tres casos, porque es el mismo
+   * formulario.
+   */
+  const [ficha, setFicha] = useState<
+    null | { c?: Colaborador; nombre?: string }>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -132,7 +139,24 @@ export default function ExtrasDialogo({
             <tbody>
               {lista.map((e, i) => (
                 <tr key={e.colaborador} className="border-b border-hueso/5">
-                  <td className="py-2 pr-3">{e.colaborador}</td>
+                  <td className="py-2 pr-3">
+                    <span className="block">{e.colaborador}</span>
+                    {/* **La ficha, desde acá.** Lo que no cambia de un día a
+                        otro —teléfono, correo, cuenta bancaria— vivía solo
+                        en `/extras`, abajo del calendario, y quien agenda un
+                        jinete no pasa por ahí: la ficha quedaba a medias y
+                        la planilla del pago salía sin cuentas. */}
+                    <button
+                      onClick={() => {
+                        const c = gente.find(
+                          (x) => normalizar(x.nombre) === normalizar(e.colaborador));
+                        setFicha(c ? { c } : { nombre: e.colaborador });
+                      }}
+                      className="text-[11px] text-hueso/45 hover:text-oro"
+                      title={`Teléfono, correo y datos de pago de ${e.colaborador}`}>
+                      ficha
+                    </button>
+                  </td>
                   <td className="py-2 pr-3">
                     <input type="text" list="actividades-conocidas"
                       value={e.actividad} className={ENTRADA}
@@ -213,22 +237,28 @@ export default function ExtrasDialogo({
             </option>
           ))}
         </select>
-        <button onClick={() => setCreando(true)}
+        <button onClick={() => setFicha({})}
           className="rounded border border-dashed border-hueso/20 px-3 py-1.5
                      text-sm text-hueso/60 hover:border-oro hover:text-oro">
           + Nuevo colaborador
         </button>
       </div>
 
-      {creando && (
-        <NuevoColaborador
-          esAdmin={esAdmin}
-          onCancelar={() => setCreando(false)}
-          onCreado={(c, aviso) => {
+      {ficha && (
+        <FichaColaborador
+          ficha={ficha.c} nombreSugerido={ficha.nombre ?? ''} esAdmin={esAdmin}
+          onCancelar={() => setFicha(null)}
+          onListo={(c, aviso) => {
             setGente((antes) => antes.some(
-              (x) => normalizar(x.nombre) === normalizar(c.nombre)) ? antes : [...antes, c]);
+              (x) => normalizar(x.nombre) === normalizar(c.nombre))
+                ? antes.map((x) =>
+                    (normalizar(x.nombre) === normalizar(c.nombre) ? c : x))
+                : [...antes, c]);
+            // Si todavía no está en el día, se agrega: crear a alguien desde
+            // acá es para ponerlo a trabajar hoy. `agregar()` ya se protege
+            // de duplicarlo, así que editar una ficha no agrega nada.
             agregar(c);
-            setCreando(false);
+            setFicha(null);
             if (aviso) setError(aviso);
           }}
         />
@@ -271,98 +301,3 @@ export default function ExtrasDialogo({
   );
 }
 
-/**
- * Crear un colaborador sin salir del día.
- *
- * Mismo criterio que `+ Nuevo trabajador` en el planificador: sin esto, la
- * lista vacía era un callejón. Lo que crea no es un caso especial — queda en
- * la lista como cualquier otro.
- */
-function NuevoColaborador({
-  esAdmin, onCreado, onCancelar
-}: {
-  esAdmin: boolean;
-  onCreado: (c: Colaborador, aviso?: string) => void;
-  onCancelar: () => void;
-}) {
-  const [nombre, setNombre] = useState('');
-  const [actividad, setActividad] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [monto, setMonto] = useState('');
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState('');
-
-  const campo = 'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
-                'focus:border-oro focus:outline-none';
-
-  async function crear() {
-    setGuardando(true);
-    setError('');
-    try {
-      const r = await fetch('/api/extras/colaborador', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ nombre, actividad, telefono, monto })
-      });
-      const d = await r.json();
-      if (d.error) return setError(d.error);
-      onCreado(d.colaborador, d.aviso);
-    } catch (e) {
-      setError(String(e));
-    } finally { setGuardando(false); }
-  }
-
-  return (
-    <Dialogo titulo="Nuevo colaborador" onCerrar={onCancelar}>
-      <p className="mt-3 text-sm text-hueso/60">
-        Queda en la lista de actividades extras, y asignado a este día.
-      </p>
-
-      <div className="mt-4 space-y-3">
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-hueso/50">Nombre</span>
-          <input type="text" value={nombre} autoFocus className={`${campo} mt-1`}
-            placeholder="Nombre y apellido, o la empresa"
-            onChange={(e) => setNombre(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-hueso/50">Actividad</span>
-          <input type="text" value={actividad} className={`${campo} mt-1`}
-            placeholder="show ecuestre, pintacaritas, castillo inflable…"
-            onChange={(e) => setActividad(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-hueso/50">
-            Teléfono <span className="normal-case text-hueso/35">(opcional)</span>
-          </span>
-          <CampoTelefono valor={telefono} className={`${campo} mt-1`}
-            etiqueta="Teléfono del colaborador nuevo" onCambio={setTelefono} />
-        </label>
-        {esAdmin && (
-          <label className="block">
-            <span className="text-xs uppercase tracking-wide text-hueso/50">
-              Monto habitual
-            </span>
-            <input type="number" min={0} step={1000} value={monto}
-              className={`${campo} mt-1`} placeholder="—"
-              onChange={(e) => setMonto(e.target.value)} />
-          </label>
-        )}
-      </div>
-
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
-
-      <div className="mt-5 flex items-center gap-3">
-        <span className="flex-1" />
-        <button onClick={onCancelar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
-          Cancelar
-        </button>
-        <button onClick={crear} disabled={guardando || !nombre.trim()}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar y agregar'}
-        </button>
-      </div>
-    </Dialogo>
-  );
-}

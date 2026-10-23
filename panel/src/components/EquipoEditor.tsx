@@ -22,36 +22,11 @@ import { normalizar } from '@/lib/columnas';
 import DatosBancarios from './DatosBancarios';
 import { bancoVacio, type Banco } from '@/lib/banco';
 import CampoTelefono from './CampoTelefono';
+import Campo from './Campo';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
   'focus:border-oro focus:outline-none';
-
-/**
- * Un campo con su rótulo encima.
- *
- * El rótulo va pegado al campo y no en una cabecera de tabla lejana: con una
- * tarjeta por persona, una fila de encabezados arriba del todo obligaría a
- * contar columnas para saber qué es cada caja.
- *
- * **Va acá afuera y no dentro del componente, y eso no es estilo.** Un
- * componente declarado dentro de otro es una función nueva en cada dibujado,
- * así que para React es **otro tipo de elemento**: desmonta lo que había y
- * monta uno nuevo. Con un `input` adentro eso significa que se pierde el
- * foco a la primera letra — se escribía una y el resto del nombre se iba al
- * vacío. Así se rompió esta pantalla el día que pasó a tarjetas, y el
- * síntoma no se parece en nada a su causa.
- */
-export const Campo = ({ etiqueta, ancho, children }: {
-  etiqueta: string; ancho: string; children: React.ReactNode;
-}) => (
-  <label className={`block ${ancho}`}>
-    <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
-      {etiqueta}
-    </span>
-    {children}
-  </label>
-);
 
 export default function EquipoEditor() {
   const [puestos, setPuestos] = useState<Puesto[] | null>(null);
