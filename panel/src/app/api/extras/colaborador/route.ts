@@ -5,6 +5,8 @@ import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { ROL } from '@/lib/auth';
 import type { Colaborador } from '@/lib/extras';
+import { bancoVacio } from '@/lib/banco';
+import { telefonoNormal } from '@/lib/contacto';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
     const yaEsta = gente.find((c) => normalizar(c.nombre) === normalizar(nombre));
     if (yaEsta) {
       return NextResponse.json({
-        colaborador: { ...yaEsta, cuenta: '' },
+        colaborador: { ...yaEsta, banco: bancoVacio() },
         yaExistia: true,
         aviso: yaEsta.activo
           ? `${yaEsta.nombre} ya estaba en la lista.`
@@ -47,19 +49,19 @@ export async function POST(req: Request) {
     const nuevo: Colaborador = {
       nombre,
       actividad: String(b?.actividad ?? '').trim(),
-      telefono: String(b?.telefono ?? '').trim(),
+      telefono: telefonoNormal(b?.telefono),
       activo: true,
       // El monto habitual y la cuenta son del administrador, igual que los
       // sueldos del equipo.
       monto: esAdmin ? aEntero(b?.monto) : 0,
-      cuenta: ''
+      banco: bancoVacio()
     };
 
     await guardarColaboradores([...gente, nuevo]);
     await anotar({ ...(await quienEs(req)), accion: 'Agregó un colaborador',
       detalle: `${nuevo.nombre}${nuevo.actividad ? ` · ${nuevo.actividad}` : ''}` });
 
-    return NextResponse.json({ colaborador: { ...nuevo, cuenta: '' } });
+    return NextResponse.json({ colaborador: { ...nuevo, banco: bancoVacio() } });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

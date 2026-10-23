@@ -5,6 +5,7 @@ import { leerReservas, crearReserva, leerMenus, leerFechas, leerConfig,
          guardarFecha } from '@/lib/datos';
 import { diaParaReservaManual } from '@/lib/dias';
 import { ASISTENCIA } from '@/lib/columnas';
+import { telefonoNormal, correoNormal } from '@/lib/contacto';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
@@ -35,8 +36,11 @@ export async function POST(req: Request) {
         { error: 'Una reserva sin personas no es una reserva.' }, { status: 400 });
     }
     const id = await crearReserva({
-      fecha: b.fecha, nombre: b.nombre, email: b.email ?? '',
-      telefono: b.telefono ?? '', menu: b.menu ?? '', personas: Number(b.personas),
+      fecha: b.fecha, nombre: b.nombre, email: correoNormal(b.email),
+      // Se guarda con la misma forma que las de Shopify: una reserva
+      // anotada a mano y una comprada tienen que ser indistinguibles para
+      // lo que venga después. Ver `contacto.ts`.
+      telefono: telefonoNormal(b.telefono), menu: b.menu ?? '', personas: Number(b.personas),
       // El monto viene del formulario, calculado con los precios de /menus y
       // corregible a mano. Antes esta línea era un `null` fijo, de cuando el
       // monto no se pedía: con eso el precio se perdía al crear y solo se

@@ -17,7 +17,7 @@
  * para un día sin reservas es justo el error que esto tiene que hacer
  * evidente.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA, PUNTO_TARJETA } from './TarjetaDia';
@@ -27,6 +27,9 @@ import { VINO } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import type { Ocupacion } from '@/lib/tipos';
 import { enPesos } from '@/lib/ocupacion';
+import DatosBancarios from './DatosBancarios';
+import { bancoVacio, type Banco } from '@/lib/banco';
+import CampoTelefono from './CampoTelefono';
 import { diasDelMes, sumarMeses, mesDe, mesEnPalabras, diaSemana, hoy,
          enPalabras } from '@/lib/fechas';
 
@@ -89,6 +92,12 @@ export default function CalendarioExtras() {
       else { setColaboradores(d.colaboradores); setError(''); setSucio(false); }
     } finally { setGuardando(false); }
   }
+
+  const cambiarBanco = (i: number, banco: Banco) => {
+    const copia = (colaboradores ?? []).map((c) => ({ ...c }));
+    copia[i].banco = banco;
+    setColaboradores(copia); setSucio(true);
+  };
 
   const cambiar = (i: number, campo: keyof Colaborador, valor: string | boolean) => {
     const copia = (colaboradores ?? []).map((c) => ({ ...c }));
@@ -268,7 +277,6 @@ export default function CalendarioExtras() {
               <th className="w-36 py-2 pr-3">Teléfono</th>
               <th className="w-16 py-2 pr-3">Activo</th>
               {esAdmin && <th className="w-32 py-2 pr-3">Monto habitual</th>}
-              {esAdmin && <th className="w-52 py-2 pr-3">Cuenta bancaria</th>}
               <th className="w-20 py-2" />
             </tr>
           </thead>
@@ -277,7 +285,8 @@ export default function CalendarioExtras() {
               const tieneDias = extras.some(
                 (e) => normalizar(e.colaborador) === normalizar(c.nombre));
               return (
-                <tr key={i} className="border-b border-hueso/5">
+                <Fragment key={i}>
+                <tr className={esAdmin ? '' : 'border-b border-hueso/5'}>
                   <td className="py-2 pr-3">
                     <input type="text" value={c.nombre} className={ENTRADA}
                       placeholder="Nombre o empresa"
@@ -289,9 +298,9 @@ export default function CalendarioExtras() {
                       onChange={(e) => cambiar(i, 'actividad', e.target.value)} />
                   </td>
                   <td className="py-2 pr-3">
-                    <input type="tel" value={c.telefono} className={ENTRADA}
-                      placeholder="+56 9 …"
-                      onChange={(e) => cambiar(i, 'telefono', e.target.value)} />
+                    <CampoTelefono valor={c.telefono} className={ENTRADA}
+                      etiqueta={`Teléfono de ${c.nombre || 'esta persona'}`}
+                      onCambio={(v) => cambiar(i, 'telefono', v)} />
                   </td>
                   <td className="py-2 pr-3">
                     <input type="checkbox" checked={c.activo}
@@ -305,14 +314,6 @@ export default function CalendarioExtras() {
                         value={c.monto || ''} placeholder="—"
                         aria-label={`Monto habitual de ${c.nombre || 'esta persona'}`}
                         onChange={(e) => cambiar(i, 'monto', e.target.value)} />
-                    </td>
-                  )}
-                  {esAdmin && (
-                    <td className="py-2 pr-3">
-                      <input type="text" value={c.cuenta} className={ENTRADA}
-                        placeholder="banco, tipo, número, RUT"
-                        aria-label={`Cuenta bancaria de ${c.nombre || 'esta persona'}`}
-                        onChange={(e) => cambiar(i, 'cuenta', e.target.value)} />
                     </td>
                   )}
                   {/* Quitar solo a quien no tiene días contratados, igual
@@ -339,10 +340,28 @@ export default function CalendarioExtras() {
                     )}
                   </td>
                 </tr>
+
+                {/* Los datos de la transferencia, en su propia línea y no en
+                    columnas más — el mismo criterio que la tabla de Equipo, y
+                    el mismo bloque. */}
+                {esAdmin && (
+                  <tr className="border-b border-hueso/5">
+                    <td className="pb-2 align-top text-xs uppercase tracking-wide
+                                   text-hueso/40">
+                      Transferencia
+                    </td>
+                    <td colSpan={5} className="pb-2">
+                      <DatosBancarios
+                        banco={c.banco} nombre={c.nombre}
+                        onCambio={(b) => cambiarBanco(i, b)} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
             {colaboradores.length === 0 && (
-              <tr><td colSpan={esAdmin ? 7 : 5} className="py-6 text-sm text-hueso/50">
+              <tr><td colSpan={esAdmin ? 6 : 5} className="py-6 text-sm text-hueso/50">
                 Todavía no hay nadie. Apreta <strong>Agregar colaborador</strong>, o
                 créalo desde un día.
               </td></tr>
@@ -356,7 +375,7 @@ export default function CalendarioExtras() {
           onClick={() => {
             setColaboradores([...colaboradores, {
               nombre: '', actividad: '', telefono: '', activo: true,
-              monto: 0, cuenta: ''
+              monto: 0, banco: bancoVacio()
             }]);
             setSucio(true);
           }}

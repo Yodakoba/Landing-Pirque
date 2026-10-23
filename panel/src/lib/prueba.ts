@@ -13,7 +13,7 @@ import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
          diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe, diasDelMes, sumarMeses,
          rangoEnPalabras } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
-import { aReserva, estadoDe, telefonoDe, nombreDe, personasDe, menuDe,
+import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
          camposDeShopify,
          type PedidoShopify } from './shopify.ts';
@@ -44,6 +44,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
          repartirPropina, propinaDelDia,
+         totalAjustes, motivosDe, leerAjustes, escribirAjustes,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
@@ -51,9 +52,17 @@ import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
          costoExtrasDelDia, costoDeExtra, informeDeExtras,
          COL_COLABORADORES, COL_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
          type Colaborador, type Extra } from './extras.ts';
+import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
+         avisoTelefono, correoNormal, correoValido, avisoCorreo,
+         FORMATO_TELEFONO } from './contacto.ts';
+import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
+         diasPorCerrar, leerCierresDe, type Cierre } from './cierres.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
+import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
+         sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
+         type Banco } from './banco.ts';
 
 let fallos = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA: ' + m); } };
@@ -67,7 +76,7 @@ const tu = (p: Partial<Turno>): Turno => ({
   fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
   asistencia: '', modalidad: MODALIDAD.porTurno,
   pagoJornada: 0, horasExtra: 0, valorHora: 0,
-  ajuste: 0, motivo: '', propina: 0, fila: 2, ...p
+  ajustes: [], propina: 0, fila: 2, ...p
 });
 const dia = (p: Partial<FechaHabil>): FechaHabil => ({
   fecha: '2026-11-14', capacidad: 60, apertura: '13:00',
@@ -1083,9 +1092,9 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
   { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
   { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' }
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
@@ -1156,9 +1165,9 @@ ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
 ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
 
 const conAcceso: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
-  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' },
-  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, cuenta: '' }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() }
 ];
 ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
    'el token encuentra a su dueño');
@@ -1331,14 +1340,14 @@ ok(pagoDe(tu({ ...jornada, asistencia: VINO.no })) === 0, 'y quien no llegó, ta
 ok(pagoDe(tu({ ...jornada, asistencia: VINO.si })) === 30000, 'quien vino cobra su jornada');
 ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, horasExtra: 2 })) === 38000,
    'las horas extra se multiplican por su valor hora');
-ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: -5000 })) === 25000,
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajustes: [{ monto: -5000, motivo: '' }] })) === 25000,
    'un ajuste negativo descuenta');
-ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: 7000 })) === 37000,
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajustes: [{ monto: 7000, motivo: '' }] })) === 37000,
    'y uno positivo suma');
 
 // Un descuento mayor que la jornada deja el día en cero, no en negativo: si
 // de verdad hay que cobrarle algo a alguien, eso no es un turno.
-ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajuste: -90000 })) === 0,
+ok(pagoDe(tu({ ...jornada, asistencia: VINO.si, ajustes: [{ monto: -90000, motivo: '' }] })) === 0,
    'nunca queda en negativo');
 
 /* ---------- contratado vs. por turno ---------- */
@@ -1352,7 +1361,7 @@ ok(pagoDe(fijo) === 0,
    'un contratado no suma jornada: su sueldo no sale de esta caja');
 ok(pagoDe({ ...fijo, horasExtra: 3 }) === 12000,
    'pero sus horas extra sí, que se pagan aparte');
-ok(pagoDe({ ...fijo, ajuste: 5000 }) === 5000, 'y sus ajustes también');
+ok(pagoDe({ ...fijo, ajustes: [{ monto: 5000, motivo: '' }] }) === 5000, 'y sus ajustes también');
 
 const turnosDelSabado: Turno[] = [
   tu({ ...jornada, trabajador: 'Ana', asistencia: VINO.si }),
@@ -1396,7 +1405,7 @@ const mes: Turno[] = [
   tu({ trabajador: 'Ana', fecha: '2026-11-14', asistencia: VINO.si,
        pagoJornada: 30000, horasExtra: 2, valorHora: 4000 }),
   tu({ trabajador: 'Ana', fecha: '2026-11-15', asistencia: VINO.si,
-       pagoJornada: 30000, ajuste: -5000, motivo: 'llegó tarde' }),
+       pagoJornada: 30000, ajustes: [{ monto: -5000, motivo: 'llegó tarde' }] }),
   // Luis contratado: su jornada no suma, sus horas extra sí.
   tu({ trabajador: 'Luis', fecha: '2026-11-14', asistencia: VINO.si,
        modalidad: MODALIDAD.contratado, pagoJornada: 30000,
@@ -1447,7 +1456,7 @@ ok(informeDelPeriodo([], '2026-11-01', '2026-11-30').length === 0,
 // Lo fija una prueba para que a nadie se le ocurra filtrarlo despues.
 const preparacion = informeDelPeriodo([
   tu({ trabajador: 'Ana', fecha: '2026-11-10', asistencia: VINO.si,  // martes
-       pagoJornada: 30000, ajuste: 10000, motivo: 'montaje, acuerdo aparte' })
+       pagoJornada: 30000, ajustes: [{ monto: 10000, motivo: 'montaje, acuerdo aparte' }] })
 ], '2026-11-01', '2026-11-30');
 ok(preparacion[0].dias === 1 && preparacion[0].total === 40000,
    'un dia de preparacion entra al informe, con su ajuste por acuerdo especial');
@@ -1553,7 +1562,7 @@ console.log('\nActividades extras');
 
 const co = (p: Partial<Colaborador>): Colaborador => ({
   nombre: 'Jinete', actividad: 'Show ecuestre', telefono: '', activo: true,
-  monto: 0, cuenta: '', ...p
+  monto: 0, banco: bancoVacio(), ...p
 });
 const ex = (p: Partial<Extra>): Extra => ({
   fecha: '2026-11-14', colaborador: 'Jinete', actividad: 'Show ecuestre',
@@ -1570,36 +1579,43 @@ ok(!Object.values(COL_COLABORADORES).some((c) => normalizar(c).includes('propina
 // Agendar no es pagar, igual que un turno sin pasar lista.
 ok(costoDeExtra(ex({ estado: '' })) === 0, 'sin confirmar no cuesta nada');
 ok(costoDeExtra(ex({ estado: VINO.no })) === 0, 'y si no vino, tampoco');
-ok(costoDeExtra(ex({ monto: 50000, ajuste: 10000 })) === 60000,
+ok(costoDeExtra(ex({ monto: 50000, ajuste: 10000, motivo: '' })) === 60000,
    'confirmada cuesta el monto más el ajuste');
-ok(costoDeExtra(ex({ monto: 50000, ajuste: -80000 })) === 0,
+ok(costoDeExtra(ex({ monto: 50000, ajuste: -80000, motivo: '' })) === 0,
    'un descuento mayor que el monto deja el día en cero, nunca en negativo');
 
 // --- Las fichas (posicionales: la pestaña se reescribe entera) ---
 const fichas = leerColaboradoresDe([
   Object.values(COL_COLABORADORES) as string[],
-  ['Pedro Soto', 'Show ecuestre', '+56 9 1111 1111', 'Sí', '50000', '123-456'],
+  ['Pedro Soto', 'Show ecuestre', '+56 9 1111 1111', 'Sí', '50000',
+   'transferir los lunes', 'Juana Soto', '11.111.111-1', 'BancoEstado',
+   'Cuenta vista', '123-456', 'juana@ejemplo.cl'],
   ['Carla Díaz', 'Pintacaritas', '', 'No', '', ''],
   ['', 'Castillo inflable', '', 'Sí', '80000', ''],
   ['pedro soto', 'Otra cosa', '', 'Sí', '999', '']
 ]);
 ok(fichas.length === 2, 'una fila sin nombre no es una ficha, y un nombre repetido no entra dos veces');
-ok(fichas[0].monto === 50000 && fichas[0].cuenta === '123-456',
-   'el monto habitual y la cuenta bancaria se leen de la ficha');
+ok(fichas[0].monto === 50000 && fichas[0].banco.numero === '123-456'
+   && fichas[0].banco.titular === 'Juana Soto'
+   && fichas[0].banco.nota === 'transferir los lunes',
+   'el monto habitual y los datos de la transferencia se leen de la ficha');
 ok(fichas[1].activo === false && fichas[1].monto === 0,
    'un monto en blanco es "sin poner", que es cero, y "No" desactiva');
 
-// Una planilla escrita antes de que existiera la columna de cuenta se lee
-// igual: la cuenta queda en blanco en vez de reventar.
+// Una planilla escrita antes de que existieran las columnas del banco se
+// lee igual: quedan en blanco en vez de reventar.
 const viejas = leerColaboradoresDe([
   ['Nombre', 'Actividad', 'Teléfono', 'Activo', 'Monto habitual'],
   ['Pedro Soto', 'Show ecuestre', '', 'Sí', '50000']
 ]);
-ok(viejas.length === 1 && viejas[0].cuenta === '',
-   'sin la columna de cuenta la ficha se lee con la cuenta en blanco');
+ok(viejas.length === 1 && viejas[0].banco.numero === ''
+   && viejas[0].banco.nota === '',
+   'sin las columnas del banco la ficha se lee con todo en blanco');
 
 const filasFichas = aFilasColaboradores([
-  co({ nombre: 'Pedro Soto', monto: 50000, cuenta: '123-456' }),
+  co({ nombre: 'Pedro Soto', monto: 50000,
+       banco: { ...bancoVacio(), numero: '123-456', banco: 'BancoEstado',
+                tipo: 'Cuenta vista', rut: '11.111.111-1' } }),
   co({ nombre: 'Carla Díaz', actividad: 'Pintacaritas', activo: false, monto: 0 })
 ]);
 ok(filasFichas[0].length === Object.keys(COL_COLABORADORES).length,
@@ -1607,7 +1623,8 @@ ok(filasFichas[0].length === Object.keys(COL_COLABORADORES).length,
 ok(filasFichas[1][4] === '50000' && filasFichas[2][4] === '',
    'un monto en cero se escribe en blanco, para que no se lea como "cobra cero"');
 const ida = leerColaboradoresDe(filasFichas);
-ok(ida.length === 2 && ida[0].cuenta === '123-456' && ida[1].activo === false,
+ok(ida.length === 2 && ida[0].banco.numero === '123-456'
+   && ida[0].banco.tipo === 'Cuenta vista' && ida[1].activo === false,
    'escribir y volver a leer da lo mismo');
 
 ok(JSON.stringify(actividadesConocidas([
@@ -1669,13 +1686,14 @@ ok(unaLinea[0].colaborador === 'pedro  soto',
 
 // --- El informe ---
 const informe = informeDeExtras([
-  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-14', monto: 50000, ajuste: 10000 }),
+  ex({ colaborador: 'Pedro Soto', fecha: '2026-11-14', monto: 50000, ajuste: 10000, motivo: '' }),
   ex({ colaborador: 'Pedro Soto', fecha: '2026-11-15', monto: 50000 }),
   ex({ colaborador: 'Pedro Soto', fecha: '2026-11-16', estado: VINO.no }),
   ex({ colaborador: 'Carla Díaz', actividad: 'Pintacaritas', fecha: '2026-11-14',
        estado: '', monto: 40000 }),
   ex({ colaborador: 'Pedro Soto', fecha: '2026-10-31', monto: 999999 })
-], '2026-11-01', '2026-11-30', new Map([[normalizar('Pedro Soto'), '123-456']]));
+], '2026-11-01', '2026-11-30', new Map([[normalizar('Pedro Soto'),
+     { ...bancoVacio(), numero: '123-456' }]]));
 
 ok(informe.length === 2, 'una línea por colaborador');
 ok(informe[0].colaborador === 'Pedro Soto' && informe[0].total === 110000,
@@ -1684,14 +1702,286 @@ ok(informe[0].dias === 2 && informe[0].noVino === 1 && informe[0].sinConfirmar =
    'cuenta los días que vino y los que no, por separado');
 ok(informe[0].montos === 100000 && informe[0].ajustes === 10000,
    'los ajustes se ven aparte de los montos, igual que en el equipo');
-ok(informe[0].cuenta === '123-456' && informe[1].cuenta === '',
-   'la cuenta bancaria la pone quien llama, desde las fichas');
+ok(informe[0].banco.numero === '123-456' && informe[1].banco.numero === '',
+   'los datos del banco los pone quien llama, desde las fichas');
 ok(informe[1].total === 0 && informe[1].sinConfirmar === 1,
    'quien quedó sin confirmar aparece con total cero, no desaparece');
 ok(informe[1].actividad === 'Pintacaritas',
    'y cada línea dice qué hizo, que es lo que distingue a un jinete de una pintacaritas');
 ok(informeDeExtras([ex({ colaborador: '  ' })], '2026-11-01', '2026-11-30').length === 0,
    'una actividad sin nombre no arma una línea');
+
+
+/* ---------- Los datos de la transferencia ---------- */
+
+console.log('\nDatos bancarios');
+
+const bc = (p: Partial<Banco>): Banco => ({ ...bancoVacio(), ...p });
+
+// **Lo que falta para transferir**, que es lo que el informe avisa antes de
+// que alguien se siente a pagar con la planilla ya bajada.
+ok(!sePuedeTransferir(bancoVacio()), 'una ficha vacía no permite transferir');
+ok(JSON.stringify(faltaParaTransferir(bancoVacio()))
+   === JSON.stringify(['banco', 'tipo de cuenta', 'número', 'RUT']),
+   'y dice exactamente qué le falta, en palabras');
+const bancoCompleto = bc({ banco: 'BancoEstado', tipo: 'Cuenta vista',
+                      numero: '12345678', rut: '11.111.111-1' });
+ok(sePuedeTransferir(bancoCompleto), 'con banco, tipo, número y RUT ya se puede');
+ok(faltaParaTransferir(bancoCompleto).length === 0, 'y no falta nada');
+
+// **El titular y el correo NO son obligatorios**, y por motivos distintos.
+ok(sePuedeTransferir({ ...bancoCompleto, titular: '', correo: '' }),
+   'sin titular ni correo se transfiere igual');
+ok(titularDe(bancoCompleto, 'Ana Soto') === 'Ana Soto',
+   'el titular en blanco es la propia persona: es el caso normal');
+ok(titularDe({ ...bancoCompleto, titular: 'Juana Soto' }, 'Ana Soto') === 'Juana Soto',
+   'y cuando la cuenta es de otra persona, manda el titular');
+
+// El RUT se empareja para que la carga masiva del banco lo acepte, pero no
+// se valida: el panel no está para corregirle el RUT a nadie.
+ok(rutLimpio('12.345.678-9') === '12345678-9', 'se le quitan los puntos');
+ok(rutLimpio('123456789') === '12345678-9', 'y se le pone el guion si no venía');
+ok(rutLimpio('9.876.543-k') === '9876543-K', 'la K va en mayúscula');
+ok(rutLimpio('  7.654.321-0 ') === '7654321-0', 'los espacios de los bordes no cuentan');
+ok(rutLimpio('no es un rut') === 'no es un rut',
+   'lo que no parece un RUT se devuelve tal cual, sin inventar');
+ok(rutLimpio('') === '', 'y un RUT vacío sigue vacío');
+
+// **El tipo de cuenta es una lista cerrada.** Un valor inventado llegaría
+// hasta la planilla del banco, así que se descarta en el servidor.
+ok(limpiarBanco({ tipo: 'Cuenta corriente' }).tipo === 'Cuenta corriente',
+   'un tipo de la lista se guarda');
+ok(limpiarBanco({ tipo: 'cuenta de la abuela' }).tipo === '',
+   'y uno inventado se descarta, en vez de viajar a la planilla del banco');
+ok(TIPOS_CUENTA.length === 4, 'los tipos de cuenta en Chile son cuatro');
+ok(limpiarBanco({ numero: '  123  ', banco: ' BancoEstado ' }).numero === '123'
+   && limpiarBanco({ banco: ' BancoEstado ' }).banco === 'BancoEstado',
+   'lo que venga del navegador se recorta');
+ok(limpiarBanco(undefined).numero === '' && limpiarBanco(null).rut === '',
+   'y si no viene nada, la ficha queda vacía en vez de reventar');
+
+// Ida y deLaFila por la planilla, con la nota en su columna aparte —la que
+// antes era toda la cuenta bancaria en texto libre—.
+const filaBco = [
+  'Pedro Soto', 'Show ecuestre', 'Sí',      // lo de la ficha, antes
+  'la nota',                                 // la columna vieja de texto libre
+  ...filaBanco(bc({
+    titular: 'Juana Soto', rut: '11111111-1', banco: 'BancoEstado',
+    tipo: 'Cuenta RUT', numero: '11111111', correo: 'juana@ejemplo.cl'
+  }))
+];
+const deLaFila = leerBanco(filaBco, 4, 3);
+ok(deLaFila.titular === 'Juana Soto' && deLaFila.numero === '11111111'
+   && deLaFila.tipo === 'Cuenta RUT' && deLaFila.correo === 'juana@ejemplo.cl',
+   'escribir y volver a leer devuelve los mismos campos');
+ok(deLaFila.nota === 'la nota',
+   'y la nota se lee de su propia columna, que es la vieja de texto libre');
+ok(leerBanco([], 3, 2).banco === '',
+   'una fila que no existe se lee vacía, no explota');
+ok(Object.keys(COL_BANCO).length === 6 && filaBanco(bancoVacio()).length === 6,
+   'seis campos y seis columnas: el encabezado y la fila no se pueden desalinear');
+
+// **Los datos del banco son del administrador.** Igual que los sueldos: no
+// hay ninguna pantalla de encargado que los reciba, y hay una prueba de la
+// tabla de permisos que lo fija más arriba.
+ok(!puede(ROL.encargado, 'configurar') && puede(ROL.admin, 'configurar'),
+   'la plata y la configuración siguen siendo solo del administrador');
+
+
+/* ---------- Teléfonos y correos con forma ---------- */
+
+console.log('\nTeléfonos y correos');
+
+// **La regla que se le pide a quien escribe**: el celular con el 9 y sin
+// el +56. Pero se acepta como la gente lo escribe de verdad.
+for (const escrito of ['912345678', '9 1234 5678', '+56912345678',
+                       '+56 9 1234 5678', '56 9 1234-5678', '(9) 1234 5678',
+                       '0 9 1234 5678', '  912345678  ']) {
+  ok(telefonoNormal(escrito) === '+56 9 1234 5678',
+     `"${escrito}" se guarda como +56 9 1234 5678`);
+}
+ok(telefonoParaEnlace('9 1234 5678') === '56912345678',
+   'y para un enlace sale sin signos, como lo quiere WhatsApp');
+ok(enlaceWhatsApp('9 1234 5678') === 'https://wa.me/56912345678',
+   'de ahí sale el link directo a su conversación');
+ok(enlaceWhatsApp('9 1234 5678', 'Hola Ana')
+   === 'https://wa.me/56912345678?text=Hola%20Ana',
+   'con el mensaje ya codificado, si se le pone uno');
+
+// **No se inventa el 9.** Ocho dígitos no son un celular al que le falte
+// el nueve: son un número que no sabemos leer, y completarlo mandaría un
+// mensaje a un desconocido.
+ok(celularChileno('12345678') === '', 'ocho dígitos no se completan solos');
+ok(/falta el 9/.test(avisoTelefono('1234 5678')),
+   'y la pantalla dice justamente eso: que parece faltarle el 9');
+
+// Lo que no es un celular chileno se guarda tal cual, con su marca.
+ok(telefonoNormal('22 2345 6789') === '22 2345 6789',
+   'un fijo se guarda como se escribió, sin que el panel lo corrija');
+ok(telefonoNormal('+1 415 555 0132') === '+1 415 555 0132',
+   'y un número extranjero también');
+ok(avisoTelefono('+1 415 555 0132').includes('WhatsApp'),
+   'pero se avisa que con ese no se va a poder automatizar');
+ok(enlaceWhatsApp('22 2345 6789') === '',
+   'un fijo no da link: vacío es la señal de que no hay nada que ofrecer');
+ok(telefonoNormal('') === '' && avisoTelefono('') === '',
+   'un campo vacío no es un error: todavía no lo han llenado');
+ok(telefonoNormal('pregunta por Juan') === 'pregunta por Juan',
+   'y lo que claramente no es un número tampoco se toca');
+
+// Un número ya normalizado no cambia al volver a guardarse: si cambiara,
+// cada guardado movería el dato y las comparaciones fallarían.
+ok(telefonoNormal(telefonoNormal('912345678')) === telefonoNormal('912345678'),
+   'normalizar dos veces da lo mismo que normalizar una');
+
+// Correos: minúsculas y sin bordes, y una validación deliberadamente simple
+// —lo único que se puede atrapar acá es un error de tipeo evidente—.
+ok(correoNormal('  Ana@Ejemplo.CL ') === 'ana@ejemplo.cl',
+   'el correo se guarda en minúsculas y sin espacios');
+ok(correoValido('ana@ejemplo.cl') && correoValido('a.b+c@sub.dominio.com'),
+   'un correo normal pasa');
+for (const malo of ['ana@ejemplo', 'ana ejemplo.cl', '@ejemplo.cl',
+                    'ana@.cl', 'ana@ejemplo.c', 'a@b.cl, c@d.cl']) {
+  ok(!correoValido(malo), `"${malo}" no pasa por correo`);
+}
+ok(avisoCorreo('') === '', 'un correo vacío no reclama');
+ok(avisoCorreo('ana@ejemplo') !== '', 'uno a medio escribir sí');
+
+// **La misma forma venga de donde venga.** Una reserva de Shopify y una
+// anotada a mano tienen que quedar indistinguibles, que es lo que permite
+// automatizar algo después sin adivinar el formato fila por fila.
+ok(telefonoDe({ billing_address: { phone: '+56 9 8765 4321' } } as PedidoShopify)
+   === '+56 9 8765 4321', 'el teléfono de un pedido se guarda normalizado');
+ok(telefonoDe({ phone: '987654321' } as PedidoShopify) === '+56 9 8765 4321',
+   'aunque el cliente lo haya escrito pelado en el checkout');
+ok(emailDe({ email: 'Ana@Ejemplo.CL' } as PedidoShopify) === 'ana@ejemplo.cl',
+   'y el correo en minúsculas');
+
+
+/* ---------- Varios ajustes por turno ---------- */
+
+console.log('\nAjustes de un turno');
+
+// Lo pidió el cliente con este ejemplo exacto: un extra positivo por hora
+// extra y uno negativo por un adelanto, **cada uno con su motivo**.
+const conDos = tu({
+  asistencia: VINO.si, pagoJornada: 30000,
+  ajustes: [{ monto: 5000, motivo: 'hora extra del montaje' },
+            { monto: -20000, motivo: 'adelanto del viernes' }]
+});
+ok(totalAjustes(conDos.ajustes) === -15000, 'los ajustes se suman entre ellos');
+ok(pagoDe(conDos) === 15000, 'y el turno paga la jornada más esa suma');
+ok(motivosDe(conDos.ajustes) === 'hora extra del montaje · adelanto del viernes',
+   'los motivos se muestran juntos, sin perder ninguno');
+
+// La regla de siempre: un descuento mayor que todo deja el día en cero.
+ok(pagoDe(tu({ asistencia: VINO.si, pagoJornada: 30000,
+               ajustes: [{ monto: -50000, motivo: 'adelanto' }] })) === 0,
+   'un descuento mayor que la jornada deja el día en cero, nunca en negativo');
+
+// --- La ida y vuelta por las dos celdas de la planilla ---
+ok(JSON.stringify(escribirAjustes([{ monto: -5000, motivo: 'llegó tarde' }]))
+   === JSON.stringify(['-5000', 'llegó tarde']),
+   'con UN ajuste la celda se ve igual que siempre: legible y editable a mano');
+ok(JSON.stringify(escribirAjustes(conDos.ajustes))
+   === JSON.stringify(['5000|-20000', 'hora extra del montaje|adelanto del viernes']),
+   'con dos, las dos celdas quedan en paralelo');
+
+const vueltaAjustes = leerAjustes('5000|-20000', 'hora extra|adelanto');
+ok(vueltaAjustes.length === 2 && vueltaAjustes[1].monto === -20000
+   && vueltaAjustes[1].motivo === 'adelanto',
+   'y se leen de vuelta tal cual, con su signo y su motivo');
+
+// **Lo que ya estaba escrito se sigue leyendo.** Una planilla anterior tiene
+// un solo ajuste por celda y tiene que abrirse sin que nadie migre nada.
+const viejo = leerAjustes('-5000', 'llegó tarde');
+ok(viejo.length === 1 && viejo[0].monto === -5000 && viejo[0].motivo === 'llegó tarde',
+   'una celda escrita cuando el ajuste era uno solo se lee como un ajuste');
+ok(leerAjustes('', '').length === 0, 'y una celda vacía no inventa ninguno');
+
+// Manda la lista de montos: si alguien edita a mano una celda y no la otra,
+// los motivos que falten se leen vacíos en vez de desalinear los pares.
+const cojo = leerAjustes('5000|-20000', 'hora extra');
+ok(cojo.length === 2 && cojo[1].motivo === '' && cojo[1].monto === -20000,
+   'si faltan motivos, los montos igual se leen en su posición');
+
+// Un ajuste en cero y sin motivo es una fila que alguien abrió y no llenó.
+ok(escribirAjustes([{ monto: 0, motivo: '' }])[0] === '',
+   'un ajuste vacío no se guarda');
+ok(leerAjustes('0', 'se le perdonó el atraso').length === 1,
+   'pero uno en cero CON motivo sí: alguien lo escribió a propósito');
+
+// El separador no puede venir dentro de un motivo, o partiría el ajuste en
+// dos al volver a leerlo.
+ok(!escribirAjustes([{ monto: 1000, motivo: 'a|b' }])[1].includes('|'),
+   'el separador se saca de los motivos antes de guardar');
+
+// Y el informe suma los ajustes de todos los turnos del periodo.
+const conAjustes = informeDelPeriodo([
+  tu({ trabajador: 'Ana', fecha: '2026-11-14', asistencia: VINO.si,
+       pagoJornada: 30000,
+       ajustes: [{ monto: 5000, motivo: 'hora extra' },
+                 { monto: -20000, motivo: 'adelanto' }] })
+], '2026-11-01', '2026-11-30');
+ok(conAjustes[0].ajustes === -15000 && conAjustes[0].total === 15000,
+   'el informe los suma en su columna y en el total');
+
+
+/* ---------- Cerrar un día ---------- */
+
+console.log('\nCierre del día');
+
+const ce = (p: Partial<Cierre>): Cierre =>
+  ({ fecha: '2026-11-14', quien: 'jefe', cuando: '2026-11-14 23:40', fila: 2, ...p });
+
+ok(diaCerrado([ce({})], '2026-11-14'), 'un día con su fila está cerrado');
+ok(!diaCerrado([ce({})], '2026-11-15'), 'y el de al lado no');
+ok(cierreDe([ce({ quien: 'ana' })], '2026-11-14')?.quien === 'ana',
+   'queda con el nombre de quien lo cerró, que es lo que permite preguntar');
+
+const delSabado = [
+  tu({ fecha: '2026-11-14', trabajador: 'Ana', asistencia: VINO.si, pagoJornada: 30000 }),
+  tu({ fecha: '2026-11-14', trabajador: 'Luis', asistencia: VINO.sinMarcar })
+];
+const exDelSabado = [{ fecha: '2026-11-14', colaborador: 'Pedro',
+  actividad: 'Show ecuestre', estado: '', monto: 50000, ajuste: 0, motivo: '', fila: 2 }];
+
+const pendiente = faltaParaCerrar(delSabado, exDelSabado, '2026-11-14');
+ok(pendiente.sinMarcar === 1, 'dice cuánta gente quedó sin marcar');
+ok(pendiente.extrasSinConfirmar === 1, 'y cuántas actividades extras sin confirmar');
+ok(pendiente.sinPropina, 'y avisa si vino gente y nadie anotó propina');
+
+// **Lo único que bloquea es la asistencia.** Un turno sin marcar no suma
+// nada, así que cerrar con turnos a medias sería cerrar con el total mal.
+ok(!sePuedeCerrar(delSabado, exDelSabado, '2026-11-14'),
+   'con alguien sin marcar no se puede cerrar');
+const marcados = delSabado.map((t) => ({ ...t, asistencia: VINO.no }));
+ok(sePuedeCerrar(marcados, exDelSabado, '2026-11-14'),
+   'una vez marcados todos, sí — aunque queden extras sin confirmar');
+ok(!sePuedeCerrar([], [], '2026-11-14'),
+   'y un día sin nadie asignado no se cierra: no hay nada que cerrar');
+
+// Lo que el calendario muestra arriba: días pasados, con equipo, sin cerrar.
+const porCerrar = diasPorCerrar(
+  [tu({ fecha: '2026-11-14' }), tu({ fecha: '2026-11-15' }), tu({ fecha: '2026-11-21' })],
+  [], [ce({ fecha: '2026-11-15' })], '2026-11-20'
+);
+ok(JSON.stringify(porCerrar) === JSON.stringify(['2026-11-14']),
+   'el 15 ya está cerrado y el 21 todavía no pasa: queda solo el 14');
+ok(diasPorCerrar([tu({ fecha: '2026-11-21' })], [], [], '2026-11-20').length === 0,
+   'un día que no ha llegado no está pendiente: nadie puede decir quién vino');
+
+// La ida y vuelta por la planilla.
+const filasCierre = [
+  ['Fecha', 'Cerrado por', 'Cuándo'],
+  ['2026-11-14', 'jefe', '2026-11-14 23:40'],
+  ['', 'nadie', '']
+];
+const leidos = leerCierresDe(filasCierre);
+ok(leidos.length === 1 && leidos[0].quien === 'jefe' && leidos[0].fila === 2,
+   'se lee una fila por día cerrado, y una sin fecha no cuenta');
+ok(leerCierresDe([['Cerrado por']]).length === 0,
+   'sin la columna Fecha no se interpreta nada');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

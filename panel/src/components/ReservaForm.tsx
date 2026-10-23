@@ -33,6 +33,8 @@ import { TIPO_PAGO, ESTADO_PAGO } from '@/lib/columnas';
 import { desglosarMenu, componerMenu, personasDeCuenta } from '@/lib/shopify';
 import { precioDe, aMonto, type Menu } from '@/lib/menus';
 import Dialogo from './Dialogo';
+import CampoTelefono from './CampoTelefono';
+import { correoNormal, avisoCorreo } from '@/lib/contacto';
 
 export default function ReservaForm({
   fecha, reserva, menusConocidos, catalogo, onListo, onCancelar
@@ -143,8 +145,26 @@ export default function ReservaForm({
           <Campo etiqueta="Nombre" ancho>
             <input type="text" {...campo('nombre')} className={ENTRADA} autoFocus />
           </Campo>
-          <Campo etiqueta="Teléfono"><input type="text" {...campo('telefono')} className={ENTRADA} /></Campo>
-          <Campo etiqueta="Email"><input type="email" {...campo('email')} className={ENTRADA} /></Campo>
+          {/* El teléfono y el correo se ordenan al salir del campo: una
+              reserva anotada a mano tiene que quedar con la misma forma que
+              una que llega de Shopify, o el día que se automatice algo
+              —mandar la confirmación, avisar un cambio— habría que adivinar
+              cuál es cuál. Ver `contacto.ts`. */}
+          <Campo etiqueta="Teléfono">
+            <CampoTelefono valor={f.telefono} className={ENTRADA}
+              etiqueta="Teléfono de quien reserva"
+              onCambio={(v) => setF({ ...f, telefono: v })} />
+          </Campo>
+          <Campo etiqueta="Email">
+            <input type="email" {...campo('email')} className={ENTRADA}
+              inputMode="email"
+              onBlur={(e) => setF({ ...f, email: correoNormal(e.target.value) })} />
+            {avisoCorreo(f.email) && (
+              <p className="mt-0.5 text-[11px] leading-tight text-amber-300/80">
+                {avisoCorreo(f.email)}
+              </p>
+            )}
+          </Campo>
           <Campo etiqueta="Tipo de pago">
             <select {...campo('tipoPago')} className={ENTRADA}>
               <option value={TIPO_PAGO.directo}>{TIPO_PAGO.directo}</option>

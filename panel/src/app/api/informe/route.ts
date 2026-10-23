@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { leerTurnos, leerTrabajadores, leerExtras, leerColaboradores } from '@/lib/datos';
 import { exigir } from '@/lib/permisos';
 import { normalizar } from '@/lib/columnas';
+import type { Banco } from '@/lib/banco';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +20,11 @@ export const dynamic = 'force-dynamic';
  * que no se mezcla es el cálculo: el equipo cobra jornadas y recibe propina,
  * un jinete cobra lo acordado y no recibe ninguna.
  *
- * De las fichas sale **solo la cuenta bancaria**, que es lo que falta para
- * poder transferir sin cruzar la planilla con otra lista a mano. Ni
- * teléfonos, ni sueldos de hoy, ni tokens: esta ruta la lee una cuenta que
- * no tiene permiso para ver el equipo.
+ * De las fichas salen **solo los datos de la transferencia** —titular, RUT,
+ * banco, tipo, número, correo y la nota—, que es lo que falta para poder
+ * pagar sin cruzar la planilla con otra lista a mano. Ni teléfonos, ni
+ * sueldos de hoy, ni tokens: esta ruta la lee una cuenta que no tiene
+ * permiso para ver el equipo.
  *
  * Es una ruta de solo lectura: el informe no escribe nada.
  */
@@ -33,9 +35,9 @@ export async function GET(req: Request) {
     const [turnos, extras, gente, colaboradores] = await Promise.all([
       leerTurnos(), leerExtras(), leerTrabajadores(), leerColaboradores()
     ]);
-    const cuentas: Record<string, string> = {};
+    const cuentas: Record<string, Banco> = {};
     for (const p of [...gente, ...colaboradores]) {
-      if (p.cuenta) cuentas[normalizar(p.nombre)] = p.cuenta;
+      cuentas[normalizar(p.nombre)] = p.banco;
     }
     return NextResponse.json({ turnos, extras, cuentas });
   } catch (e) {

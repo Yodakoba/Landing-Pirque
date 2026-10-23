@@ -35,6 +35,9 @@ import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
+import { totalAjustes, motivosDe } from '@/lib/equipo';
+import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
+         type Banco } from '@/lib/banco';
 
 type Tipo = 'mes' | 'semana' | 'rango';
 
@@ -44,7 +47,7 @@ export default function InformeEquipo() {
   // paga hace un solo pago a la semana, pero un jinete no cobra una jornada
   // ni recibe propina, así que sumarlos en una sola lista sería mentir.
   const [extras, setExtras] = useState<Extra[]>([]);
-  const [cuentas, setCuentas] = useState<Record<string, string>>({});
+  const [cuentas, setCuentas] = useState<Record<string, Banco>>({});
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   const [tipo, setTipo] = useState<Tipo>('mes');
@@ -98,15 +101,17 @@ export default function InformeEquipo() {
   const sinMarcar = lineas.reduce((s, l) => s + l.sinMarcar, 0);
   const totalExtras = lineasExtras.reduce((s, l) => s + l.total, 0);
   const sinConfirmar = lineasExtras.reduce((s, l) => s + l.sinConfirmar, 0);
-  const cuentaDe = (nombre: string) => cuentas[normalizar(nombre)] ?? '';
+  const cuentaDe = (nombre: string): Banco =>
+    cuentas[normalizar(nombre)] ?? bancoVacio();
 
-  // Quién aparece en el periodo y no tiene dónde recibir la plata. Se avisa
-  // acá porque es el momento en que importa: descubrirlo con la planilla ya
-  // descargada significa volver a entrar, completarla y bajarla de nuevo.
+  // Quién aparece en el periodo y no se le puede transferir con lo que hay
+  // anotado. Se avisa acá porque es el momento en que importa: descubrirlo
+  // con la planilla ya descargada significa volver a entrar, completarla y
+  // bajarla de nuevo.
   const sinCuenta = [
     ...lineas.map((l) => l.trabajador),
     ...lineasExtras.map((l) => l.colaborador)
-  ].filter((n) => !cuentaDe(n));
+  ].filter((n) => !sePuedeTransferir(cuentaDe(n)));
 
   const comoSeLlama = (p: string) => p.length === 7
     ? mesEnPalabras(p)
@@ -128,9 +133,19 @@ export default function InformeEquipo() {
    * cero se lee como "le tocó cero propina", y lo que pasa es que un jinete
    * no entra en el reparto.
    *
-   * La cuenta bancaria va al final, en las dos. Es lo que falta para poder
-   * transferir sin cruzar esta planilla con otra lista a mano.
+   * **Los datos de la transferencia van al final, un campo por columna**, y
+   * eso es lo que vuelve esta planilla pegable en la carga masiva de un
+   * banco: titular, RUT, banco, tipo, número y correo. En una sola columna
+   * de texto libre había que separarlos a mano, fila por fila, que es
+   * exactamente el trabajo que esto viene a evitar.
    */
+  /** Las siete columnas del pago, en el orden del encabezado. */
+  const columnasBanco = (nombre: string) => {
+    const b = cuentaDe(nombre);
+    return [titularDe(b, nombre), rutLimpio(b.rut), b.banco, b.tipo,
+            b.numero, b.correo, b.nota];
+  };
+
   function exportar() {
     const delPeriodo = (turnos ?? [])
       .filter((t) => t.fecha >= desde && t.fecha <= hasta)
@@ -143,7 +158,9 @@ export default function InformeEquipo() {
     const csv = aCSV(
       ['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
        'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo',
-       'Total', 'Propina', 'Cuenta bancaria'],
+       'Total', 'Propina',
+       'Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
+       'Correo del comprobante', 'Nota de pago'],
       [
         ...delPeriodo.map((t) => [
           'Equipo',
@@ -152,13 +169,14 @@ export default function InformeEquipo() {
           // Un contratado va en blanco, no en cero: cero se lee como "se le
           // pagó cero", y lo que pasa es que esa columna no le aplica.
           esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
-          t.horasExtra || '', t.valorHora || '', t.ajuste || '', t.motivo,
+          t.horasExtra || '', t.valorHora || '',
+          totalAjustes(t.ajustes) || '', motivosDe(t.ajustes),
           pagoDe(t),
           // Aparte del total, igual que en pantalla: la propina no es
           // sueldo, y quien reciba esta planilla tiene que poder sumar una
           // cosa sin arrastrar la otra.
           t.propina || '',
-          cuentaDe(t.trabajador)
+          ...columnasBanco(t.trabajador)
         ]),
         ...extrasDelPeriodo.map((e) => [
           'Actividad extra',
@@ -171,7 +189,7 @@ export default function InformeEquipo() {
           // Propina en blanco, a propósito: un jinete no entra en el
           // reparto, y un cero se leería como que le tocó cero.
           '',
-          cuentaDe(e.colaborador)
+          ...columnasBanco(e.colaborador)
         ])
       ]
     );
@@ -457,8 +475,8 @@ export default function InformeEquipo() {
 
           {sinCuenta.length > 0 && (
             <p className="mb-6 max-w-2xl text-xs text-amber-300/80">
-              Sin cuenta bancaria anotada: {sinCuenta.join(' · ')}. La planilla
-              sale igual, con esa columna en blanco; se completa en{' '}
+              Sin datos para transferir: {sinCuenta.join(' · ')}. La planilla
+              sale igual, con esas columnas a medias; se completa en{' '}
               <a href="/equipo" className="hover:underline">equipo</a> o en{' '}
               <a href="/extras" className="hover:underline">actividades extras</a>.
             </p>
@@ -475,9 +493,11 @@ export default function InformeEquipo() {
           </p>
           <p className="mt-3 max-w-2xl text-xs text-hueso/50">
             <strong>La planilla que se descarga trae las dos cosas juntas</strong>,
-            día por día, con el motivo de cada ajuste y la cuenta bancaria de
-            cada uno: es un solo pago a la semana, pero cada fila dice si es
-            equipo o actividad extra.
+            día por día, con el motivo de cada ajuste y los datos de la
+            transferencia de cada uno —titular, RUT, banco, tipo, número y
+            correo, un campo por columna—: es un solo pago a la semana, se
+            pega en la carga del banco, y cada fila dice si es equipo o
+            actividad extra.
           </p>
         </>
       )}

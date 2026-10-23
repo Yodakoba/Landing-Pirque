@@ -25,6 +25,8 @@ import { HOJA_MENUS, leerMenusDe, aFilasMenus, POR_DEFECTO_MENUS,
 import { esFecha, type Fecha } from './fechas.ts';
 import { normalizar } from './columnas.ts';
 import { HOJA_USUARIOS, leerUsuariosDe, aFilasUsuarios, type Usuario } from './usuarios.ts';
+import { HOJA_CIERRES, COL_CIERRES, ENCABEZADO_CIERRES, leerCierresDe,
+         type Cierre } from './cierres';
 import {
   HOJA_BITACORA, ENCABEZADO_BITACORA, filaBitacora, leerBitacoraDe,
   ahoraEnChile, recortar, type Anotacion
@@ -493,4 +495,43 @@ export async function leerBitacora(cuantas = 200): Promise<Anotacion[]> {
   } catch {
     return [];
   }
+}
+
+/* ---------- Cierres de día ---------- */
+
+export async function leerCierres(): Promise<Cierre[]> {
+  try {
+    return leerCierresDe(await leerHoja(HOJA_CIERRES));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Deja el día cerrado, o lo reabre.
+ *
+ * **Cerrar dos veces no agrega dos filas**: la pestaña es una fila por día
+ * cerrado, y dos personas apretando el botón con un segundo de diferencia
+ * no pueden dejar el registro diciendo que el día se cerró dos veces.
+ */
+export async function cerrarDia(fecha: Fecha, quien: string): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_CIERRES, ENCABEZADO_CIERRES);
+  const enc = filas[0] ?? ENCABEZADO_CIERRES;
+  const previas = leerCierresDe(filas).filter((c) => c.fecha === fecha).map((c) => c.fila);
+  await borrarFilas(HOJA_CIERRES, previas);
+  const i = (nombre: string) =>
+    enc.findIndex((c) => String(c).trim().toLowerCase() === nombre.toLowerCase());
+  const fila = new Array(Math.max(enc.length, ENCABEZADO_CIERRES.length)).fill('');
+  const poner = (k: number, v: string) => { if (k !== -1) fila[k] = v; };
+  poner(i(COL_CIERRES.fecha), fecha);
+  poner(i(COL_CIERRES.quien), quien);
+  poner(i(COL_CIERRES.cuando), ahoraEnChile());
+  await agregarFilas(HOJA_CIERRES, [fila]);
+}
+
+export async function reabrirDia(fecha: Fecha): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_CIERRES, ENCABEZADO_CIERRES);
+  const previas = leerCierresDe(filas).filter((c) => c.fecha === fecha).map((c) => c.fila);
+  await borrarFilas(HOJA_CIERRES, previas);
 }

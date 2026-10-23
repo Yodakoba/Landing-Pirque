@@ -31,6 +31,8 @@ import { COLOR_TARJETA, PUNTO_TARJETA } from './TarjetaDia';
 import { resumenEquipo, esPreparacion,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import type { Ocupacion } from '@/lib/tipos';
+import { estaCerrado, faltaParaCerrar, diasPorCerrar, type Cierre } from '@/lib/cierres';
+import type { Extra } from '@/lib/extras';
 import { diasDelMes, sumarMeses, mesDe, mesEnPalabras, diaSemana, hoy,
          enPalabras } from '@/lib/fechas';
 
@@ -42,7 +44,8 @@ const columna = (f: string) => (diaSemana(f) === 0 ? 6 : diaSemana(f) - 1);
 export default function CalendarioEquipo() {
   const [mes, setMes] = useState(() => mesDe(hoy()));
   const [equipo, setEquipo] = useState<{
-    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
+    cierres: Cierre[]; extras: Extra[]; esAdmin: boolean;
   } | null>(null);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
   const [planificando, setPlanificando] = useState<string | null>(null);
@@ -54,7 +57,8 @@ export default function CalendarioEquipo() {
         if (d.error) return setError(d.error);
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], esAdmin: !!d.esAdmin
+          turnos: d.turnos ?? [], cierres: d.cierres ?? [], extras: d.extras ?? [],
+          esAdmin: !!d.esAdmin
         });
       })
       .catch((e) => setError(String(e)));
@@ -76,6 +80,11 @@ export default function CalendarioEquipo() {
   const turnos = equipo?.turnos ?? [];
   const puestos = equipo?.puestos ?? [];
 
+  const cierres = equipo?.cierres ?? [];
+  const extras = equipo?.extras ?? [];
+  const cerrado = (f: string) => estaCerrado(cierres, f);
+  const falta = (f: string) => faltaParaCerrar(turnos, extras, f);
+
   const personasDe = (f: string) => porFecha.get(f)?.tomadas ?? 0;
   const resumenDe = (f: string) => resumenEquipo(turnos, puestos, f, personasDe(f));
 
@@ -88,6 +97,11 @@ export default function CalendarioEquipo() {
   // Cuántos días del mes tienen equipo, y cuántos de esos son preparación.
   const conEquipo = dias.filter((f) => resumenDe(f).total > 0);
   const preparacion = conEquipo.filter(prepara);
+  // Los días que ya pasaron, tienen equipo y nadie cerró todavía. Es lo que
+  // el encargado tiene que ir a mirar, y por eso va arriba y no escondido
+  // en una celda del mes.
+  const porCerrar = diasPorCerrar(turnos, extras, cierres, hoy())
+    .filter((f) => dias.includes(f));
 
   if (error) return <Aviso error={error} />;
 
@@ -108,6 +122,47 @@ export default function CalendarioEquipo() {
         recibir reservas se sigue haciendo en el{' '}
         <a href="/" className="text-oro hover:underline">calendario</a>.
       </p>
+
+      {/* **Lo que falta por cerrar, arriba y no escondido en una celda.**
+          Lo pidió el cliente así: una vez que el día pasó, el panel avisa
+          cuánta gente y cuántas actividades quedaron sin confirmar, y desde
+          ahí se cierra. Un día que todavía no llega no aparece: nadie puede
+          decir quién vino a un sábado que no ha ocurrido. */}
+      {porCerrar.length > 0 && (
+        <div className="mb-5 rounded border border-amber-500/50 bg-amber-500/5 p-4">
+          <p className="text-sm font-semibold text-amber-300">
+            {porCerrar.length === 1
+              ? 'Hay un día por cerrar.'
+              : `Hay ${porCerrar.length} días por cerrar.`}
+          </p>
+          <p className="mt-1 text-sm text-hueso/70">
+            Un día cerrado es uno donde alguien ya confirmó quién vino, anotó
+            la propina y revisó los montos. Mientras no se cierre, el informe
+            de ese periodo está incompleto.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {porCerrar.map((f) => {
+              const x = falta(f);
+              return (
+                <button key={f} onClick={() => setPlanificando(f)}
+                  className="rounded border border-amber-500/40 px-2 py-1 text-xs
+                             hover:border-oro">
+                  <span className="capitalize">{enPalabras(f)}</span>
+                  {x.sinMarcar > 0 && (
+                    <span className="text-amber-300"> · {x.sinMarcar} sin marcar</span>
+                  )}
+                  {x.extrasSinConfirmar > 0 && (
+                    <span className="text-amber-300">
+                      {' '}· {x.extrasSinConfirmar} extra{x.extrasSinConfirmar === 1 ? '' : 's'}
+                    </span>
+                  )}
+                  {x.sinPropina && <span className="text-hueso/50"> · sin propina</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <button onClick={() => setMes(sumarMeses(mes, -1))}
@@ -196,6 +251,14 @@ export default function CalendarioEquipo() {
               {res.faltan > 0 && (
                 <span className="mt-0.5 block text-amber-300">faltan {res.faltan}</span>
               )}
+              {res.total > 0 && cerrado(f) && (
+                <span className="mt-0.5 block text-hueso/45">✓ cerrado</span>
+              )}
+              {res.total > 0 && !cerrado(f) && f < hoy() && falta(f).sinMarcar > 0 && (
+                <span className="mt-0.5 block text-amber-300">
+                  {falta(f).sinMarcar} sin marcar
+                </span>
+              )}
             </button>
           );
         })}
@@ -219,8 +282,9 @@ export default function CalendarioEquipo() {
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
+          extras={equipo.extras}
+          cerrado={cerrado(planificando)}
           esAdmin={equipo.esAdmin}
-          enlaceAlDia
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}
         />

@@ -17,14 +17,24 @@
  */
 import { useMemo, useState } from 'react';
 import Dialogo from './Dialogo';
-import { planDelDia, VINO, MODALIDAD,
+import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
+         repartirPropina, propinaDelDia,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
+import { faltaParaCerrar } from '@/lib/cierres';
+import { enPesos } from '@/lib/ocupacion';
+import type { Extra } from '@/lib/extras';
+
+const ENTRADA =
+  'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
+  'focus:border-oro focus:outline-none';
 import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
+import CampoTelefono from './CampoTelefono';
 
 export default function EquipoDialogo({
-  fecha, personas, puestos, trabajadores, turnos, esAdmin = false,
-  enlaceAlDia = false, onListo, onCancelar
+  fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
+  esAdmin = false, enfocarPropina = false,
+  onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -33,19 +43,14 @@ export default function EquipoDialogo({
   trabajadores: Trabajador[];
   /** Todos los turnos, de todos los días. Acá se filtra el de esta fecha. */
   turnos: Turno[];
+  /** Las actividades extras, para avisar si quedan sin confirmar. */
+  extras?: Extra[];
+  /** Si el día ya fue cerrado por alguien. */
+  cerrado?: boolean;
   /** Si puede fijar sueldos al crear a alguien. */
   esAdmin?: boolean;
-  /**
-   * Ofrece el enlace a la página de ese día.
-   *
-   * Va solo cuando esta ventana se abrió desde el calendario del equipo:
-   * desde la página del día el enlace llevaría a donde ya se está. Lo que
-   * resuelve es un callejón real — **un día de preparación no aparece en el
-   * calendario de la portada**, así que sin esto no había cómo llegar a
-   * pasarle lista, y un turno sin pasar lista no suma nada ni entra en el
-   * informe.
-   */
-  enlaceAlDia?: boolean;
+  /** Abre con el cursor en la propina, para quien viene justo a eso. */
+  enfocarPropina?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -58,6 +63,11 @@ export default function EquipoDialogo({
   );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  // La propina del día, que se escribe UNA vez y el panel reparte. Lo que
+  // se guarda es la parte de cada uno, no el pozo: ver `repartirPropina`.
+  const [propina, setPropina] = useState(
+    () => propinaDelDia(turnos.filter((t) => t.fecha === fecha), fecha)
+  );
 
   // La lista se guarda en estado y no se lee del prop: crear a alguien desde
   // acá tiene que dejarlo disponible en TODOS los puestos de esta misma
@@ -81,6 +91,36 @@ export default function EquipoDialogo({
   );
   const faltan = lineas.reduce((n, l) => n + l.faltan, 0);
 
+  /** Los montos de una persona. Ninguno de estos admite negativos. */
+  const cambiarMonto = (i: number, campo: 'pagoJornada' | 'horasExtra', valor: string) => {
+    const copia = plan.map((t) => ({ ...t }));
+    const n = Number(String(valor).replace(/[^\d]/g, ''));
+    copia[i][campo] = Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+    setPlan(copia);
+  };
+
+  /** Los ajustes sí: un descuento es justamente un número negativo. */
+  const cambiarAjuste = (i: number, k: number, campo: 'monto' | 'motivo', valor: string) => {
+    const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
+    if (campo === 'motivo') copia[i].ajustes[k].motivo = valor;
+    else {
+      const n = Number(String(valor).replace(/[^\d.-]/g, ''));
+      copia[i].ajustes[k].monto = Number.isFinite(n) ? Math.round(n) : 0;
+    }
+    setPlan(copia);
+  };
+
+  const agregarAjuste = (i: number) => {
+    const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
+    copia[i].ajustes.push({ monto: 0, motivo: '' });
+    setPlan(copia);
+  };
+
+  const quitarAjuste = (i: number, k: number) => {
+    setPlan(plan.map((t, j) => (j === i
+      ? { ...t, ajustes: t.ajustes.filter((_, x) => x !== k) } : t)));
+  };
+
   const marcar = (nombre: string, asistencia: string) => setPlan(plan.map(
     (t) => (normalizar(t.trabajador) === normalizar(nombre)
       ? { ...t, asistencia } : t)
@@ -89,23 +129,57 @@ export default function EquipoDialogo({
   const vinieron = plan.filter((t) => t.asistencia === VINO.si).length;
   const faltaron = plan.filter((t) => t.asistencia === VINO.no).length;
 
-  async function guardar() {
+  // Quién entra en el reparto. Quien todavía no tiene ficha participa: lo
+  // más probable es que sea alguien recién agregado, y dejarlo fuera en
+  // silencio sería peor que incluirlo de más y que alguien lo corrija.
+  const participa = (nombre: string) => {
+    const f = gente.find((x) => normalizar(x.nombre) === normalizar(nombre));
+    return f ? f.propina : true;
+  };
+  const repartida = useMemo(
+    () => repartirPropina(plan, propina, participa),
+    [plan, propina, gente]
+  );
+  const reciben = repartida.filter((t) => t.propina > 0).length;
+  const falta = faltaParaCerrar(
+    plan.map((t) => ({ ...t, fila: -1 })), extras, fecha
+  );
+  const listo = falta.conEquipo > 0 && falta.sinMarcar === 0;
+
+  /**
+   * Guarda el día, y si se pidió lo deja cerrado.
+   *
+   * **Son dos peticiones y en este orden**: primero los turnos, después el
+   * cierre. Si se hiciera al revés, el servidor comprobaría si falta
+   * alguien por marcar mirando lo que había antes de este guardado, y
+   * rechazaría cerrar un día que justo se acaba de completar.
+   */
+  async function guardar(cerrando = false) {
     setGuardando(true);
     try {
       const r = await fetch('/api/equipo/turnos', {
         method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fecha, turnos: plan })
+        body: JSON.stringify({ fecha, turnos: repartirPropina(plan, propina, participa) })
       });
       const d = await r.json();
-      if (d.error) setError(d.error);
-      else onListo();
+      if (d.error) { setError(d.error); return; }
+
+      if (cerrando || cerrado) {
+        const c = await fetch('/api/equipo/cierre', {
+          method: 'PUT', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ fecha, cerrar: cerrando })
+        });
+        const dc = await c.json();
+        if (dc.error) { setError(dc.error); return; }
+      }
+      onListo();
     } catch (e) {
       setError(String(e));
     } finally { setGuardando(false); }
   }
 
   return (
-    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={onCancelar} ancho="max-w-3xl">
+    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={onCancelar} ancho="max-w-4xl">
       <p className="mt-3 text-sm text-hueso/60">
         {personas > 0
           ? <>Hay <strong className="text-hueso">{personas}</strong>{' '}
@@ -191,7 +265,7 @@ export default function EquipoDialogo({
                   // lista; acá todavía no se le ha pagado nada a nadie.
                   pagoJornada: ficha?.pagoJornada ?? 0,
                   horasExtra: 0, valorHora: ficha?.valorHora ?? 0,
-                  ajuste: 0, motivo: '', propina: 0
+                  ajustes: [], propina: 0
                 }]);
               }}
               className="mt-3 w-full rounded border border-hueso/20 bg-tinta px-2 py-1
@@ -234,12 +308,151 @@ export default function EquipoDialogo({
                 fecha, trabajador: t.nombre, puesto: creandoEn,
                 asistencia: VINO.sinMarcar, modalidad: t.modalidad,
                 pagoJornada: t.pagoJornada, horasExtra: 0, valorHora: t.valorHora,
-                ajuste: 0, motivo: '', propina: 0
+                ajustes: [], propina: 0
               }]);
             setCreandoEn(null);
             if (aviso) setError(aviso);
           }}
         />
+      )}
+
+      {/* **Las cuentas del día, en la misma ventana.**
+          Hasta el 2026-10-23 esto vivía en "Pasar lista", una ventana aparte
+          que solo se abría desde la página del día — y a un día de
+          preparación no se llega por ahí. El cliente lo pidió al revés y
+          tenía razón: se planifica en el calendario, con las reservas a la
+          vista, y **acá se confirma todo**, sea el día que sea. Un paso
+          menos y ningún callejón.
+
+          Aparece recién cuando hay alguien asignado: antes de eso no hay
+          nada que cerrar y sería una tabla vacía pidiendo atención. */}
+      {plan.length > 0 && (
+        <div className="mt-6 border-t border-hueso/10 pt-4">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-hueso/70">
+            Lo que se paga este día
+          </h3>
+          <p className="mt-1 text-xs text-hueso/50">
+            Se llena a quien <strong>vino</strong>; a quien no, el panel no le
+            paga nada. Si hay una diferencia por un acuerdo aparte
+            —un montaje, un atraso, un adelanto— va en un{' '}
+            <strong>ajuste con su motivo</strong> y no editando la jornada:
+            los dos dan el mismo total, pero solo uno deja escrito el porqué.
+          </p>
+
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[44rem] text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
+                <tr className="border-b border-hueso/10">
+                  <th className="w-44 py-2 pr-3">Quién</th>
+                  <th className="w-24 py-2 pr-3">Jornada</th>
+                  <th className="w-20 py-2 pr-3">Hs extra</th>
+                  <th className="min-w-[16rem] py-2 pr-3">Ajustes</th>
+                  <th className="w-24 py-2 pr-3 text-right">Propina</th>
+                  <th className="w-24 py-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plan.map((t, i) => (
+                  <tr key={t.trabajador} className="border-b border-hueso/5">
+                    <td className="py-2 pr-3 align-top">
+                      <span className={t.asistencia === VINO.no
+                        ? 'text-hueso/35 line-through' : ''}>{t.trabajador}</span>
+                      <span className="block text-xs text-hueso/40">
+                        {t.puesto}
+                        {t.asistencia === VINO.sinMarcar && (
+                          <span className="text-amber-300"> · sin marcar</span>
+                        )}
+                        {esContratado(t.modalidad) && <> · contratado</>}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      {/* A un contratado no se le paga jornada: su sueldo no
+                          sale de esta caja. Se dice, en vez de mostrar un
+                          campo vacío que parece un dato que falta. */}
+                      {esContratado(t.modalidad) ? (
+                        <span className="text-xs text-hueso/45">no aplica</span>
+                      ) : (
+                        <input type="number" min={0} step={1000} className={ENTRADA}
+                          value={t.pagoJornada || ''} placeholder="—"
+                          aria-label={`Jornada de ${t.trabajador}`}
+                          onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      <input type="number" min={0} step={1} className={ENTRADA}
+                        value={t.horasExtra || ''} placeholder="0"
+                        aria-label={`Horas extra de ${t.trabajador}`}
+                        onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      {t.ajustes.map((a, k) => (
+                        <div key={k} className="mb-1 flex items-center gap-1">
+                          <input type="number" step={1000} className={`${ENTRADA} w-24`}
+                            value={a.monto || ''} placeholder="0"
+                            aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
+                            onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
+                          <input type="text" className={ENTRADA} value={a.motivo}
+                            placeholder="por qué"
+                            aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
+                            onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
+                          <button onClick={() => quitarAjuste(i, k)}
+                            className="px-1 text-hueso/40 hover:text-red-400"
+                            aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
+                            title="Quitar este ajuste">✕</button>
+                        </div>
+                      ))}
+                      <button onClick={() => agregarAjuste(i)}
+                        className="text-xs text-oro hover:underline">
+                        + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
+                      </button>
+                      {t.ajustes.length > 1 && (
+                        <span className="ml-2 text-xs tabular-nums text-hueso/45">
+                          suman {enPesos(totalAjustes(t.ajustes))}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 text-right align-top tabular-nums text-hueso/70">
+                      {repartida[i]?.propina
+                        ? enPesos(repartida[i].propina)
+                        : t.asistencia === VINO.si && !participa(t.trabajador)
+                          ? <span className="text-xs text-hueso/35">no participa</span>
+                          : <span className="text-hueso/25">—</span>}
+                    </td>
+                    <td className="py-2 text-right align-top tabular-nums">
+                      {t.asistencia === VINO.si
+                        ? <strong>{enPesos(pagoDe(t))}</strong>
+                        : <span className="text-hueso/35">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* La propina se escribe UNA vez, como total del día, y el panel
+              la reparte en partes iguales entre quienes vinieron y
+              participan. Lo que se guarda es la parte de cada uno. */}
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded border
+                          border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-hueso/70">Propina del día</span>
+              <input type="number" min={0} step={1000}
+                className={`${ENTRADA} w-32`} value={propina || ''} placeholder="0"
+                autoFocus={enfocarPropina}
+                aria-label="Propina del día, en total"
+                onChange={(e) => {
+                  const n = Number(String(e.target.value).replace(/[^\d]/g, ''));
+                  setPropina(Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
+                }} />
+            </label>
+            <span className="text-xs text-hueso/50">
+              {propina > 0
+                ? <>se reparte entre {reciben} {reciben === 1 ? 'persona' : 'personas'},
+                    en partes iguales</>
+                : <>si hubo, se escribe el total y el panel la reparte</>}
+            </span>
+          </div>
+        </div>
       )}
 
       {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
@@ -261,12 +474,16 @@ export default function EquipoDialogo({
           )}
           {' '}¿Falta alguien en la lista?{' '}
           <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
-          {enlaceAlDia && plan.length > 0 && (
+          {falta.extrasSinConfirmar > 0 && (
             <>
-              {' '}Para pasar lista y anotar montos,{' '}
-              <a href={`/dia/${fecha}`} className="text-oro hover:underline">
-                abre el día
-              </a>.
+              {' '}
+              <span className="text-amber-300">
+                {falta.extrasSinConfirmar === 1
+                  ? 'Queda 1 actividad extra sin confirmar'
+                  : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
+              </span>
+              {' '}—{' '}
+              <a href="/extras" className="text-oro hover:underline">míralas acá</a>.
             </>
           )}
         </span>
@@ -275,10 +492,35 @@ export default function EquipoDialogo({
           className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
           Cancelar
         </button>
-        <button onClick={guardar} disabled={guardando}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar equipo'}
+        <button onClick={() => guardar(false)} disabled={guardando}
+          className="rounded border border-oro/60 px-4 py-1.5 text-sm font-semibold
+                     text-oro disabled:opacity-40">
+          {guardando ? 'Guardando…' : 'Guardar'}
         </button>
+        {/* **Cerrar es una declaración, no un cálculo.** El botón guarda y
+            además deja dicho que alguien revisó este día: con su nombre y su
+            hora, porque es lo que después permite preguntar. Mientras quede
+            alguien sin marcar no se puede, y el botón explica por qué. */}
+        {cerrado ? (
+          <button onClick={() => guardar(false)} disabled={guardando}
+            className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
+                       disabled:opacity-40"
+            title="Vuelve a dejar el día abierto para corregirlo">
+            Guardar y reabrir
+          </button>
+        ) : (
+          <button onClick={() => guardar(true)} disabled={guardando || !listo}
+            className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
+                       disabled:opacity-40"
+            title={listo
+              ? 'Guarda y deja el día cerrado'
+              : falta.conEquipo === 0
+                ? 'Primero asigna a alguien'
+                : `Falta marcar si ${falta.sinMarcar === 1 ? 'una persona vino' :
+                    `${falta.sinMarcar} personas vinieron`} o no`}>
+            Guardar y cerrar el día
+          </button>
+        )}
       </div>
     </Dialogo>
   );
@@ -351,9 +593,8 @@ function NuevoTrabajador({
           <span className="text-xs uppercase tracking-wide text-hueso/50">
             Teléfono <span className="normal-case text-hueso/35">(opcional)</span>
           </span>
-          <input type="tel" value={telefono} className={`${campo} mt-1`}
-            placeholder="+56 9 …"
-            onChange={(e) => setTelefono(e.target.value)} />
+          <CampoTelefono valor={telefono} className={`${campo} mt-1`}
+            etiqueta="Teléfono del trabajador nuevo" onCambio={setTelefono} />
         </label>
         <label className="block">
           <span className="text-xs uppercase tracking-wide text-hueso/50">Puesto habitual</span>

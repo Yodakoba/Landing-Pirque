@@ -15,6 +15,7 @@ import { TIPO_PAGO, ESTADO_PAGO } from './columnas.ts';
 import type { Reserva } from './tipos.ts';
 import { esFecha } from './fechas.ts';
 import { canonizar, type Menu } from './menus.ts';
+import { telefonoNormal, correoNormal } from './contacto.ts';
 
 /** Lo que nos importa de un pedido. El resto del objeto de Shopify es enorme. */
 export interface PedidoShopify {
@@ -94,7 +95,9 @@ export function nombreDe(p: PedidoShopify): string {
  */
 export function emailDe(p: PedidoShopify): string {
   const c = (p.customer ?? {}) as Record<string, unknown>;
-  return texto(p.email) || texto(p.contact_email) || texto(c.email);
+  // En minúsculas, por lo mismo que el teléfono se empareja: `Ana@X.CL` y
+  // `ana@x.cl` son la misma casilla y dos cadenas distintas.
+  return correoNormal(texto(p.email) || texto(p.contact_email) || texto(c.email));
 }
 
 /**
@@ -109,7 +112,14 @@ export function telefonoDe(p: PedidoShopify): string {
   const c = (p.customer ?? {}) as Record<string, unknown>;
   const fact = (p.billing_address ?? {}) as Record<string, unknown>;
   const envio = (p.shipping_address ?? {}) as Record<string, unknown>;
-  return texto(p.phone) || texto(fact.phone) || texto(envio.phone) || texto(c.phone);
+  const crudo = texto(p.phone) || texto(fact.phone) || texto(envio.phone)
+                || texto(c.phone);
+  // Shopify lo entrega como lo escribió el cliente en el checkout: con +56,
+  // sin él, con puntos. Se guarda con la forma del panel para que la columna
+  // sirva para algo después —mandar un WhatsApp, cruzar con una ficha— sin
+  // tener que adivinar el formato fila por fila. Un número extranjero se
+  // guarda tal cual: `telefonoNormal` solo toca lo que reconoce.
+  return telefonoNormal(crudo);
 }
 
 /** La fecha viaja en `_booking_date`, que el sitio pone en cada línea. */

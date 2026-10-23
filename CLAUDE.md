@@ -202,16 +202,20 @@ tres textos viven en el objeto `TEXTOS` del archivo.
 
 ### Lo que no sigue al idioma de la página
 
-- **El checkout de Shopify, que además cambió de idioma solo.** El
-  formulario de reserva se traduce, pero el checkout no obedece a la página.
-  El 2026-10-13 el `checkoutUrl` venía con `/es/`, o sea que todos caían en
-  español; **el 2026-10-22 redirige a `/checkouts/cn/<token>/en-us`**, y
-  probado con `Accept-Language` en es-CL, en-US y pt-BR los tres terminan en
-  `en-us`. Nadie tocó el sitio: es configuración de la tienda. Así, hoy un
-  cliente chileno pagaría en una pantalla en inglés, que es peor que el
-  problema original. **Se arregla con Shopify Markets, del lado de la
-  tienda**, y conviene volver a mirarlo cada vez que se toque algo allá,
-  porque cambia sin avisar.
+- **El checkout de Shopify, que sale en español y no sigue a la página.**
+  El formulario de reserva se traduce, pero el checkout tiene su propio
+  idioma, fijado en la tienda. **Hoy sale en español para todos**: redirige
+  a `/checkouts/cn/<token>/es-us`, probado con `Accept-Language` en es-CL,
+  en-US, pt-BR y sin cabecera — los cuatro dan `es-us`. Un visitante que leyó
+  el sitio en inglés paga en español, y eso es lo que hay.
+
+  **Vale la pena saber que esto cambió dos veces en un día**, porque es el
+  motivo para volver a mirarlo cada vez que se toque la tienda: el
+  2026-10-13 venía con `/es/`; el 2026-10-22 en la mañana salía en **`en-us`**
+  —o sea, un cliente chileno pagando en inglés—, y esa misma tarde el cliente
+  lo dejó en español. **Nadie tocó el sitio en el intertanto**: es
+  configuración de Shopify, se cambia sola y no avisa. Si alguna vez hay que
+  servirlo en tres idiomas de verdad, eso es Shopify Markets.
 - **Las conversaciones de WhatsApp.** El mensaje prellenado sí se traduce
   (el script lo decodifica del `?text=`), pero quien responde al otro lado
   escribe en el idioma que maneje. Vale la pena avisarle al cliente antes de
@@ -866,16 +870,22 @@ completa funciona con la versión `2026-10`**:
 **Dos cosas salieron de esa corrida y las dos son de la tienda, no del
 sitio:**
 
-- **El checkout de la tienda de desarrollo está detrás de contraseña.** El
-  carrito se crea bien y redirige a `/checkouts/cn/…`, pero eso termina en
-  `/password` — *"This store is password protected"*. Al cliente no le pasó
-  el 2026-10-13 porque su navegador ya tenía la clave de la tienda; **quien
+- **El checkout de la tienda de desarrollo está detrás de contraseña**, y
+  **sigue estándolo** (vuelto a comprobar el 2026-10-22 por la tarde). El
+  carrito se crea bien y redirige a `/checkouts/cn/<token>/es-us`, pero eso
+  termina en `/password` — *"Esta tienda está protegida con contraseña"*. Al
+  cliente no le pasa porque su navegador ya tiene la clave guardada; **quien
   pruebe desde otro computador se estrella ahí y parece que falla el sitio**.
-- **El checkout sale hoy en `en-us`, no en español.** Probado con
-  `Accept-Language` en es-CL, en-US y pt-BR: los tres redirigen a
-  `/checkouts/cn/<token>/**en-us**`. El 2026-10-13 venía con `/es/`, así que
-  algo cambió en la configuración de idioma de la tienda. Así, un cliente
-  chileno pagaría en una pantalla en inglés.
+  Se quita en Shopify → Online Store → Preferences, y **es el mismo paso que
+  falta para poder completar una compra de prueba** y cerrar el pendiente de
+  `_booking_date` en el pedido.
+- ~~El checkout sale en `en-us`, no en español~~ — **lo arregló el cliente
+  ese mismo día.** En la mañana los cuatro `Accept-Language` probados
+  redirigían a `/checkouts/cn/<token>/en-us`; en la tarde, a **`es-us`**, y
+  la propia pantalla de contraseña pasó a estar en español. Queda anotado
+  porque enseña algo: **el idioma del checkout cambia del lado de la tienda,
+  sin tocar el sitio y sin avisar**, así que conviene comprobarlo cada vez
+  que se toque algo allá.
 
 ### Lo que falta por verificar
 
@@ -925,7 +935,8 @@ uno sirviera por sí solo:
 | `Turnos` | Una fila por (fecha, trabajador, puesto), con asistencia, lo que se le pagó y su parte de la propina |
 
 A esas tres se sumaron después `Colaboradores` y `Actividades`, que son las
-de los jinetes y las pintacaritas — ver "Las actividades extras".
+de los jinetes y las pintacaritas —ver "Las actividades extras"—, y
+**`Cierres`**, una fila por día cerrado — ver "Cerrar el día".
 
 Las tres se editan en **`/equipo`**, salvo los turnos, que se asignan desde
 el calendario de la portada o desde **`/turnos`**, el calendario del equipo
@@ -1029,15 +1040,13 @@ está y la diferencia va en el ajuste**, no se edita la jornada. Los dos
 caminos dan el mismo total, pero solo uno deja escrito el porqué: una
 jornada editada no se distingue de un error de tipeo, y un ajuste con motivo
 se explica solo cuando alguien revise ese pago un mes después. Va dicho en la
-propia ventana de Pasar lista, que es donde se aplica.
+propia ventana del día, que es donde se aplica.
 
-**Porque llegar era el problema**: `Pasar lista` vive en la página del día, y
-un día de preparación no aparece en el calendario de la portada. Por eso la
-ventana de planificación, cuando se abre **desde `/turnos`**, ofrece el
-enlace *"abre el día"*. Desde la página del día no lo ofrece: llevaría a
-donde ya se está. Sin ese enlace el circuito quedaba cortado justo antes de
-lo que importa — y un turno sin pasar lista no suma nada ni entra en el
-informe.
+**Llegar era el problema**, y por un tiempo se resolvió con un enlace *"abre
+el día"* dentro de la ventana de planificación. El 2026-10-23 dejó de hacer
+falta: los montos y la propina se escriben en esa misma ventana, así que a
+un día de preparación ya no hay que llegar por ningún lado — se planifica y
+se cierra ahí. Ver "Una sola ventana para el día".
 
 Dos detalles de implementación que vale la pena tener escritos:
 
@@ -1060,10 +1069,12 @@ eso cada persona asignada tiene ahí mismo un **— / Vino / No vino**, en la
 misma ventana donde se elige y se agrega gente. Quien no llegó queda tachado,
 y el pie dice cuántos vinieron.
 
-**Los montos siguen siendo de Pasar lista**, que no cambió: esta ventana solo
-dice quién vino. Son dos momentos distintos del día y conviene que sigan
-siéndolo — marcar presencia es de la mañana, cerrar las cuentas es de la
-noche.
+**Desde el 2026-10-23 los montos están en esa misma ventana**, debajo. La
+idea de separarlos —marcar presencia es de la mañana, cerrar las cuentas es
+de la noche— era razonable y no sobrevivió al uso: obligaba a entrar dos
+veces y a pasar por una pantalla que para un día de preparación ni siquiera
+existe. Quien marca en la mañana deja los montos como están y listo; quien
+cierra en la noche los llena. Ver "Una sola ventana para el día".
 
 **Ojo con una trampa que esto abrió, y que costó cambiar una regla del
 servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
@@ -1186,33 +1197,106 @@ en el calendario, una semana de dos días deja más aire a la derecha, porque la
 grilla sigue siendo de cuatro columnas. Los textos no se estiran: siguen
 acotados a `max-w-2xl`.
 
-### Pasar lista, y lo que cuesta un día (2026-10-21)
+### Una sola ventana para el día, y el cierre (2026-10-23)
 
-Planificar dice quién **debería** venir; pasar lista dice quién vino y cuánto
-se le paga. Son dos cosas y el panel las trata distinto: **un turno sin pasar
-lista no suma nada.** Antes de que alguien lo diga, el panel no da por venida
-a una persona ni por pagada una jornada.
+**"Pasar lista" se jubiló como paso aparte.** Hasta el 2026-10-22 había tres
+pantallas para un mismo día: se planificaba en el calendario, se marcaba
+quién llegó en el planificador, y los montos y la propina vivían en otra
+ventana —*Pasar lista*— que solo se abría desde la página del día. A un día
+de preparación no se llega por ahí, así que el circuito quedaba cortado
+justo antes de lo que importa: un turno sin montos no suma nada ni entra en
+el informe.
 
-Se pasa lista desde la página del día, botón **Pasar lista**. Por cada
-persona: vino / no vino, la jornada, horas extra, un ajuste con su motivo, y
-el total de esa fila.
+El cliente lo pidió al revés, y así quedó:
 
-**Lo que se guarda queda congelado, y eso es la decisión importante.** El
+| Dónde | Qué se hace |
+|---|---|
+| **Calendario de la portada** | Se **planifica**, con las reservas a la vista: cuánta gente viene, cuántos menús, entonces cuánto equipo |
+| **`/turnos`** | Se **confirma todo**: quién vino, los montos, los ajustes, la propina — cualquier día, abierto, privado o de preparación |
+
+Son la **misma ventana**; lo único que cambia es desde dónde se abre. La
+página del día la abre también, con el mismo botón, así que nada se perdió:
+lo que se eliminó es la obligación de pasar por ahí.
+
+**Lo que la ventana hace ahora**, de arriba abajo: asignar por puesto, crear
+a alguien que falte, marcar **— / Vino / No vino**, escribir la jornada, las
+horas extra y los **ajustes con su motivo**, poner la **propina del día** —
+que el panel reparte— y **cerrar el día**.
+
+### Cerrar el día
+
+**Cerrar es una declaración, no un cálculo.** Se podría decir que un día
+está cerrado cuando nadie quedó sin marcar, pero eso confunde dos cosas: que
+no falte nada por marcar es una condición, y que alguien **haya revisado y
+dado por cerrado** es un hecho. Un día sin equipo cumpliría la condición sin
+que nadie lo mirara, y un día al que falta agregarle a quien llegó de más se
+vería completo justamente porque falta. Por eso el cierre se guarda con el
+**nombre de quien cerró y la hora**: es lo que después permite preguntarle.
+
+- Vive en una pestaña propia, **`Cierres`** (Fecha · Cerrado por · Cuándo),
+  una fila por día cerrado. Cerrar dos veces no agrega dos filas.
+- **Se puede reabrir**: aparece un ajuste olvidado, alguien reclama su
+  propina. Queda en la bitácora como cualquier otra acción.
+- **Lo único que bloquea el cierre es la asistencia sin marcar**, y se
+  comprueba en el servidor además de en la pantalla. Un turno sin marcar no
+  suma, así que cerrar con turnos a medias sería cerrar con el total mal.
+- **La propina y las actividades extras avisan pero no bloquean.** Un día
+  sin propina existe —no todos los días dejan— y una actividad sin confirmar
+  es plata de otro bolsillo que se arregla en su propia página. Bloquear por
+  ellas obligaría a inventar un cero para poder cerrar, y un cero inventado
+  es peor que un aviso.
+
+**`/turnos` muestra arriba lo que falta por cerrar**, que es lo que el
+cliente pidió: *"una vez que el día pasó, el panel puede mostrar: oiga,
+falta confirmar tantos trabajadores y actividades extras para cerrar el
+día"*. Cada día pendiente es un botón que abre su ventana, y dice qué le
+falta: cuánta gente sin marcar, cuántas extras sin confirmar, si nadie anotó
+propina. **Un día que todavía no llega no aparece**: nadie puede decir quién
+vino a un sábado que no ha ocurrido.
+
+### Lo que cuesta un día
+
+**Un turno sin marcar no suma nada.** Antes de que alguien diga si vino o
+no, el panel no da por venida a una persona ni por pagada una jornada. Esa
+regla no cambió con el rediseño; lo que cambió es dónde se marca.
+
+**Lo que se guarda queda congelado, y esa es la decisión importante.** El
 monto de la jornada y la modalidad viajan **dentro del turno**, no se
 recalculan desde la ficha del trabajador. Si en marzo se le sube el sueldo a
 alguien, los turnos de noviembre no pueden cambiar solos: las cuentas de
 meses cerrados dejarían de cuadrar.
 
-**Los sueldos los propone el servidor, no el navegador.** Un turno sin pasar
-lista hereda los valores de la ficha al guardarse (`guardarEquipoDelDia`).
-Así el encargado puede pasar lista y corregir montos sin que su pantalla
-reciba nunca la tabla de sueldos del equipo entero — que no necesita, y que
-no es dato suyo. Pasada la lista, lo que venga manda: ahí el monto ya es un
-hecho del día y no una propuesta.
+**Los sueldos los propone el servidor, no el navegador.** Un turno sin
+montos los hereda de la ficha al guardarse (`guardarEquipoDelDia`). Así el
+encargado puede confirmar y corregir sin que su pantalla reciba nunca la
+tabla de sueldos del equipo entero — que no necesita, y que no es dato suyo.
+Con montos ya escritos manda lo que venga: ahí el monto es un hecho del día
+y no una propuesta.
 
 Un descuento mayor que la jornada deja el día en **cero, nunca en negativo**.
 Si de verdad hay que cobrarle algo a alguien, eso no es un turno con monto
 negativo, es otra conversación.
+
+### Los ajustes son varios, y cada uno con su motivo (2026-10-23)
+
+Lo pidió el cliente con el ejemplo exacto: *"extra positivo por hora extra y
+extra negativo por adelanto"*. Con un solo ajuste había que sumarlos a mano
+y escribir un motivo que explicara los dos, o sea perder justo lo que el
+ajuste sirve para dejar: **el porqué de cada peso**, para quien revise ese
+pago un mes después.
+
+Se guardan en las **dos columnas que ya existían** —`Ajuste` y `Motivo del
+ajuste`— como dos listas en paralelo separadas por `|`. Se decidió así sobre
+abrir una pestaña nueva por una razón concreta: el caso corriente es **uno**,
+y entonces la celda se ve exactamente como antes (`-5000` · `llegó tarde`),
+así que **lo ya escrito se sigue leyendo sin migrar nada** y la planilla
+sigue siendo editable a mano por alguien que no sepa de esto. Con dos dice
+`5000|-20000` · `hora extra|adelanto`, que también se entiende.
+
+**Manda la lista de montos**: si alguien edita una celda y no la otra, los
+motivos que falten se leen vacíos en vez de desalinear los pares. Y el
+separador se saca de los motivos al guardar, porque un motivo con `|`
+partiría su propio ajuste en dos al volver a leerlo.
 
 ### Por turno o contratado (2026-10-21)
 
@@ -1319,15 +1403,15 @@ trabajo pero fuera del reparto.
 es "sí"— porque la regla es que participa todo el equipo; no entrar es la
 excepción, y una excepción se marca.
 
-El monto lo pone un encargado **al pasar lista**, en la página del día:
-escribe el **total** del día y el panel lo reparte. No hay que calcular nada
-a mano.
+El monto lo pone un encargado **en la ventana del día**, junto con la
+asistencia: escribe el **total** y el panel lo reparte. No hay que calcular
+nada a mano.
 
 **Se llega por dos puertas y las dos dan al mismo campo** (2026-10-22). En la
 página del día, el bloque Equipo muestra siempre una línea "Propina del día",
-con el monto repartido o un **sin anotar**, y su botón abre la misma ventana
-de Pasar lista con el cursor puesto en ese campo. No es un segundo formulario:
-es el mismo, y se guarda en el mismo lugar.
+con el monto repartido o un **sin anotar**, y su botón abre la ventana del
+día con el cursor puesto en ese campo. No es un segundo formulario: es el
+mismo, y se guarda en el mismo lugar.
 
 El motivo es que se llega a ese día por los dos lados —a cerrar el turno, o a
 acordarse de la propina— y la propina vivía al final de una tabla dentro de
@@ -1441,6 +1525,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Ver el calendario y las reservas | sí | sí | — | — |
 | Anotar reservas, abrir y cerrar días | sí | sí | — | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | — | — |
+| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | — | — |
 | Agendar actividades extras y confirmarlas | sí | sí | — | — |
 | Montos habituales y cuentas bancarias | sí | — | — | — |
 | Puestos y su regla "uno cada N" | sí | — | — | — |
@@ -1726,26 +1811,104 @@ quedan actividades sin confirmar en el periodo.
 servidor). Si de verdad hay que pagarle dos cosas distintas al mismo
 proveedor, va en una línea con el monto sumado y el detalle en el motivo.
 
-### La cuenta bancaria, que es lo que cierra el circuito
+### Los datos de la transferencia, que son lo que cierra el circuito
 
 El cliente la pidió para el equipo **y** para los extras: *"cuando el
 encargado de pago descarga la planilla del pago semanal, ya tiene hasta las
 cuentas bancarias dentro de este resumen"*. Entonces:
 
-- `Trabajadores` tiene una columna **`Cuenta bancaria`** más, y
-  `Colaboradores` nace con ella. Una planilla escrita antes se lee igual: la
-  columna llega en blanco en vez de reventar.
+- `Trabajadores` y `Colaboradores` llevan los campos que pide un banco en
+  Chile: **titular, RUT, banco, tipo de cuenta, número y un correo para el
+  comprobante**, más una **nota de pago** para lo que no cabe en ninguno.
+  Viven en `panel/src/lib/banco.ts`.
 - **Vive en la ficha y no en la línea del día.** Si alguien cambia de banco
   se le transfiere a la cuenta nueva, también lo que quedó pendiente: no es
   un hecho de ese día, es un dato de la persona.
-- **La ve el administrador y quien paga, nadie más.** `/api/extras` se la
+- **La ve el administrador y quien paga, nadie más.** `/api/extras` se los
   recorta al encargado junto con los montos habituales, igual que los sueldos
   del equipo. Y `/api/informe` —que lee la cuenta de pagos— **devuelve de las
-  fichas solo la cuenta bancaria**: ni teléfonos, ni sueldos de hoy, ni
-  tokens.
+  fichas solo eso**: ni teléfonos, ni sueldos de hoy, ni tokens.
 - El informe **avisa en pantalla a quién le falta**, antes de descargar. Es
   el momento en que importa: descubrirlo con la planilla ya bajada significa
   volver a entrar, completarla y bajarla de nuevo.
+
+#### Por qué campos y no una sola columna de texto (2026-10-22)
+
+Nació como **una columna de texto libre** donde cada quien escribía "Banco
+Estado, cta rut 11.111.111-1" a su manera. Eso sirve para que una persona lo
+lea y **no sirve para generar una transferencia**: quien paga tiene que
+volver a separarlo a mano, banco por banco, y un dígito mal copiado manda la
+plata a otra cuenta. Con un campo por dato, la planilla del informe **se
+pega en la carga masiva del banco** sin tocar nada.
+
+Decisiones que vale la pena tener escritas:
+
+- **El titular en blanco es la propia persona.** Lo normal es que la cuenta
+  sea suya; el campo existe para cuando no lo es —la cuenta de la señora, la
+  del hermano— y obligar a repetir el nombre en cada ficha sería pedir
+  trabajo para decir lo que ya se sabe. En el CSV sale resuelto: si está en
+  blanco, va el nombre de la persona.
+- **El tipo de cuenta es una lista cerrada y el banco no.** Los tipos son
+  cuatro y se acabó; los bancos cambian de nombre, se fusionan y aparecen
+  cooperativas, así que ahí hay texto libre con sugerencias. Un tipo que no
+  está en la lista **se descarta en el servidor**, porque un valor inventado
+  llegaría hasta la planilla del banco.
+- **El RUT se empareja pero no se valida** (`rutLimpio()`): sin puntos y con
+  guion, para que la carga masiva lo acepte. Lo que no parece un RUT se
+  devuelve tal cual — el panel no está para corregirle el RUT a nadie.
+- **Falta algo = banco, tipo, número o RUT.** El titular y el correo no
+  entran en esa cuenta: uno tiene valor por defecto y el otro es para el
+  comprobante, no para la transferencia.
+- **La columna vieja de texto libre no se borró: pasó a llamarse `Nota de
+  pago`** y se quedó en su lugar. Lo que alguien hubiera escrito ahí sigue
+  estando y se lee como lo que siempre fue, una nota; y de paso queda un
+  campo útil para "transferir los lunes" o "avisar por WhatsApp".
+- **En la tabla van en una segunda línea**, no en seis columnas más — ver
+  "La tabla de Equipo: los anchos van declarados".
+
+### Teléfonos y correos con forma, no texto libre (2026-10-23)
+
+Lo pidió el cliente con el porqué incluido: *"donde guardamos números de
+teléfono o correos electrónicos deberíamos aplicar un control de formato…
+luego podremos automatizar más tareas (enviar link por WhatsApp o correo)"*.
+
+Es el mismo argumento que los campos del banco. Un teléfono guardado como
+`+56 9 1234 5678`, como `912345678` y como `9 1234-5678` es el mismo número
+y tres cadenas distintas; mientras sean texto libre **nada se puede
+automatizar encima**. La regla vive en `panel/src/lib/contacto.ts`:
+
+- **Se escribe el celular con el 9 y sin el +56** — `9 1234 5678`, que es lo
+  que la gente tiene en la cabeza y en su agenda. El código de país lo pone
+  el panel. Pedir el `+56` es pedir que lo escriba mal dos de cada tres
+  veces.
+- **Se guarda siempre como `+56 9 1234 5678`**, venga escrito con puntos,
+  guiones, paréntesis, con `+56`, con `56` o pelado. Y para un enlace sale
+  `56912345678`, que es lo que quiere WhatsApp: `enlaceWhatsApp()` ya está
+  escrito, esperando la pantalla que lo use.
+- **No se inventa el 9.** Ocho dígitos no son un celular al que le falte el
+  nueve: son un número que no sabemos leer, y completarlo mandaría un
+  mensaje a un desconocido. La pantalla lo dice —"parece que le falta el 9"—
+  y guarda lo que se escribió.
+- **Avisa, no corrige ni bloquea.** Un fijo o un número extranjero se
+  guardan tal cual con una marca en ámbar que dice que con ese no se va a
+  poder automatizar. El panel no está para discutirle a nadie el teléfono de
+  su primo; está para que lo que **sí** tiene forma de celular quede parejo.
+- **Se ordena al salir del campo, no mientras se escribe.** Un `+56` que
+  aparece solo bajo los dedos desconcierta; al terminar, ver el número
+  ordenado confirma que quedó bien. Mismo criterio que el RUT.
+- **El correo se guarda en minúsculas y sin espacios**, y la validación es
+  a propósito simple: algo, una arroba, algo con un punto. La expresión
+  "completa" del estándar es ilegible, acepta cosas que ningún proveedor
+  entrega y aun así no dice si la casilla existe. Lo único que se puede
+  atrapar es un error de tipeo evidente.
+- **Lo normaliza el servidor, no solo la pantalla**, en las cinco puertas:
+  trabajadores, colaboradores, los dos diálogos de creación y las reservas
+  a mano. Una llamada directa a la API tiene que dejar el dato igual de
+  parejo que un formulario.
+- **También lo que llega de Shopify.** `telefonoDe()` y `emailDe()`
+  normalizan antes de escribir en `Reservas`: una reserva comprada y una
+  anotada a mano tienen que ser indistinguibles, o el día que se automatice
+  algo habría que adivinar el formato fila por fila.
 
 ### Quién puede qué
 

@@ -4,3 +4,14 @@
 
 :root { color-scheme: dark; }
 body { background: #0B0B0A; color: #F4F0E6; }
+
+/**
+ * Un marcador de posición tiene que verse como lo que es.
+ *
+ * Con el contraste por defecto, un `placeholder` que muestra un ejemplo
+ * realista —un RUT, el nombre de la persona para el titular de su cuenta—
+ * se lee de un vistazo como un dato ya escrito, y alguien da por llena una
+ * ficha vacía. Bajarle el contraste los distingue sin tener que renunciar
+ * a ejemplos útiles, que son justamente los que enseñan el formato.
+ */
+::placeholder { color: rgba(244, 240, 230, 0.28); opacity: 1; }
