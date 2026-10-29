@@ -16,8 +16,8 @@
  *
  * Límites que vale tener escritos:
  *
- * - **Llega a unos 9 días.** Hora a hora los primeros dos o tres, y de a
- *   seis horas después. Un día más lejano no trae ícono: mostrar algo ahí
+ * - **Llega a unos 9 o 10 días.** Hora a hora los primeros dos o tres, y de
+ *   a seis horas después. Un día más lejano no trae ícono: mostrar algo ahí
  *   sería inventarlo.
  * - **Es un pronóstico.** Se muestra en chico, como dato, no como promesa.
  *
@@ -49,7 +49,12 @@ export interface Clima {
   simbolo: string;
   max: number | null;
   min: number | null;
-  /** Probabilidad máxima de lluvia durante el día, en %, si MET la da. */
+  /**
+   * Probabilidad máxima de lluvia en el horario, en %, **si MET la da — y
+   * para Chile no la da** (comprobado el 2026-10-29: la respuesta no trae un
+   * solo `probability_of_precipitation`). Se deja leída por si aparece; lo
+   * que sí llega son los milímetros.
+   */
   lluvia: number | null;
   /** Milímetros de agua pronosticados en el día completo. */
   mm: number | null;
@@ -218,12 +223,13 @@ export function climaDe(respuesta: unknown): Clima[] {
     }));
 }
 
-/** "lluvia · máx 18° · mín 9° · 80% de lluvia · 6 mm", para el `title`. */
+/** "lluvia · máx 18° · mín 9° · 4,8 mm", para el `title`. */
 export function climaEnPalabras(c: Clima): string {
   const partes = [`Pronóstico: ${iconoDe(c.simbolo).texto}`];
   if (c.max !== null) partes.push(`máx ${Math.round(c.max)}°`);
   if (c.min !== null) partes.push(`mín ${Math.round(c.min)}°`);
   if (c.lluvia !== null) partes.push(`${Math.round(c.lluvia)}% de lluvia`);
-  if (c.mm !== null && c.mm >= 0.5) partes.push(`${c.mm} mm`);
+  // Con coma decimal, como se escribe en Chile.
+  if (c.mm !== null && c.mm >= 0.5) partes.push(`${String(c.mm).replace('.', ',')} mm`);
   return partes.join(' · ');
 }

@@ -88,7 +88,7 @@ export default function TarjetaDia({
   d, resumen, clima, onEditar, onPlanificar
 }: {
   d: Ocupacion;
-  /** El pronóstico de ese día, si cae dentro de los que hay (unos 9). */
+  /** El pronóstico de ese día, si cae dentro de los que hay (unos 9 o 10). */
   clima?: DatoClima;
   /** El equipo de este día. `null` mientras todavía no se cargó. */
   resumen: ResumenEquipo | null;

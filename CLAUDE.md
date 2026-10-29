@@ -1875,8 +1875,8 @@ pidió y cuánto pagó no es dato de un turno.
 
 Cada día del panel muestra en chico el pronóstico —"☀️ 28°"— en el
 calendario de la portada, en `/turnos`, en `/extras` y en la página del día,
-que además dice la probabilidad de lluvia cuando pasa del 30%. Al pasar el
-mouse se ve el detalle: mínima, máxima, probabilidad y milímetros.
+que además dice cuánta agua se espera cuando pasa de 1 mm. Al pasar el mouse
+se ve el detalle: mínima, máxima y milímetros.
 
 - **Sale de MET Norway** (`api.met.no`), el instituto meteorológico noruego.
   Es gratis **también para uso comercial**, con dos condiciones: **citar la
@@ -1896,8 +1896,13 @@ mouse se ve el detalle: mínima, máxima, probabilidad y milímetros.
   hora** en la caché de Vercel, que es más o menos cada cuánto actualiza MET.
   Next solo guarda las respuestas buenas y sigue sirviendo la última
   mientras pide la nueva, así que un rechazo de MET no borra lo que había.
-- **Llega a unos 9 días**: hora a hora los primeros dos o tres, de a seis
-  horas después. Más allá no hay ícono, y está bien: inventarlo sería peor.
+- **Llega a unos 9 o 10 días**: hora a hora los primeros dos o tres, de a
+  seis horas después. Más allá no hay ícono, y está bien: inventarlo sería
+  peor.
+- **Para Chile MET no da probabilidad de lluvia**, solo milímetros
+  (comprobado contra la respuesta real el 2026-10-29: ni un
+  `probability_of_precipitation`). El código la sigue leyendo por si
+  aparece, pero lo que se muestra son los milímetros, con coma decimal.
 - **MET entrega instantes en UTC y hay que juntarlos por día de Chile**: a
   las 02:00 UTC acá todavía es el día anterior. Lo hace `climaDe()`, y lo
   que sale son fechas en texto, como en todo el proyecto.
@@ -1912,11 +1917,14 @@ mouse se ve el detalle: mínima, máxima, probabilidad y milímetros.
   Nada del panel depende de esto.
 - **Va bajo la fecha, en el aire que ya había**, igual que la palabra bajo
   `PuntoDia`: no cambia el alto de ninguna tarjeta ni de ninguna celda.
-- **Probarlo desde este entorno necesita `api.met.no` en Network access.**
-  Y ojo: `next dev` no pasa por el proxy del entorno —ni con
+- **`api.met.no` está abierto en Network access** (2026-10-29) y se probó
+  contra la respuesta real: el sábado 31 de octubre salió con lluvia, que
+  es lo que dicen los datos hora a hora desde las 14:00 de Chile. Ojo:
+  `next dev` no pasa por el proxy del entorno —ni con
   `NODE_USE_ENV_PROXY`—, así que `/api/clima` en local falla con
   `ENOTFOUND` aunque `curl` sí llegue. Para revisar la lectura con datos
-  reales, se baja la respuesta con `curl` y se le pasa a `climaDe()`.
+  reales se baja la respuesta con `curl`, con el mismo User-Agent, y se le
+  pasa a `climaDe()`.
 
 ## Las actividades extras (2026-10-22)
 

@@ -2034,8 +2034,8 @@ ok(iconoDe('clearsky_day').icono === '☀️' && iconoDe('rainshowers_night').te
    && iconoDe('heavyrain').texto === 'lluvia' && iconoDe('lightrain').texto === 'lluvia débil',
    'los símbolos de MET caen en su ícono, con o sin sufijo de día');
 ok(iconoDe('algo_nuevo').texto === 'nublado', 'un símbolo desconocido se lee nublado, nunca despejado');
-ok(climaEnPalabras(sab!) === 'Pronóstico: lluvia débil · máx 24° · mín 8° · 40% de lluvia · 2.3 mm',
-   'el detalle redondea y dice todo');
+ok(climaEnPalabras(sab!) === 'Pronóstico: lluvia débil · máx 24° · mín 8° · 40% de lluvia · 2,3 mm',
+   'el detalle redondea, dice todo y usa coma decimal');
 ok(urlPronostico().includes('lat=-33.67') && !/\.\d{5}/.test(urlPronostico()),
    'MET pide como mucho cuatro decimales en las coordenadas');
 
