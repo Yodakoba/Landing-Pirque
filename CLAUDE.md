@@ -1473,10 +1473,19 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 - La llave vive en `Config` (`token_planilla`) y **no se genera sola**: que
   exista un link que abre sin contraseña tiene que ser decisión de alguien.
   Se crea al apretar el botón la primera vez.
+- **La manda el encargado, no solo el administrador** (2026-10-29, lo pidió
+  el cliente). Mandar la planilla es parte de organizar la semana, que es su
+  trabajo, y el link **no le abre nada**: esa página muestra menos de lo que
+  ya ve en el panel. Antes el botón estaba a la vista para los dos pero
+  crear la llave era de `links`, o sea del administrador, así que a un
+  encargado le fallaba justo la primera vez — el peor momento. Ahora crear
+  es del permiso `planilla`.
 - **Renovarla invalida todas las copias** que anden dando vueltas, que es lo
   que hay que hacer cuando alguien deja el equipo. El costo a asumir: también
   deja de servir el link de quien sí trabaja, así que hay que volver a
-  mandarlo.
+  mandarlo. **Por eso renovar y quitar siguen siendo del administrador**
+  (`links`): crear es la única forma de mandar la planilla, renovar es
+  administrar una credencial de todo el equipo.
 - Muestra solo los días **con alguien asignado**: siete columnas para un
   negocio que abre dos es una tabla llena de huecos, y esto se lee en un
   teléfono.
@@ -1674,6 +1683,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Puestos y su regla "uno cada N" | sí | — | — | — |
 | Precios, menús y configuración | sí | — | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
+| **Mandar la planilla semanal** (y crear su link) | sí | **sí** | — | — |
 | Cuentas del panel y bitácora | sí | — | — | — |
 | **El informe del equipo** | sí | — | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |

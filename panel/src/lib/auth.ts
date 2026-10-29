@@ -152,6 +152,24 @@ export const PERMISOS = {
   puestos: [ROL.admin],
   /** Crear, renovar y quitar los links personales de los trabajadores. */
   links: [ROL.admin],
+  /**
+   * Mandar la planilla semanal al grupo — y crear su link la primera vez.
+   *
+   * **Va con el encargado** (2026-10-29, lo pidió el cliente) porque mandar
+   * la planilla es parte de organizar la semana, que es justamente su
+   * trabajo. Y no le abre nada: esa página muestra **menos** de lo que el
+   * encargado ya ve en el panel —quién trabaja cada día, a qué hora, cuánta
+   * gente se espera, sin un peso y sin menús—, así que el link no es un
+   * permiso nuevo, es la forma de mandar lo que ya tiene delante.
+   *
+   * **Renovar y quitar ese link siguen siendo de `links`**, o sea del
+   * administrador, y la diferencia no es caprichosa: crear uno cuando no
+   * hay es la única forma de mandar la planilla, mientras que renovarlo
+   * **invalida todas las copias que andan dando vueltas**, incluidas las de
+   * quienes sí trabajan. Eso es administrar una credencial, no mandar un
+   * mensaje.
+   */
+  planilla: [ROL.admin, ROL.encargado],
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
