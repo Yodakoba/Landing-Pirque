@@ -1252,6 +1252,47 @@ esa persona, es el de la pantalla, y tenerlo a mano donde sea que estés
 editando es justamente el punto. Los botones de abajo y de arriba siguen
 donde estaban.
 
+### La ficha se abre con un `+`, y los puestos viven en una ventana (2026-10-29)
+
+Lo pidió el cliente mirando `/equipo`: *"que los trabajadores no se vean al
+tiro todos los datos, sino que yo los pueda abrir con un más"*, y *"los
+puestos, ponlos separados… para que la página no sea una lista gigante
+larga"*.
+
+Tenía razón, y la causa es acumulativa: cada ficha había ido creciendo
+—quién es, cuánto gana, dónde se le transfiere— y debajo venía la tabla de
+puestos. Con diez personas, `/equipo` eran varias pantallas y **había que
+recorrerla entera para llegar a cualquier cosa**.
+
+- **Cerrada, una ficha es una línea**: nombre, puesto, teléfono, y en ámbar
+  un **falta su cuenta** si no se le puede transferir todavía. Ese aviso va
+  justamente con la ficha cerrada, que es donde se mira la lista antes de
+  pagar; adentro ya lo dice `DatosBancarios`.
+- **Se abre una a la vez.** Se edita una ficha, no se comparan dos, y dejar
+  varias abiertas devolvería la página larga de la que estábamos saliendo.
+- **La que se acaba de agregar se abre sola**: agregar a alguien y que
+  aparezca una línea vacía que además hay que apretar sería pedir dos pasos
+  para uno.
+- **El resumen es un `<button>` y no un `<summary>`.** En el sitio público
+  la regla es `<details>` sin JavaScript, pero acá ya estamos en React y la
+  ficha nueva tiene que poder abrirse sola; con `<details>` eso se controla
+  igual desde el estado, así que el elemento no aportaba nada que no
+  costara explicar.
+- **Los puestos se abren con un botón** —*Administrar puestos*— y viven en
+  una ventana. Al lado queda su resumen (cuántos son y los primeros
+  nombres), que es lo único que se mira de pasada.
+
+**Y ahí se pueden ordenar, con flechas** (lo pidió el cliente en la misma
+pasada). No es cosmético: **el orden de esa lista es el orden en que el
+planificador dibuja los puestos**, así que acomodarlos al orden en que se
+arma un turno ahorra buscar en cada tarjeta. Antes el único modo era
+reescribir los nombres de arriba abajo o editar la planilla a mano.
+
+**Son flechas y no arrastrar**, también a propósito: arrastrar necesita o la
+API de *drag and drop* del navegador —que en un teléfono no funciona— o una
+librería, y este proyecto no agrega una dependencia por una comodidad. Una
+flecha se aprieta con el dedo y además se puede usar con el teclado.
+
 ### La tabla de Equipo: los anchos van declarados (2026-10-22)
 
 Lo reclamó el cliente con una captura: el nombre se leía a seis letras
@@ -1483,9 +1524,20 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 - **Renovarla invalida todas las copias** que anden dando vueltas, que es lo
   que hay que hacer cuando alguien deja el equipo. El costo a asumir: también
   deja de servir el link de quien sí trabaja, así que hay que volver a
-  mandarlo. **Por eso renovar y quitar siguen siendo del administrador**
-  (`links`): crear es la única forma de mandar la planilla, renovar es
-  administrar una credencial de todo el equipo.
+  mandarlo.
+- **Renovar también es del encargado**, por decisión del cliente ese mismo
+  día. El primer corte dejaba renovar con el administrador —invalidar las
+  copias de todo el equipo suena a administrar una credencial—, pero quien
+  se entera de que alguien se fue, y quien va a tener que volver a mandar el
+  link, es el mismo encargado: partir ese trabajo en dos personas era
+  dejarlo a medias. **Quitarlo sí se queda en `links`**: renovar deja la
+  planilla andando con un link nuevo, quitarlo la apaga.
+- **El botón de renovar estaba sin hacer hasta el 2026-10-29.** La API
+  aceptaba `renovar` y `quitar` desde el primer día, pero no había dónde
+  apretarlo: ni el administrador podía. Hoy es una línea chica bajo los
+  botones del calendario, visible **solo cuando ya hay una llave creada**, y
+  **pide confirmación**, porque es el único botón de esa pantalla que rompe
+  algo que ya estaba andando.
 - Muestra solo los días **con alguien asignado**: siete columnas para un
   negocio que abre dos es una tabla llena de huecos, y esto se lee en un
   teléfono.
@@ -1683,7 +1735,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Puestos y su regla "uno cada N" | sí | — | — | — |
 | Precios, menús y configuración | sí | — | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
-| **Mandar la planilla semanal** (y crear su link) | sí | **sí** | — | — |
+| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | — | — |
 | Cuentas del panel y bitácora | sí | — | — | — |
 | **El informe del equipo** | sí | — | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |

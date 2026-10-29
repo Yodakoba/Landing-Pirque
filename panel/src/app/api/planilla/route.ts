@@ -20,13 +20,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   /**
-   * **Crear es del encargado; renovar y quitar, del administrador.**
+   * **Crear y renovar son del encargado; quitar, del administrador.**
    *
-   * Mandar la planilla al grupo es parte de organizar la semana, y si el
-   * link todavía no existe, crearlo es el único camino — negárselo sería
-   * dejarle un botón que falla. Renovar, en cambio, **deja sin servir todas
-   * las copias que andan dando vueltas**, también las de quien sí trabaja, y
-   * quitar cierra la puerta para todos: eso es administrar una credencial.
+   * Mandar la planilla al grupo es parte de organizar la semana, y las dos
+   * primeras acciones son esa misma tarea: crear el link cuando todavía no
+   * hay, y renovarlo cuando alguien deja el equipo y conviene que su copia
+   * deje de servir. Quien se entera de eso, y quien va a tener que volver a
+   * mandar el link, es el mismo encargado.
+   *
+   * **Quitar se queda en `links`**: renovar deja la planilla andando con un
+   * link nuevo, quitarlo la apaga hasta que alguien la vuelva a encender.
    *
    * Se pide primero el permiso chico y después el grande, en ese orden, para
    * que a quien no tiene ninguno se le conteste "esta parte no es tuya"
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
         { error: 'La acción tiene que ser crear, renovar o quitar.' }, { status: 400 }
       );
     }
-    if (accion !== 'crear') {
+    if (accion === 'quitar') {
       const soloAdmin = await exigir(req, 'links');
       if (soloAdmin) return soloAdmin;
     }

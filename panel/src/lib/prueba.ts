@@ -1149,13 +1149,12 @@ ok(!puede(ROL.encargado, 'configurar') && !puede(ROL.encargado, 'puestos') &&
    !puede(ROL.encargado, 'links') && !puede(ROL.encargado, 'mantencion'),
    'pero no toca precios, puestos, links ni mantención');
 
-// **Mandar la planilla semanal sí es del encargado** (2026-10-29): es parte
-// de organizar la semana, y esa página muestra menos de lo que él ya ve.
-// Pero renovar ese link invalida todas las copias que andan dando vueltas,
-// así que eso sigue en `links`, o sea con el administrador. Las dos cosas
-// juntas son la prueba: una sí y la otra no.
+// **La planilla semanal es del encargado** (2026-10-29): mandarla, crear su
+// link y renovarlo cuando alguien deja el equipo. Lo que no tiene es
+// `links`, que es lo que apaga la planilla del todo y administra los links
+// personales de cada trabajador. Las dos cosas juntas son la prueba.
 ok(puede(ROL.encargado, 'planilla') && !puede(ROL.encargado, 'links'),
-   'el encargado manda la planilla semanal, pero no renueva su link');
+   'el encargado manda y renueva la planilla, pero no toca los links personales');
 ok(puede(ROL.admin, 'planilla'), 'y el administrador también la manda');
 ok(!puede(ROL.pagos, 'planilla') && !puede(ROL.trabajador, 'planilla'),
    'quien paga y el trabajador no: no es su pantalla');
