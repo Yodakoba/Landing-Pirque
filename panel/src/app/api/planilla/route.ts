@@ -19,7 +19,25 @@ export const dynamic = 'force-dynamic';
  * mandarlo.
  */
 export async function POST(req: Request) {
-  const no = await exigir(req, 'links');
+  /**
+   * **Crear y renovar son del encargado; quitar, del administrador.**
+   *
+   * Mandar la planilla al grupo es parte de organizar la semana, y las dos
+   * primeras acciones son esa misma tarea: crear el link cuando todavía no
+   * hay, y renovarlo cuando alguien deja el equipo y conviene que su copia
+   * deje de servir. Quien se entera de eso, y quien va a tener que volver a
+   * mandar el link, es el mismo encargado.
+   *
+   * **Quitar se queda en `links`**: renovar deja la planilla andando con un
+   * link nuevo, quitarlo la apaga hasta que alguien la vuelva a encender.
+   *
+   * Se pide primero el permiso chico y después el grande, en ese orden, para
+   * que a quien no tiene ninguno se le conteste "esta parte no es tuya"
+   * antes de mirarle el cuerpo de la petición. Y se comprueba acá, en la
+   * ruta, no solo en el middleware: ver "El middleware autentica, cada ruta
+   * autoriza".
+   */
+  const no = await exigir(req, 'planilla');
   if (no) return no;
 
   try {
@@ -28,6 +46,10 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'La acción tiene que ser crear, renovar o quitar.' }, { status: 400 }
       );
+    }
+    if (accion === 'quitar') {
+      const soloAdmin = await exigir(req, 'links');
+      if (soloAdmin) return soloAdmin;
     }
 
     const cfg = await leerConfig();

@@ -1149,6 +1149,16 @@ ok(!puede(ROL.encargado, 'configurar') && !puede(ROL.encargado, 'puestos') &&
    !puede(ROL.encargado, 'links') && !puede(ROL.encargado, 'mantencion'),
    'pero no toca precios, puestos, links ni mantención');
 
+// **La planilla semanal es del encargado** (2026-10-29): mandarla, crear su
+// link y renovarlo cuando alguien deja el equipo. Lo que no tiene es
+// `links`, que es lo que apaga la planilla del todo y administra los links
+// personales de cada trabajador. Las dos cosas juntas son la prueba.
+ok(puede(ROL.encargado, 'planilla') && !puede(ROL.encargado, 'links'),
+   'el encargado manda y renueva la planilla, pero no toca los links personales');
+ok(puede(ROL.admin, 'planilla'), 'y el administrador también la manda');
+ok(!puede(ROL.pagos, 'planilla') && !puede(ROL.trabajador, 'planilla'),
+   'quien paga y el trabajador no: no es su pantalla');
+
 // El trabajador no figura en NINGUNA fila de la tabla, y eso es el punto:
 // no hay una sola acción del panel que pueda ejecutar. Entra por su link.
 const acciones = Object.keys(PERMISOS) as Accion[];

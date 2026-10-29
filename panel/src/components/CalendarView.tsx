@@ -41,6 +41,18 @@ export default function CalendarView() {
   const [planificando, setPlanificando] = useState<Ocupacion | null>(null);
   const [avisoPlanilla, setAvisoPlanilla] = useState('');
 
+  /** Crear o renovar la llave. Devuelve la nueva, o `''` si algo falló. */
+  async function pedirToken(accion: 'crear' | 'renovar') {
+    const r = await fetch('/api/planilla', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accion })
+    });
+    const d = await r.json();
+    if (d.error) { setAvisoPlanilla(d.error); return ''; }
+    setCfg((antes) => ({ ...antes, tokenPlanilla: d.tokenPlanilla }));
+    return d.tokenPlanilla as string;
+  }
+
   /**
    * Copia el link de la planilla de una semana, para mandarlo al grupo.
    *
@@ -49,23 +61,34 @@ export default function CalendarView() {
    * necesita de su propio día vive en su link personal.
    */
   async function mandarPlanilla(lunes: string) {
-    let token = cfg.tokenPlanilla;
-    if (!token) {
-      // No existe hasta que alguien lo crea: un link público, aunque sea con
-      // llave, no puede aparecer solo.
-      const r = await fetch('/api/planilla', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accion: 'crear' })
-      });
-      const d = await r.json();
-      if (d.error) return setAvisoPlanilla(d.error);
-      token = d.tokenPlanilla;
-      setCfg({ ...cfg, tokenPlanilla: token });
-    }
+    // No existe hasta que alguien lo crea: un link público, aunque sea con
+    // llave, no puede aparecer solo.
+    const token = cfg.tokenPlanilla || await pedirToken('crear');
+    if (!token) return;
     const url = `${window.location.origin}/semana/${token}?semana=${lunes}`;
     navigator.clipboard?.writeText(url)
       .then(() => setAvisoPlanilla('Link de la planilla copiado. Mándalo al grupo.'))
       .catch(() => window.prompt('Link de la planilla:', url));
+  }
+
+  /**
+   * Renovar la llave: lo que hay que hacer cuando alguien deja el equipo.
+   *
+   * **Pide confirmación porque no afecta a una persona, afecta a todas**:
+   * la copia que tiene guardada quien sí trabaja también deja de servir, así
+   * que después hay que volver a mandar el link. Es el único botón del
+   * calendario que rompe algo que ya estaba andando.
+   */
+  async function renovarPlanilla() {
+    if (!confirm('¿Renovar el link de la planilla?\n\nLas copias que ya '
+               + 'mandaste dejan de servir al instante, también las de quienes '
+               + 'siguen en el equipo: vas a tener que mandarlo de nuevo.')) {
+      return;
+    }
+    if (await pedirToken('renovar')) {
+      setAvisoPlanilla('Link renovado: las copias anteriores dejaron de servir. '
+                     + 'Vuelve a mandarlo con "Enviar planilla semanal".');
+    }
   }
 
   const cargar = () => {
@@ -159,8 +182,25 @@ export default function CalendarView() {
       </div>
 
       {avisoPlanilla && (
-        <p className="mb-5 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
+        <p className="mb-2 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
           {avisoPlanilla}
+        </p>
+      )}
+
+      {/* **Renovar vive acá y no en cada semana**: el link es uno solo para
+          todas, y repetir el botón semana por semana haría pensar que se
+          renueva "la de este sábado". Aparece recién cuando hay una llave
+          creada —antes no hay nada que renovar— y en letra chica, porque es
+          lo que casi nunca hay que apretar. */}
+      {cfg.tokenPlanilla && (
+        <p className="mb-5 text-xs text-hueso/35">
+          El link de la planilla semanal ya está creado.{' '}
+          <button onClick={renovarPlanilla} className="text-hueso/50 hover:text-oro"
+            title="Las copias que andan dando vueltas dejan de servir al instante">
+            Renovarlo
+          </button>{' '}
+          deja sin servir las copias que andan dando vueltas — es lo que hay
+          que hacer cuando alguien deja el equipo.
         </p>
       )}
 
