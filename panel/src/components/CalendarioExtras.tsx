@@ -22,6 +22,7 @@ import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
 import PuntoDia from './PuntoDia';
+import Clima, { usePronostico } from './Clima';
 import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
 import { VINO } from '@/lib/equipo';
@@ -44,6 +45,7 @@ const ENTRADA =
 
 export default function CalendarioExtras() {
   const [mes, setMes] = useState(() => mesDe(hoy()));
+  const pronostico = usePronostico();
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [esAdmin, setEsAdmin] = useState(false);
@@ -206,8 +208,11 @@ export default function CalendarioExtras() {
                                     : 'border-hueso/10 bg-hueso/[0.02]'}
                             ${esHoy ? 'ring-1 ring-oro' : ''}`}>
                 <span className="flex items-start justify-between">
-                  <span className={oc || delDia.length ? 'font-semibold' : 'text-hueso/45'}>
-                    {Number(f.slice(8, 10))}
+                  <span className="flex flex-col items-start gap-1">
+                    <span className={oc || delDia.length ? 'font-semibold' : 'text-hueso/45'}>
+                      {Number(f.slice(8, 10))}
+                    </span>
+                    <Clima c={pronostico.get(f)} />
                   </span>
                   <PuntoDia d={oc} />
                 </span>

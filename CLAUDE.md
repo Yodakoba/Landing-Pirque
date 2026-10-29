@@ -1871,6 +1871,33 @@ pidió y cuánto pagó no es dato de un turno.
 - ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
   2026-10-22**: existe el rol `pagos`, que solo lee el informe.
 
+## El pronóstico del tiempo (2026-10-29)
+
+Cada día del panel muestra en chico el pronóstico —"☀️ 28°"— en el
+calendario de la portada, en `/turnos`, en `/extras` y en la página del día,
+que además dice la probabilidad de lluvia cuando pasa del 30%. Al pasar el
+mouse se ve el detalle: mínima, máxima y lluvia.
+
+- **Sale de Open-Meteo**: gratis, sin cuenta ni llave. Lo pide el servidor
+  en `/api/clima` y la respuesta se guarda **tres horas** en la caché de
+  Vercel, así que son unas ocho llamadas al día y no una por visita. La
+  lógica pura, con sus pruebas, está en `panel/src/lib/clima.ts`.
+- **Solo en el panel, no en el sitio público** (decidido con el cliente).
+  Es dato operativo —armar adentro, avisarle a los jinetes— y en
+  `reservas.html` un ícono de lluvia sobre un sábado espantaría reservas.
+- **Llega a 16 días.** Más allá no hay ícono, y está bien: inventarlo sería
+  peor. Pasados unos 7 días el pronóstico es poco confiable, y por eso va en
+  chico, como dato y no como aviso.
+- **Si Open-Meteo no responde, los calendarios se dibujan igual**, sin
+  íconos. Nada del panel depende de esto.
+- **Las coordenadas son las de Pirque, aproximadas** (`PIRQUE` en
+  `clima.ts`): a esta escala el modelo no distingue unas cuadras.
+- **Desde este entorno `api.open-meteo.com` está bloqueado** (403 del
+  proxy). Vercel sí lo alcanza. Para probarlo de verdad desde acá hay que
+  agregarlo en Network access.
+- **Va bajo la fecha, en el aire que ya había**, igual que la palabra bajo
+  `PuntoDia`: no cambia el alto de ninguna tarjeta ni de ninguna celda.
+
 ## Las actividades extras (2026-10-22)
 
 Lo que se contrata aparte del equipo y por día: **jinetes** —cada uno con su

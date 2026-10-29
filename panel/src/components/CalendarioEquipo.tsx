@@ -29,6 +29,7 @@ import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
 import PuntoDia from './PuntoDia';
+import Clima, { usePronostico } from './Clima';
 import { resumenEquipo, esPreparacion,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import type { Ocupacion } from '@/lib/tipos';
@@ -44,6 +45,7 @@ const columna = (f: string) => (diaSemana(f) === 0 ? 6 : diaSemana(f) - 1);
 
 export default function CalendarioEquipo() {
   const [mes, setMes] = useState(() => mesDe(hoy()));
+  const pronostico = usePronostico();
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
     cierres: Cierre[]; extras: Extra[]; esAdmin: boolean;
@@ -228,8 +230,13 @@ export default function CalendarioEquipo() {
                                   : 'border-hueso/10 bg-hueso/[0.02]'}
                           ${esHoy ? 'ring-1 ring-oro' : ''}`}>
               <span className="flex items-start justify-between">
-                <span className={oc || preparando ? 'font-semibold' : 'text-hueso/45'}>
-                  {Number(f.slice(8, 10))}
+                {/* El pronóstico bajo el número, en el aire que ya deja el
+                    punto con su palabra: no cambia el alto de la celda. */}
+                <span className="flex flex-col items-start gap-1">
+                  <span className={oc || preparando ? 'font-semibold' : 'text-hueso/45'}>
+                    {Number(f.slice(8, 10))}
+                  </span>
+                  <Clima c={pronostico.get(f)} />
                 </span>
                 {/* El punto con su palabra debajo: la misma regla en los
                     tres calendarios, para que un día se lea igual en

@@ -57,6 +57,7 @@ import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
          FORMATO_TELEFONO } from './contacto.ts';
 import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
          diasPorCerrar, leerCierresDe, type Cierre } from './cierres.ts';
+import { climaDe, iconoDe, climaEnPalabras, urlPronostico } from './clima.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -1982,6 +1983,34 @@ ok(leidos.length === 1 && leidos[0].quien === 'jefe' && leidos[0].fila === 2,
    'se lee una fila por día cerrado, y una sin fecha no cuenta');
 ok(leerCierresDe([['Cerrado por']]).length === 0,
    'sin la columna Fecha no se interpreta nada');
+
+
+// ---------- el pronóstico ----------
+const respuestaClima = {
+  daily: {
+    time: ['2026-10-31', '2026-11-01', '2026-11-02', 'basura'],
+    weather_code: [0, 63, null, 3],
+    temperature_2m_max: [28.4, 17.6, 20, 19],
+    temperature_2m_min: [11.2, 9, 8, 7],
+    precipitation_probability_max: [0, 80, 10, 5]
+  }
+};
+const climas = climaDe(respuestaClima);
+ok(climas.length === 2, 'un día sin código o con fecha rara se descarta');
+ok(climas[0].fecha === '2026-10-31' && climas[0].max === 28.4 && climas[1].lluvia === 80,
+   'las columnas de Open-Meteo pasan a una fila por día, con la fecha tal cual');
+ok(climaDe(null).length === 0 && climaDe({ error: true }).length === 0,
+   'una respuesta rota da una lista vacía, no una excepción');
+ok(climaDe({ daily: { time: ['2026-10-31'], weather_code: [1] } })[0].max === null,
+   'una temperatura que falta queda en null, no en cero');
+ok(iconoDe(0).icono === '☀️' && iconoDe(63).texto === 'lluvia' && iconoDe(81).texto === 'lluvia'
+   && iconoDe(95).texto === 'tormenta' && iconoDe(45).texto === 'niebla',
+   'los códigos WMO caen en su ícono');
+ok(iconoDe(42).texto === 'nublado', 'un código desconocido se lee nublado, nunca despejado');
+ok(climaEnPalabras(climas[1]) === 'Pronóstico: lluvia · máx 18° · mín 9° · 80% de lluvia',
+   'el detalle redondea y dice todo');
+ok(urlPronostico().includes('timezone=America%2FSantiago') && urlPronostico().includes('forecast_days=16'),
+   'se pide en hora de Chile, para que las fechas calcen sin pasar por Date');
 
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

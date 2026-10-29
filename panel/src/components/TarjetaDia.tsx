@@ -26,6 +26,8 @@ import type { Ocupacion } from '@/lib/tipos';
 import type { ResumenEquipo } from '@/lib/equipo';
 import { enPalabras } from '@/lib/fechas';
 import PuntoDia from './PuntoDia';
+import Clima from './Clima';
+import type { Clima as DatoClima } from '@/lib/clima';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
   verde: 'border-emerald-500/50 bg-emerald-500/5',
@@ -83,9 +85,11 @@ const CARA = 'col-start-1 row-start-1 flex flex-col rounded border p-4 ' +
 const PIE = 'mt-auto flex items-center gap-3 border-t border-hueso/10 pt-3 text-xs';
 
 export default function TarjetaDia({
-  d, resumen, onEditar, onPlanificar
+  d, resumen, clima, onEditar, onPlanificar
 }: {
   d: Ocupacion;
+  /** El pronóstico de ese día, si cae dentro de los 16 que hay. */
+  clima?: DatoClima;
   /** El equipo de este día. `null` mientras todavía no se cargó. */
   resumen: ResumenEquipo | null;
   onEditar: () => void;
@@ -106,10 +110,15 @@ export default function TarjetaDia({
         <div className={`${CARA} ${COLOR_TARJETA(d)} ${volteada ? 'pointer-events-none' : ''}`}
              aria-hidden={volteada}>
           <div className="flex items-start justify-between gap-2">
-            <a href={`/dia/${d.fecha}`} {...alFrente}
-               className="text-sm capitalize hover:text-oro">
-              {enPalabras(d.fecha)}
-            </a>
+            {/* El pronóstico va bajo la fecha, en el aire que deja el punto
+                con su palabra a la derecha: no cambia el alto de la tarjeta. */}
+            <span className="flex flex-col items-start gap-1">
+              <a href={`/dia/${d.fecha}`} {...alFrente}
+                 className="text-sm capitalize hover:text-oro">
+                {enPalabras(d.fecha)}
+              </a>
+              <Clima c={clima} />
+            </span>
             {/* El punto y, debajo, la palabra: público, privado, cerrado.
                 Antes eso era una línea más abajo del contenido, y una línea
                 de más cambia el alto de la tarjeta — o sea que los días de
