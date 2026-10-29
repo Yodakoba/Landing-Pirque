@@ -1,118 +1,229 @@
 /**
  * El pronóstico del tiempo para los días del calendario.
  *
- * **Sale de Open-Meteo** (open-meteo.com): gratis, sin cuenta ni llave, y con
- * la fecha devuelta en hora de Chile si se le pide. Lo último importa: las
- * fechas llegan como texto `AAAA-MM-DD` y se cruzan tal cual con las del
- * panel, sin pasar por un `Date` que las corra de día.
+ * **Sale de MET Norway** (api.met.no, el instituto meteorológico noruego),
+ * que es gratis **también para uso comercial**: solo pide que se cite la
+ * fuente y que cada consulta diga quién la hace. Se eligió el 2026-10-29
+ * sobre Open-Meteo, que fue lo primero que se montó: su versión gratuita es
+ * para uso no comercial, y un panel de un restaurante no lo es. Además
+ * limita por IP, y en la primera prueba rebotó con "Daily API request limit
+ * exceeded" porque la IP de salida era compartida —lo mismo que puede pasar
+ * en Vercel.
  *
- * Lo pidió el cliente el 2026-10-29 **para el panel, no para el sitio**. Es
- * dato operativo —armar adentro si llueve, avisarle a los jinetes— y en el
- * sitio público un ícono de lluvia sobre un sábado espantaría reservas.
+ * Lo pidió el cliente **para el panel, no para el sitio**. Es dato operativo
+ * —armar adentro si llueve, avisarle a los jinetes— y en el sitio público un
+ * ícono de lluvia sobre un sábado espantaría reservas.
  *
- * Dos límites que vale tener escritos:
+ * Límites que vale tener escritos:
  *
- * - **El pronóstico llega a 16 días, y es confiable a unos 7.** Un día más
- *   lejano no trae ícono: mostrar algo ahí sería inventarlo.
- * - **Es un pronóstico.** Por eso se muestra en chico, como dato, y no como
- *   un aviso que alguien pueda leer como promesa.
+ * - **Llega a unos 9 días.** Hora a hora los primeros dos o tres, y de a
+ *   seis horas después. Un día más lejano no trae ícono: mostrar algo ahí
+ *   sería inventarlo.
+ * - **Es un pronóstico.** Se muestra en chico, como dato, no como promesa.
  *
  * Esto es lógica pura, sin red: la llamada la hace `/api/clima`.
  */
+import { fechaEnZona, ZONA } from './fechas.ts';
 
 /**
  * **Pirque, aproximado.** El centro de la comuna, no el lote exacto: a esta
- * escala el modelo del tiempo no distingue unas cuadras, y la ubicación del
- * lote no está escrita en el proyecto más que como link de Maps.
+ * escala el modelo no distingue unas cuadras. MET pide no mandar más de
+ * cuatro decimales, justamente porque más precisión no cambia nada y le
+ * rompe la caché.
  */
 export const PIRQUE = { latitud: -33.67, longitud: -70.58 };
 
-/** Cuántos días pide. Es el máximo que da Open-Meteo. */
-export const DIAS_PRONOSTICO = 16;
+/**
+ * Quién pregunta. **MET lo exige**: una petición sin un User-Agent que
+ * identifique la aplicación y cómo contactar a sus dueños se rechaza con
+ * 403. Va el correo público del negocio.
+ */
+export const IDENTIFICACION = 'BrasasDeLoPirque-panel/1.0 (brasasdelopirque.cl; contacto@lopirque.cl)';
+
+/** La cita que pide la licencia de MET (CC BY 4.0). */
+export const FUENTE = { texto: 'MET Norway', url: 'https://www.met.no/en' };
 
 export interface Clima {
   fecha: string;
-  /** Código WMO del tiempo del día, el que usa Open-Meteo. */
-  codigo: number;
+  /** El símbolo de MET sin su sufijo de día o noche: `rain`, `clearsky`… */
+  simbolo: string;
   max: number | null;
   min: number | null;
-  /** Probabilidad máxima de lluvia en el día, en %. */
+  /** Probabilidad máxima de lluvia durante el día, en %, si MET la da. */
   lluvia: number | null;
+  /** Milímetros de agua pronosticados en el día completo. */
+  mm: number | null;
 }
 
-export function urlPronostico(dias = DIAS_PRONOSTICO): string {
+/**
+ * La versión `complete` y no la `compact`, porque es la única que trae la
+ * **probabilidad** de lluvia. Pesa más, pero se pide una vez por hora.
+ */
+export function urlPronostico(): string {
   const q = new URLSearchParams({
-    latitude: String(PIRQUE.latitud),
-    longitude: String(PIRQUE.longitud),
-    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
-    timezone: 'America/Santiago',
-    forecast_days: String(dias)
+    lat: String(PIRQUE.latitud),
+    lon: String(PIRQUE.longitud)
   });
-  return `https://api.open-meteo.com/v1/forecast?${q}`;
+  return `https://api.met.no/weatherapi/locationforecast/2.0/complete?${q}`;
+}
+
+/**
+ * **El horario en que el tiempo importa: de 10 a 19.** Se abre de 13 a 18 y
+ * se monta antes. Un chubasco a las cuatro de la mañana no cambia nada del
+ * día, y si el ícono lo mostrara, la mitad de los días saldría con lluvia.
+ * Las temperaturas y los milímetros, en cambio, son del día completo.
+ */
+export const HORARIO = { desde: 10, hasta: 19 };
+
+/** La hora de Chile de un instante, 0 a 23. */
+export function horaEnChile(instante: Date): number {
+  const h = new Intl.DateTimeFormat('en-US', {
+    timeZone: ZONA, hour: '2-digit', hourCycle: 'h23'
+  }).format(instante);
+  return Number(h) % 24;
+}
+
+/**
+ * Qué tan malo es un símbolo para un día de campo, de 0 (despejado) a 9
+ * (tormenta). Sirve para quedarse con **el peor del horario**: si a las
+ * tres llueve, el día es de lluvia aunque la mañana haya salido con sol.
+ */
+export function iconoDe(simbolo: string): { icono: string; texto: string; gravedad: number } {
+  const s = simbolo.replace(/_(day|night|polartwilight)$/, '');
+  if (s.includes('thunder')) return { icono: '⛈️', texto: 'tormenta', gravedad: 9 };
+  if (s.includes('snow')) return { icono: '🌨️', texto: 'nieve', gravedad: 8 };
+  if (s.includes('sleet')) return { icono: '🌨️', texto: 'aguanieve', gravedad: 7 };
+  if (s.startsWith('heavyrain') || s.startsWith('rain')) {
+    return { icono: '🌧️', texto: 'lluvia', gravedad: 6 };
+  }
+  if (s.startsWith('lightrain')) return { icono: '🌦️', texto: 'lluvia débil', gravedad: 5 };
+  if (s === 'fog') return { icono: '🌫️', texto: 'niebla', gravedad: 4 };
+  if (s === 'partlycloudy') return { icono: '⛅', texto: 'parcialmente nublado', gravedad: 2 };
+  if (s === 'fair') return { icono: '🌤️', texto: 'mayormente despejado', gravedad: 1 };
+  if (s === 'clearsky') return { icono: '☀️', texto: 'despejado', gravedad: 0 };
+  // `cloudy` y cualquier símbolo que no conozcamos. Equivocarse hacia el sol
+  // es lo que hace que alguien no prepare nada.
+  return { icono: '☁️', texto: 'nublado', gravedad: 3 };
 }
 
 const numero = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) ? v : null;
 
+interface Periodo {
+  summary?: { symbol_code?: string };
+  details?: Record<string, unknown>;
+}
+
+interface Paso {
+  time?: string;
+  data?: {
+    instant?: { details?: Record<string, unknown> };
+    next_1_hours?: Periodo;
+    next_6_hours?: Periodo;
+  };
+}
+
+interface Acumulado {
+  simbolo: string | null;
+  gravedad: number;
+  max: number | null;
+  min: number | null;
+  lluvia: number | null;
+  mm: number | null;
+}
+
+const mayor = (a: number | null, b: number | null) =>
+  a === null ? b : b === null ? a : Math.max(a, b);
+const menor = (a: number | null, b: number | null) =>
+  a === null ? b : b === null ? a : Math.min(a, b);
+
 /**
- * La respuesta de Open-Meteo, día por día.
+ * La respuesta de MET, de a un día con hora de Chile.
  *
- * Viene en columnas —una lista de fechas, una de códigos, una de máximas—
- * y se pasa a una fila por día. **Un día sin código se descarta**: sin saber
- * si hay sol o lluvia no hay ícono que poner, y una temperatura sola al lado
- * de nada se lee como un error.
+ * MET entrega **instantes en UTC**, hora a hora al principio y de a seis
+ * horas después, y cada instante trae lo que se espera para la hora o las
+ * seis horas siguientes. Hay que juntarlos por día **de Chile**: un instante
+ * a las 02:00 UTC es todavía el día anterior acá. Es la única conversión
+ * por `Date` del archivo, y es de un instante a una fecha, que es lo que
+ * `fechaEnZona()` sabe hacer bien; las fechas que salen son texto.
+ *
+ * - **El ícono** es el peor símbolo de los periodos que tocan el horario.
+ * - **La lluvia en %** es la mayor probabilidad de esos mismos periodos.
+ * - **Los milímetros** suman el día completo, sin contar dos veces: donde
+ *   hay datos por hora se usan esos, y un periodo de seis horas solo cuenta
+ *   desde donde terminaron los de una hora.
+ *
+ * Un día sin ningún periodo en el horario se descarta: sin saber si hay sol
+ * o lluvia no hay ícono que poner. Pasa con el último día del pronóstico,
+ * que a veces llega cortado en la madrugada.
  */
 export function climaDe(respuesta: unknown): Clima[] {
-  const d = (respuesta as { daily?: Record<string, unknown[]> })?.daily;
-  if (!d || !Array.isArray(d.time)) return [];
-  const col = (k: string) => (Array.isArray(d[k]) ? d[k] : []);
-  const codigos = col('weather_code');
-  const max = col('temperature_2m_max');
-  const min = col('temperature_2m_min');
-  const lluvia = col('precipitation_probability_max');
+  const pasos = (respuesta as { properties?: { timeseries?: unknown } })
+    ?.properties?.timeseries;
+  if (!Array.isArray(pasos)) return [];
 
-  return d.time.flatMap((f, i) => {
-    const codigo = numero(codigos[i]);
-    if (typeof f !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(f) || codigo === null) {
-      return [];
+  const dias = new Map<string, Acumulado>();
+  let cubiertoHasta = 0;   // hasta dónde ya se sumaron milímetros, en ms
+
+  for (const p of pasos as Paso[]) {
+    const inicio = typeof p?.time === 'string' ? new Date(p.time) : null;
+    if (!inicio || Number.isNaN(inicio.getTime()) || !p.data) continue;
+
+    const fecha = fechaEnZona(inicio);
+    const hora = horaEnChile(inicio);
+    const d = dias.get(fecha) ?? {
+      simbolo: null, gravedad: -1, max: null, min: null, lluvia: null, mm: null
+    };
+    dias.set(fecha, d);
+
+    const t = numero(p.data.instant?.details?.air_temperature);
+    d.max = mayor(d.max, t);
+    d.min = menor(d.min, t);
+
+    const horas = p.data.next_1_hours ? 1 : p.data.next_6_hours ? 6 : 0;
+    const periodo = horas === 1 ? p.data.next_1_hours : p.data.next_6_hours;
+    if (!periodo) continue;
+
+    d.max = mayor(d.max, numero(periodo.details?.air_temperature_max));
+    d.min = menor(d.min, numero(periodo.details?.air_temperature_min));
+
+    const fin = inicio.getTime() + horas * 3600_000;
+    const mm = numero(periodo.details?.precipitation_amount);
+    if (mm !== null && inicio.getTime() >= cubiertoHasta) {
+      d.mm = (d.mm ?? 0) + mm;
+      cubiertoHasta = fin;
     }
-    return [{
-      fecha: f, codigo,
-      max: numero(max[i]), min: numero(min[i]), lluvia: numero(lluvia[i])
-    }];
-  });
+
+    // ¿El periodo toca el horario? Se compara en horas del día, así que un
+    // periodo de seis horas que parte a las 21 no alcanza al día siguiente:
+    // a esa hora el horario de ese día ya pasó.
+    const tocaHorario = hora < HORARIO.hasta && hora + horas > HORARIO.desde;
+    const simbolo = periodo.summary?.symbol_code;
+    if (!tocaHorario || typeof simbolo !== 'string') continue;
+
+    const { gravedad } = iconoDe(simbolo);
+    if (gravedad > d.gravedad) {
+      d.gravedad = gravedad;
+      d.simbolo = simbolo.replace(/_(day|night|polartwilight)$/, '');
+    }
+    d.lluvia = mayor(d.lluvia, numero(periodo.details?.probability_of_precipitation));
+  }
+
+  return [...dias.entries()]
+    .filter(([, d]) => d.simbolo !== null)
+    .map(([fecha, d]) => ({
+      fecha, simbolo: d.simbolo as string,
+      max: d.max, min: d.min, lluvia: d.lluvia,
+      mm: d.mm === null ? null : Math.round(d.mm * 10) / 10
+    }));
 }
 
-/**
- * El ícono y su palabra, según el código WMO.
- *
- * Se agrupan en lo que importa para un día de campo: sol, nubes, niebla,
- * llovizna, lluvia, nieve y tormenta. Los códigos que no están en la tabla
- * caen en "nublado" antes que en "despejado": equivocarse hacia el sol es
- * lo que hace que alguien no prepare nada.
- */
-export function iconoDe(codigo: number): { icono: string; texto: string } {
-  if (codigo === 0) return { icono: '☀️', texto: 'despejado' };
-  if (codigo === 1) return { icono: '🌤️', texto: 'mayormente despejado' };
-  if (codigo === 2) return { icono: '⛅', texto: 'parcialmente nublado' };
-  if (codigo === 3) return { icono: '☁️', texto: 'nublado' };
-  if (codigo === 45 || codigo === 48) return { icono: '🌫️', texto: 'niebla' };
-  if (codigo >= 51 && codigo <= 57) return { icono: '🌦️', texto: 'llovizna' };
-  if ((codigo >= 61 && codigo <= 67) || (codigo >= 80 && codigo <= 82)) {
-    return { icono: '🌧️', texto: 'lluvia' };
-  }
-  if ((codigo >= 71 && codigo <= 77) || codigo === 85 || codigo === 86) {
-    return { icono: '🌨️', texto: 'nieve' };
-  }
-  if (codigo >= 95 && codigo <= 99) return { icono: '⛈️', texto: 'tormenta' };
-  return { icono: '☁️', texto: 'nublado' };
-}
-
-/** "lluvia · máx 18° · mín 9° · 70% de lluvia", para el `title`. */
+/** "lluvia · máx 18° · mín 9° · 80% de lluvia · 6 mm", para el `title`. */
 export function climaEnPalabras(c: Clima): string {
-  const partes = [`Pronóstico: ${iconoDe(c.codigo).texto}`];
+  const partes = [`Pronóstico: ${iconoDe(c.simbolo).texto}`];
   if (c.max !== null) partes.push(`máx ${Math.round(c.max)}°`);
   if (c.min !== null) partes.push(`mín ${Math.round(c.min)}°`);
   if (c.lluvia !== null) partes.push(`${Math.round(c.lluvia)}% de lluvia`);
+  if (c.mm !== null && c.mm >= 0.5) partes.push(`${c.mm} mm`);
   return partes.join(' · ');
 }
