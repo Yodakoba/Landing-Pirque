@@ -10,6 +10,7 @@ import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
 import TarjetaDia from './TarjetaDia';
+import { usePronostico } from './Clima';
 import EquipoDialogo from './EquipoDialogo';
 import { POR_DEFECTO, type Config } from '@/lib/config';
 import { menusConocidos } from '@/lib/shopify';
@@ -19,6 +20,7 @@ import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from
 
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
+  const pronostico = usePronostico();
   const [error, setError] = useState('');
   const [creando, setCreando] = useState(false);
   const [editando, setEditando] = useState<Ocupacion | null>(null);
@@ -227,7 +229,7 @@ export default function CalendarView() {
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
-              <TarjetaDia key={d.fecha} d={d}
+              <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
                 resumen={equipo
                   ? resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas)
                   : null}

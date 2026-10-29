@@ -15,6 +15,7 @@ import { aCSV } from '@/lib/csv';
 import { ocupaLugar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
+import Clima, { usePronostico } from './Clima';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
 import { estaCerrado, type Cierre } from '@/lib/cierres';
@@ -50,6 +51,7 @@ export default function DayView({ fecha }: { fecha: string }) {
     colaboradores: Colaborador[]; extras: Extra[]; esAdmin: boolean;
   } | null>(null);
   const [agendando, setAgendando] = useState(false);
+  const pronostico = usePronostico();
 
   const cargar = () =>
     fetch('/api/reservas')
@@ -201,6 +203,7 @@ export default function DayView({ fecha }: { fecha: string }) {
       <h1 className="mt-2 text-xl font-bold uppercase tracking-wide capitalize">
         {enPalabras(fecha)}
       </h1>
+      <Clima c={pronostico.get(fecha)} grande />
       <p className="text-hueso/60 text-sm">
         {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
         {noShows > 0 && (

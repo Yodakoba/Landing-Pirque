@@ -57,6 +57,7 @@ import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
          FORMATO_TELEFONO } from './contacto.ts';
 import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
          diasPorCerrar, leerCierresDe, type Cierre } from './cierres.ts';
+import { climaDe, iconoDe, climaEnPalabras, urlPronostico, horaEnChile } from './clima.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
@@ -1983,6 +1984,60 @@ ok(leidos.length === 1 && leidos[0].quien === 'jefe' && leidos[0].fila === 2,
 ok(leerCierresDe([['Cerrado por']]).length === 0,
    'sin la columna Fecha no se interpreta nada');
 
+
+// ---------- el pronóstico (MET Norway) ----------
+// Chile está en UTC-3 en noviembre: 13:00 UTC son las 10:00 de acá.
+const paso = (time: string, temp: number, uno?: [string, number, number?], seis?: [string, number, number?]) => ({
+  time,
+  data: {
+    instant: { details: { air_temperature: temp } },
+    ...(uno ? { next_1_hours: { summary: { symbol_code: uno[0] },
+      details: { precipitation_amount: uno[1], probability_of_precipitation: uno[2] } } } : {}),
+    ...(seis ? { next_6_hours: { summary: { symbol_code: seis[0] },
+      details: { precipitation_amount: seis[1], probability_of_precipitation: seis[2] } } } : {})
+  }
+});
+const met = { properties: { timeseries: [
+  // Sábado 14 por hora. A las 02:00 UTC todavía es viernes 13 en Chile.
+  paso('2026-11-14T02:00:00Z', 9, ['heavyrain', 4, 90], ['rain', 9, 90]),
+  paso('2026-11-14T08:00:00Z', 8, ['rain_night', 2, 80], ['rain', 9, 80]),   // 05:00: fuera del horario
+  paso('2026-11-14T13:00:00Z', 15, ['clearsky_day', 0, 0], ['fair_day', 0, 5]),
+  paso('2026-11-14T17:00:00Z', 24, ['lightrainshowers_day', 0.3, 40], ['cloudy', 1, 40]),
+  paso('2026-11-14T20:00:00Z', 21, ['partlycloudy_day', 0, 10], ['cloudy', 0, 10]),
+  // Desde acá, de a seis horas: 06:00 UTC = 03:00 y 12:00 UTC = 09:00.
+  paso('2026-11-15T06:00:00Z', 10, undefined, ['fog', 0, 0]),
+  paso('2026-11-15T12:00:00Z', 14, undefined, ['partlycloudy_day', 0, 5]),
+  paso('2026-11-15T18:00:00Z', 26, undefined, ['fair_day', 0, 0]),
+  // El último día llega cortado en la madrugada: no toca el horario.
+  paso('2026-11-16T06:00:00Z', 11, undefined, ['clearsky_night', 0, 0]),
+  { time: 'basura', data: {} }
+] } };
+const pron = climaDe(met);
+const pronDe = (f: string) => pron.find((c) => c.fecha === f);
+ok(horaEnChile(new Date('2026-11-14T13:00:00Z')) === 10, 'las 13 UTC son las 10 en Chile en noviembre');
+ok(pronDe('2026-11-13') === undefined,
+   'la lluvia de la madrugada cae en el viernes de Chile, y fuera del horario no da ícono');
+const sab = pronDe('2026-11-14');
+ok(sab?.simbolo === 'lightrainshowers',
+   'el sábado toma el peor símbolo del horario, no el de las 5 de la mañana');
+ok(sab?.lluvia === 40, 'y la mayor probabilidad del horario: el 80% de la madrugada no cuenta');
+ok(sab?.max === 24 && sab?.min === 8, 'las temperaturas son del día completo');
+ok(sab?.mm === 2.3, 'los milímetros suman el día completo, una sola vez');
+const dom = pronDe('2026-11-15');
+ok(dom?.simbolo === 'partlycloudy',
+   'con pasos de seis horas: la niebla de las 3 no cuenta, el periodo de las 9 a 15 sí');
+ok(pronDe('2026-11-16') === undefined, 'un día sin nada en el horario no trae ícono');
+ok(climaDe(null).length === 0 && climaDe({ properties: {} }).length === 0,
+   'una respuesta rota da una lista vacía, no una excepción');
+ok(iconoDe('clearsky_day').icono === '☀️' && iconoDe('rainshowers_night').texto === 'lluvia'
+   && iconoDe('lightrainandthunder').texto === 'tormenta' && iconoDe('lightssleetshowers_day').texto === 'aguanieve'
+   && iconoDe('heavyrain').texto === 'lluvia' && iconoDe('lightrain').texto === 'lluvia débil',
+   'los símbolos de MET caen en su ícono, con o sin sufijo de día');
+ok(iconoDe('algo_nuevo').texto === 'nublado', 'un símbolo desconocido se lee nublado, nunca despejado');
+ok(climaEnPalabras(sab!) === 'Pronóstico: lluvia débil · máx 24° · mín 8° · 40% de lluvia · 2,3 mm',
+   'el detalle redondea, dice todo y usa coma decimal');
+ok(urlPronostico().includes('lat=-33.67') && !/\.\d{5}/.test(urlPronostico()),
+   'MET pide como mucho cuatro decimales en las coordenadas');
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);
