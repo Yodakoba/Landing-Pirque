@@ -8,14 +8,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
-import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
-import { pagoEnEspanol } from '@/lib/pagos';
+import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
+import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
 import Asistencia from './Asistencia';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
-import { ocupaLugar, enPesos } from '@/lib/ocupacion';
+import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import Clima, { usePronostico } from './Clima';
@@ -27,7 +27,51 @@ import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
 import { extrasDelDia, costoExtrasDelDia, costoDeExtra,
          type Colaborador, type Extra } from '@/lib/extras';
 
-type Filtro = 'todas' | 'online' | 'local';
+/**
+ * Un azulejo del resumen: el número grande arriba y qué es debajo.
+ *
+ * **Es la misma forma para las dos filas** —los menús que hay que preparar y
+ * cómo viene el pago— y eso es a propósito: son los dos datos por los que se
+ * abre esta página un sábado en la mañana, y repetir la forma es lo que los
+ * deja leerse de un vistazo sin aprender dos diseños distintos.
+ *
+ * Va al nivel del módulo, nunca dentro de DayView: un componente declarado
+ * adentro es una función nueva en cada dibujado, o sea otro tipo de elemento
+ * para React, que desmonta y vuelve a montar. Ver CLAUDE.md.
+ */
+function Azulejo({ n, titulo, nota, color, borde }: {
+  n: number;
+  titulo: string;
+  nota?: string;
+  color?: string;
+  borde?: string;
+}) {
+  return (
+    <div className={`rounded border ${borde ?? 'border-hueso/15'} bg-panel px-4 py-2.5`}>
+      <div className={`text-2xl font-bold leading-none tabular-nums ${color ?? 'text-oro'}`}>
+        {n}
+      </div>
+      <div className="mt-1 text-sm leading-tight">{titulo}</div>
+      {nota && <div className="text-xs text-hueso/45">{nota}</div>}
+    </div>
+  );
+}
+
+/** El rótulo chico de cada fila del resumen. */
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-4 text-xs uppercase tracking-widest text-hueso/45">{children}</p>
+  );
+}
+
+/**
+ * El filtro de la tabla. **Por estado del pago, no por modalidad comprada**
+ * (cambió el 2026-10-30): decía "Pagadas online" y "Pagan en el local" pero
+ * preguntaba qué variante se había comprado, así que una reserva comprada
+ * en línea y todavía sin pagar salía en "Pagadas". Lo que se quiere saber
+ * en el mesón es a quién hay que cobrarle.
+ */
+type Filtro = 'todas' | 'pagadas' | 'porCobrar';
 
 export default function DayView({ fecha }: { fecha: string }) {
   const [todas, setTodas] = useState<Reserva[] | null>(null);
@@ -103,8 +147,8 @@ export default function DayView({ fecha }: { fecha: string }) {
   );
 
   const visibles = useMemo(() => delDia.filter((r) => {
-    if (filtro === 'local') return r.tipoPago === TIPO_PAGO.local;
-    if (filtro === 'online') return r.tipoPago !== TIPO_PAGO.local;
+    if (filtro === 'porCobrar') return faltaCobrar(r);
+    if (filtro === 'pagadas') return ocupaLugar(r) && !faltaCobrar(r);
     return true;
   }), [delDia, filtro]);
 
@@ -153,10 +197,10 @@ export default function DayView({ fecha }: { fecha: string }) {
   function exportar() {
     const csv = aCSV(
       ['ID Orden','Nombre','Email','Teléfono','Menú','Personas','Tipo Pago',
-       'Estado Pago','Monto','Asistencia'],
+       'Estado Pago','Nota de pago','Monto','Asistencia'],
       visibles.map((r) => [r.id, r.nombre, r.email, r.telefono, r.menu,
-                           r.personas, r.tipoPago, r.estadoPago, r.monto ?? '',
-                           r.asistencia])
+                           r.personas, r.tipoPago, r.estadoPago, r.notaPago,
+                           r.monto ?? '', r.asistencia])
     );
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
@@ -200,6 +244,22 @@ export default function DayView({ fecha }: { fecha: string }) {
   const costoExtras = costoExtrasDelDia(extras?.extras ?? [], fecha);
   const extrasSinConfirmar = extrasHoy.filter((e) => !e.estado).length;
 
+  // El resumen del pago, que es la segunda fila del encabezado.
+  //
+  // **Se decide por el ESTADO del pago, no por la modalidad comprada**, igual
+  // que faltaCobrar(): una reserva que dice "Pago directo" y sigue en "Por
+  // pagar" significa que la regla de medios de pago de Shopify no aplicó, y
+  // mirando la modalidad esa plata no aparecería en ninguna parte.
+  //
+  // Los números grandes son PERSONAS, para que las dos filas sumen lo mismo;
+  // cuántas reservas son va en la línea chica.
+  const cuentan = visibles.filter(ocupaLugar);
+  const porCobrar = cuentan.filter(faltaCobrar);
+  const pagadas = cuentan.filter((r) => !faltaCobrar(r));
+  const liberadas = visibles.filter((r) => !ocupaLugar(r));
+  const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + (Number(r.personas) || 0), 0);
+  const cuantas = (rs: Reserva[]) => `${rs.length} reserva${rs.length === 1 ? '' : 's'}`;
+
   return (
     <>
       <a href="/" className="text-sm text-hueso/60 hover:text-hueso">← Calendario</a>
@@ -214,19 +274,38 @@ export default function DayView({ fecha }: { fecha: string }) {
         )}
       </p>
 
-      {/* Lo que hay que preparar. Va arriba y grande porque es el dato por el
-          que se abre esta página el sábado en la mañana. */}
+      {/* Lo que hay que preparar. Va arriba y GRANDE porque es el dato por el
+          que se abre esta página el sábado en la mañana: no compite con el
+          equipo ni con las actividades, que son cajas de una línea. */}
       {menus.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {menus.map(({ menu, cantidad }) => (
-            <span key={menu}
-              className="rounded border border-hueso/15 bg-panel px-3 py-1.5 text-sm">
-              <strong className="text-oro tabular-nums">{cantidad}</strong>
-              <span className="text-hueso/70"> × </span>
-              {menu}
-            </span>
-          ))}
-        </div>
+        <>
+          <Rotulo>Qué preparar</Rotulo>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {menus.map(({ menu, cantidad }) => (
+              <Azulejo key={menu} n={cantidad} titulo={menu} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* La segunda fila, en la misma forma: cuánta gente ya pagó y a cuánta
+          hay que cobrarle. Es la otra pregunta del mesón, y hasta ahora había
+          que leerla fila por fila en la tabla. */}
+      {cuentan.length > 0 && (
+        <>
+          <Rotulo>Cómo viene el pago</Rotulo>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <Azulejo n={gente(pagadas)} titulo="Pagadas" nota={cuantas(pagadas)}
+              color="text-verde-texto" borde="border-verde/40" />
+            <Azulejo n={gente(porCobrar)} titulo="Por cobrar" nota={cuantas(porCobrar)}
+              color="text-ambar-texto" borde="border-ambar/40" />
+            {liberadas.length > 0 && (
+              <Azulejo n={gente(liberadas)} titulo="Ya no vienen"
+                nota={`${cuantas(liberadas)} · liberaron su lugar`}
+                color="text-rojo-texto" borde="border-rojo/30" />
+            )}
+          </div>
+        </>
       )}
 
       {/* **Acá iba "$X por cobrar en el local", y se sacó el 2026-10-23**,
@@ -420,11 +499,11 @@ export default function DayView({ fecha }: { fecha: string }) {
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        {(['todas','online','local'] as Filtro[]).map((f) => (
+        {(['todas','pagadas','porCobrar'] as Filtro[]).map((f) => (
           <button key={f} onClick={() => setFiltro(f)}
             className={`rounded border px-3 py-1.5 text-sm ${
               filtro === f ? 'border-oro text-oro' : 'border-hueso/20 text-hueso/70'}`}>
-            {f === 'todas' ? 'Todas' : f === 'online' ? 'Pagadas online' : 'Pagan en el local'}
+            {f === 'todas' ? 'Todas' : f === 'pagadas' ? 'Pagadas' : 'Por cobrar'}
           </button>
         ))}
         <span className="flex-1" />
@@ -458,8 +537,19 @@ export default function DayView({ fecha }: { fecha: string }) {
               {visibles.map((r) => {
                 // "Pago directo / pending" es la combinación imposible: significa
                 // que la regla de medios de pago de Shopify no aplicó.
-                const raro = r.tipoPago === TIPO_PAGO.directo &&
+                // **Solo puede pasarle a un pedido de Shopify**, que es lo
+                // que vuelve confiable este aviso: desde que la modalidad no
+                // se edita a mano, una fila con "Pago directo" ahí es un
+                // pedido de verdad. La guarda del id cubre a las filas
+                // viejas, de cuando el formulario sí la dejaba elegir.
+                const raro = !esManual(r.id) &&
+                             r.tipoPago === TIPO_PAGO.directo &&
                              r.estadoPago === ESTADO_PAGO.pendiente;
+                // La modalidad, en color, para distinguirla sin leerla. Se
+                // mira con `includes` y no con `===` porque un pedido con
+                // las dos modalidades se anota como "A + B": si hay algo que
+                // se paga en el local, manda el ámbar.
+                const enElLocal = String(r.tipoPago).includes(TIPO_PAGO.local);
                 return (
                   <tr key={r.fila} className={`border-b border-hueso/5 ${
                         ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
@@ -475,10 +565,25 @@ export default function DayView({ fecha }: { fecha: string }) {
                     <td className="py-2 pr-3">{r.menu}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{r.personas}</td>
                     <td className="py-2 pr-3">
-                      <div>{r.tipoPago || '—'}</div>
-                      <div className="text-xs text-hueso/50">
+                      {r.tipoPago ? (
+                        <span className={`inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ${
+                          enElLocal ? 'bg-ambar/15 text-ambar-texto'
+                                    : 'bg-verde/15 text-verde-texto'}`}>
+                          {r.tipoPago}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-hueso/40">
+                          {esManual(r.id) ? 'anotada a mano' : '—'}
+                        </span>
+                      )}
+                      <div className={`mt-1 text-xs ${
+                        liberaCupo(r.estadoPago) ? 'text-rojo-texto'
+                        : faltaCobrar(r) ? 'text-ambar-texto' : 'text-verde-texto'}`}>
                         {pagoEnEspanol(r.estadoPago) || '—'}
                       </div>
+                      {r.notaPago && (
+                        <div className="text-xs text-hueso/45">{r.notaPago}</div>
+                      )}
                       {raro && (
                         <div className="mt-1 text-xs font-semibold text-ambar-texto">
                           ⚠ pago directo sin pagar

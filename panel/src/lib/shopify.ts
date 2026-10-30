@@ -281,6 +281,11 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
       ? null
       : Number(p.total_price),
     tipoPago: tipoPagoDe(p) as Reserva['tipoPago'],
+    // Un pedido de Shopify ya dice cómo se pagó —su modalidad y su estado—,
+    // así que la nota es de las anotadas a mano. Va vacía y, además,
+    // `camposDeShopify()` la deja fuera para no pisar lo que alguien
+    // escribiera a mano sobre un pedido.
+    notaPago: '',
     estadoPago: estadoDe(p),
     creada: texto(p.created_at),
     asistencia: ''
@@ -296,9 +301,13 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  * sábado. Los datos de Shopify son de Shopify; la asistencia es nuestra.
  *
  * Tampoco se reescribe `creada`: la fecha en que entró el pedido no cambia.
+ *
+ * Ni `notaPago`, por el mismo motivo que la asistencia: esa nota la escribe
+ * una persona —"pagó la diferencia en efectivo"— y un pedido que se
+ * actualiza la borraría.
  */
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
-  const { asistencia, creada, ...resto } = r;
+  const { asistencia, creada, notaPago, ...resto } = r;
   return resto;
 }
 

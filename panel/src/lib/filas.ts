@@ -38,6 +38,7 @@ export function filaReserva(
   poner(i.estadoPago, r.estadoPago);
   poner(i.creada, r.creada);
   poner(i.asistencia, r.asistencia);
+  poner(i.notaPago, r.notaPago);
   return fila;
 }
 

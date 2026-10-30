@@ -313,6 +313,29 @@ export async function borrarFilas(hoja: string, filas: number[]): Promise<void> 
  * `escribirBloque` no sirve ahí porque reescribe desde A1, y acá lo que hace
  * falta es que la primera fila diga los nombres de las columnas y nada más.
  */
+/**
+ * Deja la columna en el encabezado, y devuelve el encabezado que quedó.
+ *
+ * Una columna que el panel conoce y la planilla no se lee vacía y **no se
+ * escribe en ninguna parte**: `filaReserva()` saltea los índices en -1. Eso
+ * está bien para una planilla vieja que todavía no la tiene, y es una trampa
+ * en el momento en que alguien escribe algo en ese campo y aprieta Guardar:
+ * el formulario dice que guardó y el dato no está en ninguna parte.
+ *
+ * Por eso la columna se agrega sola la primera vez que hace falta —es lo
+ * mismo que hace `asegurarHoja()` con una pestaña—, **al final y sin tocar
+ * ninguna celda de datos**. Si ya está, esto no escribe nada.
+ */
+export async function asegurarColumna(
+  hoja: string, encabezado: string[], columna: string
+): Promise<string[]> {
+  const limpio = (c: unknown) => String(c ?? '').trim().toLowerCase();
+  if (encabezado.some((c) => limpio(c) === limpio(columna))) return encabezado;
+  const nuevo = [...encabezado, columna];
+  await escribirFila(hoja, 1, nuevo);
+  return nuevo;
+}
+
 export async function asegurarEncabezado(
   hoja: string, encabezado: string[]
 ): Promise<string[][]> {

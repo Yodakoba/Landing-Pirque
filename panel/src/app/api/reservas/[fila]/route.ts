@@ -12,7 +12,12 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
   try {
     const fila = Number(params.fila);
     if (!(fila > 1)) return NextResponse.json({ error: 'Fila inválida.' }, { status: 400 });
-    const cambios = await req.json();
+    // **La modalidad no se acepta del navegador**, igual que al crear: sale
+    // del `variant_title` del pedido y la escribe el sincronizador. Como la
+    // edición es parcial, dejarla fuera conserva la que ya tenga la fila.
+    // Se comprueba acá y no solo en el formulario porque una llamada directa
+    // a la API tiene que obedecer la misma regla que un clic.
+    const { tipoPago, id, creada, fila: _f, ...cambios } = await req.json();
     await editarReserva(fila, cambios);
     const quien = await quienEs(req);
     // Qué campos se tocaron, no sus valores: la bitácora es un rastro para

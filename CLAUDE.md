@@ -952,6 +952,109 @@ parejas obligan a leerlas todas para elegir la primera.
   equipo y de las actividades extras. Era el último `<select>` de los tres
   lugares donde se pregunta exactamente lo mismo.
 
+### La modalidad la escribe Shopify; el estado del pago, cualquiera (2026-10-30)
+
+Lo encontró el cliente, y era un error lógico de fondo: *"cuando se agrega una
+reserva manualmente, en verdad no puede ser pago directo, porque pago directo
+es solo Shopify… nosotros igual necesitamos poder abrir manualmente una
+reserva que ya se pagó, por transferencia, adelantada, o como sea"*.
+
+Tenía razón y se puede leer en una sola línea del código: `tipoPagoDe()` saca
+`Tipo Pago` del **`variant_title`** del pedido, o sea de qué variante se
+compró. **Es un hecho del pedido, no una opinión de nadie.** Una reserva
+anotada a mano no compró ninguna variante, así que el formulario estaba
+pidiendo elegir un dato que no existe — y traía `Solo reserva` puesto por
+defecto, que es igual de inventado.
+
+Los dos conceptos, separados de verdad:
+
+| Columna | Qué es | Quién la escribe |
+|---|---|---|
+| `Tipo Pago` | **cómo se vendió** — qué variante se compró | **solo Shopify** |
+| `Estado Pago Shopify` | **cómo va el pago** — pagada, por pagar, cancelada… | Shopify **y** el panel |
+| `Nota de pago` | **cómo se pagó** una reserva a mano, en texto libre | el panel |
+
+- **El formulario manual pregunta una sola cosa**: cómo va el pago, el
+  desplegable que ya estaba en dos grupos. Una reserva pagada por
+  transferencia se anota **Pagada** y ya no hay que mentir sobre la
+  modalidad. Al editar una reserva de Shopify, la modalidad se **muestra
+  como texto, no como campo**.
+- **Y no se acepta del navegador**, ni al crear ni al editar: el `POST` la
+  escribe vacía y el `PATCH` la descarta, así que una llamada directa a la
+  API obedece la misma regla que un clic. Como la edición es parcial,
+  descartarla conserva la que ya tenga la fila.
+- **Con eso el aviso de "pago directo sin pagar" se vuelve confiable**, que
+  es lo que más se gana. Es la única señal de que la regla de medios de pago
+  de Shopify dejó de aplicar, y hasta ahora se podía disparar a mano sin que
+  hubiera pasado nada en la tienda. Lleva además una guarda por el id, para
+  las filas viejas de cuando el formulario sí dejaba elegir.
+
+**El monto sugerido pasó a salir del estado del pago** y no de la modalidad:
+pagada por adelantado es el precio con descuento, por pagar es el del local.
+Es exactamente la regla de la tienda —el recargo son los $5.000 por no pagar
+antes— y el monto sigue siendo editable encima.
+
+#### La nota de pago es texto libre a propósito
+
+Cuáles son los medios de pago del negocio es dato del cliente. Una lista
+cerrada inventada acá terminaría en la planilla pareciendo que lo es, así que
+se escribe "Transferencia 28/10" o "efectivo en el mesón" y listo. El campo
+aparece **solo cuando la reserva está pagada**, que es cuando la pregunta
+existe. Mismo criterio y mismo nombre que la `Nota de pago` de
+`Trabajadores` y `Colaboradores`.
+
+- **La columna se agrega sola la primera vez que hace falta**
+  (`asegurarColumna()`), como `asegurarHoja()` hace con una pestaña. Sin eso
+  el campo se habría podido escribir en el formulario sin quedar en ninguna
+  parte: una columna que el panel conoce y la planilla no se lee vacía y
+  `filaReserva()` saltea su índice en silencio. Se agrega al final y sin
+  tocar ninguna celda de datos.
+- **El sincronizador no la pisa**, igual que la asistencia: la escribe una
+  persona, y un pedido que se actualiza —un pago que se confirma— la
+  borraría. Está en la lista de omisiones de `camposDeShopify()`.
+
+#### Lo que se arregló de paso: el cálculo decía otra cosa que el rótulo
+
+`ocupacionDe()` separaba el día **por modalidad comprada** mientras la
+tarjeta del calendario rotulaba el resultado como *"X pagadas / X en el
+local"* y el comentario de `tipos.ts` decía *"personas que ya pagaron"*. No
+era lo mismo: una reserva que compró la variante de pagar en línea y seguía
+en `pending` se contaba como pagada, y esa plata no aparecía en ninguna
+parte. **El rótulo tenía razón; el cálculo se había quedado atrás** — y
+`faltaCobrar()` ya resolvía esto bien, con el porqué escrito, desde antes.
+
+Ahora los dos campos se llaman `pagadas` y `porPagar` —los nombres viejos,
+`online` y `local`, son justamente los que dejaron pasar la desalineación— y
+el filtro de la página del día dice **Todas / Pagadas / Por cobrar**, que es
+la pregunta del mesón.
+
+### Lo que se mira primero en la página de un día (2026-10-30)
+
+Lo pidió el cliente: agrandar lo principal y distinguirlo del resto. Son dos
+filas de azulejos, **con la misma forma a propósito** —número grande arriba,
+qué es debajo— porque son los dos datos por los que se abre esta página un
+sábado en la mañana, y repetir la forma es lo que los deja leerse sin
+aprender dos diseños:
+
+| Fila | Qué dice |
+|---|---|
+| **Qué preparar** | cuántos de cada menú, en dorado |
+| **Cómo viene el pago** | cuánta gente ya pagó (verde), a cuánta hay que cobrarle (ámbar) y, si las hay, cuántas liberaron su lugar (rojo) |
+
+- **Los números grandes son personas**, para que las dos filas sumen lo
+  mismo; cuántas reservas son va en la línea chica. Un "4" que fuera gente
+  arriba y reservas abajo sería la clase de número que alguien suma mal.
+- **El azulejo de los que ya no vienen aparece solo si los hay.** Un "0 ya no
+  vienen" es ruido en la fila que se mira para saber cuánto falta cobrar.
+- **En la tabla, la modalidad va en una pastilla de color**: verde *Pago
+  directo*, ámbar *Solo reserva*, y debajo el estado en su propio color. Lo
+  pidió el cliente para distinguirlas sin leerlas. El criterio del color es
+  uno solo —**¿está la plata o no?**—, así que la combinación imposible
+  (pastilla verde con estado ámbar) salta a la vista, que es justo lo que ese
+  aviso quiere.
+- Una reserva sin modalidad dice **"anotada a mano"** y no un guion mudo:
+  decir qué es vale más que decir que falta algo.
+
 ## El equipo de trabajadores (panel)
 
 Desde el 2026-10-21 el panel también planifica **quién trabaja cada día**.

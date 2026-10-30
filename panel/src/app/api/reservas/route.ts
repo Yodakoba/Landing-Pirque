@@ -47,7 +47,11 @@ export async function POST(req: Request) {
       // guardaba al editar. Vacío sigue siendo válido — es lo que pasa si
       // nadie puso precios todavía.
       monto: b.monto == null || b.monto === '' ? null : Number(b.monto),
-      tipoPago: b.tipoPago ?? '', estadoPago: b.estadoPago ?? '',
+      // **La modalidad no se recibe del navegador**: la escribe el
+      // sincronizador de Shopify y nadie más. Una reserva anotada a mano
+      // nace sin ella, que es lo que de verdad pasó.
+      tipoPago: '', estadoPago: b.estadoPago ?? '',
+      notaPago: String(b.notaPago ?? '').trim(),
       // Sin marcar: a una reserva que se acaba de crear todavía no se le
       // puede saber si la persona apareció.
       asistencia: ASISTENCIA.sinMarcar
