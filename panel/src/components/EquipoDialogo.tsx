@@ -162,10 +162,35 @@ export default function EquipoDialogo({
     setPlan(copia);
   };
 
+  /**
+   * Cuál es el ajuste recién agregado, para llevar el cursor hasta él.
+   *
+   * Se agrega desde la línea de la persona, arriba, y el campo está en la
+   * tabla de abajo: sin esto el botón parecería no hacer nada. La llave es
+   * `nombre#posición` y se limpia al enfocar, así que no vuelve a saltar.
+   */
+  const [recienAjuste, setRecienAjuste] = useState('');
+
   const agregarAjuste = (i: number) => {
     const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
+    setRecienAjuste(`${copia[i].trabajador}#${copia[i].ajustes.length}`);
     copia[i].ajustes.push({ monto: 0, motivo: '' });
     setPlan(copia);
+  };
+
+  /**
+   * Un ajuste para esa persona, desde su línea de arriba.
+   *
+   * **Existe porque el cliente no encontraba dónde se hacía**, y el caso que
+   * dio es el de todos los días: llegó dos horas tarde y hay que descontarle,
+   * o se le adelantó plata de la caja, o le toca más por feriado o por hora
+   * extra. Estaba —son los mismos ajustes de la tabla de abajo, no una
+   * segunda forma de anotar lo mismo—, pero había que bajar hasta ella
+   * sabiendo de antemano que estaba ahí.
+   */
+  const agregarAjustePara = (nombre: string) => {
+    const i = plan.findIndex((t) => normalizar(t.trabajador) === normalizar(nombre));
+    if (i !== -1) agregarAjuste(i);
   };
 
   const quitarAjuste = (i: number, k: number) => {
@@ -301,12 +326,21 @@ export default function EquipoDialogo({
                   const t = plan.find(
                     (x) => normalizar(x.trabajador) === normalizar(nombre));
                   return (
+                    /* **Dos líneas fijas, no una que envuelve.** Con un
+                       nombre corto —"Alexis"— cabía todo junto y *Ficha* y
+                       *Sacar* quedaban pegados a los botones de asistencia;
+                       con uno largo se iban solos abajo. Dos personas
+                       seguidas se veían distintas sin que nada hubiera
+                       cambiado salvo el largo del nombre, y lo que se
+                       aprieta sin querer es justamente lo que se movió de
+                       lugar. Arriba lo que se contesta —quién es y si
+                       vino—, abajo lo que se hace. */
                     <li key={nombre}
-                      className={`flex flex-wrap items-center gap-2 rounded border
-                                  px-2 py-1.5 text-xs ${
+                      className={`rounded border px-2 py-1.5 text-xs ${
                         t?.asistencia === VINO.si ? 'border-verde/25 bg-verde/5'
                         : t?.asistencia === VINO.no ? 'border-rojo/25 bg-rojo/5'
                         : 'border-hueso/10 bg-panel'}`}>
+                      <div className="flex flex-wrap items-center gap-2">
                       <span className={`text-sm ${
                         t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
                         : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
@@ -326,6 +360,44 @@ export default function EquipoDialogo({
                           tiene delante es esta ventana. */}
                       <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
                         onCambio={(v) => marcar(nombre, v)} />
+                      </div>
+
+                      {/* La segunda línea: lo que se hace con esa persona.
+                          Va separada por un filete para que no se lea como
+                          parte de la pregunta de arriba. */}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1
+                                      border-t border-hueso/10 pt-1">
+                        {/* **Sumar o restar plata de ese día, acá mismo.**
+                            El caso que lo pidió: llegó dos horas tarde, se
+                            le adelantó de la caja, le toca más por feriado.
+                            Es el mismo ajuste de la tabla de abajo —no una
+                            segunda forma de anotar lo mismo—, y el cursor
+                            se va hasta él. */}
+                        <button onClick={() => agregarAjustePara(nombre)}
+                          className="rounded px-2 py-2 text-xs text-oro hover:bg-oro/10"
+                          title={`Sumar o restar un monto del día de ${nombre}, con su motivo`}>
+                          + Ajuste
+                        </button>
+                        {!!t?.ajustes.length && (
+                          /* **El signo va adelante y aparte**: `enPesos()`
+                             de un negativo da "$-18.000", que se lee como
+                             un error de tipeo justo donde importa saber si
+                             a esa persona se le suma o se le resta. */
+                          <span className="min-w-0 text-[11px] tabular-nums text-hueso/45">
+                            {t.ajustes.length > 1 && <>{t.ajustes.length} ajustes · </>}
+                            {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
+                            {enPesos(Math.abs(totalAjustes(t.ajustes)))}
+                            {t.ajustes.length === 1 && t.ajustes[0].motivo
+                              && <span className="text-hueso/35"> · {t.ajustes[0].motivo}</span>}
+                          </span>
+                        )}
+                        <span className="flex-1" />
+                        {/* **Ficha y Sacar van juntos y no se separan.**
+                            Con `flex-wrap` sueltos, un nombre largo o un
+                            resumen de ajustes dejaba a *Sacar* solo en una
+                            tercera línea. Agrupados, bajan los dos o no
+                            baja ninguno. */}
+                        <span className="flex shrink-0 items-center gap-1">
                       {/* **La ficha, desde acá.** Lo que no cambia de un día
                           a otro —teléfono, sueldo habitual, cuenta
                           bancaria— vivía solo en `/equipo`, y quien arma un
@@ -361,6 +433,8 @@ export default function EquipoDialogo({
                         title={`Sacar a ${nombre} de este día`}>
                         Sacar
                       </button>
+                      </span>
+                      </div>
                     </li>
                   );
                 })}
@@ -460,9 +534,11 @@ export default function EquipoDialogo({
           <p className="mt-1 text-xs text-hueso/50">
             Se llena a quien <strong>vino</strong>; a quien no, el panel no le
             paga nada. Si hay una diferencia por un acuerdo aparte
-            —un montaje, un atraso, un adelanto— va en un{' '}
+            —un montaje, un atraso, un adelanto, un feriado— va en un{' '}
             <strong>ajuste con su motivo</strong> y no editando la jornada:
             los dos dan el mismo total, pero solo uno deja escrito el porqué.
+            Pueden ser varios, en más y en menos, y también se agregan desde
+            el <strong>+ Ajuste</strong> de cada persona, arriba.
           </p>
 
           {/* **Una tarjeta por persona en el teléfono, una fila en el
@@ -539,6 +615,17 @@ export default function EquipoDialogo({
                         <input type="number" step={1000} className={`${ENTRADA} w-24`}
                           value={a.monto || ''} placeholder="0"
                           aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
+                          /* El que se acaba de agregar desde la línea de
+                             arriba se trae el cursor y la pantalla: el campo
+                             está más abajo, y sin esto el botón parecería no
+                             haber hecho nada. Se limpia la llave para que no
+                             vuelva a saltar en cada dibujado. */
+                          ref={(el) => {
+                            if (!el || recienAjuste !== `${t.trabajador}#${k}`) return;
+                            setRecienAjuste('');
+                            el.scrollIntoView({ block: 'center' });
+                            el.focus();
+                          }}
                           onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
                         <input type="text" className={ENTRADA} value={a.motivo}
                           placeholder="por qué"
@@ -556,7 +643,8 @@ export default function EquipoDialogo({
                     </button>
                     {t.ajustes.length > 1 && (
                       <span className="ml-2 text-xs tabular-nums text-hueso/45">
-                        suman {enPesos(totalAjustes(t.ajustes))}
+                        suman {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
+                        {enPesos(Math.abs(totalAjustes(t.ajustes)))}
                       </span>
                     )}
                   </div>

@@ -1228,6 +1228,16 @@ veces y a pasar por una pantalla que para un día de preparación ni siquiera
 existe. Quien marca en la mañana deja los montos como están y listo; quien
 cierra en la noche los llena. Ver "Una sola ventana para el día".
 
+**La línea de cada persona son dos líneas fijas, no una que envuelve**
+(2026-10-30, lo notó el cliente con una captura). Arriba va lo que se
+contesta —quién es y si vino—; abajo lo que se hace: *+ Ajuste*, *Ficha* y
+*Sacar*. Antes era una sola fila con `flex-wrap`, así que con un nombre corto
+—"Alexis"— cabía todo junto y con uno largo *Ficha* y *Sacar* se iban solos
+abajo: dos personas seguidas se veían distintas sin que hubiera cambiado nada
+salvo el largo del nombre, y lo que se aprieta sin querer es justamente lo
+que se movió de lugar. **Ficha y Sacar además van agrupados**, para que bajen
+los dos o no baje ninguno.
+
 **Desde el 2026-10-30 son dos botones grandes, no un desplegable.** Lo pidió
 el cliente con el porqué: *"son personas rurales, que no han manejado muchos
 de estos sistemas; necesitamos que para ellos sea muy fácil de entender"*. Un
@@ -1802,6 +1812,45 @@ sigue siendo editable a mano por alguien que no sepa de esto. Con dos dice
 motivos que falten se leen vacíos en vez de desalinear los pares. Y el
 separador se saca de los motivos al guardar, porque un motivo con `|`
 partiría su propio ajuste en dos al volver a leerlo.
+
+#### El ajuste se agrega desde la línea de la persona (2026-10-30)
+
+**Estaban, y el cliente no los encontraba**, que a efectos prácticos es lo
+mismo que no tenerlos. Lo dijo así: *"hay que ponerle un ojo al tema de
+horas extras, que era pensado con comentario para definir por qué se suma o
+resta un monto y que puedo agregar distintos montos. Eso en esta vista no lo
+veo, y no sé si se nos perdió en el camino"*. Y el caso que dio es el de
+todos los días: llegó dos horas tarde y hay que descontarle, se le adelantó
+plata de la caja, le toca más por feriado, por hora extra o por haberlo hecho
+muy bien.
+
+Dos causas, las dos arregladas:
+
+- **Estaban en la tabla de abajo de la ventana del día**, y quien planifica
+  mira la parte de arriba. Ahora cada persona tiene un **`+ Ajuste`** en su
+  línea; **es el mismo ajuste, no una segunda forma de anotar lo mismo**, y
+  el cursor se va hasta el campo —que está más abajo— porque si no el botón
+  parecería no hacer nada. La línea muestra además lo que suman, con el signo
+  adelante: **−$18.000**, no `$-18.000`, que se lee como un error de tipeo
+  justo donde importa saber si se suma o se resta.
+- **La ficha decía "Hora extra" y parecía el lugar.** Ahí no hay ningún
+  motivo que escribir porque ese campo es **cuánto vale una hora extra de esa
+  persona**, de costumbre, no cuánto se le pagó un sábado. El bloque Pago de
+  la ficha ahora lo dice con todas sus letras y manda al día.
+
+#### Los días pasados se editan, y eso es a propósito
+
+Lo pidió confirmado el cliente: *"siempre puede ser que necesito agregar o
+cambiar algo en una fecha que ya está en el pasado… por lo menos poder
+revisarla"*. En `/turnos` se llega a cualquier mes con *Mes anterior*, se
+abre cualquier día y **se edita, esté cerrado o no**. Comprobado contra un
+sábado pasado y ya cerrado: se le agregó un ajuste, quedó guardado y **el día
+siguió cerrado** — editar no reabre, que es lo que se arregló el 2026-10-30.
+Reabrir es un botón propio y queda en la bitácora.
+
+Lo que el panel no hace, y conviene tenerlo claro: **si ese día ya se pagó,
+el arreglo es con la persona**. Acá queda anotado el porqué, con su monto y
+su motivo, para que la próxima planilla lo recoja.
 
 ### Por turno o contratado (2026-10-21)
 
