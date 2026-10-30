@@ -639,14 +639,14 @@ export default function EquipoEditor() {
                     {esAdmin && (
                       <td className="whitespace-nowrap py-2 pr-2 text-hueso/50">
                         <button onClick={() => moverPuesto(i, -1)} disabled={i === 0}
-                          className="px-1 hover:text-oro disabled:opacity-25"
+                          className="rounded px-2 py-1.5 text-base hover:bg-hueso/5 hover:text-oro disabled:opacity-25"
                           title={`Subir ${p.nombre || 'este puesto'}`}>
                           <span aria-hidden>↑</span>
                           <span className="sr-only">Subir {p.nombre}</span>
                         </button>
                         <button onClick={() => moverPuesto(i, 1)}
                           disabled={i === puestos.length - 1}
-                          className="px-1 hover:text-oro disabled:opacity-25"
+                          className="rounded px-2 py-1.5 text-base hover:bg-hueso/5 hover:text-oro disabled:opacity-25"
                           title={`Bajar ${p.nombre || 'este puesto'}`}>
                           <span aria-hidden>↓</span>
                           <span className="sr-only">Bajar {p.nombre}</span>

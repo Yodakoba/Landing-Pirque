@@ -134,7 +134,7 @@ export default function ExtrasDialogo({
                 <th className="w-24 py-2 pr-3">Ajuste</th>
                 <th className="py-2 pr-3">Motivo</th>
                 <th className="w-24 py-2 pr-3 text-right">Total</th>
-                <th className="w-10 py-2" />
+                <th className="w-20 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -195,12 +195,18 @@ export default function ExtrasDialogo({
                       : <span className="text-hueso/35">—</span>}
                   </td>
                   <td className="py-2 text-right">
+                    {/* Con palabras y preguntando, igual que en el equipo. */}
                     <button
-                      onClick={() => setLista(lista.filter((_, k) => k !== i))}
-                      className="px-1 text-hueso/40 hover:text-red-300"
-                      title={`Quitar a ${e.colaborador} de este día`}>
-                      <span aria-hidden>✕</span>
-                      <span className="sr-only">Quitar a {e.colaborador}</span>
+                      onClick={() => {
+                        if (!confirm(`¿Sacar a ${e.colaborador} de este día?\n\n`
+                                   + 'Se va de las actividades de esta fecha. '
+                                   + 'Su ficha y sus otros días no se tocan.')) return;
+                        setLista(lista.filter((_, k) => k !== i));
+                      }}
+                      className="rounded px-3 py-2.5 text-xs text-hueso/45
+                                 hover:bg-red-500/10 hover:text-red-300"
+                      title={`Sacar a ${e.colaborador} de este día`}>
+                      Sacar
                     </button>
                   </td>
                 </tr>

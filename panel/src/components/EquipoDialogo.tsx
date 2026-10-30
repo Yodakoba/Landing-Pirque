@@ -282,17 +282,27 @@ export default function EquipoDialogo({
                             (x) => normalizar(x.nombre) === normalizar(nombre)),
                           nombre
                         })}
-                        className="px-1 text-[11px] text-hueso/40 hover:text-oro"
+                        className="rounded px-3 py-2.5 text-xs text-hueso/45
+                                   hover:bg-hueso/5 hover:text-oro"
                         title={`Teléfono, pago y datos bancarios de ${nombre}`}>
-                        ficha
+                        Ficha
                       </button>
+                      {/* **Dice lo que hace y pregunta antes.** Era una ✕ de
+                          diez píxeles que borraba sin avisar: el único botón
+                          de esta ventana que deshace algo, y el más fácil de
+                          apretar sin querer con el dedo. */}
                       <button
-                        onClick={() => setPlan(plan.filter(
-                          (x) => normalizar(x.trabajador) !== normalizar(nombre)))}
-                        className="px-1 text-hueso/40 hover:text-red-300"
-                        title={`Quitar a ${nombre} de este día`}>
-                        <span aria-hidden>✕</span>
-                        <span className="sr-only">Quitar a {nombre} de este día</span>
+                        onClick={() => {
+                          if (!confirm(`¿Sacar a ${nombre} de este día?\n\n`
+                                     + 'Se va de la planificación de esta fecha. '
+                                     + 'Su ficha y sus otros días no se tocan.')) return;
+                          setPlan(plan.filter(
+                            (x) => normalizar(x.trabajador) !== normalizar(nombre)));
+                        }}
+                        className="rounded px-3 py-2.5 text-xs text-hueso/45
+                                   hover:bg-red-500/10 hover:text-red-300"
+                        title={`Sacar a ${nombre} de este día`}>
+                        Sacar
                       </button>
                     </li>
                   );
@@ -551,6 +561,22 @@ export default function EquipoDialogo({
           </>
         )}
       </p>
+
+      {/* **Por qué no se puede cerrar, en pantalla.** El motivo vivía en el
+          `title` del botón apagado, o sea en un globito que aparece al pasar
+          el mouse: en un teléfono eso no existe, y lo que queda es un botón
+          muerto sin explicación. */}
+      {conCierre && !cerrado && !listo && (
+        <p className="mt-3 rounded border border-amber-500/40 bg-amber-500/5
+                      px-3 py-2 text-sm text-amber-200/90">
+          {falta.conEquipo === 0
+            ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
+            : <>Para cerrar el día falta marcar si{' '}
+                <strong>{falta.sinMarcar === 1 ? 'una persona vino'
+                       : `${falta.sinMarcar} personas vinieron`}</strong> o no.
+                {' '}Son los botones <em>Vino</em> y <em>No vino</em> de arriba.</>}
+        </p>
+      )}
 
       {/* Sin el botón de cerrar hay que decir dónde está, o parecería que
           el día no se puede cerrar en ninguna parte. */}

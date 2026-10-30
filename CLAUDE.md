@@ -1106,6 +1106,19 @@ extras —dos pantallas que preguntan lo mismo tienen que preguntarlo igual—:
 - **Apretar el que ya está marcado lo desmarca**, que es la única forma de
   volver a "no sé todavía" sin inventar un tercer botón.
 
+En la misma pasada, y por el mismo criterio:
+
+- **El botón de cerrar dice en pantalla por qué está apagado** —"falta
+  marcar si una persona vino o no"—. El motivo vivía en el `title`, o sea en
+  un globito que aparece al pasar el mouse: en un teléfono eso no existe, y
+  lo que queda es un botón muerto sin explicación.
+- **Sacar a alguien del día es un botón que dice "Sacar" y pregunta antes.**
+  Era una ✕ de diez píxeles que borraba sin avisar: el único control de esa
+  ventana que deshace algo, y el más fácil de apretar sin querer con el
+  dedo. Lo mismo en las actividades extras.
+- **Lo que se aprieta con el dedo mide para el dedo**: *Ficha*, *Sacar* y
+  las flechas de los puestos pasaron de unos 20px a 36.
+
 **Ojo con una trampa que esto abrió, y que costó cambiar una regla del
 servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
 mientras la asistencia estuviera sin marcar**; pasada la lista, lo que viniera
