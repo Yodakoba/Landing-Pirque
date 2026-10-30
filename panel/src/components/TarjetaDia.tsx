@@ -87,24 +87,27 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
 // de la más alta, la más corta sobra espacio. Con el pie pegado abajo ese
 // aire queda en el medio, donde se lee como respiro, y no colgando bajo los
 // botones, donde se lee como un error de dibujo.
-const CARA = 'col-start-1 row-start-1 flex h-full flex-col rounded border p-4 ' +
-             '[backface-visibility:hidden]';
-
 /**
- * Cuántos puestos lista el dorso antes de resumir el resto.
+ * El alto estándar de una tarjeta, **un piso y no un techo**.
  *
- * **El dorso es un resumen, no la planificación**: esa está a un clic, en
- * "Planificar equipo". Y acá hay un motivo de layout que no se ve: las dos
- * caras comparten celda, así que **el alto de la tarjeta es el de la más
- * alta** — con nueve puestos el dorso medía 295px contra los 178 del frente,
- * y el domingo quedaba notoriamente más largo que el sábado **mirando una
- * cara que nadie tenía a la vista**. Lo reclamó el cliente el 2026-10-30.
+ * Lo pidió el cliente el 2026-10-30: *"encontrar el tamaño estándar con el
+ * cual llegar a la tarjeta y poder rellenar siempre todos los puestos que se
+ * llenan"*. Con el dorso en una lista corrida, un sábado cargado de verdad
+ * —18 personas en los nueve puestos— mide 201px a 1280, así que 208 lo
+ * contiene con aire de sobra y deja todas las tarjetas de la página del
+ * mismo alto, no solo las de una misma fila.
  *
- * Son cinco y no tres porque el corte tiene que doler poco: con seis puestos
- * se muestran los seis (resumir uno solo gastaría el mismo renglón que
- * mostrarlo).
+ * **Es `min-height` y no `height`, y esa es toda la diferencia**: la medida
+ * fija que este archivo venía evitando es la que recorta el contenido cuando
+ * crece. Un piso no recorta nada — si algún día no alcanza (una pantalla
+ * angosta hace envolver más la lista), la tarjeta crece y `h-full` deja
+ * pareja su fila igual.
  */
-const PUESTOS_A_LA_VISTA = 5;
+const ALTO_ESTANDAR = 'min-h-[13rem]';
+
+const CARA = `col-start-1 row-start-1 flex h-full flex-col rounded border p-4 ` +
+             `${ALTO_ESTANDAR} [backface-visibility:hidden]`;
+
 const PIE = 'mt-auto flex items-center gap-3 border-t border-hueso/10 pt-3 text-xs';
 
 export default function TarjetaDia({
@@ -119,13 +122,6 @@ export default function TarjetaDia({
   onPlanificar: () => void;
 }) {
   const [volteada, setVolteada] = useState(false);
-  // Cuántos puestos se alcanzan a mostrar y cuántos quedan resumidos.
-  // **Si sobra uno solo se muestran todos**: resumirlo gastaría el mismo
-  // renglón que mostrarlo, y encima diría menos.
-  const puestos = resumen?.porPuesto ?? [];
-  const aLaVista = puestos.length <= PUESTOS_A_LA_VISTA + 1
-    ? puestos.length : PUESTOS_A_LA_VISTA;
-  const resto = puestos.length - aLaVista;
   // Lo que no se ve no se puede tabular. Ver el comentario de arriba.
   const alFrente = { tabIndex: volteada ? -1 : 0 };
   const alDorso = { tabIndex: volteada ? 0 : -1 };
@@ -290,22 +286,33 @@ export default function TarjetaDia({
                   {resumen.total === 1 ? 'persona' : 'personas'}
                 </span>
               </p>
-              {/* "Garzón 4" y no "4 garzones": los nombres de puesto los
-                  escribe el cliente y no hay forma de pluralizarlos bien
-                  sin inventar reglas del español. */}
-              <ul className="mt-2 space-y-0.5 text-xs">
-                {resumen.porPuesto.slice(0, aLaVista).map((p) => (
-                  <li key={p.puesto} className="flex justify-between gap-2">
-                    <span className="text-hueso/70">{p.puesto}</span>
-                    <strong className="tabular-nums text-hueso">{p.cuantos}</strong>
-                  </li>
+              {/* **Todos los puestos, en una lista corrida separada por
+                  comas** (2026-10-30, lo pidió el cliente: *"juntarlos en lo
+                  menos filas posible, separados por comas"*). Un renglón por
+                  puesto no escala: **siempre van a ser más de seis**, así que
+                  la lista vertical crecía sin techo y estiraba la tarjeta.
+                  En línea, nueve puestos ocupan tres o cuatro renglones en
+                  vez de nueve.
+
+                  **"2 × Garzón" y no "dos garzones"**: los nombres de puesto
+                  los escribe el cliente y no hay forma de pluralizarlos bien
+                  sin inventar reglas del español —"asistente de bar" no se
+                  pluraliza como "garzón"—. El `×` es además la misma
+                  convención que los menús del día: "5 × Tradiciones". */}
+              <p className="mt-2 text-xs leading-snug text-hueso/70">
+                {resumen.porPuesto.map((p, k) => (
+                  <span key={p.puesto}>
+                    {k > 0 && ', '}
+                    {/* **Uno no lleva número.** Nueve "1 ×" seguidos son
+                        ruido, y sin número se lee "uno", que es como lo
+                        escribiría una persona. */}
+                    {p.cuantos > 1 && (
+                      <><strong className="tabular-nums text-hueso">{p.cuantos}</strong>{' × '}</>
+                    )}
+                    {p.puesto}
+                  </span>
                 ))}
-                {resto > 0 && (
-                  <li className="text-hueso/45">
-                    y {resto} {resto === 1 ? 'puesto' : 'puestos'} más
-                  </li>
-                )}
-              </ul>
+              </p>
             </>
           )}
 
