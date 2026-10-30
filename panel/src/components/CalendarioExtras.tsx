@@ -18,6 +18,7 @@
  * evidente.
  */
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -136,7 +137,7 @@ export default function CalendarioExtras() {
   return (
     <section>
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Actividades extras
+        Actividades extras<Ayuda tema="extras" />
       </h1>
       <p className="mb-5 max-w-2xl text-sm text-hueso/60">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
@@ -171,7 +172,12 @@ export default function CalendarioExtras() {
         </span>
       </div>
 
-      <div className="overflow-x-auto pb-1">
+      {/* `relative` no es decorativo: sin él la caja clipea el mes pero el
+          documento igual queda 95px más ancho que la pantalla, y en un
+          teléfono **la página entera se corre de lado** —los títulos y los
+          botones incluidos—, que es justo lo que este desplazamiento
+          interno viene a evitar. Comprobado a 393px. */}
+      <div className="relative overflow-x-auto pb-1">
        <div className="min-w-[640px]">
         <div className="grid grid-cols-7 gap-1 text-center text-[11px]
                         uppercase tracking-wide text-hueso/40">
@@ -205,7 +211,7 @@ export default function CalendarioExtras() {
                             hover:border-oro
                             ${delDia.length > 0 ? 'border-oro/40 bg-oro/5'
                                : oc ? COLOR_TARJETA(oc)
-                                    : 'border-hueso/10 bg-hueso/[0.02]'}
+                                    : 'border-hueso/10 bg-panel'}
                             ${esHoy ? 'ring-1 ring-oro' : ''}`}>
                 <span className="flex items-start justify-between">
                   <span className="flex flex-col items-start gap-1">
@@ -236,7 +242,7 @@ export default function CalendarioExtras() {
                   </span>
                 )}
                 {sinConfirmar > 0 && (
-                  <span className="mt-0.5 block text-amber-300">
+                  <span className="mt-0.5 block text-ambar-texto">
                     {sinConfirmar} sin confirmar
                   </span>
                 )}
@@ -256,8 +262,8 @@ export default function CalendarioExtras() {
       </p>
 
       {huerfanos.length > 0 && (
-        <div className="mt-6 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mt-6 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             Hay actividades contratadas a nombre de alguien que no está en la lista.
           </p>
           <p className="mt-1 text-sm text-hueso/70">
@@ -301,7 +307,7 @@ export default function CalendarioExtras() {
           return (
             <li key={i}
               className={`rounded border p-3 ${c.activo
-                ? 'border-hueso/15 bg-hueso/[0.02]'
+                ? 'border-hueso/15 bg-panel'
                 : 'border-hueso/10 bg-transparent opacity-60'}`}>
 
               <div className="flex flex-wrap items-start gap-3">
@@ -353,7 +359,7 @@ export default function CalendarioExtras() {
                         setColaboradores((colaboradores ?? []).filter((_, k) => k !== i));
                         setSucio(true);
                       }}
-                      className="text-hueso/60 hover:text-red-400"
+                      className="text-hueso/60 hover:text-rojo-texto"
                       title="Todavía no tiene ningún día contratado">Quitar</button>
                   ) : c.activo ? (
                     <button
@@ -422,7 +428,7 @@ export default function CalendarioExtras() {
         </button>
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       {editando && (
         <ExtrasDialogo

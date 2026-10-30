@@ -16,6 +16,7 @@
  */
 import { usePathname } from 'next/navigation';
 import Nav from './Nav';
+import BotonTema from './BotonTema';
 
 export default function Cabecera({ rol, usuario }: { rol: string; usuario: string }) {
   const ruta = usePathname();
@@ -33,9 +34,16 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
     <header className="border-b border-hueso/10">
       <div className="mx-auto flex max-w-7xl flex-wrap items-baseline gap-x-6 gap-y-2 px-5 py-4">
         {esDeTrabajador || esEntrada ? (
-          <span className="text-sm font-bold uppercase tracking-widest text-oro">
-            Brasas de Lo Pirque
-          </span>
+          <>
+            <span className="text-sm font-bold uppercase tracking-widest text-oro">
+              Brasas de Lo Pirque
+            </span>
+            {/* En la pantalla de entrada sí, porque es la primera que se abre
+                y es donde alguien se encuentra con el tema que no quería. En
+                la página del trabajador no: ahí la barra es una sola palabra
+                y el botón sería el único control de una página de lectura. */}
+            {esEntrada && (<><span className="flex-1" /><BotonTema /></>)}
+          </>
         ) : (
           <>
             <a href="/" className="text-sm font-bold uppercase tracking-widest text-oro">
@@ -43,6 +51,7 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
             </a>
             <Nav rol={rol} />
             <span className="flex-1" />
+            <BotonTema />
             {usuario && (
               <span className="flex items-baseline gap-3 text-xs">
                 <span className="text-hueso/45">

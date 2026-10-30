@@ -30,9 +30,9 @@ import Clima from './Clima';
 import type { Clima as DatoClima } from '@/lib/clima';
 
 const COLOR: Record<Ocupacion['semaforo'], string> = {
-  verde: 'border-emerald-500/50 bg-emerald-500/5',
-  amarillo: 'border-amber-500/60 bg-amber-500/5',
-  rojo: 'border-red-500/60 bg-red-500/5'
+  verde: 'border-verde/50 bg-verde/5',
+  amarillo: 'border-ambar/60 bg-ambar/5',
+  rojo: 'border-rojo/60 bg-rojo/5'
 };
 const PUNTO: Record<Ocupacion['semaforo'], string> = {
   verde: '🟢', amarillo: '🟡', rojo: '🔴'
@@ -63,9 +63,9 @@ export const sinConfigurar = (d: Ocupacion) =>
  *   si alguien lo hubiera cerrado a propósito.
  */
 export const COLOR_TARJETA = (d: Ocupacion) => {
-  if (d.bloqueada) return 'border-red-500/60 bg-red-500/5';
-  if (d.privada) return 'border-sky-400/50 bg-sky-400/5';
-  if (sinConfigurar(d)) return 'border-hueso/15 bg-hueso/[0.03]';
+  if (d.bloqueada) return 'border-rojo/60 bg-rojo/5';
+  if (d.privada) return 'border-cielo-fuerte/50 bg-cielo-fuerte/5';
+  if (sinConfigurar(d)) return 'border-hueso/15 bg-panel';
   return COLOR[d.semaforo];
 };
 
@@ -157,19 +157,19 @@ export default function TarjetaDia({
               <div className="mt-3 flex h-1.5 overflow-hidden rounded bg-hueso/10"
                    role="img"
                    aria-label={`${d.online} pagadas online, ${d.local} pagan en el local, de ${d.capacidad} lugares`}>
-                <div className="bg-emerald-400"
+                <div className="bg-verde-fuerte"
                      style={{ width: `${pct(d.online, d.capacidad)}%` }} />
-                <div className="bg-amber-400"
+                <div className="bg-ambar-fuerte"
                      style={{ width: `${pct(d.local, d.capacidad)}%` }} />
               </div>
 
               <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 <span className="text-hueso/70">
-                  <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-400" />
+                  <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-verde-fuerte" />
                   <strong className="tabular-nums text-hueso">{d.online}</strong> pagadas
                 </span>
                 <span className="text-hueso/70">
-                  <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-400" />
+                  <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-ambar-fuerte" />
                   <strong className="tabular-nums text-hueso">{d.local}</strong> en el local
                 </span>
               </p>
@@ -195,7 +195,7 @@ export default function TarjetaDia({
               día cerrado **con gente ya reservada**, porque eso no es un
               estado: es algo que hay que hacer. */}
           {d.bloqueada && d.tomadas > 0 && (
-            <p className="mt-2 text-xs text-amber-300/90">
+            <p className="mt-2 text-xs text-ambar-texto/90">
               Con {d.tomadas} {d.tomadas === 1 ? 'persona' : 'personas'} ya
               reservada{d.tomadas === 1 ? '' : 's'}: hay a quién avisarle.
             </p>
@@ -221,7 +221,7 @@ export default function TarjetaDia({
                 <span className="ml-1 tabular-nums text-hueso/45">{resumen.total}</span>
               )}
               {resumen && resumen.faltan > 0 && (
-                <span className="ml-1 text-amber-300" title={`Faltan ${resumen.faltan}`}>•</span>
+                <span className="ml-1 text-ambar-texto" title={`Faltan ${resumen.faltan}`}>•</span>
               )}
             </button>
             <button onClick={onEditar} {...alFrente}
@@ -233,7 +233,7 @@ export default function TarjetaDia({
 
         {/* ---------- el dorso: el equipo ---------- */}
         <div
-          className={`${CARA} border-hueso/15 bg-hueso/[0.04] [transform:rotateY(180deg)] ${
+          className={`${CARA} border-hueso/15 bg-panel [transform:rotateY(180deg)] ${
             volteada ? '' : 'pointer-events-none'}`}
           aria-hidden={!volteada}>
           <div className="flex items-start justify-between gap-2">
@@ -270,7 +270,7 @@ export default function TarjetaDia({
           )}
 
           {resumen && resumen.faltan > 0 && (
-            <p className="mt-2 text-xs text-amber-300/90">
+            <p className="mt-2 text-xs text-ambar-texto/90">
               Faltan {resumen.faltan} según las reglas de cada puesto.
             </p>
           )}

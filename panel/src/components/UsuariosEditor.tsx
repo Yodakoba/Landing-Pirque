@@ -12,6 +12,7 @@
  * puede dejar a alguien sin poder entrar.
  */
 import { useEffect, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import Dialogo from './Dialogo';
 import { LARGO_MINIMO_CLAVE, ROLES_DE_CUENTA } from '@/lib/auth';
@@ -89,7 +90,9 @@ export default function UsuariosEditor() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">Cuentas</h1>
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+        Cuentas<Ayuda tema="cuentas" />
+      </h1>
       <p className="mb-6 max-w-2xl text-sm text-hueso/60">
         Quién entra al panel y con qué permisos. <strong>Cada acción queda
         firmada con el nombre de esta lista</strong>, así que conviene una
@@ -103,7 +106,7 @@ export default function UsuariosEditor() {
       </p>
 
       {aviso && (
-        <p className="mb-5 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
+        <p className="mb-5 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">
           {aviso}
         </p>
       )}
@@ -152,7 +155,7 @@ export default function UsuariosEditor() {
                     <span className="text-hueso/40">Guarda la lista primero</span>
                   ) : (
                     <>
-                      <span className={u.tieneClave ? 'text-hueso/55' : 'text-amber-300'}>
+                      <span className={u.tieneClave ? 'text-hueso/55' : 'text-ambar-texto'}>
                         {u.tieneClave ? 'Puesta' : 'Sin poner'}
                       </span>
                       <button
@@ -166,7 +169,7 @@ export default function UsuariosEditor() {
                 <td className="whitespace-nowrap py-2 text-right">
                   <button
                     onClick={() => { setLista(lista.filter((_, k) => k !== i)); setSucio(true); }}
-                    className="text-hueso/60 hover:text-red-400">Quitar</button>
+                    className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
                 </td>
               </tr>
             ))}

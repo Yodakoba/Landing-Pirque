@@ -12,6 +12,8 @@
  * reparte entre el equipo que atiende, no entre quien vino a hacer un show.
  */
 import { useState } from 'react';
+import AvisoGuardado from './AvisoGuardado';
+import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
 import { VINO } from '@/lib/equipo';
 import { costoDeExtra, actividadesConocidas,
@@ -20,6 +22,7 @@ import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import FichaColaborador from './FichaColaborador';
+import Asistencia from './Asistencia';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -54,7 +57,6 @@ export default function ExtrasDialogo({
    */
   const [ficha, setFicha] = useState<
     null | { c?: Colaborador; nombre?: string }>(null);
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
   const puestas = new Set(lista.map((e) => normalizar(e.colaborador)));
@@ -87,23 +89,27 @@ export default function ExtrasDialogo({
     }]);
   };
 
-  async function guardar() {
-    setGuardando(true);
-    try {
-      const r = await fetch('/api/extras/dia', {
-        method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fecha, extras: lista })
-      });
-      const d = await r.json();
-      if (d.error) setError(d.error);
-      else onListo();
-    } catch (e) {
-      setError(String(e));
-    } finally { setGuardando(false); }
+  /**
+   * **Se guarda solo**, igual que la ventana del equipo (2026-10-30): no hay
+   * botón. Ver `usarAutoguardado`, que explica el porqué y el cómo.
+   */
+  const guardado = usarAutoguardado(lista, async (v) => {
+    const r = await fetch('/api/extras/dia', {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fecha, extras: v })
+    });
+    const d = await r.json();
+    return d.error || undefined;
+  });
+
+  /** Cierra la ventana, mandando antes lo que quede en el reloj. */
+  async function salir() {
+    await guardado.forzar();
+    if (guardado.hubo.current) onListo(); else onCancelar();
   }
 
   return (
-    <Dialogo titulo={`Actividades · ${enPalabras(fecha)}`} onCerrar={onCancelar}
+    <Dialogo titulo={`Actividades · ${enPalabras(fecha)}`} onCerrar={() => void salir()}
              ancho="max-w-4xl">
       <p className="mt-3 text-sm text-hueso/60">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
@@ -123,17 +129,17 @@ export default function ExtrasDialogo({
               los achica a todos y la última columna queda cortada — que es
               justo lo que pasaba acá, con el motivo en una caja de dos letras
               y el total partido al medio. */}
-          <table className="w-full min-w-[52rem] table-fixed text-sm">
+          <table className="w-full min-w-[58rem] table-fixed text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
               <tr className="border-b border-hueso/10">
                 <th className="w-40 py-2 pr-3">Quién</th>
                 <th className="w-36 py-2 pr-3">Actividad</th>
-                <th className="w-28 py-2 pr-3">Vino</th>
+                <th className="w-44 py-2 pr-3">Vino</th>
                 <th className="w-24 py-2 pr-3">Monto</th>
                 <th className="w-24 py-2 pr-3">Ajuste</th>
                 <th className="py-2 pr-3">Motivo</th>
                 <th className="w-24 py-2 pr-3 text-right">Total</th>
-                <th className="w-10 py-2" />
+                <th className="w-20 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -165,13 +171,10 @@ export default function ExtrasDialogo({
                       onChange={(ev) => cambiar(i, 'actividad', ev.target.value)} />
                   </td>
                   <td className="py-2 pr-3">
-                    <select value={e.estado} className={ENTRADA}
-                      aria-label={`¿Vino ${e.colaborador}?`}
-                      onChange={(ev) => cambiar(i, 'estado', ev.target.value)}>
-                      <option value={VINO.sinMarcar}>—</option>
-                      <option value={VINO.si}>Vino</option>
-                      <option value={VINO.no}>No vino</option>
-                    </select>
+                    {/* Los mismos dos botones que el equipo: dos pantallas
+                        que preguntan lo mismo tienen que preguntarlo igual. */}
+                    <Asistencia quien={e.colaborador} valor={e.estado}
+                      onCambio={(v) => cambiar(i, 'estado', v)} />
                   </td>
                   <td className="py-2 pr-3">
                     <input type="number" min={0} step={1000} className={ENTRADA}
@@ -197,12 +200,18 @@ export default function ExtrasDialogo({
                       : <span className="text-hueso/35">—</span>}
                   </td>
                   <td className="py-2 text-right">
+                    {/* Con palabras y preguntando, igual que en el equipo. */}
                     <button
-                      onClick={() => setLista(lista.filter((_, k) => k !== i))}
-                      className="px-1 text-hueso/40 hover:text-red-300"
-                      title={`Quitar a ${e.colaborador} de este día`}>
-                      <span aria-hidden>✕</span>
-                      <span className="sr-only">Quitar a {e.colaborador}</span>
+                      onClick={() => {
+                        if (!confirm(`¿Sacar a ${e.colaborador} de este día?\n\n`
+                                   + 'Se va de las actividades de esta fecha. '
+                                   + 'Su ficha y sus otros días no se tocan.')) return;
+                        setLista(lista.filter((_, k) => k !== i));
+                      }}
+                      className="rounded px-3 py-2.5 text-xs text-hueso/45
+                                 hover:bg-rojo/10 hover:text-rojo-texto"
+                      title={`Sacar a ${e.colaborador} de este día`}>
+                      Sacar
                     </button>
                   </td>
                 </tr>
@@ -264,7 +273,7 @@ export default function ExtrasDialogo({
         />
       )}
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       <p className="mt-4 max-w-2xl text-xs text-hueso/45">
         El monto se propone del que tiene puesto cada quien y se puede
@@ -274,27 +283,30 @@ export default function ExtrasDialogo({
         turnos: el total es el mismo y queda dicho por qué.
       </p>
 
+      {/* Sin botón de guardar hay que decirlo una vez. */}
+      <p className="mt-2 text-xs text-hueso/45">
+        Lo que escribas acá <strong>se guarda solo</strong>.
+      </p>
+
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {lista.length > 0 && (
           <span className="text-sm">
             <strong className="tabular-nums text-oro">{enPesos(total)}</strong>
             <span className="text-hueso/55"> en actividades de este día</span>
             {sinConfirmar > 0 && (
-              <span className="text-amber-300">
+              <span className="text-ambar-texto">
                 {' '}· {sinConfirmar} sin confirmar
               </span>
             )}
           </span>
         )}
+        <AvisoGuardado estado={guardado.estado} error={guardado.error}
+          onReintentar={() => void guardado.reintentar()} />
         <span className="flex-1" />
-        <button onClick={onCancelar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
-          Cancelar
-        </button>
-        <button onClick={guardar} disabled={guardando}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar actividades'}
+        <button onClick={() => void salir()}
+          className="rounded border border-hueso/20 px-4 py-1.5 text-sm
+                     hover:border-hueso/40">
+          Listo
         </button>
       </div>
     </Dialogo>

@@ -98,7 +98,7 @@ export default function DatosBancarios({
               onBlur={(e) => set('correo', correoNormal(e.target.value))} />
           ))}
           {avisoCorreo(banco.correo) && (
-            <p className="mt-0.5 text-[11px] leading-tight text-amber-300/80">
+            <p className="mt-0.5 text-[11px] leading-tight text-ambar-texto/80">
               {avisoCorreo(banco.correo)}
             </p>
           )}
@@ -115,7 +115,7 @@ export default function DatosBancarios({
 
       {falta.length > 0 && (banco.titular || banco.rut || banco.banco
         || banco.tipo || banco.numero || banco.nota) && (
-        <p className="mt-1 text-[11px] text-amber-300/80">
+        <p className="mt-1 text-[11px] text-ambar-texto/80">
           Falta {falta.join(', ')} para poder transferirle.
         </p>
       )}

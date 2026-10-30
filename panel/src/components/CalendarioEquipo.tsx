@@ -25,6 +25,7 @@
  * ese día. Se dice en pantalla porque es la duda razonable al usarlo.
  */
 import { useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -111,7 +112,7 @@ export default function CalendarioEquipo() {
   return (
     <section>
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Calendario del equipo
+        Calendario del equipo<Ayuda tema="turnos" />
       </h1>
       <p className="mb-5 max-w-2xl text-sm text-hueso/60">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,
@@ -132,8 +133,8 @@ export default function CalendarioEquipo() {
           ahí se cierra. Un día que todavía no llega no aparece: nadie puede
           decir quién vino a un sábado que no ha ocurrido. */}
       {porCerrar.length > 0 && (
-        <div className="mb-5 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mb-5 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             {porCerrar.length === 1
               ? 'Hay un día por cerrar.'
               : `Hay ${porCerrar.length} días por cerrar.`}
@@ -148,14 +149,14 @@ export default function CalendarioEquipo() {
               const x = falta(f);
               return (
                 <button key={f} onClick={() => setPlanificando(f)}
-                  className="rounded border border-amber-500/40 px-2 py-1 text-xs
+                  className="rounded border border-ambar/40 px-2 py-1 text-xs
                              hover:border-oro">
                   <span className="capitalize">{enPalabras(f)}</span>
                   {x.sinMarcar > 0 && (
-                    <span className="text-amber-300"> · {x.sinMarcar} sin marcar</span>
+                    <span className="text-ambar-texto"> · {x.sinMarcar} sin marcar</span>
                   )}
                   {x.extrasSinConfirmar > 0 && (
-                    <span className="text-amber-300">
+                    <span className="text-ambar-texto">
                       {' '}· {x.extrasSinConfirmar} extra{x.extrasSinConfirmar === 1 ? '' : 's'}
                     </span>
                   )}
@@ -192,7 +193,12 @@ export default function CalendarioEquipo() {
           celda, así que el mes se desplaza de lado DENTRO de su caja. Es lo
           mismo que hacen las tablas del panel, y es preferible a achicar el
           texto hasta que "preparación" no se lea. */}
-      <div className="overflow-x-auto pb-1">
+      {/* `relative` no es decorativo: sin él la caja clipea el mes pero el
+          documento igual queda 95px más ancho que la pantalla, y en un
+          teléfono **la página entera se corre de lado** —los títulos y los
+          botones incluidos—, que es justo lo que este desplazamiento
+          interno viene a evitar. Comprobado a 393px. */}
+      <div className="relative overflow-x-auto pb-1">
        <div className="min-w-[640px]">
         <div className="grid grid-cols-7 gap-1 text-center text-[11px]
                         uppercase tracking-wide text-hueso/40">
@@ -227,7 +233,7 @@ export default function CalendarioEquipo() {
                           hover:border-oro disabled:opacity-40
                           ${preparando ? 'border-oro/40 bg-oro/5'
                              : oc ? COLOR_TARJETA(oc)
-                                  : 'border-hueso/10 bg-hueso/[0.02]'}
+                                  : 'border-hueso/10 bg-panel'}
                           ${esHoy ? 'ring-1 ring-oro' : ''}`}>
               <span className="flex items-start justify-between">
                 {/* El pronóstico bajo el número, en el aire que ya deja el
@@ -258,13 +264,13 @@ export default function CalendarioEquipo() {
                 </span>
               )}
               {res.faltan > 0 && (
-                <span className="mt-0.5 block text-amber-300">faltan {res.faltan}</span>
+                <span className="mt-0.5 block text-ambar-texto">faltan {res.faltan}</span>
               )}
               {res.total > 0 && cerrado(f) && (
                 <span className="mt-0.5 block text-hueso/45">✓ cerrado</span>
               )}
               {res.total > 0 && !cerrado(f) && f < hoy() && falta(f).sinMarcar > 0 && (
-                <span className="mt-0.5 block text-amber-300">
+                <span className="mt-0.5 block text-ambar-texto">
                   {falta(f).sinMarcar} sin marcar
                 </span>
               )}
@@ -293,6 +299,8 @@ export default function CalendarioEquipo() {
           turnos={equipo.turnos}
           extras={equipo.extras}
           cerrado={cerrado(planificando)}
+          // La única pantalla que cierra un día: ver `conCierre`.
+          conCierre
           esAdmin={equipo.esAdmin}
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}

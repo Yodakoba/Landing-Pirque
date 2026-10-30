@@ -2,8 +2,148 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
-body { background: #0B0B0A; color: #F4F0E6; }
+/**
+ * Los dos temas del panel.
+ *
+ * **El oscuro es el de siempre y no cambió ni un color**: es el del sitio
+ * —negro, hueso y dorado— y el que el equipo ya aprendió. El claro se agregó
+ * el 2026-10-30 porque el panel se usa de día, muchas veces afuera, donde una
+ * pantalla negra con letras finas se lee mal.
+ *
+ * **El claro no es blanco pelado.** El fondo es papel tibio (`#FAF7F0`) y las
+ * tarjetas blancas encima, así que lo que está arriba se despega del fondo en
+ * vez de competir con él; el texto es un casi-negro cálido, no `#000`, que es
+ * lo que hace que una pantalla llena de datos no canse. Es la misma marca,
+ * dada vuelta.
+ *
+ * **El dorado se oscurece de día**, de `#C9A227` a `#8A6B12`. No es un
+ * capricho: el dorado del sitio sobre crema da menos de 2,5:1, o sea que
+ * todos los enlaces del panel serían ilegibles. El oro viejo, más profundo,
+ * se lee sobre papel y sigue siendo oro.
+ *
+ * **Los verdes y rojos se invierten de rol.** De noche el texto de un aviso
+ * es claro sobre un fondo apenas teñido; de día tiene que ser oscuro sobre
+ * ese mismo fondo. Por eso `-texto` existe aparte del tono base.
+ */
+:root {
+  color-scheme: dark;
+
+  --tinta: 11 11 10;
+  --panel: 20 18 15;
+  --hueso: 244 240 230;
+  --oro: 201 162 39;
+
+  --verde: 16 185 129;
+  --verde-fuerte: 52 211 153;
+  --verde-texto: 110 231 183;
+
+  --rojo: 239 68 68;
+  --rojo-fuerte: 248 113 113;
+  --rojo-texto: 252 165 165;
+
+  --ambar: 245 158 11;
+  --ambar-fuerte: 251 191 36;
+  --ambar-texto: 252 211 77;
+
+  --cielo: 14 165 233;
+  --cielo-fuerte: 56 189 248;
+  --cielo-texto: 125 211 252;
+
+  /* Cuánto se apaga un marcador de posición. Ver abajo. */
+  --fantasma: 0.28;
+}
+
+:root[data-tema='claro'] {
+  color-scheme: light;
+
+  --tinta: 250 247 240;
+  --panel: 255 255 255;
+  --hueso: 26 23 19;
+  --oro: 138 107 18;
+
+  --verde: 5 150 105;
+  --verde-fuerte: 4 120 87;
+  --verde-texto: 6 95 70;
+
+  --rojo: 220 38 38;
+  --rojo-fuerte: 185 28 28;
+  --rojo-texto: 153 27 27;
+
+  --ambar: 217 119 6;
+  --ambar-fuerte: 180 83 9;
+  --ambar-texto: 124 45 18;
+
+  --cielo: 2 132 199;
+  --cielo-fuerte: 3 105 161;
+  --cielo-texto: 7 89 133;
+
+  /* Sobre papel, el mismo 0,28 se perdía: un gris claro sobre blanco casi
+     no se ve, y un marcador que no se ve no enseña el formato. */
+  --fantasma: 0.42;
+}
+
+/**
+ * **La escala de transparencias no significa lo mismo sobre papel.**
+ *
+ * `text-hueso/45` de noche es hueso claro sobre negro y da 4,1:1; de día es
+ * casi-negro al 45% sobre crema y cae a 2,6:1, o sea que todo lo secundario
+ * —el puesto bajo un nombre, el id de una reserva, los guiones de "no hay
+ * dato"— se desvanecía justo en la pantalla que se mira con sol encima. No
+ * es un problema de qué color es el texto: es que el mismo porcentaje rinde
+ * distinto según contra qué se mezcle.
+ *
+ * Se arregla acá, en un solo lugar, subiendo **los tramos bajos** en el tema
+ * claro hasta que cada uno rinda más o menos lo que rendía de noche. La
+ * alternativa era escribir `text-hueso/45 dark:text-hueso/60` en los 300 y
+ * tantos lugares donde aparece, con un número nuevo que olvidar cada vez.
+ *
+ * Los tramos de 75 para arriba no están: ahí ya hay contraste de sobra en
+ * los dos temas.
+ */
+:root[data-tema='claro'] .text-hueso\/20 { color: rgb(var(--hueso) / .35); }
+:root[data-tema='claro'] .text-hueso\/25 { color: rgb(var(--hueso) / .40); }
+:root[data-tema='claro'] .text-hueso\/30 { color: rgb(var(--hueso) / .45); }
+:root[data-tema='claro'] .text-hueso\/35 { color: rgb(var(--hueso) / .50); }
+:root[data-tema='claro'] .text-hueso\/40 { color: rgb(var(--hueso) / .55); }
+:root[data-tema='claro'] .text-hueso\/45 { color: rgb(var(--hueso) / .58); }
+:root[data-tema='claro'] .text-hueso\/50 { color: rgb(var(--hueso) / .62); }
+:root[data-tema='claro'] .text-hueso\/55 { color: rgb(var(--hueso) / .66); }
+:root[data-tema='claro'] .text-hueso\/60 { color: rgb(var(--hueso) / .70); }
+:root[data-tema='claro'] .text-hueso\/70 { color: rgb(var(--hueso) / .78); }
+
+/**
+ * **Y el hover tiene que seguir ganando.** El bloque de arriba es más
+ * específico que las clases `hover:` de Tailwind —lleva `:root` y un
+ * atributo encima— así que, sin esto, en el tema claro un enlace gris dejaba
+ * de ponerse dorado al pasarle el mouse. Son cuatro colores en todo el
+ * panel; se vuelven a afirmar acá, después, con la misma especificidad.
+ */
+:root[data-tema='claro'] .hover\:text-oro:hover { color: rgb(var(--oro)); }
+:root[data-tema='claro'] .hover\:text-rojo-texto:hover { color: rgb(var(--rojo-texto)); }
+:root[data-tema='claro'] .hover\:text-verde-texto:hover { color: rgb(var(--verde-texto)); }
+:root[data-tema='claro'] .hover\:text-hueso:hover { color: rgb(var(--hueso)); }
+
+/**
+ * Un botón relleno apagado no puede verse roto.
+ *
+ * `bg-oro` con `disabled:opacity-40` funciona de noche —dorado apagado sobre
+ * negro se lee como apagado— y de día quedaba crema sobre oro pálido, que no
+ * se lee como nada. Apagado es gris: dice lo mismo sin pedir esfuerzo.
+ */
+:root[data-tema='claro'] .bg-oro:disabled {
+  opacity: 1;
+  background-color: rgb(var(--hueso) / .11);
+  color: rgb(var(--hueso) / .45);
+}
+
+/* Los bordes tienen el problema al revés: sobre papel, un 10% de casi-negro
+   es una línea gris perfectamente visible, mientras que de noche hacía falta
+   ese mismo 10% para insinuar un borde sobre el fondo. Se dejan como están. */
+
+body {
+  background: rgb(var(--tinta));
+  color: rgb(var(--hueso));
+}
 
 /**
  * Un marcador de posición tiene que verse como lo que es.
@@ -14,4 +154,34 @@ body { background: #0B0B0A; color: #F4F0E6; }
  * ficha vacía. Bajarle el contraste los distingue sin tener que renunciar
  * a ejemplos útiles, que son justamente los que enseñan el formato.
  */
-::placeholder { color: rgba(244, 240, 230, 0.28); opacity: 1; }
+::placeholder { color: rgb(var(--hueso) / var(--fantasma)); opacity: 1; }
+
+/**
+ * Los controles que se aprietan con el dedo se hunden un pelo.
+ *
+ * Lo pidió el cliente —*"un juguetón bien de PlayStation, dónde y cómo usar
+ * los botones"*— y resuelve algo real: en un teléfono no hay cursor que
+ * cambie ni `hover` que anticipe nada, así que un botón y un texto se ven
+ * igual hasta que uno de los dos responde. Un milímetro de hundida al tocar
+ * es la respuesta más barata que existe, y la que todo el mundo ya entiende.
+ *
+ * **Vale para todos los botones del panel**, no para una clase que haya que
+ * acordarse de poner: un botón al que se le olvidó es justamente el que se
+ * va a sentir muerto. `.tecla` queda como alias para lo que no sea un
+ * `<button>`.
+ *
+ * Un botón apagado no se hunde: fingir que respondió sería mentir sobre lo
+ * único que ese botón está diciendo.
+ */
+button, .tecla {
+  transition: transform .06s ease, box-shadow .12s ease,
+              background-color .12s ease, border-color .12s ease;
+}
+button:active:not(:disabled), .tecla:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button, .tecla { transition: none; }
+  button:active:not(:disabled), .tecla:active:not(:disabled) { transform: none; }
+}

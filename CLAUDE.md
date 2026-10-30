@@ -913,6 +913,45 @@ sitio:**
 - **No cancela ni reagenda.** Una cancelación en Shopify no borra la fila ni
   el evento: hoy eso se hace a mano en la planilla.
 
+### El estado del pago, en español y en dos grupos (2026-10-30)
+
+Lo reclamó el cliente: al abrir una reserva, la pregunta del pago *"sale en
+inglés y español, y eso confunde mucho"*. Era literal — el desplegable decía
+`pending — paga al llegar` y la tabla del día mostraba el código pelado,
+`pending`. Quien abre una reserva un sábado es la jefa de turno, en Pirque.
+
+**Lo que se guarda no cambió**: la columna se llama `Estado Pago Shopify` y
+lleva el código de Shopify, porque la escribe el webhook y tiene que calzar
+con lo que manda la tienda. Lo que cambió es lo que se lee. El mapa vive en
+`panel/src/lib/pagos.ts`, en un solo lugar para las dos pantallas:
+
+| Guardado | En pantalla | Qué significa |
+|---|---|---|
+| `paid` | Pagada | ya pagó |
+| `pending` | Por pagar | paga cuando llegue |
+| `cancelled` | Cancelada | avisó que no viene |
+| `refunded` | Reembolsada | se le devolvió la plata |
+| `voided` | Anulada | se anuló antes de cobrarle |
+
+**Y se simplificó sin perder nada**, que es lo que el cliente pidió: los
+cinco estados van en **dos grupos** dentro del mismo desplegable —*Viene* y
+*Ya no viene — libera el cupo*—, porque la pregunta de verdad es si esa
+persona llega o no, y recién después cómo quedó la plata. Cinco opciones
+parejas obligan a leerlas todas para elegir la primera.
+
+- **La lista de los tres que liberan el cupo es una sola**
+  (`ESTADOS_QUE_LIBERAN`): la usa `ocupaLugar()` y con ella el formulario
+  arma su grupo. Con dos listas, el día que se agregue un estado el
+  calendario y el formulario dirían cosas distintas de la misma reserva.
+- **Un código que el panel no conozca se muestra tal cual.** Mejor que una
+  celda vacía: por lo menos se entiende que hay algo nuevo.
+- **La modalidad también se explica sola**: *Pago directo — paga en línea* /
+  *Solo reserva — paga en el local*. Los nombres son los de la tienda y los
+  del sitio, así que se quedan; lo que faltaba era decir qué son.
+- **La asistencia del cliente pasó a los mismos botones Vino / No vino** del
+  equipo y de las actividades extras. Era el último `<select>` de los tres
+  lugares donde se pregunta exactamente lo mismo.
+
 ## El equipo de trabajadores (panel)
 
 Desde el 2026-10-21 el panel también planifica **quién trabaja cada día**.
@@ -1086,6 +1125,39 @@ veces y a pasar por una pantalla que para un día de preparación ni siquiera
 existe. Quien marca en la mañana deja los montos como están y listo; quien
 cierra en la noche los llena. Ver "Una sola ventana para el día".
 
+**Desde el 2026-10-30 son dos botones grandes, no un desplegable.** Lo pidió
+el cliente con el porqué: *"son personas rurales, que no han manejado muchos
+de estos sistemas; necesitamos que para ellos sea muy fácil de entender"*. Un
+`<select>` esconde las opciones hasta que alguien adivina que hay que
+abrirlo, y lo que muestra mientras tanto es un guion, que no pide nada.
+
+Lo que hay ahora, en `Asistencia.tsx` y usado también en las actividades
+extras —dos pantallas que preguntan lo mismo tienen que preguntarlo igual—:
+
+- **Los dos botones a la vista**, con la frase completa: *✓ Vino* / *✕ No
+  vino*. Se lee qué hay que hacer antes de tocar nada.
+- **El que se aprieta queda pintado**, verde o rojo, y la fila entera se
+  tiñe: el estado se ve de lejos, sin leer.
+- **Mientras nadie marque, la fila lo dice en ámbar** —*sin marcar*— porque
+  es justo el estado que no suma nada y el que impide cerrar el día.
+- **Unos 40px de alto**: un control de 30 se falla con el dedo, y fallar acá
+  es marcar a la persona equivocada.
+- **Apretar el que ya está marcado lo desmarca**, que es la única forma de
+  volver a "no sé todavía" sin inventar un tercer botón.
+
+En la misma pasada, y por el mismo criterio:
+
+- **El botón de cerrar dice en pantalla por qué está apagado** —"falta
+  marcar si una persona vino o no"—. El motivo vivía en el `title`, o sea en
+  un globito que aparece al pasar el mouse: en un teléfono eso no existe, y
+  lo que queda es un botón muerto sin explicación.
+- **Sacar a alguien del día es un botón que dice "Sacar" y pregunta antes.**
+  Era una ✕ de diez píxeles que borraba sin avisar: el único control de esa
+  ventana que deshace algo, y el más fácil de apretar sin querer con el
+  dedo. Lo mismo en las actividades extras.
+- **Lo que se aprieta con el dedo mide para el dedo**: *Ficha*, *Sacar* y
+  las flechas de los puestos pasaron de unos 20px a 36.
+
 **Ojo con una trampa que esto abrió, y que costó cambiar una regla del
 servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
 mientras la asistencia estuviera sin marcar**; pasada la lista, lo que viniera
@@ -1200,13 +1272,15 @@ en letra chica debajo de la tabla. Un botón que no hay que apretar casi nunca
 no puede estar igual de a mano que el que sí, y menos confiando en que
 alguien lea el párrafo de abajo un sábado a las once de la noche.
 
-Ahora la última columna depende de si esa persona tiene turnos guardados:
+Ahora el botón de la derecha depende de si esa persona tiene turnos
+guardados (desde el 2026-10-30 vive en la línea, abierta o cerrada — ver
+"La línea del trabajador"):
 
 | | Qué ofrece |
 |---|---|
 | Sin ningún turno | **Quitar** — la fila escrita por error, que no tiene historia que proteger |
 | Con turnos, activa | **Desactivar** — la saca del planificador y le cierra su link, conservando sus turnos |
-| Con turnos, inactiva | **Desactivado**, sin acción: su ficha se queda |
+| Con turnos, inactiva | **Activar** — vuelve al planificador y su link abre de nuevo |
 
 El costo a asumir: **ya no se puede borrar de un clic la ficha de alguien que
 sí trabajó.** Es justamente lo que no queremos que se pueda hacer sin
@@ -1293,6 +1367,84 @@ API de *drag and drop* del navegador —que en un teléfono no funciona— o una
 librería, y este proyecto no agrega una dependencia por una comodidad. Una
 flecha se aprieta con el dedo y además se puede usar con el teclado.
 
+### La línea del trabajador: se aprieta y se abre; al lado, desactivar (2026-10-30)
+
+Lo pidió el cliente mirando `/equipo`: *"en vez de ofrecer al costado
+derecho nuevamente la opción abrir, debería dar la opción activar y
+desactivar… si aprietas la línea completa menos en el botón desactivar, abre
+todas las opciones"*.
+
+Tenía razón en lo redundante: la línea entera ya era el botón que abría la
+ficha, y a la derecha decía *abrir* — una segunda forma de hacer lo mismo
+ocupando el único lugar donde cabe una acción de verdad.
+
+- **La línea abre; el botón de la derecha da de baja**, abierta o cerrada.
+  Qué ofrece depende de la historia de esa persona: **Quitar** si no tiene
+  ningún turno guardado, **Desactivar** si tiene, **Activar** si está dada de
+  baja. Los tres **preguntan antes**, porque los tres cambian algo que la
+  pantalla no deshace sola.
+- **Esas tres acciones se aplican en el acto**, sin pasar por *Guardar*. No
+  es solo coherencia con la regla de "lo que declara algo se aprieta": al
+  desactivar, la línea **desaparece de la lista** —los inactivos van
+  escondidos— y con ella el botón que la habría guardado.
+- Van por `PATCH` y `DELETE` de `/api/equipo/trabajador`, que tocan **una
+  fila**: quien aprieta ahí no tiene por qué mandar, ni pisar, lo que alguien
+  escribió en otra ficha. El `PATCH` pasó a ser **parcial de verdad** —lo que
+  no viene en el cuerpo se conserva—, porque antes escribía siempre el
+  teléfono y el puesto, y una llamada que solo quisiera desactivar se los
+  habría borrado.
+- **La regla de "no se quita a quien ya trabajó" se comprueba en el
+  servidor**, no solo en la pantalla: el `DELETE` cuenta sus turnos y
+  responde 409 con el motivo. Una llamada directa a la API tiene que obedecer
+  la misma regla que un clic.
+- **Una casilla arriba, "Ver desactivados (N)"**, escondidos por defecto. Dar
+  de baja no borra la ficha, así que esta lista solo crece y el equipo de hoy
+  termina mezclado con el de hace dos años. El número está para que nadie los
+  dé por perdidos.
+- **La casilla "Activo" de adentro se sacó**: con el botón en la línea eran
+  dos controles para lo mismo, a dos centímetros y con distinto peso.
+- **El filtro se aplica dentro del `map`, no antes**, y eso importa: `i` es
+  la posición real en la lista que se guarda, y todo lo que edita una ficha
+  la usa. Con un `filter` previo, esconder a un inactivo le cambiaría el
+  índice a los de abajo y editar a alguien escribiría sobre otro.
+
+**Y el guardado de la ficha dice qué cambió.** El cliente lo pidió con el
+caso exacto: *"si se cambia algo en estos campos y es el número de teléfono
+sin querer, por lo menos tener el control sobre: hey, cambiaste algo"*. Un
+botón que solo dice "Guardar" no distingue entre corregir un puesto a
+propósito y haber tecleado encima de un teléfono sin darse cuenta. Ahora la
+tarjeta dice **"Cambiaste teléfono, puesto."** al lado del botón, comparando
+contra la lista tal como vino de la planilla — no contra el dibujado
+anterior: lo que importa es qué quedará distinto de lo guardado.
+
+### Una pestaña que se reescribe entera tiene que borrar lo que sobra (2026-10-30)
+
+**Quitar a alguien de una lista dejaba al último duplicado en la planilla**, y
+nadie lo había visto porque en pantalla se veía perfecto.
+
+`values.update` de la API de Sheets escribe las filas que uno le pasa y
+**deja intactas las de más abajo**. `escribirBloque()` escribía cuatro filas
+sobre cinco y la quinta se quedaba donde estaba. El propio comentario de esa
+función ya advertía *"no sirve para una lista que se acorta"* — y la usaban
+`Trabajadores`, `Puestos`, `Menús`, `Colaboradores` y `Config`, que son
+justamente listas que se acortan.
+
+Ahora escribe y **después limpia** desde la fila siguiente hasta el final.
+**En ese orden, a propósito**: al revés, un fallo entre las dos llamadas
+dejaría la pestaña vacía; así, lo peor que puede pasar es quedarse con la
+fila de más —que es exactamente lo que pasaba antes— y se corrige al
+siguiente guardado.
+
+### Los calendarios de celdas necesitan `relative` (2026-10-30)
+
+En `/turnos` y `/extras`, a 393px, **la página entera se corría de lado** —
+títulos y botones incluidos—, que es justo lo que el desplazamiento interno
+del mes viene a evitar. La caja sí recortaba el mes, pero el documento
+quedaba 95px más ancho que la pantalla igual.
+
+Lo arregla `position: relative` en la caja que hace `overflow-x-auto`.
+Comprobado a 393px en las cinco pantallas del panel: ninguna se corre.
+
 ### La tabla de Equipo: los anchos van declarados (2026-10-22)
 
 Lo reclamó el cliente con una captura: el nombre se leía a seis letras
@@ -1337,11 +1489,28 @@ El cliente lo pidió al revés, y así quedó:
 | Dónde | Qué se hace |
 |---|---|
 | **Calendario de la portada** | Se **planifica**, con las reservas a la vista: cuánta gente viene, cuántos menús, entonces cuánto equipo |
-| **`/turnos`** | Se **confirma todo**: quién vino, los montos, los ajustes, la propina — cualquier día, abierto, privado o de preparación |
+| **`/turnos`** | Se **confirma todo**: quién vino, los montos, los ajustes, la propina — cualquier día, abierto, privado o de preparación — y **es el único lugar donde se cierra** |
+| **La página del día** | Se mira ese día completo —reservas, equipo, extras— y se escriben los montos y la propina; para cerrarlo manda a `/turnos` |
 
-Son la **misma ventana**; lo único que cambia es desde dónde se abre. La
-página del día la abre también, con el mismo botón, así que nada se perdió:
-lo que se eliminó es la obligación de pasar por ahí.
+Son la **misma ventana**; lo único que cambia es desde dónde se abre y si
+trae el botón de cerrar.
+
+**El botón de cerrar quedó en un solo lugar** (2026-10-30, conversado con el
+cliente: *"en calendario se hace otra cosa, el fin no es cerrar la fecha
+aquí"*). Estaba en las tres pantallas, y tres caminos al mismo paso final no
+son una comodidad: son una duda —*¿lo cierro acá o allá? ¿es lo mismo?*—
+para quien no maneja sistemas así. Se eligió `/turnos` porque es la pantalla
+que **ya pide** el cierre: al entrar lista arriba los días pasados a los que
+les falta algo, así que entrar es que te digan qué hacer.
+
+**Se descartó mostrarlo según el rol**, que era la otra salida sobre la
+mesa: el rol contesta *quién puede*, no *dónde se hace*, y acá cierran los
+dos roles que entran al panel. Esconderlo por rol habría dejado la misma
+pregunta en pie para quien sí lo ve.
+
+El costo a asumir: desde la página del día hay que dar un salto a `/turnos`.
+Las dos pantallas lo dicen con un enlace, en vez de dejar al botón ausente
+pareciendo un error.
 
 **Lo que la ventana hace ahora**, de arriba abajo: asignar por puesto, crear
 a alguien que falte, marcar **— / Vino / No vino**, escribir la jornada, las
@@ -1357,6 +1526,55 @@ día**. Ahora el resumen va arriba en su propia línea y los botones abajo sin
 envolver —delineado el que solo guarda, relleno el que cierra—, y en un
 teléfono el tercero se recorta a "Guardar y cerrar", que dice lo mismo en
 menos espacio.
+
+### Lo que es un valor se guarda solo; lo que declara algo se aprieta (2026-10-30)
+
+Lo pidió el cliente con la distinción ya hecha: *"una cosa es guardar un
+cambio que hiciste en un detalle, se paga ahora 30 en vez de 28. Y otra cosa
+es cerrar la fecha"*. Y tenía razón en que el panel las trataba igual: abajo
+de la ventana del día había dos botones hermanos —**Guardar** y **Guardar y
+cerrar el día**—, del mismo tamaño y a dos centímetros, y uno de los dos no
+se deshace solo.
+
+Entonces se revisó pantalla por pantalla y salió una regla, que es lo que
+hay que recordar:
+
+- **Se guarda solo lo que es un valor sobre algo que ya existe.** La ventana
+  del día y la de las actividades extras editan montos, asistencias, ajustes
+  y propina de gente que ya está en la lista. Ahí el botón no decidía nada:
+  solo se podía olvidar. Ya no existe — lo que se escribe se guarda, y una
+  línea abajo a la izquierda lo dice (*Guardando… / ✓ Guardado*, y en rojo
+  con **Reintentar** si el servidor se quejó).
+- **Se aprieta Guardar cuando lo que se edita es la lista misma**: `/equipo`,
+  las fichas de `/extras`, `/menus`, `/configuración`, `/usuarios`. Ahí el
+  nombre **es** la identidad de la fila y la pantalla reescribe la pestaña
+  entera, así que guardar a mitad de palabra —mientras alguien borra un
+  nombre para reescribirlo— mandaría una fila sin nombre, el servidor la
+  descartaría (hace bien) y la ficha desaparecería bajo los dedos. Esas
+  pantallas ya tienen su botón **dentro de cada ficha**, que era el problema
+  de verdad.
+- **Cerrar el día nunca se guarda solo.** Es una declaración con nombre y
+  hora: se aprieta, y **pregunta antes** — *"¿Cerrar el martes 20 de octubre?
+  Queda anotado que lo cerraste tú, con la hora. Se puede reabrir después."*
+  Reabrir también pregunta.
+
+Detalles que vale la pena tener escritos, todos en `usarAutoguardado.ts`:
+
+- **Espera a que dejen de escribir** (600ms). Sin eso, un monto de cinco
+  dígitos serían cinco guardados y el cuarto llegaría con un número a medio
+  escribir.
+- **Nunca hay dos peticiones a la vez**: lo que llegue mientras una está en
+  vuelo queda anotado y se manda apenas vuelva. Se guarda el día entero, así
+  que el último gana y eso es justo lo correcto.
+- **Al cerrar la ventana se manda lo que quede en el reloj**, y además hay un
+  seguro al desmontar para el escape rápido. Comprobado: escribir la propina
+  y apretar Escape en el mismo segundo deja el monto guardado.
+- **Cerrar el día fuerza el guardado primero**, en ese orden: al revés, el
+  servidor miraría si falta alguien por marcar sobre los datos de antes del
+  último cambio y rechazaría cerrar un día que se acaba de completar.
+- **Editar un día cerrado ya no lo reabre.** Antes *Guardar* en un día
+  cerrado mandaba `cerrar: false`, o sea que corregir un ajuste olvidado lo
+  reabría sin que nadie lo pidiera. Hoy reabrir es un botón propio.
 
 ### Cerrar el día
 
@@ -1932,6 +2150,181 @@ pidió y cuánto pagó no es dato de un turno.
   contabilidad antes de usarlo así.
 - ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
   2026-10-22**: existe el rol `pagos`, que solo lee el informe.
+
+## El panel se explica solo (2026-10-30)
+
+Lo pidió el cliente: *"tenemos que pensar también sobre un sistema de
+enseñanza interactiva dentro del sitio para los que lo acceden la primera
+vez… signo de interrogación, clic, quiero aprender más y se abre y aprendo
+más sobre esto"*.
+
+Son dos cosas separadas y conviene no confundirlas: **una tira que se ofrece
+al llegar** y **un `?` que se pide cuando hace falta**.
+
+### Todos los textos viven en `ayudas.ts`
+
+Si cada pantalla escribiera su explicación dentro de su JSX, corregir el tono
+o una palabra sería recorrer doce archivos, y nadie podría leer de una
+sentada lo que el panel le está enseñando a la gente. Juntos se leen enteros
+y se corrigen en un lugar.
+
+Cómo están escritos, que es la parte que importa:
+
+- **Dicen qué se hace, no qué es.** *"Acá se mira cómo viene la ocupación"*
+  sirve; *"esta pantalla muestra una grilla de fechas"* no le sirve a nadie.
+- **Sin palabras del oficio.** Ni endpoint, ni registro, ni sincronizar.
+- **Cortos**: dos o tres párrafos, unos pasos numerados y un *Ojo* con la
+  única advertencia que conviene leer antes de tocar algo. Una ayuda larga no
+  se lee, y una que no se lee es peor que ninguna porque ocupa el lugar de la
+  buena.
+- **No inventan datos del negocio.** Ningún precio, ningún horario, ninguna
+  capacidad: eso sale de la planilla y cambia. Acá se explica el panel.
+
+Hay una por pantalla —calendario, día, turnos, equipo, extras, informe,
+menús, configuración, cuentas, bitácora— más una para **marcar quién vino**,
+que es lo único que de verdad se aprende dentro de la ventana del día.
+
+### El `?` se pide, no aparece
+
+No hay globitos que salgan solos ni carteles que haya que cerrar: quien ya
+sabe usar el panel no ve nada distinto, y quien no sabe tiene el mismo signo
+en el mismo lugar en todas las pantallas. **Una ayuda que interrumpe se
+aprende a cerrar sin leerla.**
+
+### El recorrido: cuatro pantallas, ofrecido dos veces
+
+**Son pantallas de texto, no globitos flotando sobre la página**, que era la
+otra forma de hacerlo. Un globito hay que anclarlo a algo que esté a la
+vista: en un teléfono la mitad quedan fuera de pantalla, y si alguien hace
+scroll el globito apunta al aire. Cinco pasos leídos de corrido no se rompen
+nunca. Cada uno con un enlace para ir a ver la pantalla de la que habla, y
+unos puntos que dicen cuánto falta — sin eso, *Siguiente* podría ser el
+segundo de cuatro o el segundo de veinte, y la diferencia es si alguien sigue
+o se sale.
+
+**Se ofrece dos veces y no más.** Una sola oferta se la pierde quien entró
+apurado; una oferta eterna se vuelve parte del fondo y deja de verse. Quien
+lo termina o lo cierra no lo ve nunca más, y de todas formas se puede volver
+a abrir desde el `?` del calendario, que es donde vuelve quien se perdió.
+
+**Se recuerda en `localStorage`, o sea por navegador y no por persona.** Si
+el equipo comparte un teléfono, la tira aparece una vez para ese teléfono.
+Hacerlo por persona obligaría a escribir en la planilla cada vez que alguien
+mira un cartel, y eso no vale lo que cuesta.
+
+**No aparece en `/mi/`, en `/semana/` ni en la entrada**: las tres las abre
+gente que no administra nada, y un recorrido por el panel sería ofrecerle una
+visita a una casa en la que no vive.
+
+### Una ventana hereda el estilo de donde está escrita (2026-10-30)
+
+Vale tenerlo anotado porque el síntoma es llamativo y la causa no se parece:
+**la primera versión mostraba toda la ayuda EN MAYÚSCULAS Y EN NEGRITA**.
+
+El `?` vive al lado del título de la pantalla, o sea **dentro de un `<h1>`
+con `uppercase`**, y una ventana modal se dibuja donde está escrita, no en la
+raíz del documento: hereda `text-transform` como cualquier otro elemento.
+Tres párrafos gritados son ilegibles.
+
+Se arregla en `Dialogo` —`normal-case font-normal tracking-normal`— y no
+sacando el `?` del título, porque cualquier ventana que mañana se abra desde
+otro lugar tendría exactamente el mismo problema.
+
+## El panel tiene tema claro (2026-10-30)
+
+Lo pidió el cliente: *"créame una versión diurna… pero no simplemente blanco
+y negro, sino una elegancia"*, con *"un buen contraste de toda la
+información"* y *"un juguetón bien de PlayStation, dónde y cómo usar los
+botones"*. **Solo el panel** — el sitio público se queda como está, por
+decisión suya en la misma frase.
+
+### Los colores son variables, no valores
+
+`tailwind.config.ts` ya no tiene hex: cada color es `rgb(var(--x) /
+<alpha-value>)`. **Las clases de los componentes no cambiaron** —`bg-tinta`,
+`text-hueso/60`, `border-oro/40` se siguen escribiendo igual— y lo único que
+cambia entre un tema y otro es qué vale la variable. La alternativa, prefijar
+`dark:` en cada clase de cada pantalla, habría sido reescribir el panel
+entero y dejar cada color nuevo con dos lugares donde equivocarse.
+
+Van en canales sueltos (`11 11 10`) porque es lo que `<alpha-value>`
+necesita para que `/60` siga funcionando.
+
+**Los tres colores de estado pasaron a tener nombre propio** —`verde`,
+`rojo`, `ambar`, `cielo`— en vez de los `emerald-400` de Tailwind, y no es
+gusto: de noche el texto de un aviso es claro y de día tiene que ser oscuro,
+así que el número de la paleta dejaría de significar lo mismo. Cada uno trae
+los tres tonos que de verdad se usan: el base (fondos y bordes con
+transparencia), `-fuerte` (bordes y rellenos sólidos) y `-texto`, que es el
+único pensado para leerse.
+
+### Qué es el tema claro
+
+**No es blanco pelado.** Papel tibio de fondo (`#FAF7F0`), **tarjetas
+blancas encima** y texto casi-negro cálido. Que las tarjetas sean más claras
+que la página es lo que las despega; por eso las superficies pasaron de
+`bg-hueso/[0.02]` —un tinte que de día se ve *hundido*— a **`bg-panel`**, que
+es el token de "superficie levantada" y vale `#14120F` de noche y `#FFFFFF`
+de día. Los tintes que **sí** son tintes —un `hover`, un chip, la barra de
+ocupación— se quedaron como estaban.
+
+**El dorado se oscurece de día**, de `#C9A227` a `#8A6B12`. El dorado del
+sitio sobre crema da menos de 2,5:1: todos los enlaces del panel serían
+ilegibles. El oro viejo, más profundo, se lee sobre papel y sigue siendo oro.
+
+**La escala de transparencias no significa lo mismo sobre papel**, y eso hubo
+que arreglarlo aparte. `text-hueso/45` de noche da 4,1:1 y de día cae a 2,6:1,
+o sea que todo lo secundario —el puesto bajo un nombre, el id de una reserva,
+los guiones de "no hay dato"— se desvanecía justo en la pantalla que se mira
+con sol encima. Los tramos bajos se suben en un **solo bloque** de
+`globals.css`, en vez de escribir `text-hueso/45 dark:text-hueso/60` en los
+trescientos y tantos lugares donde aparece.
+
+Ese bloque trajo su propia trampa, anotada porque es fácil de repetir:
+**lleva `:root` y un atributo, así que es más específico que las clases
+`hover:` de Tailwind** y los enlaces dejaban de ponerse dorados al pasarles
+el mouse. Los cuatro colores de hover que usa el panel se vuelven a afirmar
+después, con la misma especificidad.
+
+Y **un botón relleno apagado no puede verse roto**: `bg-oro` con
+`disabled:opacity-40` de día quedaba crema sobre oro pálido, que no se lee
+como nada. Apagado es gris.
+
+### El interruptor
+
+Está en la barra de arriba, y también en la pantalla de entrada —que es la
+primera que se abre, y donde alguien se encuentra con el tema que no quería—.
+En `/mi/` y en `/semana/` no: ahí la barra es una palabra y el botón sería el
+único control de una página de lectura.
+
+- **Arranca en oscuro, no en el del sistema.** Seguir a `prefers-color-scheme`
+  suena más fino y acá habría sido un problema: el panel lo usa gente a la que
+  recién se le enseñó dónde queda cada cosa, y la mitad del equipo habría
+  abierto un panel blanco sin pedirlo, distinto del que le mostraron.
+- **Se recuerda en `localStorage`**, o sea por navegador: el teléfono de la
+  jefa de turno puede estar en claro y el computador de la oficina en oscuro.
+  Si está bloqueado, abre en oscuro y el botón sirve para esa sesión.
+- **Lo pinta un guion de tres líneas en el `<head>`, antes de dibujar.** Si
+  esperara a React, cada carga aparecería oscura y pegaría un salto a blanco
+  — el parpadeo clásico, que además desconcierta justo a quien menos maneja
+  estos sistemas. No se puede resolver en el servidor: el tema es de cada
+  navegador y el HTML de Next se sirve igual para todos.
+
+### Los botones se hunden, y la asistencia es un semáforo
+
+Eso es el *"juguetón bien de PlayStation"*, y resuelve algo real: en un
+teléfono no hay cursor que cambie ni `hover` que anticipe nada, así que un
+botón y un texto se ven igual hasta que uno de los dos responde.
+
+- **Todo botón del panel se hunde 1px al tocarlo**, con `transition` corta.
+  Va sobre `button` y no sobre una clase que haya que acordarse de poner: un
+  botón al que se le olvidó es justamente el que se va a sentir muerto. Un
+  botón apagado **no** se hunde, porque fingir que respondió sería mentir
+  sobre lo único que está diciendo. Respeta `prefers-reduced-motion`.
+- **Vino / No vino llevan el punto del semáforo**: lleno cuando ese estado
+  está elegido, hueco cuando no. Así la fila se entiende sin leer ninguna de
+  las dos palabras —y sin depender solo del color, que para quien no lo
+  distingue no diría nada—. El elegido suma un halo suave de su color.
 
 ## El pronóstico del tiempo (2026-10-29)
 

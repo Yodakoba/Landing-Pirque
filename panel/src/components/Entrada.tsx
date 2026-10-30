@@ -61,7 +61,7 @@ export default function Entrada() {
             onChange={(e) => setClave(e.target.value)} />
         </label>
 
-        {error && <p className="text-sm text-red-300">{error}</p>}
+        {error && <p className="text-sm text-rojo-texto">{error}</p>}
 
         <button type="submit" disabled={entrando || !usuario || !clave}
           className="w-full rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta

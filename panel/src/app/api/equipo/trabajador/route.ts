@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { leerTrabajadores, guardarTrabajadores, anotar } from '@/lib/datos';
+import { leerTrabajadores, guardarTrabajadores, leerTurnos, anotar } from '@/lib/datos';
 import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
@@ -130,20 +130,30 @@ export async function PATCH(req: Request) {
       // El nombre se conserva como está escrito en la planilla: un cambio de
       // mayúsculas no puede desenganchar sus turnos.
       nombre: antes.nombre,
-      telefono: telefonoNormal(b?.telefono),
-      puesto: String(b?.puesto ?? '').trim(),
+      // **Lo que no venga en el cuerpo se conserva**, que es lo que un PATCH
+      // significa. Antes el teléfono y el puesto se escribían siempre, así
+      // que una llamada que solo quisiera desactivar a alguien le habría
+      // borrado los dos. La ficha manda los campos completos y no nota la
+      // diferencia; la línea de `/equipo` manda `activo` y nada más.
+      telefono: b?.telefono === undefined
+        ? antes.telefono : telefonoNormal(b.telefono),
+      puesto: b?.puesto === undefined
+        ? antes.puesto : String(b.puesto).trim(),
       activo: b?.activo === undefined ? antes.activo : esSi(b.activo),
       // El token no viene nunca del navegador: se administra en `/equipo`.
       token: antes.token,
-      modalidad: esAdmin
-        ? (esContratado(b?.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno)
+      modalidad: esAdmin && b?.modalidad !== undefined
+        ? (esContratado(b.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno)
         : antes.modalidad,
-      pagoJornada: esAdmin ? aEntero(b?.pagoJornada) : antes.pagoJornada,
-      valorHora: esAdmin ? aEntero(b?.valorHora) : antes.valorHora,
+      pagoJornada: esAdmin && b?.pagoJornada !== undefined
+        ? aEntero(b.pagoJornada) : antes.pagoJornada,
+      valorHora: esAdmin && b?.valorHora !== undefined
+        ? aEntero(b.valorHora) : antes.valorHora,
       propina: esAdmin
         ? (b?.propina === undefined ? antes.propina : esSi(b.propina))
         : antes.propina,
-      banco: esAdmin ? limpiarBanco(b?.banco) : antes.banco
+      banco: esAdmin && b?.banco !== undefined
+        ? limpiarBanco(b.banco) : antes.banco
     };
 
     await guardarTrabajadores(
@@ -156,6 +166,58 @@ export async function PATCH(req: Request) {
       trabajador: esAdmin ? { ...nueva, token: '' }
                           : { ...nueva, token: '', banco: bancoVacio() }
     });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
+}
+
+/**
+ * Saca UNA ficha de la lista.
+ *
+ * **Solo a quien no tiene ningún turno guardado.** Borrar la ficha de
+ * alguien que ya trabajó dejaría sus turnos apuntando a un nombre que no
+ * está en ninguna parte, y esos turnos son el registro de quién trabajó
+ * qué día. La pantalla ya ofrece *Desactivar* en ese caso, pero **la regla
+ * se comprueba acá**: una llamada directa a la API tiene que obedecerla
+ * igual que un clic.
+ *
+ * Es una fila y no la lista entera por lo mismo que `POST` y `PATCH`: quien
+ * aprieta *Quitar* en una línea cerrada no tiene por qué mandar —ni pisar—
+ * lo que haya escrito en otra.
+ */
+export async function DELETE(req: Request) {
+  const no = await exigir(req, 'equipo');
+  if (no) return no;
+
+  try {
+    const b = await req.json();
+    const nombre = String(b?.nombre ?? '').trim();
+    if (!nombre) {
+      return NextResponse.json({ error: 'Falta el nombre.' }, { status: 400 });
+    }
+
+    const gente = await leerTrabajadores();
+    const quien = gente.find((t) => normalizar(t.nombre) === normalizar(nombre));
+    if (!quien) {
+      return NextResponse.json({ quitado: nombre });
+    }
+
+    const turnos = (await leerTurnos())
+      .filter((t) => normalizar(t.trabajador) === normalizar(nombre)).length;
+    if (turnos > 0) {
+      return NextResponse.json({
+        error: `${quien.nombre} tiene ${turnos} turnos guardados, así que su `
+             + 'ficha no se quita: desactívala y conserva su historia.'
+      }, { status: 409 });
+    }
+
+    await guardarTrabajadores(
+      gente.filter((t) => normalizar(t.nombre) !== normalizar(nombre))
+    );
+    await anotar({ ...(await quienEs(req)), accion: 'Quitó a un trabajador de la lista',
+      detalle: quien.nombre });
+
+    return NextResponse.json({ quitado: quien.nombre });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

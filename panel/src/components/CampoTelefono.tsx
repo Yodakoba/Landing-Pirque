@@ -40,7 +40,7 @@ export default function CampoTelefono({
         onChange={(e) => onCambio(e.target.value)}
         onBlur={(e) => onCambio(telefonoNormal(e.target.value))} />
       {aviso && (
-        <p className="mt-0.5 text-[11px] leading-tight text-amber-300/80">{aviso}</p>
+        <p className="mt-0.5 text-[11px] leading-tight text-ambar-texto/80">{aviso}</p>
       )}
     </div>
   );

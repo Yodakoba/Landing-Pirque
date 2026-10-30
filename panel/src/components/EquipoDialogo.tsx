@@ -16,6 +16,7 @@
  * llamada directa a la API tiene que obedecer la misma regla.
  */
 import { useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
          repartirPropina, propinaDelDia,
@@ -30,10 +31,31 @@ const ENTRADA =
 import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
+import Asistencia from './Asistencia';
+import AvisoGuardado from './AvisoGuardado';
+import { usarAutoguardado } from './usarAutoguardado';
+
+/**
+ * El rótulo de un campo, **solo mientras la pantalla sea angosta**: en el
+ * escritorio ese nombre ya está en el encabezado de la columna, y repetirlo
+ * en cada fila sería ruido.
+ *
+ * Va al nivel del módulo y no dentro del componente: una función nueva en
+ * cada dibujado es, para React, otro tipo de elemento, y con un `input` al
+ * lado eso significa perder el foco. Ver `Campo.tsx`.
+ */
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="mb-0.5 block text-[11px] uppercase tracking-wide
+                     text-hueso/45 md:hidden">
+      {children}
+    </span>
+  );
+}
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
-  esAdmin = false, enfocarPropina = false,
+  conCierre = false, esAdmin = false, enfocarPropina = false,
   onListo, onCancelar
 }: {
   fecha: string;
@@ -47,6 +69,30 @@ export default function EquipoDialogo({
   extras?: Extra[];
   /** Si el día ya fue cerrado por alguien. */
   cerrado?: boolean;
+  /**
+   * Si desde acá se puede **cerrar el día**. Solo lo pide `/turnos`.
+   *
+   * **El día se cierra en un solo lugar** (2026-10-30, decidido con el
+   * cliente). El botón estaba en las tres pantallas que abren esta ventana
+   * —el calendario de la portada, `/turnos` y la página del día— y eso no
+   * es una comodidad, es una duda: *¿lo cierro acá o allá? ¿es lo mismo?*
+   * Para quien no maneja sistemas así, tres caminos al mismo paso final se
+   * leen como tres pasos distintos.
+   *
+   * Se eligió `/turnos` porque es la pantalla que ya **pide** el cierre: al
+   * entrar lista arriba los días pasados a los que les falta algo. Entrar y
+   * que la pantalla te diga qué hacer es lo contrario de tener que acordarse.
+   *
+   * El calendario de la portada queda para lo suyo —cómo viene la ocupación
+   * y quién trabaja—, y **se descartó mostrarlo ahí según el rol**: el rol
+   * contesta *quién puede*, no *dónde se hace*, y acá cierran los dos roles
+   * que entran. Esconderlo por rol habría dejado la misma pregunta en pie
+   * para quien sí lo ve.
+   *
+   * El costo a asumir: desde la página del día hay que dar un salto a
+   * `/turnos` para cerrar. Las dos pantallas lo dicen con un enlace.
+   */
+  conCierre?: boolean;
   /** Si puede fijar sueldos al crear a alguien. */
   esAdmin?: boolean;
   /** Abre con el cursor en la propina, para quien viene justo a eso. */
@@ -55,14 +101,14 @@ export default function EquipoDialogo({
   onCancelar: () => void;
 }) {
   // El plan se edita en memoria y se guarda completo. Así quitar a alguien
-  // es tan posible como agregarlo, y nada se escribe hasta apretar Guardar.
-  // Se conserva el turno entero, no solo nombre y puesto: si alguien ya pasó
-  // lista, replanificar el día no puede borrarle la asistencia ni el monto.
+  // es tan posible como agregarlo. Se conserva el turno entero, no solo
+  // nombre y puesto: si alguien ya pasó lista, replanificar el día no puede
+  // borrarle la asistencia ni el monto.
   const [plan, setPlan] = useState<Omit<Turno, 'fila'>[]>(
     () => turnos.filter((t) => t.fecha === fecha).map(({ fila, ...resto }) => resto)
   );
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [cerrando, setCerrando] = useState(false);
   // La propina del día, que se escribe UNA vez y el panel reparte. Lo que
   // se guarda es la parte de cada uno, no el pozo: ver `repartirPropina`.
   const [propina, setPropina] = useState(
@@ -153,39 +199,74 @@ export default function EquipoDialogo({
   const listo = falta.conEquipo > 0 && falta.sinMarcar === 0;
 
   /**
-   * Guarda el día, y si se pidió lo deja cerrado.
+   * **Lo que se escribe se guarda solo** (2026-10-30). Antes había que
+   * apretar *Guardar*, al lado de *Guardar y cerrar el día*: dos botones
+   * hermanos para dos cosas que no se parecen en nada —corregir un monto y
+   * declarar cerrado un día—. Ver `usarAutoguardado`.
    *
-   * **Son dos peticiones y en este orden**: primero los turnos, después el
-   * cierre. Si se hiciera al revés, el servidor comprobaría si falta
-   * alguien por marcar mirando lo que había antes de este guardado, y
-   * rechazaría cerrar un día que justo se acaba de completar.
+   * Se manda el día entero, con la propina ya repartida, que es como esta
+   * ventana trabajó siempre: el servidor borra las filas de esta fecha y
+   * escribe las nuevas, sin tocar los otros días.
    */
-  async function guardar(cerrando = false) {
-    setGuardando(true);
-    try {
+  const guardado = usarAutoguardado(
+    useMemo(() => ({ plan, propina, gente }), [plan, propina, gente]),
+    async (v) => {
       const r = await fetch('/api/equipo/turnos', {
         method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fecha, turnos: repartirPropina(plan, propina, participa) })
+        body: JSON.stringify({
+          fecha, turnos: repartirPropina(v.plan, v.propina, participa)
+        })
       });
       const d = await r.json();
-      if (d.error) { setError(d.error); return; }
+      return d.error || undefined;
+    }
+  );
 
-      if (cerrando || cerrado) {
-        const c = await fetch('/api/equipo/cierre', {
-          method: 'PUT', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ fecha, cerrar: cerrando })
-        });
-        const dc = await c.json();
-        if (dc.error) { setError(dc.error); return; }
-      }
+  /** Cierra la ventana, mandando antes lo que quede en el reloj. */
+  async function salir() {
+    await guardado.forzar();
+    if (guardado.hubo.current) onListo(); else onCancelar();
+  }
+
+  /**
+   * Cerrar o reabrir el día.
+   *
+   * **Se guarda primero y se cierra después, en ese orden**: si fuera al
+   * revés, el servidor comprobaría si falta alguien por marcar mirando lo
+   * que había antes del último cambio, y rechazaría cerrar un día que
+   * justo se acaba de completar.
+   *
+   * **Y pregunta antes**, que es lo que el cliente pidió para las acciones
+   * que no se corrigen solas: sin el botón de guardar al lado, esta es la
+   * única de la ventana que declara algo.
+   */
+  async function cambiarCierre(cerrar: boolean) {
+    const pregunta = cerrar
+      ? `¿Cerrar el ${enPalabras(fecha)}? Queda anotado que lo cerraste tú, `
+        + 'con la hora. Se puede reabrir después.'
+      : `¿Reabrir el ${enPalabras(fecha)} para corregirlo?`;
+    if (!confirm(pregunta)) return;
+
+    setCerrando(true);
+    setError('');
+    try {
+      await guardado.forzar();
+      const c = await fetch('/api/equipo/cierre', {
+        method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fecha, cerrar })
+      });
+      const dc = await c.json();
+      if (dc.error) { setError(dc.error); return; }
       onListo();
     } catch (e) {
       setError(String(e));
-    } finally { setGuardando(false); }
+    } finally { setCerrando(false); }
   }
 
   return (
-    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={onCancelar} ancho="max-w-4xl">
+    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
+      {/* El `?` de esta ventana explica lo único que de verdad se aprende
+          acá: qué significa dejar a alguien sin marcar. */}
       <p className="mt-3 text-sm text-hueso/60">
         {personas > 0
           ? <>Hay <strong className="text-hueso">{personas}</strong>{' '}
@@ -194,11 +275,12 @@ export default function EquipoDialogo({
           : <>Todavía no hay nadie reservado este día.</>}
         {' '}
         {faltan > 0
-          ? <span className="text-amber-300">Faltan {faltan} según las reglas de cada puesto.</span>
+          ? <span className="text-ambar-texto">Faltan {faltan} según las reglas de cada puesto.</span>
           : <span className="text-hueso/50">
               Las sugerencias salen de la columna <em>uno cada N personas</em> de{' '}
               <a href="/equipo" className="text-oro hover:underline">Equipo</a>.
             </span>}
+        <Ayuda tema="asistencia" />
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -207,38 +289,43 @@ export default function EquipoDialogo({
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-sm font-semibold">{l.puesto}</h3>
               <span className={`text-xs tabular-nums ${
-                l.faltan > 0 ? 'text-amber-300' : 'text-hueso/45'}`}>
+                l.faltan > 0 ? 'text-ambar-texto' : 'text-hueso/45'}`}>
                 {l.asignados.length}
                 {l.sugeridos > 0 && <> / {l.sugeridos}</>}
               </span>
             </div>
 
             {l.asignados.length > 0 ? (
-              <ul className="mt-2 space-y-1">
+              <ul className="mt-2 space-y-1.5">
                 {l.asignados.map((nombre) => {
                   const t = plan.find(
                     (x) => normalizar(x.trabajador) === normalizar(nombre));
                   return (
-                    <li key={nombre} className="flex items-center gap-1.5 text-xs">
-                      {/* Marcar quién llegó **acá mismo**: quien abre el día a
-                          las once de la mañana es la jefa de turno, y lo que
-                          tiene delante es esta ventana. Los montos siguen
-                          siendo de Pasar lista — esto solo dice quién vino. */}
-                      <select value={t?.asistencia ?? VINO.sinMarcar}
-                        aria-label={`¿Vino ${nombre}?`}
-                        onChange={(e) => marcar(nombre, e.target.value)}
-                        className="rounded border border-hueso/20 bg-tinta px-1 py-0.5
-                                   text-xs focus:border-oro focus:outline-none">
-                        <option value={VINO.sinMarcar}>—</option>
-                        <option value={VINO.si}>Vino</option>
-                        <option value={VINO.no}>No vino</option>
-                      </select>
-                      <span className={
+                    <li key={nombre}
+                      className={`flex flex-wrap items-center gap-2 rounded border
+                                  px-2 py-1.5 text-xs ${
+                        t?.asistencia === VINO.si ? 'border-verde/25 bg-verde/5'
+                        : t?.asistencia === VINO.no ? 'border-rojo/25 bg-rojo/5'
+                        : 'border-hueso/10 bg-panel'}`}>
+                      <span className={`text-sm ${
                         t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
-                        : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}>
+                        : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
                         {nombre}
                       </span>
+                      {/* Mientras nadie diga si llegó, el turno no suma nada:
+                          por eso se dice con todas sus letras y no con un
+                          guion, que no pide nada. */}
+                      {!t?.asistencia && (
+                        <span className="text-[10px] uppercase tracking-wide text-ambar-texto/70">
+                          sin marcar
+                        </span>
+                      )}
                       <span className="flex-1" />
+                      {/* Marcar quién llegó **acá mismo**: quien abre el día a
+                          las once de la mañana es la jefa de turno, y lo que
+                          tiene delante es esta ventana. */}
+                      <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
+                        onCambio={(v) => marcar(nombre, v)} />
                       {/* **La ficha, desde acá.** Lo que no cambia de un día
                           a otro —teléfono, sueldo habitual, cuenta
                           bancaria— vivía solo en `/equipo`, y quien arma un
@@ -252,17 +339,27 @@ export default function EquipoDialogo({
                             (x) => normalizar(x.nombre) === normalizar(nombre)),
                           nombre
                         })}
-                        className="px-1 text-[11px] text-hueso/40 hover:text-oro"
+                        className="rounded px-3 py-2.5 text-xs text-hueso/45
+                                   hover:bg-hueso/5 hover:text-oro"
                         title={`Teléfono, pago y datos bancarios de ${nombre}`}>
-                        ficha
+                        Ficha
                       </button>
+                      {/* **Dice lo que hace y pregunta antes.** Era una ✕ de
+                          diez píxeles que borraba sin avisar: el único botón
+                          de esta ventana que deshace algo, y el más fácil de
+                          apretar sin querer con el dedo. */}
                       <button
-                        onClick={() => setPlan(plan.filter(
-                          (x) => normalizar(x.trabajador) !== normalizar(nombre)))}
-                        className="px-1 text-hueso/40 hover:text-red-300"
-                        title={`Quitar a ${nombre} de este día`}>
-                        <span aria-hidden>✕</span>
-                        <span className="sr-only">Quitar a {nombre} de este día</span>
+                        onClick={() => {
+                          if (!confirm(`¿Sacar a ${nombre} de este día?\n\n`
+                                     + 'Se va de la planificación de esta fecha. '
+                                     + 'Su ficha y sus otros días no se tocan.')) return;
+                          setPlan(plan.filter(
+                            (x) => normalizar(x.trabajador) !== normalizar(nombre)));
+                        }}
+                        className="rounded px-3 py-2.5 text-xs text-hueso/45
+                                   hover:bg-rojo/10 hover:text-rojo-texto"
+                        title={`Sacar a ${nombre} de este día`}>
+                        Sacar
                       </button>
                     </li>
                   );
@@ -368,101 +465,133 @@ export default function EquipoDialogo({
             los dos dan el mismo total, pero solo uno deja escrito el porqué.
           </p>
 
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
-                <tr className="border-b border-hueso/10">
-                  <th className="w-44 py-2 pr-3">Quién</th>
-                  <th className="w-24 py-2 pr-3">Jornada</th>
-                  <th className="w-20 py-2 pr-3">Hs extra</th>
-                  <th className="min-w-[16rem] py-2 pr-3">Ajustes</th>
-                  <th className="w-24 py-2 pr-3 text-right">Propina</th>
-                  <th className="w-24 py-2 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plan.map((t, i) => (
-                  <tr key={t.trabajador} className="border-b border-hueso/5">
-                    <td className="py-2 pr-3 align-top">
-                      <span className={t.asistencia === VINO.no
-                        ? 'text-hueso/35 line-through' : ''}>{t.trabajador}</span>
-                      <span className="block text-xs text-hueso/40">
-                        {t.puesto}
-                        {t.asistencia === VINO.sinMarcar && (
-                          <span className="text-amber-300"> · sin marcar</span>
-                        )}
-                        {esContratado(t.modalidad) && <> · contratado</>}
+          {/* **Una tarjeta por persona en el teléfono, una fila en el
+              escritorio.** Eran seis columnas dentro de una tabla que se
+              desplazaba de lado: en un teléfono se veían dos, y las dos sin
+              su encabezado, porque el encabezado se había ido para la
+              izquierda. O sea que para saber si esa caja era la jornada o
+              las horas extra había que acordarse — justo acá, donde lo que
+              se escribe es lo que se le paga a alguien.
+
+              El encabezado se muestra solo donde cabe entero (`md:`), y
+              abajo cada campo lleva su rótulo encima mientras la pantalla
+              sea angosta. Es el mismo criterio que las fichas de `/equipo`:
+              con tarjetas, una fila de encabezados allá arriba obligaría a
+              contar columnas. */}
+          <div className="mt-3">
+            <div className="hidden border-b border-hueso/10 pb-2 text-xs uppercase
+                            tracking-wide text-hueso/50
+                            md:grid md:grid-cols-[11rem_6rem_5rem_1fr_6rem_6rem] md:gap-x-3">
+              <span>Quién</span>
+              <span>Jornada</span>
+              <span>Hs extra</span>
+              <span>Ajustes</span>
+              <span className="text-right">Propina</span>
+              <span className="text-right">Total</span>
+            </div>
+
+            <div className="space-y-3 md:space-y-0">
+              {plan.map((t, i) => (
+                <div key={t.trabajador}
+                  className="rounded border border-hueso/15 p-3 text-sm
+                             md:grid md:grid-cols-[11rem_6rem_5rem_1fr_6rem_6rem]
+                             md:items-start md:gap-x-3 md:rounded-none md:border-0
+                             md:border-b md:border-hueso/5 md:p-0 md:py-2">
+                  <div>
+                    <span className={t.asistencia === VINO.no
+                      ? 'text-hueso/35 line-through' : ''}>{t.trabajador}</span>
+                    <span className="block text-xs text-hueso/40">
+                      {t.puesto}
+                      {t.asistencia === VINO.sinMarcar && (
+                        <span className="text-ambar-texto"> · sin marcar</span>
+                      )}
+                      {esContratado(t.modalidad) && <> · contratado</>}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 md:mt-0">
+                    <Rotulo>Jornada</Rotulo>
+                    {/* A un contratado no se le paga jornada: su sueldo no
+                        sale de esta caja. Se dice, en vez de mostrar un campo
+                        vacío que parece un dato que falta. */}
+                    {esContratado(t.modalidad) ? (
+                      <span className="text-xs text-hueso/45">no aplica</span>
+                    ) : (
+                      <input type="number" min={0} step={1000} className={ENTRADA}
+                        value={t.pagoJornada || ''} placeholder="—"
+                        aria-label={`Jornada de ${t.trabajador}`}
+                        onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
+                    )}
+                  </div>
+
+                  <div className="mt-2 md:mt-0">
+                    <Rotulo>Horas extra</Rotulo>
+                    <input type="number" min={0} step={1} className={ENTRADA}
+                      value={t.horasExtra || ''} placeholder="0"
+                      aria-label={`Horas extra de ${t.trabajador}`}
+                      onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
+                  </div>
+
+                  <div className="mt-2 md:mt-0">
+                    <Rotulo>Ajustes</Rotulo>
+                    {t.ajustes.map((a, k) => (
+                      <div key={k} className="mb-1 flex items-center gap-1">
+                        <input type="number" step={1000} className={`${ENTRADA} w-24`}
+                          value={a.monto || ''} placeholder="0"
+                          aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
+                          onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
+                        <input type="text" className={ENTRADA} value={a.motivo}
+                          placeholder="por qué"
+                          aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
+                          onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
+                        <button onClick={() => quitarAjuste(i, k)}
+                          className="px-2 py-1.5 text-hueso/40 hover:text-rojo-texto"
+                          aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
+                          title="Quitar este ajuste">✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => agregarAjuste(i)}
+                      className="text-xs text-oro hover:underline">
+                      + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
+                    </button>
+                    {t.ajustes.length > 1 && (
+                      <span className="ml-2 text-xs tabular-nums text-hueso/45">
+                        suman {enPesos(totalAjustes(t.ajustes))}
                       </span>
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      {/* A un contratado no se le paga jornada: su sueldo no
-                          sale de esta caja. Se dice, en vez de mostrar un
-                          campo vacío que parece un dato que falta. */}
-                      {esContratado(t.modalidad) ? (
-                        <span className="text-xs text-hueso/45">no aplica</span>
-                      ) : (
-                        <input type="number" min={0} step={1000} className={ENTRADA}
-                          value={t.pagoJornada || ''} placeholder="—"
-                          aria-label={`Jornada de ${t.trabajador}`}
-                          onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      <input type="number" min={0} step={1} className={ENTRADA}
-                        value={t.horasExtra || ''} placeholder="0"
-                        aria-label={`Horas extra de ${t.trabajador}`}
-                        onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      {t.ajustes.map((a, k) => (
-                        <div key={k} className="mb-1 flex items-center gap-1">
-                          <input type="number" step={1000} className={`${ENTRADA} w-24`}
-                            value={a.monto || ''} placeholder="0"
-                            aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
-                            onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
-                          <input type="text" className={ENTRADA} value={a.motivo}
-                            placeholder="por qué"
-                            aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
-                            onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
-                          <button onClick={() => quitarAjuste(i, k)}
-                            className="px-1 text-hueso/40 hover:text-red-400"
-                            aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
-                            title="Quitar este ajuste">✕</button>
-                        </div>
-                      ))}
-                      <button onClick={() => agregarAjuste(i)}
-                        className="text-xs text-oro hover:underline">
-                        + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
-                      </button>
-                      {t.ajustes.length > 1 && (
-                        <span className="ml-2 text-xs tabular-nums text-hueso/45">
-                          suman {enPesos(totalAjustes(t.ajustes))}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 text-right align-top tabular-nums text-hueso/70">
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex items-baseline justify-between
+                                  tabular-nums text-hueso/70 md:mt-0 md:block md:text-right">
+                    <Rotulo>Propina</Rotulo>
+                    <span>
                       {repartida[i]?.propina
                         ? enPesos(repartida[i].propina)
                         : t.asistencia === VINO.si && !participa(t.trabajador)
                           ? <span className="text-xs text-hueso/35">no participa</span>
                           : <span className="text-hueso/25">—</span>}
-                    </td>
-                    <td className="py-2 text-right align-top tabular-nums">
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex items-baseline justify-between
+                                  tabular-nums md:mt-0 md:block md:text-right">
+                    <Rotulo>Total</Rotulo>
+                    <span>
                       {t.asistencia === VINO.si
                         ? <strong>{enPesos(pagoDe(t))}</strong>
                         : <span className="text-hueso/35">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* La propina se escribe UNA vez, como total del día, y el panel
               la reparte en partes iguales entre quienes vinieron y
               participan. Lo que se guarda es la parte de cada uno. */}
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded border
-                          border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+                          border-hueso/15 bg-panel px-3 py-2">
             <label className="flex items-center gap-2 text-sm">
               <span className="text-hueso/70">Propina del día</span>
               <input type="number" min={0} step={1000}
@@ -484,7 +613,7 @@ export default function EquipoDialogo({
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       {/* **El resumen arriba y las acciones en una sola línea abajo.**
           Antes compartían una fila que envolvía, así que con el resumen
@@ -500,7 +629,7 @@ export default function EquipoDialogo({
               {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
             </strong>
             {faltaron > 0 && (
-              <span className="text-red-300">
+              <span className="text-rojo-texto">
                 {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
               </span>
             )}.
@@ -511,7 +640,7 @@ export default function EquipoDialogo({
         {falta.extrasSinConfirmar > 0 && (
           <>
             {' '}
-            <span className="text-amber-300">
+            <span className="text-ambar-texto">
               {falta.extrasSinConfirmar === 1
                 ? 'Queda 1 actividad extra sin confirmar'
                 : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
@@ -522,46 +651,78 @@ export default function EquipoDialogo({
         )}
       </p>
 
-      {/* `flex-nowrap`: los tres botones se quedan en la línea pase lo que
-          pase. En un teléfono el día se recorta a "Guardar y cerrar", que
-          dice lo mismo en menos espacio. */}
+      {/* **Por qué no se puede cerrar, en pantalla.** El motivo vivía en el
+          `title` del botón apagado, o sea en un globito que aparece al pasar
+          el mouse: en un teléfono eso no existe, y lo que queda es un botón
+          muerto sin explicación. */}
+      {conCierre && !cerrado && !listo && (
+        <p className="mt-3 rounded border border-ambar/40 bg-ambar/5
+                      px-3 py-2 text-sm text-ambar-texto/90">
+          {falta.conEquipo === 0
+            ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
+            : <>Para cerrar el día falta marcar si{' '}
+                <strong>{falta.sinMarcar === 1 ? 'una persona vino'
+                       : `${falta.sinMarcar} personas vinieron`}</strong> o no.
+                {' '}Son los botones <em>Vino</em> y <em>No vino</em> de arriba.</>}
+        </p>
+      )}
+
+      {/* Sin botón de guardar hay que decirlo una vez, o quien lo busca
+          creería que lo escrito se pierde al cerrar. Y sin el botón de
+          cerrar hay que decir dónde está, o parecería que el día no se
+          puede cerrar en ninguna parte. */}
+      {plan.length > 0 && (
+        <p className="mt-2 text-xs text-hueso/45">
+          Lo que escribas acá <strong>se guarda solo</strong>.
+          {!conCierre && <> <strong>El día se cierra en{' '}
+            <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
+            que es donde el panel va mostrando los días que quedaron pendientes.</>}
+        </p>
+      )}
+
+      {/* **Abajo queda una sola acción, y es la que declara algo.** Lo
+          escrito ya está guardado —la línea de la izquierda lo dice—, así
+          que *Listo* solo cierra la ventana y *Cerrar el día* pregunta
+          antes. Dos botones hermanos, uno de ellos irreversible, eran justo
+          lo que confundía.
+
+          `flex-nowrap`: se quedan en la línea pase lo que pase. En un
+          teléfono el día se recorta a "Cerrar", que dice lo mismo en menos
+          espacio. */}
       <div className="mt-3 flex flex-nowrap items-center gap-2">
-        <button onClick={onCancelar}
-          className="whitespace-nowrap rounded border border-hueso/20 px-3 py-1.5
-                     text-sm hover:border-hueso/40">
-          Cancelar
-        </button>
+        <AvisoGuardado estado={guardado.estado} error={guardado.error}
+          onReintentar={() => void guardado.reintentar()} />
         <span className="flex-1" />
-        {/* Delineado el que solo guarda, relleno el que cierra: son dos
-            cosas distintas y la forma lo dice antes que el texto. */}
-        <button onClick={() => guardar(false)} disabled={guardando}
-          className="whitespace-nowrap rounded border border-oro/60 px-4 py-1.5
-                     text-sm font-semibold text-oro disabled:opacity-40"
-          title="Anota los cambios y deja el día abierto">
-          {guardando ? 'Guardando…' : 'Guardar'}
+        <button onClick={() => void salir()}
+          className="whitespace-nowrap rounded border border-hueso/20 px-4 py-1.5
+                     text-sm hover:border-hueso/40">
+          Listo
         </button>
-        {/* **Cerrar es una declaración, no un cálculo.** El botón guarda y
-            además deja dicho que alguien revisó este día: con su nombre y su
-            hora, porque es lo que después permite preguntar. Mientras quede
-            alguien sin marcar no se puede, y el botón explica por qué. */}
-        {cerrado ? (
-          <button onClick={() => guardar(false)} disabled={guardando}
+        {/* **Cerrar es una declaración, no un cálculo.** Deja dicho que
+            alguien revisó este día: con su nombre y su hora, porque es lo
+            que después permite preguntar. Mientras quede alguien sin marcar
+            no se puede, y arriba dice por qué.
+
+            **No aparece en el calendario de la portada**: ver `conCierre`. */}
+        {!conCierre ? null : cerrado ? (
+          <button onClick={() => void cambiarCierre(false)} disabled={cerrando}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"
             title="Vuelve a dejar el día abierto para corregirlo">
-            Guardar y reabrir
+            Reabrir<span className="hidden sm:inline"> el día</span>
           </button>
         ) : (
-          <button onClick={() => guardar(true)} disabled={guardando || !listo}
+          <button onClick={() => void cambiarCierre(true)}
+            disabled={cerrando || !listo}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"
             title={listo
-              ? 'Guarda y deja el día cerrado, con tu nombre y la hora'
+              ? 'Deja el día cerrado, con tu nombre y la hora'
               : falta.conEquipo === 0
                 ? 'Primero asigna a alguien'
                 : `Falta marcar si ${falta.sinMarcar === 1 ? 'una persona vino' :
                     `${falta.sinMarcar} personas vinieron`} o no`}>
-            Guardar y cerrar<span className="hidden sm:inline"> el día</span>
+            {cerrando ? 'Cerrando…' : <>Cerrar<span className="hidden sm:inline"> el día</span></>}
           </button>
         )}
       </div>

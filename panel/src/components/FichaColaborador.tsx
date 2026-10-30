@@ -92,7 +92,7 @@ export default function FichaColaborador({
             // Ver la explicación de arriba: renombrar desde acá dejaría las
             // actividades de los otros días apuntando a un nombre que ya no
             // está. Se muestra, no se edita.
-            <p className="rounded border border-hueso/10 bg-hueso/5 px-2 py-1 text-sm">
+            <p className="rounded border border-hueso/10 bg-panel px-2 py-1 text-sm">
               {ficha!.nombre}
             </p>
           )}
@@ -148,7 +148,7 @@ export default function FichaColaborador({
         </p>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       <div className="mt-5 flex items-center gap-3">
         <span className="flex-1" />

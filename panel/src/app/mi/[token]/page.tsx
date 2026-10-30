@@ -127,7 +127,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             });
             return (
               <li key={t.fecha + t.puesto}
-                  className="rounded border border-hueso/15 bg-hueso/[0.03] p-4">
+                  className="rounded border border-hueso/15 bg-panel p-4">
                 <p className="text-sm capitalize text-hueso/85">{enPalabras(t.fecha)}</p>
                 <p className="mt-2 text-lg font-bold">
                   {t.puesto || <span className="text-hueso/50">Sin puesto definido</span>}
@@ -150,7 +150,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
                     <ul className="mt-1.5 flex flex-wrap gap-1.5">
                       {menus.map(({ menu, cantidad }) => (
                         <li key={menu}
-                            className="rounded border border-hueso/15 bg-hueso/5 px-2 py-1 text-xs">
+                            className="rounded border border-hueso/15 bg-panel px-2 py-1 text-xs">
                           <strong className="tabular-nums text-oro">{cantidad}</strong>
                           <span className="text-hueso/50"> × </span>
                           <span className="text-hueso/80">{menu}</span>

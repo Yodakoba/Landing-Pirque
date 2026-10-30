@@ -10,6 +10,7 @@
  * cero, vas a ver que vuelve a 60: eso no es un error, es la validación.
  */
 import { useEffect, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import { deDiasSemana, type Config } from '@/lib/config';
 
@@ -117,7 +118,9 @@ export default function ConfigEditor() {
 
   return (
     <section>
-      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">Configuración</h1>
+      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
+        Configuración<Ayuda tema="configuracion" />
+      </h1>
       <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
         Estos valores viven en la pestaña <code className="text-hueso/80">Config</code> de
         la planilla, no en el código, así que cambiarlos no necesita un
