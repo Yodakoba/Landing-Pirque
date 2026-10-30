@@ -1282,6 +1282,27 @@ otra cosa: pone el día en el calendario **para recibir reservas**, así que
 tenerlo en esta pantalla solo invitaba a usarlo para un montaje y abrirlo sin
 querer. Abrir un día sigue siendo del calendario de la portada.
 
+**Y desde el otro lado, el 2026-10-30, se abrió la puerta que faltaba**: el
+*Agregar fecha* del calendario de la portada ofrece ahora un cuarto estado,
+**Día de preparación**. Lo pidió el cliente con el caso exacto: *"se agrega
+una fecha pública y al final dice en esa misma vista el encargado: ah, y
+tengo que preparar una fecha"*.
+
+**No contradice nada de lo anterior, porque no escribe una fila.** Elegirlo
+cambia el botón a *Planificar el equipo* y abre la ventana del equipo de esa
+fecha; `Fechas Hábiles` no se toca, así que el sitio sigue sin ofrecer ese
+día. Comprobado de punta a punta: con el 11 de noviembre planificado desde
+ahí, la planilla no tiene esa fila, `/turnos` lo muestra en dorado como
+preparación y el calendario de la portada no lo muestra.
+
+Lo que sí cambió es la pregunta del grupo de opciones, que decía **"quién
+puede reservar"**: a eso la preparación contestaría "nadie", que no es lo que
+dice. Ahora pregunta **qué día es**, y las cuatro respuestas caben.
+
+**Solo se ofrece al agregar, no al editar un día que ya está en la hoja.**
+Ese se vuelve de preparación cerrándolo y asignándole equipo, y poner acá un
+atajo a eso sería explicar dos caminos para lo mismo.
+
 **La jefa de turno es un puesto, no un rol.** Para marcar asistencia necesita
 una cuenta de **encargado** en `/usuarios`; con su nombre, además, la bitácora
 dice quién marcó qué.
@@ -1299,6 +1320,34 @@ Guardar el equipo de un día **borra las filas de esa fecha y escribe las
 nuevas**, sin tocar los otros días: la pestaña entera son todos los fines de
 semana del año, y un error guardando un sábado no puede llevarse por delante
 el historial.
+
+### El calendario se agrupa por semana (2026-10-30)
+
+Lo pidió el cliente: *"me gustaría poner un poco más el enfoque a que juntes
+los paneles semanalmente. No digo que dejas de marcar el mes, pero se piensa
+mucho semanalmente en el local"*.
+
+Las semanas ya estaban, pero marcadas **más suave que el mes** —una línea
+gris sobre una grilla corrida— justamente al revés de cómo se usa. Ahora
+**cada semana es una caja con su cabecera** y el mes es la línea que la
+precede: sigue marcado, que es la referencia para ubicarse entre 90 días,
+pero dejó de ser lo que agrupa.
+
+En la cabecera de cada semana: el rango en palabras, **cuánta gente viene en
+toda la semana** y de qué días son —*"13 personas · 2 públicos"*—, y el botón
+de mandar la planilla, que ya estaba. Los estados de cada día siguen en su
+tarjeta, con `PuntoDia`; acá va el conteo, que es lo único que no se puede
+ver sin sumarlo.
+
+**La semana en curso va delineada en dorado y dice "esta semana".** Es la
+que se mira al entrar.
+
+**Y una semana que cruza de mes ya no se parte en dos.** Antes sí, a
+propósito —mandaba el encabezado de mes—, y dejó de tener sentido cuando la
+semana pasó a ser una caja: un sábado 31 y su domingo 1 son el mismo fin de
+semana, el mismo turno y la misma planilla, así que verlos en dos cajas
+distintas es justo lo contrario de lo que se pidió. El mes se anuncia antes
+de la primera semana que lo estrena.
 
 ### La tarjeta se da vuelta
 
