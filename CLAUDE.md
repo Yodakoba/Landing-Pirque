@@ -1086,6 +1086,26 @@ veces y a pasar por una pantalla que para un día de preparación ni siquiera
 existe. Quien marca en la mañana deja los montos como están y listo; quien
 cierra en la noche los llena. Ver "Una sola ventana para el día".
 
+**Desde el 2026-10-30 son dos botones grandes, no un desplegable.** Lo pidió
+el cliente con el porqué: *"son personas rurales, que no han manejado muchos
+de estos sistemas; necesitamos que para ellos sea muy fácil de entender"*. Un
+`<select>` esconde las opciones hasta que alguien adivina que hay que
+abrirlo, y lo que muestra mientras tanto es un guion, que no pide nada.
+
+Lo que hay ahora, en `Asistencia.tsx` y usado también en las actividades
+extras —dos pantallas que preguntan lo mismo tienen que preguntarlo igual—:
+
+- **Los dos botones a la vista**, con la frase completa: *✓ Vino* / *✕ No
+  vino*. Se lee qué hay que hacer antes de tocar nada.
+- **El que se aprieta queda pintado**, verde o rojo, y la fila entera se
+  tiñe: el estado se ve de lejos, sin leer.
+- **Mientras nadie marque, la fila lo dice en ámbar** —*sin marcar*— porque
+  es justo el estado que no suma nada y el que impide cerrar el día.
+- **Unos 40px de alto**: un control de 30 se falla con el dedo, y fallar acá
+  es marcar a la persona equivocada.
+- **Apretar el que ya está marcado lo desmarca**, que es la única forma de
+  volver a "no sé todavía" sin inventar un tercer botón.
+
 **Ojo con una trampa que esto abrió, y que costó cambiar una regla del
 servidor.** `guardarEquipoDelDia()` heredaba los montos de la ficha **solo
 mientras la asistencia estuviera sin marcar**; pasada la lista, lo que viniera
@@ -1337,11 +1357,28 @@ El cliente lo pidió al revés, y así quedó:
 | Dónde | Qué se hace |
 |---|---|
 | **Calendario de la portada** | Se **planifica**, con las reservas a la vista: cuánta gente viene, cuántos menús, entonces cuánto equipo |
-| **`/turnos`** | Se **confirma todo**: quién vino, los montos, los ajustes, la propina — cualquier día, abierto, privado o de preparación |
+| **`/turnos`** | Se **confirma todo**: quién vino, los montos, los ajustes, la propina — cualquier día, abierto, privado o de preparación — y **es el único lugar donde se cierra** |
+| **La página del día** | Se mira ese día completo —reservas, equipo, extras— y se escriben los montos y la propina; para cerrarlo manda a `/turnos` |
 
-Son la **misma ventana**; lo único que cambia es desde dónde se abre. La
-página del día la abre también, con el mismo botón, así que nada se perdió:
-lo que se eliminó es la obligación de pasar por ahí.
+Son la **misma ventana**; lo único que cambia es desde dónde se abre y si
+trae el botón de cerrar.
+
+**El botón de cerrar quedó en un solo lugar** (2026-10-30, conversado con el
+cliente: *"en calendario se hace otra cosa, el fin no es cerrar la fecha
+aquí"*). Estaba en las tres pantallas, y tres caminos al mismo paso final no
+son una comodidad: son una duda —*¿lo cierro acá o allá? ¿es lo mismo?*—
+para quien no maneja sistemas así. Se eligió `/turnos` porque es la pantalla
+que **ya pide** el cierre: al entrar lista arriba los días pasados a los que
+les falta algo, así que entrar es que te digan qué hacer.
+
+**Se descartó mostrarlo según el rol**, que era la otra salida sobre la
+mesa: el rol contesta *quién puede*, no *dónde se hace*, y acá cierran los
+dos roles que entran al panel. Esconderlo por rol habría dejado la misma
+pregunta en pie para quien sí lo ve.
+
+El costo a asumir: desde la página del día hay que dar un salto a `/turnos`.
+Las dos pantallas lo dicen con un enlace, en vez de dejar al botón ausente
+pareciendo un error.
 
 **Lo que la ventana hace ahora**, de arriba abajo: asignar por puesto, crear
 a alguien que falte, marcar **— / Vino / No vino**, escribir la jornada, las

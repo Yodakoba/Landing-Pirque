@@ -20,6 +20,7 @@ import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import FichaColaborador from './FichaColaborador';
+import Asistencia from './Asistencia';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -123,12 +124,12 @@ export default function ExtrasDialogo({
               los achica a todos y la última columna queda cortada — que es
               justo lo que pasaba acá, con el motivo en una caja de dos letras
               y el total partido al medio. */}
-          <table className="w-full min-w-[52rem] table-fixed text-sm">
+          <table className="w-full min-w-[58rem] table-fixed text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
               <tr className="border-b border-hueso/10">
                 <th className="w-40 py-2 pr-3">Quién</th>
                 <th className="w-36 py-2 pr-3">Actividad</th>
-                <th className="w-28 py-2 pr-3">Vino</th>
+                <th className="w-44 py-2 pr-3">Vino</th>
                 <th className="w-24 py-2 pr-3">Monto</th>
                 <th className="w-24 py-2 pr-3">Ajuste</th>
                 <th className="py-2 pr-3">Motivo</th>
@@ -165,13 +166,10 @@ export default function ExtrasDialogo({
                       onChange={(ev) => cambiar(i, 'actividad', ev.target.value)} />
                   </td>
                   <td className="py-2 pr-3">
-                    <select value={e.estado} className={ENTRADA}
-                      aria-label={`¿Vino ${e.colaborador}?`}
-                      onChange={(ev) => cambiar(i, 'estado', ev.target.value)}>
-                      <option value={VINO.sinMarcar}>—</option>
-                      <option value={VINO.si}>Vino</option>
-                      <option value={VINO.no}>No vino</option>
-                    </select>
+                    {/* Los mismos dos botones que el equipo: dos pantallas
+                        que preguntan lo mismo tienen que preguntarlo igual. */}
+                    <Asistencia quien={e.colaborador} valor={e.estado}
+                      onCambio={(v) => cambiar(i, 'estado', v)} />
                   </td>
                   <td className="py-2 pr-3">
                     <input type="number" min={0} step={1000} className={ENTRADA}

@@ -30,10 +30,11 @@ const ENTRADA =
 import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
+import Asistencia from './Asistencia';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
-  esAdmin = false, enfocarPropina = false,
+  conCierre = false, esAdmin = false, enfocarPropina = false,
   onListo, onCancelar
 }: {
   fecha: string;
@@ -47,6 +48,30 @@ export default function EquipoDialogo({
   extras?: Extra[];
   /** Si el día ya fue cerrado por alguien. */
   cerrado?: boolean;
+  /**
+   * Si desde acá se puede **cerrar el día**. Solo lo pide `/turnos`.
+   *
+   * **El día se cierra en un solo lugar** (2026-10-30, decidido con el
+   * cliente). El botón estaba en las tres pantallas que abren esta ventana
+   * —el calendario de la portada, `/turnos` y la página del día— y eso no
+   * es una comodidad, es una duda: *¿lo cierro acá o allá? ¿es lo mismo?*
+   * Para quien no maneja sistemas así, tres caminos al mismo paso final se
+   * leen como tres pasos distintos.
+   *
+   * Se eligió `/turnos` porque es la pantalla que ya **pide** el cierre: al
+   * entrar lista arriba los días pasados a los que les falta algo. Entrar y
+   * que la pantalla te diga qué hacer es lo contrario de tener que acordarse.
+   *
+   * El calendario de la portada queda para lo suyo —cómo viene la ocupación
+   * y quién trabaja—, y **se descartó mostrarlo ahí según el rol**: el rol
+   * contesta *quién puede*, no *dónde se hace*, y acá cierran los dos roles
+   * que entran. Esconderlo por rol habría dejado la misma pregunta en pie
+   * para quien sí lo ve.
+   *
+   * El costo a asumir: desde la página del día hay que dar un salto a
+   * `/turnos` para cerrar. Las dos pantallas lo dicen con un enlace.
+   */
+  conCierre?: boolean;
   /** Si puede fijar sueldos al crear a alguien. */
   esAdmin?: boolean;
   /** Abre con el cursor en la propina, para quien viene justo a eso. */
@@ -214,31 +239,36 @@ export default function EquipoDialogo({
             </div>
 
             {l.asignados.length > 0 ? (
-              <ul className="mt-2 space-y-1">
+              <ul className="mt-2 space-y-1.5">
                 {l.asignados.map((nombre) => {
                   const t = plan.find(
                     (x) => normalizar(x.trabajador) === normalizar(nombre));
                   return (
-                    <li key={nombre} className="flex items-center gap-1.5 text-xs">
-                      {/* Marcar quién llegó **acá mismo**: quien abre el día a
-                          las once de la mañana es la jefa de turno, y lo que
-                          tiene delante es esta ventana. Los montos siguen
-                          siendo de Pasar lista — esto solo dice quién vino. */}
-                      <select value={t?.asistencia ?? VINO.sinMarcar}
-                        aria-label={`¿Vino ${nombre}?`}
-                        onChange={(e) => marcar(nombre, e.target.value)}
-                        className="rounded border border-hueso/20 bg-tinta px-1 py-0.5
-                                   text-xs focus:border-oro focus:outline-none">
-                        <option value={VINO.sinMarcar}>—</option>
-                        <option value={VINO.si}>Vino</option>
-                        <option value={VINO.no}>No vino</option>
-                      </select>
-                      <span className={
+                    <li key={nombre}
+                      className={`flex flex-wrap items-center gap-2 rounded border
+                                  px-2 py-1.5 text-xs ${
+                        t?.asistencia === VINO.si ? 'border-emerald-500/25 bg-emerald-500/5'
+                        : t?.asistencia === VINO.no ? 'border-red-500/25 bg-red-500/5'
+                        : 'border-hueso/10 bg-hueso/[0.02]'}`}>
+                      <span className={`text-sm ${
                         t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
-                        : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}>
+                        : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
                         {nombre}
                       </span>
+                      {/* Mientras nadie diga si llegó, el turno no suma nada:
+                          por eso se dice con todas sus letras y no con un
+                          guion, que no pide nada. */}
+                      {!t?.asistencia && (
+                        <span className="text-[10px] uppercase tracking-wide text-amber-300/70">
+                          sin marcar
+                        </span>
+                      )}
                       <span className="flex-1" />
+                      {/* Marcar quién llegó **acá mismo**: quien abre el día a
+                          las once de la mañana es la jefa de turno, y lo que
+                          tiene delante es esta ventana. */}
+                      <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
+                        onCambio={(v) => marcar(nombre, v)} />
                       {/* **La ficha, desde acá.** Lo que no cambia de un día
                           a otro —teléfono, sueldo habitual, cuenta
                           bancaria— vivía solo en `/equipo`, y quien arma un
@@ -522,9 +552,19 @@ export default function EquipoDialogo({
         )}
       </p>
 
-      {/* `flex-nowrap`: los tres botones se quedan en la línea pase lo que
-          pase. En un teléfono el día se recorta a "Guardar y cerrar", que
-          dice lo mismo en menos espacio. */}
+      {/* Sin el botón de cerrar hay que decir dónde está, o parecería que
+          el día no se puede cerrar en ninguna parte. */}
+      {!conCierre && plan.length > 0 && (
+        <p className="mt-2 text-xs text-hueso/45">
+          Lo que escribas acá se guarda igual. <strong>El día se cierra en{' '}
+          <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
+          que es donde el panel va mostrando los días que quedaron pendientes.
+        </p>
+      )}
+
+      {/* `flex-nowrap`: los botones se quedan en la línea pase lo que pase.
+          En un teléfono el día se recorta a "Guardar y cerrar", que dice lo
+          mismo en menos espacio. */}
       <div className="mt-3 flex flex-nowrap items-center gap-2">
         <button onClick={onCancelar}
           className="whitespace-nowrap rounded border border-hueso/20 px-3 py-1.5
@@ -543,8 +583,10 @@ export default function EquipoDialogo({
         {/* **Cerrar es una declaración, no un cálculo.** El botón guarda y
             además deja dicho que alguien revisó este día: con su nombre y su
             hora, porque es lo que después permite preguntar. Mientras quede
-            alguien sin marcar no se puede, y el botón explica por qué. */}
-        {cerrado ? (
+            alguien sin marcar no se puede, y el botón explica por qué.
+
+            **No aparece en el calendario de la portada**: ver `conCierre`. */}
+        {!conCierre ? null : cerrado ? (
           <button onClick={() => guardar(false)} disabled={guardando}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"

@@ -293,6 +293,8 @@ export default function CalendarioEquipo() {
           turnos={equipo.turnos}
           extras={equipo.extras}
           cerrado={cerrado(planificando)}
+          // La única pantalla que cierra un día: ver `conCierre`.
+          conCierre
           esAdmin={equipo.esAdmin}
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}
