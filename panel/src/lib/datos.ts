@@ -10,7 +10,8 @@
  * MANUAL-<timestamp>: no pueden chocar con los ids numéricos de Shopify.
  */
 import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFilas,
-         escribirBloque, asegurarEncabezado, esPestanaQueNoExiste } from './sheets.ts';
+         escribirBloque, asegurarEncabezado, asegurarColumna,
+         esPestanaQueNoExiste } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
   indices, faltantes
@@ -75,6 +76,7 @@ export async function leerReservas(): Promise<Reserva[]> {
       estadoPago: String(en(f, i.estadoPago)),
       creada: String(en(f, i.creada)),
       asistencia: String(en(f, i.asistencia)),
+      notaPago: String(en(f, i.notaPago)),
       fila: n + 1                            // 1-based, y la 1 es el encabezado
     });
   }
@@ -83,7 +85,11 @@ export async function leerReservas(): Promise<Reserva[]> {
 
 export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): Promise<string> {
   const filas = await leerHoja(HOJA_RESERVAS);
-  const enc = filas[0] ?? [];
+  // La nota de pago llegó después que la planilla, así que la columna puede
+  // no estar. Se agrega sola la primera vez: sin esto el campo se escribiría
+  // en el formulario y no quedaría en ninguna parte.
+  const enc = await asegurarColumna(
+    HOJA_RESERVAS, filas[0] ?? [], COL_RESERVAS.notaPago);
   // MANUAL- para que no pueda chocar con un id de Shopify, que es numérico.
   const id = 'MANUAL-' + Date.now();
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, {
@@ -94,7 +100,9 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
 
 export async function editarReserva(fila: number, cambios: Partial<Reserva>): Promise<void> {
   const filas = await leerHoja(HOJA_RESERVAS);
-  const enc = filas[0] ?? [];
+  const enc = cambios.notaPago === undefined
+    ? (filas[0] ?? [])
+    : await asegurarColumna(HOJA_RESERVAS, filas[0] ?? [], COL_RESERVAS.notaPago);
   const previa = filas[fila - 1];
   if (!previa) throw new Error(`La fila ${fila} ya no existe en la planilla.`);
   await escribirFila(HOJA_RESERVAS, fila, filaReserva(enc, cambios, previa));

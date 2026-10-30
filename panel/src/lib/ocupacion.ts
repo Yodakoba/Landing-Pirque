@@ -3,7 +3,7 @@
  * lo que se puede probar de verdad, y por eso vive separada de las rutas.
  */
 import type { Reserva, FechaHabil, Ocupacion, Semaforo } from './tipos.ts';
-import { TIPO_PAGO, ESTADO_PAGO, estaCerrado, esPrivada } from './columnas.ts';
+import { ESTADO_PAGO, estaCerrado, esPrivada } from './columnas.ts';
 import { liberaCupo } from './pagos.ts';
 import type { Fecha } from './fechas.ts';
 import { POR_DEFECTO } from './config.ts';
@@ -65,8 +65,16 @@ export function deEseDia(reservas: Reserva[], fecha: Fecha): Reserva[] {
 }
 
 /**
- * El desglose de un día: cuántas personas, y de esas cuántas ya pagaron
- * online y cuántas pagan en el local.
+ * El desglose de un día: cuántas personas, y de esas cuántas ya pagaron y a
+ * cuántas hay que cobrarles.
+ *
+ * **Se decide por el ESTADO del pago, no por la modalidad comprada**, que es
+ * lo mismo que hace faltaCobrar() y por el mismo motivo. Hasta el 2026-10-30
+ * esto miraba `Tipo Pago`, o sea qué variante se compró, mientras la tarjeta
+ * del calendario rotulaba el resultado como "X pagadas / X en el local". No
+ * era lo mismo: una reserva que compró la variante de pagar en línea y
+ * todavía dice "pending" se contaba como pagada, y esa plata no aparecía en
+ * ninguna parte. El rótulo tenía razón; el cálculo se había quedado atrás.
  */
 export function ocupacionDe(
   reservas: Reserva[],
@@ -75,14 +83,14 @@ export function ocupacionDe(
 ): Ocupacion {
   const delDia = deEseDia(reservas, dia.fecha).filter(ocupaLugar);
 
-  let online = 0;
-  let local = 0;
+  let pagadas = 0;
+  let porPagar = 0;
   for (const r of delDia) {
     const n = Number(r.personas) || 0;
-    if (r.tipoPago === TIPO_PAGO.local) local += n;
-    else online += n;
+    if (faltaCobrar(r)) porPagar += n;
+    else pagadas += n;
   }
-  const tomadas = online + local;
+  const tomadas = pagadas + porPagar;
 
   // La plata que hay que cobrar el mismo día, y cuántas reservas no tienen
   // monto. Las segundas se cuentan aparte a propósito: un total que omite
@@ -105,8 +113,8 @@ export function ocupacionDe(
     capacidad: dia.capacidad,
     tomadas,
     quedan: Math.max(0, dia.capacidad - tomadas),
-    online,
-    local,
+    pagadas,
+    porPagar,
     porCobrar,
     sinMonto,
     privada,

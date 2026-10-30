@@ -85,8 +85,12 @@ export function eventoDe(
   const lineas = [
     `Menú: ${r.menu || '—'}`,
     `Personas: ${r.personas}`,
-    `Modalidad: ${r.tipoPago || 'sin especificar'}`,
+    // La modalidad solo existe si el pedido vino de Shopify. En una
+    // anotada a mano la línea se omite, en vez de decir "sin especificar"
+    // como si alguien hubiera olvidado llenarla.
+    r.tipoPago ? `Modalidad: ${r.tipoPago}` : null,
     `Estado del pago: ${r.estadoPago || '—'}`,
+    r.notaPago ? `Cómo pagó: ${r.notaPago}` : null,
     r.monto != null ? `Monto: ${enPesos(Number(r.monto))}` : 'Monto: sin anotar',
     r.email ? `Email: ${r.email}` : null,
     r.telefono ? `Teléfono: ${r.telefono}` : null,

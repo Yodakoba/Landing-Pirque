@@ -156,21 +156,21 @@ export default function TarjetaDia({
                   barra es lo que queda libre. */}
               <div className="mt-3 flex h-1.5 overflow-hidden rounded bg-hueso/10"
                    role="img"
-                   aria-label={`${d.online} pagadas online, ${d.local} pagan en el local, de ${d.capacidad} lugares`}>
+                   aria-label={`${d.pagadas} pagadas, ${d.porPagar} por cobrar, de ${d.capacidad} lugares`}>
                 <div className="bg-verde-fuerte"
-                     style={{ width: `${pct(d.online, d.capacidad)}%` }} />
+                     style={{ width: `${pct(d.pagadas, d.capacidad)}%` }} />
                 <div className="bg-ambar-fuerte"
-                     style={{ width: `${pct(d.local, d.capacidad)}%` }} />
+                     style={{ width: `${pct(d.porPagar, d.capacidad)}%` }} />
               </div>
 
               <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 <span className="text-hueso/70">
                   <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-verde-fuerte" />
-                  <strong className="tabular-nums text-hueso">{d.online}</strong> pagadas
+                  <strong className="tabular-nums text-hueso">{d.pagadas}</strong> pagadas
                 </span>
                 <span className="text-hueso/70">
                   <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-ambar-fuerte" />
-                  <strong className="tabular-nums text-hueso">{d.local}</strong> en el local
+                  <strong className="tabular-nums text-hueso">{d.porPagar}</strong> por cobrar
                 </span>
               </p>
 

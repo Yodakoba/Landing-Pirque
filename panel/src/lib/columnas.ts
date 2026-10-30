@@ -28,7 +28,8 @@ export const COL_RESERVAS = {
   tipoPago: 'Tipo Pago',
   estadoPago: 'Estado Pago Shopify',
   creada: 'Creada',
-  asistencia: 'Asistencia'
+  asistencia: 'Asistencia',
+  notaPago: 'Nota de pago'
 } as const;
 
 export const COL_FECHAS = {
@@ -39,11 +40,42 @@ export const COL_FECHAS = {
   notas: 'Notas'
 } as const;
 
-/** Las dos modalidades, como vienen del SKU del pedido. */
+/**
+ * Las dos modalidades, **como vienen del SKU del pedido**.
+ *
+ * Y esa frase es toda la regla: `tipoPagoDe()` las saca del `variant_title`,
+ * o sea de qué variante se compró en la tienda. **Es un hecho del pedido de
+ * Shopify, no una opinión de nadie**, así que una reserva anotada a mano no
+ * puede tener ninguna de las dos: no compró ninguna variante.
+ *
+ * Hasta el 2026-10-30 el formulario manual la dejaba elegir, y eso hacía dos
+ * daños. Obligaba a inventar un dato —una reserva pagada por transferencia
+ * no es "Pago directo"— y contaminaba la única señal que tenemos de que la
+ * regla de medios de pago de Shopify dejó de aplicar: el aviso de "pago
+ * directo sin pagar" se podía disparar a mano, sin que hubiera pasado nada
+ * en la tienda.
+ *
+ * Lo que sí vale para las dos: **cómo va el pago** (`ESTADO_PAGO`), que es
+ * lo único que el formulario manual pregunta hoy.
+ */
 export const TIPO_PAGO = {
   directo: 'Pago directo',
   local: 'Solo reserva'
 } as const;
+
+/**
+ * El prefijo del id de una reserva anotada a mano.
+ *
+ * No es cosmético: el sincronizador usa la columna del id para saber qué
+ * pedidos ya anotó, y los ids de Shopify son números, así que no pueden
+ * chocar con esto.
+ */
+export const ID_MANUAL = 'MANUAL-';
+
+/** Si esta reserva se anotó a mano, o sea si NO viene de un pedido. */
+export function esManual(id: unknown): boolean {
+  return String(id ?? '').trim().toUpperCase().startsWith(ID_MANUAL);
+}
 
 /**
  * El `financial_status` de Shopify, tal cual —la columna se llama "Estado

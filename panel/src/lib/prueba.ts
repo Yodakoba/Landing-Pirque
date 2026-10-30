@@ -23,7 +23,8 @@ import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { diaParaReservaManual } from './dias.ts';
-import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO } from './columnas.ts';
+import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
+  from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
          ROL, PERMISOS, ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE,
@@ -73,7 +74,7 @@ const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA
 const r = (p: Partial<Reserva>): Reserva => ({
   id: 'x', fecha: '2026-11-14', nombre: '', email: '', telefono: '',
   menu: 'Tradiciones', personas: 1, monto: null, tipoPago: TIPO_PAGO.directo, asistencia: '',
-  estadoPago: 'paid', creada: '', fila: 2, ...p
+  estadoPago: 'paid', creada: '', notaPago: '', fila: 2, ...p
 });
 const tu = (p: Partial<Turno>): Turno => ({
   fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
@@ -103,7 +104,7 @@ ok(!ocupaLugar(r({ estadoPago: 'refunded' })), 'una reembolsada libera su lugar'
 ok(!ocupaLugar(r({ estadoPago: 'voided' })), 'una anulada también');
 ok(!ocupaLugar(r({ estadoPago: 'REFUNDED' })), 'y no importan las mayúsculas');
 
-/* ---------- el desglose online vs local ---------- */
+/* ---------- el desglose: pagadas vs por cobrar ---------- */
 let o = ocupacionDe([
   r({ personas: 4, tipoPago: TIPO_PAGO.directo, estadoPago: 'paid' }),
   r({ personas: 2, tipoPago: TIPO_PAGO.local, estadoPago: 'pending' }),
@@ -111,9 +112,27 @@ let o = ocupacionDe([
   r({ personas: 3, fecha: '2026-11-15' })
 ], dia({}));
 ok(o.tomadas === 6, 'suma solo las del día y solo las que ocupan lugar');
-ok(o.online === 4 && o.local === 2, 'separa lo pagado online de lo que se paga en el local');
+ok(o.pagadas === 4 && o.porPagar === 2, 'separa lo pagado de lo que hay que cobrar');
+
 ok(o.quedan === 54, 'quedan = capacidad - tomadas');
 ok(o.semaforo === 'verde', 'y el semáforo sale de ese total');
+
+// Lo que se rompia antes: la variante comprada decia "paga en linea" y la
+// plata todavia no estaba. Mirando la modalidad, esa persona salia contada
+// como pagada y nadie le cobraba en la puerta.
+const oSinPagar = ocupacionDe([
+  r({ personas: 5, tipoPago: TIPO_PAGO.directo, estadoPago: 'pending' })
+], dia({}));
+ok(oSinPagar.pagadas === 0 && oSinPagar.porPagar === 5,
+   'una comprada en linea y sin pagar cuenta como por cobrar, no como pagada');
+
+// Y una anotada a mano, que no tiene modalidad ninguna, se reparte igual.
+const oAMano = ocupacionDe([
+  r({ id: 'MANUAL-1', personas: 2, tipoPago: '', estadoPago: 'paid' }),
+  r({ id: 'MANUAL-2', personas: 3, tipoPago: '', estadoPago: 'pending' })
+], dia({}));
+ok(oAMano.pagadas === 2 && oAMano.porPagar === 3,
+   'una reserva a mano, sin modalidad, igual se sabe si esta pagada');
 
 /* ---------- un día bloqueado ---------- */
 o = ocupacionDe([], dia({ estado: 'Bloqueada', notas: 'Evento privado' }));
@@ -147,7 +166,7 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
-               'Asistencia'];
+               'Asistencia','Nota de pago'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -329,6 +348,14 @@ res = aReserva(pedido({ financial_status: 'pending',
   line_items: [linea('Tradiciones', 2, 'Pago directo')] }))!;
 ok(res.tipoPago === 'Pago directo' && res.estadoPago === ESTADO_PAGO.pendiente,
    '"Pago directo" + "pending" queda anotado tal cual: es como se ve que la regla de Shopify no aplico');
+
+// Y esa senal solo sirve si NADIE MAS puede escribir esa columna. Desde el
+// 2026-10-30 la modalidad la escribe el sincronizador y nada mas: el
+// formulario manual ya no la ofrece, asi que una fila que la traiga es un
+// pedido de verdad.
+ok(esManual('MANUAL-1792604490985') && !esManual('1007'),
+   'el id dice si la reserva se anoto a mano');
+ok(!esManual(''), 'y una fila sin id no cuenta como anotada a mano');
 
 /* ---------- lo que el sincronizador NO toca ---------- */
 const campos = camposDeShopify(aReserva(pedido())!);

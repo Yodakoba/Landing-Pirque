@@ -29,7 +29,7 @@
  */
 import { useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
-import { TIPO_PAGO, ESTADO_PAGO } from '@/lib/columnas';
+import { ESTADO_PAGO } from '@/lib/columnas';
 import { ESTADOS_QUE_VIENEN, ESTADOS_QUE_LIBERAN, pagoConGlosa, liberaCupo }
   from '@/lib/pagos';
 import { desglosarMenu, componerMenu, personasDeCuenta } from '@/lib/shopify';
@@ -53,8 +53,13 @@ export default function ReservaForm({
     nombre: reserva?.nombre ?? '',
     email: reserva?.email ?? '',
     telefono: reserva?.telefono ?? '',
-    tipoPago: reserva?.tipoPago ?? TIPO_PAGO.local,
-    estadoPago: reserva?.estadoPago ?? ESTADO_PAGO.pendiente
+    // **La modalidad NO se edita acá**: sale del `variant_title` del pedido,
+    // o sea que la escribe Shopify y nadie más. Viaja en el estado solo para
+    // conservarla al editar una reserva comprada; una anotada a mano nace en
+    // blanco, porque no compró ninguna variante.
+    tipoPago: reserva?.tipoPago ?? '',
+    estadoPago: reserva?.estadoPago ?? ESTADO_PAGO.pendiente,
+    notaPago: reserva?.notaPago ?? ''
   });
 
   // El conteo por menú. Al editar se reconstruye desde el texto guardado,
@@ -76,8 +81,14 @@ export default function ReservaForm({
   );
   const personas = personasDeCuenta(cuenta);
 
-  // El total que proponen los precios de /menus, segun la modalidad elegida.
-  const enElLocal = f.tipoPago === TIPO_PAGO.local;
+  // El total que proponen los precios de /menus.
+  //
+  // **Sale del estado del pago, no de la modalidad**, desde que la modalidad
+  // dejó de preguntarse: pagada por adelantado es el precio con descuento, y
+  // por pagar es el del local, que es exactamente la regla de la tienda —el
+  // recargo son los $5.000 por no pagar antes—. El monto queda editable
+  // encima, que es para lo que existe el campo.
+  const enElLocal = f.estadoPago !== ESTADO_PAGO.pagado;
   const sugerido = useMemo(() => {
     let suma = 0;
     for (const [nombre, n] of Object.entries(cuenta)) {
@@ -167,12 +178,6 @@ export default function ReservaForm({
               </p>
             )}
           </Campo>
-          <Campo etiqueta="Cómo paga" ancho>
-            <select {...campo('tipoPago')} className={ENTRADA}>
-              <option value={TIPO_PAGO.directo}>{TIPO_PAGO.directo} — paga en línea</option>
-              <option value={TIPO_PAGO.local}>{TIPO_PAGO.local} — paga en el local</option>
-            </select>
-          </Campo>
           {/* Las opciones van en dos grupos y no en una lista de cinco: la
               pregunta de verdad es si esta persona viene o no, y recién
               después cómo quedó la plata. Cinco opciones parejas obligan a
@@ -198,6 +203,30 @@ export default function ReservaForm({
                   : 'Ocupa su lugar igual: la persona viene y paga cuando llegue.'}
             </p>
           </Campo>
+
+          {/* Cómo se pagó, en texto libre. **Libre a propósito**: cuáles son
+              los medios de pago del negocio es dato del cliente, y una lista
+              cerrada inventada acá terminaría en la planilla como si lo
+              fuera. Una reserva pagada sin decir cómo es justo la que nadie
+              puede cuadrar un mes después. */}
+          {f.estadoPago === ESTADO_PAGO.pagado && (
+            <Campo etiqueta="Cómo pagó" ancho>
+              <input type="text" {...campo('notaPago')} className={ENTRADA}
+                placeholder="Transferencia 28/10, efectivo en el mesón…" />
+            </Campo>
+          )}
+
+          {/* La modalidad, cuando la hay: es un HECHO del pedido de Shopify,
+              así que se muestra y no se edita. En una reserva anotada a mano
+              no hay ninguna que mostrar. */}
+          {f.tipoPago && (
+            <Campo etiqueta="Modalidad comprada" ancho>
+              <p className="text-sm text-hueso/70">
+                {f.tipoPago}
+                <span className="text-hueso/45"> — lo escribió Shopify al comprar</span>
+              </p>
+            </Campo>
+          )}
         </div>
 
         {/* Los menús, con un contador cada uno. Las personas salen de acá:
