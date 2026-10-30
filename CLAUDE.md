@@ -2216,6 +2216,43 @@ mira un cartel, y eso no vale lo que cuesta.
 gente que no administra nada, y un recorrido por el panel sería ofrecerle una
 visita a una casa en la que no vive.
 
+### La página quedaba trabada al cerrar dos ventanas (2026-10-30)
+
+Lo reportó el cliente, y el síntoma es tan raro que vale tenerlo escrito
+entero: **se abría el día en `/turnos`, dentro la ficha de alguien, se
+cerraba la ficha con *Cancelar* y el día clicando afuera — y la página
+quedaba trabada, sin poder subir a ver el menú.** Había que recargar.
+
+El `body` se quedaba en `overflow: hidden`, que es lo que `Dialogo` le pone
+mientras hay una ventana abierta. Reproducido con Playwright antes de tocar
+nada: con las dos ventanas ya cerradas, `document.body.style.overflow`
+seguía diciendo `hidden`.
+
+**La causa son dos, y las dos valen como regla.**
+
+**Un valor compartido no se puede guardar por copias.** Cada ventana
+guardaba por su cuenta "cómo estaba el scroll antes de abrirme", y con dos
+abiertas la segunda guardaba `hidden` —puesto por la primera— como si fuera
+el estado original. Bastaba con que los efectos corrieran en cierto orden
+para que la de abajo terminara restaurando `hidden` al cerrarse. Ahora el
+valor lo guarda **la primera que abre** y lo restaura **la última que
+cierra** (`trabarElFondo` / `soltarElFondo`), que es lo que de verdad
+significa "mientras haya una ventana".
+
+**Y una función escrita en el JSX es una función distinta en cada
+dibujado.** `onCerrar` estaba en las dependencias del efecto, y todas las
+pantallas lo pasan como `onCerrar={() => salir()}`: el efecto se desmontaba
+y se volvía a montar constantemente. Eso rompía las dos cosas que ese efecto
+cuida — el scroll, y **la pila de Escape**, porque al re-montarse la ventana
+de abajo se sacaba y se volvía a poner *encima* de la de arriba, así que
+Escape cerraba la equivocada. Hoy `onCerrar` vive en una `ref` y el efecto
+corre **una vez por ventana**.
+
+Comprobado después del arreglo, en los cuatro caminos de cierre —Cancelar,
+clic afuera, Escape y *Listo*— y en la ventana de ayuda: el `body` queda
+libre, la rueda vuelve a subir, y dos Escape cierran una ventana cada vez,
+empezando por la de encima.
+
 ### Una ventana hereda el estilo de donde está escrita (2026-10-30)
 
 Vale tenerlo anotado porque el síntoma es llamativo y la causa no se parece:
