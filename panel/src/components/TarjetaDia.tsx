@@ -15,6 +15,13 @@
  *   y las dos quedan del mismo tamaño sin tener que fijarlo a mano. Con
  *   `absolute` habría que darle un alto explícito al contenedor, y ese es
  *   justo el tipo de medida que queda vieja cuando el contenido cambia.
+ *
+ *   **Se probó lo contrario el 2026-10-30 y se descartó**: con el frente en
+ *   el flujo y el dorso encima, la tarjeta quedaba tan baja como el frente
+ *   y el dorso salía **cortado a media línea**, sin nada que dijera que
+ *   seguía. Arreglar una cara rompiendo la otra no es arreglarlo. Lo que sí
+ *   se hizo es acotar el dorso, que era lo que lo volvía desmedido: ver
+ *   `PUESTOS_A_LA_VISTA`.
  * - **La cara que está de espaldas se apaga para todo el mundo**, no solo a
  *   la vista: `aria-hidden` para los lectores de pantalla,
  *   `pointer-events-none` para el mouse y `tabIndex -1` en sus botones para
@@ -80,8 +87,24 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
 // de la más alta, la más corta sobra espacio. Con el pie pegado abajo ese
 // aire queda en el medio, donde se lee como respiro, y no colgando bajo los
 // botones, donde se lee como un error de dibujo.
-const CARA = 'col-start-1 row-start-1 flex flex-col rounded border p-4 ' +
+const CARA = 'col-start-1 row-start-1 flex h-full flex-col rounded border p-4 ' +
              '[backface-visibility:hidden]';
+
+/**
+ * Cuántos puestos lista el dorso antes de resumir el resto.
+ *
+ * **El dorso es un resumen, no la planificación**: esa está a un clic, en
+ * "Planificar equipo". Y acá hay un motivo de layout que no se ve: las dos
+ * caras comparten celda, así que **el alto de la tarjeta es el de la más
+ * alta** — con nueve puestos el dorso medía 295px contra los 178 del frente,
+ * y el domingo quedaba notoriamente más largo que el sábado **mirando una
+ * cara que nadie tenía a la vista**. Lo reclamó el cliente el 2026-10-30.
+ *
+ * Son cinco y no tres porque el corte tiene que doler poco: con seis puestos
+ * se muestran los seis (resumir uno solo gastaría el mismo renglón que
+ * mostrarlo).
+ */
+const PUESTOS_A_LA_VISTA = 5;
 const PIE = 'mt-auto flex items-center gap-3 border-t border-hueso/10 pt-3 text-xs';
 
 export default function TarjetaDia({
@@ -96,14 +119,26 @@ export default function TarjetaDia({
   onPlanificar: () => void;
 }) {
   const [volteada, setVolteada] = useState(false);
+  // Cuántos puestos se alcanzan a mostrar y cuántos quedan resumidos.
+  // **Si sobra uno solo se muestran todos**: resumirlo gastaría el mismo
+  // renglón que mostrarlo, y encima diría menos.
+  const puestos = resumen?.porPuesto ?? [];
+  const aLaVista = puestos.length <= PUESTOS_A_LA_VISTA + 1
+    ? puestos.length : PUESTOS_A_LA_VISTA;
+  const resto = puestos.length - aLaVista;
   // Lo que no se ve no se puede tabular. Ver el comentario de arriba.
   const alFrente = { tabIndex: volteada ? -1 : 0 };
   const alDorso = { tabIndex: volteada ? 0 : -1 };
 
   return (
-    <div className="[perspective:1200px]">
+    /* `h-full` en los tres niveles: **todas las tarjetas de una misma fila
+       miden lo mismo**. Sin esto, una tarjeta más baja que su fila dejaba
+       un hueco debajo del borde, que se lee como un error de dibujo y no
+       como aire. El pie va con `mt-auto`, así que el sobrante queda en el
+       medio. */
+    <div className="h-full [perspective:1200px]">
       <div
-        className="grid transition-transform duration-500 [transform-style:preserve-3d]"
+        className="grid h-full transition-transform duration-500 [transform-style:preserve-3d]"
         style={{ transform: volteada ? 'rotateY(180deg)' : undefined }}>
 
         {/* ---------- el frente: la ocupación ---------- */}
@@ -259,12 +294,17 @@ export default function TarjetaDia({
                   escribe el cliente y no hay forma de pluralizarlos bien
                   sin inventar reglas del español. */}
               <ul className="mt-2 space-y-0.5 text-xs">
-                {resumen.porPuesto.map((p) => (
+                {resumen.porPuesto.slice(0, aLaVista).map((p) => (
                   <li key={p.puesto} className="flex justify-between gap-2">
                     <span className="text-hueso/70">{p.puesto}</span>
                     <strong className="tabular-nums text-hueso">{p.cuantos}</strong>
                   </li>
                 ))}
+                {resto > 0 && (
+                  <li className="text-hueso/45">
+                    y {resto} {resto === 1 ? 'puesto' : 'puestos'} más
+                  </li>
+                )}
               </ul>
             </>
           )}

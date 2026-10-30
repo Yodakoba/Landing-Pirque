@@ -1377,6 +1377,34 @@ trampas conocidas:
   alcanzables con el tabulador**, así que sin esto se podría tabular hacia
   botones invisibles.
 
+**Un día salía más largo que los otros, y la causa era la cara que no se
+veía** (2026-10-30, lo notó el cliente con una captura: *"el domingo está más
+largo que los otros días, de hecho es el único día que pasa"*).
+
+Medido antes de tocar nada: el frente del viernes y el del sábado medían
+**178px** y el **dorso del domingo, 295** — nueve personas repartidas en
+nueve puestos, un renglón cada uno. Como las dos caras comparten celda, ese
+dorso estiraba la tarjeta entera, y el frente —que es lo que uno mira—
+quedaba con un hueco bajo el borde. Dos arreglos, y los dos hacen falta:
+
+- **El dorso lista cinco puestos y resume el resto** (`PUESTOS_A_LA_VISTA`):
+  *"y 4 puestos más"*. Es un resumen, no la planificación — esa está a un
+  clic, en *Planificar equipo*. Son cinco y no tres porque el corte tiene que
+  doler poco: **con seis se muestran los seis**, ya que resumir uno solo
+  gastaría el mismo renglón que mostrarlo.
+- **Las tarjetas de una misma fila miden lo mismo** (`h-full` en los tres
+  niveles). Sin eso, una tarjeta más baja que su fila dejaba el hueco bajo su
+  propio borde, que se lee como un error de dibujo; con el pie en `mt-auto`,
+  el sobrante queda en el medio, donde se lee como aire.
+
+**Se probó la salida obvia —que mande el frente, con el dorso `absolute`
+encima— y se descartó**: la tarjeta quedaba a 178 y el dorso salía **cortado
+a media línea**, sin nada que dijera que seguía. Arreglar una cara rompiendo
+la otra no es arreglarlo.
+
+En un teléfono las tarjetas van **apiladas**, una por fila, así que ahí una
+más alta sigue siéndolo — y está bien: no hay fila con la que desalinearse.
+
 El pie del frente dice ahora **"Ver reservas"** y no "Ver quiénes vienen":
 con tres acciones, el texto largo se partía en dos líneas en una tarjeta de
 cuatro columnas. La fecha del título lleva al mismo lugar.
