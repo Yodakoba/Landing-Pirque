@@ -127,6 +127,18 @@ export default function FichaTrabajador({
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Pago
           </p>
+          {/* **Esto es lo de siempre, no lo de un día**, y conviene decirlo
+              acá: el cliente vino a buscar a esta ficha los ajustes con su
+              motivo —un atraso, un adelanto de la caja, un feriado— porque
+              el campo decía "Hora extra" y parecía el lugar. Son dos cosas
+              distintas: acá va cuánto vale una hora extra de esta persona;
+              cuántas hizo un sábado, y cualquier suma o resta de ese día, se
+              anota en su turno. */}
+          <p className="mb-3 text-xs text-hueso/45">
+            Lo que esta persona gana <strong>de costumbre</strong>. Lo de un
+            día —cuántas horas extra hizo, un atraso, un adelanto de la caja,
+            un feriado— se anota en ese día, con su motivo.
+          </p>
           <div className="flex flex-wrap items-start gap-3">
             <Campo etiqueta="Modalidad" ancho="w-44">
               <select value={modalidad} className={ENTRADA}
@@ -145,7 +157,10 @@ export default function FichaTrabajador({
                 aria-label={`Jornada de ${nombre || 'esta persona'}`}
                 onChange={(e) => setPagoJornada(e.target.value)} />
             </Campo>
-            <Campo etiqueta="Hora extra" ancho="w-32">
+            {/* El rótulo es corto a propósito: "Valor de la hora extra" se
+                partía en dos líneas y empujaba el campo hacia abajo,
+                desalineándolo de los de al lado. */}
+            <Campo etiqueta="Valor hora extra" ancho="w-36">
               <input type="number" min={0} step={500} className={ENTRADA}
                 value={valorHora} placeholder="—"
                 aria-label={`Valor de la hora extra de ${nombre || 'esta persona'}`}

@@ -20,6 +20,34 @@ import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
 
+/**
+ * Lo que se dice de una semana completa, de un vistazo.
+ *
+ * **En el local se piensa por semana**, que es lo que pidió el cliente el
+ * 2026-10-30: el mes sigue marcado, pero la unidad que se mira es la semana.
+ * Por eso cada una es ahora una caja con su cabecera, y no una línea gris
+ * sobre una grilla corrida.
+ *
+ * Los días cerrados no se cuentan como públicos ni como privados: se nombran
+ * aparte, porque "3 días" que incluyen uno que no abre no es lo que alguien
+ * lee ahí.
+ */
+function resumenSemana(dias: Ocupacion[]) {
+  let personas = 0, publicos = 0, privados = 0, cerrados = 0;
+  for (const d of dias) {
+    personas += d.tomadas;
+    if (d.bloqueada) cerrados++;
+    else if (d.privada) privados++;
+    else publicos++;
+  }
+  const partes = [
+    publicos ? `${publicos} ${publicos === 1 ? 'público' : 'públicos'}` : null,
+    privados ? `${privados} ${privados === 1 ? 'privado' : 'privados'}` : null,
+    cerrados ? `${cerrados} ${cerrados === 1 ? 'cerrado' : 'cerrados'}` : null
+  ].filter(Boolean);
+  return { personas, dias: partes.join(' · ') };
+}
+
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const pronostico = usePronostico();
@@ -40,7 +68,11 @@ export default function CalendarView() {
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
   } | null>(null);
-  const [planificando, setPlanificando] = useState<Ocupacion | null>(null);
+  // **Una fecha, no una Ocupacion**: a un día de preparación se le asigna
+  // equipo sin que exista en el calendario, así que no hay ocupación que
+  // pasarle. Ver "Agregar fecha" y la opción de preparación.
+  const [planificando, setPlanificando] =
+    useState<{ fecha: string; personas: number } | null>(null);
   const [avisoPlanilla, setAvisoPlanilla] = useState('');
 
   /** Crear o renovar la llave. Devuelve la nueva, o `''` si algo falló. */
@@ -130,25 +162,23 @@ export default function CalendarView() {
   };
   useEffect(cargar, []);
 
-  // Agrupado por mes, conservando el orden. Con 90 días a la vista una
-  // grilla corrida se vuelve ilegible: el corte de mes es la referencia que
-  // la gente usa para ubicarse.
-  const meses = useMemo(() => {
-    const grupos: { mes: string; semanas: { semana: string; dias: Ocupacion[] }[] }[] = [];
+  /**
+   * Agrupado **por semana**, conservando el orden.
+   *
+   * Hasta el 2026-10-30 el corte de mes mandaba y una semana que cruzaba de
+   * mes quedaba partida en dos. Dejó de tener sentido cuando la semana pasó
+   * a ser una caja: un sábado 31 y su domingo 1 son el mismo fin de semana
+   * —el mismo turno, la misma planilla— y verlos en dos cajas distintas es
+   * justo lo contrario de lo que el cliente pidió. El mes sigue marcado,
+   * como una línea antes de la primera semana que lo estrena.
+   */
+  const semanas = useMemo(() => {
+    const grupos: { semana: string; dias: Ocupacion[] }[] = [];
     for (const d of dias ?? []) {
-      const mes = mesDe(d.fecha);
       const semana = semanaDe(d.fecha);
-      let grupo = grupos[grupos.length - 1];
-      if (!grupo || grupo.mes !== mes) {
-        grupo = { mes, semanas: [] };
-        grupos.push(grupo);
-      }
-      const ultima = grupo.semanas[grupo.semanas.length - 1];
-      // Una semana que cruza de mes queda partida en dos grupos, a
-      // proposito: el encabezado de mes manda, y un sabado 31 con su domingo
-      // 1 se lee mejor separado que colgando del mes anterior.
+      const ultima = grupos[grupos.length - 1];
       if (ultima && ultima.semana === semana) ultima.dias.push(d);
-      else grupo.semanas.push({ semana, dias: [d] });
+      else grupos.push({ semana, dias: [d] });
     }
     return grupos;
   }, [dias]);
@@ -219,13 +249,20 @@ export default function CalendarView() {
           fechasExistentes={fechasEnLaHoja}
           onListo={() => { setEditando(null); setAgregandoFecha(false); cargar(); }}
           onCancelar={() => { setEditando(null); setAgregandoFecha(false); }}
+          /* Un día de preparación no se agrega, se planifica: se cierra esta
+             ventana y se abre la del equipo de esa fecha. No se escribe nada
+             en `Fechas Hábiles`, así que el sitio sigue sin ofrecer ese día. */
+          onPreparacion={(fecha) => {
+            setAgregandoFecha(false);
+            setPlanificando({ fecha, personas: 0 });
+          }}
         />
       )}
 
       {planificando && equipo && (
         <EquipoDialogo
           fecha={planificando.fecha}
-          personas={planificando.tomadas}
+          personas={planificando.personas}
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
@@ -249,31 +286,66 @@ export default function CalendarView() {
         />
       )}
 
-      {meses.map(({ mes, semanas }) => (
-        <section key={mes} className="mb-8 last:mb-0">
-          {/* Separador sutil: una línea y el mes en chico. No un título
-              grande, que competiría con el dato de cada día. */}
-          <div className="mb-3 flex items-center gap-3">
-            <h2 className="text-xs uppercase tracking-widest text-hueso/45">
-              {mesEnPalabras(mes)}
-            </h2>
-            <span className="h-px flex-1 bg-hueso/10" />
-            <span className="text-xs text-hueso/35">
-              {semanas.reduce((n, s) => n + s.dias.length, 0)} días
-            </span>
-          </div>
+      {semanas.map(({ semana, dias: deLaSemana }, i) => {
+        const resumen = resumenSemana(deLaSemana);
+        const esta = semana === semanaDe(hoy());
+        // El mes se anuncia antes de la PRIMERA semana que lo estrena, y no
+        // envolviendo las semanas: así una que cruza de mes sigue entera y
+        // el mes igual queda marcado. Se mira el primer día de la semana
+        // porque es el que decide bajo qué mes aparece.
+        const mes = mesDe(deLaSemana[0].fecha);
+        const anterior = i > 0 ? mesDe(semanas[i - 1].dias[0].fecha) : null;
+        const estrena = mes !== anterior;
+        return (
+        <div key={semana}>
+          {estrena && (
+            /* Separador sutil: una línea y el mes en chico. No un título
+               grande, que competiría con el dato de cada día. */
+            <div className={`mb-3 flex items-center gap-3 ${i > 0 ? 'mt-8' : ''}`}>
+              <h2 className="text-xs uppercase tracking-widest text-hueso/45">
+                {mesEnPalabras(mes)}
+              </h2>
+              <span className="h-px flex-1 bg-hueso/10" />
+              <span className="text-xs text-hueso/35">
+                {(dias ?? []).filter((d) => mesDe(d.fecha) === mes).length} días
+              </span>
+            </div>
+          )}
 
-          {semanas.map(({ semana, dias: deLaSemana }) => (
-          <div key={semana} className="mb-4 last:mb-0">
-            {/* La semana se marca más suave que el mes: es una agrupación
-                para escanear, no una sección. */}
-            <p className="mb-2 flex flex-wrap items-baseline gap-3 text-xs text-hueso/35">
-              {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
-              <button onClick={() => mandarPlanilla(semanaDe(deLaSemana[0].fecha))}
-                className="text-hueso/45 hover:text-oro">
+          {/* **La semana es la caja y el mes la línea de arriba**, y no al
+              revés como era hasta el 2026-10-30. Lo pidió el cliente con el
+              porqué: en el local se piensa por semana. El mes sigue marcado
+              —es la referencia para ubicarse entre 90 días— pero dejó de ser
+              lo que agrupa: una grilla corrida bajo un título de mes no dice
+              dónde termina un fin de semana y empieza el otro. */}
+          <div
+            className={`mb-4 rounded-lg border p-3 ${
+              esta ? 'border-oro/40 bg-oro/[0.03]' : 'border-hueso/15'}`}>
+            <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1
+                            border-b border-hueso/10 pb-2">
+              <strong className="text-sm">
+                {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
+              </strong>
+              {esta && (
+                <span className="rounded bg-oro/15 px-1.5 py-0.5 text-[10px]
+                                 font-semibold uppercase tracking-wide text-oro">
+                  esta semana
+                </span>
+              )}
+              {/* Lo que se pregunta de una semana: cuánta gente viene y qué
+                  días son. Los estados ya están en cada tarjeta; acá va el
+                  conteo, que es lo que no se puede ver sin sumarlo. */}
+              <span className="text-xs text-hueso/50">
+                <strong className="tabular-nums text-hueso/75">{resumen.personas}</strong>
+                {resumen.personas === 1 ? ' persona' : ' personas'}
+                {resumen.dias && <span className="text-hueso/35"> · {resumen.dias}</span>}
+              </span>
+              <span className="flex-1" />
+              <button onClick={() => mandarPlanilla(semana)}
+                className="text-xs text-hueso/45 hover:text-oro">
                 Enviar planilla semanal
               </button>
-            </p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
               <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
@@ -281,13 +353,13 @@ export default function CalendarView() {
                   ? resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas)
                   : null}
                 onEditar={() => setEditando(d)}
-                onPlanificar={() => setPlanificando(d)} />
+                onPlanificar={() => setPlanificando({ fecha: d.fecha, personas: d.tomadas })} />
             ))}
             </div>
           </div>
-          ))}
-        </section>
-      ))}
+        </div>
+        );
+      })}
     </>
   );
 }

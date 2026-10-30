@@ -1228,6 +1228,16 @@ veces y a pasar por una pantalla que para un día de preparación ni siquiera
 existe. Quien marca en la mañana deja los montos como están y listo; quien
 cierra en la noche los llena. Ver "Una sola ventana para el día".
 
+**La línea de cada persona son dos líneas fijas, no una que envuelve**
+(2026-10-30, lo notó el cliente con una captura). Arriba va lo que se
+contesta —quién es y si vino—; abajo lo que se hace: *+ Ajuste*, *Ficha* y
+*Sacar*. Antes era una sola fila con `flex-wrap`, así que con un nombre corto
+—"Alexis"— cabía todo junto y con uno largo *Ficha* y *Sacar* se iban solos
+abajo: dos personas seguidas se veían distintas sin que hubiera cambiado nada
+salvo el largo del nombre, y lo que se aprieta sin querer es justamente lo
+que se movió de lugar. **Ficha y Sacar además van agrupados**, para que bajen
+los dos o no baje ninguno.
+
 **Desde el 2026-10-30 son dos botones grandes, no un desplegable.** Lo pidió
 el cliente con el porqué: *"son personas rurales, que no han manejado muchos
 de estos sistemas; necesitamos que para ellos sea muy fácil de entender"*. Un
@@ -1282,6 +1292,27 @@ otra cosa: pone el día en el calendario **para recibir reservas**, así que
 tenerlo en esta pantalla solo invitaba a usarlo para un montaje y abrirlo sin
 querer. Abrir un día sigue siendo del calendario de la portada.
 
+**Y desde el otro lado, el 2026-10-30, se abrió la puerta que faltaba**: el
+*Agregar fecha* del calendario de la portada ofrece ahora un cuarto estado,
+**Día de preparación**. Lo pidió el cliente con el caso exacto: *"se agrega
+una fecha pública y al final dice en esa misma vista el encargado: ah, y
+tengo que preparar una fecha"*.
+
+**No contradice nada de lo anterior, porque no escribe una fila.** Elegirlo
+cambia el botón a *Planificar el equipo* y abre la ventana del equipo de esa
+fecha; `Fechas Hábiles` no se toca, así que el sitio sigue sin ofrecer ese
+día. Comprobado de punta a punta: con el 11 de noviembre planificado desde
+ahí, la planilla no tiene esa fila, `/turnos` lo muestra en dorado como
+preparación y el calendario de la portada no lo muestra.
+
+Lo que sí cambió es la pregunta del grupo de opciones, que decía **"quién
+puede reservar"**: a eso la preparación contestaría "nadie", que no es lo que
+dice. Ahora pregunta **qué día es**, y las cuatro respuestas caben.
+
+**Solo se ofrece al agregar, no al editar un día que ya está en la hoja.**
+Ese se vuelve de preparación cerrándolo y asignándole equipo, y poner acá un
+atajo a eso sería explicar dos caminos para lo mismo.
+
 **La jefa de turno es un puesto, no un rol.** Para marcar asistencia necesita
 una cuenta de **encargado** en `/usuarios`; con su nombre, además, la bitácora
 dice quién marcó qué.
@@ -1299,6 +1330,34 @@ Guardar el equipo de un día **borra las filas de esa fecha y escribe las
 nuevas**, sin tocar los otros días: la pestaña entera son todos los fines de
 semana del año, y un error guardando un sábado no puede llevarse por delante
 el historial.
+
+### El calendario se agrupa por semana (2026-10-30)
+
+Lo pidió el cliente: *"me gustaría poner un poco más el enfoque a que juntes
+los paneles semanalmente. No digo que dejas de marcar el mes, pero se piensa
+mucho semanalmente en el local"*.
+
+Las semanas ya estaban, pero marcadas **más suave que el mes** —una línea
+gris sobre una grilla corrida— justamente al revés de cómo se usa. Ahora
+**cada semana es una caja con su cabecera** y el mes es la línea que la
+precede: sigue marcado, que es la referencia para ubicarse entre 90 días,
+pero dejó de ser lo que agrupa.
+
+En la cabecera de cada semana: el rango en palabras, **cuánta gente viene en
+toda la semana** y de qué días son —*"13 personas · 2 públicos"*—, y el botón
+de mandar la planilla, que ya estaba. Los estados de cada día siguen en su
+tarjeta, con `PuntoDia`; acá va el conteo, que es lo único que no se puede
+ver sin sumarlo.
+
+**La semana en curso va delineada en dorado y dice "esta semana".** Es la
+que se mira al entrar.
+
+**Y una semana que cruza de mes ya no se parte en dos.** Antes sí, a
+propósito —mandaba el encabezado de mes—, y dejó de tener sentido cuando la
+semana pasó a ser una caja: un sábado 31 y su domingo 1 son el mismo fin de
+semana, el mismo turno y la misma planilla, así que verlos en dos cajas
+distintas es justo lo contrario de lo que se pidió. El mes se anuncia antes
+de la primera semana que lo estrena.
 
 ### La tarjeta se da vuelta
 
@@ -1753,6 +1812,45 @@ sigue siendo editable a mano por alguien que no sepa de esto. Con dos dice
 motivos que falten se leen vacíos en vez de desalinear los pares. Y el
 separador se saca de los motivos al guardar, porque un motivo con `|`
 partiría su propio ajuste en dos al volver a leerlo.
+
+#### El ajuste se agrega desde la línea de la persona (2026-10-30)
+
+**Estaban, y el cliente no los encontraba**, que a efectos prácticos es lo
+mismo que no tenerlos. Lo dijo así: *"hay que ponerle un ojo al tema de
+horas extras, que era pensado con comentario para definir por qué se suma o
+resta un monto y que puedo agregar distintos montos. Eso en esta vista no lo
+veo, y no sé si se nos perdió en el camino"*. Y el caso que dio es el de
+todos los días: llegó dos horas tarde y hay que descontarle, se le adelantó
+plata de la caja, le toca más por feriado, por hora extra o por haberlo hecho
+muy bien.
+
+Dos causas, las dos arregladas:
+
+- **Estaban en la tabla de abajo de la ventana del día**, y quien planifica
+  mira la parte de arriba. Ahora cada persona tiene un **`+ Ajuste`** en su
+  línea; **es el mismo ajuste, no una segunda forma de anotar lo mismo**, y
+  el cursor se va hasta el campo —que está más abajo— porque si no el botón
+  parecería no hacer nada. La línea muestra además lo que suman, con el signo
+  adelante: **−$18.000**, no `$-18.000`, que se lee como un error de tipeo
+  justo donde importa saber si se suma o se resta.
+- **La ficha decía "Hora extra" y parecía el lugar.** Ahí no hay ningún
+  motivo que escribir porque ese campo es **cuánto vale una hora extra de esa
+  persona**, de costumbre, no cuánto se le pagó un sábado. El bloque Pago de
+  la ficha ahora lo dice con todas sus letras y manda al día.
+
+#### Los días pasados se editan, y eso es a propósito
+
+Lo pidió confirmado el cliente: *"siempre puede ser que necesito agregar o
+cambiar algo en una fecha que ya está en el pasado… por lo menos poder
+revisarla"*. En `/turnos` se llega a cualquier mes con *Mes anterior*, se
+abre cualquier día y **se edita, esté cerrado o no**. Comprobado contra un
+sábado pasado y ya cerrado: se le agregó un ajuste, quedó guardado y **el día
+siguió cerrado** — editar no reabre, que es lo que se arregló el 2026-10-30.
+Reabrir es un botón propio y queda en la bitácora.
+
+Lo que el panel no hace, y conviene tenerlo claro: **si ese día ya se pagó,
+el arreglo es con la persona**. Acá queda anotado el porqué, con su monto y
+su motivo, para que la próxima planilla lo recoja.
 
 ### Por turno o contratado (2026-10-21)
 
