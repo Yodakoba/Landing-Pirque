@@ -30,6 +30,8 @@
 import { useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO } from '@/lib/columnas';
+import { ESTADOS_QUE_VIENEN, ESTADOS_QUE_LIBERAN, pagoConGlosa, liberaCupo }
+  from '@/lib/pagos';
 import { desglosarMenu, componerMenu, personasDeCuenta } from '@/lib/shopify';
 import { precioDe, aMonto, type Menu } from '@/lib/menus';
 import Dialogo from './Dialogo';
@@ -165,22 +167,35 @@ export default function ReservaForm({
               </p>
             )}
           </Campo>
-          <Campo etiqueta="Tipo de pago">
+          <Campo etiqueta="Cómo paga" ancho>
             <select {...campo('tipoPago')} className={ENTRADA}>
-              <option value={TIPO_PAGO.directo}>{TIPO_PAGO.directo}</option>
-              <option value={TIPO_PAGO.local}>{TIPO_PAGO.local}</option>
+              <option value={TIPO_PAGO.directo}>{TIPO_PAGO.directo} — paga en línea</option>
+              <option value={TIPO_PAGO.local}>{TIPO_PAGO.local} — paga en el local</option>
             </select>
           </Campo>
-          <Campo etiqueta="Estado del pago" ancho>
+          {/* Las opciones van en dos grupos y no en una lista de cinco: la
+              pregunta de verdad es si esta persona viene o no, y recién
+              después cómo quedó la plata. Cinco opciones parejas obligan a
+              leerlas todas para elegir la primera. */}
+          <Campo etiqueta="Cómo va el pago" ancho>
             <select {...campo('estadoPago')} className={ENTRADA}>
-              <option value={ESTADO_PAGO.pagado}>paid — ya pagó</option>
-              <option value={ESTADO_PAGO.pendiente}>pending — paga al llegar</option>
-              <option value={ESTADO_PAGO.reembolsado}>refunded — se le devolvió</option>
-              <option value={ESTADO_PAGO.anulado}>voided — anulada</option>
-              <option value={ESTADO_PAGO.cancelado}>cancelled — cancelada</option>
+              <optgroup label="Viene">
+                {ESTADOS_QUE_VIENEN.map((e) => (
+                  <option key={e} value={e}>{pagoConGlosa(e)}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Ya no viene — libera el cupo">
+                {ESTADOS_QUE_LIBERAN.map((e) => (
+                  <option key={e} value={e}>{pagoConGlosa(e)}</option>
+                ))}
+              </optgroup>
             </select>
             <p className="mt-1 text-xs text-hueso/50">
-              Reembolsada, anulada y cancelada liberan el cupo. Pendiente no: el cliente viene igual.
+              {liberaCupo(f.estadoPago)
+                ? 'Su lugar queda libre para otra persona.'
+                : f.estadoPago === ESTADO_PAGO.pagado
+                  ? 'Ya pagó. Su lugar está tomado.'
+                  : 'Ocupa su lugar igual: la persona viene y paga cuando llegue.'}
             </p>
           </Campo>
         </div>

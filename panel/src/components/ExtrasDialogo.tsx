@@ -12,6 +12,8 @@
  * reparte entre el equipo que atiende, no entre quien vino a hacer un show.
  */
 import { useState } from 'react';
+import AvisoGuardado from './AvisoGuardado';
+import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
 import { VINO } from '@/lib/equipo';
 import { costoDeExtra, actividadesConocidas,
@@ -55,7 +57,6 @@ export default function ExtrasDialogo({
    */
   const [ficha, setFicha] = useState<
     null | { c?: Colaborador; nombre?: string }>(null);
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
   const puestas = new Set(lista.map((e) => normalizar(e.colaborador)));
@@ -88,23 +89,27 @@ export default function ExtrasDialogo({
     }]);
   };
 
-  async function guardar() {
-    setGuardando(true);
-    try {
-      const r = await fetch('/api/extras/dia', {
-        method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fecha, extras: lista })
-      });
-      const d = await r.json();
-      if (d.error) setError(d.error);
-      else onListo();
-    } catch (e) {
-      setError(String(e));
-    } finally { setGuardando(false); }
+  /**
+   * **Se guarda solo**, igual que la ventana del equipo (2026-10-30): no hay
+   * botón. Ver `usarAutoguardado`, que explica el porqué y el cómo.
+   */
+  const guardado = usarAutoguardado(lista, async (v) => {
+    const r = await fetch('/api/extras/dia', {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fecha, extras: v })
+    });
+    const d = await r.json();
+    return d.error || undefined;
+  });
+
+  /** Cierra la ventana, mandando antes lo que quede en el reloj. */
+  async function salir() {
+    await guardado.forzar();
+    if (guardado.hubo.current) onListo(); else onCancelar();
   }
 
   return (
-    <Dialogo titulo={`Actividades · ${enPalabras(fecha)}`} onCerrar={onCancelar}
+    <Dialogo titulo={`Actividades · ${enPalabras(fecha)}`} onCerrar={() => void salir()}
              ancho="max-w-4xl">
       <p className="mt-3 text-sm text-hueso/60">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
@@ -278,6 +283,11 @@ export default function ExtrasDialogo({
         turnos: el total es el mismo y queda dicho por qué.
       </p>
 
+      {/* Sin botón de guardar hay que decirlo una vez. */}
+      <p className="mt-2 text-xs text-hueso/45">
+        Lo que escribas acá <strong>se guarda solo</strong>.
+      </p>
+
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {lista.length > 0 && (
           <span className="text-sm">
@@ -290,15 +300,13 @@ export default function ExtrasDialogo({
             )}
           </span>
         )}
+        <AvisoGuardado estado={guardado.estado} error={guardado.error}
+          onReintentar={() => void guardado.reintentar()} />
         <span className="flex-1" />
-        <button onClick={onCancelar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
-          Cancelar
-        </button>
-        <button onClick={guardar} disabled={guardando}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar actividades'}
+        <button onClick={() => void salir()}
+          className="rounded border border-hueso/20 px-4 py-1.5 text-sm
+                     hover:border-hueso/40">
+          Listo
         </button>
       </div>
     </Dialogo>

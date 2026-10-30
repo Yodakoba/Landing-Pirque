@@ -4,6 +4,7 @@
  */
 import type { Reserva, FechaHabil, Ocupacion, Semaforo } from './tipos.ts';
 import { TIPO_PAGO, ESTADO_PAGO, estaCerrado, esPrivada } from './columnas.ts';
+import { liberaCupo } from './pagos.ts';
 import type { Fecha } from './fechas.ts';
 import { POR_DEFECTO } from './config.ts';
 
@@ -37,10 +38,7 @@ export function semaforo(
  * Una pendiente SÍ ocupa: el cliente viene igual, paga al llegar.
  */
 export function ocupaLugar(r: Reserva): boolean {
-  const e = String(r.estadoPago || '').trim().toLowerCase();
-  return e !== ESTADO_PAGO.reembolsado &&
-         e !== ESTADO_PAGO.anulado &&
-         e !== ESTADO_PAGO.cancelado;
+  return !liberaCupo(r.estadoPago);
 }
 
 /**

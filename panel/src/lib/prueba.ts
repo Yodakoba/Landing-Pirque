@@ -8,6 +8,8 @@
  */
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, faltaCobrar,
          enPesos, CORTES } from './ocupacion.ts';
+import { pagoEnEspanol, pagoConGlosa, ESTADOS_QUE_LIBERAN,
+         ESTADOS_QUE_VIENEN } from './pagos.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
          diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe, diasDelMes, sumarMeses,
@@ -2048,6 +2050,26 @@ ok(climaEnPalabras(sab!) === 'Pronóstico: lluvia débil · máx 24° · mín 8�
    'el detalle redondea, dice todo y usa coma decimal');
 ok(urlPronostico().includes('lat=-33.67') && !/\.\d{5}/.test(urlPronostico()),
    'MET pide como mucho cuatro decimales en las coordenadas');
+
+/* ---------- el estado del pago, dicho en espanol ---------- */
+// Lo que se GUARDA sigue siendo el codigo de Shopify; lo que se MUESTRA es
+// espanol. La prueba fija las dos mitades, porque cambiar lo guardado
+// rompe el webhook y cambiar lo mostrado vuelve a mezclar los idiomas.
+ok(pagoEnEspanol('pending') === 'Por pagar', 'pending se lee "Por pagar"');
+ok(pagoEnEspanol('paid') === 'Pagada' && pagoEnEspanol('cancelled') === 'Cancelada',
+   'y los otros cuatro tambien tienen su palabra');
+ok(pagoEnEspanol('PAID') === 'Pagada', 'da lo mismo como venga escrito');
+ok(pagoEnEspanol('algo_nuevo') === 'algo_nuevo',
+   'un codigo que el panel no conoce se muestra tal cual: mejor eso que una celda vacia');
+ok(pagoEnEspanol('') === '', 'y uno vacio se queda vacio');
+ok(pagoConGlosa('pending') === 'Por pagar — paga cuando llegue',
+   'en el formulario va la palabra y lo que significa, sin el codigo en ingles');
+ok(ESTADOS_QUE_LIBERAN.length === 3 && ESTADOS_QUE_VIENEN.length === 2,
+   'cinco estados, repartidos en los dos grupos que ofrece el formulario');
+ok(ESTADOS_QUE_LIBERAN.every((e) => !ocupaLugar(r({ estadoPago: e }))),
+   'los tres del grupo "ya no viene" liberan el cupo DE VERDAD: es la misma lista que mira ocupaLugar()');
+ok(ESTADOS_QUE_VIENEN.every((e) => ocupaLugar(r({ estadoPago: e }))),
+   'y los dos del grupo "viene" lo ocupan');
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

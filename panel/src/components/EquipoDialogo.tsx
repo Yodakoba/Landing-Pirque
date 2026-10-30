@@ -31,6 +31,8 @@ import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
 import Asistencia from './Asistencia';
+import AvisoGuardado from './AvisoGuardado';
+import { usarAutoguardado } from './usarAutoguardado';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
@@ -80,14 +82,14 @@ export default function EquipoDialogo({
   onCancelar: () => void;
 }) {
   // El plan se edita en memoria y se guarda completo. Así quitar a alguien
-  // es tan posible como agregarlo, y nada se escribe hasta apretar Guardar.
-  // Se conserva el turno entero, no solo nombre y puesto: si alguien ya pasó
-  // lista, replanificar el día no puede borrarle la asistencia ni el monto.
+  // es tan posible como agregarlo. Se conserva el turno entero, no solo
+  // nombre y puesto: si alguien ya pasó lista, replanificar el día no puede
+  // borrarle la asistencia ni el monto.
   const [plan, setPlan] = useState<Omit<Turno, 'fila'>[]>(
     () => turnos.filter((t) => t.fecha === fecha).map(({ fila, ...resto }) => resto)
   );
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [cerrando, setCerrando] = useState(false);
   // La propina del día, que se escribe UNA vez y el panel reparte. Lo que
   // se guarda es la parte de cada uno, no el pozo: ver `repartirPropina`.
   const [propina, setPropina] = useState(
@@ -178,39 +180,72 @@ export default function EquipoDialogo({
   const listo = falta.conEquipo > 0 && falta.sinMarcar === 0;
 
   /**
-   * Guarda el día, y si se pidió lo deja cerrado.
+   * **Lo que se escribe se guarda solo** (2026-10-30). Antes había que
+   * apretar *Guardar*, al lado de *Guardar y cerrar el día*: dos botones
+   * hermanos para dos cosas que no se parecen en nada —corregir un monto y
+   * declarar cerrado un día—. Ver `usarAutoguardado`.
    *
-   * **Son dos peticiones y en este orden**: primero los turnos, después el
-   * cierre. Si se hiciera al revés, el servidor comprobaría si falta
-   * alguien por marcar mirando lo que había antes de este guardado, y
-   * rechazaría cerrar un día que justo se acaba de completar.
+   * Se manda el día entero, con la propina ya repartida, que es como esta
+   * ventana trabajó siempre: el servidor borra las filas de esta fecha y
+   * escribe las nuevas, sin tocar los otros días.
    */
-  async function guardar(cerrando = false) {
-    setGuardando(true);
-    try {
+  const guardado = usarAutoguardado(
+    useMemo(() => ({ plan, propina, gente }), [plan, propina, gente]),
+    async (v) => {
       const r = await fetch('/api/equipo/turnos', {
         method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fecha, turnos: repartirPropina(plan, propina, participa) })
+        body: JSON.stringify({
+          fecha, turnos: repartirPropina(v.plan, v.propina, participa)
+        })
       });
       const d = await r.json();
-      if (d.error) { setError(d.error); return; }
+      return d.error || undefined;
+    }
+  );
 
-      if (cerrando || cerrado) {
-        const c = await fetch('/api/equipo/cierre', {
-          method: 'PUT', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ fecha, cerrar: cerrando })
-        });
-        const dc = await c.json();
-        if (dc.error) { setError(dc.error); return; }
-      }
+  /** Cierra la ventana, mandando antes lo que quede en el reloj. */
+  async function salir() {
+    await guardado.forzar();
+    if (guardado.hubo.current) onListo(); else onCancelar();
+  }
+
+  /**
+   * Cerrar o reabrir el día.
+   *
+   * **Se guarda primero y se cierra después, en ese orden**: si fuera al
+   * revés, el servidor comprobaría si falta alguien por marcar mirando lo
+   * que había antes del último cambio, y rechazaría cerrar un día que
+   * justo se acaba de completar.
+   *
+   * **Y pregunta antes**, que es lo que el cliente pidió para las acciones
+   * que no se corrigen solas: sin el botón de guardar al lado, esta es la
+   * única de la ventana que declara algo.
+   */
+  async function cambiarCierre(cerrar: boolean) {
+    const pregunta = cerrar
+      ? `¿Cerrar el ${enPalabras(fecha)}? Queda anotado que lo cerraste tú, `
+        + 'con la hora. Se puede reabrir después.'
+      : `¿Reabrir el ${enPalabras(fecha)} para corregirlo?`;
+    if (!confirm(pregunta)) return;
+
+    setCerrando(true);
+    setError('');
+    try {
+      await guardado.forzar();
+      const c = await fetch('/api/equipo/cierre', {
+        method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fecha, cerrar })
+      });
+      const dc = await c.json();
+      if (dc.error) { setError(dc.error); return; }
       onListo();
     } catch (e) {
       setError(String(e));
-    } finally { setGuardando(false); }
+    } finally { setCerrando(false); }
   }
 
   return (
-    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={onCancelar} ancho="max-w-4xl">
+    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
       <p className="mt-3 text-sm text-hueso/60">
         {personas > 0
           ? <>Hay <strong className="text-hueso">{personas}</strong>{' '}
@@ -578,58 +613,62 @@ export default function EquipoDialogo({
         </p>
       )}
 
-      {/* Sin el botón de cerrar hay que decir dónde está, o parecería que
-          el día no se puede cerrar en ninguna parte. */}
-      {!conCierre && plan.length > 0 && (
+      {/* Sin botón de guardar hay que decirlo una vez, o quien lo busca
+          creería que lo escrito se pierde al cerrar. Y sin el botón de
+          cerrar hay que decir dónde está, o parecería que el día no se
+          puede cerrar en ninguna parte. */}
+      {plan.length > 0 && (
         <p className="mt-2 text-xs text-hueso/45">
-          Lo que escribas acá se guarda igual. <strong>El día se cierra en{' '}
-          <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
-          que es donde el panel va mostrando los días que quedaron pendientes.
+          Lo que escribas acá <strong>se guarda solo</strong>.
+          {!conCierre && <> <strong>El día se cierra en{' '}
+            <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
+            que es donde el panel va mostrando los días que quedaron pendientes.</>}
         </p>
       )}
 
-      {/* `flex-nowrap`: los botones se quedan en la línea pase lo que pase.
-          En un teléfono el día se recorta a "Guardar y cerrar", que dice lo
-          mismo en menos espacio. */}
+      {/* **Abajo queda una sola acción, y es la que declara algo.** Lo
+          escrito ya está guardado —la línea de la izquierda lo dice—, así
+          que *Listo* solo cierra la ventana y *Cerrar el día* pregunta
+          antes. Dos botones hermanos, uno de ellos irreversible, eran justo
+          lo que confundía.
+
+          `flex-nowrap`: se quedan en la línea pase lo que pase. En un
+          teléfono el día se recorta a "Cerrar", que dice lo mismo en menos
+          espacio. */}
       <div className="mt-3 flex flex-nowrap items-center gap-2">
-        <button onClick={onCancelar}
-          className="whitespace-nowrap rounded border border-hueso/20 px-3 py-1.5
-                     text-sm hover:border-hueso/40">
-          Cancelar
-        </button>
+        <AvisoGuardado estado={guardado.estado} error={guardado.error}
+          onReintentar={() => void guardado.reintentar()} />
         <span className="flex-1" />
-        {/* Delineado el que solo guarda, relleno el que cierra: son dos
-            cosas distintas y la forma lo dice antes que el texto. */}
-        <button onClick={() => guardar(false)} disabled={guardando}
-          className="whitespace-nowrap rounded border border-oro/60 px-4 py-1.5
-                     text-sm font-semibold text-oro disabled:opacity-40"
-          title="Anota los cambios y deja el día abierto">
-          {guardando ? 'Guardando…' : 'Guardar'}
+        <button onClick={() => void salir()}
+          className="whitespace-nowrap rounded border border-hueso/20 px-4 py-1.5
+                     text-sm hover:border-hueso/40">
+          Listo
         </button>
-        {/* **Cerrar es una declaración, no un cálculo.** El botón guarda y
-            además deja dicho que alguien revisó este día: con su nombre y su
-            hora, porque es lo que después permite preguntar. Mientras quede
-            alguien sin marcar no se puede, y el botón explica por qué.
+        {/* **Cerrar es una declaración, no un cálculo.** Deja dicho que
+            alguien revisó este día: con su nombre y su hora, porque es lo
+            que después permite preguntar. Mientras quede alguien sin marcar
+            no se puede, y arriba dice por qué.
 
             **No aparece en el calendario de la portada**: ver `conCierre`. */}
         {!conCierre ? null : cerrado ? (
-          <button onClick={() => guardar(false)} disabled={guardando}
+          <button onClick={() => void cambiarCierre(false)} disabled={cerrando}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"
             title="Vuelve a dejar el día abierto para corregirlo">
-            Guardar y reabrir
+            Reabrir<span className="hidden sm:inline"> el día</span>
           </button>
         ) : (
-          <button onClick={() => guardar(true)} disabled={guardando || !listo}
+          <button onClick={() => void cambiarCierre(true)}
+            disabled={cerrando || !listo}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"
             title={listo
-              ? 'Guarda y deja el día cerrado, con tu nombre y la hora'
+              ? 'Deja el día cerrado, con tu nombre y la hora'
               : falta.conEquipo === 0
                 ? 'Primero asigna a alguien'
                 : `Falta marcar si ${falta.sinMarcar === 1 ? 'una persona vino' :
                     `${falta.sinMarcar} personas vinieron`} o no`}>
-            Guardar y cerrar<span className="hidden sm:inline"> el día</span>
+            {cerrando ? 'Cerrando…' : <>Cerrar<span className="hidden sm:inline"> el día</span></>}
           </button>
         )}
       </div>

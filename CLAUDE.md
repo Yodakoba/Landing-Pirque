@@ -913,6 +913,45 @@ sitio:**
 - **No cancela ni reagenda.** Una cancelación en Shopify no borra la fila ni
   el evento: hoy eso se hace a mano en la planilla.
 
+### El estado del pago, en español y en dos grupos (2026-10-30)
+
+Lo reclamó el cliente: al abrir una reserva, la pregunta del pago *"sale en
+inglés y español, y eso confunde mucho"*. Era literal — el desplegable decía
+`pending — paga al llegar` y la tabla del día mostraba el código pelado,
+`pending`. Quien abre una reserva un sábado es la jefa de turno, en Pirque.
+
+**Lo que se guarda no cambió**: la columna se llama `Estado Pago Shopify` y
+lleva el código de Shopify, porque la escribe el webhook y tiene que calzar
+con lo que manda la tienda. Lo que cambió es lo que se lee. El mapa vive en
+`panel/src/lib/pagos.ts`, en un solo lugar para las dos pantallas:
+
+| Guardado | En pantalla | Qué significa |
+|---|---|---|
+| `paid` | Pagada | ya pagó |
+| `pending` | Por pagar | paga cuando llegue |
+| `cancelled` | Cancelada | avisó que no viene |
+| `refunded` | Reembolsada | se le devolvió la plata |
+| `voided` | Anulada | se anuló antes de cobrarle |
+
+**Y se simplificó sin perder nada**, que es lo que el cliente pidió: los
+cinco estados van en **dos grupos** dentro del mismo desplegable —*Viene* y
+*Ya no viene — libera el cupo*—, porque la pregunta de verdad es si esa
+persona llega o no, y recién después cómo quedó la plata. Cinco opciones
+parejas obligan a leerlas todas para elegir la primera.
+
+- **La lista de los tres que liberan el cupo es una sola**
+  (`ESTADOS_QUE_LIBERAN`): la usa `ocupaLugar()` y con ella el formulario
+  arma su grupo. Con dos listas, el día que se agregue un estado el
+  calendario y el formulario dirían cosas distintas de la misma reserva.
+- **Un código que el panel no conozca se muestra tal cual.** Mejor que una
+  celda vacía: por lo menos se entiende que hay algo nuevo.
+- **La modalidad también se explica sola**: *Pago directo — paga en línea* /
+  *Solo reserva — paga en el local*. Los nombres son los de la tienda y los
+  del sitio, así que se quedan; lo que faltaba era decir qué son.
+- **La asistencia del cliente pasó a los mismos botones Vino / No vino** del
+  equipo y de las actividades extras. Era el último `<select>` de los tres
+  lugares donde se pregunta exactamente lo mismo.
+
 ## El equipo de trabajadores (panel)
 
 Desde el 2026-10-21 el panel también planifica **quién trabaja cada día**.
@@ -1407,6 +1446,55 @@ día**. Ahora el resumen va arriba en su propia línea y los botones abajo sin
 envolver —delineado el que solo guarda, relleno el que cierra—, y en un
 teléfono el tercero se recorta a "Guardar y cerrar", que dice lo mismo en
 menos espacio.
+
+### Lo que es un valor se guarda solo; lo que declara algo se aprieta (2026-10-30)
+
+Lo pidió el cliente con la distinción ya hecha: *"una cosa es guardar un
+cambio que hiciste en un detalle, se paga ahora 30 en vez de 28. Y otra cosa
+es cerrar la fecha"*. Y tenía razón en que el panel las trataba igual: abajo
+de la ventana del día había dos botones hermanos —**Guardar** y **Guardar y
+cerrar el día**—, del mismo tamaño y a dos centímetros, y uno de los dos no
+se deshace solo.
+
+Entonces se revisó pantalla por pantalla y salió una regla, que es lo que
+hay que recordar:
+
+- **Se guarda solo lo que es un valor sobre algo que ya existe.** La ventana
+  del día y la de las actividades extras editan montos, asistencias, ajustes
+  y propina de gente que ya está en la lista. Ahí el botón no decidía nada:
+  solo se podía olvidar. Ya no existe — lo que se escribe se guarda, y una
+  línea abajo a la izquierda lo dice (*Guardando… / ✓ Guardado*, y en rojo
+  con **Reintentar** si el servidor se quejó).
+- **Se aprieta Guardar cuando lo que se edita es la lista misma**: `/equipo`,
+  las fichas de `/extras`, `/menus`, `/configuración`, `/usuarios`. Ahí el
+  nombre **es** la identidad de la fila y la pantalla reescribe la pestaña
+  entera, así que guardar a mitad de palabra —mientras alguien borra un
+  nombre para reescribirlo— mandaría una fila sin nombre, el servidor la
+  descartaría (hace bien) y la ficha desaparecería bajo los dedos. Esas
+  pantallas ya tienen su botón **dentro de cada ficha**, que era el problema
+  de verdad.
+- **Cerrar el día nunca se guarda solo.** Es una declaración con nombre y
+  hora: se aprieta, y **pregunta antes** — *"¿Cerrar el martes 20 de octubre?
+  Queda anotado que lo cerraste tú, con la hora. Se puede reabrir después."*
+  Reabrir también pregunta.
+
+Detalles que vale la pena tener escritos, todos en `usarAutoguardado.ts`:
+
+- **Espera a que dejen de escribir** (600ms). Sin eso, un monto de cinco
+  dígitos serían cinco guardados y el cuarto llegaría con un número a medio
+  escribir.
+- **Nunca hay dos peticiones a la vez**: lo que llegue mientras una está en
+  vuelo queda anotado y se manda apenas vuelva. Se guarda el día entero, así
+  que el último gana y eso es justo lo correcto.
+- **Al cerrar la ventana se manda lo que quede en el reloj**, y además hay un
+  seguro al desmontar para el escape rápido. Comprobado: escribir la propina
+  y apretar Escape en el mismo segundo deja el monto guardado.
+- **Cerrar el día fuerza el guardado primero**, en ese orden: al revés, el
+  servidor miraría si falta alguien por marcar sobre los datos de antes del
+  último cambio y rechazaría cerrar un día que se acaba de completar.
+- **Editar un día cerrado ya no lo reabre.** Antes *Guardar* en un día
+  cerrado mandaba `cerrar: false`, o sea que corregir un ajuste olvidado lo
+  reabría sin que nadie lo pidiera. Hoy reabrir es un botón propio.
 
 ### Cerrar el día
 

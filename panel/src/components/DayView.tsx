@@ -8,6 +8,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
+import { pagoEnEspanol } from '@/lib/pagos';
+import Asistencia from './Asistencia';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
@@ -473,7 +475,9 @@ export default function DayView({ fecha }: { fecha: string }) {
                     <td className="py-2 pr-3 text-right tabular-nums">{r.personas}</td>
                     <td className="py-2 pr-3">
                       <div>{r.tipoPago || '—'}</div>
-                      <div className="text-xs text-hueso/50">{r.estadoPago || '—'}</div>
+                      <div className="text-xs text-hueso/50">
+                        {pagoEnEspanol(r.estadoPago) || '—'}
+                      </div>
                       {raro && (
                         <div className="mt-1 text-xs font-semibold text-amber-400">
                           ⚠ pago directo sin pagar
@@ -481,18 +485,9 @@ export default function DayView({ fecha }: { fecha: string }) {
                       )}
                     </td>
                     <td className="py-2 pr-3">
-                      <select value={r.asistencia || ''}
-                        onChange={(e) => marcar(r, e.target.value)}
-                        className={`rounded border bg-tinta px-2 py-1 text-xs ${
-                          r.asistencia === ASISTENCIA.noVino
-                            ? 'border-red-500/60 text-red-400'
-                            : r.asistencia === ASISTENCIA.vino
-                              ? 'border-emerald-500/50 text-emerald-400'
-                              : 'border-hueso/20 text-hueso/50'}`}>
-                        <option value={ASISTENCIA.sinMarcar}>— sin marcar</option>
-                        <option value={ASISTENCIA.vino}>Vino</option>
-                        <option value={ASISTENCIA.noVino}>No llegó</option>
-                      </select>
+                      <Asistencia valor={r.asistencia || ''}
+                        quien={r.nombre || 'esta reserva'}
+                        onCambio={(v) => marcar(r, v)} />
                     </td>
                     <td className="py-2 text-right whitespace-nowrap">
                       <button onClick={() => { setCreando(false); setEditando(r); }}

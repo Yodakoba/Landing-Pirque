@@ -17,8 +17,11 @@
  * volver a "no sé todavía" sin inventar un tercer botón. Va dicho en el
  * `title`, y el caso normal —marcar una vez— no necesita saberlo.
  *
- * El mismo control se usa para el equipo y para las actividades extras: dos
- * pantallas que preguntan lo mismo tienen que preguntarlo igual.
+ * El mismo control se usa para el equipo, para las actividades extras y
+ * para la asistencia de los clientes en la tabla del día: pantallas que
+ * preguntan lo mismo tienen que preguntarlo igual. Los valores de `VINO` y
+ * los de `ASISTENCIA` —la columna de `Reservas`— son el mismo `Sí` / `No`,
+ * así que el control sirve para las dos sin traducir nada.
  */
 import { VINO } from '@/lib/equipo';
 
