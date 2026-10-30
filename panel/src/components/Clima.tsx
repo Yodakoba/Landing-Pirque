@@ -49,9 +49,9 @@ export default function Clima({ c, grande = false }: { c?: DatoClima; grande?: b
       {/* En grande, cuánta agua. La probabilidad iría primero, pero MET no
           la da para Chile; los milímetros sí llegan siempre. */}
       {grande && (c.lluvia !== null && c.lluvia >= 30 ? (
-        <span aria-hidden className="text-sky-300/80">{Math.round(c.lluvia)}% lluvia</span>
+        <span aria-hidden className="text-cielo-texto/80">{Math.round(c.lluvia)}% lluvia</span>
       ) : c.mm !== null && c.mm >= 1 && (
-        <span aria-hidden className="text-sky-300/80">{Math.round(c.mm)} mm de lluvia</span>
+        <span aria-hidden className="text-cielo-texto/80">{Math.round(c.mm)} mm de lluvia</span>
       ))}
       {grande && (
         <a href={FUENTE.url} target="_blank" rel="noreferrer"

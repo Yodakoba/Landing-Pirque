@@ -162,7 +162,7 @@ export default function ReservaForm({
               inputMode="email"
               onBlur={(e) => setF({ ...f, email: correoNormal(e.target.value) })} />
             {avisoCorreo(f.email) && (
-              <p className="mt-0.5 text-[11px] leading-tight text-amber-300/80">
+              <p className="mt-0.5 text-[11px] leading-tight text-ambar-texto/80">
                 {avisoCorreo(f.email)}
               </p>
             )}
@@ -278,7 +278,7 @@ export default function ReservaForm({
             )}
           </p>
         </div>
-        {error && <p className="mt-3 text-sm font-semibold text-red-400">{error}</p>}
+        {error && <p className="mt-3 text-sm font-semibold text-rojo-texto">{error}</p>}
 
         <div className="mt-5 flex gap-3">
           <button onClick={guardar} disabled={guardando}

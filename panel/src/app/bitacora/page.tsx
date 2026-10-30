@@ -26,7 +26,7 @@ export default async function Pagina() {
   );
   if (!puede((sesion?.rol ?? '') as Rol, 'bitacora')) {
     return (
-      <div className="rounded border border-hueso/20 bg-hueso/5 p-4">
+      <div className="rounded border border-hueso/20 bg-panel p-4">
         <p className="font-semibold text-hueso/85">Esta parte no es tuya.</p>
         <p className="mt-1 text-sm text-hueso/70">
           La bitácora la ve el administrador.

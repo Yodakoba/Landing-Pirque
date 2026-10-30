@@ -18,10 +18,10 @@ export default function AvisoGuardado({ estado, error, onReintentar }: {
 }) {
   if (estado === 'error') {
     return (
-      <p className="text-xs text-red-400" role="alert">
+      <p className="text-xs text-rojo-texto" role="alert">
         No se pudo guardar{error ? `: ${error}` : '.'}{' '}
         {onReintentar && (
-          <button onClick={onReintentar} className="underline hover:text-red-300">
+          <button onClick={onReintentar} className="underline hover:text-rojo-texto">
             Reintentar
           </button>
         )}
@@ -33,7 +33,7 @@ export default function AvisoGuardado({ estado, error, onReintentar }: {
   }
   if (estado === 'guardado') {
     return (
-      <p className="text-xs text-emerald-400/80" aria-live="polite">
+      <p className="text-xs text-verde-texto/80" aria-live="polite">
         ✓ Guardado
       </p>
     );

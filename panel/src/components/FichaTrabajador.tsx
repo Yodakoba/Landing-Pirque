@@ -94,7 +94,7 @@ export default function FichaTrabajador({
               placeholder="Nombre y apellido" aria-label="Nombre del trabajador"
               onChange={(e) => setNombre(e.target.value)} />
           ) : (
-            <p className="rounded border border-hueso/10 bg-hueso/5 px-2 py-1 text-sm">
+            <p className="rounded border border-hueso/10 bg-panel px-2 py-1 text-sm">
               {ficha!.nombre}
             </p>
           )}
@@ -182,7 +182,7 @@ export default function FichaTrabajador({
         </p>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       <div className="mt-5 flex items-center gap-3">
         <span className="flex-1" />

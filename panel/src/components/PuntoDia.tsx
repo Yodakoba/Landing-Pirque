@@ -26,8 +26,8 @@ type Estado = 'preparacion' | 'cerrado' | 'privado' | 'sinCupo' | 'publico';
 
 const PALABRA: Record<Estado, { texto: string; clase: string; punto?: string }> = {
   preparacion: { texto: 'preparación', clase: 'text-oro/80', punto: '🟡' },
-  cerrado: { texto: 'cerrado', clase: 'text-red-400/80' },
-  privado: { texto: 'privado', clase: 'text-sky-300/80' },
+  cerrado: { texto: 'cerrado', clase: 'text-rojo-texto/80' },
+  privado: { texto: 'privado', clase: 'text-cielo-texto/80' },
   sinCupo: { texto: 'sin cupo', clase: 'text-hueso/35' },
   publico: { texto: 'público', clase: 'text-hueso/40' }
 };

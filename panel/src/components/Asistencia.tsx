@@ -30,8 +30,25 @@ import { VINO } from '@/lib/equipo';
  * deja unos 40px de alto, que es lo que se acierta con el dedo. Un control
  * de 30px se falla, y fallar acá significa marcar a la persona equivocada.
  */
-const BASE = 'flex items-center gap-1.5 rounded border px-3 py-2 '
-           + 'text-sm font-semibold transition';
+const BASE = 'tecla flex items-center gap-1.5 rounded-lg border-2 px-3 py-2 '
+           + 'text-sm font-semibold';
+
+/**
+ * El punto del semáforo, que es lo que se lee de lejos.
+ *
+ * Lo pidió el cliente junto con lo de los botones: un semáforo donde la
+ * palabra sea la confirmación y el color la respuesta. El punto se llena
+ * cuando ese estado está elegido y queda hueco cuando no, así que la fila
+ * se entiende sin leer ninguna de las dos palabras —y sin depender solo del
+ * color, que para quien no lo distingue no diría nada.
+ */
+function Foco({ encendido }: { encendido: boolean }) {
+  return (
+    <span aria-hidden
+      className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full border-2 border-current ${
+        encendido ? 'bg-current' : 'bg-transparent opacity-50'}`} />
+  );
+}
 
 export default function Asistencia({ valor, onCambio, quien }: {
   /** Lo que hay guardado: `VINO.si`, `VINO.no` o vacío. */
@@ -50,16 +67,16 @@ export default function Asistencia({ valor, onCambio, quien }: {
       <button type="button" aria-pressed={vino} onClick={() => cambiar(VINO.si)}
         title={vino ? 'Apreta de nuevo para dejarlo sin marcar' : `${quien} llegó`}
         className={`${BASE} ${vino
-          ? 'border-emerald-400 bg-emerald-500/20 text-emerald-200'
-          : 'border-hueso/20 text-hueso/50 hover:border-emerald-400/60 hover:text-emerald-200'}`}>
-        <span aria-hidden>✓</span> Vino
+          ? 'border-verde bg-verde/15 text-verde-texto shadow-[0_0_0_3px_rgb(var(--verde)/0.14)]'
+          : 'border-hueso/20 text-hueso/50 hover:border-verde/60 hover:text-verde-texto'}`}>
+        <Foco encendido={vino} /> Vino
       </button>
       <button type="button" aria-pressed={falto} onClick={() => cambiar(VINO.no)}
         title={falto ? 'Apreta de nuevo para dejarlo sin marcar' : `${quien} no llegó`}
         className={`${BASE} ${falto
-          ? 'border-red-400 bg-red-500/20 text-red-200'
-          : 'border-hueso/20 text-hueso/50 hover:border-red-400/60 hover:text-red-200'}`}>
-        <span aria-hidden>✕</span> No vino
+          ? 'border-rojo bg-rojo/15 text-rojo-texto shadow-[0_0_0_3px_rgb(var(--rojo)/0.14)]'
+          : 'border-hueso/20 text-hueso/50 hover:border-rojo/60 hover:text-rojo-texto'}`}>
+        <Foco encendido={falto} /> No vino
       </button>
     </div>
   );

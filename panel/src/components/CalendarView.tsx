@@ -182,7 +182,7 @@ export default function CalendarView() {
       </div>
 
       {avisoPlanilla && (
-        <p className="mb-2 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
+        <p className="mb-2 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">
           {avisoPlanilla}
         </p>
       )}
@@ -290,15 +290,15 @@ export function Aviso({ error, permiso = false }: { error: string; permiso?: boo
   // el problema donde no está.
   if (permiso) {
     return (
-      <div className="rounded border border-hueso/20 bg-hueso/5 p-4">
+      <div className="rounded border border-hueso/20 bg-panel p-4">
         <p className="font-semibold text-hueso/85">Esta parte no es tuya.</p>
         <p className="mt-1 text-sm text-hueso/70">{error}</p>
       </div>
     );
   }
   return (
-    <div className="rounded border border-red-500/50 bg-red-500/5 p-4">
-      <p className="font-semibold text-red-300">No se pudo leer la planilla.</p>
+    <div className="rounded border border-rojo/50 bg-rojo/5 p-4">
+      <p className="font-semibold text-rojo-texto">No se pudo leer la planilla.</p>
       <p className="mt-1 text-sm text-hueso/70">{error}</p>
       <p className="mt-3 text-sm text-hueso/60">
         Abre <a className="underline" href="/api/diagnostico">/api/diagnostico</a> para

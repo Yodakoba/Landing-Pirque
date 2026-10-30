@@ -2151,6 +2151,102 @@ pidió y cuánto pagó no es dato de un turno.
 - ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
   2026-10-22**: existe el rol `pagos`, que solo lee el informe.
 
+## El panel tiene tema claro (2026-10-30)
+
+Lo pidió el cliente: *"créame una versión diurna… pero no simplemente blanco
+y negro, sino una elegancia"*, con *"un buen contraste de toda la
+información"* y *"un juguetón bien de PlayStation, dónde y cómo usar los
+botones"*. **Solo el panel** — el sitio público se queda como está, por
+decisión suya en la misma frase.
+
+### Los colores son variables, no valores
+
+`tailwind.config.ts` ya no tiene hex: cada color es `rgb(var(--x) /
+<alpha-value>)`. **Las clases de los componentes no cambiaron** —`bg-tinta`,
+`text-hueso/60`, `border-oro/40` se siguen escribiendo igual— y lo único que
+cambia entre un tema y otro es qué vale la variable. La alternativa, prefijar
+`dark:` en cada clase de cada pantalla, habría sido reescribir el panel
+entero y dejar cada color nuevo con dos lugares donde equivocarse.
+
+Van en canales sueltos (`11 11 10`) porque es lo que `<alpha-value>`
+necesita para que `/60` siga funcionando.
+
+**Los tres colores de estado pasaron a tener nombre propio** —`verde`,
+`rojo`, `ambar`, `cielo`— en vez de los `emerald-400` de Tailwind, y no es
+gusto: de noche el texto de un aviso es claro y de día tiene que ser oscuro,
+así que el número de la paleta dejaría de significar lo mismo. Cada uno trae
+los tres tonos que de verdad se usan: el base (fondos y bordes con
+transparencia), `-fuerte` (bordes y rellenos sólidos) y `-texto`, que es el
+único pensado para leerse.
+
+### Qué es el tema claro
+
+**No es blanco pelado.** Papel tibio de fondo (`#FAF7F0`), **tarjetas
+blancas encima** y texto casi-negro cálido. Que las tarjetas sean más claras
+que la página es lo que las despega; por eso las superficies pasaron de
+`bg-hueso/[0.02]` —un tinte que de día se ve *hundido*— a **`bg-panel`**, que
+es el token de "superficie levantada" y vale `#14120F` de noche y `#FFFFFF`
+de día. Los tintes que **sí** son tintes —un `hover`, un chip, la barra de
+ocupación— se quedaron como estaban.
+
+**El dorado se oscurece de día**, de `#C9A227` a `#8A6B12`. El dorado del
+sitio sobre crema da menos de 2,5:1: todos los enlaces del panel serían
+ilegibles. El oro viejo, más profundo, se lee sobre papel y sigue siendo oro.
+
+**La escala de transparencias no significa lo mismo sobre papel**, y eso hubo
+que arreglarlo aparte. `text-hueso/45` de noche da 4,1:1 y de día cae a 2,6:1,
+o sea que todo lo secundario —el puesto bajo un nombre, el id de una reserva,
+los guiones de "no hay dato"— se desvanecía justo en la pantalla que se mira
+con sol encima. Los tramos bajos se suben en un **solo bloque** de
+`globals.css`, en vez de escribir `text-hueso/45 dark:text-hueso/60` en los
+trescientos y tantos lugares donde aparece.
+
+Ese bloque trajo su propia trampa, anotada porque es fácil de repetir:
+**lleva `:root` y un atributo, así que es más específico que las clases
+`hover:` de Tailwind** y los enlaces dejaban de ponerse dorados al pasarles
+el mouse. Los cuatro colores de hover que usa el panel se vuelven a afirmar
+después, con la misma especificidad.
+
+Y **un botón relleno apagado no puede verse roto**: `bg-oro` con
+`disabled:opacity-40` de día quedaba crema sobre oro pálido, que no se lee
+como nada. Apagado es gris.
+
+### El interruptor
+
+Está en la barra de arriba, y también en la pantalla de entrada —que es la
+primera que se abre, y donde alguien se encuentra con el tema que no quería—.
+En `/mi/` y en `/semana/` no: ahí la barra es una palabra y el botón sería el
+único control de una página de lectura.
+
+- **Arranca en oscuro, no en el del sistema.** Seguir a `prefers-color-scheme`
+  suena más fino y acá habría sido un problema: el panel lo usa gente a la que
+  recién se le enseñó dónde queda cada cosa, y la mitad del equipo habría
+  abierto un panel blanco sin pedirlo, distinto del que le mostraron.
+- **Se recuerda en `localStorage`**, o sea por navegador: el teléfono de la
+  jefa de turno puede estar en claro y el computador de la oficina en oscuro.
+  Si está bloqueado, abre en oscuro y el botón sirve para esa sesión.
+- **Lo pinta un guion de tres líneas en el `<head>`, antes de dibujar.** Si
+  esperara a React, cada carga aparecería oscura y pegaría un salto a blanco
+  — el parpadeo clásico, que además desconcierta justo a quien menos maneja
+  estos sistemas. No se puede resolver en el servidor: el tema es de cada
+  navegador y el HTML de Next se sirve igual para todos.
+
+### Los botones se hunden, y la asistencia es un semáforo
+
+Eso es el *"juguetón bien de PlayStation"*, y resuelve algo real: en un
+teléfono no hay cursor que cambie ni `hover` que anticipe nada, así que un
+botón y un texto se ven igual hasta que uno de los dos responde.
+
+- **Todo botón del panel se hunde 1px al tocarlo**, con `transition` corta.
+  Va sobre `button` y no sobre una clase que haya que acordarse de poner: un
+  botón al que se le olvidó es justamente el que se va a sentir muerto. Un
+  botón apagado **no** se hunde, porque fingir que respondió sería mentir
+  sobre lo único que está diciendo. Respeta `prefers-reduced-motion`.
+- **Vino / No vino llevan el punto del semáforo**: lleno cuando ese estado
+  está elegido, hueco cuando no. Así la fila se entiende sin leer ninguna de
+  las dos palabras —y sin depender solo del color, que para quien no lo
+  distingue no diría nada—. El elegido suma un halo suave de su color.
+
 ## El pronóstico del tiempo (2026-10-29)
 
 Cada día del panel muestra en chico el pronóstico —"☀️ 28°"— en el

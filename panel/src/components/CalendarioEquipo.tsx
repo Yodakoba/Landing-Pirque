@@ -132,8 +132,8 @@ export default function CalendarioEquipo() {
           ahí se cierra. Un día que todavía no llega no aparece: nadie puede
           decir quién vino a un sábado que no ha ocurrido. */}
       {porCerrar.length > 0 && (
-        <div className="mb-5 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mb-5 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             {porCerrar.length === 1
               ? 'Hay un día por cerrar.'
               : `Hay ${porCerrar.length} días por cerrar.`}
@@ -148,14 +148,14 @@ export default function CalendarioEquipo() {
               const x = falta(f);
               return (
                 <button key={f} onClick={() => setPlanificando(f)}
-                  className="rounded border border-amber-500/40 px-2 py-1 text-xs
+                  className="rounded border border-ambar/40 px-2 py-1 text-xs
                              hover:border-oro">
                   <span className="capitalize">{enPalabras(f)}</span>
                   {x.sinMarcar > 0 && (
-                    <span className="text-amber-300"> · {x.sinMarcar} sin marcar</span>
+                    <span className="text-ambar-texto"> · {x.sinMarcar} sin marcar</span>
                   )}
                   {x.extrasSinConfirmar > 0 && (
-                    <span className="text-amber-300">
+                    <span className="text-ambar-texto">
                       {' '}· {x.extrasSinConfirmar} extra{x.extrasSinConfirmar === 1 ? '' : 's'}
                     </span>
                   )}
@@ -232,7 +232,7 @@ export default function CalendarioEquipo() {
                           hover:border-oro disabled:opacity-40
                           ${preparando ? 'border-oro/40 bg-oro/5'
                              : oc ? COLOR_TARJETA(oc)
-                                  : 'border-hueso/10 bg-hueso/[0.02]'}
+                                  : 'border-hueso/10 bg-panel'}
                           ${esHoy ? 'ring-1 ring-oro' : ''}`}>
               <span className="flex items-start justify-between">
                 {/* El pronóstico bajo el número, en el aire que ya deja el
@@ -263,13 +263,13 @@ export default function CalendarioEquipo() {
                 </span>
               )}
               {res.faltan > 0 && (
-                <span className="mt-0.5 block text-amber-300">faltan {res.faltan}</span>
+                <span className="mt-0.5 block text-ambar-texto">faltan {res.faltan}</span>
               )}
               {res.total > 0 && cerrado(f) && (
                 <span className="mt-0.5 block text-hueso/45">✓ cerrado</span>
               )}
               {res.total > 0 && !cerrado(f) && f < hoy() && falta(f).sinMarcar > 0 && (
-                <span className="mt-0.5 block text-amber-300">
+                <span className="mt-0.5 block text-ambar-texto">
                   {falta(f).sinMarcar} sin marcar
                 </span>
               )}

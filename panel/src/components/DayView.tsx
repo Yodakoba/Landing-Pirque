@@ -209,7 +209,7 @@ export default function DayView({ fecha }: { fecha: string }) {
       <p className="text-hueso/60 text-sm">
         {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
         {noShows > 0 && (
-          <span className="text-red-400"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
+          <span className="text-rojo-texto"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
         )}
       </p>
 
@@ -219,7 +219,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         <div className="mt-4 flex flex-wrap gap-2">
           {menus.map(({ menu, cantidad }) => (
             <span key={menu}
-              className="rounded border border-hueso/15 bg-hueso/5 px-3 py-1.5 text-sm">
+              className="rounded border border-hueso/15 bg-panel px-3 py-1.5 text-sm">
               <strong className="text-oro tabular-nums">{cantidad}</strong>
               <span className="text-hueso/70"> × </span>
               {menu}
@@ -241,7 +241,7 @@ export default function DayView({ fecha }: { fecha: string }) {
 
       {/* El equipo de este día. Va junto a lo que hay que preparar porque es
           la otra mitad de la misma pregunta: para esta gente, con quién. */}
-      <div className="mt-3 rounded border border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+      <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs uppercase tracking-widest text-hueso/45">Equipo</span>
           {conGente.length === 0 ? (
@@ -271,7 +271,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           )}
           <span className="flex-1" />
           {faltan > 0 && (
-            <span className="text-xs text-amber-300">Faltan {faltan}</span>
+            <span className="text-xs text-ambar-texto">Faltan {faltan}</span>
           )}
           <button onClick={() => setPlanificando('equipo')} disabled={!equipo}
             className="text-sm text-oro hover:underline disabled:opacity-40">
@@ -288,12 +288,12 @@ export default function DayView({ fecha }: { fecha: string }) {
             <span className="text-hueso/55"> en el equipo de este día · </span>
             <span className="text-hueso/55">{vinieron} vinieron</span>
             {faltaron > 0 && (
-              <span className="text-red-300">
+              <span className="text-rojo-texto">
                 {' '}· {faltaron} {faltaron === 1 ? 'no llegó' : 'no llegaron'}
               </span>
             )}
             {sinMarcar > 0 && (
-              <span className="text-amber-300"> · {sinMarcar} sin marcar</span>
+              <span className="text-ambar-texto"> · {sinMarcar} sin marcar</span>
             )}
           </p>
         )}
@@ -335,7 +335,7 @@ export default function DayView({ fecha }: { fecha: string }) {
 
           Está igual en la página del día porque es donde se cierra un día, y
           "¿cuánto costó este sábado?" no se contesta sin ellas. */}
-      <div className="mt-3 rounded border border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+      <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs uppercase tracking-widest text-hueso/45">
             Actividades extras
@@ -363,7 +363,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           )}
           <span className="flex-1" />
           {extrasSinConfirmar > 0 && (
-            <span className="text-xs text-amber-300">
+            <span className="text-xs text-ambar-texto">
               {extrasSinConfirmar} sin confirmar
             </span>
           )}
@@ -479,7 +479,7 @@ export default function DayView({ fecha }: { fecha: string }) {
                         {pagoEnEspanol(r.estadoPago) || '—'}
                       </div>
                       {raro && (
-                        <div className="mt-1 text-xs font-semibold text-amber-400">
+                        <div className="mt-1 text-xs font-semibold text-ambar-texto">
                           ⚠ pago directo sin pagar
                         </div>
                       )}
@@ -493,7 +493,7 @@ export default function DayView({ fecha }: { fecha: string }) {
                       <button onClick={() => { setCreando(false); setEditando(r); }}
                         className="text-hueso/60 hover:text-oro">Editar</button>
                       <button onClick={() => borrar(r)}
-                        className="ml-3 text-hueso/60 hover:text-red-400">Borrar</button>
+                        className="ml-3 text-hueso/60 hover:text-rojo-texto">Borrar</button>
                     </td>
                   </tr>
                 );

@@ -22,7 +22,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     cookieDe(headers().get('cookie'), COOKIE_SESION), secretoDeSesion(process.env)
   );
   return (
-    <html lang="es">
+    <html lang="es" data-tema="oscuro">
+      <head>
+        {/*
+          **El tema se pinta antes de dibujar nada.** Si esperara a React, cada
+          carga aparecería con el tema oscuro y pegaría un salto a blanco un
+          instante después — el clásico parpadeo, que además desconcierta
+          justo a quien menos maneja estos sistemas.
+
+          Por eso es un guión bloqueante de tres líneas en el `<head>`: no hay
+          forma de leer `localStorage` en el servidor, porque el tema es de
+          cada navegador y el HTML de Next se sirve igual para todos.
+
+          Va entre `try` porque en navegación privada `localStorage` lanza al
+          tocarlo, y un error acá dejaría la página entera en blanco.
+        */}
+        <script dangerouslySetInnerHTML={{ __html:
+          "try{var t=localStorage.getItem('brasas-tema');"
+          + "if(t==='claro')document.documentElement.dataset.tema='claro'}catch(e){}"
+        }} />
+      </head>
       <body className="min-h-screen">
         <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} />
         <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>

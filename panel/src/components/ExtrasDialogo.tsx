@@ -209,7 +209,7 @@ export default function ExtrasDialogo({
                         setLista(lista.filter((_, k) => k !== i));
                       }}
                       className="rounded px-3 py-2.5 text-xs text-hueso/45
-                                 hover:bg-red-500/10 hover:text-red-300"
+                                 hover:bg-rojo/10 hover:text-rojo-texto"
                       title={`Sacar a ${e.colaborador} de este día`}>
                       Sacar
                     </button>
@@ -273,7 +273,7 @@ export default function ExtrasDialogo({
         />
       )}
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       <p className="mt-4 max-w-2xl text-xs text-hueso/45">
         El monto se propone del que tiene puesto cada quien y se puede
@@ -294,7 +294,7 @@ export default function ExtrasDialogo({
             <strong className="tabular-nums text-oro">{enPesos(total)}</strong>
             <span className="text-hueso/55"> en actividades de este día</span>
             {sinConfirmar > 0 && (
-              <span className="text-amber-300">
+              <span className="text-ambar-texto">
                 {' '}· {sinConfirmar} sin confirmar
               </span>
             )}

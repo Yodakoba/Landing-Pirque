@@ -259,8 +259,8 @@ export default function InformeEquipo() {
       </div>
 
       {sinMarcar > 0 && (
-        <div className="mb-6 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             Hay {sinMarcar} turno{sinMarcar === 1 ? '' : 's'} sin pasar lista
             en este periodo.
           </p>
@@ -272,8 +272,8 @@ export default function InformeEquipo() {
       )}
 
       {sinConfirmar > 0 && (
-        <div className="mb-6 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             Hay {sinConfirmar} actividad{sinConfirmar === 1 ? '' : 'es'} extra
             sin confirmar en este periodo.
           </p>
@@ -328,12 +328,12 @@ export default function InformeEquipo() {
                     <td className="py-2 pr-3 tabular-nums">
                       {l.dias}
                       {l.noVino > 0 && (
-                        <span className="ml-1 text-xs text-red-300/80">
+                        <span className="ml-1 text-xs text-rojo-texto/80">
                           · {l.noVino} no vino
                         </span>
                       )}
                       {l.sinMarcar > 0 && (
-                        <span className="ml-1 text-xs text-amber-300/80">
+                        <span className="ml-1 text-xs text-ambar-texto/80">
                           · {l.sinMarcar} sin marcar
                         </span>
                       )}
@@ -350,7 +350,7 @@ export default function InformeEquipo() {
                         : <span className="text-hueso/25">—</span>}
                     </td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${
-                      l.ajustes < 0 ? 'text-red-300/80' : 'text-hueso/70'}`}>
+                      l.ajustes < 0 ? 'text-rojo-texto/80' : 'text-hueso/70'}`}>
                       {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
@@ -414,12 +414,12 @@ export default function InformeEquipo() {
                         <td className="py-2 pr-3 tabular-nums">
                           {l.dias}
                           {l.noVino > 0 && (
-                            <span className="ml-1 text-xs text-red-300/80">
+                            <span className="ml-1 text-xs text-rojo-texto/80">
                               · {l.noVino} no vino
                             </span>
                           )}
                           {l.sinConfirmar > 0 && (
-                            <span className="ml-1 text-xs text-amber-300/80">
+                            <span className="ml-1 text-xs text-ambar-texto/80">
                               · {l.sinConfirmar} sin confirmar
                             </span>
                           )}
@@ -428,7 +428,7 @@ export default function InformeEquipo() {
                           {l.montos ? enPesos(l.montos) : <span className="text-hueso/25">—</span>}
                         </td>
                         <td className={`py-2 pr-3 text-right tabular-nums ${
-                          l.ajustes < 0 ? 'text-red-300/80' : 'text-hueso/70'}`}>
+                          l.ajustes < 0 ? 'text-rojo-texto/80' : 'text-hueso/70'}`}>
                           {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
                         </td>
                         <td className="py-2 text-right tabular-nums">
@@ -474,7 +474,7 @@ export default function InformeEquipo() {
           </div>
 
           {sinCuenta.length > 0 && (
-            <p className="mb-6 max-w-2xl text-xs text-amber-300/80">
+            <p className="mb-6 max-w-2xl text-xs text-ambar-texto/80">
               Sin datos para transferir: {sinCuenta.join(' · ')}. La planilla
               sale igual, con esas columnas a medias; se completa en{' '}
               <a href="/equipo" className="hover:underline">equipo</a> o en{' '}

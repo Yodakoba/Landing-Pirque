@@ -274,7 +274,7 @@ export default function EquipoEditor() {
     return (
       <>
         {dif.length > 0 && (
-          <span className="text-xs text-amber-300/85">
+          <span className="text-xs text-ambar-texto/85">
             Cambiaste {dif.join(', ')}.
           </span>
         )}
@@ -389,8 +389,8 @@ export default function EquipoEditor() {
       </p>
 
       {sinFicha.length > 0 && (
-        <div className="mb-6 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             Hay {sinFicha.length === 1 ? 'alguien asignado' : 'gente asignada'} a
             turnos que no está en esta lista.
           </p>
@@ -421,7 +421,7 @@ export default function EquipoEditor() {
         </p>
       )}
       {avisoLink && (
-        <p className="mb-4 rounded border border-hueso/20 bg-hueso/5 px-3 py-2 text-sm">
+        <p className="mb-4 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">
           {avisoLink}
         </p>
       )}
@@ -461,7 +461,7 @@ export default function EquipoEditor() {
           return (
             <li key={i}
               className={`overflow-hidden rounded border ${t.activo
-                ? 'border-hueso/15 bg-hueso/[0.02]'
+                ? 'border-hueso/15 bg-panel'
                 : 'border-hueso/10 bg-transparent opacity-60'}`}>
 
               {/* **La ficha cerrada es una línea.** Nombre, puesto y teléfono
@@ -495,7 +495,7 @@ export default function EquipoEditor() {
                       cerrada**: adentro ya lo avisa `DatosBancarios`, pero
                       cerrada es donde se mira la lista antes de pagar. */}
                   {esAdmin && t.nombre.trim() && !sePuedeTransferir(t.banco) && (
-                    <span className="text-[11px] text-amber-300/80">falta su cuenta</span>
+                    <span className="text-[11px] text-ambar-texto/80">falta su cuenta</span>
                   )}
                 </button>
 
@@ -518,8 +518,8 @@ export default function EquipoEditor() {
                       void quitarFicha(i);
                     }}
                     className="shrink-0 rounded border border-hueso/25 px-3 py-1.5 text-xs
-                               font-semibold text-hueso/70 hover:border-red-400
-                               hover:text-red-300"
+                               font-semibold text-hueso/70 hover:border-rojo-fuerte
+                               hover:text-rojo-texto"
                     title="Todavía no tiene ningún turno guardado">Quitar</button>
                 ) : t.activo ? (
                   <button
@@ -531,8 +531,8 @@ export default function EquipoEditor() {
                       void cambiarActivo(i, false);
                     }}
                     className="shrink-0 rounded border border-hueso/25 px-3 py-1.5 text-xs
-                               font-semibold text-hueso/70 hover:border-red-400
-                               hover:text-red-300"
+                               font-semibold text-hueso/70 hover:border-rojo-fuerte
+                               hover:text-rojo-texto"
                     title={`Tiene ${turnos} turnos guardados, así que su ficha `
                            + 'no se quita: se desactiva y conserva su historia'}>
                     Desactivar
@@ -612,7 +612,7 @@ export default function EquipoEditor() {
                               persona, y dos "Quitar" a dos centímetros de
                               distancia son una confusión esperando a pasar. */}
                           <button onClick={() => link(t.nombre, 'quitar')}
-                            className="text-hueso/55 hover:text-red-400">Quitar link</button>
+                            className="text-hueso/55 hover:text-rojo-texto">Quitar link</button>
                         </>
                       ) : (
                         <button onClick={() => link(t.nombre, 'crear')}
@@ -738,7 +738,7 @@ export default function EquipoEditor() {
           trabajadores: entre las dos, `/equipo` era una página larguísima
           que había que recorrer entera para llegar a cualquier cosa. Acá
           queda un botón, y la tabla se abre cuando de verdad hace falta. */}
-      <div className="mt-10 rounded border border-hueso/15 bg-hueso/[0.02] p-4">
+      <div className="mt-10 rounded border border-hueso/15 bg-panel p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <button onClick={() => setVerPuestos(true)}
             className="rounded border border-hueso/25 px-4 py-2 text-sm font-semibold
@@ -830,7 +830,7 @@ export default function EquipoEditor() {
                       {esAdmin && (
                         <button
                           onClick={() => { setPuestos(puestos.filter((_, k) => k !== i)); setSucio(true); }}
-                          className="text-hueso/60 hover:text-red-400">Quitar</button>
+                          className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
                       )}
                     </td>
                   </tr>

@@ -138,19 +138,19 @@ export default function DiaEditor({
         </div>
 
         {yaEstaba && (
-          <p className="mt-3 rounded border border-amber-500/50 bg-amber-500/5 p-3 text-sm text-amber-200">
+          <p className="mt-3 rounded border border-ambar/50 bg-ambar/5 p-3 text-sm text-ambar-texto">
             Esa fecha ya está en la lista. Guardar va a reemplazar su cupo,
             su hora y su estado por lo que pongas acá.
           </p>
         )}
 
         {!nueva && Number(f.capacidad) > 0 && Number(f.capacidad) < dia!.tomadas && (
-          <p className="mt-3 rounded border border-amber-500/50 bg-amber-500/5 p-3 text-sm text-amber-200">
+          <p className="mt-3 rounded border border-ambar/50 bg-ambar/5 p-3 text-sm text-ambar-texto">
             Ese cupo es menor que las {dia!.tomadas} personas que ya reservaron.
             Se puede guardar igual, pero el día va a quedar sobrevendido.
           </p>
         )}
-        {error && <p className="mt-3 text-sm font-semibold text-red-400">{error}</p>}
+        {error && <p className="mt-3 text-sm font-semibold text-rojo-texto">{error}</p>}
 
         {/* Tres estados y no un interruptor, porque son tres cosas
             distintas: abierta al público, abierta solo para nosotros, y

@@ -90,8 +90,8 @@ export default function MenusEditor() {
       </p>
 
       {sinRegistrar.length > 0 && (
-        <div className="mb-6 rounded border border-amber-500/50 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-300">
+        <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
+          <p className="text-sm font-semibold text-ambar-texto">
             Hay {sinRegistrar.length === 1 ? 'un menú vendido' : 'menús vendidos'} que
             no está{sinRegistrar.length === 1 ? '' : 'n'} en esta lista.
           </p>
@@ -138,7 +138,7 @@ export default function MenusEditor() {
                 </td>
                 <td className="py-2 text-right whitespace-nowrap">
                   <button onClick={() => { setMenus(menus.filter((_, k) => k !== i)); setSucio(true); }}
-                    className="text-hueso/60 hover:text-red-400">Quitar</button>
+                    className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
                 </td>
               </tr>
             ))}

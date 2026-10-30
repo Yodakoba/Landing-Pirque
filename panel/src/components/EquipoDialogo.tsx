@@ -272,7 +272,7 @@ export default function EquipoDialogo({
           : <>Todavía no hay nadie reservado este día.</>}
         {' '}
         {faltan > 0
-          ? <span className="text-amber-300">Faltan {faltan} según las reglas de cada puesto.</span>
+          ? <span className="text-ambar-texto">Faltan {faltan} según las reglas de cada puesto.</span>
           : <span className="text-hueso/50">
               Las sugerencias salen de la columna <em>uno cada N personas</em> de{' '}
               <a href="/equipo" className="text-oro hover:underline">Equipo</a>.
@@ -285,7 +285,7 @@ export default function EquipoDialogo({
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-sm font-semibold">{l.puesto}</h3>
               <span className={`text-xs tabular-nums ${
-                l.faltan > 0 ? 'text-amber-300' : 'text-hueso/45'}`}>
+                l.faltan > 0 ? 'text-ambar-texto' : 'text-hueso/45'}`}>
                 {l.asignados.length}
                 {l.sugeridos > 0 && <> / {l.sugeridos}</>}
               </span>
@@ -300,9 +300,9 @@ export default function EquipoDialogo({
                     <li key={nombre}
                       className={`flex flex-wrap items-center gap-2 rounded border
                                   px-2 py-1.5 text-xs ${
-                        t?.asistencia === VINO.si ? 'border-emerald-500/25 bg-emerald-500/5'
-                        : t?.asistencia === VINO.no ? 'border-red-500/25 bg-red-500/5'
-                        : 'border-hueso/10 bg-hueso/[0.02]'}`}>
+                        t?.asistencia === VINO.si ? 'border-verde/25 bg-verde/5'
+                        : t?.asistencia === VINO.no ? 'border-rojo/25 bg-rojo/5'
+                        : 'border-hueso/10 bg-panel'}`}>
                       <span className={`text-sm ${
                         t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
                         : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
@@ -312,7 +312,7 @@ export default function EquipoDialogo({
                           por eso se dice con todas sus letras y no con un
                           guion, que no pide nada. */}
                       {!t?.asistencia && (
-                        <span className="text-[10px] uppercase tracking-wide text-amber-300/70">
+                        <span className="text-[10px] uppercase tracking-wide text-ambar-texto/70">
                           sin marcar
                         </span>
                       )}
@@ -353,7 +353,7 @@ export default function EquipoDialogo({
                             (x) => normalizar(x.trabajador) !== normalizar(nombre)));
                         }}
                         className="rounded px-3 py-2.5 text-xs text-hueso/45
-                                   hover:bg-red-500/10 hover:text-red-300"
+                                   hover:bg-rojo/10 hover:text-rojo-texto"
                         title={`Sacar a ${nombre} de este día`}>
                         Sacar
                       </button>
@@ -499,7 +499,7 @@ export default function EquipoDialogo({
                     <span className="block text-xs text-hueso/40">
                       {t.puesto}
                       {t.asistencia === VINO.sinMarcar && (
-                        <span className="text-amber-300"> · sin marcar</span>
+                        <span className="text-ambar-texto"> · sin marcar</span>
                       )}
                       {esContratado(t.modalidad) && <> · contratado</>}
                     </span>
@@ -541,7 +541,7 @@ export default function EquipoDialogo({
                           aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
                           onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
                         <button onClick={() => quitarAjuste(i, k)}
-                          className="px-2 py-1.5 text-hueso/40 hover:text-red-400"
+                          className="px-2 py-1.5 text-hueso/40 hover:text-rojo-texto"
                           aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
                           title="Quitar este ajuste">✕</button>
                       </div>
@@ -587,7 +587,7 @@ export default function EquipoDialogo({
               la reparte en partes iguales entre quienes vinieron y
               participan. Lo que se guarda es la parte de cada uno. */}
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded border
-                          border-hueso/15 bg-hueso/[0.03] px-3 py-2">
+                          border-hueso/15 bg-panel px-3 py-2">
             <label className="flex items-center gap-2 text-sm">
               <span className="text-hueso/70">Propina del día</span>
               <input type="number" min={0} step={1000}
@@ -609,7 +609,7 @@ export default function EquipoDialogo({
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       {/* **El resumen arriba y las acciones en una sola línea abajo.**
           Antes compartían una fila que envolvía, así que con el resumen
@@ -625,7 +625,7 @@ export default function EquipoDialogo({
               {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
             </strong>
             {faltaron > 0 && (
-              <span className="text-red-300">
+              <span className="text-rojo-texto">
                 {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
               </span>
             )}.
@@ -636,7 +636,7 @@ export default function EquipoDialogo({
         {falta.extrasSinConfirmar > 0 && (
           <>
             {' '}
-            <span className="text-amber-300">
+            <span className="text-ambar-texto">
               {falta.extrasSinConfirmar === 1
                 ? 'Queda 1 actividad extra sin confirmar'
                 : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
@@ -652,8 +652,8 @@ export default function EquipoDialogo({
           el mouse: en un teléfono eso no existe, y lo que queda es un botón
           muerto sin explicación. */}
       {conCierre && !cerrado && !listo && (
-        <p className="mt-3 rounded border border-amber-500/40 bg-amber-500/5
-                      px-3 py-2 text-sm text-amber-200/90">
+        <p className="mt-3 rounded border border-ambar/40 bg-ambar/5
+                      px-3 py-2 text-sm text-ambar-texto/90">
           {falta.conEquipo === 0
             ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
             : <>Para cerrar el día falta marcar si{' '}
