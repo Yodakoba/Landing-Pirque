@@ -6,6 +6,7 @@
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
 import { useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA } from '@/lib/columnas';
 import { pagoEnEspanol } from '@/lib/pagos';
@@ -203,7 +204,7 @@ export default function DayView({ fecha }: { fecha: string }) {
     <>
       <a href="/" className="text-sm text-hueso/60 hover:text-hueso">← Calendario</a>
       <h1 className="mt-2 text-xl font-bold uppercase tracking-wide capitalize">
-        {enPalabras(fecha)}
+        {enPalabras(fecha)}<Ayuda tema="dia" />
       </h1>
       <Clima c={pronostico.get(fecha)} grande />
       <p className="text-hueso/60 text-sm">

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Cabecera from '@/components/Cabecera';
+import Recorrido from '@/components/Recorrido';
 import { headers } from 'next/headers';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from '@/lib/sesion';
 
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen">
         <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} />
+        <Recorrido />
         <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
       </body>
     </html>

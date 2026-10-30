@@ -12,6 +12,7 @@
  * filtro que pudiéramos escribir acá.
  */
 import { headers } from 'next/headers';
+import Ayuda from '@/components/Ayuda';
 import { leerBitacora } from '@/lib/datos';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from '@/lib/sesion';
 import { puede, type Rol } from '@/lib/auth';
@@ -39,7 +40,9 @@ export default async function Pagina() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">Bitácora</h1>
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+        Bitácora<Ayuda tema="bitacora" />
+      </h1>
       <p className="mb-6 max-w-2xl text-sm text-hueso/60">
         Lo último que se hizo en el panel, de lo más reciente a lo más
         antiguo. Las horas son de Chile.{' '}

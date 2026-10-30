@@ -10,6 +10,7 @@
  * panel es enterarse cuando dejan de estarlo. Ver src/lib/menus.ts.
  */
 import { useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import { desconocidos, aMonto, type Menu } from '@/lib/menus';
 import { menusConocidos } from '@/lib/shopify';
@@ -74,7 +75,9 @@ export default function MenusEditor() {
 
   return (
     <section>
-      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">Menús</h1>
+      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
+        Menús<Ayuda tema="menus" />
+      </h1>
       <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
         Qué menús existen y cuánto valen. <strong>El nombre tiene que ser
         exactamente el mismo acá, en Shopify y en el sitio</strong>: no hay

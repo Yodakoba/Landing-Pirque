@@ -12,6 +12,7 @@
  * puede dejar a alguien sin poder entrar.
  */
 import { useEffect, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import Dialogo from './Dialogo';
 import { LARGO_MINIMO_CLAVE, ROLES_DE_CUENTA } from '@/lib/auth';
@@ -89,7 +90,9 @@ export default function UsuariosEditor() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">Cuentas</h1>
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+        Cuentas<Ayuda tema="cuentas" />
+      </h1>
       <p className="mb-6 max-w-2xl text-sm text-hueso/60">
         Quién entra al panel y con qué permisos. <strong>Cada acción queda
         firmada con el nombre de esta lista</strong>, así que conviene una

@@ -16,6 +16,7 @@
  * llamada directa a la API tiene que obedecer la misma regla.
  */
 import { useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
          repartirPropina, propinaDelDia,
@@ -264,6 +265,8 @@ export default function EquipoDialogo({
 
   return (
     <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
+      {/* El `?` de esta ventana explica lo único que de verdad se aprende
+          acá: qué significa dejar a alguien sin marcar. */}
       <p className="mt-3 text-sm text-hueso/60">
         {personas > 0
           ? <>Hay <strong className="text-hueso">{personas}</strong>{' '}
@@ -277,6 +280,7 @@ export default function EquipoDialogo({
               Las sugerencias salen de la columna <em>uno cada N personas</em> de{' '}
               <a href="/equipo" className="text-oro hover:underline">Equipo</a>.
             </span>}
+        <Ayuda tema="asistencia" />
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">

@@ -2151,6 +2151,85 @@ pidió y cuánto pagó no es dato de un turno.
 - ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
   2026-10-22**: existe el rol `pagos`, que solo lee el informe.
 
+## El panel se explica solo (2026-10-30)
+
+Lo pidió el cliente: *"tenemos que pensar también sobre un sistema de
+enseñanza interactiva dentro del sitio para los que lo acceden la primera
+vez… signo de interrogación, clic, quiero aprender más y se abre y aprendo
+más sobre esto"*.
+
+Son dos cosas separadas y conviene no confundirlas: **una tira que se ofrece
+al llegar** y **un `?` que se pide cuando hace falta**.
+
+### Todos los textos viven en `ayudas.ts`
+
+Si cada pantalla escribiera su explicación dentro de su JSX, corregir el tono
+o una palabra sería recorrer doce archivos, y nadie podría leer de una
+sentada lo que el panel le está enseñando a la gente. Juntos se leen enteros
+y se corrigen en un lugar.
+
+Cómo están escritos, que es la parte que importa:
+
+- **Dicen qué se hace, no qué es.** *"Acá se mira cómo viene la ocupación"*
+  sirve; *"esta pantalla muestra una grilla de fechas"* no le sirve a nadie.
+- **Sin palabras del oficio.** Ni endpoint, ni registro, ni sincronizar.
+- **Cortos**: dos o tres párrafos, unos pasos numerados y un *Ojo* con la
+  única advertencia que conviene leer antes de tocar algo. Una ayuda larga no
+  se lee, y una que no se lee es peor que ninguna porque ocupa el lugar de la
+  buena.
+- **No inventan datos del negocio.** Ningún precio, ningún horario, ninguna
+  capacidad: eso sale de la planilla y cambia. Acá se explica el panel.
+
+Hay una por pantalla —calendario, día, turnos, equipo, extras, informe,
+menús, configuración, cuentas, bitácora— más una para **marcar quién vino**,
+que es lo único que de verdad se aprende dentro de la ventana del día.
+
+### El `?` se pide, no aparece
+
+No hay globitos que salgan solos ni carteles que haya que cerrar: quien ya
+sabe usar el panel no ve nada distinto, y quien no sabe tiene el mismo signo
+en el mismo lugar en todas las pantallas. **Una ayuda que interrumpe se
+aprende a cerrar sin leerla.**
+
+### El recorrido: cuatro pantallas, ofrecido dos veces
+
+**Son pantallas de texto, no globitos flotando sobre la página**, que era la
+otra forma de hacerlo. Un globito hay que anclarlo a algo que esté a la
+vista: en un teléfono la mitad quedan fuera de pantalla, y si alguien hace
+scroll el globito apunta al aire. Cinco pasos leídos de corrido no se rompen
+nunca. Cada uno con un enlace para ir a ver la pantalla de la que habla, y
+unos puntos que dicen cuánto falta — sin eso, *Siguiente* podría ser el
+segundo de cuatro o el segundo de veinte, y la diferencia es si alguien sigue
+o se sale.
+
+**Se ofrece dos veces y no más.** Una sola oferta se la pierde quien entró
+apurado; una oferta eterna se vuelve parte del fondo y deja de verse. Quien
+lo termina o lo cierra no lo ve nunca más, y de todas formas se puede volver
+a abrir desde el `?` del calendario, que es donde vuelve quien se perdió.
+
+**Se recuerda en `localStorage`, o sea por navegador y no por persona.** Si
+el equipo comparte un teléfono, la tira aparece una vez para ese teléfono.
+Hacerlo por persona obligaría a escribir en la planilla cada vez que alguien
+mira un cartel, y eso no vale lo que cuesta.
+
+**No aparece en `/mi/`, en `/semana/` ni en la entrada**: las tres las abre
+gente que no administra nada, y un recorrido por el panel sería ofrecerle una
+visita a una casa en la que no vive.
+
+### Una ventana hereda el estilo de donde está escrita (2026-10-30)
+
+Vale tenerlo anotado porque el síntoma es llamativo y la causa no se parece:
+**la primera versión mostraba toda la ayuda EN MAYÚSCULAS Y EN NEGRITA**.
+
+El `?` vive al lado del título de la pantalla, o sea **dentro de un `<h1>`
+con `uppercase`**, y una ventana modal se dibuja donde está escrita, no en la
+raíz del documento: hereda `text-transform` como cualquier otro elemento.
+Tres párrafos gritados son ilegibles.
+
+Se arregla en `Dialogo` —`normal-case font-normal tracking-normal`— y no
+sacando el `?` del título, porque cualquier ventana que mañana se abra desde
+otro lugar tendría exactamente el mismo problema.
+
 ## El panel tiene tema claro (2026-10-30)
 
 Lo pidió el cliente: *"créame una versión diurna… pero no simplemente blanco

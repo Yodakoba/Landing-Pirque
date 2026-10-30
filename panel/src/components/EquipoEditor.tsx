@@ -15,6 +15,7 @@
  * que el panel diera consejos que nadie dio.
  */
 import { Fragment, useEffect, useRef, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import { aEntero, esContratado, MODALIDAD,
          type Puesto, type Trabajador } from '@/lib/equipo';
@@ -371,7 +372,9 @@ export default function EquipoEditor() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">Equipo</h1>
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+        Equipo<Ayuda tema="equipo" />
+      </h1>
       <p className="mb-4 max-w-2xl text-sm text-hueso/60">
         Quiénes trabajan y en qué puestos. Para asignar a alguien a un día,
         anda al calendario y apreta <strong>Equipo</strong> en la tarjeta de

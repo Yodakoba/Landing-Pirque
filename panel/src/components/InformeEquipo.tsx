@@ -25,6 +25,7 @@
  * columnas son lo que permite darse cuenta a tiempo.
  */
 import { useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import {
   informeDelPeriodo, mesesConTurnos, semanasConTurnos, rangoDelPeriodo,
@@ -209,7 +210,9 @@ export default function InformeEquipo() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">Informe del equipo</h1>
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+        Informe del equipo<Ayuda tema="informe" />
+      </h1>
       <p className="mb-6 max-w-2xl text-sm text-hueso/60">
         Lo que se le pagó a cada persona, según lo que quedó anotado al pasar
         lista. <strong>No se recalcula desde los sueldos de hoy</strong>: un

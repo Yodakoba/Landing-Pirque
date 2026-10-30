@@ -76,8 +76,18 @@ export default function Dialogo({
       className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4"
       style={{ zIndex: 50 + abiertas.length }}
       role="dialog" aria-modal="true" aria-label={titulo}>
-      {/* El clic de adentro no llega al fondo, así que no cierra nada. */}
-      <div className={`mx-auto mt-10 ${ancho} rounded border border-hueso/15 bg-panel p-5`}>
+      {/* El clic de adentro no llega al fondo, así que no cierra nada.
+
+          **`normal-case font-normal tracking-normal` no es decorativo.** Una
+          ventana se dibuja donde está escrita, no en la raíz del documento,
+          así que hereda el estilo de lo que la rodea. El `?` de ayuda vive al
+          lado del título de la pantalla, o sea **dentro de un `<h1>` en
+          mayúsculas**: sin esto, la explicación entera salía GRITADA Y EN
+          NEGRITA, que además de feo es ilegible en tres párrafos. Se arregla
+          acá y no sacando el `?` del título, porque cualquier ventana que se
+          abra mañana desde otro lugar tendría el mismo problema. */}
+      <div className={`mx-auto mt-10 ${ancho} rounded border border-hueso/15
+                       bg-panel p-5 font-normal normal-case tracking-normal`}>
         <h2 className="text-sm font-bold uppercase tracking-widest text-oro">{titulo}</h2>
         {children}
       </div>

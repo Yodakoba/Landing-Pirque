@@ -6,6 +6,8 @@
  * cobrada y cuánta hay que cobrar el mismo día.
  */
 import { useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
+import { verRecorrido } from './Recorrido';
 import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
@@ -156,7 +158,12 @@ export default function CalendarView() {
 
   return (
     <>
-      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">Fechas abiertas</h1>
+      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
+        Fechas abiertas
+        {/* El único `?` que además ofrece el recorrido: es la portada,
+            o sea donde vuelve quien se perdió. */}
+        <Ayuda tema="calendario" onRecorrido={verRecorrido} />
+      </h1>
       <p className="text-hueso/60 text-sm mb-6">
         Toca un día para ver quiénes vienen.{' '}
         {dias.length > 0 && (

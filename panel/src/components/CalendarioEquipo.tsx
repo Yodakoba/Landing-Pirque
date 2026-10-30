@@ -25,6 +25,7 @@
  * ese día. Se dice en pantalla porque es la duda razonable al usarlo.
  */
 import { useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -111,7 +112,7 @@ export default function CalendarioEquipo() {
   return (
     <section>
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Calendario del equipo
+        Calendario del equipo<Ayuda tema="turnos" />
       </h1>
       <p className="mb-5 max-w-2xl text-sm text-hueso/60">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,

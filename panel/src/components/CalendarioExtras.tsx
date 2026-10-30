@@ -18,6 +18,7 @@
  * evidente.
  */
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -136,7 +137,7 @@ export default function CalendarioExtras() {
   return (
     <section>
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Actividades extras
+        Actividades extras<Ayuda tema="extras" />
       </h1>
       <p className="mb-5 max-w-2xl text-sm text-hueso/60">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
