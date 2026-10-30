@@ -1377,6 +1377,46 @@ trampas conocidas:
   alcanzables con el tabulador**, así que sin esto se podría tabular hacia
   botones invisibles.
 
+**Un día salía más largo que los otros, y la causa era la cara que no se
+veía** (2026-10-30, lo notó el cliente con una captura: *"el domingo está más
+largo que los otros días, de hecho es el único día que pasa"*).
+
+Medido antes de tocar nada: el frente del viernes y el del sábado medían
+**178px** y el **dorso del domingo, 295** — nueve personas repartidas en
+nueve puestos, **un renglón cada uno**. Como las dos caras comparten celda,
+ese dorso estiraba la tarjeta entera, y el frente —que es lo que uno mira—
+quedaba con un hueco bajo el borde.
+
+**La lista vertical era el problema de fondo, y no tenía techo.** Lo dijo el
+cliente al ver el primer arreglo —un recorte a cinco puestos con un "y 4
+más"—: *"siempre va a haber más que seis puestos, siempre"*. Un recorte deja
+el dato afuera justo cuando más puestos hay, que es cuando uno quiere mirar.
+Entonces:
+
+- **Todos los puestos, en una lista corrida separada por comas**, como lo
+  escribiría una persona: *"4 × Garzón, Jefe de turno, 2 × Parrillero,
+  Barman"*. **Uno no lleva número** —nueve "1 ×" seguidos son ruido, y sin
+  número se lee "uno"— y el `×` es la misma convención que los menús del día.
+  Con esto un sábado de 18 personas en los nueve puestos ocupa **cuatro
+  renglones en vez de nueve**: el dorso pasó de 295px a 201.
+- **"2 × Garzón" y no "dos garzones"**, porque los nombres de puesto los
+  escribe el cliente y no hay forma de pluralizarlos bien sin inventar reglas
+  del español: "asistente de bar" no se pluraliza como "garzón".
+- **Un alto estándar** (`ALTO_ESTANDAR`, hoy `13rem`), que es lo otro que
+  pidió: *"encontrar el tamaño estándar con el cual llegar a la tarjeta y
+  poder rellenar siempre todos los puestos que se llenan"*. Con él **todas
+  las tarjetas de la página miden lo mismo**, no solo las de una fila, y el
+  sábado más cargado entra sin estirar nada.
+- **Es `min-height` y no `height`, y esa es toda la diferencia** con la
+  medida fija que este archivo venía evitando: un piso no recorta nada. Si
+  algún día no alcanza —una pantalla angosta hace envolver más la lista— la
+  tarjeta crece, y `h-full` deja pareja su fila igual.
+
+**Se probó la salida obvia —que mande el frente, con el dorso `absolute`
+encima— y se descartó**: la tarjeta quedaba a 178 y el dorso salía **cortado
+a media línea**, sin nada que dijera que seguía. Arreglar una cara rompiendo
+la otra no es arreglarlo.
+
 El pie del frente dice ahora **"Ver reservas"** y no "Ver quiénes vienen":
 con tres acciones, el texto largo se partía en dos líneas en una tarjeta de
 cuatro columnas. La fecha del título lleva al mismo lugar.
