@@ -226,17 +226,32 @@ export async function asegurarHoja(hoja: string): Promise<string> {
 }
 
 /**
- * Reescribe un bloque entero desde A1.
+ * Reescribe una pestaña entera desde A1, **y borra lo que quede debajo**.
  *
- * Para tablas chicas y de tamaño fijo, como `Config`. No borra lo que
- * quede más abajo, así que no sirve para una lista que se acorta.
+ * Ese segundo paso arregla un error real (2026-10-30): `values.update`
+ * escribe las filas que uno le pasa y **deja intactas las de más abajo**,
+ * así que sacar a alguien de una lista de cuatro escribía tres filas y la
+ * cuarta se quedaba donde estaba. Quien quitaba a un trabajador lo veía
+ * desaparecer de la pantalla y encontraba al último **duplicado** en la
+ * planilla. Lo mismo valía para los puestos, los menús y los colaboradores:
+ * todas las pestañas que se reescriben enteras.
+ *
+ * **Se escribe primero y se borra después**, en ese orden. Al revés, un
+ * fallo entre las dos llamadas dejaría la pestaña vacía; así, lo peor que
+ * puede pasar es quedarse con la fila de más, que es exactamente lo que
+ * pasaba antes y se corrige al siguiente guardado.
  */
 export async function escribirBloque(hoja: string, filas: unknown[][]): Promise<void> {
+  const titulo = await asegurarHoja(hoja);
   await sheets().spreadsheets.values.update({
     spreadsheetId: idPlanilla(),
-    range: `'${await asegurarHoja(hoja)}'!A1`,
+    range: `'${titulo}'!A1`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: filas }
+  });
+  await sheets().spreadsheets.values.clear({
+    spreadsheetId: idPlanilla(),
+    range: `'${titulo}'!A${filas.length + 1}:ZZ`
   });
 }
 

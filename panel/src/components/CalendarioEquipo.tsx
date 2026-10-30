@@ -192,7 +192,12 @@ export default function CalendarioEquipo() {
           celda, así que el mes se desplaza de lado DENTRO de su caja. Es lo
           mismo que hacen las tablas del panel, y es preferible a achicar el
           texto hasta que "preparación" no se lea. */}
-      <div className="overflow-x-auto pb-1">
+      {/* `relative` no es decorativo: sin él la caja clipea el mes pero el
+          documento igual queda 95px más ancho que la pantalla, y en un
+          teléfono **la página entera se corre de lado** —los títulos y los
+          botones incluidos—, que es justo lo que este desplazamiento
+          interno viene a evitar. Comprobado a 393px. */}
+      <div className="relative overflow-x-auto pb-1">
        <div className="min-w-[640px]">
         <div className="grid grid-cols-7 gap-1 text-center text-[11px]
                         uppercase tracking-wide text-hueso/40">

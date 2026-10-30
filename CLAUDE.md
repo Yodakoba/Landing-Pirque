@@ -1272,13 +1272,15 @@ en letra chica debajo de la tabla. Un botón que no hay que apretar casi nunca
 no puede estar igual de a mano que el que sí, y menos confiando en que
 alguien lea el párrafo de abajo un sábado a las once de la noche.
 
-Ahora la última columna depende de si esa persona tiene turnos guardados:
+Ahora el botón de la derecha depende de si esa persona tiene turnos
+guardados (desde el 2026-10-30 vive en la línea, abierta o cerrada — ver
+"La línea del trabajador"):
 
 | | Qué ofrece |
 |---|---|
 | Sin ningún turno | **Quitar** — la fila escrita por error, que no tiene historia que proteger |
 | Con turnos, activa | **Desactivar** — la saca del planificador y le cierra su link, conservando sus turnos |
-| Con turnos, inactiva | **Desactivado**, sin acción: su ficha se queda |
+| Con turnos, inactiva | **Activar** — vuelve al planificador y su link abre de nuevo |
 
 El costo a asumir: **ya no se puede borrar de un clic la ficha de alguien que
 sí trabajó.** Es justamente lo que no queremos que se pueda hacer sin
@@ -1364,6 +1366,84 @@ reescribir los nombres de arriba abajo o editar la planilla a mano.
 API de *drag and drop* del navegador —que en un teléfono no funciona— o una
 librería, y este proyecto no agrega una dependencia por una comodidad. Una
 flecha se aprieta con el dedo y además se puede usar con el teclado.
+
+### La línea del trabajador: se aprieta y se abre; al lado, desactivar (2026-10-30)
+
+Lo pidió el cliente mirando `/equipo`: *"en vez de ofrecer al costado
+derecho nuevamente la opción abrir, debería dar la opción activar y
+desactivar… si aprietas la línea completa menos en el botón desactivar, abre
+todas las opciones"*.
+
+Tenía razón en lo redundante: la línea entera ya era el botón que abría la
+ficha, y a la derecha decía *abrir* — una segunda forma de hacer lo mismo
+ocupando el único lugar donde cabe una acción de verdad.
+
+- **La línea abre; el botón de la derecha da de baja**, abierta o cerrada.
+  Qué ofrece depende de la historia de esa persona: **Quitar** si no tiene
+  ningún turno guardado, **Desactivar** si tiene, **Activar** si está dada de
+  baja. Los tres **preguntan antes**, porque los tres cambian algo que la
+  pantalla no deshace sola.
+- **Esas tres acciones se aplican en el acto**, sin pasar por *Guardar*. No
+  es solo coherencia con la regla de "lo que declara algo se aprieta": al
+  desactivar, la línea **desaparece de la lista** —los inactivos van
+  escondidos— y con ella el botón que la habría guardado.
+- Van por `PATCH` y `DELETE` de `/api/equipo/trabajador`, que tocan **una
+  fila**: quien aprieta ahí no tiene por qué mandar, ni pisar, lo que alguien
+  escribió en otra ficha. El `PATCH` pasó a ser **parcial de verdad** —lo que
+  no viene en el cuerpo se conserva—, porque antes escribía siempre el
+  teléfono y el puesto, y una llamada que solo quisiera desactivar se los
+  habría borrado.
+- **La regla de "no se quita a quien ya trabajó" se comprueba en el
+  servidor**, no solo en la pantalla: el `DELETE` cuenta sus turnos y
+  responde 409 con el motivo. Una llamada directa a la API tiene que obedecer
+  la misma regla que un clic.
+- **Una casilla arriba, "Ver desactivados (N)"**, escondidos por defecto. Dar
+  de baja no borra la ficha, así que esta lista solo crece y el equipo de hoy
+  termina mezclado con el de hace dos años. El número está para que nadie los
+  dé por perdidos.
+- **La casilla "Activo" de adentro se sacó**: con el botón en la línea eran
+  dos controles para lo mismo, a dos centímetros y con distinto peso.
+- **El filtro se aplica dentro del `map`, no antes**, y eso importa: `i` es
+  la posición real en la lista que se guarda, y todo lo que edita una ficha
+  la usa. Con un `filter` previo, esconder a un inactivo le cambiaría el
+  índice a los de abajo y editar a alguien escribiría sobre otro.
+
+**Y el guardado de la ficha dice qué cambió.** El cliente lo pidió con el
+caso exacto: *"si se cambia algo en estos campos y es el número de teléfono
+sin querer, por lo menos tener el control sobre: hey, cambiaste algo"*. Un
+botón que solo dice "Guardar" no distingue entre corregir un puesto a
+propósito y haber tecleado encima de un teléfono sin darse cuenta. Ahora la
+tarjeta dice **"Cambiaste teléfono, puesto."** al lado del botón, comparando
+contra la lista tal como vino de la planilla — no contra el dibujado
+anterior: lo que importa es qué quedará distinto de lo guardado.
+
+### Una pestaña que se reescribe entera tiene que borrar lo que sobra (2026-10-30)
+
+**Quitar a alguien de una lista dejaba al último duplicado en la planilla**, y
+nadie lo había visto porque en pantalla se veía perfecto.
+
+`values.update` de la API de Sheets escribe las filas que uno le pasa y
+**deja intactas las de más abajo**. `escribirBloque()` escribía cuatro filas
+sobre cinco y la quinta se quedaba donde estaba. El propio comentario de esa
+función ya advertía *"no sirve para una lista que se acorta"* — y la usaban
+`Trabajadores`, `Puestos`, `Menús`, `Colaboradores` y `Config`, que son
+justamente listas que se acortan.
+
+Ahora escribe y **después limpia** desde la fila siguiente hasta el final.
+**En ese orden, a propósito**: al revés, un fallo entre las dos llamadas
+dejaría la pestaña vacía; así, lo peor que puede pasar es quedarse con la
+fila de más —que es exactamente lo que pasaba antes— y se corrige al
+siguiente guardado.
+
+### Los calendarios de celdas necesitan `relative` (2026-10-30)
+
+En `/turnos` y `/extras`, a 393px, **la página entera se corría de lado** —
+títulos y botones incluidos—, que es justo lo que el desplazamiento interno
+del mes viene a evitar. La caja sí recortaba el mes, pero el documento
+quedaba 95px más ancho que la pantalla igual.
+
+Lo arregla `position: relative` en la caja que hace `overflow-x-auto`.
+Comprobado a 393px en las cinco pantallas del panel: ninguna se corre.
 
 ### La tabla de Equipo: los anchos van declarados (2026-10-22)
 

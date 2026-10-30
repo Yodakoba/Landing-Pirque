@@ -34,6 +34,24 @@ import Asistencia from './Asistencia';
 import AvisoGuardado from './AvisoGuardado';
 import { usarAutoguardado } from './usarAutoguardado';
 
+/**
+ * El rótulo de un campo, **solo mientras la pantalla sea angosta**: en el
+ * escritorio ese nombre ya está en el encabezado de la columna, y repetirlo
+ * en cada fila sería ruido.
+ *
+ * Va al nivel del módulo y no dentro del componente: una función nueva en
+ * cada dibujado es, para React, otro tipo de elemento, y con un `input` al
+ * lado eso significa perder el foco. Ver `Campo.tsx`.
+ */
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="mb-0.5 block text-[11px] uppercase tracking-wide
+                     text-hueso/45 md:hidden">
+      {children}
+    </span>
+  );
+}
+
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
   conCierre = false, esAdmin = false, enfocarPropina = false,
@@ -443,94 +461,126 @@ export default function EquipoDialogo({
             los dos dan el mismo total, pero solo uno deja escrito el porqué.
           </p>
 
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
-                <tr className="border-b border-hueso/10">
-                  <th className="w-44 py-2 pr-3">Quién</th>
-                  <th className="w-24 py-2 pr-3">Jornada</th>
-                  <th className="w-20 py-2 pr-3">Hs extra</th>
-                  <th className="min-w-[16rem] py-2 pr-3">Ajustes</th>
-                  <th className="w-24 py-2 pr-3 text-right">Propina</th>
-                  <th className="w-24 py-2 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plan.map((t, i) => (
-                  <tr key={t.trabajador} className="border-b border-hueso/5">
-                    <td className="py-2 pr-3 align-top">
-                      <span className={t.asistencia === VINO.no
-                        ? 'text-hueso/35 line-through' : ''}>{t.trabajador}</span>
-                      <span className="block text-xs text-hueso/40">
-                        {t.puesto}
-                        {t.asistencia === VINO.sinMarcar && (
-                          <span className="text-amber-300"> · sin marcar</span>
-                        )}
-                        {esContratado(t.modalidad) && <> · contratado</>}
+          {/* **Una tarjeta por persona en el teléfono, una fila en el
+              escritorio.** Eran seis columnas dentro de una tabla que se
+              desplazaba de lado: en un teléfono se veían dos, y las dos sin
+              su encabezado, porque el encabezado se había ido para la
+              izquierda. O sea que para saber si esa caja era la jornada o
+              las horas extra había que acordarse — justo acá, donde lo que
+              se escribe es lo que se le paga a alguien.
+
+              El encabezado se muestra solo donde cabe entero (`md:`), y
+              abajo cada campo lleva su rótulo encima mientras la pantalla
+              sea angosta. Es el mismo criterio que las fichas de `/equipo`:
+              con tarjetas, una fila de encabezados allá arriba obligaría a
+              contar columnas. */}
+          <div className="mt-3">
+            <div className="hidden border-b border-hueso/10 pb-2 text-xs uppercase
+                            tracking-wide text-hueso/50
+                            md:grid md:grid-cols-[11rem_6rem_5rem_1fr_6rem_6rem] md:gap-x-3">
+              <span>Quién</span>
+              <span>Jornada</span>
+              <span>Hs extra</span>
+              <span>Ajustes</span>
+              <span className="text-right">Propina</span>
+              <span className="text-right">Total</span>
+            </div>
+
+            <div className="space-y-3 md:space-y-0">
+              {plan.map((t, i) => (
+                <div key={t.trabajador}
+                  className="rounded border border-hueso/15 p-3 text-sm
+                             md:grid md:grid-cols-[11rem_6rem_5rem_1fr_6rem_6rem]
+                             md:items-start md:gap-x-3 md:rounded-none md:border-0
+                             md:border-b md:border-hueso/5 md:p-0 md:py-2">
+                  <div>
+                    <span className={t.asistencia === VINO.no
+                      ? 'text-hueso/35 line-through' : ''}>{t.trabajador}</span>
+                    <span className="block text-xs text-hueso/40">
+                      {t.puesto}
+                      {t.asistencia === VINO.sinMarcar && (
+                        <span className="text-amber-300"> · sin marcar</span>
+                      )}
+                      {esContratado(t.modalidad) && <> · contratado</>}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 md:mt-0">
+                    <Rotulo>Jornada</Rotulo>
+                    {/* A un contratado no se le paga jornada: su sueldo no
+                        sale de esta caja. Se dice, en vez de mostrar un campo
+                        vacío que parece un dato que falta. */}
+                    {esContratado(t.modalidad) ? (
+                      <span className="text-xs text-hueso/45">no aplica</span>
+                    ) : (
+                      <input type="number" min={0} step={1000} className={ENTRADA}
+                        value={t.pagoJornada || ''} placeholder="—"
+                        aria-label={`Jornada de ${t.trabajador}`}
+                        onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
+                    )}
+                  </div>
+
+                  <div className="mt-2 md:mt-0">
+                    <Rotulo>Horas extra</Rotulo>
+                    <input type="number" min={0} step={1} className={ENTRADA}
+                      value={t.horasExtra || ''} placeholder="0"
+                      aria-label={`Horas extra de ${t.trabajador}`}
+                      onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
+                  </div>
+
+                  <div className="mt-2 md:mt-0">
+                    <Rotulo>Ajustes</Rotulo>
+                    {t.ajustes.map((a, k) => (
+                      <div key={k} className="mb-1 flex items-center gap-1">
+                        <input type="number" step={1000} className={`${ENTRADA} w-24`}
+                          value={a.monto || ''} placeholder="0"
+                          aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
+                          onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
+                        <input type="text" className={ENTRADA} value={a.motivo}
+                          placeholder="por qué"
+                          aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
+                          onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
+                        <button onClick={() => quitarAjuste(i, k)}
+                          className="px-2 py-1.5 text-hueso/40 hover:text-red-400"
+                          aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
+                          title="Quitar este ajuste">✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => agregarAjuste(i)}
+                      className="text-xs text-oro hover:underline">
+                      + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
+                    </button>
+                    {t.ajustes.length > 1 && (
+                      <span className="ml-2 text-xs tabular-nums text-hueso/45">
+                        suman {enPesos(totalAjustes(t.ajustes))}
                       </span>
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      {/* A un contratado no se le paga jornada: su sueldo no
-                          sale de esta caja. Se dice, en vez de mostrar un
-                          campo vacío que parece un dato que falta. */}
-                      {esContratado(t.modalidad) ? (
-                        <span className="text-xs text-hueso/45">no aplica</span>
-                      ) : (
-                        <input type="number" min={0} step={1000} className={ENTRADA}
-                          value={t.pagoJornada || ''} placeholder="—"
-                          aria-label={`Jornada de ${t.trabajador}`}
-                          onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      <input type="number" min={0} step={1} className={ENTRADA}
-                        value={t.horasExtra || ''} placeholder="0"
-                        aria-label={`Horas extra de ${t.trabajador}`}
-                        onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      {t.ajustes.map((a, k) => (
-                        <div key={k} className="mb-1 flex items-center gap-1">
-                          <input type="number" step={1000} className={`${ENTRADA} w-24`}
-                            value={a.monto || ''} placeholder="0"
-                            aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
-                            onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
-                          <input type="text" className={ENTRADA} value={a.motivo}
-                            placeholder="por qué"
-                            aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
-                            onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
-                          <button onClick={() => quitarAjuste(i, k)}
-                            className="px-1 text-hueso/40 hover:text-red-400"
-                            aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
-                            title="Quitar este ajuste">✕</button>
-                        </div>
-                      ))}
-                      <button onClick={() => agregarAjuste(i)}
-                        className="text-xs text-oro hover:underline">
-                        + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
-                      </button>
-                      {t.ajustes.length > 1 && (
-                        <span className="ml-2 text-xs tabular-nums text-hueso/45">
-                          suman {enPesos(totalAjustes(t.ajustes))}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 text-right align-top tabular-nums text-hueso/70">
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex items-baseline justify-between
+                                  tabular-nums text-hueso/70 md:mt-0 md:block md:text-right">
+                    <Rotulo>Propina</Rotulo>
+                    <span>
                       {repartida[i]?.propina
                         ? enPesos(repartida[i].propina)
                         : t.asistencia === VINO.si && !participa(t.trabajador)
                           ? <span className="text-xs text-hueso/35">no participa</span>
                           : <span className="text-hueso/25">—</span>}
-                    </td>
-                    <td className="py-2 text-right align-top tabular-nums">
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex items-baseline justify-between
+                                  tabular-nums md:mt-0 md:block md:text-right">
+                    <Rotulo>Total</Rotulo>
+                    <span>
                       {t.asistencia === VINO.si
                         ? <strong>{enPesos(pagoDe(t))}</strong>
                         : <span className="text-hueso/35">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* La propina se escribe UNA vez, como total del día, y el panel
