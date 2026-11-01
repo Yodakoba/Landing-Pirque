@@ -2765,6 +2765,79 @@ botón y un texto se ven igual hasta que uno de los dos responde.
   las dos palabras —y sin depender solo del color, que para quien no lo
   distingue no diría nada—. El elegido suma un halo suave de su color.
 
+## La regla PlayStation, que vale para todo el panel (2026-11-01)
+
+La dio el cliente como **regla general, no como un pedido suelto**: *"todo
+diseño tiene que seguir a la regla PlayStation, botones bien legible, bien
+grande… y no detalle chico, letra chica"*. Venía del tema claro —*"un
+juguetón bien de PlayStation, dónde y cómo usar los botones"*— y ahora
+aplica a cualquier pantalla que se toque.
+
+Qué significa en concreto, que es lo que hay que poder revisar:
+
+- **Lo que se aprieta se ve que se aprieta.** Un botón tiene borde o
+  relleno, no es un texto en gris que resulta ser un enlace. Y mide para el
+  dedo: **34px de alto o más**, no 16.
+- **No hay letra chica donde hay un dato.** 9, 10 y 11px son para una
+  marca de agua, no para decir si un día es público o cuántos grados va a
+  hacer. El piso del panel es **13px**, y lo que importa va más grande.
+- **Contraste de verdad.** Las opacidades bajas —`/35`, `/40`, `/45`— se
+  reservan para lo que de verdad es secundario. Un rótulo que alguien va a
+  leer con sol encima va a `/60` o más, y cuando tiene color propio usa su
+  token `-texto`, que es el pensado para leerse.
+- **Se distingue por forma, no solo por color.** Una pastilla con borde se
+  reconoce sin leerla y sin distinguir el verde del ámbar; un cuadradito de
+  8px al lado de una palabra, no.
+- **Los números que se miran de lejos van grandes.** El dato principal de
+  una tarjeta es el que se lee cruzando la cocina.
+
+**Esto no cambia el tema claro ni la paleta**, que el cliente pidió
+explícitamente dejar como está: *"no cambiar el estilo del diurno, está
+súper bonito"*. Lo que cambia es el tamaño, el peso y el contraste de lo que
+ya hay.
+
+### La tarjeta del calendario, rehecha con esa regla (2026-11-01)
+
+Lo pidió mirando la portada: *"el icono del tiempo es demasiado chico, nadie
+lo va a detectar bien"* y *"hay mucho espacio libre donde se puede
+distribuir mejor la información que tenemos hoy, que no hay que cambiar"*.
+
+Medido antes de tocar nada: la tarjeta medía **295×208**, su contenido
+ocupaba **83 a 98px** y el pie 29 — o sea **unos 50 a 65px de aire muerto**
+en el medio. Y el pronóstico medía **10px de alto**.
+
+**No se agregó ni se sacó un solo dato**, que era la condición. Lo que
+cambió es dónde está cada uno y cuánto pesa:
+
+| Qué | Antes | Ahora |
+|---|---|---|
+| El pronóstico | 10px bajo la fecha | **pastilla con borde**, ícono a 22px, al lado del número |
+| El número del día | 24px | **30px** |
+| La barra de ocupación | 6px | **12px, redondeada** |
+| Pagadas / por cobrar | texto gris con un cuadradito | **dos pastillas** con su borde y su color de texto |
+| El pie | tres textos de 12px al 60% | **tres botones con borde**, 13px, 34px de alto |
+| La palabra bajo el punto | 9px al 35% | **11px semibold**, con su color de texto |
+
+- **El pronóstico salió de la cabecera a propósito.** Ahí era un apéndice de
+  la fecha; al lado del número ocupa el aire que ya estaba muerto a la
+  derecha y **no alarga la tarjeta**. Y es un dato que se mira *antes* de
+  decidir si el show ecuestre se hace afuera o se arma adentro.
+- **`Clima` tiene ahora tres tamaños y no dos** —`chico`, `tarjeta`,
+  `grande`—, porque son tres lugares distintos: la celda de `/turnos` mide
+  92px y ahí el ícono sí va de refilón; la tarjeta tiene espacio; la página
+  del día además dice cuánta agua y cita la fuente.
+- **`ALTO_ESTANDAR` subió de 13rem a 14.25.** Es la medida que hay que
+  volver a tomar cada vez que la tarjeta cambie de contenido: quitándole el
+  piso a las 52 caras de la página, la más alta pasó de 201 a **225px**, así
+  que 228 las deja otra vez a todas del mismo alto. Sigue siendo
+  `min-height` y no `height`, por lo de siempre: un piso no recorta nada.
+- **El dorso sigue el mismo criterio**, y ahí *Planificar* pasó a ser el
+  único botón **relleno** de la tarjeta: es a lo que se vino al darla vuelta.
+
+Comprobado en los dos temas, a 1280 y a 393px: las 52 caras miden 228, el
+pie entra en una sola línea con botones de 34px de alto, y a 393 la página
+no se corre de lado.
+
 ## El pronóstico del tiempo (2026-10-29)
 
 Cada día del panel muestra en chico el pronóstico —"☀️ 28°"— en el

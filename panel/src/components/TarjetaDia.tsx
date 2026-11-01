@@ -93,9 +93,13 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
  * Lo pidió el cliente el 2026-10-30: *"encontrar el tamaño estándar con el
  * cual llegar a la tarjeta y poder rellenar siempre todos los puestos que se
  * llenan"*. Con el dorso en una lista corrida, un sábado cargado de verdad
- * —18 personas en los nueve puestos— mide 201px a 1280, así que 208 lo
- * contiene con aire de sobra y deja todas las tarjetas de la página del
- * mismo alto, no solo las de una misma fila.
+ * —18 personas en los nueve puestos— medía 201px a 1280.
+ *
+ * **Subió de 13rem a 14.25 el 2026-11-01**, con el rediseño de la tarjeta:
+ * medido quitándole el piso a las 52 caras de la página, la más alta pasó a
+ * 225px, así que 228 la contiene y deja otra vez todas las tarjetas de la
+ * página del mismo alto — no solo las de una misma fila. Es la medida que
+ * hay que volver a tomar cada vez que la tarjeta cambie de contenido.
  *
  * **Es `min-height` y no `height`, y esa es toda la diferencia**: la medida
  * fija que este archivo venía evitando es la que recorta el contenido cuando
@@ -103,12 +107,24 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
  * angosta hace envolver más la lista), la tarjeta crece y `h-full` deja
  * pareja su fila igual.
  */
-const ALTO_ESTANDAR = 'min-h-[13rem]';
+const ALTO_ESTANDAR = 'min-h-[14.25rem]';
 
 const CARA = `col-start-1 row-start-1 flex h-full flex-col rounded border p-4 ` +
              `${ALTO_ESTANDAR} [backface-visibility:hidden]`;
 
-const PIE = 'mt-auto flex items-center gap-3 border-t border-hueso/10 pt-3 text-xs';
+const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3';
+
+/**
+ * **La regla PlayStation, aplicada al pie de la tarjeta** (2026-11-01).
+ *
+ * Eran tres textos de 12px al 60% de opacidad, uno al lado del otro: no se
+ * leían como botones y, en un teléfono, se fallaban con el dedo. Ahora son
+ * botones con borde, con su área de toque y con contraste de verdad. El
+ * tamaño sale de lo mismo que el resto del panel: lo que se aprieta mide
+ * para el dedo.
+ */
+const BOTON = `rounded-md border border-hueso/20 px-2.5 py-1.5 text-[13px] font-medium
+               text-hueso/80 transition hover:border-oro hover:text-oro`;
 
 export default function TarjetaDia({
   d, resumen, clima, onEditar, onPlanificar
@@ -141,15 +157,14 @@ export default function TarjetaDia({
         <div className={`${CARA} ${COLOR_TARJETA(d)} ${volteada ? 'pointer-events-none' : ''}`}
              aria-hidden={volteada}>
           <div className="flex items-start justify-between gap-2">
-            {/* El pronóstico va bajo la fecha, en el aire que deja el punto
-                con su palabra a la derecha: no cambia el alto de la tarjeta. */}
-            <span className="flex flex-col items-start gap-1">
-              <a href={`/dia/${d.fecha}`} {...alFrente}
-                 className="text-sm capitalize hover:text-oro">
-                {enPalabras(d.fecha)}
-              </a>
-              <Clima c={clima} />
-            </span>
+            {/* **El pronóstico ya no va acá.** Estaba bajo la fecha a 10px,
+                donde no lo veía nadie; ahora es una pastilla al lado del
+                número, que es lo que se mira. Ver el bloque de abajo. */}
+            <a href={`/dia/${d.fecha}`} {...alFrente}
+               className="text-[15px] font-semibold capitalize leading-tight
+                          text-hueso/90 hover:text-oro">
+              {enPalabras(d.fecha)}
+            </a>
             {/* El punto y, debajo, la palabra: público, privado, cerrado.
                 Antes eso era una línea más abajo del contenido, y una línea
                 de más cambia el alto de la tarjeta — o sea que los días de
@@ -164,28 +179,36 @@ export default function TarjetaDia({
                   pero nadie le puso cupo. Se muestran las personas igual
                   —si no, una reserva quedaría invisible otra vez— y se
                   dice qué falta. */}
-              <p className="mt-3 text-2xl font-bold">
-                {d.tomadas}
-                <span className="ml-1 text-xs font-normal text-hueso/50">
-                  {d.tomadas === 1 ? 'persona' : 'personas'}
-                </span>
-              </p>
-              <p className="mt-2 text-xs text-hueso/60">
-                Sin cupo definido. Apreta <strong>Editar</strong> para abrir
-                este día o dejarlo privado.
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-3xl font-bold leading-none">
+                  {d.tomadas}
+                  <span className="ml-1.5 text-[13px] font-medium text-hueso/70">
+                    {d.tomadas === 1 ? 'persona' : 'personas'}
+                  </span>
+                </p>
+                <Clima c={clima} tamano="tarjeta" />
+              </div>
+              <p className="mt-3 text-[13px] leading-snug text-hueso/70">
+                Sin cupo definido. Apreta <strong className="text-hueso">Editar</strong>{' '}
+                para abrir este día o dejarlo privado.
               </p>
             </>
           ) : (
             <>
-              <p className="mt-3 text-2xl font-bold">
-                {d.tomadas}<span className="text-hueso/40">/{d.capacidad}</span>
-                <span className="ml-1 text-xs font-normal text-hueso/50">personas</span>
-              </p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-3xl font-bold leading-none">
+                  {d.tomadas}<span className="text-hueso/45">/{d.capacidad}</span>
+                  <span className="ml-1.5 text-[13px] font-medium text-hueso/70">personas</span>
+                </p>
+                {/* La pastilla del tiempo ocupa el aire que antes quedaba
+                    muerto a la derecha del número, así que no alarga nada. */}
+                <Clima c={clima} tamano="tarjeta" />
+              </div>
               {/* La barra: cuánto del cupo está cobrado y cuánto falta
                   cobrar el mismo día. Verde es plata que ya está; ámbar
                   es plata que hay que cobrar en la puerta. El resto de la
                   barra es lo que queda libre. */}
-              <div className="mt-3 flex h-1.5 overflow-hidden rounded bg-hueso/10"
+              <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-hueso/15"
                    role="img"
                    aria-label={`${d.pagadas} pagadas, ${d.porPagar} por cobrar, de ${d.capacidad} lugares`}>
                 <div className="bg-verde-fuerte"
@@ -194,14 +217,21 @@ export default function TarjetaDia({
                      style={{ width: `${pct(d.porPagar, d.capacidad)}%` }} />
               </div>
 
-              <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                <span className="text-hueso/70">
-                  <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-verde-fuerte" />
-                  <strong className="tabular-nums text-hueso">{d.pagadas}</strong> pagadas
+              {/* **Dos pastillas y no dos textos con un cuadradito.** Es la
+                  regla PlayStation: lo que hay que distinguir de un vistazo
+                  se distingue por forma y color, no por un punto de 8px al
+                  lado de una letra de 12. El punto se queda igual, porque
+                  el color solo no alcanza para quien no lo distingue. */}
+              <p className="mt-3 flex flex-wrap gap-2 text-[13px]">
+                <span className="inline-flex items-center gap-1.5 rounded-md border
+                                 border-verde/40 bg-verde/10 px-2 py-1 text-verde-texto">
+                  <span aria-hidden className="h-2 w-2 rounded-full bg-verde-fuerte" />
+                  <strong className="tabular-nums">{d.pagadas}</strong> pagadas
                 </span>
-                <span className="text-hueso/70">
-                  <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-ambar-fuerte" />
-                  <strong className="tabular-nums text-hueso">{d.porPagar}</strong> por cobrar
+                <span className="inline-flex items-center gap-1.5 rounded-md border
+                                 border-ambar/40 bg-ambar/10 px-2 py-1 text-ambar-texto">
+                  <span aria-hidden className="h-2 w-2 rounded-full bg-ambar-fuerte" />
+                  <strong className="tabular-nums">{d.porPagar}</strong> por cobrar
                 </span>
               </p>
 
@@ -226,12 +256,12 @@ export default function TarjetaDia({
               día cerrado **con gente ya reservada**, porque eso no es un
               estado: es algo que hay que hacer. */}
           {d.bloqueada && d.tomadas > 0 && (
-            <p className="mt-2 text-xs text-ambar-texto/90">
+            <p className="mt-3 text-[13px] font-medium leading-snug text-ambar-texto">
               Con {d.tomadas} {d.tomadas === 1 ? 'persona' : 'personas'} ya
               reservada{d.tomadas === 1 ? '' : 's'}: hay a quién avisarle.
             </p>
           )}
-          {d.notas && <p className="mt-1 text-xs text-hueso/50">{d.notas}</p>}
+          {d.notas && <p className="mt-2 text-[13px] text-hueso/70">{d.notas}</p>}
 
           <div className={`mt-3 ${PIE}`}>
             {/* "Ver reservas" y no "Ver quiénes vienen": con tres acciones
@@ -239,25 +269,25 @@ export default function TarjetaDia({
                 tarjeta de cuatro columnas. La fecha de arriba lleva al mismo
                 lugar, así que el detalle no se pierde. */}
             <a href={`/dia/${d.fecha}`} {...alFrente}
-               className="whitespace-nowrap text-hueso/60 hover:text-oro">
-              Ver reservas
+               className={`${BOTON} whitespace-nowrap`}>
+              Reservas
             </a>
             <span className="flex-1" />
             <button onClick={() => setVolteada(true)} {...alFrente}
-              className="whitespace-nowrap text-hueso/60 hover:text-oro">
+              className={`${BOTON} whitespace-nowrap`}>
               Equipo
               {/* El número va acá para no tener que dar vuelta la tarjeta
                   solo para saber si hay alguien asignado. */}
               {resumen && resumen.total > 0 && (
-                <span className="ml-1 tabular-nums text-hueso/45">{resumen.total}</span>
+                <span className="ml-1 tabular-nums text-hueso/60">{resumen.total}</span>
               )}
               {resumen && resumen.faltan > 0 && (
                 <span className="ml-1 text-ambar-texto" title={`Faltan ${resumen.faltan}`}>•</span>
               )}
             </button>
             <button onClick={onEditar} {...alFrente}
-              className="whitespace-nowrap text-hueso/60 hover:text-oro">
-              {sinConfigurar(d) ? 'Abrir día' : 'Editar'}
+              className={`${BOTON} whitespace-nowrap`}>
+              {sinConfigurar(d) ? 'Abrir' : 'Editar'}
             </button>
           </div>
         </div>
@@ -268,21 +298,25 @@ export default function TarjetaDia({
             volteada ? '' : 'pointer-events-none'}`}
           aria-hidden={!volteada}>
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm capitalize text-hueso/80">{enPalabras(d.fecha)}</h3>
-            <span className="text-xs uppercase tracking-widest text-oro">Equipo</span>
+            <h3 className="text-[15px] font-semibold capitalize leading-tight text-hueso/90">
+              {enPalabras(d.fecha)}
+            </h3>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-oro">
+              Equipo
+            </span>
           </div>
 
           {!resumen ? (
-            <p className="mt-3 text-xs text-hueso/50">Cargando…</p>
+            <p className="mt-3 text-[13px] text-hueso/70">Cargando…</p>
           ) : resumen.total === 0 ? (
-            <p className="mt-3 text-sm text-hueso/55">
+            <p className="mt-3 text-[15px] text-hueso/70">
               Nadie asignado todavía.
             </p>
           ) : (
             <>
-              <p className="mt-3 text-2xl font-bold">
+              <p className="mt-3 text-3xl font-bold leading-none">
                 {resumen.total}
-                <span className="ml-1 text-xs font-normal text-hueso/50">
+                <span className="ml-1.5 text-[13px] font-medium text-hueso/70">
                   {resumen.total === 1 ? 'persona' : 'personas'}
                 </span>
               </p>
@@ -299,7 +333,7 @@ export default function TarjetaDia({
                   sin inventar reglas del español —"asistente de bar" no se
                   pluraliza como "garzón"—. El `×` es además la misma
                   convención que los menús del día: "5 × Tradiciones". */}
-              <p className="mt-2 text-xs leading-snug text-hueso/70">
+              <p className="mt-3 text-[13px] leading-snug text-hueso/75">
                 {resumen.porPuesto.map((p, k) => (
                   <span key={p.puesto}>
                     {k > 0 && ', '}
@@ -317,20 +351,23 @@ export default function TarjetaDia({
           )}
 
           {resumen && resumen.faltan > 0 && (
-            <p className="mt-2 text-xs text-ambar-texto/90">
+            <p className="mt-3 text-[13px] font-medium text-ambar-texto">
               Faltan {resumen.faltan} según las reglas de cada puesto.
             </p>
           )}
 
           <div className={`mt-3 ${PIE}`}>
             <button onClick={() => setVolteada(false)} {...alDorso}
-              className="text-hueso/60 hover:text-oro">
+              className={BOTON}>
               Volver
             </button>
             <span className="flex-1" />
+            {/* El relleno es para el que decide: planificar es a lo que se
+                vino al dar vuelta la tarjeta. */}
             <button onClick={onPlanificar} {...alDorso}
-              className="font-semibold text-oro hover:underline">
-              Planificar equipo
+              className="rounded-md bg-oro px-2.5 py-1.5 text-[13px] font-semibold
+                         text-tinta transition hover:brightness-110">
+              Planificar
             </button>
           </div>
         </div>
