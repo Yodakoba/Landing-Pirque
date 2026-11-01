@@ -2083,6 +2083,23 @@ justamente lo que permite mandar este sin pensarlo dos veces.
 - Muestra solo los días **con alguien asignado**: siete columnas para un
   negocio que abre dos es una tabla llena de huecos, y esto se lee en un
   teléfono.
+- **La columna del puesto queda fija al desplazar de lado** (2026-11-01, lo
+  pidió el cliente): *"con un equipo tan grande, si no, no se va a
+  entender"*. Con nueve puestos y tres días la tabla no cabe en un teléfono,
+  y al correrla uno queda mirando una columna de nombres sin saber de qué
+  puesto son — que es lo único que esta tabla viene a decir. Dos detalles de
+  implementación: la celda fija **lleva su propio fondo** (`bg-tinta`), sin
+  el cual los nombres se verían por debajo, y **su línea de corte es un
+  `shadow` y no un `border`**, porque con `border-collapse: collapse` el
+  borde de una celda fija se va con el desplazamiento. La caja que desplaza
+  lleva `relative`, por lo mismo que los calendarios de celdas.
+- **Se evaluó además agrupar los puestos por área —cocina, barra, servicio—
+  y pintarlos**, y el cliente lo descartó el mismo día: *"chao con esa
+  tarea, fijada columna 1 se soluciona igual"*. Queda anotado para que a
+  nadie le dé por reponerlo sin que lo pidan. Si alguna vez se hace, el área
+  es **dato del negocio**: va como columna de `Puestos`, editable en
+  `/equipo`, no mapeada en el código — renombrar un puesto no puede dejarlo
+  sin área.
 - Un nombre **tachado** es alguien que no llegó ese día.
 - Como `/mi/`, no dibuja la barra del panel.
 

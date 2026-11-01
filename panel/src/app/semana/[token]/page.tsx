@@ -108,11 +108,23 @@ export default async function Pagina({
         </p>
       ) : (
         <>
-          <div className="mt-6 overflow-x-auto">
+          {/* La columna del puesto queda FIJA al desplazar de lado. Con un
+              equipo grande el mes no cabe en un teléfono, y sin esto uno
+              termina mirando una columna de nombres sin saber de qué puesto
+              son — que es justo lo único que esta tabla viene a decir.
+              `relative` en la caja que desplaza, como en los calendarios de
+              celdas: sin eso la página entera se corre de lado. */}
+          <div className="relative mt-6 overflow-x-auto">
             <table className="w-full min-w-[32rem] text-sm">
               <thead>
                 <tr className="border-b border-hueso/15 text-left align-bottom">
-                  <th className="w-32 py-2 pr-3 text-xs uppercase tracking-wide text-hueso/45">
+                  {/* El `shadow` hace de borde derecho y no un `border`: con
+                      `border-collapse: collapse` el borde de una celda fija
+                      se va con el desplazamiento y la columna queda pegada a
+                      los nombres. */}
+                  <th className="sticky left-0 z-20 w-32 bg-tinta py-2 pr-3 text-xs
+                                 uppercase tracking-wide text-hueso/45
+                                 shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">
                     Puesto
                   </th>
                   {conEquipo.map((f) => (
@@ -144,7 +156,10 @@ export default async function Pagina({
               <tbody>
                 {filas.map((puesto) => (
                   <tr key={puesto} className="border-b border-hueso/5 align-top">
-                    <td className="py-2 pr-3 text-hueso/55">{puesto}</td>
+                    <td className="sticky left-0 z-10 bg-tinta py-2 pr-3 text-hueso/55
+                                   shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">
+                      {puesto}
+                    </td>
                     {conEquipo.map((f) => (
                       <td key={f} className="py-2 pr-3">
                         {quienes(puesto, f).length === 0 ? (
