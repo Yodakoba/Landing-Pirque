@@ -1,0 +1,191 @@
+/**
+ * El presupuesto como lo ve el cliente.
+ *
+ * **Es un link, y se imprime a PDF desde el navegador.** Se eligió sobre
+ * generar el archivo en el servidor: sin dependencias nuevas, sale un PDF
+ * de verdad, se manda por WhatsApp como los otros links del panel, y si se
+ * corrige un precio el mismo link ya muestra lo corregido — un adjunto
+ * viejo, en cambio, nadie sabe que lo es. Ver `BotonImprimir`.
+ *
+ * **Es un componente de servidor y lee la planilla directo**, igual que
+ * `/mi/`: así no existe ninguna ruta de API nueva que alguien pueda llamar
+ * con un token prestado para sacar datos en bruto. Lo único que sale de acá
+ * es el HTML de una cotización.
+ *
+ * **Lo que NO tiene, a propósito: un botón de "acepto".** Sería una puerta
+ * de escritura sin contraseña sobre un dato que mueve el cupo de un día. El
+ * cliente responde por WhatsApp y el encargado lo marca en el panel.
+ */
+import { leerPresupuestos, leerLineasPresupuesto } from '@/lib/datos';
+import { porToken, lineasDe, totalDe, personasDe, totalDeLinea,
+         estadoVisible, folioDe } from '@/lib/presupuestos';
+import { enPesos } from '@/lib/ocupacion';
+import { enPalabras, hoy } from '@/lib/fechas';
+import BotonImprimir from '@/components/BotonImprimir';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * Los datos del negocio, que son los confirmados del proyecto.
+ *
+ * **El WhatsApp es el de Eventos**, no el de Reservas, y eso es deliberado:
+ * un presupuesto se cotiza conversando —agencias, empresas, matrimonios— y
+ * ese es justamente el canal de ese público. Los dos números son distintos
+ * a propósito; ver CLAUDE.md.
+ */
+const NEGOCIO = {
+  nombre: 'Brasas de Lo Pirque',
+  direccion: 'Casas de San Vicente, lote 4, Pirque, Región Metropolitana',
+  email: 'contacto@lopirque.cl',
+  whatsapp: '+56 9 3385 8575'
+};
+
+export default async function Pagina({ params }: { params: { token: string } }) {
+  const [lista, todas] = await Promise.all([
+    leerPresupuestos(), leerLineasPresupuesto()
+  ]);
+  const p = porToken(lista, decodeURIComponent(params.token ?? ''));
+
+  // **El mismo mensaje para un link inventado y para uno que ya no está**,
+  // igual que en `/mi/`: decir "ese presupuesto se borró" confirmaría que
+  // existió, y a quien sí es cliente no le sirve de nada — la salida es la
+  // misma, pedirlo de nuevo.
+  if (!p) {
+    return (
+      <section className="mx-auto max-w-md text-center">
+        <h1 className="text-lg font-bold uppercase tracking-wide">Este link no sirve</h1>
+        <p className="mt-3 text-sm text-hueso/70">
+          Puede estar mal copiado, o puede que te hayan mandado uno nuevo.
+          Escríbenos y te lo reenviamos.
+        </p>
+      </section>
+    );
+  }
+
+  const lineas = lineasDe(todas, p.id);
+  const total = totalDe(lineas);
+  const personas = personasDe(lineas);
+  const estado = estadoVisible(p, hoy());
+  const vencido = estado === 'Vencido';
+
+  return (
+    <section className="documento mx-auto max-w-2xl">
+      {/* Lo que no va al papel: el botón. Se esconde al imprimir. */}
+      <div className="sin-imprimir mb-6 flex flex-wrap items-center gap-3">
+        <BotonImprimir />
+        <span className="text-[13px] text-hueso/60">
+          Se abre la impresión del navegador: elige <strong>Guardar como PDF</strong>.
+        </span>
+      </div>
+
+      {vencido && (
+        <p className="mb-6 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-sm
+                      text-ambar-texto">
+          <strong>Este presupuesto venció</strong> el{' '}
+          <span className="first-letter:uppercase">{enPalabras(p.validoHasta)}</span>. Escríbenos
+          y te lo actualizamos con los precios de hoy.
+        </p>
+      )}
+
+      <header className="border-b border-hueso/20 pb-5">
+        <p className="text-sm font-bold uppercase tracking-widest text-oro">
+          {NEGOCIO.nombre}
+        </p>
+        <h1 className="mt-3 text-2xl font-bold uppercase tracking-wide">Presupuesto</h1>
+        <p className="mt-1 text-[13px] text-hueso/60">
+          N° {folioDe(p)}
+          {p.creado && <> · emitido el {p.creado.slice(0, 10)}</>}
+        </p>
+      </header>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+            Para
+          </p>
+          <p className="mt-1 text-base font-semibold">{p.cliente}</p>
+          {p.telefono && <p className="text-sm text-hueso/70">{p.telefono}</p>}
+          {p.email && <p className="text-sm text-hueso/70">{p.email}</p>}
+        </div>
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+            Fecha del evento
+          </p>
+          <p className="mt-1 text-base font-semibold first-letter:uppercase">{enPalabras(p.fecha)}</p>
+          {personas > 0 && (
+            <p className="text-sm text-hueso/70">
+              {personas} {personas === 1 ? 'persona' : 'personas'}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <table className="mt-7 w-full text-sm">
+        <thead className="text-left text-[13px] font-semibold uppercase
+                          tracking-wide text-hueso/60">
+          <tr className="border-b border-hueso/20">
+            <th className="py-2 pr-3">Concepto</th>
+            <th className="py-2 pr-3 text-right">Cantidad</th>
+            <th className="py-2 pr-3 text-right">Precio</th>
+            <th className="py-2 text-right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lineas.map((l, i) => (
+            <tr key={i} className="border-b border-hueso/10">
+              <td className="py-2.5 pr-3">{l.concepto}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{l.cantidad}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{enPesos(l.precio)}</td>
+              <td className="py-2.5 text-right tabular-nums">{enPesos(totalDeLinea(l))}</td>
+            </tr>
+          ))}
+          {lineas.length === 0 && (
+            <tr><td colSpan={4} className="py-4 text-hueso/60">
+              Todavía no hay nada cotizado.
+            </td></tr>
+          )}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={3} className="pt-4 pr-3 text-right text-sm font-semibold">
+              Total
+            </td>
+            <td className="pt-4 text-right text-xl font-bold tabular-nums text-oro">
+              {enPesos(total)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+
+      {p.notas && (
+        <p className="mt-6 rounded border border-hueso/15 bg-panel p-3 text-sm">
+          {p.notas}
+        </p>
+      )}
+
+      <div className="mt-7 border-t border-hueso/20 pt-5 text-[13px] text-hueso/70">
+        {p.validoHasta && !vencido && (
+          <p>
+            <strong>Válido hasta el{' '}
+              <span className="first-letter:uppercase">{enPalabras(p.validoHasta)}</span>.</strong>{' '}
+            La fecha del evento se confirma al aceptar este presupuesto; mientras
+            tanto no está reservada.
+          </p>
+        )}
+        {!p.validoHasta && (
+          <p>
+            La fecha del evento se confirma al aceptar este presupuesto; mientras
+            tanto no está reservada.
+          </p>
+        )}
+        <p className="mt-3">
+          ¿Lo tomamos? Escríbenos por WhatsApp al{' '}
+          <strong>{NEGOCIO.whatsapp}</strong> o a {NEGOCIO.email}.
+        </p>
+        <p className="mt-3 text-hueso/55">
+          {NEGOCIO.nombre} · {NEGOCIO.direccion}
+        </p>
+      </div>
+    </section>
+  );
+}

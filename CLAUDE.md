@@ -1195,21 +1195,108 @@ Lo peor que puede pasar es que no se vea la línea de lo cotizado.
 con reservas: si alguien cotizó un día que después se cerró, esconderlo
 escondería una conversación abierta con un cliente.
 
-### Lo que falta (lotes 2 a 4)
+### La pantalla: `/presupuestos`
 
-1. ~~El dato y la garantía~~ — **hecho.**
-2. **Crear y editar** — `/presupuestos`, con los precios saliendo de `Menús`.
-3. **El documento** — `/presupuesto/<token>`, imprimible, con su botón de
-   PDF. Se eligió un **link que se imprime** por sobre generar el archivo en
-   el servidor: sin dependencias nuevas, sale un PDF de verdad desde el
-   navegador, se manda por WhatsApp como los otros links del panel, y si se
-   corrige un precio el link ya muestra lo corregido.
-4. **Verlo donde se trabaja** — la línea en rosado en el calendario, en la
-   página del día y en `/turnos`, y convertirlo en reserva al aceptarlo.
+Una ficha por cotización, que se abre con un `+` — igual que `/equipo` y
+`/extras`, y por lo mismo: adentro hay líneas con cantidad y precio, y eso
+no cabe en una fila de tabla sin que las de una se peguen a las de la
+siguiente. Cerrada es una línea: cliente, fecha, estado, personas y total.
+
+**Se guarda con un botón, no solo.** Es la regla del panel: acá se edita la
+lista misma —el cliente, las líneas, los precios— y guardar a mitad de
+palabra mandaría una cotización a medio escribir. La ventana de un día, que
+edita valores sobre algo que ya existe, se guarda sola; esto no.
+
+- **Agregar menú** propone el precio desde `Menús` y lo deja editable;
+  **Otra línea** nace vacía y con cero personas, para el arriendo, el show
+  ecuestre o lo que sea.
+- **Los cerrados se esconden** —rechazados, vencidos, ya confirmados— con
+  una casilla que dice cuántos son. Esta lista solo crece, igual que la de
+  trabajadores.
+- **El token se crea al crear el presupuesto**, no al mandarlo, y ahí está
+  la diferencia con la planilla semanal: esa abre datos del equipo, así que
+  que exista tiene que ser una decisión. Un presupuesto **es** un documento
+  para mandar — nace para eso.
+- **La vigencia no se corre sola al editar.** Hay un botón *Renovar
+  vigencia* aparte: corregir una línea no puede alargarle el plazo al
+  cliente sin que nadie lo decida.
+
+Dos campos **no se aceptan nunca del navegador**, y se descartan en el
+servidor igual que la modalidad de una reserva: el **token**, porque
+cambiarlo invalida el link que el cliente ya tiene, y el **`ID Reserva`**,
+porque es lo que decide si este presupuesto todavía cuenta como gente
+posible — dejarlo escribir desde afuera permitiría apagar o encender el
+conteo de un día sin que exista ninguna reserva.
+
+**Un presupuesto ya convertido en reserva no se borra**, y se comprueba en
+el servidor: su `ID Reserva` es el rastro de dónde salió esa reserva.
+
+### El documento: `/presupuesto/<token>`
+
+Es lo que se le manda al cliente, y **se imprime a PDF desde el navegador**.
+Se eligió sobre generar el archivo en el servidor por razones concretas: una
+librería de PDF pesa megas en la función de Vercel, obliga a incrustar
+fuentes para las tildes y la ñ, y cada cambio de diseño cuesta el triple.
+Con `window.print()` el navegador ofrece "Guardar como PDF" —en el teléfono
+también— y sale un PDF de verdad con el mismo diseño de la pantalla.
+
+Y queda algo que un archivo no da: **el link sigue vivo.** Si se corrige un
+precio, el cliente abre el mismo link y ve lo corregido, en vez de quedarse
+con un adjunto viejo que nadie sabe que lo es.
+
+- **Lee la planilla directo, sin pasar por una ruta de API**, igual que
+  `/mi/`: así no hay ningún endpoint nuevo que se pueda llamar con un token
+  prestado para sacar datos en bruto.
+- **Un link inválido y uno borrado dicen lo mismo**, por lo mismo que en
+  `/mi/`.
+- **Un token vacío no encuentra nada**, aunque haya presupuestos sin token.
+  Si calzara, entrar a `/presupuesto/` sin nada detrás abriría la primera
+  cotización de la lista — con el precio que se le ofreció a otro cliente.
+  Hay una prueba que lo fija.
+- **No dibuja la barra del panel ni la tira de bienvenida.** La barra, por
+  lo mismo que `/mi/`. La tira es peor: como el documento se imprime, se iba
+  impresa arriba de la cotización —un cartel del panel interno en la hoja
+  que recibe el cliente—. Se vio en la primera captura y por eso queda
+  anotado.
+- **El WhatsApp del pie es el de Eventos**, no el de Reservas: un
+  presupuesto se cotiza conversando —agencias, empresas, matrimonios— y ese
+  es el canal de ese público.
+- **Las fechas van con `first-letter:uppercase` y no `capitalize`**, al
+  revés que en el panel: `capitalize` pone mayúscula en cada palabra y
+  "Sábado 5 De Diciembre" se lee descuidado en un documento que sale del
+  negocio hacia un cliente.
+
+#### El papel es blanco siempre
+
+El bloque `@media print` de `globals.css` fuerza los colores claros sin
+importar el tema del panel. Imprimir el tema oscuro gastaría un cartucho en
+un fondo negro y en PDF se vería como un documento de otro planeta. Se
+fuerza ahí y **no** cambiando el tema antes de imprimir, porque eso le haría
+parpadear la pantalla a quien solo quería guardar el archivo. El oro también
+se cambia por el de día: el del sitio da menos de 2,5:1 sobre blanco y el
+total saldría casi invisible.
+
+Comprobado emulando `print` con el panel en oscuro: fondo blanco, texto
+negro, el botón y la barra en `display:none`.
+
+### El rosado tiene nombre propio
+
+`--rosa` en las dos paletas, como `verde`, `rojo`, `ámbar` y `cielo`, y por
+lo mismo: es un **significado** —"cotizado, todavía no confirmado"— y no un
+color. De día se oscurece igual que el dorado, porque el de noche sobre
+papel da menos de 3:1 y "2 presupuestos" no se leería con sol encima.
+
+### Lo que falta (lote 4)
+
+**Verlo donde se trabaja**: la línea en rosado en la tarjeta del calendario,
+en la página del día y en `/turnos`, y **convertirlo en reserva** al
+aceptarlo —que es lo que escribe el `ID Reserva` y apaga el conteo de
+posibles.
 
 **El link del documento no lleva botón de "acepto" para el cliente**, y es
-deliberado: sería una puerta de escritura sin contraseña. El cliente
-responde por WhatsApp y el encargado lo marca.
+deliberado: sería una puerta de escritura sin contraseña sobre un dato que
+mueve el cupo de un día. El cliente responde por WhatsApp y el encargado lo
+marca.
 
 ## El equipo de trabajadores (panel)
 
@@ -3072,6 +3159,17 @@ subir el piso es tocar un archivo.
   hundido al tocarlo que un `<button>` ya trae de fábrica.
 - **El relleno es uno por pantalla**, el que dice a qué se vino. Dos
   rellenos en la misma vista es no tener ninguno.
+
+### El rótulo de un campo también tiene piso (2026-11-01)
+
+`Campo` —el rótulo que va encima de cada caja de texto— estaba a **10px al
+35%**, que era lo más chico del panel y en el lugar donde menos corresponde:
+es lo único que dice qué se está escribiendo ahí. Pasó a **13px al 60%**, y
+vale de una vez para las cuatro pantallas que lo usan, que es la gracia de
+que viva en un archivo.
+
+Comprobado que ningún rótulo se parte en dos líneas y que ninguna pantalla
+se corre de lado, a 393 y 1280.
 
 ### El menú de arriba: pastillas, no una lista (2026-11-01)
 

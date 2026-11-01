@@ -302,6 +302,23 @@ export function folioDe(p: Pick<Presupuesto, 'id'>): string {
   return n.length > 6 ? n.slice(-6) : n;
 }
 
+/**
+ * De quién es este link.
+ *
+ * **Un token vacío no encuentra nada**, aunque haya presupuestos sin token.
+ * Si calzara, entrar a `/presupuesto/` sin nada detrás abriría la primera
+ * cotización de la lista — con el precio que se le ofreció a otro cliente.
+ * Es la misma guarda que `trabajadorPorToken()`, y acá importa más.
+ *
+ * Se compara con `iguales()` desde la página, que no distingue en tiempo:
+ * acá solo se busca.
+ */
+export function porToken(lista: Presupuesto[], token: string): Presupuesto | null {
+  const t = String(token ?? '').trim();
+  if (!t) return null;
+  return lista.find((p) => p.token && p.token === t) ?? null;
+}
+
 /* ---------- leer y escribir ---------- */
 
 export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {

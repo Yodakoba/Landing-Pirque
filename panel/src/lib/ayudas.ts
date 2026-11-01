@@ -171,6 +171,31 @@ export const AYUDAS: Record<string, Ayuda> = {
     ojo: 'Una actividad sin confirmar no suma: agendar no es pagar.'
   },
 
+  presupuestos: {
+    titulo: 'Los presupuestos',
+    cuerpo: [
+      'Acá armas una cotización para un cliente —una agencia, un matrimonio, '
+      + 'una empresa— y se la mandas por un link. Lleva lo que haga falta: '
+      + 'menús, el arriendo del recinto, el show ecuestre.',
+      'Mientras no se confirme NO ocupa cupo. El día lo muestra aparte, en '
+      + 'rosado, como gente posible: así se ve que hay una conversación '
+      + 'abierta sin quitarle el lugar a quien sí reservó.',
+      'El precio de cada menú se propone desde la pestaña Menús y se puede '
+      + 'cambiar: lo que escribas acá es lo que se le cotiza a esta persona, '
+      + 'y es lo que se usa después si acepta.'
+    ],
+    pasos: [
+      'Nuevo presupuesto, y le pones el nombre del cliente y la fecha.',
+      'Agregas los menús y las líneas que correspondan, con su cantidad y '
+      + 'su precio.',
+      'Copiar link y se lo mandas. Al abrirlo puede guardarlo como PDF.',
+      'Cuando conteste, le cambias "En qué va" a Aceptado o Rechazado.'
+    ],
+    ojo: 'La columna Personas es aparte de la cantidad a propósito: un '
+       + 'arriendo del recinto es cantidad 1 y cero personas. De ahí sale la '
+       + 'gente que el día muestra como posible.'
+  },
+
   informe: {
     titulo: 'El informe para pagar',
     cuerpo: [
