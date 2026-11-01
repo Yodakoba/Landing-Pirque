@@ -210,6 +210,72 @@ export function estaVencido(p: Pick<Presupuesto, 'validoHasta'>, hoy: Fecha): bo
 }
 
 /**
+ * Cuántos días le quedan de vigencia.
+ *
+ * Devuelve `null` cuando no caduca o cuando **ya venció**: las dos cosas no
+ * son "le quedan N días" y confundirlas haría que un vencido apareciera
+ * entre los que están por vencer, o al revés. Vencer tiene su propia
+ * pregunta, `estaVencido()`.
+ *
+ * **Se cuenta sumando días al texto, no restando fechas.** Es la misma
+ * razón de siempre: pasar una fecha por `Date` la corre de día según el
+ * huso del servidor, y Vercel no está en Chile. Con un horizonte chico
+ * —se pregunta para avisar, no para un informe— sumar unos pocos días es
+ * más barato que cualquier resta, y no puede equivocarse.
+ */
+export function diasParaVencer(
+  p: Pick<Presupuesto, 'validoHasta'>, hoy: Fecha, horizonte = 60
+): number | null {
+  const hasta = String(p.validoHasta ?? '').slice(0, 10);
+  if (!esFecha(hasta) || hasta < hoy) return null;
+  for (let n = 0; n <= horizonte; n++) if (sumarDias(hoy, n) === hasta) return n;
+  // Más allá del horizonte no interesa cuántos son: no está por vencer.
+  return null;
+}
+
+/**
+ * Cuántos días antes se avisa que un presupuesto está por vencer.
+ *
+ * **Es una constante y no una fila de `Config`**, al revés que la vigencia.
+ * La diferencia: cuántos días vale una cotización es un **plazo comercial**
+ * que el cliente negocia y puede querer cambiar; cuántos días antes se lo
+ * recuerda el panel es cuándo conviene avisar, que no es dato del negocio.
+ * Agregar una fila a la planilla por cada número del panel la convierte en
+ * un archivo de configuración que nadie quiere mantener.
+ */
+export const DIAS_AVISO_VENCIMIENTO = 3;
+
+/**
+ * Si está vigente pero se le acaba el plazo.
+ *
+ * **No incluye a los ya vencidos**, a propósito: son dos avisos distintos
+ * —*"apúrate"* y *"se te pasó"*— y juntarlos borraría justamente el que
+ * todavía se puede atender. Tampoco incluye a los que ya tienen reserva ni
+ * a los rechazados: ahí el plazo dejó de importar.
+ */
+export function porVencer(
+  p: Presupuesto, hoy: Fecha, dias = DIAS_AVISO_VENCIMIENTO
+): boolean {
+  if (!cuentaComoPosible(p, hoy)) return false;
+  const quedan = diasParaVencer(p, hoy);
+  return quedan !== null && quedan <= dias;
+}
+
+/**
+ * Los que vencieron **sin que nadie los cerrara**.
+ *
+ * Uno rechazado o ya convertido en reserva no entra: esos terminaron. Lo
+ * que queda acá es una conversación que se enfrió sola, y el panel la
+ * nombra para que alguien decida — renovarla o marcarla rechazada— en vez
+ * de que desaparezca sola de la lista.
+ */
+export function vencidoSinCerrar(p: Presupuesto, hoy: Fecha): boolean {
+  if (String(p.idReserva ?? '').trim()) return false;
+  if (normalizar(p.estado) === normalizar(ESTADO_PRESUPUESTO.rechazado)) return false;
+  return estaVencido(p, hoy);
+}
+
+/**
  * **Si este presupuesto suma como gente posible en su día.**
  *
  * Es la regla central de toda esta capa, y es una sola condición a

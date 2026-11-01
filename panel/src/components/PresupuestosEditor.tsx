@@ -23,6 +23,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import {
   ESTADO_PRESUPUESTO, totalDe, personasDe, estadoVisible, folioDe, aEntero,
+  porVencer, vencidoSinCerrar, diasParaVencer,
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import type { Menu } from '@/lib/menus';
@@ -42,6 +43,21 @@ const COLOR: Record<string, string> = {
   Rechazado: 'border-hueso/25 text-hueso/50',
   Vencido: 'border-ambar/50 text-ambar-texto'
 };
+
+/**
+ * El plazo en palabras.
+ *
+ * **"Vence hoy" y "vence mañana" no son "vence en 0 días" ni "en 1 día"**,
+ * y esa es toda la gracia de esta función: un cero no se lee como urgencia,
+ * se lee como un error. Va al nivel del módulo, nunca dentro del
+ * componente.
+ */
+function plazoEnPalabras(dias: number | null): string {
+  if (dias === null) return '';
+  if (dias === 0) return 'vence hoy';
+  if (dias === 1) return 'vence mañana';
+  return `vence en ${dias} días`;
+}
 
 function Pastilla({ children }: { children: string }) {
   return (
@@ -82,6 +98,11 @@ export default function PresupuestosEditor() {
   if (!lista) return <p className="text-hueso/50">Cargando…</p>;
 
   const abrir = (p: Presupuesto) => {
+    // **Abrir un cerrado destapa la lista.** Un vencido está escondido por
+    // defecto, así que el botón del aviso de arriba habría abierto una ficha
+    // que no se dibuja: el clic no hacía nada visible. Quien llega por ese
+    // aviso viene justamente a atender ese presupuesto.
+    if (cerrado(p)) setVerCerrados(true);
     setAbierto(p.id);
     setBorrador({
       p: { ...p },
@@ -229,6 +250,9 @@ export default function PresupuestosEditor() {
     ['Rechazado', 'Vencido', 'Confirmado'].includes(estadoDe(p));
   const cerrados = lista.filter(cerrado).length;
 
+  const porVencerHoy = lista.filter((p) => porVencer(p, hoy));
+  const vencidos = lista.filter((p) => vencidoSinCerrar(p, hoy));
+
   const totalDeUno = (id: string) => totalDe(lineas.filter((l) => l.presupuesto === id));
   const genteDeUno = (id: string) => personasDe(lineas.filter((l) => l.presupuesto === id));
 
@@ -254,6 +278,56 @@ export default function PresupuestosEditor() {
         <p className="mb-4 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">
           {aviso}
         </p>
+      )}
+
+      {/* **Lo que hay que atender, arriba** (2026-11-01). Es el mismo patrón
+          que el aviso de `/turnos` con los días por cerrar, y por el mismo
+          motivo: entrar acá tiene que ser que te digan qué hacer, no tener
+          que acordarte de revisar la lista buscando fechas.
+
+          **Son dos avisos y no uno.** *Por vencer* es "apúrate, todavía se
+          puede"; *vencido* es "se te pasó, decide qué hacer con esto".
+          Juntarlos borraría justamente el que se puede atender. Cada uno es
+          un botón que abre su ficha, igual que los días pendientes. */}
+      {(porVencerHoy.length > 0 || vencidos.length > 0) && (
+        <div className="mb-4 space-y-2">
+          {porVencerHoy.length > 0 && (
+            <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
+              <p className="text-sm font-semibold text-ambar-texto">
+                {porVencerHoy.length === 1
+                  ? 'Un presupuesto está por vencer'
+                  : `${porVencerHoy.length} presupuestos están por vencer`}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {porVencerHoy.map((p) => (
+                  <button key={p.id} onClick={() => abrir(p)} className="boton">
+                    {p.cliente} · {plazoEnPalabras(diasParaVencer(p, hoy))}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {vencidos.length > 0 && (
+            <div className="rounded border border-hueso/20 bg-panel p-3">
+              <p className="text-sm font-semibold text-hueso/80">
+                {vencidos.length === 1
+                  ? 'Un presupuesto venció sin respuesta'
+                  : `${vencidos.length} presupuestos vencieron sin respuesta`}
+              </p>
+              <p className="mt-1 text-[13px] text-hueso/65">
+                Renueva su vigencia si la conversación sigue viva, o márcalo
+                rechazado para sacarlo de la lista.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {vencidos.map((p) => (
+                  <button key={p.id} onClick={() => abrir(p)} className="boton">
+                    {p.cliente}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -295,6 +369,16 @@ export default function PresupuestosEditor() {
                     {enPalabras(p.fecha)}
                   </span>
                   <Pastilla>{est}</Pastilla>
+                  {/* El plazo, solo cuando queda poco. Decir "vence en 11
+                      días" en cada línea sería ruido todos los días, y lo
+                      que está por vencer dejaría de distinguirse. */}
+                  {porVencer(p, hoy) && (
+                    <span className="whitespace-nowrap rounded-full border
+                                     border-ambar/50 px-2 py-0.5 text-[13px]
+                                     font-semibold text-ambar-texto">
+                      {plazoEnPalabras(diasParaVencer(p, hoy))}
+                    </span>
+                  )}
                   <span className="flex-1" />
                   <span className="text-[13px] text-hueso/60">
                     {genteDeUno(p.id)} personas
