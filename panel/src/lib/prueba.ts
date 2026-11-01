@@ -1611,8 +1611,19 @@ const deEncargado = todas.filter((a) => puede(ROL.encargado, a));
 const dePagos = todas.filter((a) => puede(ROL.pagos, a));
 ok(deEncargado.every((a) => puede(ROL.pagos, a)),
    'quien paga puede todo lo que puede el encargado: no es un rol más chico');
-ok(dePagos.filter((a) => !puede(ROL.encargado, a)).join() === 'pagar',
-   'y lo ÚNICO que tiene de más es registrar pagos');
+ok(dePagos.filter((a) => !puede(ROL.encargado, a)).sort().join() === 'pagar,sueldos',
+   'y lo único que tiene de más son las dos cosas de la plata: ver los sueldos de las fichas y registrar pagos');
+
+// **`sueldos` y `links` son dos permisos y no uno, a propósito** (2026-11-01).
+// Eran la misma condición —`esAdmin`— y el cliente pidió que quien paga
+// viera los sueldos; abrir esa condición le habría dado de paso los tokens
+// de los links personales de todo el equipo, que son credenciales.
+ok(puede(ROL.pagos, 'sueldos') && !puede(ROL.pagos, 'links'),
+   'quien paga ve los sueldos de las fichas pero NO los links personales: son plata y credencial, no la misma cosa');
+ok(!puede(ROL.encargado, 'sueldos'),
+   'el encargado sigue sin ver cuánto gana cada compañero: no lo necesita para asignar turnos');
+ok(puede(ROL.admin, 'sueldos') && puede(ROL.admin, 'links'),
+   'el administrador, las dos');
 ok(puede(ROL.pagos, 'pagar'), 'quien paga puede registrar que pagó');
 ok(!puede(ROL.encargado, 'pagar'),
    'el encargado NO: ve el informe, pero declarar que una plata salió es otra cosa');

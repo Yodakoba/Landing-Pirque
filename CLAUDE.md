@@ -2984,12 +2984,57 @@ el botón: el permiso se comprueba en la ruta, que es la regla de este panel.
   cualquier rol que mañana tenga el informe y no el calendario, y porque es
   un `if` que no se cumple.
 - **`/api/informe` sigue devolviendo de las fichas solo los datos de la
-  transferencia**, sin sueldos habituales ni tokens — y `/api/equipo` le
-  sigue recortando a `pagos` lo mismo que al encargado. No es un olvido:
-  **lo que se paga es lo que quedó congelado en cada turno**, no lo que la
-  ficha dice que alguien gana de costumbre, así que el sueldo habitual no
-  hace falta para pagar. Y los tokens de los links personales no los recibe
-  nadie que no sea el administrador, que es de quien son.
+  transferencia**, sin sueldos habituales ni tokens. Eso no cambió y no es
+  un olvido: lo que se paga es lo que quedó congelado en cada turno. Los
+  sueldos de la ficha los ve ahora en `/equipo`, que es donde se editan.
+
+
+#### `sueldos` y `links` son dos permisos, y antes eran uno solo
+
+El cliente remató la conversación con una frase: **"que vea también los
+sueldos de las fichas"**. Suena a abrir una condición, y abrirla habría
+estado mal — ahí está lo que vale guardar.
+
+**`esAdmin` estaba haciendo de dos cosas a la vez.** La misma condición
+escondía:
+
+- **los montos habituales y la cuenta bancaria** de una ficha, que son
+  plata, y
+- **el token del link personal**, que es una credencial.
+
+No tienen nada que ver. Abrirle `esAdmin` a la cuenta de pagos para que
+viera los sueldos le habría entregado de paso **los links personales de
+todo el equipo** — y esos son del administrador justamente porque con uno
+se entra a ver lo de una persona sin contraseña.
+
+Por eso se partió en dos:
+
+| Permiso | Qué gobierna | Quién |
+|---|---|---|
+| **`sueldos`** | modalidad, jornada, valor hora, propina y cuenta bancaria de la ficha | administrador **y quien paga** |
+| **`links`** | crear, copiar, renovar y quitar el link personal | **solo el administrador** |
+
+- **Vale para las dos pantallas y para las dos puntas.** `/api/equipo` y
+  `/api/extras` recortan por `sueldos` al devolver, y **descartan por lo
+  mismo al guardar**: quien no recibe un monto tampoco lo puede pisar, que
+  es la regla de siempre acá. El token sigue recortándose por `esAdmin`.
+- **Y el texto de arriba de `/equipo` —"dentro de cada trabajador puedes
+  copiar su link personal"— pasó a mostrarse solo al administrador.**
+  Prometerle a la cuenta de pagos algo que no va a encontrar es peor que no
+  decir nada.
+- **Hay una prueba que lo fija**: que `pagos` tenga `sueldos` y **no**
+  `links`. Si algún día alguien junta las dos condiciones otra vez, falla.
+
+Comprobado con las tres cuentas contra la planilla falsa:
+
+```
+pagos      verSueldos ✓  jornada 30.000  cuenta ✓  token ✗   ve Pago y Transferencia, no el link
+encargado  verSueldos ✗  jornada 0       cuenta ✗  token ✗   no ve ninguno de los dos
+admin      verSueldos ✓  jornada 30.000  cuenta ✓  token ✗*  ve los tres
+```
+
+*El token sale vacío también para el admin cuando la persona todavía no
+tiene link creado, que es el caso de la prueba.
 
 ### Quién puede hacer qué (2026-10-21, cuarto rol el 2026-10-22)
 
@@ -3003,8 +3048,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | **sí** | — |
 | Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
 | Crear y mandar presupuestos | sí | sí | **sí** | — |
-| Montos habituales y cuentas bancarias **en la ficha** | sí | — | — | — |
-| Cuentas bancarias **para transferir**, en el informe | sí | — | **sí** | — |
+| Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — |
 | Puestos y su regla "uno cada N" | sí | — | — | — |
 | Precios, menús y configuración | sí | — | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — | — |

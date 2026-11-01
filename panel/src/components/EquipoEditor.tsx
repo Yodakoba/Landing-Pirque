@@ -46,6 +46,11 @@ export default function EquipoEditor() {
   // personales son del administrador, y si el encargado viera esos controles
   // el panel le estaría mintiendo: la ruta se los va a negar igual.
   const [esAdmin, setEsAdmin] = useState(false);
+  // **Dos banderas y no una.** `esAdmin` es para los links personales, que
+  // son credenciales; `verSueldos` es para la plata —montos y cuenta
+  // bancaria— que desde el 2026-11-01 también ve quien paga. Eran la misma
+  // condición y el cliente pidió abrir una sola de las dos.
+  const [verSueldos, setVerSueldos] = useState(false);
   const [avisoLink, setAvisoLink] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -96,6 +101,7 @@ export default function EquipoEditor() {
         }
         setTurnosDe(cuenta);
         setEsAdmin(!!d.esAdmin);
+        setVerSueldos(!!d.verSueldos);
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -388,9 +394,15 @@ export default function EquipoEditor() {
       <p className="mb-3 max-w-2xl text-sm text-hueso/70">
         Acá puedes agregar y editar trabajadores.
       </p>
-      <p className="mb-4 max-w-2xl text-sm text-hueso/70">
-        Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.
-      </p>
+      {/* Solo para quien de verdad tiene ese bloque. A la cuenta de pagos
+          el link personal no se le muestra —es una credencial, y los links
+          son del administrador— así que prometerle algo que no va a
+          encontrar es peor que no decir nada. */}
+      {esAdmin && (
+        <p className="mb-4 max-w-2xl text-sm text-hueso/70">
+          Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.
+        </p>
+      )}
       <p className="mb-6">
         <a href="/turnos" className="tecla boton">Ver el mes completo</a>
       </p>
@@ -516,7 +528,7 @@ export default function EquipoEditor() {
                   {/* Lo que falta para poder pagarle se dice **con la ficha
                       cerrada**: adentro ya lo avisa `DatosBancarios`, pero
                       cerrada es donde se mira la lista antes de pagar. */}
-                  {esAdmin && t.nombre.trim() && !sePuedeTransferir(t.banco) && (
+                  {verSueldos && t.nombre.trim() && !sePuedeTransferir(t.banco) && (
                     <span className="text-[11px] text-ambar-texto/80">falta su cuenta</span>
                   )}
                 </button>
@@ -681,7 +693,7 @@ export default function EquipoEditor() {
                 )}
 
                 {/* Cuánto gana. Solo el administrador. */}
-                {esAdmin && (
+                {verSueldos && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
                       <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
@@ -725,7 +737,7 @@ export default function EquipoEditor() {
                 )}
 
                 {/* Dónde se le transfiere. También solo el administrador. */}
-                {esAdmin && (
+                {verSueldos && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
                       <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
@@ -769,8 +781,8 @@ export default function EquipoEditor() {
         {botonGuardar}
       </div>
 
-      {esAdmin && (
-        <p className="mt-4 max-w-2xl text-xs text-hueso/50">
+      {verSueldos && (
+        <p className="mt-4 max-w-2xl text-[13px] text-hueso/50">
           <strong>La propina se reparte en partes iguales</strong> entre
           quienes vinieron ese día y tienen esta casilla marcada. Desmarcarla
           deja a alguien en la planilla de trabajo pero fuera del reparto,

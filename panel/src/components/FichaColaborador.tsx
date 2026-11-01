@@ -34,13 +34,13 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function FichaColaborador({
-  ficha, nombreSugerido = '', esAdmin, onListo, onCancelar
+  ficha, nombreSugerido = '', verSueldos, onListo, onCancelar
 }: {
   /** La ficha a editar, o `undefined` para crear una nueva. */
   ficha?: Colaborador;
   /** Con qué nombre nace, cuando se crea desde un nombre ya escrito. */
   nombreSugerido?: string;
-  esAdmin: boolean;
+  verSueldos: boolean;
   onListo: (c: Colaborador, aviso?: string) => void;
   onCancelar: () => void;
 }) {
@@ -108,7 +108,7 @@ export default function FichaColaborador({
             etiqueta={`Teléfono de ${nombre || 'esta persona'}`}
             onCambio={setTelefono} />
         </Campo>
-        {esAdmin && (
+        {verSueldos && (
           <Campo etiqueta="Monto habitual" ancho="w-32">
             <input type="number" min={0} step={1000} value={monto}
               className={ENTRADA} placeholder="—"
@@ -128,7 +128,7 @@ export default function FichaColaborador({
         )}
       </div>
 
-      {esAdmin && (
+      {verSueldos && (
         <div className="mt-4 border-t border-hueso/10 pt-4">
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Transferencia
@@ -141,10 +141,10 @@ export default function FichaColaborador({
         </div>
       )}
 
-      {!esAdmin && (
+      {!verSueldos && (
         <p className="mt-4 text-xs text-hueso/45">
-          El monto habitual y los datos bancarios los maneja el
-          administrador.
+          El monto habitual y los datos bancarios los manejan el
+          administrador y quien hace los pagos.
         </p>
       )}
 

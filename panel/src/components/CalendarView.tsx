@@ -66,7 +66,7 @@ export default function CalendarView() {
   // todavía no tiene las pestañas del equipo, el calendario se dibuja igual.
   // Lo que no hay es el resumen, y el dorso de la tarjeta lo dice.
   const [equipo, setEquipo] = useState<{
-    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; esAdmin: boolean;
+    puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; verSueldos: boolean;
   } | null>(null);
   // **Una fecha, no una Ocupacion**: a un día de preparación se le asigna
   // equipo sin que exista en el calendario, así que no hay ocupación que
@@ -155,7 +155,7 @@ export default function CalendarView() {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], esAdmin: !!d.esAdmin
+          turnos: d.turnos ?? [], verSueldos: !!d.verSueldos
         });
       })
       .catch(() => {});
@@ -266,7 +266,7 @@ export default function CalendarView() {
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
-          esAdmin={equipo.esAdmin}
+          verSueldos={equipo.verSueldos}
           onListo={() => { setPlanificando(null); cargar(); }}
           onCancelar={() => setPlanificando(null)}
         />

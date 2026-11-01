@@ -157,6 +157,23 @@ export const PERMISOS = {
    * cuentas bancarias de las fichas, que se filtran en la respuesta.
    */
   extras: [ROL.admin, ROL.encargado, ROL.pagos],
+  /**
+   * Ver y editar **los montos habituales y la cuenta bancaria** de una
+   * ficha: la modalidad, la jornada, el valor hora, si entra en la propina
+   * y los datos de la transferencia.
+   *
+   * **Existe porque `esAdmin` estaba haciendo de dos cosas a la vez**
+   * (2026-11-01). La misma condición escondía los sueldos de la ficha **y**
+   * los links personales, que no tienen nada que ver: uno es plata y el
+   * otro es una credencial. Cuando el cliente pidió que quien paga viera
+   * los sueldos, abrir `esAdmin` le habría dado de paso los tokens de todo
+   * el equipo.
+   *
+   * Entonces se partió en dos. Esto es la plata, y la tiene quien paga; los
+   * links siguen en `links`, que es solo del administrador porque es de
+   * quien son.
+   */
+  sueldos: [ROL.admin, ROL.pagos],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
   puestos: [ROL.admin],
   /** Crear, renovar y quitar los links personales de los trabajadores. */

@@ -27,7 +27,7 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function FichaTrabajador({
-  ficha, puesto = '', nombreSugerido = '', esAdmin, onListo, onCancelar
+  ficha, puesto = '', nombreSugerido = '', verSueldos, onListo, onCancelar
 }: {
   /** La ficha a editar, o `undefined` para crear una nueva. */
   ficha?: Trabajador;
@@ -35,7 +35,7 @@ export default function FichaTrabajador({
   nombreSugerido?: string;
   /** El puesto desde el que se está creando: es su puesto habitual. */
   puesto?: string;
-  esAdmin: boolean;
+  verSueldos: boolean;
   onListo: (t: Trabajador, aviso?: string) => void;
   onCancelar: () => void;
 }) {
@@ -122,7 +122,7 @@ export default function FichaTrabajador({
         )}
       </div>
 
-      {esAdmin && (
+      {verSueldos && (
         <div className="mt-4 border-t border-hueso/10 pt-4">
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Pago
@@ -178,7 +178,7 @@ export default function FichaTrabajador({
         </div>
       )}
 
-      {esAdmin && (
+      {verSueldos && (
         <div className="mt-4 border-t border-hueso/10 pt-4">
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Transferencia
@@ -191,9 +191,10 @@ export default function FichaTrabajador({
         </div>
       )}
 
-      {!esAdmin && (
+      {!verSueldos && (
         <p className="mt-4 text-xs text-hueso/45">
-          Los sueldos y los datos bancarios los maneja el administrador.
+          Los sueldos y los datos bancarios los manejan el administrador y
+          quien hace los pagos.
         </p>
       )}
 

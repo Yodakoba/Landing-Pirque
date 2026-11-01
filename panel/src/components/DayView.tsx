@@ -112,7 +112,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
-    cierres: Cierre[]; esAdmin: boolean;
+    cierres: Cierre[]; verSueldos: boolean;
   } | null>(null);
   // **Ya no hay "Pasar lista".** Los dos caminos —planificar y anotar la
   // propina— abren la MISMA ventana, que es la del día completo; lo único
@@ -123,7 +123,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   // pantalla, y la pregunta "¿cuánto costó este sábado?" no se contesta sin
   // el jinete.
   const [extras, setExtras] = useState<{
-    colaboradores: Colaborador[]; extras: Extra[]; esAdmin: boolean;
+    colaboradores: Colaborador[]; extras: Extra[]; verSueldos: boolean;
   } | null>(null);
   const [agendando, setAgendando] = useState(false);
   /**
@@ -158,7 +158,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], cierres: d.cierres ?? [], esAdmin: !!d.esAdmin
+          turnos: d.turnos ?? [], cierres: d.cierres ?? [], verSueldos: !!d.verSueldos
         });
       })
       .catch(() => {});
@@ -172,7 +172,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         if (d.error) return;
         setExtras({
           colaboradores: d.colaboradores ?? [], extras: d.extras ?? [],
-          esAdmin: !!d.esAdmin
+          verSueldos: !!d.verSueldos
         });
       })
       .catch(() => {});
@@ -578,7 +578,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           fecha={fecha}
           extras={extras.extras}
           colaboradores={extras.colaboradores}
-          esAdmin={extras.esAdmin}
+          verSueldos={extras.verSueldos}
           onListo={() => { setAgendando(false); cargarExtras(); }}
           onCancelar={() => setAgendando(false)}
         />
@@ -593,7 +593,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           turnos={equipo.turnos}
           extras={extras?.extras ?? []}
           cerrado={estaCerrado(equipo.cierres, fecha)}
-          esAdmin={equipo.esAdmin}
+          verSueldos={equipo.verSueldos}
           enfocarPropina={planificando === 'propina'}
           onListo={() => { setPlanificando('no'); cargarEquipo(); }}
           onCancelar={() => setPlanificando('no')}

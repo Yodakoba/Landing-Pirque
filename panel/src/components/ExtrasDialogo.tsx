@@ -29,14 +29,14 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function ExtrasDialogo({
-  fecha, extras, colaboradores, esAdmin = false, onListo, onCancelar
+  fecha, extras, colaboradores, verSueldos = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Todas las actividades, de todos los días. Acá se filtra esta fecha. */
   extras: Extra[];
   colaboradores: Colaborador[];
   /** Si puede fijar el monto habitual al crear a alguien. */
-  esAdmin?: boolean;
+  verSueldos?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -258,7 +258,7 @@ export default function ExtrasDialogo({
 
       {ficha && (
         <FichaColaborador
-          ficha={ficha.c} nombreSugerido={ficha.nombre ?? ''} esAdmin={esAdmin}
+          ficha={ficha.c} nombreSugerido={ficha.nombre ?? ''} verSueldos={verSueldos}
           onCancelar={() => setFicha(null)}
           onListo={(c, aviso) => {
             setGente((antes) => antes.some(
