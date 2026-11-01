@@ -211,6 +211,16 @@ export const PERMISOS = {
    * esos. Es lo que hay que decidir cuando se afine la lista.
    */
   informe: [ROL.admin, ROL.encargado, ROL.pagos],
+  /**
+   * Registrar que a alguien ya se le pagó, entero o en parte.
+   *
+   * **Va con quien paga, no con quien organiza el día** (2026-11-01). El
+   * encargado ve el informe —se lo liberó el cliente como intertanto— pero
+   * leerlo y declarar que una plata salió son dos cosas distintas: lo
+   * segundo es un hecho con nombre y hora, como cerrar un día, y lo hace
+   * quien de verdad hizo la transferencia.
+   */
+  pagar: [ROL.admin, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */

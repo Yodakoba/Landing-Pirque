@@ -31,6 +31,7 @@
 import { useState } from 'react';
 import type { Ocupacion } from '@/lib/tipos';
 import type { ResumenEquipo } from '@/lib/equipo';
+import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import PuntoDia from './PuntoDia';
 import Clima from './Clima';
@@ -337,9 +338,29 @@ export default function TarjetaDia({
             <h3 className="text-[15px] font-semibold capitalize leading-tight text-hueso/90">
               {enPalabras(d.fecha)}
             </h3>
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-oro">
-              Equipo
-            </span>
+            {/* **Lo que va a costar ese equipo** (2026-11-01, lo pidió el
+                cliente: en el espacio libre de arriba a la derecha, al lado
+                de cuánta gente trabaja). Ocupa el aire que ya estaba ahí, así
+                que no alarga la tarjeta.
+
+                **Cuenta a quien todavía no está marcado**, por una razón
+                concreta: `pagoDe()` da cero hasta que alguien pase lista, y
+                un sábado recién planificado habría mostrado $0 justo cuando
+                uno decide cuánta gente poner. Un cero no se lee como "falta
+                marcar", se lee como "no cuesta nada". Ver `costoPlanificado()`. */}
+            <div className="shrink-0 text-right">
+              <span className="block text-[11px] font-semibold uppercase
+                               tracking-widest text-oro">
+                Equipo
+              </span>
+              {!!resumen?.costo && (
+                <span className="mt-0.5 block whitespace-nowrap rounded-full border
+                                 border-oro/40 px-2 py-0.5 text-[13px] font-bold
+                                 tabular-nums text-oro">
+                  {enPesos(resumen.costo)}
+                </span>
+              )}
+            </div>
           </div>
 
           {!resumen ? (

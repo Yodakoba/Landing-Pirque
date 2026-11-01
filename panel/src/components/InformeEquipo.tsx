@@ -39,8 +39,168 @@ import { aCSV } from '@/lib/csv';
 import { totalAjustes, motivosDe } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
          type Banco } from '@/lib/banco';
+import { pagadoDe, aTransferirDe, faltaDe, estadoDePago,
+         type PagoEquipo } from '@/lib/remuneraciones';
+import Dialogo from './Dialogo';
+import Campo from './Campo';
 
 type Tipo = 'mes' | 'semana' | 'rango';
+
+/**
+ * Las tres celdas del pago, iguales en las dos tablas.
+ *
+ * **Va al nivel del módulo, nunca dentro del componente**: una función
+ * declarada adentro es, para React, otro tipo de elemento en cada dibujado,
+ * y lo desmonta y lo vuelve a montar. Ya nos costó el foco de los inputs de
+ * `/equipo` una vez.
+ *
+ * El **check es derivado**: sale de comparar lo pagado con lo que hay que
+ * transferir, no de un campo guardado. Por eso no puede contradecir a los
+ * montos que tiene al lado.
+ */
+function CeldasPago({
+  aTransferir, pagado, falta, estado, puedePagar, onCobrar
+}: {
+  aTransferir: number; pagado: number; falta: number;
+  estado: 'pagado' | 'parcial' | 'pendiente';
+  puedePagar: boolean;
+  onCobrar: () => void;
+}) {
+  return (
+    <>
+      <td className="py-2 pr-3 text-right tabular-nums">
+        {aTransferir > 0
+          ? <strong className="text-[15px]">{enPesos(aTransferir)}</strong>
+          : <span className="text-hueso/25">—</span>}
+      </td>
+      <td className="py-2 pr-3 text-right">
+        {pagado > 0 ? (
+          <>
+            <div className="tabular-nums text-hueso/75">{enPesos(pagado)}</div>
+            {/* Se distingue por forma y no solo por color: una pastilla con
+                borde se reconoce sin leerla y sin distinguir el verde del
+                ámbar, que es lo que pide la regla del panel. */}
+            <span className={`mt-0.5 inline-block whitespace-nowrap rounded-full border
+                              px-2 py-0.5 text-[13px] font-semibold ${
+              estado === 'pagado'
+                ? 'border-verde/50 text-verde-texto'
+                : 'border-ambar/50 text-ambar-texto'}`}>
+              {estado === 'pagado' ? '✓ pagado' : 'parcial'}
+            </span>
+          </>
+        ) : estado === 'pagado' ? (
+          // Nada que transferir: no queda eternamente "pendiente" por cero.
+          <span className="text-hueso/25">—</span>
+        ) : (
+          <span className="whitespace-nowrap rounded-full border border-hueso/25
+                           px-2 py-0.5 text-[13px] font-semibold text-hueso/60">
+            sin pagar
+          </span>
+        )}
+      </td>
+      <td className="py-2 pr-3 text-right tabular-nums">
+        {falta > 0
+          ? <strong className="text-ambar-texto">{enPesos(falta)}</strong>
+          : <span className="text-hueso/25">—</span>}
+      </td>
+      <td className="py-2 text-right">
+        {puedePagar && falta > 0 && (
+          <button onClick={onCobrar} className="boton whitespace-nowrap">
+            Registrar pago
+          </button>
+        )}
+      </td>
+    </>
+  );
+}
+
+/**
+ * El formulario de un pago.
+ *
+ * **Al nivel del módulo** por lo mismo que `CeldasPago`: declarado dentro
+ * del componente, React lo desmontaría en cada dibujado y el input perdería
+ * el foco a cada tecla.
+ *
+ * El monto **nace con lo que falta**, que es el caso de siempre: lo normal
+ * es pagar todo, y entonces esto es apretar dos botones. Bajarlo es lo que
+ * convierte el pago en parcial, sin un modo aparte que haya que elegir.
+ */
+function FormularioPago({
+  quien, propuesto, periodo, onGuardar, onCancelar
+}: {
+  quien: string; propuesto: number; periodo: string;
+  onGuardar: (monto: number, nota: string) => void;
+  onCancelar: () => void;
+}) {
+  const [monto, setMonto] = useState(String(propuesto));
+  const [nota, setNota] = useState('');
+  const n = Math.round(Number(monto.replace(/[^\d-]/g, '')) || 0);
+  const parcial = n > 0 && n < propuesto;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-hueso/70">
+        Lo que falta transferirle a <strong className="text-hueso">{quien}</strong>{' '}
+        por {periodo} son <strong className="text-hueso">{enPesos(propuesto)}</strong>.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <Campo etiqueta="Cuánto se le pagó" ancho="w-44">
+          <input type="text" inputMode="numeric" value={monto} autoFocus
+            aria-label="Monto pagado"
+            onChange={(e) => setMonto(e.target.value)}
+            className="w-full rounded border border-hueso/20 bg-transparent px-2 py-1.5
+                       text-sm tabular-nums outline-none focus:border-oro/60" />
+        </Campo>
+        <Campo etiqueta="Nota (opcional)" ancho="w-full sm:w-72">
+          <input type="text" value={nota} placeholder="Transferencia 2/11"
+            aria-label="Nota del pago"
+            onChange={(e) => setNota(e.target.value)}
+            className="w-full rounded border border-hueso/20 bg-transparent px-2 py-1.5
+                       text-sm outline-none focus:border-oro/60" />
+        </Campo>
+      </div>
+
+      {/* Que va a quedar parcial se dice antes de guardar, no después: es
+          justamente lo que alguien querría saber si se equivocó de cifra. */}
+      {parcial && (
+        <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[13px]
+                      text-ambar-texto">
+          Queda como pago parcial: faltarían {enPesos(propuesto - n)}.
+        </p>
+      )}
+      {n > propuesto && (
+        <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[13px]
+                      text-ambar-texto">
+          Es más de lo que falta. Se anota igual, y el periodo queda pagado de más.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={() => onGuardar(n, nota)} disabled={!n}
+          className="boton boton-relleno">
+          Registrar pago
+        </button>
+        <button onClick={onCancelar} className="boton">Cancelar</button>
+        <span className="flex-1" />
+        <span className="text-[13px] text-hueso/55">
+          Queda anotado con tu nombre y la fecha.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Los encabezados de esas mismas tres columnas, para no escribirlos dos veces. */
+function EncabezadosPago() {
+  return (
+    <>
+      <th className="w-32 py-2 pr-3 text-right">A transferir</th>
+      <th className="w-28 py-2 pr-3 text-right">Pagado</th>
+      <th className="w-28 py-2 pr-3 text-right">Falta</th>
+      <th className="w-32 py-2" />
+    </>
+  );
+}
 
 export default function InformeEquipo() {
   const [turnos, setTurnos] = useState<Turno[] | null>(null);
@@ -49,6 +209,14 @@ export default function InformeEquipo() {
   // ni recibe propina, así que sumarlos en una sola lista sería mentir.
   const [extras, setExtras] = useState<Extra[]>([]);
   const [cuentas, setCuentas] = useState<Record<string, Banco>>({});
+  // Los pagos ya registrados. El "check" de cada fila **se deduce de
+  // sumarlos**, no es un campo guardado que pueda decir otra cosa que la
+  // plata. Ver `remuneraciones.ts`.
+  const [pagos, setPagos] = useState<PagoEquipo[]>([]);
+  const [puedePagar, setPuedePagar] = useState(false);
+  // A quién se le está registrando un pago, con el monto propuesto.
+  const [cobrando, setCobrando] = useState<
+    { quien: string; propuesto: number } | null>(null);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   const [tipo, setTipo] = useState<Tipo>('mes');
@@ -68,6 +236,8 @@ export default function InformeEquipo() {
         setTurnos(d.turnos ?? []);
         setExtras(d.extras ?? []);
         setCuentas(d.cuentas ?? {});
+        setPagos(d.pagos ?? []);
+        setPuedePagar(!!d.puedePagar);
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -104,6 +274,55 @@ export default function InformeEquipo() {
   const sinConfirmar = lineasExtras.reduce((s, l) => s + l.sinConfirmar, 0);
   const cuentaDe = (nombre: string): Banco =>
     cuentas[normalizar(nombre)] ?? bancoVacio();
+
+  /**
+   * Lo que falta saber de una persona para transferirle.
+   *
+   * **A transferir = remuneración + propina.** Es la única parte donde las
+   * dos se suman, y es a propósito: en el costo del equipo la propina sigue
+   * yendo aparte —esa plata no sale del negocio, pasa por él— pero a la hora
+   * de transferir sale una sola plata a una sola cuenta. Hasta ahora había
+   * que sumar dos columnas a mano.
+   */
+  const pagoDeFila = (nombre: string, tot: number, prop: number) => {
+    const aTransferir = aTransferirDe(tot, prop);
+    const pagado = pagadoDe(pagos, nombre, desde, hasta);
+    return {
+      aTransferir, pagado,
+      falta: faltaDe(aTransferir, pagado),
+      estado: estadoDePago(aTransferir, pagado)
+    };
+  };
+
+  const sumaDe = (nombres: { nombre: string; tot: number; prop: number }[]) =>
+    nombres.reduce((s, x) => {
+      const p = pagoDeFila(x.nombre, x.tot, x.prop);
+      return { aTransferir: s.aTransferir + p.aTransferir,
+               pagado: s.pagado + p.pagado, falta: s.falta + p.falta };
+    }, { aTransferir: 0, pagado: 0, falta: 0 });
+
+  const sumaEquipo = sumaDe(
+    lineas.map((l) => ({ nombre: l.trabajador, tot: l.total, prop: l.propina }))
+  );
+  // Un colaborador no recibe propina —no entra en el reparto— así que su
+  // "a transferir" es su total y nada más. El cero va escrito para que se
+  // lea que es una decisión y no un campo que faltó.
+  const sumaExtras = sumaDe(
+    lineasExtras.map((l) => ({ nombre: l.colaborador, tot: l.total, prop: 0 }))
+  );
+
+  async function registrarPago(quien: string, monto: number, nota: string) {
+    const r = await fetch('/api/informe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quien, monto, desde, hasta, nota })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    // Se agrega a lo que ya hay en pantalla en vez de recargar todo: el
+    // informe de un mes son muchas filas y lo único que cambió es esta.
+    if (d.pago) setPagos((antes) => [...antes, d.pago]);
+    setCobrando(null);
+  }
 
   // Quién aparece en el periodo y no se le puede transferir con lo que hay
   // anotado. Se avisa acá porque es el momento en que importa: descubrirlo
@@ -147,6 +366,20 @@ export default function InformeEquipo() {
             b.numero, b.correo, b.nota];
   };
 
+  /**
+   * Las tres columnas del pago, **solo en la primera fila de cada persona**.
+   *
+   * El CSV es detalle día por día y el pago es por persona y periodo: si
+   * fuera en cada fila, alguien que sume la columna cobraría cinco veces lo
+   * mismo. En blanco en las demás filas la columna suma exactamente lo que
+   * hay que transferir, que es para lo que se abre esta planilla.
+   */
+  const columnasPago = (nombre: string, tot: number, prop: number, primera: boolean) => {
+    if (!primera) return ['', '', ''];
+    const x = pagoDeFila(nombre, tot, prop);
+    return [x.aTransferir, x.pagado, x.falta];
+  };
+
   function exportar() {
     const delPeriodo = (turnos ?? [])
       .filter((t) => t.fecha >= desde && t.fecha <= hasta)
@@ -160,10 +393,11 @@ export default function InformeEquipo() {
       ['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
        'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo',
        'Total', 'Propina',
+       'A transferir', 'Pagado', 'Falta',
        'Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
        'Correo del comprobante', 'Nota de pago'],
       [
-        ...delPeriodo.map((t) => [
+        ...delPeriodo.map((t, i) => [
           'Equipo',
           t.trabajador, t.fecha, t.puesto, t.modalidad,
           t.asistencia || 'sin marcar',
@@ -177,9 +411,17 @@ export default function InformeEquipo() {
           // sueldo, y quien reciba esta planilla tiene que poder sumar una
           // cosa sin arrastrar la otra.
           t.propina || '',
+          ...columnasPago(
+            t.trabajador,
+            lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.total ?? 0,
+            lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.propina ?? 0,
+            // La primera fila de esa persona: las filas vienen ordenadas por
+            // nombre, así que es la que no tiene a nadie igual encima.
+            i === 0 || normalizar(delPeriodo[i - 1].trabajador) !== normalizar(t.trabajador)
+          ),
           ...columnasBanco(t.trabajador)
         ]),
-        ...extrasDelPeriodo.map((e) => [
+        ...extrasDelPeriodo.map((e, i) => [
           'Actividad extra',
           e.colaborador, e.fecha, e.actividad,
           // Modalidad, horas extra y valor hora no le aplican a un extra:
@@ -190,6 +432,12 @@ export default function InformeEquipo() {
           // Propina en blanco, a propósito: un jinete no entra en el
           // reparto, y un cero se leería como que le tocó cero.
           '',
+          ...columnasPago(
+            e.colaborador,
+            lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(e.colaborador))?.total ?? 0,
+            0,
+            i === 0 || normalizar(extrasDelPeriodo[i - 1].colaborador) !== normalizar(e.colaborador)
+          ),
           ...columnasBanco(e.colaborador)
         ])
       ]
@@ -306,37 +554,38 @@ export default function InformeEquipo() {
               Sin turnos anotados en este periodo.
             </p>
           ) : (
-          <div className="mb-8 overflow-x-auto">
+          <div className="relative mb-8 overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
+              <thead className="text-left text-[13px] uppercase tracking-wide text-hueso/50">
                 <tr className="border-b border-hueso/10">
-                  <th className="py-2 pr-3">Quién</th>
+                  <th className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">Quién</th>
                   <th className="w-24 py-2 pr-3">Días</th>
                   <th className="w-28 py-2 pr-3 text-right">Jornadas</th>
                   <th className="w-32 py-2 pr-3 text-right">Horas extra</th>
                   <th className="w-28 py-2 pr-3 text-right">Ajustes</th>
                   <th className="w-28 py-2 pr-3 text-right">Total</th>
-                  <th className="w-28 py-2 text-right">Propina</th>
+                  <th className="w-28 py-2 pr-3 text-right">Propina</th>
+                  <EncabezadosPago />
                 </tr>
               </thead>
               <tbody>
                 {lineas.map((l) => (
                   <tr key={l.trabajador} className="border-b border-hueso/5">
-                    <td className="py-2 pr-3">
+                    <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">
                       {l.trabajador}
                       {esContratado(l.modalidad) && (
-                        <span className="ml-1 text-xs text-hueso/40">contratado</span>
+                        <span className="ml-1 text-[13px] text-hueso/40">contratado</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 tabular-nums">
                       {l.dias}
                       {l.noVino > 0 && (
-                        <span className="ml-1 text-xs text-rojo-texto/80">
+                        <span className="ml-1 text-[13px] text-rojo-texto/80">
                           · {l.noVino} no vino
                         </span>
                       )}
                       {l.sinMarcar > 0 && (
-                        <span className="ml-1 text-xs text-ambar-texto/80">
+                        <span className="ml-1 text-[13px] text-ambar-texto/80">
                           · {l.sinMarcar} sin marcar
                         </span>
                       )}
@@ -347,7 +596,7 @@ export default function InformeEquipo() {
                     <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
                       {l.horasExtra
                         ? <>{enPesos(l.montoHorasExtra)}
-                            <span className="ml-1 text-xs text-hueso/40">
+                            <span className="ml-1 text-[13px] text-hueso/40">
                               ({l.horasExtra} h)
                             </span></>
                         : <span className="text-hueso/25">—</span>}
@@ -359,26 +608,45 @@ export default function InformeEquipo() {
                     <td className="py-2 pr-3 text-right tabular-nums">
                       <strong>{enPesos(l.total)}</strong>
                     </td>
-                    <td className="py-2 text-right tabular-nums text-hueso/70">
+                    <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
                       {l.propina ? enPesos(l.propina) : <span className="text-hueso/25">—</span>}
                     </td>
+                    <CeldasPago {...pagoDeFila(l.trabajador, l.total, l.propina)}
+                      puedePagar={puedePagar}
+                      onCobrar={() => setCobrando({
+                        quien: l.trabajador,
+                        propuesto: pagoDeFila(l.trabajador, l.total, l.propina).falta
+                      })} />
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t border-hueso/15">
-                  <td className="py-3 pr-3 text-xs uppercase tracking-wide text-hueso/45">
+                  <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-3 pr-3 text-[13px] uppercase tracking-wide text-hueso/45">
                     {lineas.length} {lineas.length === 1 ? 'persona' : 'personas'}
                   </td>
                   <td colSpan={4} />
                   <td className="py-3 pr-3 text-right tabular-nums">
                     <strong className="text-oro">{enPesos(total)}</strong>
                   </td>
-                  <td className="py-3 text-right tabular-nums">
+                  <td className="py-3 pr-3 text-right tabular-nums">
                     {propina > 0
                       ? <strong className="text-hueso/80">{enPesos(propina)}</strong>
                       : <span className="text-hueso/25">—</span>}
                   </td>
+                  <td className="py-3 pr-3 text-right tabular-nums">
+                    <strong className="text-[15px]">{enPesos(sumaEquipo.aTransferir)}</strong>
+                  </td>
+                  <td className="py-3 pr-3 text-right tabular-nums text-hueso/75">
+                    {sumaEquipo.pagado > 0
+                      ? enPesos(sumaEquipo.pagado) : <span className="text-hueso/25">—</span>}
+                  </td>
+                  <td className="py-3 pr-3 text-right tabular-nums">
+                    {sumaEquipo.falta > 0
+                      ? <strong className="text-ambar-texto">{enPesos(sumaEquipo.falta)}</strong>
+                      : <span className="text-hueso/25">—</span>}
+                  </td>
+                  <td />
                 </tr>
               </tfoot>
             </table>
@@ -395,34 +663,35 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-hueso/70">
                 Actividades extras
               </h2>
-              <div className="mb-8 overflow-x-auto">
+              <div className="relative mb-8 overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
+                  <thead className="text-left text-[13px] uppercase tracking-wide text-hueso/50">
                     <tr className="border-b border-hueso/10">
-                      <th className="py-2 pr-3">Quién</th>
+                      <th className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">Quién</th>
                       <th className="w-48 py-2 pr-3">Actividad</th>
                       <th className="w-40 py-2 pr-3">Días</th>
                       <th className="w-28 py-2 pr-3 text-right">Montos</th>
                       <th className="w-28 py-2 pr-3 text-right">Ajustes</th>
-                      <th className="w-28 py-2 text-right">Total</th>
+                      <th className="w-28 py-2 pr-3 text-right">Total</th>
+                      <EncabezadosPago />
                     </tr>
                   </thead>
                   <tbody>
                     {lineasExtras.map((l) => (
                       <tr key={l.colaborador} className="border-b border-hueso/5">
-                        <td className="py-2 pr-3">{l.colaborador}</td>
+                        <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">{l.colaborador}</td>
                         <td className="py-2 pr-3 text-hueso/70">
                           {l.actividad || <span className="text-hueso/25">—</span>}
                         </td>
                         <td className="py-2 pr-3 tabular-nums">
                           {l.dias}
                           {l.noVino > 0 && (
-                            <span className="ml-1 text-xs text-rojo-texto/80">
+                            <span className="ml-1 text-[13px] text-rojo-texto/80">
                               · {l.noVino} no vino
                             </span>
                           )}
                           {l.sinConfirmar > 0 && (
-                            <span className="ml-1 text-xs text-ambar-texto/80">
+                            <span className="ml-1 text-[13px] text-ambar-texto/80">
                               · {l.sinConfirmar} sin confirmar
                             </span>
                           )}
@@ -434,23 +703,46 @@ export default function InformeEquipo() {
                           l.ajustes < 0 ? 'text-rojo-texto/80' : 'text-hueso/70'}`}>
                           {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
                         </td>
-                        <td className="py-2 text-right tabular-nums">
+                        <td className="py-2 pr-3 text-right tabular-nums">
                           <strong>{enPesos(l.total)}</strong>
                         </td>
+                        {/* Un colaborador no entra en el reparto de la
+                            propina, así que su "a transferir" es su total y
+                            nada más: el cero va escrito para que se lea como
+                            decisión y no como un campo que faltó. */}
+                        <CeldasPago {...pagoDeFila(l.colaborador, l.total, 0)}
+                          puedePagar={puedePagar}
+                          onCobrar={() => setCobrando({
+                            quien: l.colaborador,
+                            propuesto: pagoDeFila(l.colaborador, l.total, 0).falta
+                          })} />
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-hueso/15">
-                      <td className="py-3 pr-3 text-xs uppercase tracking-wide text-hueso/45">
+                      <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-3 pr-3 text-[13px] uppercase tracking-wide text-hueso/45">
                         {lineasExtras.length}{' '}
                         {lineasExtras.length === 1 ? 'colaborador' : 'colaboradores'}
                       </td>
                       <td colSpan={3} />
                       <td className="py-3 pr-3" />
-                      <td className="py-3 text-right tabular-nums">
+                      <td className="py-3 pr-3 text-right tabular-nums">
                         <strong className="text-oro">{enPesos(totalExtras)}</strong>
                       </td>
+                      <td className="py-3 pr-3 text-right tabular-nums">
+                        <strong className="text-[15px]">{enPesos(sumaExtras.aTransferir)}</strong>
+                      </td>
+                      <td className="py-3 pr-3 text-right tabular-nums text-hueso/75">
+                        {sumaExtras.pagado > 0
+                          ? enPesos(sumaExtras.pagado) : <span className="text-hueso/25">—</span>}
+                      </td>
+                      <td className="py-3 pr-3 text-right tabular-nums">
+                        {sumaExtras.falta > 0
+                          ? <strong className="text-ambar-texto">{enPesos(sumaExtras.falta)}</strong>
+                          : <span className="text-hueso/25">—</span>}
+                      </td>
+                      <td />
                     </tr>
                   </tfoot>
                 </table>
@@ -458,26 +750,55 @@ export default function InformeEquipo() {
             </>
           )}
 
-          {/* El único número que contesta "¿cuánto pago esta semana?", que es
-              la pregunta con la que se entra acá. La propina queda fuera a
-              propósito: no sale del negocio. */}
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3
-                          rounded border border-oro/30 bg-oro/5 px-4 py-3">
-            <span className="text-xs uppercase tracking-wide text-hueso/60">
-              Total del periodo
-            </span>
-            <span className="text-lg font-semibold tabular-nums text-oro">
-              {enPesos(total + totalExtras)}
-            </span>
-            <span className="w-full text-xs text-hueso/50">
-              Equipo {enPesos(total)}
-              {' · '}Actividades extras {enPesos(totalExtras)}
-              {propina > 0 && <> · propina {enPesos(propina)}, que va aparte</>}
-            </span>
+          {/* **Dos números y no uno**, porque son dos preguntas distintas y
+              hasta ahora solo estaba la primera:
+
+              - **Lo que cuesta el equipo**, que es la pregunta del negocio.
+                La propina sigue fuera a propósito: no sale del negocio, pasa
+                por él.
+              - **Lo que hay que transferir**, que es la pregunta de quien
+                paga — y ahí la propina SÍ va sumada, porque sale una sola
+                plata a una sola cuenta.
+
+              Juntarlas en un solo número obligaría a elegir cuál de las dos
+              contestar mal. */}
+          <div className="mb-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded border border-oro/30 bg-oro/5 px-4 py-3">
+              <p className="text-[13px] font-semibold uppercase tracking-wide text-hueso/60">
+                Costo del periodo
+              </p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-oro">
+                {enPesos(total + totalExtras)}
+              </p>
+              <p className="mt-1 text-[13px] text-hueso/60">
+                Equipo {enPesos(total)}
+                {' · '}Extras {enPesos(totalExtras)}
+                {propina > 0 && <> · propina {enPesos(propina)}, que va aparte</>}
+              </p>
+            </div>
+            <div className="rounded border border-hueso/20 bg-panel px-4 py-3">
+              <p className="text-[13px] font-semibold uppercase tracking-wide text-hueso/60">
+                A transferir
+              </p>
+              <p className="mt-1 text-2xl font-bold tabular-nums">
+                {enPesos(sumaEquipo.aTransferir + sumaExtras.aTransferir)}
+              </p>
+              <p className="mt-1 text-[13px] text-hueso/60">
+                Pagado {enPesos(sumaEquipo.pagado + sumaExtras.pagado)}
+                {' · '}
+                {sumaEquipo.falta + sumaExtras.falta > 0 ? (
+                  <strong className="text-ambar-texto">
+                    falta {enPesos(sumaEquipo.falta + sumaExtras.falta)}
+                  </strong>
+                ) : (
+                  <strong className="text-verde-texto">✓ todo pagado</strong>
+                )}
+              </p>
+            </div>
           </div>
 
           {sinCuenta.length > 0 && (
-            <p className="mb-6 max-w-2xl text-xs text-ambar-texto/80">
+            <p className="mb-6 max-w-2xl text-[13px] text-ambar-texto/80">
               Sin datos para transferir: {sinCuenta.join(' · ')}. La planilla
               sale igual, con esas columnas a medias; se completa en{' '}
               <a href="/equipo" className="hover:underline">equipo</a> o en{' '}
@@ -485,7 +806,7 @@ export default function InformeEquipo() {
             </p>
           )}
 
-          <p className="mt-6 max-w-2xl text-xs text-hueso/50">
+          <p className="mt-6 max-w-2xl text-[13px] text-hueso/50">
             <strong>Un contratado suma cero en jornadas</strong>, porque su
             sueldo no sale de acá; lo que aparece en su fila son horas extra y
             ajustes. <strong>La propina va aparte y no se suma al total</strong>:
@@ -494,7 +815,7 @@ export default function InformeEquipo() {
             extras no reciben propina</strong> y no cobran jornada: cobran lo
             acordado para ese día, y por eso van en su propia tabla.
           </p>
-          <p className="mt-3 max-w-2xl text-xs text-hueso/50">
+          <p className="mt-3 max-w-2xl text-[13px] text-hueso/50">
             <strong>La planilla que se descarga trae las dos cosas juntas</strong>,
             día por día, con el motivo de cada ajuste y los datos de la
             transferencia de cada uno —titular, RUT, banco, tipo, número y
@@ -504,6 +825,26 @@ export default function InformeEquipo() {
           </p>
         </>
       )}
+
+      {/* **Registrar un pago, entero o en parte.** El monto viene propuesto
+          con lo que falta —que es el caso de siempre— y se puede bajar: eso
+          es todo lo que hace falta para "pagué solo 100 de 250". El resto
+          queda a la vista y se cierra con un segundo pago cuando se haga.
+
+          No hay una casilla "pagado": se deduce de que la suma cubra lo que
+          hay que transferir. Ver `remuneraciones.ts`. */}
+      {cobrando && (
+        <Dialogo titulo={`Registrar pago · ${cobrando.quien}`}
+          onCerrar={() => setCobrando(null)}>
+          <FormularioPago
+            quien={cobrando.quien}
+            propuesto={cobrando.propuesto}
+            periodo={rangoEnPalabras([desde, hasta])}
+            onGuardar={(monto, nota) => void registrarPago(cobrando.quien, monto, nota)}
+            onCancelar={() => setCobrando(null)} />
+        </Dialogo>
+      )}
+
     </section>
   );
 }

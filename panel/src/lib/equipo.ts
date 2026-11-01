@@ -360,6 +360,37 @@ export function costoDelDia(turnos: Turno[], fecha: Fecha): number {
 }
 
 /**
+ * Lo que va a costar el equipo de un día, **contando a quien todavía no
+ * está marcado**.
+ *
+ * Existe por un problema concreto que apareció al poner el costo en la
+ * tarjeta del calendario (2026-11-01, lo pidió el cliente): `costoDelDia()`
+ * solo suma a quien ya tiene marcado que vino, y **antes de pasar lista eso
+ * es cero**. Un sábado planificado con nueve personas habría mostrado
+ * **$0** justo cuando uno está decidiendo cuánta gente poner — y un cero no
+ * se lee como "falta marcar", se lee como "no cuesta nada".
+ *
+ * La regla acá es la contraria: **cuenta todos salvo los que ya dijeron que
+ * no vinieron**. Con eso el mismo número sirve en los dos momentos:
+ *
+ * - **Antes de pasar lista** es el costo del plan, que es la pregunta.
+ * - **Después** los que no llegaron se caen solos, y converge exactamente a
+ *   `costoDelDia()`.
+ *
+ * Un número que no hay que aprender a interpretar según el día que sea.
+ *
+ * Los contratados siguen sin sumar jornada, y las horas extra y los ajustes
+ * ya escritos sí entran: son parte de lo que ese día va a costar.
+ */
+export function costoPlanificado(turnos: Turno[], fecha: Fecha): number {
+  return turnos
+    .filter((t) => t.fecha === fecha && t.asistencia !== VINO.no)
+    // `pagoDe()` devuelve 0 si no está marcado "vino", así que acá se le
+    // pasa como si lo estuviera: lo que se pregunta es cuánto costaría.
+    .reduce((s, t) => s + pagoDe({ ...t, asistencia: VINO.si }), 0);
+}
+
+/**
  * Los puestos que nombró el cliente, en su orden.
  *
  * **Son el punto de partida, no la lista definitiva**: viven en la planilla y
@@ -680,6 +711,19 @@ export interface ResumenEquipo {
   porPuesto: { puesto: string; cuantos: number }[];
   /** Cuántos faltan en total según las razones puestas. 0 = alcanza o sin reglas. */
   faltan: number;
+  /**
+   * Lo que va a costar ese equipo, contando a quien todavía no está marcado.
+   *
+   * Lo pidió el cliente el 2026-11-01 para la tarjeta del calendario: al
+   * lado de cuánta gente hay, cuánto suma. Es `costoPlanificado()` y no
+   * `costoDelDia()` por lo que explica esa función — antes de pasar lista,
+   * el segundo da cero.
+   *
+   * **No es un dato nuevo para nadie**: son los montos que viajan dentro de
+   * cada turno, los mismos que el encargado ya escribe y ya ve en la página
+   * del día. Los sueldos de la ficha siguen sin bajar a su navegador.
+   */
+  costo: number;
 }
 
 /**
@@ -697,7 +741,8 @@ export function resumenEquipo(
     porPuesto: plan
       .filter((l) => l.asignados.length > 0)
       .map((l) => ({ puesto: l.puesto, cuantos: l.asignados.length })),
-    faltan: plan.reduce((n, l) => n + l.faltan, 0)
+    faltan: plan.reduce((n, l) => n + l.faltan, 0),
+    costo: costoPlanificado(turnos, fecha)
   };
 }
 
