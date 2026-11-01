@@ -1268,8 +1268,10 @@ ok(!puede(ROL.encargado, 'configurar') && !puede(ROL.encargado, 'puestos') &&
 ok(puede(ROL.encargado, 'planilla') && !puede(ROL.encargado, 'links'),
    'el encargado manda y renueva la planilla, pero no toca los links personales');
 ok(puede(ROL.admin, 'planilla'), 'y el administrador también la manda');
-ok(!puede(ROL.pagos, 'planilla') && !puede(ROL.trabajador, 'planilla'),
-   'quien paga y el trabajador no: no es su pantalla');
+// Quien paga TAMBIÉN la manda, desde el 2026-11-01: tiene todo lo del
+// encargado. El trabajador no — su acceso no pasa por la tabla de permisos.
+ok(puede(ROL.pagos, 'planilla'), 'y quien paga también, que ahora opera como el encargado');
+ok(!puede(ROL.trabajador, 'planilla'), 'el trabajador no: su acceso es su link personal');
 
 // El trabajador no figura en NINGUNA fila de la tabla, y eso es el punto:
 // no hay una sola acción del panel que pueda ejecutar. Entra por su link.
@@ -1597,23 +1599,30 @@ ok(new Set(sem).size === sem.length, 'sin repetir una semana con varios turnos')
 ok(puede(ROL.pagos, 'informe'), 'quien hace los pagos lee el informe');
 ok(ROLES_DE_CUENTA.includes(ROL.pagos), 'y se le puede crear una cuenta');
 
-// Lo que NO puede es el punto del rol: existe para que esa persona no tenga
-// que entrar con la cuenta de administrador, que abre precios, configuración
-// y las cuentas del panel.
 const todas = Object.keys(PERMISOS) as Accion[];
-// **Dos acciones y ni una más**: leer el informe y registrar un pago. La
-// segunda llegó el 2026-11-01 con el check de pago. El conteo está
-// justamente para que agregar un permiso a la tabla no se lo regale sin que
-// nadie se entere.
-ok(todas.filter((a) => puede(ROL.pagos, a)).length === 2,
-   'y solo eso: dos acciones, no tres');
+
+// **La regla del rol, desde el 2026-11-01: `pagos` es el encargado MÁS
+// `pagar`, y nada más.** Antes era una cuenta mínima de una sola acción y
+// el cliente lo corrigió: quien paga también opera. Se fija como relación
+// entre los dos roles y no como un conteo, porque el conteo había que venir
+// a corregirlo cada vez que la tabla crecía — y una prueba que se corrige
+// sola a mano deja de proteger.
+const deEncargado = todas.filter((a) => puede(ROL.encargado, a));
+const dePagos = todas.filter((a) => puede(ROL.pagos, a));
+ok(deEncargado.every((a) => puede(ROL.pagos, a)),
+   'quien paga puede todo lo que puede el encargado: no es un rol más chico');
+ok(dePagos.filter((a) => !puede(ROL.encargado, a)).join() === 'pagar',
+   'y lo ÚNICO que tiene de más es registrar pagos');
 ok(puede(ROL.pagos, 'pagar'), 'quien paga puede registrar que pagó');
 ok(!puede(ROL.encargado, 'pagar'),
    'el encargado NO: ve el informe, pero declarar que una plata salió es otra cosa');
-ok(!puede(ROL.pagos, 'ver') && !puede(ROL.pagos, 'reservas') &&
-   !puede(ROL.pagos, 'equipo') && !puede(ROL.pagos, 'configurar') &&
-   !puede(ROL.pagos, 'usuarios') && !puede(ROL.pagos, 'bitacora'),
-   'no ve el calendario, ni reservas, ni equipo, ni configuración, ni cuentas');
+
+// Lo que sigue sin tocar es lo del administrador, que es justamente para lo
+// que esta cuenta existe: no tener que abrir la del admin para pagar.
+ok(!puede(ROL.pagos, 'configurar') && !puede(ROL.pagos, 'usuarios') &&
+   !puede(ROL.pagos, 'bitacora') && !puede(ROL.pagos, 'puestos') &&
+   !puede(ROL.pagos, 'links') && !puede(ROL.pagos, 'mantencion'),
+   'pero no la configuración, ni las cuentas del panel, ni la bitácora, ni los links');
 ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
 
 // **El encargado lo ve desde el 2026-11-01**, por decisión del cliente y

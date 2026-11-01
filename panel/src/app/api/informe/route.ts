@@ -27,8 +27,13 @@ export const dynamic = 'force-dynamic';
  * De las fichas salen **solo los datos de la transferencia** —titular, RUT,
  * banco, tipo, número, correo y la nota—, que es lo que falta para poder
  * pagar sin cruzar la planilla con otra lista a mano. Ni teléfonos, ni
- * sueldos de hoy, ni tokens: esta ruta la lee una cuenta que no tiene
- * permiso para ver el equipo.
+ * sueldos habituales, ni tokens.
+ *
+ * Ese recorte **se mantiene aunque la cuenta de pagos ya pueda ver el
+ * equipo** (cambió el 2026-11-01): lo que se paga es lo que quedó congelado
+ * en cada turno, no lo que la ficha dice que alguien gana de costumbre, así
+ * que el sueldo habitual sigue sin hacer falta acá. Y los tokens no los
+ * recibe nadie que no sea el administrador, que es de quien son los links.
  *
  * Es una ruta de solo lectura: el informe no escribe nada.
  */

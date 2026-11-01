@@ -248,8 +248,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Quiénes pueden entrar y hasta dónde llega cada uno.',
       'Administrador ve y hace todo. Encargado organiza el día a día '
       + '—reservas, turnos, asistencia— y por ahora también abre el informe, '
-      + 'pero no toca precios ni configuración. Pagos solo abre el informe. '
-      + 'Un trabajador no entra acá: su acceso es su link personal.'
+      + 'pero no toca precios ni configuración. Pagos hace todo lo del '
+      + 'encargado y además es el único que puede anotar que a alguien ya se '
+      + 'le pagó. Un trabajador no entra acá: su acceso es su link personal.'
     ],
     ojo: 'Es mejor desactivar una cuenta que borrarla: así sus líneas de la '
        + 'bitácora siguen diciendo quién hizo qué.'

@@ -1932,10 +1932,10 @@ entra; ésta es plata que sale.
 - **Registrarlo es del permiso `pagar`: administrador y la cuenta de
   pagos.** El encargado ve el informe —se lo liberó el cliente como
   intertanto— pero leer cuánto se le debe a alguien y declarar que esa plata
-  salió son dos cosas distintas. Hay una prueba que lo fija.
-- **El rol de pagos tiene ahora dos acciones, no una**, y la prueba que las
-  cuenta se actualizó a dos: está para que agregar un permiso a la tabla no
-  se le regale sin que nadie se entere.
+  salió son dos cosas distintas. Hay una prueba que lo fija, y el encargado
+  recibe **403 llamando la API directo**, no es que se le esconda el botón.
+- **`pagar` es justamente lo único que distingue a `pagos` de
+  `encargado`** — ver "El rol de pagos".
 
 #### La columna que faltaba: a transferir
 
@@ -2906,7 +2906,8 @@ Vale tenerla escrita porque no es obvia:
   2026-11-01 el encargado también lo ve, y es provisorio** — ver abajo.
 
 Esa pregunta se contestó el **2026-10-22**: sí es otra persona, así que
-existe el rol **pagos**.
+existe el rol **pagos** — que desde el 2026-11-01 **no es una cuenta más
+chica que la del encargado, sino la misma más la plata**. Ver abajo.
 
 #### El encargado ve el informe, por ahora (2026-11-01)
 
@@ -2934,28 +2935,61 @@ bancarias, el lugar natural es recortarlas en esa ruta según el rol, como
 `/api/extras` ya hace con los montos habituales — no esconderlas en la
 pantalla, que es dejar el dato viajando igual.
 
-### El rol de pagos (2026-10-22)
+### El rol de pagos: el encargado, más la plata (2026-10-22, corregido el 2026-11-01)
 
-**Dos acciones y ni una más: leer el informe y registrar un pago.** La
-segunda llegó el 2026-11-01 con el check de pago. Hay una prueba que las
-cuenta —dos, no tres—, para que agregar un permiso nuevo a la tabla no se lo
-regale sin que nadie se entere.
+**Nació como una cuenta mínima y el cliente lo corrigió.** El primer corte
+le daba **una sola acción**, leer el informe, con el argumento de que juntar
+las cuentas no necesita ver el calendario. Duró diez días. Lo dijo así:
 
-No ve el calendario, ni reservas, ni clientes, ni el equipo, ni la
-configuración, ni las cuentas, ni la bitácora. Existe precisamente para que
-quien junta las cuentas no tenga que entrar con la del administrador.
+> *"El encargado de pagos en verdad tiene que ver y tiene los mismos
+> derechos que el encargado, pero él sí tiene adicionalmente los derechos de
+> configurar o reescribir montos en estas filas y columnas de pago."*
 
-Dos detalles que lo hacen funcionar:
+Y tiene razón, porque el supuesto de atrás estaba equivocado: quien paga en
+un negocio de este tamaño no es un contador externo que solo recibe una
+planilla, es alguien de confianza que además opera. Entonces:
 
-- **`/api/informe`, una ruta propia que devuelve solo turnos.** El informe
-  antes leía `/api/equipo`, por donde viajan reservas, trabajadores y
-  puestos. Darle "ver" a la cuenta de pagos para que pudiera sacar sus
-  cuentas habría sido abrirle el panel entero. **Desde el 2026-11-01 esa
-  ruta la lee también el encargado**, con lo que eso trae: ver arriba.
-- **El middleware la manda de `/` a `/informe`.** Sin eso aterrizaría en una
-  portada que carga y falla, y parecería que el panel está roto en vez de
-  que esa parte no es suya. El enlace de la marca sigue apuntando a `/`, que
-  para ella redirige — no hay callejón.
+> **`pagos` = `encargado` + `pagar`.** Ni más ni menos.
+
+- **Ve y hace todo lo del encargado**: el calendario, las reservas, los
+  turnos, las actividades extras, los presupuestos, la planilla semanal.
+- **Y es el único además del administrador que puede escribir en la parte
+  de los pagos** del informe. El encargado ve esas columnas y no las toca.
+- **Lo que sigue sin tocar es lo del administrador**: los puestos, los links
+  personales, las cuentas del panel, la bitácora, los precios y la
+  configuración. Eso es exactamente para lo que esta cuenta existe — para no
+  tener que abrir la del admin solo para pagar.
+
+**La prueba dejó de contar acciones y pasó a fijar la relación entre los dos
+roles**: que `pagos` pueda todo lo del encargado, y que lo único que tenga
+de más sea `pagar`. El conteo había que venir a corregirlo cada vez que la
+tabla crecía, y una prueba que se corrige a mano cada vez deja de proteger.
+
+**Se comprobó con las tres cuentas**, y lo que importa es la última línea:
+
+```
+pagos      menú igual al del encargado · 2 botones de pago · POST /api/informe → 200
+encargado  menú igual                  · 0 botones         · POST /api/informe → 403
+admin      menú completo               · 2 botones         · POST /api/informe → 200
+```
+
+El encargado **recibe 403 llamando la API directo**, no es que se le esconda
+el botón: el permiso se comprueba en la ruta, que es la regla de este panel.
+
+#### Dos cosas que no cambiaron, y conviene que se note
+
+- **El redirect de `/` a `/informe` del middleware quedó sin usarse.** Era
+  para la cuenta de pagos cuando no podía ver el calendario; ahora entra por
+  la puerta de siempre. Se deja porque la guarda sigue siendo correcta para
+  cualquier rol que mañana tenga el informe y no el calendario, y porque es
+  un `if` que no se cumple.
+- **`/api/informe` sigue devolviendo de las fichas solo los datos de la
+  transferencia**, sin sueldos habituales ni tokens — y `/api/equipo` le
+  sigue recortando a `pagos` lo mismo que al encargado. No es un olvido:
+  **lo que se paga es lo que quedó congelado en cada turno**, no lo que la
+  ficha dice que alguien gana de costumbre, así que el sueldo habitual no
+  hace falta para pagar. Y los tokens de los links personales no los recibe
+  nadie que no sea el administrador, que es de quien son.
 
 ### Quién puede hacer qué (2026-10-21, cuarto rol el 2026-10-22)
 
@@ -2963,19 +2997,21 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 
 | | Administrador | Encargado | Pagos | Trabajador |
 |---|---|---|---|---|
-| Ver el calendario y las reservas | sí | sí | — | — |
-| Anotar reservas, abrir y cerrar días | sí | sí | — | — |
-| Asignar turnos y editar la lista de trabajadores | sí | sí | — | — |
-| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | — | — |
-| Agendar actividades extras y confirmarlas | sí | sí | — | — |
-| Montos habituales y cuentas bancarias | sí | — | — | — |
+| Ver el calendario y las reservas | sí | sí | **sí** | — |
+| Anotar reservas, abrir y cerrar días | sí | sí | **sí** | — |
+| Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — |
+| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | **sí** | — |
+| Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
+| Crear y mandar presupuestos | sí | sí | **sí** | — |
+| Montos habituales y cuentas bancarias **en la ficha** | sí | — | — | — |
+| Cuentas bancarias **para transferir**, en el informe | sí | — | **sí** | — |
 | Puestos y su regla "uno cada N" | sí | — | — | — |
 | Precios, menús y configuración | sí | — | — | — |
 | Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
-| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | — | — |
+| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — |
 | Cuentas del panel y bitácora | sí | — | — | — |
 | **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — |
-| **Registrar que a alguien ya se le pagó** | sí | — | **sí** | — |
+| **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
