@@ -13,6 +13,13 @@
  * hasta cerrarlo entero, y en un equipo que comparte dispositivos eso
  * significaba que el turno siguiente entraba como el anterior — justo lo
  * que la bitácora necesita que no pase.
+ *
+ * **Son dos filas y no una sola que envuelve** (2026-11-01). Antes la marca,
+ * las nueve páginas, el tema, el nombre y el botón de salir iban todos en un
+ * mismo `flex-wrap`, así que en un teléfono se mezclaban: el nombre de la
+ * cuenta podía terminar entre dos páginas del menú. Arriba va **quién eres y
+ * dónde estás** —la marca, el tema, la cuenta y salir—; abajo, **a dónde
+ * puedes ir**. Son dos preguntas distintas y ahora se ven distintas.
  */
 import { usePathname } from 'next/navigation';
 import Nav from './Nav';
@@ -32,9 +39,9 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
 
   return (
     <header className="border-b border-hueso/10">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-baseline gap-x-6 gap-y-2 px-5 py-4">
+      <div className="mx-auto max-w-7xl px-5 py-3">
         {esDeTrabajador || esEntrada ? (
-          <>
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-bold uppercase tracking-widest text-oro">
               Brasas de Lo Pirque
             </span>
@@ -43,26 +50,33 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
                 la página del trabajador no: ahí la barra es una sola palabra
                 y el botón sería el único control de una página de lectura. */}
             {esEntrada && (<><span className="flex-1" /><BotonTema /></>)}
-          </>
+          </div>
         ) : (
           <>
-            <a href="/" className="text-sm font-bold uppercase tracking-widest text-oro">
-              Reservas
-            </a>
-            <Nav rol={rol} />
-            <span className="flex-1" />
-            <BotonTema />
-            {usuario && (
-              <span className="flex items-baseline gap-3 text-xs">
-                <span className="text-hueso/45">
-                  {usuario}
-                  <span className="ml-1 text-hueso/30">· {rol}</span>
-                </span>
-                <button onClick={salir} className="text-hueso/60 hover:text-oro">
-                  Salir
-                </button>
-              </span>
-            )}
+            {/* Fila 1: quién eres y dónde estás. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <a href="/" className="text-base font-bold uppercase tracking-widest text-oro">
+                Reservas
+              </a>
+              <span className="flex-1" />
+              <BotonTema />
+              {usuario && (
+                <>
+                  {/* El nombre de la cuenta ya no va a 12px y al 45%: es el
+                      dato que contesta "¿con cuál estoy adentro?", y la
+                      bitácora depende de que alguien se dé cuenta. */}
+                  <span className="text-[13px] text-hueso/70">
+                    {usuario}
+                    <span className="ml-1 text-hueso/50">· {rol}</span>
+                  </span>
+                  <button onClick={salir} className="tecla boton">Salir</button>
+                </>
+              )}
+            </div>
+            {/* Fila 2: a dónde puedes ir. */}
+            <div className="mt-3">
+              <Nav rol={rol} />
+            </div>
           </>
         )}
       </div>

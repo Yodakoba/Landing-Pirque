@@ -185,3 +185,45 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   button, .tecla { transition: none; }
   button:active:not(:disabled), .tecla:active:not(:disabled) { transform: none; }
 }
+
+/**
+ * EL BOTÓN DEL PANEL, en un solo lugar — la regla PlayStation hecha clase.
+ *
+ * Nació el 2026-11-01, cuando el cliente miró la barra de arriba en el
+ * teléfono: *"no se siente cero PlayStation, se parece a una lista de
+ * máquina de escribir"*. Tenía razón, y el problema de fondo era que cada
+ * pantalla se escribía su propio botón a mano: unos con borde, otros un
+ * texto en gris que resultaba ser un enlace, y cada uno con su tamaño.
+ *
+ * Acá vive el acuerdo: **borde, 36px de alto y 13px**, que es lo que la
+ * regla pide. Un `<a>` también puede llevarlo —de ahí `.tecla`, que le da
+ * el hundido que un `<button>` ya tiene— y así un enlace que se comporta
+ * como botón se ve como botón.
+ *
+ * `.boton-relleno` es el dorado: **uno por pantalla**, el que dice a qué
+ * se vino. Dos rellenos en la misma vista es no tener ninguno.
+ */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .375rem;
+  min-height: 2.25rem;
+  border-radius: .5rem;
+  border: 1px solid rgb(var(--hueso) / .2);
+  padding: .375rem .75rem;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: rgb(var(--hueso) / .8);
+}
+.boton:hover { border-color: rgb(var(--oro)); color: rgb(var(--oro)); }
+
+.boton-relleno {
+  background: rgb(var(--oro));
+  border-color: rgb(var(--oro));
+  color: rgb(var(--tinta));
+  font-weight: 600;
+}
+.boton-relleno:hover { background: rgb(var(--oro)); color: rgb(var(--tinta)); filter: brightness(1.08); }
