@@ -24,11 +24,13 @@ import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
 import { camposDeShopify } from './shopify.ts';
 import { HOJA_MENUS, leerMenusDe, aFilasMenus, POR_DEFECTO_MENUS,
          type Menu } from './menus.ts';
-import { esFecha, type Fecha } from './fechas.ts';
+import { esFecha, hoy, type Fecha } from './fechas.ts';
 import { normalizar } from './columnas.ts';
 import { HOJA_USUARIOS, leerUsuariosDe, aFilasUsuarios, type Usuario } from './usuarios.ts';
 import { HOJA_CIERRES, COL_CIERRES, ENCABEZADO_CIERRES, leerCierresDe,
          type Cierre } from './cierres';
+import { HOJA_PAGOS, ENCABEZADO_PAGOS, leerPagosDe, filaPago, nuevoIdPago,
+         type PagoEquipo } from './remuneraciones';
 import {
   HOJA_BITACORA, ENCABEZADO_BITACORA, filaBitacora, leerBitacoraDe,
   ahoraEnChile, recortar, type Anotacion
@@ -543,6 +545,61 @@ export async function reabrirDia(fecha: Fecha): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_CIERRES, ENCABEZADO_CIERRES);
   const previas = leerCierresDe(filas).filter((c) => c.fecha === fecha).map((c) => c.fila);
   await borrarFilas(HOJA_CIERRES, previas);
+}
+
+/* ---------- Pagos al equipo ---------- */
+
+/**
+ * Los pagos ya registrados.
+ *
+ * **Devuelve lista vacía si la pestaña no existe**, igual que los turnos y
+ * las actividades: el informe tiene que funcionar antes de que nadie haya
+ * pagado nada. Lo peor que puede pasar es que todo se vea pendiente, que es
+ * exactamente lo que es.
+ */
+export async function leerPagosEquipo(): Promise<PagoEquipo[]> {
+  try {
+    return leerPagosDe(await leerHoja(HOJA_PAGOS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Anota un pago. **Siempre agrega una fila, nunca edita una anterior.**
+ *
+ * Un pago es un hecho que pasó: corregirlo pisando el de antes borraría que
+ * hubo dos movimientos. Si hay que devolver plata, se anota un pago en
+ * negativo y quedan los dos en el registro.
+ */
+export async function anotarPagoEquipo(
+  p: Omit<PagoEquipo, 'fila' | 'id' | 'fecha' | 'registradoPor'>,
+  registradoPor: string
+): Promise<PagoEquipo> {
+  const filas = await asegurarEncabezado(HOJA_PAGOS, ENCABEZADO_PAGOS);
+  const enc = filas[0] ?? ENCABEZADO_PAGOS;
+  const completo = {
+    ...p,
+    id: nuevoIdPago(),
+    // El día en que se transfirió lo pone el servidor: es parte del rastro,
+    // no un dato que convenga dejar escribir desde afuera.
+    fecha: hoy(),
+    registradoPor
+  };
+  await agregarFilas(HOJA_PAGOS, [filaPago(completo, enc)]);
+  return { ...completo, fila: -1 };
+}
+
+/** Borra un pago anotado por error. Se busca por id, no por posición. */
+export async function borrarPagoEquipo(id: string): Promise<boolean> {
+  const buscado = String(id ?? '').trim();
+  if (!buscado) return false;
+  const filas = await asegurarEncabezado(HOJA_PAGOS, ENCABEZADO_PAGOS);
+  const suyas = leerPagosDe(filas).filter((p) => p.id === buscado).map((p) => p.fila);
+  if (!suyas.length) return false;
+  await borrarFilas(HOJA_PAGOS, suyas);
+  return true;
 }
 
 /* ---------- Presupuestos ---------- */

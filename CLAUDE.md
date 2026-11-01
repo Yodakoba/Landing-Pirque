@@ -1889,6 +1889,116 @@ el cálculo tampoco se borró: `faltaCobrar()` y los campos `porCobrar` /
 muestra de otra forma. Lo que se liberó es el espacio, para cuando aparezca
 algo que de verdad ayude mirando el mes.
 
+### El check de pago, que son pagos y no una casilla (2026-11-01)
+
+Lo pidió el cliente pensando en quien hace la transferencia: *"un check de
+pago… pero que también tendrá la posibilidad de decir yo pagué solo 100 de
+esto"*.
+
+**Lo que se guarda son los pagos, no un check.** Una casilla "pagado sí/no"
+más un campo "monto pagado" son dos datos que pueden contradecirse —alguien
+marca la casilla y deja el monto en cero, o al revés— y el panel tendría dos
+verdades sobre la misma plata. El hecho que se guarda es **el pago**: cuánto,
+cuándo y quién lo anotó. Que esté pagado del todo **se deduce de sumarlos**,
+igual que "Vencido" se deduce de la fecha en los presupuestos.
+
+Lo que eso gana, y que un check no da:
+
+- **Un pago parcial no es un caso especial**, es un pago más chico. Pagar el
+  resto después es otra fila y la suma cierra sola, sin un estado intermedio
+  que alguien tenga que mantener.
+- **Queda el rastro**, que es justo lo que alguien va a querer saber un mes
+  después.
+- **Una corrección se anota en negativo** en vez de borrar la fila, así que
+  tampoco se pierde que hubo dos movimientos.
+
+Vive en una pestaña propia, **`Pagos`** (ID · Fecha de pago · Trabajador ·
+Periodo desde · Periodo hasta · Monto · Nota · Registrado por), por nombre de
+columna como `Turnos` y `Cierres`. El código está en
+`panel/src/lib/remuneraciones.ts` — **se llama así y no `pagos.ts` porque ese
+nombre ya lo tiene el estado del pago de una reserva**, que es plata que
+entra; ésta es plata que sale.
+
+- **El pago se ancla al periodo por el que se pagó, no al día en que se
+  transfirió.** Se paga el lunes la semana que terminó el domingo, así que la
+  fecha de la transferencia cae fuera del periodo que está saldando.
+- **Cuenta cuando cabe entero dentro del periodo que se mira**
+  (`cuentaEnPeriodo()`). Pagar la semana del 9 aparece al mirar esa semana y
+  al mirar noviembre entero, que es como se usa. **La contra a asumir:**
+  mirar un rango de tres días metido dentro de esa semana **no** muestra ese
+  pago, porque no es de esos tres días. Repartirlo a prorrata sería inventar
+  —nadie pagó "un tercio del martes"—. **Se comprobó rompiéndolo**: contando
+  por solape en vez de por contención, esa prueba falla.
+- **Registrarlo es del permiso `pagar`: administrador y la cuenta de
+  pagos.** El encargado ve el informe —se lo liberó el cliente como
+  intertanto— pero leer cuánto se le debe a alguien y declarar que esa plata
+  salió son dos cosas distintas. Hay una prueba que lo fija.
+- **El rol de pagos tiene ahora dos acciones, no una**, y la prueba que las
+  cuenta se actualizó a dos: está para que agregar un permiso a la tabla no
+  se le regale sin que nadie se entere.
+
+#### La columna que faltaba: a transferir
+
+**La propina se queda aparte del total de remuneración**, como siempre: esa
+plata no sale del negocio, pasa por él, y juntarlas haría imposible
+contestar "¿cuánto me costó el equipo?". Lo que se agregó es la suma que de
+verdad se usa al transferir:
+
+| | Qué es |
+|---|---|
+| **Total** | lo que cuesta esa persona al negocio — sin propina |
+| **Propina** | lo que le tocó del reparto |
+| **A transferir** | **Total + Propina** — la plata que sale en una transferencia |
+| **Pagado** · **Falta** | lo registrado, y la resta |
+
+Y el bloque del final pasó de un número a dos, porque son dos preguntas:
+**Costo del periodo** (la del negocio, sin propina) y **A transferir** (la de
+quien paga, con propina). Juntarlas obligaba a contestar mal una de las dos.
+
+- **En el CSV las tres columnas van solo en la primera fila de cada
+  persona.** El archivo es detalle día por día y el pago es por persona y
+  periodo: repetido en cada fila, quien sume la columna cobraría cinco veces
+  lo mismo. En blanco en las demás, la columna suma exactamente lo que hay
+  que transferir.
+- **Las actividades extras llevan las mismas columnas**, porque el punto era
+  un solo pago semanal que las incluya. Su "a transferir" es su total y nada
+  más: un colaborador no entra en el reparto de la propina.
+- **El monto nace con lo que falta.** Lo normal es pagar todo, y entonces es
+  apretar dos botones; bajarlo es lo que lo vuelve parcial, sin un modo
+  aparte que haya que elegir. Si queda parcial, **la ventana lo dice antes de
+  guardar**, que es cuando sirve saberlo.
+- De paso esta pantalla tuvo su pasada de la regla PlayStation: **de 34
+  textos bajo 13px a 2** —los dos que quedan son un `sr-only` y uno de un
+  componente compartido— y **la columna del nombre queda fija** al correr la
+  tabla, como en la planilla semanal y en la página del día.
+
+### Lo que va a costar el equipo de un día, en la tarjeta (2026-11-01)
+
+Lo pidió el cliente: en el espacio libre de arriba a la derecha del dorso,
+al lado de cuánta gente trabaja, **cuánto suman las remuneraciones del
+equipo planificado hasta ahí**. Ocupa el aire que ya estaba ahí, así que no
+alarga la tarjeta.
+
+**No abre ningún dato nuevo**: son los montos que viajan congelados dentro
+de cada turno, los mismos que el encargado ya escribe y ya ve en la página
+del día. Los sueldos de la **ficha** siguen sin bajar a su navegador.
+
+**La trampa que hubo que resolver, y que vale como regla:** `pagoDe()`
+devuelve **cero mientras nadie marque si la persona vino**, así que un
+sábado recién planificado habría mostrado **$0** justo cuando uno decide
+cuánta gente poner — y un cero no se lee como "falta marcar", se lee como
+"no cuesta nada".
+
+Por eso existe `costoPlanificado()`, que **cuenta a todos salvo los que ya
+dijeron que no vinieron**:
+
+- **Antes de pasar lista** es el costo del plan, que es la pregunta.
+- **Después**, los que no llegaron se caen solos y **converge exactamente a
+  `costoDelDia()`**. Hay una prueba que lo fija.
+
+Un solo número que no hay que aprender a interpretar según el día que sea.
+Un contratado sigue sin sumar jornada, y sus horas extra sí: son del día.
+
 ### La palabra bajo el punto: público, privado, cerrado, preparación (2026-10-23)
 
 **En los tres calendarios, el estado de un día se lee bajo su punto de
@@ -2826,9 +2936,10 @@ pantalla, que es dejar el dato viajando igual.
 
 ### El rol de pagos (2026-10-22)
 
-**Una sola acción: leer el informe.** Nada más. Hay una prueba que lo fija
-contando cuántas acciones puede —una, no dos—, para que agregar un permiso
-nuevo a la tabla no se lo regale sin que nadie se entere.
+**Dos acciones y ni una más: leer el informe y registrar un pago.** La
+segunda llegó el 2026-11-01 con el check de pago. Hay una prueba que las
+cuenta —dos, no tres—, para que agregar un permiso nuevo a la tabla no se lo
+regale sin que nadie se entere.
 
 No ve el calendario, ni reservas, ni clientes, ni el equipo, ni la
 configuración, ni las cuentas, ni la bitácora. Existe precisamente para que
@@ -2864,6 +2975,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | — | — |
 | Cuentas del panel y bitácora | sí | — | — | — |
 | **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — |
+| **Registrar que a alguien ya se le pagó** | sí | — | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.

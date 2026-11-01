@@ -24,6 +24,11 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
+import {
+  ENCABEZADO_PAGOS, leerPagosDe, filaPago, cuentaEnPeriodo, pagadoDe,
+  estadoDePago, aTransferirDe, faltaDe, pagoDelCuerpo, nuevoIdPago,
+  type PagoEquipo
+} from './remuneraciones.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
   from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
@@ -53,7 +58,7 @@ import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
 import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          leerTurnosDe, filaTurno, normalizarPlan, planDelDia, resumenEquipo,
          sugeridos, sinFicha, esSi, aEntero, COL_TURNOS,
-         nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia,
+         nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia, costoPlanificado,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
          repartirPropina, propinaDelDia, porNombre,
@@ -1596,8 +1601,15 @@ ok(ROLES_DE_CUENTA.includes(ROL.pagos), 'y se le puede crear una cuenta');
 // que entrar con la cuenta de administrador, que abre precios, configuración
 // y las cuentas del panel.
 const todas = Object.keys(PERMISOS) as Accion[];
-ok(todas.filter((a) => puede(ROL.pagos, a)).length === 1,
-   'y solo eso: una acción, no dos');
+// **Dos acciones y ni una más**: leer el informe y registrar un pago. La
+// segunda llegó el 2026-11-01 con el check de pago. El conteo está
+// justamente para que agregar un permiso a la tabla no se lo regale sin que
+// nadie se entere.
+ok(todas.filter((a) => puede(ROL.pagos, a)).length === 2,
+   'y solo eso: dos acciones, no tres');
+ok(puede(ROL.pagos, 'pagar'), 'quien paga puede registrar que pagó');
+ok(!puede(ROL.encargado, 'pagar'),
+   'el encargado NO: ve el informe, pero declarar que una plata salió es otra cosa');
 ok(!puede(ROL.pagos, 'ver') && !puede(ROL.pagos, 'reservas') &&
    !puede(ROL.pagos, 'equipo') && !puede(ROL.pagos, 'configurar') &&
    !puede(ROL.pagos, 'usuarios') && !puede(ROL.pagos, 'bitacora'),
@@ -2431,6 +2443,160 @@ ok(ESTADOS_QUE_LIBERAN.every((e) => !ocupaLugar(r({ estadoPago: e }))),
    'los tres del grupo "ya no viene" liberan el cupo DE VERDAD: es la misma lista que mira ocupaLugar()');
 ok(ESTADOS_QUE_VIENEN.every((e) => ocupaLugar(r({ estadoPago: e }))),
    'y los dos del grupo "viene" lo ocupan');
+
+
+/* ---------- Lo que ya se pagó, y lo que falta ---------- */
+
+console.log('\nPagos al equipo');
+{
+  const pago = (x: Partial<PagoEquipo>): PagoEquipo => ({
+    id: 'PAGO-1', fecha: '2026-11-16', quien: 'Ana Soto',
+    desde: '2026-11-09', hasta: '2026-11-15', monto: 50000,
+    nota: '', registradoPor: 'jefe', fila: 2, ...x
+  });
+
+  // --- A transferir: la remuneración MÁS la propina ---
+  ok(aTransferirDe(120000, 18000) === 138000,
+     'a transferir es la remuneración más la propina: sale una sola plata a una sola cuenta');
+  ok(aTransferirDe(120000, 0) === 120000, 'sin propina es la remuneración sola');
+  ok(aTransferirDe(0, 0) === 0, 'y sin nada, cero');
+  // La propina sigue fuera de pagoDe(): el costo del equipo no la ve. Eso
+  // lo fija su propia prueba; acá lo que importa es que esta suma exista
+  // SOLO para transferir.
+  ok(aTransferirDe(-5000, 0) === 0, 'un total negativo no existe: es cero');
+
+  // --- Qué pago cuenta en qué periodo ---
+  const semana = { desde: '2026-11-09', hasta: '2026-11-15' };
+  ok(cuentaEnPeriodo(pago({}), semana.desde, semana.hasta),
+     'un pago por esa semana cuenta al mirar esa semana');
+  ok(cuentaEnPeriodo(pago({}), '2026-11-01', '2026-11-30'),
+     'y también al mirar el mes entero, que es como se usa');
+  ok(!cuentaEnPeriodo(pago({}), '2026-11-10', '2026-11-12'),
+     'pero NO al mirar tres días metidos dentro de esa semana: ese pago es de la semana, no de esos días');
+  ok(!cuentaEnPeriodo(pago({}), '2026-12-01', '2026-12-31'),
+     'ni en otro mes');
+  ok(!cuentaEnPeriodo(pago({ desde: '', hasta: '' }), '2026-11-01', '2026-11-30'),
+     'un pago sin periodo no cuenta en ninguno, en vez de colarse en todos');
+
+  // --- Lo pagado se suma, y los pagos parciales se acumulan ---
+  const pagos = [
+    pago({ id: 'A', monto: 50000 }),
+    pago({ id: 'B', monto: 30000 }),
+    pago({ id: 'C', quien: 'Hugo Vergara', monto: 99000 }),
+    pago({ id: 'D', monto: 999999, desde: '2026-12-05', hasta: '2026-12-05' })
+  ];
+  ok(pagadoDe(pagos, 'Ana Soto', semana.desde, semana.hasta) === 80000,
+     'dos pagos parciales suman: 50.000 más 30.000');
+  ok(pagadoDe(pagos, 'ANA soto', semana.desde, semana.hasta) === 80000,
+     'y el nombre se compara normalizado, como en todo el panel');
+  ok(pagadoDe(pagos, 'Hugo Vergara', semana.desde, semana.hasta) === 99000,
+     'cada uno con lo suyo');
+  ok(pagadoDe(pagos, 'Nadie', semana.desde, semana.hasta) === 0,
+     'quien no tiene pagos lleva cero');
+  ok(pagadoDe(pagos, '', semana.desde, semana.hasta) === 0,
+     'y un nombre vacío no junta los pagos de todos');
+
+  // Un pago en negativo es la corrección de uno de más, y resta.
+  ok(pagadoDe([...pagos, pago({ id: 'E', monto: -20000 })],
+              'Ana Soto', semana.desde, semana.hasta) === 60000,
+     'un pago en negativo corrige uno de más sin borrar el rastro del primero');
+
+  // --- El check: se deduce, no se guarda ---
+  ok(estadoDePago(100000, 100000) === 'pagado', 'cubierto exacto es pagado');
+  ok(estadoDePago(100000, 120000) === 'pagado', 'y de más también');
+  ok(estadoDePago(100000, 40000) === 'parcial', 'una parte es parcial');
+  ok(estadoDePago(100000, 0) === 'pendiente', 'nada es pendiente');
+  ok(estadoDePago(0, 0) === 'pagado',
+     'sin nada que transferir NO queda pendiente por cero pesos: alguien que no vino en todo el periodo no se persigue');
+
+  ok(faltaDe(100000, 40000) === 60000, 'lo que falta es la resta');
+  ok(faltaDe(100000, 150000) === 0, 'y nunca es negativo: no se le cobra de vuelta acá');
+
+  // --- Ida y vuelta por la planilla ---
+  const fila = filaPago({
+    id: 'PAGO-X', fecha: '2026-11-16', quien: 'Ana Soto',
+    desde: '2026-11-09', hasta: '2026-11-15', monto: 80000,
+    nota: 'Transferencia 16/11', registradoPor: 'tesorera'
+  }, ENCABEZADO_PAGOS);
+  const vuelta = leerPagosDe([ENCABEZADO_PAGOS, fila.map(String)]);
+  ok(vuelta.length === 1, 'una fila escrita se vuelve a leer');
+  ok(vuelta[0].monto === 80000 && vuelta[0].quien === 'Ana Soto',
+     'con su monto y su persona');
+  ok(vuelta[0].nota === 'Transferencia 16/11' && vuelta[0].registradoPor === 'tesorera',
+     'y con el rastro de quién lo anotó, que es lo que un check no deja');
+  ok(leerPagosDe([ENCABEZADO_PAGOS]).length === 0, 'una pestaña vacía no inventa pagos');
+  ok(leerPagosDe([]).length === 0, 'y una que no existe tampoco');
+  // Una fila sin nombre no es un pago a nadie: se saltea.
+  ok(leerPagosDe([ENCABEZADO_PAGOS, ENCABEZADO_PAGOS.map(() => '')]).length === 0,
+     'una fila sin trabajador se saltea en vez de contarse como un pago de cero');
+
+  // --- Lo que llega del navegador, limpiado ---
+  const bueno = pagoDelCuerpo({
+    quien: ' Ana Soto ', monto: '80.000', desde: '2026-11-09', hasta: '2026-11-15'
+  });
+  ok(bueno?.monto === 80000 && bueno?.quien === 'Ana Soto',
+     'el monto se vuelve entero y el nombre se recorta');
+  ok(pagoDelCuerpo({ quien: '', monto: 1, desde: '2026-11-09', hasta: '2026-11-15' }) === null,
+     'sin trabajador no hay pago');
+  ok(pagoDelCuerpo({ quien: 'Ana', monto: 0, desde: '2026-11-09', hasta: '2026-11-15' }) === null,
+     'un pago de cero no es un pago');
+  ok(pagoDelCuerpo({ quien: 'Ana', monto: 100, desde: 'cualquier cosa', hasta: '2026-11-15' }) === null,
+     'con una fecha que no se entiende, no se guarda nada');
+  ok(pagoDelCuerpo({ quien: 'Ana', monto: 100, desde: '2026-11-15', hasta: '2026-11-09' }) === null,
+     'ni con el periodo al revés');
+  ok(pagoDelCuerpo({ quien: 'Ana', monto: -5000, desde: '2026-11-09', hasta: '2026-11-15' })?.monto === -5000,
+     'un negativo SÍ se acepta: es la corrección de un pago de más');
+
+  // El id se arma solo y no se acepta de afuera, igual que el token de un
+  // presupuesto: es parte del rastro, no un dato del navegador.
+  ok(nuevoIdPago(0) !== nuevoIdPago(1), 'dos pagos no comparten id');
+  ok((pagoDelCuerpo({ quien: 'Ana', monto: 1, desde: '2026-11-09', hasta: '2026-11-15',
+                      id: 'MIO', registradoPor: 'otro' } as unknown) as Record<string, unknown>)
+       ?.id === undefined,
+     'el id y quién lo registró NO se aceptan del navegador');
+}
+
+/* ---------- Lo que va a costar el equipo de un día ---------- */
+
+console.log('\nCosto planificado del día');
+{
+  const tu = (x: Partial<Turno>): Turno => ({
+    fecha: '2026-11-14', trabajador: 'Ana', puesto: 'Garzón', asistencia: '',
+    modalidad: '', pagoJornada: 30000, horasExtra: 0, valorHora: 4000,
+    ajustes: [], propina: 0, fila: 2, ...x
+  } as Turno);
+
+  const plan = [tu({ trabajador: 'Ana' }), tu({ trabajador: 'Beto' }),
+                tu({ trabajador: 'Caro' })];
+
+  // **Lo que arregla esta función**: antes de pasar lista, costoDelDia da
+  // cero, y un cero en la tarjeta se lee como "no cuesta nada".
+  ok(costoDelDia(plan, '2026-11-14') === 0,
+     'sin marcar a nadie, el costo confirmado es cero — correcto, pero no es lo que se pregunta al planificar');
+  ok(costoPlanificado(plan, '2026-11-14') === 90000,
+     'el planificado SÍ cuenta a los tres: es lo que va a costar ese día');
+
+  // Quien ya dijo que no vino se cae; los demás siguen contando.
+  const conFalta = [tu({ trabajador: 'Ana', asistencia: VINO.no }),
+                    tu({ trabajador: 'Beto' }),
+                    tu({ trabajador: 'Caro', asistencia: VINO.si })];
+  ok(costoPlanificado(conFalta, '2026-11-14') === 60000,
+     'quien no vino se cae solo, y el que falta por marcar sigue contando');
+
+  // Ya marcado todo, los dos números son el mismo: no hay que aprender a
+  // interpretar la tarjeta según el día que sea.
+  const todoMarcado = plan.map((t) => ({ ...t, asistencia: VINO.si }));
+  ok(costoPlanificado(todoMarcado, '2026-11-14') === costoDelDia(todoMarcado, '2026-11-14'),
+     'con la lista pasada, el planificado converge exactamente al confirmado');
+
+  // Un contratado no suma jornada ni acá: su sueldo no sale de esta caja.
+  ok(costoPlanificado([tu({ modalidad: 'Contratado' })], '2026-11-14') === 0,
+     'un contratado no suma jornada en el planificado tampoco');
+  ok(costoPlanificado([tu({ modalidad: 'Contratado', horasExtra: 2 })], '2026-11-14') === 8000,
+     'pero sus horas extra sí: esas son del día y se pagan aparte');
+
+  ok(costoPlanificado(plan, '2026-11-15') === 0, 'otro día no suma nada');
+}
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);
