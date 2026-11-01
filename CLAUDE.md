@@ -1286,17 +1286,100 @@ lo mismo: es un **significado** —"cotizado, todavía no confirmado"— y no un
 color. De día se oscurece igual que el dorado, porque el de noche sobre
 papel da menos de 3:1 y "2 presupuestos" no se leería con sol encima.
 
-### Lo que falta (lote 4)
+### Dónde se ve, en rosado
 
-**Verlo donde se trabaja**: la línea en rosado en la tarjeta del calendario,
-en la página del día y en `/turnos`, y **convertirlo en reserva** al
-aceptarlo —que es lo que escribe el `ID Reserva` y apaga el conteo de
-posibles.
+| Pantalla | Qué muestra |
+|---|---|
+| Tarjeta del calendario | una pastilla —*1 presupuesto · 18 posibles*— **debajo** de la barra y de las pastillas de pago |
+| Página del día | un bloque propio, debajo de Actividades extras, con quién, cuánta gente, cuánto y en qué va |
+| `/turnos` | una línea *18 posibles* junto a lo demás de la celda |
+| Planilla semanal y link personal | **nunca**, igual que las actividades extras |
+| Sitio público | **nunca** |
+
+Tres decisiones que vale la pena tener escritas:
+
+- **En la tarjeta va debajo, no dentro.** Arriba está lo que ya es —el
+  número grande, la barra, las pagadas y las por cobrar—; esto es lo que
+  podría ser. Mezclarlo sería exactamente lo que el cliente pidió que no
+  pasara.
+- **En `/turnos` va al lado del estado, no en vez de.** Un presupuesto no es
+  un estado del día —eso lo dice `PuntoDia`: público, cerrado, preparación—
+  es una capa encima. Un sábado cerrado puede tener una cotización dando
+  vueltas, y las dos cosas son ciertas.
+- **El bloque del día dice por qué no suma.** *"18 personas posibles si se
+  confirma este presupuesto. No ocupan cupo todavía: los números de arriba
+  no los cuentan."* Va siempre, porque es justo lo que alguien daría por
+  hecho mirando una tarjeta con gente.
+
+### Convertirlo en reserva
+
+Es **un botón propio**, que aparece solo con el presupuesto aceptado y
+todavía sin reserva, y **pregunta antes**: que el cliente diga que sí y que
+le tomemos el lugar son dos decisiones, y la segunda es la que le quita la
+silla a otro.
+
+**El orden de las dos escrituras es deliberado: primero la reserva, después
+el vínculo.** Las dos van a la planilla y no hay transacción que las junte,
+así que hay que elegir cuál falla mejor:
+
+- **Reserva primero**: si el vínculo falla, queda la reserva ocupando su
+  lugar **y** el presupuesto contando como posible. Se ve doble, es feo y
+  **se nota en el acto**.
+- **Vínculo primero**: si la reserva falla, el presupuesto deja de contar y
+  no existe ninguna reserva. Esa gente desaparece de las dos listas y
+  **nadie se entera** hasta que llegan.
+
+El error visible gana siempre sobre el invisible. Convertir dos veces se
+rechaza en el servidor, no solo en la pantalla: dos clics seguidos llegan
+como dos peticiones.
+
+Lo que queda anotado en `Reservas`, en `reservaDesdePresupuesto()`:
+
+- **El monto es el total negociado del presupuesto**, no el recalculado
+  desde `Menús`. Lo pidió el cliente con el porqué: *"se transcribe el
+  precio de este presupuesto enviado, porque eso es parte de las
+  negociaciones"*. Si se recalculara, el descuento acordado por teléfono
+  desaparecería justo cuando pasa a ser plata que hay que cobrar.
+- **Al `Menú` solo van las líneas con personas**, así que el arriendo del
+  recinto no llega a la cocina. **Se probó primero filtrando con
+  `canonizar()` contra la pestaña `Menús` y estaba mal**, aunque parezca el
+  camino obvio: esa función devuelve *tal cual* lo que no reconoce —a
+  propósito, para que un plato nuevo de la tienda aparezca igual— así que no
+  sirve de filtro, y usarla como tal habría hecho desaparecer en silencio un
+  menú nuevo de la lista de lo que hay que preparar. **Lo cazó una prueba**,
+  y por eso quedó escrito.
+- **Nace por pagar**, no pagada: aceptar un presupuesto es comprometerse a
+  venir, no haber transferido.
+- Lleva `Del presupuesto N° …` en la nota de pago, que es el rastro de dónde
+  salió, y el `ID Reserva` queda escrito en el presupuesto.
+
+Comprobado de punta a punta con un día de 60 lugares y dos cotizaciones:
+
+```
+antes       tomadas=0   quedan=60  | 2 presupuestos · 43 posibles   sitio: quedan 60
+convierto A tomadas=25  quedan=35  | 1 presupuesto  · 18 posibles   sitio: quedan 35
+convierto B tomadas=43  quedan=17  | 0 presupuestos ·  0 posibles   sitio: quedan 17
+```
+
+Las 43 personas pasaron de posibles a tomadas **sin contarse dos veces en
+ningún paso**, y el segundo intento sobre el mismo presupuesto se rechaza.
 
 **El link del documento no lleva botón de "acepto" para el cliente**, y es
 deliberado: sería una puerta de escritura sin contraseña sobre un dato que
 mueve el cupo de un día. El cliente responde por WhatsApp y el encargado lo
 marca.
+
+### Lo que no tiene, y conviene que sea una decisión
+
+- **No aparece en `/extras`.** Esa pantalla contesta quién hace el show; un
+  presupuesto es otra pregunta, igual que las actividades no aparecen en el
+  calendario de la portada.
+- **No avisa cuando uno está por vencer.** Hoy se ve vencido cuando ya lo
+  está. Si hace falta, el lugar natural es el mismo aviso de arriba de
+  `/turnos` que lista lo que falta cerrar.
+- **No manda el link solo.** Se copia y se pega en WhatsApp.
+  `enlaceWhatsApp()` ya está escrito en `contacto.ts` esperando la pantalla
+  que lo use, y el teléfono del cliente ya se guarda normalizado.
 
 ## El equipo de trabajadores (panel)
 

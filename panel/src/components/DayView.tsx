@@ -14,6 +14,8 @@ import Asistencia from './Asistencia';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
+import { cuentaComoPosible, estadoVisible, lineasDe, totalDe, personasDe,
+         folioDe, type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
@@ -124,6 +126,16 @@ export default function DayView({ fecha }: { fecha: string }) {
     colaboradores: Colaborador[]; extras: Extra[]; esAdmin: boolean;
   } | null>(null);
   const [agendando, setAgendando] = useState(false);
+  /**
+   * Lo cotizado para este día y todavía sin confirmar.
+   *
+   * Se lee y **no se edita acá**: el presupuesto se arma en `/presupuestos`,
+   * que es donde están las líneas y los precios. Esta pantalla lo muestra
+   * porque es donde se mira un día completo, y una conversación abierta con
+   * un cliente es parte de ese día.
+   */
+  const [cotizado, setCotizado] = useState<
+    { presupuestos: Presupuesto[]; lineas: LineaPresupuesto[]; hoy: string } | null>(null);
   const pronostico = usePronostico();
 
   const cargar = () =>
@@ -165,7 +177,20 @@ export default function DayView({ fecha }: { fecha: string }) {
       })
       .catch(() => {});
 
-  useEffect(() => { cargar(); cargarEquipo(); cargarExtras(); }, []);
+  // Si no se pueden leer, el día se dibuja igual sin el bloque: una falla
+  // de la capa comercial no puede dejar sin pantalla a quien vino a mirar
+  // las reservas. Mismo criterio que `posiblesDeLosDias()`.
+  const cargarCotizado = () =>
+    fetch('/api/presupuestos')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) return;
+        setCotizado({ presupuestos: d.presupuestos ?? [], lineas: d.lineas ?? [],
+                      hoy: d.hoy ?? '' });
+      })
+      .catch(() => {});
+
+  useEffect(() => { cargar(); cargarEquipo(); cargarExtras(); cargarCotizado(); }, []);
 
   const delDia = useMemo(
     () => (todas ?? []).filter((r) => r.fecha === fecha),
@@ -497,6 +522,56 @@ export default function DayView({ fecha }: { fecha: string }) {
           </p>
         )}
       </div>
+
+      {/* **Lo cotizado para este día, en su propio bloque y en rosado**
+          (2026-11-01). Va debajo del equipo y de las extras porque es lo
+          único de esta pantalla que **todavía no es un hecho**: arriba está
+          lo que hay que preparar y lo que cuesta; acá, lo que podría pasar.
+
+          No se edita desde acá a propósito: el presupuesto se arma en
+          `/presupuestos`, que es donde viven las líneas y los precios.
+          Tenerlo en dos lugares sería tener dos formularios para lo mismo. */}
+      {cotizado && (() => {
+        const vivos = cotizado.presupuestos.filter(
+          (p) => p.fecha === fecha && cuentaComoPosible(p, cotizado.hoy));
+        if (vivos.length === 0) return null;
+        const gente = vivos.reduce(
+          (n, p) => n + personasDe(lineasDe(cotizado.lineas, p.id)), 0);
+        return (
+          <div className="mt-3 rounded border border-rosa/40 bg-rosa/[0.06] px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <RotuloBloque>Presupuestos</RotuloBloque>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {vivos.map((p) => (
+                  <li key={p.id}>
+                    <span className="text-hueso/85">{p.cliente}</span>
+                    <span className="text-hueso/60">
+                      {' · '}{personasDe(lineasDe(cotizado.lineas, p.id))} pers.
+                      {' · '}{enPesos(totalDe(lineasDe(cotizado.lineas, p.id)))}
+                      {' · '}{estadoVisible(p, cotizado.hoy).toLowerCase()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <span className="flex-1" />
+              <a href="/presupuestos" className="tecla boton">Ver presupuestos</a>
+            </div>
+            {/* La frase que explica por qué este bloque no suma a los números
+                de arriba. Va siempre, porque es justo lo que alguien podría
+                dar por hecho mirando una tarjeta con gente. */}
+            <p className="mt-2 border-t border-rosa/20 pt-2 text-[13px]">
+              <strong className="tabular-nums text-rosa-texto">{gente}</strong>
+              <span className="text-hueso/65">
+                {' '}personas posibles si se{' '}
+                {vivos.length === 1
+                  ? 'confirma este presupuesto'
+                  : 'confirman estos presupuestos'}.
+                No ocupan cupo todavía: los números de arriba no los cuentan.
+              </span>
+            </p>
+          </div>
+        );
+      })()}
 
       {agendando && extras && (
         <ExtrasDialogo

@@ -270,6 +270,23 @@ export default function CalendarioEquipo() {
                 </span>
               )}
 
+              {/* **Lo cotizado, en rosado, al lado de lo demás y no en vez
+                  de** (2026-11-01). Un presupuesto no es un estado del día
+                  —eso lo dice `PuntoDia`: público, cerrado, preparación— es
+                  una capa encima. Un sábado cerrado puede tener una
+                  cotización dando vueltas, y las dos cosas son ciertas.
+
+                  Está acá porque un día con 43 personas posibles es un día
+                  que quizás haya que armar, y esta es la pantalla donde se
+                  decide a quién se le avisa. */}
+              {oc && oc.presupuestos > 0 && (
+                <span className="mt-1 block text-rosa-texto">
+                  {oc.presupuestadas > 0
+                    ? <>{oc.presupuestadas} posibles</>
+                    : <>{oc.presupuestos} presup.</>}
+                </span>
+              )}
+
               {res.total > 0 && (
                 <span className="mt-1 block text-oro">
                   {res.total} en el equipo
