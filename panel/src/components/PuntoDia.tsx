@@ -24,12 +24,19 @@ import { PUNTO_TARJETA, sinConfigurar } from './TarjetaDia';
 
 type Estado = 'preparacion' | 'cerrado' | 'privado' | 'sinCupo' | 'publico';
 
+/**
+ * **La palabra se lee, no se adivina** (2026-11-01). Estaba a 9px y con
+ * opacidades de 35 y 40, o sea en el límite de lo legible justo en el dato
+ * que dice de qué tipo es ese día. Es la regla PlayStation: acá no hay
+ * detalle chico. Subió a 11px en semibold y cada estado usa su color de
+ * texto, que es el que está pensado para leerse.
+ */
 const PALABRA: Record<Estado, { texto: string; clase: string; punto?: string }> = {
-  preparacion: { texto: 'preparación', clase: 'text-oro/80', punto: '🟡' },
-  cerrado: { texto: 'cerrado', clase: 'text-rojo-texto/80' },
-  privado: { texto: 'privado', clase: 'text-cielo-texto/80' },
-  sinCupo: { texto: 'sin cupo', clase: 'text-hueso/35' },
-  publico: { texto: 'público', clase: 'text-hueso/40' }
+  preparacion: { texto: 'preparación', clase: 'text-oro', punto: '🟡' },
+  cerrado: { texto: 'cerrado', clase: 'text-rojo-texto' },
+  privado: { texto: 'privado', clase: 'text-cielo-texto' },
+  sinCupo: { texto: 'sin cupo', clase: 'text-hueso/60' },
+  publico: { texto: 'público', clase: 'text-hueso/65' }
 };
 
 export function estadoDia(d: Ocupacion | undefined, preparacion = false): Estado | null {
@@ -55,8 +62,8 @@ export default function PuntoDia({ d, preparacion = false }: {
 
   return (
     <span className="flex shrink-0 flex-col items-end leading-none">
-      <span aria-hidden>{punto ?? (d ? PUNTO_TARJETA(d) : '🟡')}</span>
-      <span className={`mt-1 text-[9px] uppercase tracking-wide ${clase}`}>
+      <span aria-hidden className="text-[15px]">{punto ?? (d ? PUNTO_TARJETA(d) : '🟡')}</span>
+      <span className={`mt-1 text-[11px] font-semibold uppercase tracking-wide ${clase}`}>
         {texto}
       </span>
     </span>
