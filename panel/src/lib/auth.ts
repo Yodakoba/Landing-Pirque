@@ -195,12 +195,22 @@ export const PERMISOS = {
   /**
    * El informe del mes: cuánto se le pagó a cada persona.
    *
-   * Es del administrador, aunque el encargado sí vea los montos de un día
-   * —los escribe él al pasar lista—. La línea está puesta a propósito ahí:
-   * lo que necesita para cerrar un turno es el día que tiene delante, no el
-   * historial de sueldos de todo el equipo.
+   * **El encargado también lo ve desde el 2026-11-01**, y es una decisión
+   * del cliente tomada a propósito como provisoria: *"por ahora libéralo
+   * para encargado también… luego se define más especificado cuál rol tiene
+   * qué derechos de ver"*. O sea que esta línea está para volver a mirarse,
+   * no para quedarse.
+   *
+   * El argumento que tenía antes sigue en pie y conviene no perderlo: el
+   * encargado necesita **el día que tiene delante** para cerrar un turno, no
+   * el historial de sueldos de todo el equipo. Y hay una consecuencia
+   * concreta que no es obvia, porque no está en esta tabla: `/api/informe`
+   * devuelve de cada ficha **los datos de la transferencia** —RUT, banco,
+   * número de cuenta—, que en todo el resto del panel son solo del
+   * administrador y de quien paga. Al abrir el informe se abren también
+   * esos. Es lo que hay que decidir cuando se afine la lista.
    */
-  informe: [ROL.admin, ROL.pagos],
+  informe: [ROL.admin, ROL.encargado, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
