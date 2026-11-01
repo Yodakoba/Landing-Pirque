@@ -1720,6 +1720,44 @@ poder probarlo sin red.
   panel no sabe si alguien la duplicó queriendo y la editó. Lo que ya no pasa
   es que el día cuente esa gente dos veces mientras nadie lo note.
 
+### Un mes pasado salía entero como "preparación" (2026-11-01)
+
+Lo pilló el cliente mirando octubre en `/turnos`: *"si ahora yo reviso el
+mes octubre, solo veo fechas en preparación… me debería en el pasado igual
+mostrar exactamente qué fecha fue pública, privada o preparación"*. Tenía
+razón, y la causa encadena dos cosas que por separado se ven bien.
+
+**`/api/ocupacion` devolvía siempre `hoy()` en adelante**, que es lo que
+necesita el calendario de la portada. Y `/turnos` y `/extras` la pedían
+**una sola vez y sin parámetros**, aunque dibujan **cualquier mes**: para un
+mes de atrás no venía ni un día.
+
+Y acá entra la segunda mitad: **la regla de preparación es "tiene equipo y
+no recibe público"**. Sin ocupación, ningún día recibe público — así que
+cada día con equipo pasaba el filtro y el mes entero se leía *preparación*.
+De paso la tarjeta decía **0 personas** en días que sí tuvieron gente,
+porque el conteo sale de esa misma ocupación.
+
+**No era un bug de `esPreparacion()`**, que hace exactamente lo que dice;
+era que se le estaba contestando "no recibe público" a una pregunta que en
+realidad nadie había ido a buscar. Un dato que falta y uno que es `false` se
+ven igual en un `if`, y esa es la lección que vale guardar.
+
+El arreglo es pedir la ocupación **del mes que se está mirando**:
+`/api/ocupacion` acepta ahora `desde` y `hasta`, y los dos calendarios la
+vuelven a pedir al cambiar de mes. Sin esos parámetros —o con basura— se
+comporta igual que antes, así que la portada no cambió.
+
+Comprobado con un octubre sembrado: los sábados y domingos vuelven a decir
+*público* con su gente real, un día marcado privado dice *privado*, y en
+*preparación* quedan solo los dos que corresponden — un martes con equipo y
+un sábado cerrado con equipo. La portada sigue partiendo en el día de hoy.
+
+**Ojo con el mismo error en el otro extremo**: la ventana de siempre llega
+hasta `dias_a_futuro` (hoy, 90 días), así que un mes más adelante que eso
+tenía exactamente el mismo problema. Con el rango por mes, deja de
+depender de esa ventana.
+
 ### Los calendarios de celdas necesitan `relative` (2026-10-30)
 
 En `/turnos` y `/extras`, a 393px, **la página entera se corría de lado** —

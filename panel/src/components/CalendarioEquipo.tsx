@@ -67,15 +67,27 @@ export default function CalendarioEquipo() {
       })
       .catch((e) => setError(String(e)));
 
+  // **La ocupación se pide del mes que se está mirando, no de hoy en
+  // adelante.** Pedirla sin rango es lo que hacía que un mes pasado saliera
+  // entero como "preparación": sin ocupación ningún día recibe público, y la
+  // regla de preparación es justamente "tiene equipo y no recibe público".
+  // De paso, la tarjeta decía 0 personas en días que sí tuvieron gente.
+  //
   // La ocupación es solo para pintar el mes: si falla, el calendario se
   // dibuja igual y se puede planificar. Lo que no se podría es saber cuánta
   // gente viene, y eso se nota solo.
-  const cargarDias = () =>
-    fetch('/api/ocupacion').then((r) => r.json())
+  const cargarDias = (m: string) => {
+    const dias = diasDelMes(m);
+    if (dias.length === 0) return;
+    const rango = `desde=${dias[0]}&hasta=${dias[dias.length - 1]}`;
+    fetch(`/api/ocupacion?${rango}`).then((r) => r.json())
       .then((d) => { if (d.ocupacion) setOcupacion(d.ocupacion); })
       .catch(() => {});
+  };
 
-  useEffect(() => { cargarEquipo(); cargarDias(); }, []);
+  useEffect(() => { cargarEquipo(); }, []);
+  // Y se vuelve a pedir al cambiar de mes, que es cuando cambia el rango.
+  useEffect(() => { cargarDias(mes); }, [mes]);
 
   const porFecha = useMemo(
     () => new Map(ocupacion.map((o) => [o.fecha, o])), [ocupacion]
