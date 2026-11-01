@@ -3786,7 +3786,7 @@ Dentro de los paneles, en este orden:
 | Las experiencias y el menú | Los cuatro niveles con flip 3D en CSS puro (checkbox + label), y el menú compartido en un `<details>` debajo |
 | Date una vuelta por el lugar | La galería de 27 fotos, carrusel swipe con `scroll-snap`, sin JS |
 | Las actividades | Show ecuestre · seis tarjetas de actividades del recinto · actividades adicionales (coaching con caballos, taller de queso, karting, taller de asado) |
-| El recinto y los extras | Desayuno de campo y once campesina · precio del recinto ($2.500.000 + IVA fin de semana / $1.500.000 + IVA días de semana, solo arriendo, sin catering) · "Eventos a medida" |
+| El recinto y los extras | Desayuno de campo y once campesina · precio del recinto ($2.500.000 fin de semana / $1.500.000 días de semana, **IVA incluido**, solo arriendo, sin catering) · "Eventos a medida" |
 | Por qué acá *(B2B: Por qué sumarte)* | Los tres momentos o segmentos · los beneficios · cómo funciona en 3 pasos |
 
 ### Los paneles
@@ -3877,6 +3877,40 @@ agencias que compran por grupo. Por eso:
   de atrás de sus tarjetas. El sitio público muestra al frente el de **pagar
   por adelantado**. No es una inconsistencia: son las dos modalidades.
 
+### El precio del recinto pasó a ser con IVA incluido (2026-11-01)
+
+Salió al desglosar el IVA en los presupuestos: **el recinto era el único
+precio del sitio anunciado "+ IVA"**, mientras las experiencias dicen "IVA
+incluido". Con el presupuesto tratando todo como IVA incluido, cotizar el
+arriendo escribiendo 2.500.000 habría significado una cosa en el documento y
+otra en la página — $475.000 de diferencia.
+
+Lo cerró el cliente: *"cámbialo en la página que 2,5 millones incluyendo
+IVA… y ahí veamos cuando se negocia, si hay que subir"*. **El precio
+publicado es el total**, y lo que haya que ajustar se conversa en la
+negociación, que es donde ya se decide todo lo demás de un evento.
+
+- **Cambiaron los dos montos, no solo el de 2,5.** El de días de semana está
+  en el mismo bloque y es el mismo producto: dejar uno "+ IVA" al lado del
+  otro habría repuesto justo la inconsistencia que esto viene a sacar.
+- **Va en tres páginas**: `eventos.html`, `landing-afiliados.html` y
+  `promociones.html`.
+- **El "IVA incluido" se dice una vez para el bloque**, en la bajada que ya
+  decía "Valores sin catering", y no dos veces en letra grande al lado de
+  cada monto. Mismo criterio que el pie del presupuesto: el desglose es del
+  total, no de cada línea.
+- **Queda un "+ IVA" en el sitio, y es a propósito**: el desayuno de campo y
+  la once campesina, a **$8.000 + IVA por persona**. Ese precio no se tocó
+  porque el cliente habló del recinto, y cambiarlo sería bajarlo un 19% por
+  cuenta propia. Conviene preguntarle, porque hoy es lo único del sitio que
+  se anuncia así.
+- **Ojo con los diccionarios**: al sacarle el "+ IVA" al monto, la llave
+  `"$2.500.000 + IVA"` dejó de usarse y hubo que agregar `"$2.500.000"` a
+  secas. Un precio a secas **sí** pasa por el diccionario —ahí sale el `CLP`
+  que necesita el inglés—; lo que hace `INTACTO` es decidir si **faltar** es
+  un error, no saltarse la traducción. Sin esa llave, `en/` habría mostrado
+  `$2.500.000`, que en inglés se lee como dos dólares y medio.
+
 **Supuesto sin confirmar:** que el mínimo de 25 no rige para venta directa.
 Se dedujo de que el producto en Shopify no muestra ningún mínimo. Si resulta
 que sí rige, hay que devolverlo a cinco lugares del sitio público.
@@ -3912,18 +3946,12 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   apareció al mirar el catálogo el 2026-10-22. Si se mantiene, es una cuarta
   fila en el formulario y su par de variantes; si no, no se hace nada, pero
   conviene que sea una decisión y no un olvido.
-- **¿El arriendo del recinto también es con IVA incluido?** El presupuesto
-  trata **todos** los precios como IVA incluido, que es lo que dijo el
-  cliente el 2026-11-01. Pero el landing de socios anuncia el recinto como
-  **"$2.500.000 + IVA"**, o sea al revés. Si se cotiza el arriendo
-  escribiendo 2.500.000, el documento dice que el total es ese y el neto
-  2.100.840; si lo que corresponde es 2.500.000 **más** IVA, habría que
-  escribir 2.975.000 en la línea. La diferencia son $475.000, así que
-  conviene que sea una decisión. Dos salidas posibles: que el precio del
-  recinto se anuncie con IVA incluido como todo lo demás, o que la línea
-  del presupuesto tenga una marca de "este precio va + IVA" — lo segundo
-  rompe que haya un solo neto por documento, así que lo primero es más
-  simple.
+- ~~¿El arriendo del recinto también es con IVA incluido?~~ — **resuelto el
+  2026-11-01**: sí. El landing lo anunciaba como "$2.500.000 + IVA" al revés
+  que todo lo demás, y el cliente lo cerró en una frase: *"cámbialo en la
+  página que 2,5 millones incluyendo IVA… y ahí veamos cuando se negocia, si
+  hay que subir"*. O sea que el precio publicado es el total. Ver "El precio
+  del recinto pasó a ser con IVA incluido".
 - **El nombre del negocio no calza.** Google Maps lo lista como "Lo Pirque
   Restaurant" y el email es `@lopirque.cl`, pero el sitio se llama "Brasas de
   Lo Pirque" y el dominio es `brasasdelopirque.cl`. Si alguien busca la marca
