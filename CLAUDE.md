@@ -2100,8 +2100,17 @@ justamente lo que permite mandar este sin pensarlo dos veces.
   es **dato del negocio**: va como columna de `Puestos`, editable en
   `/equipo`, no mapeada en el código — renombrar un puesto no puede dejarlo
   sin área.
+- **El cuerpo va a 16px y no a los 14 del resto del panel** (2026-11-01, lo
+  pidió el cliente: *"está muy, muy chica las letras"*, mirándola en el
+  celular). Esta página no es el panel: **es un link que se abre en un
+  teléfono, de pie y a un brazo de distancia**, para contestar "¿a quién me
+  toca hoy?". Los rótulos —el encabezado *Puesto* y la bajada con la hora y
+  la gente— subieron de 12 a 14. Lo que sobra de ancho se resuelve
+  desplazando, que ya funciona con la columna fija.
 - Un nombre **tachado** es alguien que no llegó ese día.
-- Como `/mi/`, no dibuja la barra del panel.
+- Como `/mi/`, no dibuja la barra del panel — **pero sí hereda el tema**, y
+  desde el 2026-11-01 eso significa que abre en claro sin que nadie elija
+  nada. Ver "El interruptor".
 
 ### Lo que ve cada quien, de un vistazo
 
@@ -2675,17 +2684,31 @@ primera que se abre, y donde alguien se encuentra con el tema que no quería—.
 En `/mi/` y en `/semana/` no: ahí la barra es una palabra y el botón sería el
 único control de una página de lectura.
 
-- **Arranca en oscuro, no en el del sistema.** Seguir a `prefers-color-scheme`
-  suena más fino y acá habría sido un problema: el panel lo usa gente a la que
-  recién se le enseñó dónde queda cada cosa, y la mitad del equipo habría
-  abierto un panel blanco sin pedirlo, distinto del que le mostraron.
+- **Arranca en claro desde el 2026-11-01**, por decisión del cliente:
+  *"cambia la configuración predeterminada a diurno, es mucho más lindo"*.
+  Hasta entonces arrancaba en oscuro, con el argumento de que el equipo había
+  aprendido el panel así; ganó el otro, que es que esto se abre de día y en un
+  teléfono, muchas veces al sol. **Vale para todo lo que cuelga del layout**,
+  así que `/semana/` y `/mi/` —que no tienen interruptor— también abren en
+  claro, que era lo que el cliente quería de la planilla semanal.
+- **Lo que NO cambió es que no sigue a `prefers-color-scheme`**, y ese
+  argumento sí se sostiene: el panel lo usa gente a la que recién se le enseñó
+  dónde queda cada cosa, y que la pantalla dependa de una configuración del
+  sistema operativo que nadie recuerda haber tocado deja a media docena de
+  personas viendo cosas distintas. Hay un valor por defecto, y encima la
+  decisión de cada uno.
 - **Se recuerda en `localStorage`**, o sea por navegador: el teléfono de la
-  jefa de turno puede estar en claro y el computador de la oficina en oscuro.
-  Si está bloqueado, abre en oscuro y el botón sirve para esa sesión.
+  jefa de turno puede estar en oscuro y el computador de la oficina en claro.
+  Si está bloqueado, abre en claro y el botón sirve para esa sesión.
+- **Cambiar el valor por defecto es dar vuelta las dos puntas**: el
+  `data-tema` del `<html>` en `layout.tsx` **y** la condición del guion del
+  `<head>`, que ahora busca el `oscuro` guardado en vez del `claro`. Si se
+  toca una sola, quien no haya elegido nada ve un tema y el guion le pinta el
+  otro — el parpadeo que ese guion existe para evitar.
 - **Lo pinta un guion de tres líneas en el `<head>`, antes de dibujar.** Si
-  esperara a React, cada carga aparecería oscura y pegaría un salto a blanco
-  — el parpadeo clásico, que además desconcierta justo a quien menos maneja
-  estos sistemas. No se puede resolver en el servidor: el tema es de cada
+  esperara a React, a quien eligió el oscuro le aparecería la pantalla clara
+  y pegaría un salto a negro en cada carga — el parpadeo clásico, que además
+  desconcierta justo a quien menos maneja estos sistemas. No se puede resolver en el servidor: el tema es de cada
   navegador y el HTML de Next se sirve igual para todos.
 
 ### Los botones se hunden, y la asistencia es un semáforo

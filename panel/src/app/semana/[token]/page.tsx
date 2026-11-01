@@ -114,15 +114,22 @@ export default async function Pagina({
               son — que es justo lo único que esta tabla viene a decir.
               `relative` en la caja que desplaza, como en los calendarios de
               celdas: sin eso la página entera se corre de lado. */}
+          {/* El cuerpo va a 16px y no a los 14 del resto del panel
+              (2026-11-01, lo pidió el cliente: "está muy, muy chica las
+              letras", mirándola en el celular). Esta página no es el panel:
+              **es un link que se abre en un teléfono, de pie y a un brazo de
+              distancia**, para contestar "¿a quién me toca hoy?". Lo que
+              sobra de ancho se resuelve desplazando, que ya funciona con la
+              columna fija. */}
           <div className="relative mt-6 overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-sm">
+            <table className="w-full min-w-[32rem] text-base">
               <thead>
                 <tr className="border-b border-hueso/15 text-left align-bottom">
                   {/* El `shadow` hace de borde derecho y no un `border`: con
                       `border-collapse: collapse` el borde de una celda fija
                       se va con el desplazamiento y la columna queda pegada a
                       los nombres. */}
-                  <th className="sticky left-0 z-20 w-32 bg-tinta py-2 pr-3 text-xs
+                  <th className="sticky left-0 z-20 w-36 bg-tinta py-2 pr-3 text-sm
                                  uppercase tracking-wide text-hueso/45
                                  shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">
                     Puesto
@@ -130,7 +137,7 @@ export default async function Pagina({
                   {conEquipo.map((f) => (
                     <th key={f} className="py-2 pr-3">
                       <span className="block capitalize text-hueso/85">{enPalabras(f)}</span>
-                      <span className="block text-xs font-normal text-hueso/45">
+                      <span className="block text-sm font-normal text-hueso/45">
                         {porFecha.get(f)?.apertura || cfg.horaApertura}
                         {/* Un día sin público y con equipo es preparación, y
                             decirlo importa más acá que en ninguna parte: esta
@@ -183,7 +190,7 @@ export default async function Pagina({
             </table>
           </div>
 
-          <p className="mt-4 text-xs text-hueso/40">
+          <p className="mt-4 text-sm text-hueso/40">
             Un nombre tachado es alguien que no llegó ese día.
           </p>
         </>
