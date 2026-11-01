@@ -14,7 +14,7 @@ import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFi
          esPestanaQueNoExiste } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
-  indices, faltantes
+  indices, faltantes, esManual
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { filaReserva, filaFecha, buscarFilaPorId } from './filas.ts';
@@ -161,6 +161,43 @@ export async function borrarFecha(fila: number): Promise<void> {
  * esto es quedarse callado: si un encabezado no calza, la columna se lee
  * vacía y el panel se ve bien con datos que no están.
  */
+/**
+ * Los `ID Orden` que aparecen más de una vez, con cuántas filas tiene cada
+ * uno. Vacío es lo normal.
+ *
+ * **El mismo id es el mismo pedido, por definición**: `guardarPedido()`
+ * busca por esa columna justamente para no anotarlo dos veces. Que aparezca
+ * repetido significa que dos escrituras se cruzaron —Shopify manda
+ * `orders/create` y `orders/paid` casi juntos, y además reintenta— y las dos
+ * leyeron la planilla antes de que la otra escribiera.
+ *
+ * Las anotadas a mano no cuentan: su id es `MANUAL-<timestamp>` y es único
+ * por construcción.
+ */
+function idsRepetidos(filas: string[][]): { id: string; filas: number }[] {
+  if (filas.length < 2) return [];
+  const i = indices(filas[0], COL_RESERVAS);
+  if (i.id === -1) return [];
+  const cuenta = new Map<string, number>();
+  for (let n = 1; n < filas.length; n++) {
+    const id = String(filas[n]?.[i.id] ?? '').trim();
+    if (!id || esManual(id)) continue;
+    cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
+  }
+  return [...cuenta].filter(([, c]) => c > 1).map(([id, c]) => ({ id, filas: c }));
+}
+
+/** Dónde quedó un `#ERROR!` de la planilla, que es un dato perdido. */
+function celdasConError(filas: string[][]): string[] {
+  const salida: string[] = [];
+  for (let n = 1; n < filas.length; n++) {
+    for (const celda of filas[n] ?? []) {
+      if (String(celda).startsWith('#ERROR')) { salida.push(`fila ${n + 1}`); break; }
+    }
+  }
+  return salida;
+}
+
 export async function diagnostico() {
   const [res, fec, tur] = await Promise.all([
     leerHoja(HOJA_RESERVAS).catch(() => [] as string[][]),
@@ -180,7 +217,17 @@ export async function diagnostico() {
       existe: res.length > 0,
       encabezado: res[0] ?? [],
       faltan: faltantes(res[0] ?? [], COL_RESERVAS),
-      filas: Math.max(0, res.length - 1)
+      filas: Math.max(0, res.length - 1),
+      // **Un `ID Orden` repetido es el mismo pedido anotado dos veces**, y
+      // mientras eso pase el día cuenta esa gente dos veces. Se nombra en
+      // vez de esconderse: borrar una fila sola, sin que nadie lo sepa,
+      // sería peor — puede que alguien la haya duplicado a mano y editado.
+      // Ver `idsRepetidos()`.
+      idsRepetidos: idsRepetidos(res),
+      // Una celda que diga `#ERROR!` es un dato que la planilla se comió al
+      // leerlo como fórmula. No debería volver a pasar —ver `valorSeguro()`—
+      // pero las filas escritas antes del arreglo siguen ahí.
+      celdasConError: celdasConError(res)
     },
     [HOJA_FECHAS]: {
       existe: fec.length > 0,

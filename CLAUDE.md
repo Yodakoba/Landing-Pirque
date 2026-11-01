@@ -1637,6 +1637,74 @@ dejaría la pestaña vacía; así, lo peor que puede pasar es quedarse con la
 fila de más —que es exactamente lo que pasaba antes— y se corrige al
 siguiente guardado.
 
+### La planilla se comía los datos que parecen fórmula (2026-11-01)
+
+Lo pilló el cliente con una compra de prueba: la columna de contacto de la
+reserva decía **`#ERROR! (Formula parse error.)`** en vez del teléfono.
+
+**Es nuestro, y es de los que no avisan.** Las cuatro escrituras usan
+`valueInputOption: 'USER_ENTERED'`, que hace que la API interprete cada
+celda **igual que si alguien la tecleara**: un `=`, un `+`, un `-` o un `@`
+adelante abren una fórmula. Y este proyecto escribe dos datos que empiezan
+justo así:
+
+| Dónde | Qué se escribe | Qué guardaba |
+|---|---|---|
+| `Teléfono` de `Reservas`, `Trabajadores`, `Colaboradores` | `+56 9 1234 5678` | `#ERROR!` |
+| `Ajuste` de `Turnos` y `Actividades`, con dos o más | `-5000\|12000` | `#ERROR!` |
+
+El segundo es el peor: **son los ajustes del pago**, o sea plata que alguien
+tiene que cobrar, y se perdía sin que nada lo dijera. Un ajuste solo
+(`-5000`) nunca falló, así que el caso corriente tapaba al otro.
+
+Lo arregla `valorSeguro()`, en **`panel/src/lib/celdas.ts`**: antepone un
+`'` a lo que empiece como fórmula. Ese apóstrofo es la forma que tiene
+Sheets de decir "esto es texto" — **no se guarda ni se lee**, así que lo que
+vuelve por la API es el valor tal cual.
+
+- **Solo se escapa lo que no es un número**, y eso importa: `-5000` solo
+  tiene que seguir siendo el número -5000, porque esta planilla la abre una
+  persona y suma columnas con sus propias fórmulas.
+- **Vive aparte de `sheets.ts`**, por el mismo motivo que `filas.ts`: ahí no
+  se importa `googleapis`, así que se prueba sin red y sin credenciales.
+- **Ojo, y esto es lo que hay que recordar: la planilla falsa del entorno de
+  desarrollo NO puede reproducir este error.** Es un archivo JSON que guarda
+  las cadenas tal cual, así que `-5000|12000` "funciona" ahí y revienta en la
+  planilla de verdad. Todo lo que se pruebe solo contra el arnés tiene este
+  punto ciego; lo que fija el arreglo es una prueba sobre `valorSeguro()`.
+
+**Las filas ya escritas siguen con su `#ERROR!`.** Para las reservas se
+arreglan solas al correr la reconciliación de Shopify —`camposDeShopify()`
+reescribe el teléfono— dentro de la ventana de diez días. Las de más atrás,
+y los ajustes de un turno, hay que escribirlos de nuevo a mano.
+
+### Un `ID Orden` repetido es el mismo pedido dos veces (2026-11-01)
+
+En el mismo pantallazo venían **dos filas idénticas** del mismo pedido. Son
+dos cosas distintas y conviene no confundirlas:
+
+- **Si los dos `ID Orden` son distintos**, son dos pedidos de verdad y el
+  panel hace bien en mostrar dos. Eso es de la tienda, no del panel.
+- **Si son el mismo**, es nuestro. `guardarPedido()` es idempotente
+  *buscando primero por esa columna*, pero eso es leer-y-después-escribir
+  **sin bloqueo**: Shopify manda `orders/create` y `orders/paid` casi juntos,
+  además reintenta, y la reconciliación diaria es un tercer escritor. Dos que
+  lean la planilla antes de que el otro escriba agregan los dos.
+
+**Se nombra, no se esconde**, que es la regla de este proyecto para los
+fallos callados. Borrar una fila sola sería peor: puede que alguien la haya
+duplicado a mano a propósito.
+
+- **`/api/diagnostico` lista `idsRepetidos`** —con cuántas filas tiene cada
+  uno— y `celdasConError`, las filas donde quedó un `#ERROR!`.
+- **La página del día marca la fila** con un *⚠ pedido repetido*, porque
+  quien mira el día es quien lo va a notar. Mientras esté, **ese día cuenta
+  esa gente dos veces**.
+
+Lo que falta decidir, cuando haya un caso confirmado: si el panel debe
+además **colapsar** las filas repetidas al leer, o dejar que se borren a
+mano. Hoy solo avisa.
+
 ### Los calendarios de celdas necesitan `relative` (2026-10-30)
 
 En `/turnos` y `/extras`, a 393px, **la página entera se corría de lado** —

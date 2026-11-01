@@ -23,6 +23,7 @@ import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { diaParaReservaManual } from './dias.ts';
+import { valorSeguro } from './celdas.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
   from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
@@ -342,6 +343,30 @@ ok(res.nombre === '' && res.email === '' && res.telefono === '',
    'solo quedan vacios nombre, correo y telefono, que es lo que Shopify censura');
 ok(res.personas === 3 && res.monto === 107000,
    'y lo que de verdad hace falta para el cupo llega igual');
+
+/* ---------- lo que Sheets leeria como formula ---------- */
+
+// **Los dos casos que de verdad pasaron, los dos en silencio.** Con
+// `USER_ENTERED` la API interpreta la celda como si alguien la tecleara, y
+// un `=`, `+`, `-` o `@` adelante abre una formula: la planilla guarda
+// `#ERROR!` y el dato se pierde.
+ok(valorSeguro('+56 9 1234 5678') === "'+56 9 1234 5678",
+   'el telefono normalizado se escribe como texto, no como formula');
+ok(valorSeguro('-5000|12000') === "'-5000|12000",
+   'dos ajustes en una celda tambien, que es plata que alguien tiene que cobrar');
+ok(valorSeguro('=1+1') === "'=1+1" && valorSeguro('@algo') === "'@algo",
+   'y cualquier otra cosa que empiece como formula');
+
+// Un numero con signo SIGUE siendo un numero: la planilla la abre una
+// persona y suma columnas con sus propias formulas.
+ok(valorSeguro('-5000') === '-5000', 'un ajuste negativo solo se queda numero');
+ok(valorSeguro('+56') === '+56', 'y cualquier numero con signo');
+
+// Lo demas pasa intacto, incluido lo que no es texto.
+ok(valorSeguro('Tradiciones') === 'Tradiciones', 'el texto corriente no se toca');
+ok(valorSeguro('2026-11-14') === '2026-11-14', 'ni una fecha');
+ok(valorSeguro(7) === 7 && valorSeguro(null) === null, 'ni lo que no es texto');
+ok(valorSeguro('') === '', 'ni una celda vacia');
 
 /* ---------- la modalidad comprada, que delata una regla caida ---------- */
 res = aReserva(pedido({ financial_status: 'pending',

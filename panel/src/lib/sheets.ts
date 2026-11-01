@@ -4,6 +4,7 @@
  */
 import { google } from 'googleapis';
 import type { sheets_v4 } from 'googleapis';
+import { celdas } from './celdas.ts';
 
 // La planilla, y los eventos del calendario. El segundo se agregó el
 // 2026-10-21 al jubilar el Apps Script, que era quien los creaba.
@@ -158,7 +159,7 @@ export async function agregarFila(hoja: string, fila: unknown[]): Promise<void> 
     range: `'${await nombreReal(hoja)}'`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
-    requestBody: { values: [fila] }
+    requestBody: { values: [celdas(fila)] }
   });
 }
 
@@ -168,7 +169,7 @@ export async function escribirFila(hoja: string, fila: number, valores: unknown[
     spreadsheetId: idPlanilla(),
     range: `'${await nombreReal(hoja)}'!A${fila}`,
     valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [valores] }
+    requestBody: { values: [celdas(valores)] }
   });
 }
 
@@ -247,7 +248,7 @@ export async function escribirBloque(hoja: string, filas: unknown[][]): Promise<
     spreadsheetId: idPlanilla(),
     range: `'${titulo}'!A1`,
     valueInputOption: 'USER_ENTERED',
-    requestBody: { values: filas }
+    requestBody: { values: filas.map(celdas) }
   });
   await sheets().spreadsheets.values.clear({
     spreadsheetId: idPlanilla(),
@@ -269,7 +270,7 @@ export async function agregarFilas(hoja: string, filas: unknown[][]): Promise<vo
     range: `'${await nombreReal(hoja)}'`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
-    requestBody: { values: filas }
+    requestBody: { values: filas.map(celdas) }
   });
 }
 

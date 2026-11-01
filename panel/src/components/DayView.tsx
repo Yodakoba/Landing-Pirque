@@ -550,6 +550,15 @@ export default function DayView({ fecha }: { fecha: string }) {
                 // las dos modalidades se anota como "A + B": si hay algo que
                 // se paga en el local, manda el ámbar.
                 const enElLocal = String(r.tipoPago).includes(TIPO_PAGO.local);
+                // **El mismo pedido anotado dos veces.** Pasa cuando dos
+                // escrituras se cruzan —Shopify manda `orders/create` y
+                // `orders/paid` casi juntos, y además reintenta— y las dos
+                // leen la planilla antes de que la otra escriba. Mientras
+                // esté, el día cuenta esa gente dos veces, así que se dice
+                // acá y no solo en el diagnóstico: quien mira el día es
+                // quien lo va a notar.
+                const repetida = !esManual(r.id) && String(r.id).trim() !== ''
+                  && delDia.filter((x) => String(x.id).trim() === String(r.id).trim()).length > 1;
                 return (
                   <tr key={r.fila} className={`border-b border-hueso/5 ${
                         ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
@@ -587,6 +596,13 @@ export default function DayView({ fecha }: { fecha: string }) {
                       {raro && (
                         <div className="mt-1 text-xs font-semibold text-ambar-texto">
                           ⚠ pago directo sin pagar
+                        </div>
+                      )}
+                      {repetida && (
+                        <div className="mt-1 text-xs font-semibold text-ambar-texto"
+                          title={'El mismo ID Orden está en más de una fila de la planilla. '
+                               + 'Mientras esté, este día cuenta esa gente dos veces.'}>
+                          ⚠ pedido repetido
                         </div>
                       )}
                     </td>
