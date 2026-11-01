@@ -48,19 +48,45 @@ function Azulejo({ n, titulo, nota, color, borde }: {
 }) {
   return (
     <div className={`rounded border ${borde ?? 'border-hueso/15'} bg-panel px-4 py-2.5`}>
-      <div className={`text-2xl font-bold leading-none tabular-nums ${color ?? 'text-oro'}`}>
+      <div className={`text-3xl font-bold leading-none tabular-nums ${color ?? 'text-oro'}`}>
         {n}
       </div>
-      <div className="mt-1 text-sm leading-tight">{titulo}</div>
-      {nota && <div className="text-xs text-hueso/45">{nota}</div>}
+      <div className="mt-1.5 text-sm font-medium leading-tight">{titulo}</div>
+      {nota && <div className="mt-0.5 text-[13px] text-hueso/60">{nota}</div>}
     </div>
   );
 }
 
-/** El rótulo chico de cada fila del resumen. */
+/**
+ * El rótulo de cada fila del resumen.
+ *
+ * **13px semibold al 60%, no 12 al 45** (2026-11-01). La regla del panel
+ * pone el piso en 13 y reserva las opacidades bajas para lo de verdad
+ * secundario: un rótulo que nombra la fila que se vino a mirar no lo es.
+ */
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-4 text-xs uppercase tracking-widest text-hueso/45">{children}</p>
+    <p className="mt-5 text-[13px] font-semibold uppercase tracking-widest
+                  text-hueso/60">{children}</p>
+  );
+}
+
+/** El rótulo de un bloque —Equipo, Actividades extras—, con el mismo peso. */
+function RotuloBloque({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+      {children}
+    </span>
+  );
+}
+
+/** Un aviso corto en ámbar: pastilla con borde, para reconocerlo sin leerlo. */
+function Pendiente({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="whitespace-nowrap rounded-full border border-ambar/50 px-2 py-0.5
+                     text-[13px] font-semibold text-ambar-texto">
+      {children}
+    </span>
   );
 }
 
@@ -262,12 +288,12 @@ export default function DayView({ fecha }: { fecha: string }) {
 
   return (
     <>
-      <a href="/" className="text-sm text-hueso/60 hover:text-hueso">← Calendario</a>
-      <h1 className="mt-2 text-xl font-bold uppercase tracking-wide capitalize">
+      <a href="/" className="tecla boton">← Calendario</a>
+      <h1 className="mt-3 text-xl font-bold uppercase tracking-wide capitalize">
         {enPalabras(fecha)}<Ayuda tema="dia" />
       </h1>
       <Clima c={pronostico.get(fecha)} grande />
-      <p className="text-hueso/60 text-sm">
+      <p className="text-[15px] text-hueso/70">
         {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
         {noShows > 0 && (
           <span className="text-rojo-texto"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
@@ -323,7 +349,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           la otra mitad de la misma pregunta: para esta gente, con quién. */}
       <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-xs uppercase tracking-widest text-hueso/45">Equipo</span>
+          <RotuloBloque>Equipo</RotuloBloque>
           {conGente.length === 0 ? (
             <span className="text-sm text-hueso/55">Nadie asignado todavía.</span>
           ) : (
@@ -350,11 +376,14 @@ export default function DayView({ fecha }: { fecha: string }) {
             </ul>
           )}
           <span className="flex-1" />
-          {faltan > 0 && (
-            <span className="text-xs text-ambar-texto">Faltan {faltan}</span>
-          )}
+          {faltan > 0 && <Pendiente>Faltan {faltan}</Pendiente>}
+          {/* **Es un botón, no un enlace de texto en oro** (2026-11-01). Es
+              la acción del bloque y estaba escrita igual que un rótulo:
+              20px de alto, sin borde ni relleno, flotando en el borde
+              derecho. Relleno no va, porque el único de esta pantalla es
+              *Agregar reserva*, que es a lo que se entra. */}
           <button onClick={() => setPlanificando('equipo')} disabled={!equipo}
-            className="text-sm text-oro hover:underline disabled:opacity-40">
+            className="boton">
             {turnosDelDia.length > 0 ? 'Equipo y cuentas del día' : 'Planificar equipo'}
           </button>
         </div>
@@ -363,10 +392,10 @@ export default function DayView({ fecha }: { fecha: string }) {
             antes de eso el total sería cero y se leería como "no se pagó
             nada", que es otra cosa que "todavía no se sabe". */}
         {turnosDelDia.length > 0 && sinMarcar < turnosDelDia.length && (
-          <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
-            <strong className="tabular-nums text-oro">{enPesos(costo)}</strong>
-            <span className="text-hueso/55"> en el equipo de este día · </span>
-            <span className="text-hueso/55">{vinieron} vinieron</span>
+          <p className="mt-2 border-t border-hueso/10 pt-2 text-[13px]">
+            <strong className="text-base tabular-nums text-oro">{enPesos(costo)}</strong>
+            <span className="text-hueso/65"> en el equipo de este día · </span>
+            <span className="text-hueso/65">{vinieron} vinieron</span>
             {faltaron > 0 && (
               <span className="text-rojo-texto">
                 {' '}· {faltaron} {faltaron === 1 ? 'no llegó' : 'no llegaron'}
@@ -384,25 +413,27 @@ export default function DayView({ fecha }: { fecha: string }) {
             aparte del costo, no sumada: esa plata no sale del negocio, pasa
             por él. */}
         {turnosDelDia.length > 0 && (
-          <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
-            <span className="text-hueso/55">Propina del día: </span>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1
+                          border-t border-hueso/10 pt-2 text-[13px]">
+            <span className="text-hueso/65">Propina del día:</span>
             {propina > 0 ? (
-              <>
-                <strong className="tabular-nums text-hueso/85">{enPesos(propina)}</strong>
-                <span className="text-hueso/55">
+              <span>
+                <strong className="text-base tabular-nums text-hueso">{enPesos(propina)}</strong>
+                <span className="text-hueso/65">
                   , repartidos entre {reciben}{' '}
                   {reciben === 1 ? 'persona' : 'personas'}
                 </span>
-              </>
+              </span>
             ) : (
-              <span className="text-hueso/45">sin anotar</span>
+              /* "Sin anotar" en ámbar y con borde: es lo que falta hacer,
+                 no un dato gris más. */
+              <Pendiente>sin anotar</Pendiente>
             )}
-            <span className="text-hueso/30"> · </span>
-            <button onClick={() => setPlanificando('propina')}
-              className="text-oro hover:underline">
-              {propina > 0 ? 'Editar' : 'Agregar'}
+            <span className="flex-1" />
+            <button onClick={() => setPlanificando('propina')} className="boton">
+              {propina > 0 ? 'Editar propina' : 'Agregar propina'}
             </button>
-          </p>
+          </div>
         )}
       </div>
 
@@ -417,9 +448,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           "¿cuánto costó este sábado?" no se contesta sin ellas. */}
       <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-xs uppercase tracking-widest text-hueso/45">
-            Actividades extras
-          </span>
+          <RotuloBloque>Actividades extras</RotuloBloque>
           {extrasHoy.length === 0 ? (
             <span className="text-sm text-hueso/55">Ninguna este día.</span>
           ) : (
@@ -443,12 +472,10 @@ export default function DayView({ fecha }: { fecha: string }) {
           )}
           <span className="flex-1" />
           {extrasSinConfirmar > 0 && (
-            <span className="text-xs text-ambar-texto">
-              {extrasSinConfirmar} sin confirmar
-            </span>
+            <Pendiente>{extrasSinConfirmar} sin confirmar</Pendiente>
           )}
           <button onClick={() => setAgendando(true)} disabled={!extras}
-            className="text-sm text-oro hover:underline disabled:opacity-40">
+            className="boton">
             {extrasHoy.length === 0 ? 'Agendar actividad' : 'Editar actividades'}
           </button>
         </div>
@@ -459,11 +486,11 @@ export default function DayView({ fecha }: { fecha: string }) {
             sumado al del equipo: son dos bolsillos y conviene que se vean
             separados. */}
         {costoExtras > 0 && (
-          <p className="mt-2 border-t border-hueso/10 pt-2 text-xs">
-            <strong className="tabular-nums text-oro">{enPesos(costoExtras)}</strong>
-            <span className="text-hueso/55"> en actividades de este día</span>
+          <p className="mt-2 border-t border-hueso/10 pt-2 text-[13px]">
+            <strong className="text-base tabular-nums text-oro">{enPesos(costoExtras)}</strong>
+            <span className="text-hueso/65"> en actividades de este día</span>
             {costo > 0 && (
-              <span className="text-hueso/45">
+              <span className="text-hueso/60">
                 {' '}· con el equipo, {enPesos(costo + costoExtras)} en total
               </span>
             )}
@@ -498,21 +525,23 @@ export default function DayView({ fecha }: { fecha: string }) {
         />
       )}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      {/* El filtro: **el elegido va pintado**, no solo con el borde de otro
+          color, así se reconoce sin distinguir el dorado del gris. No va
+          relleno entero a propósito: el único relleno de esta pantalla es
+          *Agregar reserva*, y dos rellenos es no tener ninguno. */}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
         {(['todas','pagadas','porCobrar'] as Filtro[]).map((f) => (
           <button key={f} onClick={() => setFiltro(f)}
-            className={`rounded border px-3 py-1.5 text-sm ${
-              filtro === f ? 'border-oro text-oro' : 'border-hueso/20 text-hueso/70'}`}>
+            aria-pressed={filtro === f}
+            className={`boton rounded-full ${filtro === f
+              ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
             {f === 'todas' ? 'Todas' : f === 'pagadas' ? 'Pagadas' : 'Por cobrar'}
           </button>
         ))}
         <span className="flex-1" />
-        <button onClick={exportar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
-          Exportar CSV
-        </button>
+        <button onClick={exportar} className="boton">Exportar CSV</button>
         <button onClick={() => { setEditando(null); setCreando(true); }}
-          className="rounded bg-oro px-3 py-1.5 text-sm font-semibold text-tinta">
+          className="boton boton-relleno">
           Agregar reserva
         </button>
       </div>
@@ -520,11 +549,22 @@ export default function DayView({ fecha }: { fecha: string }) {
       {visibles.length === 0 ? (
         <p className="mt-8 text-hueso/50">No hay reservas para este filtro.</p>
       ) : (
-        <div className="mt-5 overflow-x-auto">
+        /* **La columna del nombre queda fija al correr de lado**
+           (2026-11-01), igual que la de la planilla semanal y por lo mismo:
+           con siete columnas la tabla no cabe en un teléfono, y al correrla
+           uno queda mirando pastillas de pago sin saber de quién son. Los
+           dos detalles de implementación son los ya anotados: la celda fija
+           lleva su propio fondo, o los demás datos se verían por debajo, y
+           su línea de corte es un `shadow` y no un `border`, porque con
+           `border-collapse: collapse` el borde de una celda fija se va con
+           el desplazamiento. La caja lleva `relative`. */
+        <div className="relative mt-5 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
+            <thead className="text-left text-[13px] font-semibold uppercase
+                              tracking-wide text-hueso/60">
               <tr className="border-b border-hueso/10">
-                <th className="py-2 pr-3">Nombre</th>
+                <th className="sticky left-0 z-20 bg-tinta py-2 pr-3
+                               shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">Nombre</th>
                 <th className="py-2 pr-3">Contacto</th>
                 <th className="py-2 pr-3">Menú</th>
                 <th className="py-2 pr-3 text-right">Personas</th>
@@ -559,44 +599,49 @@ export default function DayView({ fecha }: { fecha: string }) {
                 return (
                   <tr key={r.fila} className={`border-b border-hueso/5 ${
                         ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
-                    <td className="py-2 pr-3">
-                      {r.nombre || <span className="text-hueso/40">sin nombre</span>}
-                      <div className="text-xs text-hueso/40">{r.id}</div>
+                    <td className="sticky left-0 z-10 bg-tinta py-2 pr-3
+                                   shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">
+                      {r.nombre || <span className="text-hueso/50">sin nombre</span>}
+                      <div className="text-[13px] text-hueso/55">{r.id}</div>
                     </td>
                     <td className="py-2 pr-3 text-hueso/70">
                       {r.telefono && <div>{r.telefono}</div>}
-                      {r.email && <div className="text-xs">{r.email}</div>}
-                      {!r.telefono && !r.email && <span className="text-hueso/40">—</span>}
+                      {r.email && <div className="text-[13px]">{r.email}</div>}
+                      {!r.telefono && !r.email && <span className="text-hueso/50">—</span>}
                     </td>
                     <td className="py-2 pr-3">{r.menu}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{r.personas}</td>
                     <td className="py-2 pr-3">
                       {r.tipoPago ? (
-                        <span className={`inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ${
-                          enElLocal ? 'bg-ambar/15 text-ambar-texto'
-                                    : 'bg-verde/15 text-verde-texto'}`}>
+                        /* **Con borde, no solo con fondo de color.** Una
+                           pastilla delineada se reconoce sin distinguir el
+                           verde del ámbar, que es lo que pide la regla. */
+                        <span className={`inline-block whitespace-nowrap rounded-full border
+                                          px-2 py-0.5 text-[13px] font-semibold ${
+                          enElLocal ? 'border-ambar/50 bg-ambar/15 text-ambar-texto'
+                                    : 'border-verde/50 bg-verde/15 text-verde-texto'}`}>
                           {r.tipoPago}
                         </span>
                       ) : (
-                        <span className="text-xs text-hueso/40">
+                        <span className="text-[13px] text-hueso/55">
                           {esManual(r.id) ? 'anotada a mano' : '—'}
                         </span>
                       )}
-                      <div className={`mt-1 text-xs ${
+                      <div className={`mt-1 text-[13px] font-semibold ${
                         liberaCupo(r.estadoPago) ? 'text-rojo-texto'
                         : faltaCobrar(r) ? 'text-ambar-texto' : 'text-verde-texto'}`}>
                         {pagoEnEspanol(r.estadoPago) || '—'}
                       </div>
                       {r.notaPago && (
-                        <div className="text-xs text-hueso/45">{r.notaPago}</div>
+                        <div className="text-[13px] text-hueso/60">{r.notaPago}</div>
                       )}
                       {raro && (
-                        <div className="mt-1 text-xs font-semibold text-ambar-texto">
+                        <div className="mt-1 text-[13px] font-semibold text-ambar-texto">
                           ⚠ pago directo sin pagar
                         </div>
                       )}
                       {repetida && (
-                        <div className="mt-1 text-xs font-semibold text-ambar-texto"
+                        <div className="mt-1 text-[13px] font-semibold text-ambar-texto"
                           title={`El mismo ID Orden está en ${r.duplicadas} filas de la `
                                + 'planilla. El panel lo cuenta una sola vez; conviene '
                                + 'borrar la de más.'}>
@@ -609,11 +654,19 @@ export default function DayView({ fecha }: { fecha: string }) {
                         quien={r.nombre || 'esta reserva'}
                         onCambio={(v) => marcar(r, v)} />
                     </td>
+                    {/* **Dos botones, no dos textos en gris de 20px.** Son
+                        las dos acciones de la fila y una de ellas borra: lo
+                        que se aprieta tiene que verse que se aprieta, y
+                        medir para el dedo. */}
                     <td className="py-2 text-right whitespace-nowrap">
-                      <button onClick={() => { setCreando(false); setEditando(r); }}
-                        className="text-hueso/60 hover:text-oro">Editar</button>
-                      <button onClick={() => borrar(r)}
-                        className="ml-3 text-hueso/60 hover:text-rojo-texto">Borrar</button>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => { setCreando(false); setEditando(r); }}
+                          className="boton">Editar</button>
+                        <button onClick={() => borrar(r)}
+                          className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                          Borrar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

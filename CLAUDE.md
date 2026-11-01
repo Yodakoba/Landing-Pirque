@@ -1139,10 +1139,21 @@ buscar.
   comparación de cadenas: así un `hugo vergara` escrito en minúsculas va
   entre Gloria y Álvaro donde corresponde, y no al final de todo. Hay una
   prueba que lo fija con ese caso exacto.
-- **La lista de `/equipo` NO se ordena**, y eso no es un olvido: ahí la
-  posición de cada ficha es su fila en la planilla, y todo lo que edita una
-  persona —cambiar un campo, quitarla— usa ese índice. Ordenarla haría que
-  editar a alguien escribiera sobre otro.
+- **Las listas de fichas de `/equipo` y `/extras` también van alfabéticas**
+  (el cliente lo pidió al día siguiente, y tenía razón: es la misma gente y
+  el mismo problema). Pero ahí hay una trampa que conviene tener escrita,
+  porque la versión anterior de esta nota decía que no se podían ordenar:
+  **se ordena lo que se dibuja, no lo que se guarda.** La posición de cada
+  ficha en el array **es su fila en la planilla**, y todo lo que la edita
+  —cambiar un campo, quitarla, desactivarla— usa ese índice; ordenar el
+  array de verdad haría que editar a alguien escribiera sobre otro. Por eso
+  cada ficha se lleva su índice al ordenarse
+  (`.map((t, i) => ({ t, i })).sort(…)`). Comprobado abriendo la última de
+  la pantalla, que es la novena de la planilla: se abrió la ficha correcta y
+  el cambio quedó en ella sola.
+- **Las fichas sin nombre van al final**, que es donde está el botón de
+  agregar: una recién creada que saltara al principio se perdería de vista
+  justo después de apretarlo.
 
 ### Los días de preparación, y el calendario del equipo (2026-10-22)
 
@@ -2981,6 +2992,43 @@ cambió es dónde está cada uno y cuánto pesa:
 Comprobado en los dos temas, a 1280 y a 393px: las 52 caras miden 228, el
 pie entra en una sola línea con botones de 34px de alto, y a 393 la página
 no se corre de lado.
+
+### La página del día, rehecha con esa regla (2026-11-01)
+
+Medido antes de tocar nada, a 1280: **28 textos bajo 13px** y **siete
+controles sin forma** —ni borde ni relleno, texto en gris o en oro que
+resulta ser un botón— de 16 a 20px de alto. Después: **cero y cero**.
+
+No se agregó ni se sacó un dato; cambió el tamaño, el peso y la forma:
+
+| Qué | Antes | Ahora |
+|---|---|---|
+| *Equipo y cuentas del día*, *Agregar propina*, *Editar actividades* | texto en oro de 20px flotando en el borde | **botones** de 36px |
+| *Editar* y *Borrar* de cada fila | dos textos en gris de 20px | **dos botones** de 36px, el de borrar se pone rojo |
+| *← Calendario* | enlace de 17px | botón |
+| Rótulos (*Qué preparar*, *Equipo*…) | 12px al 45% | **13px semibold al 60%** |
+| Los totales en pesos | 12px | 13px, con el monto a 16 en negrita |
+| El número de un azulejo | 24px | **30px**, como el de la tarjeta del calendario |
+| La pastilla de modalidad | fondo de color, sin borde | **con borde**, para reconocerla sin distinguir el verde del ámbar |
+| *Faltan N*, *sin anotar*, *N sin confirmar* | texto suelto de 12px | **pastilla ámbar con borde** |
+| El `?` de la ayuda | círculo de 24px con un signo de 12 | **30px y 15px** — vale para las diez pantallas |
+
+Dos decisiones que vale la pena tener escritas:
+
+- **El relleno dorado sigue siendo uno solo**: *Agregar reserva*. El filtro
+  elegido se pinta con un tinte (`bg-oro/15` y borde dorado) en vez de
+  rellenarse entero, porque dos rellenos en una vista es no tener ninguno.
+  Igual se distingue por forma, que es lo que la regla pide.
+- **La columna del nombre queda fija al correr la tabla de lado**, igual que
+  la del puesto en la planilla semanal y por lo mismo: con siete columnas en
+  un teléfono, al correrla uno quedaba mirando pastillas de pago sin saber de
+  quién eran. Mismos dos detalles de siempre — fondo propio en la celda fija,
+  y `shadow` en vez de `border`, porque con `border-collapse: collapse` el
+  borde se va con el desplazamiento.
+
+Comprobado en los dos temas, a 393 y 1280: ninguna pantalla se corre de lado,
+y con la tabla corrida 900px la celda del nombre sigue en su lugar con su
+sombra.
 
 ## El pronóstico del tiempo (2026-10-29)
 

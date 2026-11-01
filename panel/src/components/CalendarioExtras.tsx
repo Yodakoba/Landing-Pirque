@@ -26,7 +26,7 @@ import PuntoDia from './PuntoDia';
 import Clima, { usePronostico } from './Clima';
 import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
-import { VINO } from '@/lib/equipo';
+import { VINO, porNombre } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import type { Ocupacion } from '@/lib/tipos';
 import { enPesos } from '@/lib/ocupacion';
@@ -308,8 +308,21 @@ export default function CalendarioExtras() {
           mismo motivo: con los datos del banco en una segunda línea, una
           tabla dejaba las líneas de uno pegadas a las del siguiente y no se
           veía dónde terminaba cada ficha. */}
+      {/* Alfabética, igual que la lista de `/equipo` y el desplegable del
+          planificador: tres lugares que muestran a la misma gente tienen que
+          mostrarla igual. Se ordena **lo que se dibuja**, no lo que se
+          guarda: `i` sigue siendo la fila real, y todo lo que edita una
+          ficha la usa. Las sin nombre van al final, junto al botón de
+          agregar. */}
       <ul className="space-y-3">
-        {(colaboradores ?? []).map((c, i) => {
+        {(colaboradores ?? [])
+          .map((c, i) => ({ c, i }))
+          .sort((a, b) => {
+            const va = !a.c.nombre.trim(), vb = !b.c.nombre.trim();
+            if (va !== vb) return va ? 1 : -1;
+            return porNombre(a.c, b.c);
+          })
+          .map(({ c, i }) => {
           const tieneDias = extras.some(
             (e) => normalizar(e.colaborador) === normalizar(c.nombre));
           return (
