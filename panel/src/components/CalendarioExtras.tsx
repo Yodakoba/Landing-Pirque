@@ -68,14 +68,22 @@ export default function CalendarioExtras() {
       })
       .catch((e) => setError(String(e)));
 
+  useEffect(() => { cargar(); }, []);
+
+  // **Del mes que se está mirando, no de hoy en adelante.** Sin rango, un
+  // mes pasado venía sin un solo día y las celdas perdían su color y su
+  // palabra — el mismo error que se arregló en `/turnos`.
+  //
+  // La ocupación es solo para pintar el mes: si falla, el calendario se
+  // dibuja igual y se pueden contratar actividades.
   useEffect(() => {
-    cargar();
-    // La ocupación es solo para pintar el mes: si falla, el calendario se
-    // dibuja igual y se pueden contratar actividades.
-    fetch('/api/ocupacion').then((r) => r.json())
-      .then((d) => { if (d.ocupacion) setOcupacion(d.ocupacion); })
+    const d = diasDelMes(mes);
+    if (d.length === 0) return;
+    fetch(`/api/ocupacion?desde=${d[0]}&hasta=${d[d.length - 1]}`)
+      .then((r) => r.json())
+      .then((x) => { if (x.ocupacion) setOcupacion(x.ocupacion); })
       .catch(() => {});
-  }, []);
+  }, [mes]);
 
   const porFecha = useMemo(
     () => new Map(ocupacion.map((o) => [o.fecha, o])), [ocupacion]

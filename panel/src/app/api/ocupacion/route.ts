@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { exigir } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
-import { diasAbiertosEntre, hoy, sumarDias } from '@/lib/fechas';
+import { diasAbiertosEntre, hoy, sumarDias, esFecha } from '@/lib/fechas';
 import type { FechaHabil } from '@/lib/tipos';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +30,15 @@ export const dynamic = 'force-dynamic';
  * Un día que la regla abre pero que todavía no está en la hoja se muestra
  * igual, en gris y con capacidad 0: así se ve cuáles faltan por abrir, en
  * vez de que simplemente no aparezcan.
+ *
+ * **La ventana parte hoy salvo que se pida otra** (`desde` y `hasta`), y eso
+ * último se agregó el 2026-11-01 para arreglar un error que se veía feo.
+ * `/turnos` y `/extras` dibujan **cualquier mes**, incluidos los que ya
+ * pasaron, y pedían esta ocupación una sola vez y sin parámetros: para un
+ * mes de atrás no venía ningún día, así que **todo sábado con equipo se leía
+ * como "preparación"** —la regla es "tiene equipo y no recibe público", y
+ * sin ocupación ningún día recibe público— y la tarjeta además decía 0
+ * personas. Lo notó el cliente mirando octubre.
  */
 export async function GET(req: Request) {
   const no = await exigir(req, 'ver');
@@ -42,8 +51,14 @@ export async function GET(req: Request) {
       leerReservas(), leerFechas(), leerConfig()
     ]);
 
-    const desde = hoy();
-    const hasta = sumarDias(desde, pedido > 0 ? pedido : cfg.diasAFuturo);
+    // Un rango explícito manda sobre la ventana de siempre: es lo que piden
+    // los calendarios que se mueven de mes en mes. Lo que no venga, o venga
+    // mal escrito, cae en el comportamiento de antes.
+    const q = new URL(req.url).searchParams;
+    const desde = esFecha(q.get('desde') ?? '') ? q.get('desde')! : hoy();
+    const hasta = esFecha(q.get('hasta') ?? '')
+      ? q.get('hasta')!
+      : sumarDias(desde, pedido > 0 ? pedido : cfg.diasAFuturo);
 
     const porFecha = new Map(fechas.map((f) => [f.fecha, f]));
     const porRegla = diasAbiertosEntre(desde, hasta, cfg.diasAbiertos);
