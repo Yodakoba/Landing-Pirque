@@ -1602,9 +1602,13 @@ ok(!puede(ROL.pagos, 'ver') && !puede(ROL.pagos, 'reservas') &&
    !puede(ROL.pagos, 'equipo') && !puede(ROL.pagos, 'configurar') &&
    !puede(ROL.pagos, 'usuarios') && !puede(ROL.pagos, 'bitacora'),
    'no ve el calendario, ni reservas, ni equipo, ni configuración, ni cuentas');
-ok(!puede(ROL.encargado, 'informe'),
-   'y el encargado sigue sin ver el informe: lo suyo es el día que tiene delante');
 ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
+
+// **El encargado lo ve desde el 2026-11-01**, por decisión del cliente y
+// declaradamente provisoria. La prueba lo fija igual: si mañana se le quita,
+// que sea porque alguien lo decidió y vino a cambiar esta línea.
+ok(puede(ROL.encargado, 'informe'),
+   'y el encargado también, por ahora: lo liberó el cliente hasta definir la lista fina');
 
 
 /* ---------- la propina ---------- */

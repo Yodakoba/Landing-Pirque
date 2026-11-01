@@ -246,10 +246,10 @@ export const AYUDAS: Record<string, Ayuda> = {
     titulo: 'Las cuentas del panel',
     cuerpo: [
       'Quiénes pueden entrar y hasta dónde llega cada uno.',
-      'Administrador ve y hace todo. Encargado organiza el día a día — '
-      + 'reservas, turnos, asistencia— pero no toca sueldos ni '
-      + 'configuración. Pagos solo abre el informe. Un trabajador no entra '
-      + 'acá: su acceso es su link personal.'
+      'Administrador ve y hace todo. Encargado organiza el día a día '
+      + '—reservas, turnos, asistencia— y por ahora también abre el informe, '
+      + 'pero no toca precios ni configuración. Pagos solo abre el informe. '
+      + 'Un trabajador no entra acá: su acceso es su link personal.'
     ],
     ojo: 'Es mejor desactivar una cuenta que borrarla: así sus líneas de la '
        + 'bitácora siguen diciendo quién hizo qué.'

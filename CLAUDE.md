@@ -2736,12 +2736,39 @@ Vale tenerla escrita porque no es obvia:
 
 - **Los montos de un día son del encargado.** Los escribe él al pasar lista
   y los ve en la página de ese día. Es su trabajo.
-- **El informe del periodo es del administrador.** Lo que el encargado
-  necesita para cerrar un turno es el día que tiene delante, no el historial
-  de sueldos de todo el equipo.
+- **El informe del periodo era del administrador**, con el argumento de que
+  lo que el encargado necesita para cerrar un turno es el día que tiene
+  delante y no el historial de sueldos de todo el equipo. **Desde el
+  2026-11-01 el encargado también lo ve, y es provisorio** — ver abajo.
 
 Esa pregunta se contestó el **2026-10-22**: sí es otra persona, así que
 existe el rol **pagos**.
+
+#### El encargado ve el informe, por ahora (2026-11-01)
+
+Lo liberó el cliente en medio de una reunión, y dejó dicho que es un
+intertanto: *"por ahora libéralo para encargado también… luego se define más
+especificado cuál rol tiene qué derechos de ver"*. Queda anotado **como
+decisión provisoria y no como la línea definitiva**, porque lo que había
+antes tenía un argumento y ese argumento no se cayó, solo se postergó.
+
+**Lo que hay que saber antes de dejarlo así**, y que no se ve en la tabla de
+permisos: `/api/informe` devuelve de cada ficha **los datos de la
+transferencia** —titular, RUT, banco, tipo de cuenta, número y el correo del
+comprobante—, porque quien paga los necesita para hacer la transferencia sin
+cruzar dos listas a mano. En pantalla no se muestran: lo que se ve es el
+aviso de a quién le falta la cuenta. **Pero van en el CSV que se descarga**,
+así que abrir el informe abrió también eso — y en todo el resto del panel las
+cuentas bancarias son solo del administrador y de quien paga.
+
+Comprobado con el arnés: la cuenta de encargado recibe `/api/informe` con
+200 y los mismos turnos y cuentas que el administrador, le aparece
+**Informe** en el menú, y la pantalla ya no le dice "esta parte no es tuya".
+
+Si al afinar la lista se decide que el encargado vea sus cuentas pero no las
+bancarias, el lugar natural es recortarlas en esa ruta según el rol, como
+`/api/extras` ya hace con los montos habituales — no esconderlas en la
+pantalla, que es dejar el dato viajando igual.
 
 ### El rol de pagos (2026-10-22)
 
@@ -2758,7 +2785,8 @@ Dos detalles que lo hacen funcionar:
 - **`/api/informe`, una ruta propia que devuelve solo turnos.** El informe
   antes leía `/api/equipo`, por donde viajan reservas, trabajadores y
   puestos. Darle "ver" a la cuenta de pagos para que pudiera sacar sus
-  cuentas habría sido abrirle el panel entero.
+  cuentas habría sido abrirle el panel entero. **Desde el 2026-11-01 esa
+  ruta la lee también el encargado**, con lo que eso trae: ver arriba.
 - **El middleware la manda de `/` a `/informe`.** Sin eso aterrizaría en una
   portada que carga y falla, y parecería que el panel está roto en vez de
   que esa parte no es suya. El enlace de la marca sigue apuntando a `/`, que
@@ -2781,7 +2809,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
 | **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | — | — |
 | Cuentas del panel y bitácora | sí | — | — | — |
-| **El informe del equipo** | sí | — | **sí** | — |
+| **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
