@@ -5,6 +5,7 @@
 import type { Reserva, FechaHabil, Ocupacion, Semaforo } from './tipos.ts';
 import { ESTADO_PAGO, estaCerrado, esPrivada } from './columnas.ts';
 import { liberaCupo } from './pagos.ts';
+import { SIN_POSIBLES, type Posibles } from './presupuestos.ts';
 import type { Fecha } from './fechas.ts';
 import { POR_DEFECTO } from './config.ts';
 
@@ -76,10 +77,23 @@ export function deEseDia(reservas: Reserva[], fecha: Fecha): Reserva[] {
  * todavía dice "pending" se contaba como pagada, y esa plata no aparecía en
  * ninguna parte. El rótulo tenía razón; el cálculo se había quedado atrás.
  */
+/**
+ * **Lo cotizado y sin confirmar NO entra en ninguna cuenta de este archivo.**
+ *
+ * Viaja aparte, en `posibles`, y sale tal cual en dos campos propios. No se
+ * suma a `tomadas`, no descuenta de `quedan` y no mueve el semáforo, que es
+ * exactamente lo que pidió el cliente: *"no puede que solo por enviar un
+ * presupuesto se ocupen cupos confirmados dentro del día"*.
+ *
+ * Que llegue como parámetro y no se calcule acá adentro es lo que mantiene
+ * esta función pura y probable sin red — y además deja ver de un vistazo
+ * que lo posible entra y sale sin tocar nada del medio.
+ */
 export function ocupacionDe(
   reservas: Reserva[],
   dia: FechaHabil,
-  cortes = CORTES
+  cortes = CORTES,
+  posibles?: Map<string, Posibles>
 ): Ocupacion {
   const delDia = deEseDia(reservas, dia.fecha).filter(ocupaLugar);
 
@@ -108,6 +122,9 @@ export function ocupacionDe(
   // Distinto de cerrada: recibe reservas, pero el sitio no la ofrece.
   const privada = esPrivada(dia.estado);
 
+  // Lo cotizado y sin confirmar. Se copia y no se usa: ver arriba.
+  const pos = posibles?.get(dia.fecha) ?? SIN_POSIBLES;
+
   return {
     fecha: dia.fecha,
     capacidad: dia.capacidad,
@@ -118,6 +135,8 @@ export function ocupacionDe(
     porCobrar,
     sinMonto,
     privada,
+    presupuestos: pos.presupuestos,
+    presupuestadas: pos.personas,
     semaforo: bloqueada ? 'rojo' : semaforo(tomadas, dia.capacidad, cortes),
     bloqueada,
     notas: dia.notas || ''
@@ -127,7 +146,8 @@ export function ocupacionDe(
 export function ocupacionDeTodos(
   reservas: Reserva[],
   dias: FechaHabil[],
-  cortes = CORTES
+  cortes = CORTES,
+  posibles?: Map<string, Posibles>
 ): Ocupacion[] {
-  return dias.map((d) => ocupacionDe(reservas, d, cortes));
+  return dias.map((d) => ocupacionDe(reservas, d, cortes, posibles));
 }

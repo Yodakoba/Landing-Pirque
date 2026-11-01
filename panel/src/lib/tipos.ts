@@ -49,6 +49,21 @@ export interface Ocupacion {
   porCobrar: number;     // pesos a cobrar el mismo día
   sinMonto: number;      // reservas por cobrar SIN monto anotado
   privada: boolean;      // recibe reservas, pero el sitio no la ofrece
+  /**
+   * Cuántos presupuestos vigentes hay ese día, y cuánta gente sumarían si
+   * todos se confirmaran.
+   *
+   * **Son dos campos que nadie más mira.** No entran en `tomadas`, no
+   * descuentan de `quedan` y no mueven el `semaforo`: un presupuesto es una
+   * posibilidad, no una silla ocupada, y hasta que se confirme no puede
+   * sacarle el lugar a quien sí reservó. Están para poder decirlo en
+   * pantalla —"2 presupuestos · 43 posibles"— y para nada más.
+   *
+   * Al sitio público **nunca llegan**: `paraElSitio()` devuelve tres campos
+   * y hay una prueba que lo fija.
+   */
+  presupuestos: number;
+  presupuestadas: number;
   semaforo: Semaforo;
   bloqueada: boolean;
   notas: string;
