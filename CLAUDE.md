@@ -1124,6 +1124,26 @@ justo el lugar donde se mira para saber si el equipo alcanza. Lo garantiza
 `normalizarPlan()` **en el servidor**, no la interfaz, porque una llamada
 directa a la API tiene que obedecer la misma regla.
 
+### La lista para elegir va alfabética (2026-11-01)
+
+Lo pidió el cliente mirando el desplegable con que se agrega a alguien a un
+puesto: venía **en el orden en que se grabó cada ficha**, que no es un orden
+para nadie. Con quince personas hay que leer la lista entera para encontrar
+a una, y la recién creada queda al final — que es justo la que se va a
+buscar.
+
+- Va en `porNombre`, en `equipo.ts`, y lo usan el planificador del día y el
+  de las actividades extras: **dos pantallas que preguntan lo mismo tienen
+  que preguntarlo igual.**
+- Es `localeCompare` con el idioma puesto y `sensitivity: 'base'`, no una
+  comparación de cadenas: así un `hugo vergara` escrito en minúsculas va
+  entre Gloria y Álvaro donde corresponde, y no al final de todo. Hay una
+  prueba que lo fija con ese caso exacto.
+- **La lista de `/equipo` NO se ordena**, y eso no es un olvido: ahí la
+  posición de cada ficha es su fila en la planilla, y todo lo que edita una
+  persona —cambiar un campo, quitarla— usa ese índice. Ordenarla haría que
+  editar a alguien escribiera sobre otro.
+
 ### Los días de preparación, y el calendario del equipo (2026-10-22)
 
 **Hay días en que no entra nadie y se trabaja igual**: preparar un
@@ -1377,6 +1397,14 @@ trampas conocidas:
   alcanzables con el tabulador**, así que sin esto se podría tabular hacia
   botones invisibles.
 
+**El número del pie pesa más que su propia palabra** (2026-11-01, lo pidió
+el cliente). El botón *Equipo* traía al lado cuánta gente hay asignada, en
+`text-hueso/60`, o sea **más apagado que el rótulo que lo acompaña** —que va
+al 80—. Era al revés de lo que alguien mira: la palabra se lee una vez y el
+número se mira cada vez. Ahora va en su propia cajita, en negrita y al color
+completo, así que se distingue **por forma** y no solo por peso, que es lo
+que pide la regla del panel. El botón sigue midiendo 36px.
+
 **Un día salía más largo que los otros, y la causa era la cara que no se
 veía** (2026-10-30, lo notó el cliente con una captura: *"el domingo está más
 largo que los otros días, de hecho es el único día que pasa"*).
@@ -1568,6 +1596,43 @@ reescribir los nombres de arriba abajo o editar la planilla a mano.
 API de *drag and drop* del navegador —que en un teléfono no funciona— o una
 librería, y este proyecto no agrega una dependencia por una comodidad. Una
 flecha se aprieta con el dedo y además se puede usar con el teclado.
+
+### Dos frases, un link, y el link personal con el peso que tiene (2026-11-01)
+
+Lo pidió el cliente mirando `/equipo`: *"los textos de ayuda al inicio son
+muy largos… en vez de empaquetar todo en frases, solo decir equipo, aquí
+puedes agregar, editar, trabajadores, punto"*, y *"volviendo al crear el
+link personal, este tiene que ser bien a la vista, bien PlayStation… tal
+como desactivar, con la misma importancia"*.
+
+Las dos cosas son la misma causa: **lo que explica ocupaba el lugar de lo
+que se hace.**
+
+Arriba había tres párrafos —qué se hace acá, qué es el link personal, y a
+qué pantalla ir para los días cerrados— o sea media pantalla de teléfono
+antes de ver a la primera persona. Y el link personal, que es lo que de
+verdad se viene a hacer al abrir una ficha, eran **tres textos en gris** al
+costado de los campos, del tamaño de un rótulo y sin nada que dijera que se
+aprietan: exactamente lo que la regla del panel prohíbe.
+
+- **Arriba quedan dos frases y un botón**: *"Acá puedes agregar y editar
+  trabajadores"*, *"Dentro de cada trabajador puedes copiar su link
+  personal"*, y **Ver el mes completo** como botón, sin el párrafo que
+  explicaba los días de preparación — eso vive en la ayuda de `/turnos`.
+- **El link personal es un bloque propio dentro de la ficha**, como Pago y
+  Transferencia, con su **botón relleno**: *Crear link personal* la primera
+  vez, *Copiar link personal* después, y al lado *Renovar* y *Quitar link*.
+- **Al lado del rótulo hay un `?`** que dice **qué ve la persona al
+  abrirlo** — que es la pregunta que uno se hace justo antes de mandarlo por
+  WhatsApp. Ahí se fue el párrafo que estaba arriba de la lista. Es la única
+  ayuda del panel que no es de una pantalla sino de un botón.
+- **Con cambios sin guardar el bloque lo dice**, en vez de desaparecer: esos
+  botones reescriben la pestaña entera desde la planilla, así que con
+  ediciones en pantalla se perderían.
+
+Vale notar que el relleno dorado sigue siendo **uno por vista**: solo hay
+una ficha abierta a la vez, y mientras hay cambios sin guardar el botón del
+link no está — el relleno es el de *Guardar cambios*.
 
 ### La línea del trabajador: se aprieta y se abre; al lado, desactivar (2026-10-30)
 
@@ -2525,6 +2590,38 @@ la parrilla, y hacer dos versiones de esta página sería mantener dos.
 **No ve reservas, ni nombres de clientes, ni montos, ni a los demás
 trabajadores.** Los totales por menú son cuánto hay que cocinar; quién lo
 pidió y cuánto pagó no es dato de un turno.
+
+#### Su propia plata, desglosada (2026-11-01)
+
+Lo pidió el cliente: que al abrir su link la persona *"ve todos sus datos de
+forma ordenada, cuánto por turno, cuánto propina, cuánto se le restó por
+alguna razón, los extras"*.
+
+Abajo de sus turnos van sus **últimos 30 días**, y hasta ahora cada día era
+**una línea con una sola cifra** — que es justo la que no se puede revisar:
+quien ve $35.000 y esperaba $40.000 no tiene cómo saber si le descontaron
+algo, si le pagaron horas extra o si está mal. Ahora cada día es una tarjeta
+con la jornada, las horas extra con su cálculo (`2 × $4.000`), **cada ajuste
+con su motivo**, la propina y el total.
+
+- **El motivo es la parte que importa.** Es lo único que explica un
+  descuento un mes después, y es exactamente para esto que se escribe al
+  cerrar el día. Cada ajuste va en su línea: sumarlos en una sería volver a
+  esconder el porqué. Sin motivo escrito dice *Descuento* o *Extra* según el
+  signo, no un guion mudo.
+- **Acá la propina SÍ va sumada en el total**, al revés que en las cuentas
+  del negocio: para quien la recibe es todo lo mismo. Mostrada aparte, eso
+  sí, y **arriba del total y no debajo** — un total seguido de otra cifra se
+  lee como si esa otra no estuviera contada, que es la duda que esto viene a
+  sacar.
+- **Los montos negativos llevan el signo adelante** —`−$20.000`— y en rojo,
+  la misma convención del resto del panel.
+- **Si los pedazos no suman el total, la página lo dice.** `pagoDe()` nunca
+  baja de cero, así que un descuento mayor que la jornada deja ese día en
+  cero y deja de cuadrar. Es raro; callarlo haría que la persona sumara con
+  la calculadora y le diera otra cosa.
+- **Sigue sin mostrar lo de nadie más**, y las actividades extras siguen sin
+  aparecer acá: el desglose es de sus propios turnos.
 
 ### Lo que falta decidir
 

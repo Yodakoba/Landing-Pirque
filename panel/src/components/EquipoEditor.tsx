@@ -375,20 +375,24 @@ export default function EquipoEditor() {
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
         Equipo<Ayuda tema="equipo" />
       </h1>
-      <p className="mb-4 max-w-2xl text-sm text-hueso/60">
-        Quiénes trabajan y en qué puestos. Para asignar a alguien a un día,
-        anda al calendario y apreta <strong>Equipo</strong> en la tarjeta de
-        ese día.
+      {/* **Dos frases y un link** (2026-11-01, lo pidió el cliente: *"los
+          textos de ayuda al inicio son muy largos"*). Acá arriba iban tres
+          párrafos explicando el link personal, los días de preparación y a
+          qué pantalla ir para cada cosa — o sea media pantalla de teléfono
+          antes de ver a la primera persona.
+
+          Lo que queda es lo que hay que saber para usar esta página: qué se
+          hace acá, y que el link personal está dentro de cada ficha. El
+          porqué largo del link vive en su `?`, que se pide; lo de los días
+          cerrados, en la ayuda de `/turnos`. */}
+      <p className="mb-3 max-w-2xl text-sm text-hueso/70">
+        Acá puedes agregar y editar trabajadores.
       </p>
-      {/* Los días que no reciben público no están en el calendario de la
-          portada, y hay trabajo igual: preparar, montar, cerrar. Por eso el
-          enlace va acá arriba y no escondido al final. */}
-      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
-        Para ver el <strong>mes completo</strong> y planificar también los
-        días cerrados —preparación, montaje—, anda a{' '}
-        <a href="/turnos" className="text-oro hover:underline">
-          Turnos · calendario del equipo
-        </a>.
+      <p className="mb-4 max-w-2xl text-sm text-hueso/70">
+        Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.
+      </p>
+      <p className="mb-6">
+        <a href="/turnos" className="tecla boton">Ver el mes completo</a>
       </p>
 
       {sinFicha.length > 0 && (
@@ -414,15 +418,10 @@ export default function EquipoEditor() {
       <h2 className="mb-3 text-xs uppercase tracking-widest text-hueso/45">
         Trabajadores
       </h2>
-      {esAdmin && (
-        <p className="mb-4 max-w-2xl text-sm text-hueso/60">
-          <strong>El link personal</strong> le deja ver sus turnos y nada más:
-          qué día, a qué hora y en qué puesto. No ve reservas, ni montos, ni a
-          los demás. Se manda por WhatsApp y no necesita contraseña, así que
-          quien lo tenga ve esa página — si alguien pierde el teléfono,{' '}
-          <strong>Renovar</strong> deja el anterior inservible al instante.
-        </p>
-      )}
+      {/* El párrafo que explicaba el link personal se fue al `?` que está
+          al lado del botón, dentro de cada ficha: es donde se hace la
+          pregunta, y acá arriba eran seis líneas que había que saltarse
+          para llegar a la lista. */}
       {avisoLink && (
         <p className="mb-4 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">
           {avisoLink}
@@ -595,38 +594,71 @@ export default function EquipoEditor() {
 
                   <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-xs">
                     {guardarEnTarjeta(i)}
-                    {/* Los links se administran **con la lista guardada**: esta
-                        llamada reescribe la pestaña entera desde la planilla,
-                        así que con ediciones en pantalla se perderían. Mientras
-                        haya cambios, en su lugar está el botón de guardar — que
-                        es lo que hay que hacer para volver a tenerlos. */}
-                    {esAdmin && (
-                      !t.nombre.trim() ? (
-                        <span className="text-hueso/35">Ponle nombre y guarda</span>
-                      ) : sucio ? null : t.token ? (
+                    {/* Dar de baja vive **en la línea de la persona**, abierta
+                        o cerrada: ver arriba. Acá adentro quedaban los dos
+                        controles a dos centímetros y con el mismo peso. */}
+                  </div>
+                </div>
+
+                {/* **El link personal, con el peso que tiene** (2026-11-01, lo
+                    pidió el cliente: que esté *"bien a la vista, bien
+                    PlayStation"*, y con la misma importancia que *Desactivar*).
+
+                    Eran tres textos en gris al costado de los campos de
+                    arriba, del mismo tamaño que un rótulo y sin nada que
+                    dijera que se aprietan — la cosa exacta que la regla del
+                    panel prohíbe. Ahora es un bloque propio, como Pago y
+                    Transferencia, con su botón relleno: crear el link es a lo
+                    que se vino cuando se abre esta ficha por primera vez.
+
+                    El `?` de al lado explica **qué ve la persona al abrirlo**,
+                    que es la pregunta que se hace justo antes de mandarlo por
+                    WhatsApp. Ahí se fue el párrafo que estaba arriba de la
+                    lista.
+
+                    Los links se administran **con la lista guardada**: esta
+                    llamada reescribe la pestaña entera desde la planilla, así
+                    que con ediciones en pantalla se perderían. Por eso con
+                    cambios pendientes el bloque lo dice en vez de desaparecer
+                    sin explicación. */}
+                {esAdmin && (
+                  <div className="mt-3 border-t border-hueso/10 pt-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="flex w-28 items-center text-[11px] uppercase
+                                       tracking-widest text-hueso/50">
+                        Link personal<Ayuda tema="link" />
+                      </span>
+                      {!t.nombre.trim() ? (
+                        <span className="text-[13px] text-hueso/55">
+                          Ponle nombre y guarda para poder crearle su link.
+                        </span>
+                      ) : sucio ? (
+                        <span className="text-[13px] text-ambar-texto/85">
+                          Guarda los cambios para administrar su link.
+                        </span>
+                      ) : t.token ? (
                         <>
                           <button onClick={() => copiar(t.token, t.nombre)}
-                            className="text-oro hover:underline">Copiar link</button>
+                            className="boton boton-relleno">Copiar link personal</button>
                           <button onClick={() => link(t.nombre, 'renovar')}
-                            className="text-hueso/55 hover:text-oro"
+                            className="boton"
                             title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
                           {/* "Quitar link", con la palabra completa: en esta
                               misma tarjeta hay otro botón que quita a la
                               persona, y dos "Quitar" a dos centímetros de
                               distancia son una confusión esperando a pasar. */}
                           <button onClick={() => link(t.nombre, 'quitar')}
-                            className="text-hueso/55 hover:text-rojo-texto">Quitar link</button>
+                            className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                            Quitar link
+                          </button>
                         </>
                       ) : (
                         <button onClick={() => link(t.nombre, 'crear')}
-                          className="text-oro hover:underline">Crear link</button>
-                      )
-                    )}
-                    {/* Dar de baja vive **en la línea de la persona**, abierta
-                        o cerrada: ver arriba. Acá adentro quedaban los dos
-                        controles a dos centímetros y con el mismo peso. */}
+                          className="boton boton-relleno">Crear link personal</button>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Cuánto gana. Solo el administrador. */}
                 {esAdmin && (

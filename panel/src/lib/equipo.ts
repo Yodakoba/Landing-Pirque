@@ -423,6 +423,22 @@ export function esSi(v: unknown): boolean {
 
 /* ---------- Puestos ---------- */
 
+/**
+ * Orden alfabético por nombre, en español.
+ *
+ * Lo pidió el cliente mirando el desplegable con que se agrega gente a un
+ * puesto: venía **en el orden en que se grabó cada ficha**, que no es un
+ * orden para nadie. Con quince personas, encontrar a alguien era leer la
+ * lista entera, y la que se acababa de crear quedaba al final — justo la
+ * que se va a buscar.
+ *
+ * `localeCompare` con el idioma puesto y `sensitivity: 'base'`, para que la
+ * lista no se parta en dos por una mayúscula ni por un acento: un
+ * `hugo vergara` escrito en minúsculas va donde le toca y no al final.
+ */
+export const porNombre = (a: { nombre: string }, b: { nombre: string }) =>
+  a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+
 export function leerPuestosDe(filas: string[][]): Puesto[] {
   const salida: Puesto[] = [];
   const vistos = new Set<string>();
