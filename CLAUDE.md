@@ -1408,6 +1408,60 @@ rompió nada —el día ya no lo cuenta— solo quedó sin cerrar.
   antes de abrirlo; sin eso el clic no hacía nada visible, que es el peor
   resultado para un botón.
 
+### El IVA, desglosado porque esto va a empresas (2026-11-01)
+
+Lo pidió el cliente con el dato que fija todo el cálculo: *"en un presupuesto
+que mayormente va dirigido hacia empresas hay que indicar el IVA… los precios
+que nosotros ofrecemos hoy son con IVA"*.
+
+**Los precios ya traen el IVA, así que el total no cambia.** Lo que se
+calcula es el neto, hacia atrás. Al revés —sumándole 19% a lo escrito— cada
+cotización habría salido un 19% más cara que el precio que anuncia el resto
+del sitio, que es el error que más caro se paga: se descubre cuando el
+cliente compara.
+
+El pie del documento pasó de una línea a tres:
+
+```
+Neto       $3.000.000
+IVA 19%      $570.000
+Total      $3.570.000
+```
+
+- **El IVA sale de restar, no de multiplicar.** Con `neto × 0,19` los tres
+  números no siempre suman —44.000 da neto 36.975 e IVA 7.025,25— y una hoja
+  que va a la contabilidad de una empresa no puede tener un peso que no
+  cuadra. Restando, `neto + iva === total` **siempre**. Mismo criterio que
+  `repartirPropina()`, que reparte hasta el último peso.
+  **Se comprobó rompiéndolo**: cambiando la resta por la multiplicación, la
+  prueba falla con 70.000. Con un solo monto no se habría visto —44.000
+  cuadra por casualidad— y por eso la prueba recorre once totales.
+- **Va sobre el total y no línea por línea.** La suma de los netos
+  redondeados de cada línea no da el neto del total, así que un documento con
+  las dos cosas tendría dos netos distintos. Y a quien recibe la cotización
+  le sirve el del total, que es el que pasa a su contabilidad.
+- **Está dicho con palabras además del desglose**: *"Los precios de este
+  presupuesto incluyen IVA."* Sin esa línea, quien lee un presupuesto en una
+  empresa le suma 19% por costumbre y nos deja fuera por un impuesto que ya
+  estaba cobrado.
+- **La tasa es una constante del código** (`IVA` en `presupuestos.ts`), no
+  una fila de `Config`, al revés que la vigencia. La diferencia es quién lo
+  decide: el plazo lo fija el cliente, la tasa la fija la ley. Un campo
+  editable sería un lugar donde un cero mal tecleado sale impreso.
+- **Lo que se guarda no cambió.** La reserva que nace de un presupuesto
+  sigue llevando el **total con IVA**, que es la plata que hay que cobrar;
+  hay una prueba que lo fija. El desglose es para leerlo, no para calcular
+  con él.
+- **Quien cotiza ve los mismos tres números** en `/presupuestos`, porque una
+  agencia pide el neto por teléfono y no puede haber que sacarlo aparte.
+
+**De paso se arregló algo que venía de antes**: a 393px la tabla del
+documento corría la página entera 11px hacia el lado. Ahora va en una caja
+que se desplaza, con `relative`, como las tablas del panel — y esa caja
+**deja de recortar al imprimir** (`.caja-tabla` en el `@media print`), porque
+en la hoja hay ancho de sobra y lo que sobresaliera se perdería sin que nada
+lo dijera.
+
 ### Lo que no tiene, y conviene que sea una decisión
 
 - **No aparece en `/extras`.** Esa pantalla contesta quién hace el show; un
@@ -3858,6 +3912,18 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   apareció al mirar el catálogo el 2026-10-22. Si se mantiene, es una cuarta
   fila en el formulario y su par de variantes; si no, no se hace nada, pero
   conviene que sea una decisión y no un olvido.
+- **¿El arriendo del recinto también es con IVA incluido?** El presupuesto
+  trata **todos** los precios como IVA incluido, que es lo que dijo el
+  cliente el 2026-11-01. Pero el landing de socios anuncia el recinto como
+  **"$2.500.000 + IVA"**, o sea al revés. Si se cotiza el arriendo
+  escribiendo 2.500.000, el documento dice que el total es ese y el neto
+  2.100.840; si lo que corresponde es 2.500.000 **más** IVA, habría que
+  escribir 2.975.000 en la línea. La diferencia son $475.000, así que
+  conviene que sea una decisión. Dos salidas posibles: que el precio del
+  recinto se anuncie con IVA incluido como todo lo demás, o que la línea
+  del presupuesto tenga una marca de "este precio va + IVA" — lo segundo
+  rompe que haya un solo neto por documento, así que lo primero es más
+  simple.
 - **El nombre del negocio no calza.** Google Maps lo lista como "Lo Pirque
   Restaurant" y el email es `@lopirque.cl`, pero el sitio se llama "Brasas de
   Lo Pirque" y el dominio es `brasasdelopirque.cl`. Si alguien busca la marca

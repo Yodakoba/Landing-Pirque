@@ -32,7 +32,7 @@ import {
   leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
   normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible, porToken,
   reservaDesdePresupuesto, diasParaVencer, porVencer, vencidoSinCerrar,
-  totalDe, validoHastaDe, personasDe as personasDeLineas,
+  totalDe, validoHastaDe, personasDe as personasDeLineas, desglosarIVA, IVA,
   type Presupuesto, type LineaPresupuesto
 } from './presupuestos.ts';
 import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
@@ -2130,6 +2130,42 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
      'ni uno rechazado: ese tambien termino');
   ok(!vencidoSinCerrar(pre({ validoHasta: '2026-11-03' }), HOY),
      'y uno vigente no esta vencido');
+
+  // --- El IVA, que un presupuesto a una empresa tiene que desglosar ---
+  // Los precios ya VIENEN con IVA (lo dijo el cliente), asi que el total no
+  // se toca y el neto se calcula hacia atras.
+  const d44 = desglosarIVA(44000);
+  ok(d44.total === 44000,
+     'el total NO cambia al desglosar: los precios ya traen el IVA, es lo que se cobra');
+  ok(d44.neto === 36975, 'el neto sale de dividir por 1,19');
+  ok(d44.iva === 7025, 'y el IVA, de restar el neto al total');
+
+  // Lo que esto fija de verdad: los tres numeros CUADRAN, siempre. Con
+  // neto x 0,19 el IVA de 44.000 daria 7.025,25 y la hoja no sumaria.
+  for (const total of [0, 1, 7, 100, 19000, 44000, 70000, 107000, 2500000, 2975000, 999999]) {
+    const d = desglosarIVA(total);
+    ok(d.neto + d.iva === d.total,
+       `neto + IVA da exactamente el total, con ${total}`);
+    ok(d.neto >= 0 && d.iva >= 0, `y ninguno sale negativo, con ${total}`);
+  }
+
+  ok(desglosarIVA(0).total === 0 && desglosarIVA(0).iva === 0,
+     'un presupuesto sin lineas no inventa un impuesto');
+  ok(desglosarIVA(-5000).total === 0,
+     'y un total negativo no existe: es cero, no un credito fiscal');
+  ok(IVA === 0.19, 'la tasa es el 19% chileno, en un solo lugar del codigo');
+
+  // El desglose es informativo y no toca lo que se guarda: la reserva que
+  // sale de un presupuesto lleva el total negociado, con IVA, que es la
+  // plata que hay que cobrar.
+  const conIVA = reservaDesdePresupuesto(
+    pre({ id: 'PRE-IVA', fecha: '2026-11-14', cliente: 'Agencia Austral' }),
+    [{ presupuesto: 'PRE-IVA', concepto: 'Tradiciones', cantidad: 1,
+       precio: 44000, personas: 1, fila: 2 }],
+    [{ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 }]
+  );
+  ok(conIVA.monto === 44000,
+     'la reserva guarda el total CON IVA: es lo que se le cobra, no el neto');
 
   // --- El link del cliente ---
   const conToken = [
