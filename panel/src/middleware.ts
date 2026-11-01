@@ -108,9 +108,15 @@ export async function middleware(req: NextRequest) {
   );
   if (sesion) {
     // Quien no puede ver el calendario no tiene nada que hacer en la
-    // portada: es el caso de la cuenta de pagos, que solo lee el informe.
-    // Sin esto aterrizaría en una pantalla que carga y falla, y parecería
+    // portada: aterrizaría en una pantalla que carga y falla, y parecería
     // que el panel está roto en vez de que esa parte no es suya.
+    //
+    // **Hoy no lo usa nadie**, y queda igual: era el caso de la cuenta de
+    // pagos, que hasta el 2026-11-01 solo leía el informe; desde que el
+    // cliente le dio todo lo del encargado, sí puede ver el calendario y
+    // entra por la puerta de siempre. Se deja porque la guarda es correcta
+    // para cualquier rol que mañana tenga el informe y no el calendario, y
+    // porque no cuesta nada: es un `if` que no se cumple.
     if (ruta === '/' && !puede(sesion.rol as Rol, 'ver')
         && puede(sesion.rol as Rol, 'informe')) {
       const informe = req.nextUrl.clone();

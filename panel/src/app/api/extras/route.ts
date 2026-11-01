@@ -5,7 +5,7 @@ import {
 import { aEntero, esSi } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
-import { ROL } from '@/lib/auth';
+import { puede, type Rol } from '@/lib/auth';
 import type { Colaborador } from '@/lib/extras';
 import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
  * pantalla son dos oportunidades de que una llegue tarde y la vista quede a
  * medias.
  *
- * **Al encargado se le recortan los montos habituales y las cuentas
+ * **A quien no puede ver sueldos se le recortan los montos habituales y las cuentas
  * bancarias.** Los necesita para agendar tanto como necesita los sueldos del
  * equipo para asignar turnos: no los necesita. El monto del día lo escribe
  * él, y el que propone el servidor al guardar; lo que no recibe es la lista
@@ -37,11 +37,11 @@ export async function GET(req: Request) {
     const [colaboradores, extras] = await Promise.all([
       leerColaboradores(), leerExtras()
     ]);
-    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    const verSueldos = puede((await quienEs(req)).rol as Rol, 'sueldos');
     return NextResponse.json({
-      colaboradores: esAdmin ? colaboradores : sinPlata(colaboradores),
+      colaboradores: verSueldos ? colaboradores : sinPlata(colaboradores),
       extras,
-      esAdmin
+      verSueldos
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
-  const esAdmin = (await quienEs(req)).rol === ROL.admin;
+  const verSueldos = puede((await quienEs(req)).rol as Rol, 'sueldos');
   try {
     const cuerpo = await req.json();
     if (!Array.isArray(cuerpo?.colaboradores)) {
@@ -86,8 +86,8 @@ export async function PUT(req: Request) {
         // Si no viene el campo, activo: existe la fila porque alguien lo
         // agregó. Misma regla que la celda en blanco de la planilla.
         activo: c?.activo === undefined ? true : esSi(c.activo),
-        monto: esAdmin ? aEntero(c?.monto) : (antes?.monto ?? 0),
-        banco: esAdmin ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio())
+        monto: verSueldos ? aEntero(c?.monto) : (antes?.monto ?? 0),
+        banco: verSueldos ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio())
       });
     }
 
@@ -96,7 +96,7 @@ export async function PUT(req: Request) {
       detalle: `${limpia.length} en la lista · ` +
                `${limpia.filter((c) => c.activo).length} activos` });
     return NextResponse.json({
-      colaboradores: esAdmin ? limpia : sinPlata(limpia)
+      colaboradores: verSueldos ? limpia : sinPlata(limpia)
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

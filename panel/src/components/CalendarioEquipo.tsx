@@ -49,7 +49,7 @@ export default function CalendarioEquipo() {
   const pronostico = usePronostico();
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
-    cierres: Cierre[]; extras: Extra[]; esAdmin: boolean;
+    cierres: Cierre[]; extras: Extra[]; verSueldos: boolean;
   } | null>(null);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
   const [planificando, setPlanificando] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function CalendarioEquipo() {
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
           turnos: d.turnos ?? [], cierres: d.cierres ?? [], extras: d.extras ?? [],
-          esAdmin: !!d.esAdmin
+          verSueldos: !!d.verSueldos
         });
       })
       .catch((e) => setError(String(e)));
@@ -330,7 +330,7 @@ export default function CalendarioEquipo() {
           cerrado={cerrado(planificando)}
           // La única pantalla que cierra un día: ver `conCierre`.
           conCierre
-          esAdmin={equipo.esAdmin}
+          verSueldos={equipo.verSueldos}
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}
         />

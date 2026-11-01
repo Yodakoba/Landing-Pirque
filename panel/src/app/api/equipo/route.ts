@@ -8,7 +8,7 @@ import { aEntero, esSi, sinFicha, esContratado, MODALIDAD,
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { anotar } from '@/lib/datos';
-import { ROL } from '@/lib/auth';
+import { ROL, puede, type Rol } from '@/lib/auth';
 import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
 
@@ -30,16 +30,24 @@ export const dynamic = 'force-dynamic';
  * malo con ellas: es que no las necesita, y una credencial que viaja a
  * quien no la necesita es una credencial de más dando vueltas.
  */
-const sinTokens = (gente: Trabajador[]) => gente.map((t) => ({
-  ...t, token: '', banco: bancoVacio(),
-  // Los sueldos tampoco bajan al navegador de un encargado. No es que vaya a
-  // hacer algo malo con ellos: es que no los necesita para asignar turnos, y
-  // cuánto gana cada compañero no es dato suyo.
-  pagoJornada: 0, valorHora: 0
-  // La modalidad y la participación en la propina SÍ bajan: el encargado
-  // las necesita al pasar lista —a quién no se le paga por turno, entre
-  // quiénes se reparte— y ninguna de las dos dice cuánto gana nadie.
-}));
+const recortada = (gente: Trabajador[], verLinks: boolean, verSueldos: boolean) =>
+  gente.map((t) => ({
+    ...t,
+    // **El token lo recibe quien administra los links.** Un encargado no:
+    // una credencial que viaja a quien no la usa es una credencial de más
+    // dando vueltas.
+    token: verLinks ? t.token : '',
+    // **Los sueldos y la cuenta bancaria van por su propio permiso.**
+    // Hasta el 2026-11-01 esto iba con `esAdmin`, la misma condición que el
+    // token, y los dos se abrieron para la cuenta de pagos. Siguen
+    // separados igual: uno es plata y el otro una credencial, así que el
+    // día que un rol necesite ver lo uno y no lo otro, la costura está.
+    // Un encargado sigue sin recibir ninguno de los dos.
+    ...(verSueldos ? {} : { banco: bancoVacio(), pagoJornada: 0, valorHora: 0 })
+    // La modalidad y la participación en la propina SÍ bajan siempre: el
+    // encargado las necesita al pasar lista —a quién no se le paga por
+    // turno, entre quiénes se reparte— y ninguna dice cuánto gana nadie.
+  }));
 
 export async function GET(req: Request) {
   const no = await exigir(req, 'ver');
@@ -52,10 +60,19 @@ export async function GET(req: Request) {
     const [puestos, trabajadores, turnos, cierres, extras] = await Promise.all([
       leerPuestos(), leerTrabajadores(), leerTurnos(), leerCierres(), leerExtras()
     ]);
-    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    const rol = (await quienEs(req)).rol as Rol;
+    // **Tres banderas, una por permiso**, en vez de un `esAdmin` que
+    // gobernaba cosas sin relación: la plata, las credenciales y la lista
+    // de puestos. Hoy las tres las tiene el mismo par de roles, pero cada
+    // una dice qué gobierna, así que moverlas por separado es cambiar la
+    // tabla de permisos y nada más.
+    const verSueldos = puede(rol, 'sueldos');
+    const verLinks = puede(rol, 'links');
+    const editarPuestos = puede(rol, 'puestos');
     return NextResponse.json({
-      puestos, trabajadores: esAdmin ? trabajadores : sinTokens(trabajadores), turnos,
-      cierres, extras, esAdmin,
+      puestos,
+      trabajadores: recortada(trabajadores, verLinks, verSueldos),
+      turnos, cierres, extras, verSueldos, verLinks, editarPuestos,
       // Quién tiene turnos y no está en la lista. Pasa al renombrar a
       // alguien que ya estaba asignado; el panel lo muestra en vez de que
       // se descubra cuando el conteo del día no cuadre.
@@ -77,7 +94,12 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
-  const esAdmin = (await quienEs(req)).rol === ROL.admin;
+  const rol = (await quienEs(req)).rol as Rol;
+  // Lo que no se recibe, tampoco se puede pisar: quien no ve los sueldos
+  // tampoco los escribe, y lo que mande el navegador se descarta a favor de
+  // lo que ya había. Ver `recortada()`.
+  const verSueldos = puede(rol, 'sueldos');
+  const verLinks = puede(rol, 'links');
   try {
     const cuerpo = await req.json();
     const salida: { puestos?: Puesto[]; trabajadores?: Trabajador[] } = {};
@@ -125,37 +147,37 @@ export async function PUT(req: Request) {
           // blanco de la planilla, y por el mismo motivo: existe la fila
           // porque alguien agregó a esa persona al equipo.
           activo: t?.activo === undefined ? true : esSi(t.activo),
-          token: esAdmin
+          token: verLinks
             ? String(t?.token ?? '').trim()
             : (previos.get(normalizar(nombre))?.token ?? ''),
           // La modalidad la fija el administrador, igual que los montos:
           // marcar a alguien como contratado cambia lo que cuesta el día.
-          modalidad: esAdmin
+          modalidad: verSueldos
             ? (esContratado(t?.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno)
             : (previos.get(normalizar(nombre))?.modalidad ?? MODALIDAD.porTurno),
-          pagoJornada: esAdmin
+          pagoJornada: verSueldos
             ? aEntero(t?.pagoJornada)
             : (previos.get(normalizar(nombre))?.pagoJornada ?? 0),
-          valorHora: esAdmin
+          valorHora: verSueldos
             ? aEntero(t?.valorHora)
             : (previos.get(normalizar(nombre))?.valorHora ?? 0),
           // Quién entra en el reparto de la propina también lo fija el
           // administrador: decide a dónde va plata, aunque no sea del
           // negocio. En blanco es SÍ, que es la regla; no entrar es la
           // excepción y por eso se marca.
-          propina: esAdmin
+          propina: verSueldos
             ? (t?.propina === undefined ? true : esSi(t.propina))
             : (previos.get(normalizar(nombre))?.propina ?? true),
-          // Los datos bancarios los fija el administrador, igual que los
-          // montos: un encargado ni siquiera los recibe (ver sinTokens), así
-          // que si pudiera guardarlos los borraría sin querer.
-          banco: esAdmin
+          // Los datos bancarios van con los montos: quien no los recibe
+          // (ver `recortada()`) tampoco los guarda, porque si pudiera los
+          // borraría sin querer al guardar la lista.
+          banco: verSueldos
             ? limpiarBanco(t?.banco)
             : (previos.get(normalizar(nombre))?.banco ?? bancoVacio())
         });
       }
       await guardarTrabajadores(limpia);
-      salida.trabajadores = esAdmin ? limpia : sinTokens(limpia);
+      salida.trabajadores = recortada(limpia, verLinks, verSueldos);
       await anotar({ ...(await quienEs(req)), accion: 'Cambió la lista de trabajadores',
         detalle: `${limpia.length} en la lista · ` +
                  `${limpia.filter((t) => t.activo).length} activos` });

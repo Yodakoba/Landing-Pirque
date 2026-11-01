@@ -65,14 +65,23 @@ export const ROL = {
   /** El día a día: reservas, días, asistencia, equipo. */
   encargado: 'encargado',
   /**
-   * Quien hace los pagos. **Solo ve el informe del equipo.**
+   * Quien hace los pagos: **el encargado, más la plata.**
    *
-   * Existe porque antes esa persona tenía que entrar con la cuenta de
-   * administrador, que abre también precios, configuración y las cuentas
-   * del panel. Juntar las cuentas del equipo no requiere nada de eso.
+   * Nació el 2026-10-22 como una cuenta mínima —una sola acción, leer el
+   * informe— con el argumento de que juntar las cuentas no necesita ver el
+   * calendario. **El cliente lo corrigió el 2026-11-01**, y tenía razón:
+   * *"el encargado de pagos en verdad tiene que ver y tiene los mismos
+   * derechos que el encargado, pero él sí tiene adicionalmente los derechos
+   * de configurar o reescribir montos en estas filas y columnas de pago"*.
    *
-   * No ve reservas, ni clientes, ni el calendario: lo suyo son los turnos
-   * ya cerrados y cuánto suman.
+   * O sea que no es un rol más chico que el encargado, es **el mismo más
+   * una cosa**: `pagar`. Quien paga es alguien de confianza del negocio que
+   * además entra a operar; la diferencia con el encargado no es cuánto ve,
+   * es que puede declarar que una plata salió.
+   *
+   * Lo que sigue sin tocar es lo del administrador: los puestos, los links
+   * personales, las cuentas del panel, la bitácora, los precios y la
+   * configuración. Eso es lo que esta cuenta existe para no tener que abrir.
    */
   pagos: 'pagos',
   /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
@@ -132,13 +141,13 @@ export function rolDe(cabecera: string, c: Credenciales): Rol {
  */
 export const PERMISOS = {
   /** Ver el calendario, los días y las reservas. */
-  ver: [ROL.admin, ROL.encargado],
+  ver: [ROL.admin, ROL.encargado, ROL.pagos],
   /** Anotar, editar y borrar reservas. */
-  reservas: [ROL.admin, ROL.encargado],
+  reservas: [ROL.admin, ROL.encargado, ROL.pagos],
   /** Abrir, cerrar y editar días. */
-  dias: [ROL.admin, ROL.encargado],
+  dias: [ROL.admin, ROL.encargado, ROL.pagos],
   /** Asignar turnos y administrar la lista de trabajadores. */
-  equipo: [ROL.admin, ROL.encargado],
+  equipo: [ROL.admin, ROL.encargado, ROL.pagos],
   /**
    * Contratar actividades extras y anotar sus montos.
    *
@@ -147,11 +156,28 @@ export const PERMISOS = {
    * pasar lista. Lo que el encargado no ve son los montos habituales ni las
    * cuentas bancarias de las fichas, que se filtran en la respuesta.
    */
-  extras: [ROL.admin, ROL.encargado],
+  extras: [ROL.admin, ROL.encargado, ROL.pagos],
+  /**
+   * Ver y editar **los montos habituales y la cuenta bancaria** de una
+   * ficha: la modalidad, la jornada, el valor hora, si entra en la propina
+   * y los datos de la transferencia.
+   *
+   * **Existe porque `esAdmin` estaba haciendo de dos cosas a la vez**
+   * (2026-11-01). La misma condición escondía los sueldos de la ficha **y**
+   * los links personales, que no tienen nada que ver: uno es plata y el
+   * otro es una credencial. Cuando el cliente pidió que quien paga viera
+   * los sueldos, abrir `esAdmin` le habría dado de paso los tokens de todo
+   * el equipo.
+   *
+   * Entonces se partió en dos. Esto es la plata, y la tiene quien paga; los
+   * links siguen en `links`, que es solo del administrador porque es de
+   * quien son.
+   */
+  sueldos: [ROL.admin, ROL.pagos],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
-  puestos: [ROL.admin],
+  puestos: [ROL.admin, ROL.pagos],
   /** Crear, renovar y quitar los links personales de los trabajadores. */
-  links: [ROL.admin],
+  links: [ROL.admin, ROL.pagos],
   /**
    * La planilla semanal: mandarla al grupo, crear su link y **renovarlo**.
    *
@@ -174,7 +200,7 @@ export const PERMISOS = {
    * alguien la vuelva a encender. Lo primero es seguir trabajando; lo
    * segundo es cerrar una puerta del panel.
    */
-  planilla: [ROL.admin, ROL.encargado],
+  planilla: [ROL.admin, ROL.encargado, ROL.pagos],
   /**
    * Crear, editar y mandar presupuestos.
    *
@@ -187,11 +213,11 @@ export const PERMISOS = {
    * pestaña `Menús`, que él no puede cambiar. Lo único que decide acá es qué
    * precio ofrecer en **esta** cotización, que es justamente la negociación.
    */
-  presupuestos: [ROL.admin, ROL.encargado],
+  presupuestos: [ROL.admin, ROL.encargado, ROL.pagos],
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
-  bitacora: [ROL.admin],
+  bitacora: [ROL.admin, ROL.pagos],
   /**
    * El informe del mes: cuánto se le pagó a cada persona.
    *
@@ -214,15 +240,15 @@ export const PERMISOS = {
   /**
    * Registrar que a alguien ya se le pagó, entero o en parte.
    *
-   * **Va con quien paga, no con quien organiza el día** (2026-11-01). El
-   * encargado ve el informe —se lo liberó el cliente como intertanto— pero
-   * leerlo y declarar que una plata salió son dos cosas distintas: lo
-   * segundo es un hecho con nombre y hora, como cerrar un día, y lo hace
-   * quien de verdad hizo la transferencia.
+   * **Es lo único que distingue a `pagos` de `encargado`** (2026-11-01, lo
+   * fijó el cliente). Los dos ven el informe; solo uno puede escribir en la
+   * parte de los pagos. Leer cuánto se le debe a alguien y declarar que esa
+   * plata salió son dos cosas distintas: lo segundo es un hecho con nombre
+   * y hora, como cerrar un día, y lo hace quien hizo la transferencia.
    */
   pagar: [ROL.admin, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
-  configurar: [ROL.admin],
+  configurar: [ROL.admin, ROL.pagos],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
   mantencion: [ROL.admin]
 } as const;

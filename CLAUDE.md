@@ -1932,10 +1932,10 @@ entra; ésta es plata que sale.
 - **Registrarlo es del permiso `pagar`: administrador y la cuenta de
   pagos.** El encargado ve el informe —se lo liberó el cliente como
   intertanto— pero leer cuánto se le debe a alguien y declarar que esa plata
-  salió son dos cosas distintas. Hay una prueba que lo fija.
-- **El rol de pagos tiene ahora dos acciones, no una**, y la prueba que las
-  cuenta se actualizó a dos: está para que agregar un permiso a la tabla no
-  se le regale sin que nadie se entere.
+  salió son dos cosas distintas. Hay una prueba que lo fija, y el encargado
+  recibe **403 llamando la API directo**, no es que se le esconda el botón.
+- **`pagar` es justamente lo único que distingue a `pagos` de
+  `encargado`** — ver "El rol de pagos".
 
 #### La columna que faltaba: a transferir
 
@@ -2906,7 +2906,8 @@ Vale tenerla escrita porque no es obvia:
   2026-11-01 el encargado también lo ve, y es provisorio** — ver abajo.
 
 Esa pregunta se contestó el **2026-10-22**: sí es otra persona, así que
-existe el rol **pagos**.
+existe el rol **pagos** — que desde el 2026-11-01 **no es una cuenta más
+chica que la del encargado, sino la misma más la plata**. Ver abajo.
 
 #### El encargado ve el informe, por ahora (2026-11-01)
 
@@ -2934,28 +2935,147 @@ bancarias, el lugar natural es recortarlas en esa ruta según el rol, como
 `/api/extras` ya hace con los montos habituales — no esconderlas en la
 pantalla, que es dejar el dato viajando igual.
 
-### El rol de pagos (2026-10-22)
+### El rol de pagos: el encargado, más la plata (2026-10-22, corregido el 2026-11-01)
 
-**Dos acciones y ni una más: leer el informe y registrar un pago.** La
-segunda llegó el 2026-11-01 con el check de pago. Hay una prueba que las
-cuenta —dos, no tres—, para que agregar un permiso nuevo a la tabla no se lo
-regale sin que nadie se entere.
+**Nació como una cuenta mínima y el cliente lo corrigió.** El primer corte
+le daba **una sola acción**, leer el informe, con el argumento de que juntar
+las cuentas no necesita ver el calendario. Duró diez días. Lo dijo así:
 
-No ve el calendario, ni reservas, ni clientes, ni el equipo, ni la
-configuración, ni las cuentas, ni la bitácora. Existe precisamente para que
-quien junta las cuentas no tenga que entrar con la del administrador.
+> *"El encargado de pagos en verdad tiene que ver y tiene los mismos
+> derechos que el encargado, pero él sí tiene adicionalmente los derechos de
+> configurar o reescribir montos en estas filas y columnas de pago."*
 
-Dos detalles que lo hacen funcionar:
+Y tiene razón, porque el supuesto de atrás estaba equivocado: quien paga en
+un negocio de este tamaño no es un contador externo que solo recibe una
+planilla, es alguien de confianza que además opera. Entonces:
 
-- **`/api/informe`, una ruta propia que devuelve solo turnos.** El informe
-  antes leía `/api/equipo`, por donde viajan reservas, trabajadores y
-  puestos. Darle "ver" a la cuenta de pagos para que pudiera sacar sus
-  cuentas habría sido abrirle el panel entero. **Desde el 2026-11-01 esa
-  ruta la lee también el encargado**, con lo que eso trae: ver arriba.
-- **El middleware la manda de `/` a `/informe`.** Sin eso aterrizaría en una
-  portada que carga y falla, y parecería que el panel está roto en vez de
-  que esa parte no es suya. El enlace de la marca sigue apuntando a `/`, que
-  para ella redirige — no hay callejón.
+Y el 2026-11-01, en la misma conversación, lo terminó de ubicar: **es el
+segundo rol más poderoso del panel**, el que *"puede hacer casi todo"*. Así
+que la regla se escribe al revés, por lo que **no** puede, que es lo corto:
+
+> **`pagos` puede todo menos dos cosas: las cuentas del panel y la
+> mantención técnica.**
+
+| | |
+|---|---|
+| **No puede** | `usuarios` — crear cuentas y cambiar roles · `mantencion` — Shopify a mano y el diagnóstico de la planilla |
+| **Sí puede**, y el encargado no | registrar pagos · ver y editar los sueldos y cuentas bancarias de las fichas · los links personales · los puestos · la bitácora · los precios y la configuración |
+| **Sí puede**, igual que el encargado | el calendario, las reservas, los turnos, las extras, los presupuestos, la planilla semanal |
+
+Las dos que quedan fuera lo están por motivos distintos y conviene no
+confundirlos:
+
+- **Las cuentas del panel** porque ahí se decide **quién entra y con qué
+  rol**. Una cuenta que pudiera editarlas podría ascenderse sola, y entonces
+  no habría roles, habría un trámite.
+- **La mantención** —consultar Shopify a mano, el diagnóstico de la
+  planilla— porque es para arreglar el sistema, no para operarlo. No es
+  cuestión de confianza: es que no es su trabajo, y el día que algo falle
+  conviene saber quién estuvo tocando.
+
+**La prueba se escribe como la lista de lo que NO puede**, y esa es la
+parte que vale copiar: así, **cualquier permiso que se agregue mañana a la
+tabla y no esté en esa lista, lo tiene**. Al revés —enumerando lo que sí—
+cada permiso nuevo habría nacido fuera del rol sin que nadie lo decidiera,
+que es justo cómo este rol terminó siendo más chico de lo que el cliente
+quería y hubo que corregirlo dos veces.
+
+**La prueba dejó de contar acciones y pasó a fijar la relación entre los dos
+roles**: que `pagos` pueda todo lo del encargado, y que lo único que tenga
+de más sea `pagar`. El conteo había que venir a corregirlo cada vez que la
+tabla crecía, y una prueba que se corrige a mano cada vez deja de proteger.
+
+**Se comprobó con las tres cuentas**, y lo que importa es la última línea:
+
+```
+                POST /api/informe   /menus  /config  /bitacora  /usuarios
+pagos      → 200                      ✓        ✓         ✓      ✗ bloqueada
+encargado  → 403                      ✗        ✗         ✗      ✗
+admin      → 200                      ✓        ✓         ✓         ✓
+```
+
+Y abriendo la ficha de una persona en `/equipo`:
+
+```
+pagos      Pago ✓  Transferencia ✓  botón de link ✓  Administrar puestos ✓
+encargado       ✗                ✗                ✗                     ✗
+admin           ✓                ✓                ✓                     ✓
+```
+
+El encargado **recibe 403 llamando la API directo**, no es que se le esconda
+el botón: el permiso se comprueba en la ruta, que es la regla de este panel.
+
+#### Dos cosas que no cambiaron, y conviene que se note
+
+- **El redirect de `/` a `/informe` del middleware quedó sin usarse.** Era
+  para la cuenta de pagos cuando no podía ver el calendario; ahora entra por
+  la puerta de siempre. Se deja porque la guarda sigue siendo correcta para
+  cualquier rol que mañana tenga el informe y no el calendario, y porque es
+  un `if` que no se cumple.
+- **`/api/informe` sigue devolviendo de las fichas solo los datos de la
+  transferencia**, sin sueldos habituales ni tokens. Eso no cambió y no es
+  un olvido: lo que se paga es lo que quedó congelado en cada turno. Los
+  sueldos de la ficha los ve ahora en `/equipo`, que es donde se editan.
+
+
+#### `sueldos` y `links` son dos permisos, y antes eran uno solo
+
+El cliente remató la conversación con una frase: **"que vea también los
+sueldos de las fichas"**. Suena a abrir una condición, y abrirla habría
+estado mal — ahí está lo que vale guardar.
+
+**`esAdmin` estaba haciendo de dos cosas a la vez.** La misma condición
+escondía:
+
+- **los montos habituales y la cuenta bancaria** de una ficha, que son
+  plata, y
+- **el token del link personal**, que es una credencial.
+
+No tienen nada que ver. Abrirle `esAdmin` a la cuenta de pagos para que
+viera los sueldos le habría entregado de paso **los links personales de
+todo el equipo** — y esos son del administrador justamente porque con uno
+se entra a ver lo de una persona sin contraseña.
+
+Por eso se partió en dos:
+
+| Permiso | Qué gobierna | Quién |
+|---|---|---|
+| **`sueldos`** | modalidad, jornada, valor hora, propina y cuenta bancaria de la ficha | administrador y quien paga |
+| **`links`** | crear, copiar, renovar y quitar el link personal | administrador y quien paga |
+
+**Hoy los tiene el mismo par de roles, así que no discriminan entre ellos
+—el cliente terminó dando los dos— y se dejan separados igual.** Son cosas
+distintas: uno es plata y el otro una credencial. La costura queda para el
+día que un rol necesite lo uno sin lo otro, que es exactamente lo que no se
+podía hacer mientras eran `esAdmin`. Lo que sí separan hoy es al
+**encargado**, que no tiene ninguno de los dos.
+
+**Y de paso se fue `esAdmin` de la interfaz de `/equipo`.** Gobernaba tres
+cosas sin relación —la plata, el link y la lista de puestos— así que la
+pantalla manda ahora tres banderas, una por permiso. Cambiar quién ve qué
+es tocar la tabla de permisos y nada más.
+
+- **Vale para las dos pantallas y para las dos puntas.** `/api/equipo` y
+  `/api/extras` recortan por `sueldos` al devolver, y **descartan por lo
+  mismo al guardar**: quien no recibe un monto tampoco lo puede pisar, que
+  es la regla de siempre acá. El token sigue recortándose por `esAdmin`.
+- **Y el texto de arriba de `/equipo` —"dentro de cada trabajador puedes
+  copiar su link personal"— pasó a mostrarse solo al administrador.**
+  Prometerle a la cuenta de pagos algo que no va a encontrar es peor que no
+  decir nada.
+- **Hay una prueba que lo fija**: que `pagos` tenga `sueldos` y **no**
+  `links`. Si algún día alguien junta las dos condiciones otra vez, falla.
+
+Comprobado con las tres cuentas contra la planilla falsa:
+
+```
+pagos      verSueldos ✓  jornada 30.000  cuenta ✓  token ✗   ve Pago y Transferencia, no el link
+encargado  verSueldos ✗  jornada 0       cuenta ✗  token ✗   no ve ninguno de los dos
+admin      verSueldos ✓  jornada 30.000  cuenta ✓  token ✗*  ve los tres
+```
+
+*El token sale vacío también para el admin cuando la persona todavía no
+tiene link creado, que es el caso de la prueba.
 
 ### Quién puede hacer qué (2026-10-21, cuarto rol el 2026-10-22)
 
@@ -2963,19 +3083,22 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 
 | | Administrador | Encargado | Pagos | Trabajador |
 |---|---|---|---|---|
-| Ver el calendario y las reservas | sí | sí | — | — |
-| Anotar reservas, abrir y cerrar días | sí | sí | — | — |
-| Asignar turnos y editar la lista de trabajadores | sí | sí | — | — |
-| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | — | — |
-| Agendar actividades extras y confirmarlas | sí | sí | — | — |
-| Montos habituales y cuentas bancarias | sí | — | — | — |
-| Puestos y su regla "uno cada N" | sí | — | — | — |
-| Precios, menús y configuración | sí | — | — | — |
-| Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
-| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | — | — |
-| Cuentas del panel y bitácora | sí | — | — | — |
+| Ver el calendario y las reservas | sí | sí | **sí** | — |
+| Anotar reservas, abrir y cerrar días | sí | sí | **sí** | — |
+| Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — |
+| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | **sí** | — |
+| Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
+| Crear y mandar presupuestos | sí | sí | **sí** | — |
+| Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — |
+| Puestos y su regla "uno cada N" | sí | — | **sí** | — |
+| Precios, menús y configuración | sí | — | **sí** | — |
+| **Links personales** | sí | — | **sí** | — |
+| Diagnóstico y Shopify a mano | sí | — | — | — |
+| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — |
+| **La bitácora** | sí | — | **sí** | — |
+| Cuentas del panel y sus contraseñas | sí | — | — | — |
 | **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — |
-| **Registrar que a alguien ya se le pagó** | sí | — | **sí** | — |
+| **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.

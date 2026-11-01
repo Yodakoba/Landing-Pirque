@@ -55,7 +55,7 @@ function Rotulo({ children }: { children: React.ReactNode }) {
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
-  conCierre = false, esAdmin = false, enfocarPropina = false,
+  conCierre = false, verSueldos = false, enfocarPropina = false,
   onListo, onCancelar
 }: {
   fecha: string;
@@ -94,7 +94,7 @@ export default function EquipoDialogo({
    */
   conCierre?: boolean;
   /** Si puede fijar sueldos al crear a alguien. */
-  esAdmin?: boolean;
+  verSueldos?: boolean;
   /** Abre con el cursor en la propina, para quien viene justo a eso. */
   enfocarPropina?: boolean;
   onListo: () => void;
@@ -495,7 +495,7 @@ export default function EquipoDialogo({
       {ficha && (
         <FichaTrabajador
           ficha={ficha.t} puesto={ficha.puesto ?? ''}
-          nombreSugerido={ficha.nombre ?? ''} esAdmin={esAdmin}
+          nombreSugerido={ficha.nombre ?? ''} verSueldos={verSueldos}
           onCancelar={() => setFicha(null)}
           onListo={(t, aviso) => {
             setGente((antes) => antes.some(

@@ -49,7 +49,7 @@ export default function CalendarioExtras() {
   const pronostico = usePronostico();
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
-  const [esAdmin, setEsAdmin] = useState(false);
+  const [verSueldos, setVerSueldos] = useState(false);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
   const [editando, setEditando] = useState<string | null>(null);
   const [sucio, setSucio] = useState(false);
@@ -63,7 +63,7 @@ export default function CalendarioExtras() {
         if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
         setColaboradores(d.colaboradores ?? []);
         setExtras(d.extras ?? []);
-        setEsAdmin(!!d.esAdmin);
+        setVerSueldos(!!d.verSueldos);
         setSucio(false);
       })
       .catch((e) => setError(String(e)));
@@ -299,7 +299,7 @@ export default function CalendarioExtras() {
         propone al agregarlo a un día y se puede corregir ahí; lo que se le
         pagó un día queda anotado en ese día y no cambia si después le subes
         la tarifa.
-        {!esAdmin && (
+        {!verSueldos && (
           <> El monto y la cuenta bancaria los maneja el administrador.</>
         )}
       </p>
@@ -349,7 +349,7 @@ export default function CalendarioExtras() {
                     etiqueta={`Teléfono de ${c.nombre || 'esta persona'}`}
                     onCambio={(v) => cambiar(i, 'telefono', v)} />
                 </Campo>
-                {esAdmin && (
+                {verSueldos && (
                   <Campo etiqueta="Monto habitual" ancho="w-32">
                     <input type="number" min={0} step={1000} className={ENTRADA}
                       value={c.monto || ''} placeholder="—"
@@ -398,7 +398,7 @@ export default function CalendarioExtras() {
                 </div>
               </div>
 
-              {esAdmin && (
+              {verSueldos && (
                 <div className="mt-3 border-t border-hueso/10 pt-3">
                   <div className="flex flex-wrap items-start gap-3">
                     <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
@@ -456,7 +456,7 @@ export default function CalendarioExtras() {
           fecha={editando}
           extras={extras}
           colaboradores={colaboradores}
-          esAdmin={esAdmin}
+          verSueldos={verSueldos}
           onListo={() => { setEditando(null); cargar(); }}
           onCancelar={() => setEditando(null)}
         />
