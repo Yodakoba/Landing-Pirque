@@ -1,12 +1,19 @@
 /**
- * Armar una fila de la planilla a partir de un objeto del panel.
+ * Traducir entre las filas de la planilla y los objetos del panel, en los
+ * dos sentidos: armar una fila para escribirla, y leer las filas que vuelven.
  *
  * Vive aparte de datos.ts a propósito: acá no se importa googleapis, así que
  * esto se puede probar sin red y sin credenciales. Es justo la pieza donde un
  * error se ve recién en la planilla del cliente, ya escrito.
  */
-import { indices, COL_RESERVAS, COL_FECHAS } from './columnas.ts';
+import { indices, COL_RESERVAS, COL_FECHAS, esManual } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
+import { esFecha } from './fechas.ts';
+
+const num = (v: unknown): number => {
+  const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
 
 /**
  * Respeta el orden REAL del encabezado, no el nuestro.
@@ -86,4 +93,102 @@ export function buscarFilaPorId(
     if (String(filas[n]?.[i.id] ?? '').trim() === buscado) return n + 1;
   }
   return -1;
+}
+
+/**
+ * Las filas de la pestaña, ya como reservas. **Puro, para poder probarlo.**
+ *
+ * **Una fila cuyo `ID Orden` ya apareció se descarta**, y eso es lo único
+ * raro que hace esta función. El motivo, confirmado por el cliente el
+ * 2026-11-01 con dos filas idénticas del pedido `7345141809369`:
+ *
+ * `guardarPedido()` es idempotente *buscando primero por esa columna*, pero
+ * eso es **leer-y-después-escribir sin bloqueo**, y la API de Sheets no da
+ * ninguno. Shopify manda `orders/create` y `orders/paid` casi juntos,
+ * reintenta si tardamos más de cinco segundos, y la reconciliación diaria es
+ * un tercer escritor: dos que lean la planilla antes de que el otro escriba
+ * agregan los dos. **La ventana no se puede cerrar sin un candado que no
+ * existe** — lo que sí se puede es dejar de contar dos veces lo mismo.
+ *
+ * Y eso es correcto por definición: **el mismo `ID Orden` es el mismo
+ * pedido**. Sin esto, el día cuenta esa gente dos veces, el cupo se achica
+ * solo, la cocina prepara de más y el total del día miente.
+ *
+ * **No se esconde: se avisa.** La fila que sobrevive lleva `duplicadas` con
+ * cuántas filas hay, la página del día lo marca y `/api/diagnostico` las
+ * nombra, para que alguien borre la de más en la planilla. Borrarla desde
+ * acá sería peor: el panel no sabe si alguien la duplicó a mano queriendo.
+ *
+ * Las anotadas a mano no entran en esto: su id es `MANUAL-<timestamp>` y es
+ * único por construcción.
+ */
+export function leerReservasDe(filas: string[][]): Reserva[] {
+  if (filas.length < 2) return [];
+  const i = indices(filas[0], COL_RESERVAS);
+  const en = (f: string[], k: number) => (k === -1 ? '' : (f[k] ?? ''));
+
+  const salida: Reserva[] = [];
+  const vistas = new Map<string, Reserva>();
+  for (let n = 1; n < filas.length; n++) {
+    const f = filas[n];
+    const fecha = String(en(f, i.fecha)).slice(0, 10);
+    if (!esFecha(fecha)) continue;          // filas vacías o con basura, fuera
+
+    const id = String(en(f, i.id));
+    const repetible = id.trim() !== '' && !esManual(id);
+    const antes = repetible ? vistas.get(id.trim()) : undefined;
+    if (antes) {
+      // Se queda la primera —la que ya tiene su `fila`, por la que se edita—
+      // y esta solo suma al contador que después lo delata en pantalla.
+      antes.duplicadas = (antes.duplicadas ?? 1) + 1;
+      continue;
+    }
+
+    const monto = en(f, i.monto);
+    const reserva: Reserva = {
+      id: String(en(f, i.id)),
+      fecha,
+      nombre: String(en(f, i.nombre)),
+      email: String(en(f, i.email)),
+      telefono: String(en(f, i.telefono)),
+      menu: String(en(f, i.menu)),
+      personas: num(en(f, i.personas)),
+      monto: monto === '' ? null : num(monto),
+      tipoPago: String(en(f, i.tipoPago)) as Reserva['tipoPago'],
+      estadoPago: String(en(f, i.estadoPago)),
+      creada: String(en(f, i.creada)),
+      asistencia: String(en(f, i.asistencia)),
+      notaPago: String(en(f, i.notaPago)),
+      fila: n + 1                            // 1-based, y la 1 es el encabezado
+    };
+    salida.push(reserva);
+    if (repetible) vistas.set(id.trim(), reserva);
+  }
+  return salida;
+}
+
+/**
+ * Los `ID Orden` que aparecen más de una vez, con cuántas filas tiene cada
+ * uno. Vacío es lo normal.
+ *
+ * **El mismo id es el mismo pedido, por definición**: `guardarPedido()`
+ * busca por esa columna justamente para no anotarlo dos veces. Que aparezca
+ * repetido significa que dos escrituras se cruzaron —Shopify manda
+ * `orders/create` y `orders/paid` casi juntos, y además reintenta— y las dos
+ * leyeron la planilla antes de que la otra escribiera.
+ *
+ * Las anotadas a mano no cuentan: su id es `MANUAL-<timestamp>` y es único
+ * por construcción.
+ */
+export function idsRepetidos(filas: string[][]): { id: string; filas: number }[] {
+  if (filas.length < 2) return [];
+  const i = indices(filas[0], COL_RESERVAS);
+  if (i.id === -1) return [];
+  const cuenta = new Map<string, number>();
+  for (let n = 1; n < filas.length; n++) {
+    const id = String(filas[n]?.[i.id] ?? '').trim();
+    if (!id || esManual(id)) continue;
+    cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
+  }
+  return [...cuenta].filter(([, c]) => c > 1).map(([id, c]) => ({ id, filas: c }));
 }

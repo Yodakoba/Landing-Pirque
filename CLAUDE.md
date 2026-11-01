@@ -1637,6 +1637,89 @@ dejaría la pestaña vacía; así, lo peor que puede pasar es quedarse con la
 fila de más —que es exactamente lo que pasaba antes— y se corrige al
 siguiente guardado.
 
+### La planilla se comía los datos que parecen fórmula (2026-11-01)
+
+Lo pilló el cliente con una compra de prueba: la columna de contacto de la
+reserva decía **`#ERROR! (Formula parse error.)`** en vez del teléfono.
+
+**Es nuestro, y es de los que no avisan.** Las cuatro escrituras usan
+`valueInputOption: 'USER_ENTERED'`, que hace que la API interprete cada
+celda **igual que si alguien la tecleara**: un `=`, un `+`, un `-` o un `@`
+adelante abren una fórmula. Y este proyecto escribe dos datos que empiezan
+justo así:
+
+| Dónde | Qué se escribe | Qué guardaba |
+|---|---|---|
+| `Teléfono` de `Reservas`, `Trabajadores`, `Colaboradores` | `+56 9 1234 5678` | `#ERROR!` |
+| `Ajuste` de `Turnos` y `Actividades`, con dos o más | `-5000\|12000` | `#ERROR!` |
+
+El segundo es el peor: **son los ajustes del pago**, o sea plata que alguien
+tiene que cobrar, y se perdía sin que nada lo dijera. Un ajuste solo
+(`-5000`) nunca falló, así que el caso corriente tapaba al otro.
+
+Lo arregla `valorSeguro()`, en **`panel/src/lib/celdas.ts`**: antepone un
+`'` a lo que empiece como fórmula. Ese apóstrofo es la forma que tiene
+Sheets de decir "esto es texto" — **no se guarda ni se lee**, así que lo que
+vuelve por la API es el valor tal cual.
+
+- **Solo se escapa lo que no es un número**, y eso importa: `-5000` solo
+  tiene que seguir siendo el número -5000, porque esta planilla la abre una
+  persona y suma columnas con sus propias fórmulas.
+- **Vive aparte de `sheets.ts`**, por el mismo motivo que `filas.ts`: ahí no
+  se importa `googleapis`, así que se prueba sin red y sin credenciales.
+- **Ojo, y esto es lo que hay que recordar: la planilla falsa del entorno de
+  desarrollo NO puede reproducir este error.** Es un archivo JSON que guarda
+  las cadenas tal cual, así que `-5000|12000` "funciona" ahí y revienta en la
+  planilla de verdad. Todo lo que se pruebe solo contra el arnés tiene este
+  punto ciego; lo que fija el arreglo es una prueba sobre `valorSeguro()`.
+
+**Las filas ya escritas siguen con su `#ERROR!`.** Para las reservas se
+arreglan solas al correr la reconciliación de Shopify —`camposDeShopify()`
+reescribe el teléfono— dentro de la ventana de diez días. Las de más atrás,
+y los ajustes de un turno, hay que escribirlos de nuevo a mano.
+
+### Un `ID Orden` repetido es el mismo pedido dos veces (2026-11-01)
+
+En el mismo pantallazo venían **dos filas idénticas** del mismo pedido. Son
+dos cosas distintas y conviene no confundirlas:
+
+- **Si los dos `ID Orden` son distintos**, son dos pedidos de verdad y el
+  panel hace bien en mostrar dos. Eso es de la tienda, no del panel.
+- **Si son el mismo**, es nuestro. `guardarPedido()` es idempotente
+  *buscando primero por esa columna*, pero eso es leer-y-después-escribir
+  **sin bloqueo**: Shopify manda `orders/create` y `orders/paid` casi juntos,
+  además reintenta, y la reconciliación diaria es un tercer escritor. Dos que
+  lean la planilla antes de que el otro escriba agregan los dos.
+
+**El caso quedó confirmado el 2026-11-01** —las dos filas del pedido
+`7345141809369`, idénticas— así que el panel dejó de solo avisar: **ahora las
+cuenta una sola vez al leer** y además las nombra.
+
+**No es el ambiente de desarrollo ni el re-login del cliente en Shopify.** Los
+webhooks van de servidor a servidor, de Shopify a Vercel, y no pasan por el
+navegador de nadie: la sesión de la tienda no los toca. Si acaso, **en
+producción es más probable**, porque hay más pedidos y más entregas de
+`orders/create` y `orders/paid` casi juntas.
+
+**La ventana no se puede cerrar sin un candado que la API de Sheets no da.**
+Lo que sí se puede es dejar de contar dos veces lo mismo, y eso es correcto
+por definición: **el mismo `ID Orden` es el mismo pedido**. Vive en
+`leerReservasDe()`, que es puro y está en `filas.ts` —sin `googleapis`— para
+poder probarlo sin red.
+
+- **Se queda la primera fila**, que es por la que se edita la reserva, y
+  lleva `duplicadas` con cuántas hay. Las anotadas a mano no entran: su id es
+  `MANUAL-<timestamp>`, único por construcción, y dos iguales solo podrían
+  venir de que alguien copió la fila queriendo.
+- **Se nombra, no se esconde**, que es la regla de este proyecto para los
+  fallos callados: **`/api/diagnostico` lista `idsRepetidos`** —con cuántas
+  filas tiene cada uno— y `celdasConError`, las filas donde quedó un
+  `#ERROR!`; y **la página del día marca la fila** con un *⚠ 2 filas con este
+  pedido*, porque quien mira el día es quien lo va a notar.
+- **Borrar la fila de más sigue siendo a mano**, y eso es a propósito: el
+  panel no sabe si alguien la duplicó queriendo y la editó. Lo que ya no pasa
+  es que el día cuente esa gente dos veces mientras nadie lo note.
+
 ### Los calendarios de celdas necesitan `relative` (2026-10-30)
 
 En `/turnos` y `/extras`, a 393px, **la página entera se corría de lado** —

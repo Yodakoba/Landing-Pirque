@@ -23,6 +23,7 @@ import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { diaParaReservaManual } from './dias.ts';
+import { valorSeguro } from './celdas.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
   from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
@@ -35,7 +36,8 @@ import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
 import { ahoraEnChile, filaBitacora, leerBitacoraDe, recortar,
          ENCABEZADO_BITACORA } from './bitacora.ts';
 import { cookieDe } from './sesion.ts';
-import { filaReserva, buscarFilaPorId } from './filas.ts';
+import { filaReserva, buscarFilaPorId, leerReservasDe, idsRepetidos }
+  from './filas.ts';
 import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
 import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
@@ -343,6 +345,30 @@ ok(res.nombre === '' && res.email === '' && res.telefono === '',
 ok(res.personas === 3 && res.monto === 107000,
    'y lo que de verdad hace falta para el cupo llega igual');
 
+/* ---------- lo que Sheets leeria como formula ---------- */
+
+// **Los dos casos que de verdad pasaron, los dos en silencio.** Con
+// `USER_ENTERED` la API interpreta la celda como si alguien la tecleara, y
+// un `=`, `+`, `-` o `@` adelante abre una formula: la planilla guarda
+// `#ERROR!` y el dato se pierde.
+ok(valorSeguro('+56 9 1234 5678') === "'+56 9 1234 5678",
+   'el telefono normalizado se escribe como texto, no como formula');
+ok(valorSeguro('-5000|12000') === "'-5000|12000",
+   'dos ajustes en una celda tambien, que es plata que alguien tiene que cobrar');
+ok(valorSeguro('=1+1') === "'=1+1" && valorSeguro('@algo') === "'@algo",
+   'y cualquier otra cosa que empiece como formula');
+
+// Un numero con signo SIGUE siendo un numero: la planilla la abre una
+// persona y suma columnas con sus propias formulas.
+ok(valorSeguro('-5000') === '-5000', 'un ajuste negativo solo se queda numero');
+ok(valorSeguro('+56') === '+56', 'y cualquier numero con signo');
+
+// Lo demas pasa intacto, incluido lo que no es texto.
+ok(valorSeguro('Tradiciones') === 'Tradiciones', 'el texto corriente no se toca');
+ok(valorSeguro('2026-11-14') === '2026-11-14', 'ni una fecha');
+ok(valorSeguro(7) === 7 && valorSeguro(null) === null, 'ni lo que no es texto');
+ok(valorSeguro('') === '', 'ni una celda vacia');
+
 /* ---------- la modalidad comprada, que delata una regla caida ---------- */
 res = aReserva(pedido({ financial_status: 'pending',
   line_items: [linea('Tradiciones', 2, 'Pago directo')] }))!;
@@ -484,6 +510,50 @@ ok(buscarFilaPorId([encR], encR, '1007') === -1, 'una hoja con solo encabezado n
 ok(buscarFilaPorId([], [], '1007') === -1, 'ni una hoja vacia');
 ok(buscarFilaPorId(hoja, ['Otra', 'Cosa'], '1007') === -1,
    'y si la planilla no tiene la columna ID Orden, no se inventa una fila');
+
+/* ---------- y cuando el reintento IGUAL se cuela: el mismo pedido dos veces ---------- */
+// Confirmado por el cliente el 2026-11-01: dos filas con el mismo
+// `ID Orden` 7345141809369. `guardarPedido()` busca por esa columna, pero es
+// leer-y-despues-escribir sin candado, y la API de Sheets no da ninguno. Sin
+// esto el dia cuenta esa gente dos veces: el cupo se achica solo y la cocina
+// prepara de mas.
+const encDup = ['ID Orden', 'Fecha Reserva', 'Nombre', 'Personas', 'Monto'];
+const hojaDup = [encDup,
+  ['7345141809369', '2026-11-14', 'Ana', '4', '176000'],
+  ['7345141809369', '2026-11-14', 'Ana', '4', '176000'],
+  ['7345141809370', '2026-11-14', 'Beto', '3', '132000']];
+const dedup = leerReservasDe(hojaDup);
+ok(dedup.length === 2, 'el mismo ID Orden en dos filas se lee como UN pedido');
+ok(dedup[0].personas + dedup[1].personas === 7,
+   'y el dia suma 7 personas, no 11: el cupo no se achica solo');
+ok(dedup[0].fila === 2,
+   'se queda la PRIMERA fila, que es por la que se edita la reserva');
+ok(dedup[0].duplicadas === 2 && dedup[1].duplicadas === undefined,
+   'la que sobrevive dice cuantas filas hay, para poder avisarlo en pantalla');
+ok(leerReservasDe([encDup, ['7345141809369', '2026-11-14', 'Ana', '4', '1']])[0]
+     .duplicadas === undefined,
+   'una reserva normal NO trae el contador: ausente es "no pasa nada"');
+
+// Las anotadas a mano no entran: su id es unico por construccion, y dos
+// MANUAL- iguales solo podrian venir de que alguien copio la fila a proposito.
+const hojaManual = [encDup,
+  ['MANUAL-1', '2026-11-14', 'A mano', '2', ''],
+  ['MANUAL-1', '2026-11-14', 'A mano', '2', '']];
+ok(leerReservasDe(hojaManual).length === 2,
+   'dos filas MANUAL con el mismo id se dejan las dos: eso lo hizo una persona');
+// Lo mismo una fila sin id: no hay nada por lo que agruparla.
+ok(leerReservasDe([encDup, ['', '2026-11-14', 'X', '2', ''],
+                           ['', '2026-11-14', 'Y', '3', '']]).length === 2,
+   'y dos filas SIN id no son el mismo pedido');
+
+// El diagnostico las nombra igual, porque la fila de mas sigue en la planilla
+// y alguien tiene que borrarla.
+const repes = idsRepetidos(hojaDup);
+ok(repes.length === 1 && repes[0].id === '7345141809369' && repes[0].filas === 2,
+   'el diagnostico nombra el id repetido y cuantas filas tiene');
+ok(idsRepetidos(hojaManual).length === 0, 'y no reclama por las hechas a mano');
+ok(idsRepetidos([encDup]).length === 0 && idsRepetidos([]).length === 0,
+   'una hoja vacia o con solo encabezado no revienta el diagnostico');
 
 /* ---------- que la cocina sepa que preparar ---------- */
 // Antes la columna Menu decia solo "Menu Tradiciones", sin cantidades y sin

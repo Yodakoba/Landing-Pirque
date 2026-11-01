@@ -14,10 +14,11 @@ import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFi
          esPestanaQueNoExiste } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
-  indices, faltantes
+  indices, faltantes, esManual
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
-import { filaReserva, filaFecha, buscarFilaPorId } from './filas.ts';
+import { filaReserva, filaFecha, buscarFilaPorId, leerReservasDe,
+         idsRepetidos } from './filas.ts';
 import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
          type Config } from './config.ts';
 import { camposDeShopify } from './shopify.ts';
@@ -52,36 +53,9 @@ const num = (v: unknown): number => {
 /* ---------- Reservas ---------- */
 
 export async function leerReservas(): Promise<Reserva[]> {
-  const filas = await leerHoja(HOJA_RESERVAS);
-  if (filas.length < 2) return [];
-  const i = indices(filas[0], COL_RESERVAS);
-  const en = (f: string[], k: number) => (k === -1 ? '' : (f[k] ?? ''));
-
-  const salida: Reserva[] = [];
-  for (let n = 1; n < filas.length; n++) {
-    const f = filas[n];
-    const fecha = String(en(f, i.fecha)).slice(0, 10);
-    if (!esFecha(fecha)) continue;          // filas vacías o con basura, fuera
-    const monto = en(f, i.monto);
-    salida.push({
-      id: String(en(f, i.id)),
-      fecha,
-      nombre: String(en(f, i.nombre)),
-      email: String(en(f, i.email)),
-      telefono: String(en(f, i.telefono)),
-      menu: String(en(f, i.menu)),
-      personas: num(en(f, i.personas)),
-      monto: monto === '' ? null : num(monto),
-      tipoPago: String(en(f, i.tipoPago)) as Reserva['tipoPago'],
-      estadoPago: String(en(f, i.estadoPago)),
-      creada: String(en(f, i.creada)),
-      asistencia: String(en(f, i.asistencia)),
-      notaPago: String(en(f, i.notaPago)),
-      fila: n + 1                            // 1-based, y la 1 es el encabezado
-    });
-  }
-  return salida;
+  return leerReservasDe(await leerHoja(HOJA_RESERVAS));
 }
+export { leerReservasDe };
 
 export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): Promise<string> {
   const filas = await leerHoja(HOJA_RESERVAS);
@@ -161,6 +135,17 @@ export async function borrarFecha(fila: number): Promise<void> {
  * esto es quedarse callado: si un encabezado no calza, la columna se lee
  * vacía y el panel se ve bien con datos que no están.
  */
+/** Dónde quedó un `#ERROR!` de la planilla, que es un dato perdido. */
+function celdasConError(filas: string[][]): string[] {
+  const salida: string[] = [];
+  for (let n = 1; n < filas.length; n++) {
+    for (const celda of filas[n] ?? []) {
+      if (String(celda).startsWith('#ERROR')) { salida.push(`fila ${n + 1}`); break; }
+    }
+  }
+  return salida;
+}
+
 export async function diagnostico() {
   const [res, fec, tur] = await Promise.all([
     leerHoja(HOJA_RESERVAS).catch(() => [] as string[][]),
@@ -180,7 +165,17 @@ export async function diagnostico() {
       existe: res.length > 0,
       encabezado: res[0] ?? [],
       faltan: faltantes(res[0] ?? [], COL_RESERVAS),
-      filas: Math.max(0, res.length - 1)
+      filas: Math.max(0, res.length - 1),
+      // **Un `ID Orden` repetido es el mismo pedido anotado dos veces.** El
+      // panel ya lo cuenta una sola vez al leer —ver `leerReservasDe()`— así
+      // que el día no miente; lo que queda es la fila de más en la planilla,
+      // y eso se nombra en vez de esconderse. Borrarla desde acá sería peor:
+      // puede que alguien la haya duplicado a mano y editado.
+      idsRepetidos: idsRepetidos(res),
+      // Una celda que diga `#ERROR!` es un dato que la planilla se comió al
+      // leerlo como fórmula. No debería volver a pasar —ver `valorSeguro()`—
+      // pero las filas escritas antes del arreglo siguen ahí.
+      celdasConError: celdasConError(res)
     },
     [HOJA_FECHAS]: {
       existe: fec.length > 0,

@@ -550,6 +550,12 @@ export default function DayView({ fecha }: { fecha: string }) {
                 // las dos modalidades se anota como "A + B": si hay algo que
                 // se paga en el local, manda el ámbar.
                 const enElLocal = String(r.tipoPago).includes(TIPO_PAGO.local);
+                // **El mismo pedido anotado dos veces en la planilla.**
+                // El panel ya lo cuenta una sola vez —ver `leerReservasDe()`—
+                // así que esto no cambia ningún total: avisa, para que
+                // alguien borre la fila de más. Quien mira el día es quien
+                // lo va a notar.
+                const repetida = (r.duplicadas ?? 1) > 1;
                 return (
                   <tr key={r.fila} className={`border-b border-hueso/5 ${
                         ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
@@ -587,6 +593,14 @@ export default function DayView({ fecha }: { fecha: string }) {
                       {raro && (
                         <div className="mt-1 text-xs font-semibold text-ambar-texto">
                           ⚠ pago directo sin pagar
+                        </div>
+                      )}
+                      {repetida && (
+                        <div className="mt-1 text-xs font-semibold text-ambar-texto"
+                          title={`El mismo ID Orden está en ${r.duplicadas} filas de la `
+                               + 'planilla. El panel lo cuenta una sola vez; conviene '
+                               + 'borrar la de más.'}>
+                          ⚠ {r.duplicadas} filas con este pedido
                         </div>
                       )}
                     </td>
