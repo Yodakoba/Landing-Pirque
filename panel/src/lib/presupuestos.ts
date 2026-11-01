@@ -35,7 +35,9 @@
  * de un turno, y por el mismo motivo: lo acordado no puede cambiar solo
  * porque mañana cambie una tarifa.
  */
-import { normalizar, indices } from './columnas.ts';
+import { normalizar, indices, ESTADO_PAGO } from './columnas.ts';
+import { canonizar, type Menu } from './menus.ts';
+import { componerMenu } from './shopify.ts';
 import { esFecha, sumarDias, type Fecha } from './fechas.ts';
 
 export const HOJA_PRESUPUESTOS = 'Presupuestos';
@@ -279,6 +281,74 @@ export function posiblesPorDia(
 /** Las líneas de un presupuesto, en el orden en que están escritas. */
 export const lineasDe = (lineas: LineaPresupuesto[], id: string) =>
   lineas.filter((l) => l.presupuesto === id);
+
+/* ---------- convertirlo en reserva ---------- */
+
+/**
+ * Lo que se anota en `Reservas` cuando el cliente acepta.
+ *
+ * **Se transcribe el precio negociado, no se recalcula desde `Menús`.** Lo
+ * pidió el cliente con el porqué: *"cuando se transforma en reserva
+ * confirmada, se transcribe el precio de este presupuesto enviado, porque
+ * eso es parte de las negociaciones"*. Si se recalculara, el descuento que
+ * se acordó por teléfono desaparecería en el momento exacto en que pasa a
+ * ser plata que alguien tiene que cobrar.
+ *
+ * **Al `Menú` solo van las líneas que representan gente**, y el filtro es
+ * la columna `Personas`, no la lista de menús. El arriendo del recinto y el
+ * show ecuestre cuestan y no se cocinan: meterlos ahí haría que la página
+ * del día le pidiera a la cocina preparar "1 × Arriendo del recinto".
+ *
+ * **Se probó primero con `canonizar()` contra la pestaña `Menús` y estaba
+ * mal**, aunque parezca el camino obvio: esa función devuelve **tal cual**
+ * lo que no reconoce —a propósito, para que un plato que la tienda empezó a
+ * vender ayer aparezca igual en el panel— así que no sirve de filtro, y
+ * convertirla en uno habría hecho desaparecer en silencio un menú nuevo de
+ * la lista de lo que hay que cocinar. La columna `Personas`, en cambio, es
+ * donde alguien **ya dijo** qué línea es gente. Un menú que todavía no está
+ * en el catálogo pasa igual, y `desconocidos()` lo reclama en la página del
+ * día, que es el mecanismo que el panel ya tiene para eso.
+ *
+ * `canonizar()` sí se usa, pero para lo suyo: emparejar mayúsculas y tildes
+ * para que `tradiciones` y `Tradiciones` se sumen como el mismo plato.
+ *
+ * Nace en **por pagar**, no en pagada: aceptar un presupuesto es
+ * comprometerse a venir, no haber transferido. Si ya pagó, se corrige en la
+ * página del día — que es donde se corrige cualquier estado de pago.
+ */
+export function reservaDesdePresupuesto(
+  p: Presupuesto,
+  lineas: LineaPresupuesto[],
+  menus: Menu[]
+): {
+  fecha: Fecha; nombre: string; email: string; telefono: string;
+  menu: string; personas: number; monto: number;
+  tipoPago: ''; estadoPago: string; asistencia: string; notaPago: string;
+} {
+  const cuenta: Record<string, number> = {};
+  for (const l of lineas) {
+    // Cero personas es una línea que no se cocina.
+    if (l.personas <= 0) continue;
+    const nombre = canonizar(l.concepto, menus);
+    if (!nombre) continue;
+    cuenta[nombre] = (cuenta[nombre] ?? 0) + Math.max(0, l.cantidad);
+  }
+  return {
+    fecha: p.fecha,
+    nombre: p.cliente,
+    email: p.email,
+    telefono: p.telefono,
+    menu: componerMenu(cuenta),
+    personas: personasDe(lineas),
+    monto: totalDe(lineas),
+    // **Solo lo escribe Shopify**, igual que en una reserva anotada a mano:
+    // acá no se compró ninguna variante.
+    tipoPago: '',
+    estadoPago: ESTADO_PAGO.pendiente,
+    asistencia: '',
+    notaPago: `Del presupuesto N° ${folioDe(p)}`
+  };
+}
 
 /* ---------- ids y tokens ---------- */
 

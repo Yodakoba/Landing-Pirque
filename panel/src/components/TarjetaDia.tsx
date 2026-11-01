@@ -252,6 +252,34 @@ export default function TarjetaDia({
             </>
           )}
 
+          {/* **Lo cotizado y sin confirmar, en rosado** (2026-11-01, lo pidió
+              el cliente: *"este día tú tienes dos presupuestos enviados con
+              un total de 43 posibles reservas, pero si no está confirmado,
+              no toquen nada de lo concreto"*).
+
+              Va **debajo de la barra y de las pastillas**, no dentro: ahí
+              arriba está lo que ya es, y esto es lo que podría ser. Mezclarlo
+              con las pagadas y las por cobrar sería exactamente lo que no
+              hay que hacer — y no entra en la barra ni en el número grande,
+              porque no ocupa cupo. El rosado es el único color que no está
+              usado por nada que sí sea un hecho.
+
+              Aparece solo si hay alguno: un "0 presupuestos" es ruido en una
+              tarjeta que se mira para decidir. */}
+          {d.presupuestos > 0 && (
+            <p className="mt-2 flex flex-wrap gap-2 text-[13px]">
+              <span className="inline-flex items-center gap-1.5 rounded-md border
+                               border-rosa/50 bg-rosa/10 px-2 py-1 text-rosa-texto">
+                <span aria-hidden className="h-2 w-2 rounded-full bg-rosa-fuerte" />
+                <strong className="tabular-nums">{d.presupuestos}</strong>
+                {d.presupuestos === 1 ? 'presupuesto' : 'presupuestos'}
+                {d.presupuestadas > 0 && (
+                  <> · <strong className="tabular-nums">{d.presupuestadas}</strong> posibles</>
+                )}
+              </span>
+            </p>
+          )}
+
           {/* Que el día esté cerrado o privado ya lo dice la palabra bajo
               el punto. Lo único que sobrevive como línea es el aviso de un
               día cerrado **con gente ya reservada**, porque eso no es un

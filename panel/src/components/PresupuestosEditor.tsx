@@ -138,6 +138,37 @@ export default function PresupuestosEditor() {
     } catch (e) { setError(String(e)); } finally { setGuardando(false); }
   }
 
+  /**
+   * Convertirlo en reserva.
+   *
+   * **Es un botón propio y no un efecto de marcarlo "Aceptado"**: que el
+   * cliente diga que sí y que le tomemos el lugar son dos decisiones, y la
+   * segunda es la que le quita la silla a otro. Por eso pregunta antes y
+   * dice qué va a pasar.
+   */
+  async function convertir(p: Presupuesto) {
+    const gente = genteDeUno(p.id);
+    if (!confirm(
+      `¿Convertir el presupuesto de ${p.cliente} en una reserva?\n\n`
+      + `Desde ahora ocupa ${gente} ${gente === 1 ? 'lugar' : 'lugares'} del día, `
+      + `y deja de contarse como posible. Queda por pagar, con el monto `
+      + `cotizado.`)) return;
+    setGuardando(true);
+    try {
+      const r = await fetch('/api/presupuestos/convertir', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: p.id })
+      });
+      const d = await r.json();
+      if (d.error) return setError(d.error);
+      setError('');
+      setAviso(`Listo: ${p.cliente} ya es una reserva del día. `
+             + 'Ahora ocupa cupo y aparece en la página de ese día.');
+      setAbierto(null); setBorrador(null);
+      await cargar();
+    } catch (e) { setError(String(e)); } finally { setGuardando(false); }
+  }
+
   function copiarLink(p: Presupuesto) {
     const url = `${window.location.origin}/presupuesto/${p.token}`;
     navigator.clipboard?.writeText(url)
@@ -406,8 +437,12 @@ export default function PresupuestosEditor() {
                           ...borrador, p: { ...borrador.p, notas: e.target.value } })} />
                     </Campo>
                     <Campo etiqueta="En qué va" ancho="w-44">
+                      {/* Ya convertido, el estado deja de ser una opinión:
+                          existe una reserva. Se muestra y no se edita, igual
+                          que la modalidad de una reserva de Shopify. */}
                       <select value={borrador.p.estado || ESTADO_PRESUPUESTO.borrador}
                         className={ENTRADA} aria-label="Estado del presupuesto"
+                        disabled={!!borrador.p.idReserva}
                         onChange={(e) => setBorrador({
                           ...borrador, p: { ...borrador.p, estado: e.target.value } })}>
                         <option value={ESTADO_PRESUPUESTO.borrador}>Borrador</option>
@@ -433,6 +468,22 @@ export default function PresupuestosEditor() {
                       title="Vuelve a contar el plazo desde hoy">
                       Renovar vigencia
                     </button>
+                    {/* Aparece solo con el presupuesto aceptado y todavía sin
+                        reserva: antes de eso no hay nada que convertir, y
+                        después ya está hecho. */}
+                    {!borrador.p.idReserva
+                      && borrador.p.estado === ESTADO_PRESUPUESTO.aceptado && (
+                      <button onClick={() => void convertir(borrador.p)}
+                        disabled={guardando}
+                        className="boton border-verde-fuerte text-verde-texto">
+                        Convertir en reserva
+                      </button>
+                    )}
+                    {borrador.p.idReserva && (
+                      <a href={`/dia/${borrador.p.fecha}`} className="tecla boton">
+                        Ver la reserva del día
+                      </a>
+                    )}
                     <span className="flex-1" />
                     {!borrador.p.idReserva && (
                       <button onClick={() => void borrar(borrador.p)} disabled={guardando}

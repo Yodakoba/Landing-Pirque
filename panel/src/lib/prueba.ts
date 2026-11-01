@@ -31,6 +31,7 @@ import {
   ESTADO_PRESUPUESTO, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
   normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible, porToken,
+  reservaDesdePresupuesto,
   totalDe, validoHastaDe, personasDe as personasDeLineas,
   type Presupuesto, type LineaPresupuesto
 } from './presupuestos.ts';
@@ -2106,6 +2107,38 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
      'un token VACIO no encuentra nada, aunque haya presupuestos sin token: si calzara, entrar a /presupuesto/ sin nada abriria la cotizacion de otro cliente');
   ok(porToken(conToken, '   ') === null, 'ni con espacios');
   ok(porToken(conToken, 'ABC123') === null, 'ni con otras mayusculas');
+
+  // --- Convertirlo en reserva ---
+  {
+    const catalogo = [
+      { nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
+      { nombre: 'Niños', precioEnLinea: 19000, precioEnLocal: 24000 }
+    ];
+    const r2 = reservaDesdePresupuesto(pre({ cliente: 'Agencia Sur' }), lineas, catalogo);
+
+    ok(r2.monto === 20 * 40000 + 10 * 19000 + 2500000,
+       'el monto de la reserva es el TOTAL NEGOCIADO del presupuesto, no el de la lista de precios');
+    ok(r2.personas === 30, 'las personas son las del presupuesto');
+    // El arriendo cuesta y no se cocina.
+    ok(!r2.menu.includes('Arriendo'),
+       'el arriendo NO va al menu: la cocina no prepara un arriendo del recinto');
+    ok(r2.menu === '20 × Tradiciones + 10 × Niños',
+       `el menu queda en el formato que la pagina del dia sabe leer — y fue: ${r2.menu}`);
+    // Y de vuelta: lo que se escribe se tiene que poder desglosar.
+    const vuelta2 = desglosarMenu(r2.menu, catalogo);
+    ok(vuelta2.length === 2 && vuelta2[0].cantidad === 20,
+       'y se desglosa de vuelta, que es de donde sale el "que preparar" del dia');
+    ok(r2.estadoPago === ESTADO_PAGO.pendiente,
+       'nace POR PAGAR: aceptar un presupuesto es comprometerse a venir, no haber transferido');
+    ok(r2.tipoPago === '',
+       'y sin modalidad, como cualquier reserva a mano: esa la escribe solo Shopify');
+
+    // Un precio rebajado sobrevive la conversion, que es el punto entero.
+    const rebajado = reservaDesdePresupuesto(
+      pre({}), [li({ cantidad: 44, precio: 64000, personas: 44 })], catalogo);
+    ok(rebajado.monto === 44 * 64000,
+       'si se negocio a 64.000 la reserva vale 64.000 x 44, aunque la lista diga 44.000');
+  }
 
   // --- El estado que se muestra resuelve el vencimiento solo ---
   ok(estadoVisible(pre({ validoHasta: '2026-10-31' }), HOY) === 'Vencido',
