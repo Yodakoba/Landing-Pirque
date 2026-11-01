@@ -17,7 +17,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
-import { aEntero, esContratado, MODALIDAD,
+import { aEntero, esContratado, MODALIDAD, porNombre,
          type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import DatosBancarios from './DatosBancarios';
@@ -451,13 +451,33 @@ export default function EquipoEditor() {
           Ver desactivados ({inactivos})
         </label>
       )}
+      {/* **La lista se muestra alfabética** (2026-11-01, lo pidió el
+          cliente). Venía en el orden de la planilla, o sea en el que se
+          grabó cada ficha: para encontrar a alguien entre quince había que
+          leerla entera, igual que pasaba en el desplegable del planificador.
+
+          **Se ordena lo que se dibuja, no lo que se guarda**, y esa es toda
+          la diferencia con la advertencia que este archivo traía escrita:
+          `i` sigue siendo la posición real en la lista que se manda, porque
+          cada ficha se lleva la suya al ordenarse. Todo lo que edita —un
+          campo, quitarla, desactivarla— la usa, así que ordenar el array de
+          verdad habría hecho que editar a alguien escribiera sobre otro.
+
+          **Las fichas sin nombre van al final**, que es donde está el botón
+          de agregar: una recién creada que saltara al principio se perdería
+          de vista justo después de apretarlo. */}
       <ul className="space-y-3">
-        {gente.map((t, i) => {
-          // Se filtra DENTRO del map y no antes: `i` es la posición real en
-          // la lista que se guarda, y todo lo que edita una ficha —cambiar un
-          // campo, quitarla— la usa. Con un `filter` previo, esconder a un
-          // inactivo le cambiaría el índice a los de abajo y editar a alguien
-          // escribiría sobre otro.
+        {gente
+          .map((t, i) => ({ t, i }))
+          .sort((a, b) => {
+            const va = !a.t.nombre.trim(), vb = !b.t.nombre.trim();
+            if (va !== vb) return va ? 1 : -1;
+            return porNombre(a.t, b.t);
+          })
+          .map(({ t, i }) => {
+          // Los inactivos se filtran DENTRO del map y no antes, por lo mismo:
+          // con un `filter` previo sobre el array original, esconder a uno le
+          // cambiaría el índice a los de abajo.
           if (!t.activo && !verInactivos) return null;
           const turnos = turnosDe.get(normalizar(t.nombre)) ?? 0;
           return (

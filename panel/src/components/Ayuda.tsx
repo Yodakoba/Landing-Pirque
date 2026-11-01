@@ -33,9 +33,14 @@ export default function Ayuda({ tema, onRecorrido }: {
       <button type="button" onClick={() => setAbierta(true)}
         aria-label={`Qué es esto: ${a.titulo}`}
         title="Qué es esta pantalla y cómo se usa"
-        className="ml-2 inline-flex h-6 w-6 shrink-0 items-center justify-center
-                   rounded-full border border-hueso/25 align-middle text-xs
-                   font-bold text-hueso/55 hover:border-oro hover:text-oro">
+        /* **30px y 15px, no 24 y 12** (2026-11-01). Era el único control
+           del panel que seguía bajo el piso de la regla: un signo de 12px
+           dentro de un círculo de 24 no se acierta con el dedo, y este es
+           justamente el botón que aprieta quien no sabe usar la pantalla. */
+        className="ml-2 inline-flex h-[30px] w-[30px] shrink-0 items-center
+                   justify-center rounded-full border border-hueso/30 align-middle
+                   text-[15px] font-bold text-hueso/70 hover:border-oro
+                   hover:text-oro">
         ?
       </button>
 
