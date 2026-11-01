@@ -67,11 +67,28 @@ const PREFIJO_TRABAJADOR = '/mi/';
  */
 const PREFIJO_PLANILLA = '/semana/';
 
+/**
+ * El presupuesto que se le manda a un cliente. Misma idea otra vez: no
+ * puede pedir contraseña porque quien lo abre no es del equipo, y lo que lo
+ * protege es el token de la URL, que la página busca entre los presupuestos
+ * antes de mostrar nada.
+ *
+ * **`/presupuesto` a secas no abre nada**: `porToken()` no encuentra nada
+ * con un token vacío, aunque haya presupuestos sin token. Si calzara,
+ * entrar sin nada detrás abriría el primero de la lista — con el precio que
+ * se le ofreció a otro cliente.
+ *
+ * Y lo que enseña es solo esa cotización: ni el calendario, ni el resto de
+ * los clientes, ni lo que se le cotizó a nadie más.
+ */
+const PREFIJO_PRESUPUESTO = '/presupuesto/';
+
 export async function middleware(req: NextRequest) {
   const ruta = req.nextUrl.pathname;
   if (PUBLICAS.includes(ruta)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_TRABAJADOR)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_PLANILLA)) return NextResponse.next();
+  if (ruta.startsWith(PREFIJO_PRESUPUESTO)) return NextResponse.next();
 
   const secreto = secretoDeSesion(process.env);
 

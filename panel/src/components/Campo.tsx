@@ -23,7 +23,17 @@ export default function Campo({ etiqueta, ancho, children }: {
 }) {
   return (
     <label className={`block ${ancho}`}>
-      <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
+      {/* **13px al 60%, no 10 al 35** (2026-11-01). Era el rótulo más chico
+          del panel y está en el lugar donde menos corresponde: es lo único
+          que dice qué se está escribiendo en esa caja. La regla pone el piso
+          en 13 y reserva las opacidades bajas para lo secundario — un rótulo
+          que hay que leer para no escribir el precio en la casilla de las
+          personas no lo es.
+
+          Vale para las cuatro pantallas que lo usan de una vez, que es la
+          gracia de que esto viva en un archivo. */}
+      <span className="mb-1 block text-[13px] font-medium uppercase
+                       tracking-wide text-hueso/60">
         {etiqueta}
       </span>
       {children}

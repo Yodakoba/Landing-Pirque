@@ -37,7 +37,12 @@ export default {
         verde: { DEFAULT: c('--verde'), fuerte: c('--verde-fuerte'), texto: c('--verde-texto') },
         rojo: { DEFAULT: c('--rojo'), fuerte: c('--rojo-fuerte'), texto: c('--rojo-texto') },
         ambar: { DEFAULT: c('--ambar'), fuerte: c('--ambar-fuerte'), texto: c('--ambar-texto') },
-        cielo: { DEFAULT: c('--cielo'), fuerte: c('--cielo-fuerte'), texto: c('--cielo-texto') }
+        cielo: { DEFAULT: c('--cielo'), fuerte: c('--cielo-fuerte'), texto: c('--cielo-texto') },
+        // El rosado es el de los presupuestos, y tiene nombre propio por la
+        // misma razón que los otros cuatro: es un significado —"cotizado,
+        // todavía no confirmado"— y no un color. El cliente lo pidió así
+        // justamente para que no se confunda con nada que ya esté tomado.
+        rosa: { DEFAULT: c('--rosa'), fuerte: c('--rosa-fuerte'), texto: c('--rosa-texto') }
       }
     }
   },

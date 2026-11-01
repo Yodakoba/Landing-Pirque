@@ -49,6 +49,11 @@
   --cielo-fuerte: 56 189 248;
   --cielo-texto: 125 211 252;
 
+  /* Lo cotizado y sin confirmar. */
+  --rosa: 236 72 153;
+  --rosa-fuerte: 244 114 182;
+  --rosa-texto: 249 168 212;
+
   /* Cuánto se apaga un marcador de posición. Ver abajo. */
   --fantasma: 0.28;
 }
@@ -76,6 +81,12 @@
   --cielo: 2 132 199;
   --cielo-fuerte: 3 105 161;
   --cielo-texto: 7 89 133;
+
+  /* De día el rosado se oscurece, como el dorado: el de noche sobre papel
+     da menos de 3:1 y "2 presupuestos" no se leería con sol encima. */
+  --rosa: 219 39 119;
+  --rosa-fuerte: 190 24 93;
+  --rosa-texto: 157 23 77;
 
   /* Sobre papel, el mismo 0,28 se perdía: un gris claro sobre blanco casi
      no se ve, y un marcador que no se ve no enseña el formato. */
@@ -227,3 +238,40 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   font-weight: 600;
 }
 .boton-relleno:hover { background: rgb(var(--oro)); color: rgb(var(--tinta)); filter: brightness(1.08); }
+
+/* ---------- El presupuesto impreso ---------- */
+
+/**
+ * Lo que pasa cuando alguien aprieta "Descargar PDF".
+ *
+ * **El papel es blanco siempre**, sin importar el tema del panel: imprimir
+ * el tema oscuro gastaría un cartucho entero en un fondo negro, y en PDF se
+ * ve como un documento de otro planeta. Se fuerzan los colores acá y no se
+ * cambia el tema antes de imprimir, porque eso le haría parpadear la
+ * pantalla a quien solo quería guardar el archivo.
+ */
+@media print {
+  /* El botón y lo que explica cómo usarlo no van al papel. */
+  .sin-imprimir { display: none !important; }
+
+  /* Fuera la barra del panel y los márgenes de la aplicación: el documento
+     tiene que empezar arriba de la hoja, no a ocho centímetros. */
+  body > header { display: none !important; }
+  main { padding: 0 !important; max-width: none !important; }
+
+  :root, :root[data-tema='oscuro'], :root[data-tema='claro'] {
+    --tinta: 255 255 255;
+    --panel: 255 255 255;
+    --hueso: 17 17 17;
+    /* El oro de día, que es el que se lee sobre blanco. El del sitio da
+       menos de 2,5:1 sobre papel y el total saldría casi invisible. */
+    --oro: 138 107 18;
+  }
+
+  body { background: #fff !important; color: #111 !important; }
+
+  /* Una cotización de muchas líneas no puede partir una fila en dos hojas. */
+  tr, li { break-inside: avoid; }
+
+  @page { margin: 18mm 16mm; }
+}

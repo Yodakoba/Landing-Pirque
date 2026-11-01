@@ -30,7 +30,7 @@ import type { Reserva, FechaHabil } from './tipos.ts';
 import {
   ESTADO_PRESUPUESTO, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
-  normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible,
+  normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible, porToken,
   totalDe, validoHastaDe, personasDe as personasDeLineas,
   type Presupuesto, type LineaPresupuesto
 } from './presupuestos.ts';
@@ -2094,6 +2094,18 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   ok(normalizarLineas([
     { presupuesto: 'PRE-1', concepto: '  ', cantidad: 3, precio: 100, personas: 3 }
   ]).length === 0, 'una linea sin concepto se descarta al guardar');
+
+  // --- El link del cliente ---
+  const conToken = [
+    pre({ id: 'PRE-1', token: 'abc123' }),
+    // Uno sin token: todavía no se ha mandado.
+    pre({ id: 'PRE-2', token: '' })
+  ];
+  ok(porToken(conToken, 'abc123')?.id === 'PRE-1', 'el token encuentra su presupuesto');
+  ok(porToken(conToken, '') === null,
+     'un token VACIO no encuentra nada, aunque haya presupuestos sin token: si calzara, entrar a /presupuesto/ sin nada abriria la cotizacion de otro cliente');
+  ok(porToken(conToken, '   ') === null, 'ni con espacios');
+  ok(porToken(conToken, 'ABC123') === null, 'ni con otras mayusculas');
 
   // --- El estado que se muestra resuelve el vencimiento solo ---
   ok(estadoVisible(pre({ validoHasta: '2026-10-31' }), HOY) === 'Vencido',

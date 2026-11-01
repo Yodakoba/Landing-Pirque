@@ -29,7 +29,12 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
   const ruta = usePathname();
   // Ni la página del trabajador ni la planilla del grupo llevan barra:
   // todos sus enlaces pedirían una contraseña que quien las abre no tiene.
-  const esDeTrabajador = ruta.startsWith('/mi/') || ruta.startsWith('/semana/');
+  //
+  // **El presupuesto tampoco**, y ahí es más fuerte todavía: lo abre un
+  // cliente, no alguien del equipo. Una barra con "Turnos" y "Bitácora"
+  // sobre una cotización diría que hay un panel detrás al que asomarse.
+  const esDeTrabajador = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
+                      || ruta.startsWith('/presupuesto/');
   const esEntrada = ruta === '/login';
 
   async function salir() {

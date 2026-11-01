@@ -175,6 +175,19 @@ export const PERMISOS = {
    * segundo es cerrar una puerta del panel.
    */
   planilla: [ROL.admin, ROL.encargado],
+  /**
+   * Crear, editar y mandar presupuestos.
+   *
+   * **Va con el encargado** (2026-11-01, lo pidió el cliente): cotizar es
+   * parte de atender una consulta, y es el encargado quien la recibe. Si no
+   * pudiera, cada agencia que escribe un sábado tendría que esperar al
+   * administrador.
+   *
+   * Y no le abre nada que no tenga: los precios siguen saliendo de la
+   * pestaña `Menús`, que él no puede cambiar. Lo único que decide acá es qué
+   * precio ofrecer en **esta** cotización, que es justamente la negociación.
+   */
+  presupuestos: [ROL.admin, ROL.encargado],
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */

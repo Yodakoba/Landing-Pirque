@@ -56,10 +56,17 @@ export default function Recorrido() {
     return () => window.removeEventListener('brasas:recorrido', abrir);
   }, []);
 
-  // Ni la página del trabajador, ni la planilla del grupo, ni la entrada:
-  // las tres las abre gente que no administra nada, y un recorrido por el
-  // panel sería ofrecerle una visita a una casa en la que no vive.
+  // Ni la página del trabajador, ni la planilla del grupo, ni el
+  // presupuesto, ni la entrada: las cuatro las abre gente que no administra
+  // nada, y un recorrido por el panel sería ofrecerle una visita a una casa
+  // en la que no vive.
+  //
+  // **En el presupuesto es peor todavía**, y por eso vale tenerlo escrito:
+  // ese documento se imprime a PDF, así que la tira se iba impresa arriba
+  // de una cotización — un cartel del panel interno en la hoja que recibe
+  // el cliente.
   const fuera = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
+             || ruta.startsWith('/presupuesto/')
              || ruta === '/login';
   if (fuera) return null;
 
