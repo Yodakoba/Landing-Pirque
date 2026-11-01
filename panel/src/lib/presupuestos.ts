@@ -178,6 +178,57 @@ export const totalDe = (lineas: LineaPresupuesto[]) =>
 export const personasDe = (lineas: LineaPresupuesto[]) =>
   lineas.reduce((n, l) => n + Math.max(0, l.personas), 0);
 
+/* ---------- el IVA ---------- */
+
+/**
+ * El IVA chileno.
+ *
+ * **Es una constante y no una fila de `Config`**, al revés que la vigencia.
+ * La diferencia es quién lo decide: cuántos días vale una cotización lo fija
+ * el cliente y lo puede cambiar mañana, pero la tasa del IVA la fija la ley
+ * y es la misma para todos. Dejarla editable sería ofrecer un campo donde un
+ * cero o un 12 mal tecleados saldrían impresos en un documento que va a la
+ * contabilidad de una empresa. Si algún día la ley la cambia, es esta línea.
+ */
+export const IVA = 0.19;
+
+export interface Desglose {
+  /** Lo cotizado sin impuesto. */
+  neto: number;
+  /** El impuesto. */
+  iva: number;
+  /** Lo que el cliente paga. Es el total de las líneas, tal cual. */
+  total: number;
+}
+
+/**
+ * El desglose de un total **que ya trae el IVA incluido**.
+ *
+ * Esa es la decisión de fondo y la dio el cliente: *"los precios que nosotros
+ * ofrecemos hoy son con IVA"*. O sea que el total **no cambia** al desglosar
+ * —sigue siendo lo que se le cobra— y lo que se calcula hacia atrás es el
+ * neto. Al revés, sumándole 19% a lo escrito, cada presupuesto habría salido
+ * un 19% más caro que el precio que anuncia el resto del sitio.
+ *
+ * **El IVA sale de restar, no de multiplicar**, y eso no es un atajo: con
+ * `neto × 0,19` los tres números no siempre suman —`44.000` da neto 36.975 e
+ * IVA 7.025,25— y un documento que va a la contabilidad de una empresa no
+ * puede tener un peso que no cuadra. Restando, `neto + iva === total`
+ * siempre. Mismo criterio que `repartirPropina()`, que reparte hasta el
+ * último peso en vez de dejar decimales.
+ *
+ * **Va sobre el total y no línea por línea**, también a propósito: la suma de
+ * los netos redondeados de cada línea no da el neto del total, así que un
+ * documento con las dos cosas tendría dos netos distintos. Y a quien recibe
+ * la cotización le sirve el neto del total, que es el que pasa a su
+ * contabilidad.
+ */
+export function desglosarIVA(total: number, tasa = IVA): Desglose {
+  const t = Math.max(0, Math.round(total));
+  const neto = Math.round(t / (1 + tasa));
+  return { neto, iva: t - neto, total: t };
+}
+
 /* ---------- vigencia ---------- */
 
 /**

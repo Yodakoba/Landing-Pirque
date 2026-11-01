@@ -23,6 +23,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import {
   ESTADO_PRESUPUESTO, totalDe, personasDe, estadoVisible, folioDe, aEntero,
+  desglosarIVA, IVA,
   porVencer, vencidoSinCerrar, diasParaVencer,
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
@@ -501,8 +502,18 @@ export default function PresupuestosEditor() {
                       <span className="text-[13px] text-hueso/65">
                         {genteBorrador} {genteBorrador === 1 ? 'persona' : 'personas'}
                       </span>
+                      {/* **El mismo desglose que ve el cliente**, para que
+                          quien negocia esté mirando los mismos tres números
+                          que la hoja que va a mandar. Una agencia pide el
+                          neto por teléfono y no puede haber que calcularlo
+                          aparte. */}
+                      <span className="text-[13px] text-hueso/65 tabular-nums">
+                        Neto {enPesos(desglosarIVA(totalBorrador).neto)}
+                        {' · '}IVA {Math.round(IVA * 100)}%{' '}
+                        {enPesos(desglosarIVA(totalBorrador).iva)}
+                      </span>
                       <span>
-                        <span className="text-[13px] text-hueso/65">Total: </span>
+                        <span className="text-[13px] text-hueso/65">Total con IVA: </span>
                         <strong className="text-lg tabular-nums text-oro">
                           {enPesos(totalBorrador)}
                         </strong>

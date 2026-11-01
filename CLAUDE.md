@@ -1408,6 +1408,60 @@ rompió nada —el día ya no lo cuenta— solo quedó sin cerrar.
   antes de abrirlo; sin eso el clic no hacía nada visible, que es el peor
   resultado para un botón.
 
+### El IVA, desglosado porque esto va a empresas (2026-11-01)
+
+Lo pidió el cliente con el dato que fija todo el cálculo: *"en un presupuesto
+que mayormente va dirigido hacia empresas hay que indicar el IVA… los precios
+que nosotros ofrecemos hoy son con IVA"*.
+
+**Los precios ya traen el IVA, así que el total no cambia.** Lo que se
+calcula es el neto, hacia atrás. Al revés —sumándole 19% a lo escrito— cada
+cotización habría salido un 19% más cara que el precio que anuncia el resto
+del sitio, que es el error que más caro se paga: se descubre cuando el
+cliente compara.
+
+El pie del documento pasó de una línea a tres:
+
+```
+Neto       $3.000.000
+IVA 19%      $570.000
+Total      $3.570.000
+```
+
+- **El IVA sale de restar, no de multiplicar.** Con `neto × 0,19` los tres
+  números no siempre suman —44.000 da neto 36.975 e IVA 7.025,25— y una hoja
+  que va a la contabilidad de una empresa no puede tener un peso que no
+  cuadra. Restando, `neto + iva === total` **siempre**. Mismo criterio que
+  `repartirPropina()`, que reparte hasta el último peso.
+  **Se comprobó rompiéndolo**: cambiando la resta por la multiplicación, la
+  prueba falla con 70.000. Con un solo monto no se habría visto —44.000
+  cuadra por casualidad— y por eso la prueba recorre once totales.
+- **Va sobre el total y no línea por línea.** La suma de los netos
+  redondeados de cada línea no da el neto del total, así que un documento con
+  las dos cosas tendría dos netos distintos. Y a quien recibe la cotización
+  le sirve el del total, que es el que pasa a su contabilidad.
+- **Está dicho con palabras además del desglose**: *"Los precios de este
+  presupuesto incluyen IVA."* Sin esa línea, quien lee un presupuesto en una
+  empresa le suma 19% por costumbre y nos deja fuera por un impuesto que ya
+  estaba cobrado.
+- **La tasa es una constante del código** (`IVA` en `presupuestos.ts`), no
+  una fila de `Config`, al revés que la vigencia. La diferencia es quién lo
+  decide: el plazo lo fija el cliente, la tasa la fija la ley. Un campo
+  editable sería un lugar donde un cero mal tecleado sale impreso.
+- **Lo que se guarda no cambió.** La reserva que nace de un presupuesto
+  sigue llevando el **total con IVA**, que es la plata que hay que cobrar;
+  hay una prueba que lo fija. El desglose es para leerlo, no para calcular
+  con él.
+- **Quien cotiza ve los mismos tres números** en `/presupuestos`, porque una
+  agencia pide el neto por teléfono y no puede haber que sacarlo aparte.
+
+**De paso se arregló algo que venía de antes**: a 393px la tabla del
+documento corría la página entera 11px hacia el lado. Ahora va en una caja
+que se desplaza, con `relative`, como las tablas del panel — y esa caja
+**deja de recortar al imprimir** (`.caja-tabla` en el `@media print`), porque
+en la hoja hay ancho de sobra y lo que sobresaliera se perdería sin que nada
+lo dijera.
+
 ### Lo que no tiene, y conviene que sea una decisión
 
 - **No aparece en `/extras`.** Esa pantalla contesta quién hace el show; un
@@ -3732,7 +3786,7 @@ Dentro de los paneles, en este orden:
 | Las experiencias y el menú | Los cuatro niveles con flip 3D en CSS puro (checkbox + label), y el menú compartido en un `<details>` debajo |
 | Date una vuelta por el lugar | La galería de 27 fotos, carrusel swipe con `scroll-snap`, sin JS |
 | Las actividades | Show ecuestre · seis tarjetas de actividades del recinto · actividades adicionales (coaching con caballos, taller de queso, karting, taller de asado) |
-| El recinto y los extras | Desayuno de campo y once campesina · precio del recinto ($2.500.000 + IVA fin de semana / $1.500.000 + IVA días de semana, solo arriendo, sin catering) · "Eventos a medida" |
+| El recinto y los extras | Desayuno de campo y once campesina · precio del recinto ($2.500.000 fin de semana / $1.500.000 días de semana, **IVA incluido**, solo arriendo, sin catering) · "Eventos a medida" |
 | Por qué acá *(B2B: Por qué sumarte)* | Los tres momentos o segmentos · los beneficios · cómo funciona en 3 pasos |
 
 ### Los paneles
@@ -3823,6 +3877,40 @@ agencias que compran por grupo. Por eso:
   de atrás de sus tarjetas. El sitio público muestra al frente el de **pagar
   por adelantado**. No es una inconsistencia: son las dos modalidades.
 
+### El precio del recinto pasó a ser con IVA incluido (2026-11-01)
+
+Salió al desglosar el IVA en los presupuestos: **el recinto era el único
+precio del sitio anunciado "+ IVA"**, mientras las experiencias dicen "IVA
+incluido". Con el presupuesto tratando todo como IVA incluido, cotizar el
+arriendo escribiendo 2.500.000 habría significado una cosa en el documento y
+otra en la página — $475.000 de diferencia.
+
+Lo cerró el cliente: *"cámbialo en la página que 2,5 millones incluyendo
+IVA… y ahí veamos cuando se negocia, si hay que subir"*. **El precio
+publicado es el total**, y lo que haya que ajustar se conversa en la
+negociación, que es donde ya se decide todo lo demás de un evento.
+
+- **Cambiaron los dos montos, no solo el de 2,5.** El de días de semana está
+  en el mismo bloque y es el mismo producto: dejar uno "+ IVA" al lado del
+  otro habría repuesto justo la inconsistencia que esto viene a sacar.
+- **Va en tres páginas**: `eventos.html`, `landing-afiliados.html` y
+  `promociones.html`.
+- **El "IVA incluido" se dice una vez para el bloque**, en la bajada que ya
+  decía "Valores sin catering", y no dos veces en letra grande al lado de
+  cada monto. Mismo criterio que el pie del presupuesto: el desglose es del
+  total, no de cada línea.
+- **Queda un "+ IVA" en el sitio, y es a propósito**: el desayuno de campo y
+  la once campesina, a **$8.000 + IVA por persona**. Ese precio no se tocó
+  porque el cliente habló del recinto, y cambiarlo sería bajarlo un 19% por
+  cuenta propia. Conviene preguntarle, porque hoy es lo único del sitio que
+  se anuncia así.
+- **Ojo con los diccionarios**: al sacarle el "+ IVA" al monto, la llave
+  `"$2.500.000 + IVA"` dejó de usarse y hubo que agregar `"$2.500.000"` a
+  secas. Un precio a secas **sí** pasa por el diccionario —ahí sale el `CLP`
+  que necesita el inglés—; lo que hace `INTACTO` es decidir si **faltar** es
+  un error, no saltarse la traducción. Sin esa llave, `en/` habría mostrado
+  `$2.500.000`, que en inglés se lee como dos dólares y medio.
+
 **Supuesto sin confirmar:** que el mínimo de 25 no rige para venta directa.
 Se dedujo de que el producto en Shopify no muestra ningún mínimo. Si resulta
 que sí rige, hay que devolverlo a cinco lugares del sitio público.
@@ -3858,6 +3946,12 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   apareció al mirar el catálogo el 2026-10-22. Si se mantiene, es una cuarta
   fila en el formulario y su par de variantes; si no, no se hace nada, pero
   conviene que sea una decisión y no un olvido.
+- ~~¿El arriendo del recinto también es con IVA incluido?~~ — **resuelto el
+  2026-11-01**: sí. El landing lo anunciaba como "$2.500.000 + IVA" al revés
+  que todo lo demás, y el cliente lo cerró en una frase: *"cámbialo en la
+  página que 2,5 millones incluyendo IVA… y ahí veamos cuando se negocia, si
+  hay que subir"*. O sea que el precio publicado es el total. Ver "El precio
+  del recinto pasó a ser con IVA incluido".
 - **El nombre del negocio no calza.** Google Maps lo lista como "Lo Pirque
   Restaurant" y el email es `@lopirque.cl`, pero el sitio se llama "Brasas de
   Lo Pirque" y el dominio es `brasasdelopirque.cl`. Si alguien busca la marca

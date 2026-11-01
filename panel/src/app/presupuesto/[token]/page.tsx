@@ -18,7 +18,7 @@
  */
 import { leerPresupuestos, leerLineasPresupuesto } from '@/lib/datos';
 import { porToken, lineasDe, totalDe, personasDe, totalDeLinea,
-         estadoVisible, folioDe } from '@/lib/presupuestos';
+         estadoVisible, folioDe, desglosarIVA, IVA } from '@/lib/presupuestos';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
 import BotonImprimir from '@/components/BotonImprimir';
@@ -64,6 +64,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
 
   const lineas = lineasDe(todas, p.id);
   const total = totalDe(lineas);
+  // **Los precios de las líneas ya traen el IVA**, así que el total es lo que
+  // se cobra y el neto se calcula hacia atrás. Ver `desglosarIVA()`.
+  const desglose = desglosarIVA(total);
+  const tasaIVA = Math.round(IVA * 100);
   const personas = personasDe(lineas);
   const estado = estadoVisible(p, hoy());
   const vencido = estado === 'Vencido';
@@ -120,7 +124,13 @@ export default async function Pagina({ params }: { params: { token: string } }) 
         </div>
       </div>
 
-      <table className="mt-7 w-full text-sm">
+      {/* **La tabla se desplaza de lado dentro de su caja**, como las del
+          panel, y lleva `relative` por lo mismo: sin eso la página entera se
+          corría 11px a 393px —venía así de antes— y un documento que se
+          abre en un teléfono no puede empezar movido. Al imprimir la caja
+          deja de recortar: la hoja es mucho más ancha y la tabla entra. */}
+      <div className="relative mt-7 overflow-x-auto caja-tabla">
+      <table className="w-full text-sm">
         <thead className="text-left text-[13px] font-semibold uppercase
                           tracking-wide text-hueso/60">
           <tr className="border-b border-hueso/20">
@@ -145,17 +155,50 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             </td></tr>
           )}
         </tbody>
+        {/* **El desglose va sobre el total y no línea por línea**: la suma
+            de los netos de cada línea no da el neto del total, y dos netos
+            distintos en una misma hoja es justo lo que no puede pasar en un
+            documento que va a la contabilidad de una empresa. El total es el
+            que manda —es lo que se cobra— y por eso sigue siendo el número
+            grande y en dorado. */}
         <tfoot>
           <tr>
-            <td colSpan={3} className="pt-4 pr-3 text-right text-sm font-semibold">
+            <td colSpan={3} className="pt-4 pr-3 text-right text-sm text-hueso/70">
+              Neto
+            </td>
+            <td className="pt-4 text-right text-sm tabular-nums text-hueso/70">
+              {enPesos(desglose.neto)}
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
+              IVA {tasaIVA}%
+            </td>
+            <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
+              {enPesos(desglose.iva)}
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={3} className="border-t border-hueso/20 pr-3 pt-2 text-right
+                                       text-sm font-semibold">
               Total
             </td>
-            <td className="pt-4 text-right text-xl font-bold tabular-nums text-oro">
-              {enPesos(total)}
+            <td className="border-t border-hueso/20 pt-2 text-right text-xl
+                           font-bold tabular-nums text-oro">
+              {enPesos(desglose.total)}
             </td>
           </tr>
         </tfoot>
       </table>
+      </div>
+
+      {/* **Que los precios incluyen IVA se dice con palabras, no solo con el
+          desglose.** Un presupuesto que va a una empresa lo lee alguien que,
+          si no está dicho, le suma 19% encima por costumbre — y nos deja
+          fuera de presupuesto por un impuesto que ya estaba cobrado. */}
+      <p className="mt-3 text-[13px] font-semibold text-hueso/70">
+        Los precios de este presupuesto incluyen IVA.
+      </p>
 
       {p.notas && (
         <p className="mt-6 rounded border border-hueso/15 bg-panel p-3 text-sm">
