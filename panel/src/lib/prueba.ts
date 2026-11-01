@@ -31,7 +31,7 @@ import {
   ESTADO_PRESUPUESTO, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
   normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible, porToken,
-  reservaDesdePresupuesto,
+  reservaDesdePresupuesto, diasParaVencer, porVencer, vencidoSinCerrar,
   totalDe, validoHastaDe, personasDe as personasDeLineas,
   type Presupuesto, type LineaPresupuesto
 } from './presupuestos.ts';
@@ -2095,6 +2095,37 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   ok(normalizarLineas([
     { presupuesto: 'PRE-1', concepto: '  ', cantidad: 3, precio: 100, personas: 3 }
   ]).length === 0, 'una linea sin concepto se descarta al guardar');
+
+  // --- Por vencer: el aviso de "apurate", distinto del de "se te paso" ---
+  ok(diasParaVencer(pre({ validoHasta: '2026-11-04' }), HOY) === 3,
+     'del 1 al 4 quedan tres dias');
+  ok(diasParaVencer(pre({ validoHasta: HOY }), HOY) === 0,
+     'el ultimo dia quedan cero, no es negativo');
+  ok(diasParaVencer(pre({ validoHasta: '2026-10-31' }), HOY) === null,
+     'uno YA vencido no tiene dias que queden: eso es otra pregunta');
+  ok(diasParaVencer(pre({ validoHasta: '' }), HOY) === null,
+     'y uno sin vencimiento tampoco');
+
+  ok(porVencer(pre({ validoHasta: '2026-11-03' }), HOY), 'a dos dias, avisa');
+  ok(porVencer(pre({ validoHasta: HOY }), HOY), 'el ultimo dia tambien avisa');
+  ok(!porVencer(pre({ validoHasta: '2026-11-20' }), HOY),
+     'a diecinueve dias no avisa: seria ruido todos los dias');
+  ok(!porVencer(pre({ validoHasta: '2026-10-31' }), HOY),
+     'uno VENCIDO no esta "por vencer": son dos avisos distintos y juntarlos borraria el que todavia se puede atender');
+  ok(!porVencer(pre({ validoHasta: '2026-11-03', idReserva: '123' }), HOY),
+     'con reserva ya creada el plazo dejo de importar');
+  ok(!porVencer(pre({ validoHasta: '2026-11-03', estado: ESTADO_PRESUPUESTO.rechazado }), HOY),
+     'y un rechazado tampoco');
+
+  ok(vencidoSinCerrar(pre({ validoHasta: '2026-10-31' }), HOY),
+     'uno vencido y sin cerrar se nombra: es una conversacion que se enfrio sola');
+  ok(!vencidoSinCerrar(pre({ validoHasta: '2026-10-31', idReserva: '123' }), HOY),
+     'uno vencido pero ya convertido NO: ese termino bien');
+  ok(!vencidoSinCerrar(pre({ validoHasta: '2026-10-31',
+                            estado: ESTADO_PRESUPUESTO.rechazado }), HOY),
+     'ni uno rechazado: ese tambien termino');
+  ok(!vencidoSinCerrar(pre({ validoHasta: '2026-11-03' }), HOY),
+     'y uno vigente no esta vencido');
 
   // --- El link del cliente ---
   const conToken = [

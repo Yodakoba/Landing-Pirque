@@ -193,7 +193,9 @@ export const AYUDAS: Record<string, Ayuda> = {
     ],
     ojo: 'La columna Personas es aparte de la cantidad a propósito: un '
        + 'arriendo del recinto es cantidad 1 y cero personas. De ahí sale la '
-       + 'gente que el día muestra como posible.'
+       + 'gente que el día muestra como posible. Y si a un presupuesto le '
+       + 'quedan pocos días, el panel lo avisa arriba: renuévalo o márcalo '
+       + 'rechazado.'
   },
 
   informe: {

@@ -1369,14 +1369,50 @@ deliberado: sería una puerta de escritura sin contraseña sobre un dato que
 mueve el cupo de un día. El cliente responde por WhatsApp y el encargado lo
 marca.
 
+### Los que están por vencer, y los que ya se pasaron (2026-11-01)
+
+Lo pidió el cliente, y era justo el pendiente que este archivo tenía
+anotado. **Son dos avisos distintos arriba de `/presupuestos`, y no se
+juntaron a propósito**, porque piden cosas opuestas:
+
+| Aviso | Qué dice | Qué hay que hacer |
+|---|---|---|
+| **Por vencer** (ámbar) | *"2 presupuestos vencen pronto"* — con *vence hoy / vence mañana / vence en 3 días* | apurar al cliente, o renovar la vigencia: **todavía cuentan como gente posible** |
+| **Vencidos sin respuesta** (neutro) | *"1 presupuesto venció y nadie lo cerró"* | marcarlo rechazado o renovarlo: **ya dejó de contar** |
+
+Juntarlos en una sola lista habría mezclado *"apúrate, todavía se puede"*
+con *"se te pasó"*, que es la diferencia que uno viene a mirar. Y el
+segundo no es alarma: va en gris, porque un presupuesto que venció no
+rompió nada —el día ya no lo cuenta— solo quedó sin cerrar.
+
+- **El plazo del aviso son 3 días y es una constante del código**
+  (`DIAS_AVISO_VENCIMIENTO`), no una fila de `Config`. La vigencia sí está
+  en la planilla porque es un **plazo comercial** que el cliente le ofrece a
+  alguien; *cuándo avisarle al encargado* no es dato del negocio, es una
+  decisión de esta pantalla. Una fila más en `Config` sería una pregunta más
+  que contestar para estrenar el panel.
+- **"Vence hoy" y "vence mañana" no se escriben "en 0 días" y "en 1 día".**
+  Un cero en un plazo se lee dos veces para entender que es hoy.
+- **`diasParaVencer()` cuenta sumando fechas de texto**, no restando dos
+  `Date`. Es la regla de todo el proyecto, y acá se nota: con husos, un
+  presupuesto que vence hoy en Chile se vería vencido —o al revés— según la
+  hora en que alguien abra la página desde Vercel.
+- **El último día todavía vale**, igual que en `estaVencido()`: "válido
+  hasta el 15" avisa el 15 y recién el 16 pasa al otro aviso.
+- **Los dos avisos usan `cuentaComoPosible()` por debajo**, así que un
+  presupuesto ya convertido en reserva o marcado rechazado no aparece en
+  ninguno. No hay una segunda definición de "sigue abierto" esperando a
+  desalinearse.
+- **Apretar un vencido abre su ficha aunque esté escondida.** Los cerrados
+  van ocultos tras la casilla, así que el botón del aviso destapa la lista
+  antes de abrirlo; sin eso el clic no hacía nada visible, que es el peor
+  resultado para un botón.
+
 ### Lo que no tiene, y conviene que sea una decisión
 
 - **No aparece en `/extras`.** Esa pantalla contesta quién hace el show; un
   presupuesto es otra pregunta, igual que las actividades no aparecen en el
   calendario de la portada.
-- **No avisa cuando uno está por vencer.** Hoy se ve vencido cuando ya lo
-  está. Si hace falta, el lugar natural es el mismo aviso de arriba de
-  `/turnos` que lista lo que falta cerrar.
 - **No manda el link solo.** Se copia y se pega en WhatsApp.
   `enlaceWhatsApp()` ya está escrito en `contacto.ts` esperando la pantalla
   que lo use, y el teléfono del cliente ya se guarda normalizado.
