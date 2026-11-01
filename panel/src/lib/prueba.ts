@@ -48,7 +48,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
-         repartirPropina, propinaDelDia,
+         repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
@@ -1969,6 +1969,22 @@ ok(emailDe({ email: 'Ana@Ejemplo.CL' } as PedidoShopify) === 'ana@ejemplo.cl',
 
 
 /* ---------- Varios ajustes por turno ---------- */
+
+console.log('\nOrden alfabético de la gente');
+
+// Lo pidió el cliente mirando el desplegable con que se agrega a alguien a un
+// puesto: venía en el orden en que se grabó cada ficha. Lo que se comprueba
+// acá es lo que ese orden tiene que resolver y una lista cruda no resuelve:
+// una minúscula no manda a nadie al final, y un acento tampoco.
+{
+  const lista = [
+    { nombre: 'Gloria' }, { nombre: 'hugo vergara' }, { nombre: 'Álvaro' },
+    { nombre: 'Elvira Molina' }, { nombre: 'Bruno Cerendero' }
+  ];
+  const orden = [...lista].sort(porNombre).map((x) => x.nombre).join(' · ');
+  ok(orden === 'Álvaro · Bruno Cerendero · Elvira Molina · Gloria · hugo vergara',
+     'la lista va alfabetica, sin que la minuscula ni el acento la partan');
+}
 
 console.log('\nAjustes de un turno');
 

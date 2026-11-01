@@ -121,6 +121,36 @@ export const AYUDAS: Record<string, Ayuda> = {
        + 'turnos son el registro de quién trabajó qué día.'
   },
 
+  /**
+   * El `?` que va al lado del botón del link, dentro de la ficha.
+   *
+   * No es la ayuda de una pantalla sino la de un botón, y es el único caso:
+   * la pregunta —*¿qué va a ver esta persona cuando lo abra?*— se hace justo
+   * antes de mandarlo por WhatsApp, y la respuesta decide si se manda.
+   */
+  link: {
+    titulo: 'El link personal',
+    cuerpo: [
+      'Es una dirección propia de esa persona. Se la mandas por WhatsApp, '
+      + 'ella la aprieta y ve su página. No pide contraseña ni correo.',
+      'Lo que ve: sus próximos turnos —qué día, desde qué hora, en qué '
+      + 'puesto, cuánta gente se espera y qué menús hay que preparar— y sus '
+      + 'últimos 30 días con el detalle de lo que se le pagó cada uno: la '
+      + 'jornada, las horas extra, los ajustes con su motivo y su parte de '
+      + 'la propina.',
+      'Lo que no ve: reservas, nombres de clientes, a los demás trabajadores '
+      + 'ni lo que gana nadie más.'
+    ],
+    pasos: [
+      'Crear link personal se lo genera y te lo copia. Pégalo en su WhatsApp.',
+      'Copiar link personal vuelve a copiar el mismo, por si lo perdió.',
+      'Renovar crea uno nuevo y deja el anterior inservible al instante: es '
+      + 'lo que hay que hacer si alguien pierde el teléfono.'
+    ],
+    ojo: 'Quien tenga el link ve esa página, así que es de una sola persona '
+       + 'y no se manda al grupo. Desactivarla también se lo cierra.'
+  },
+
   extras: {
     titulo: 'Las actividades extras',
     cuerpo: [

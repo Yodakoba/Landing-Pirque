@@ -278,9 +278,16 @@ export default function TarjetaDia({
               className={`${BOTON} whitespace-nowrap`}>
               Equipo
               {/* El número va acá para no tener que dar vuelta la tarjeta
-                  solo para saber si hay alguien asignado. */}
+                  solo para saber si hay alguien asignado.
+
+                  **Pesa más que la palabra, no menos** (2026-11-01, lo pidió
+                  el cliente). Iba en `text-hueso/60` al lado de un rótulo al
+                  80: el dato quedaba más apagado que su propia etiqueta, que
+                  es al revés de lo que alguien mira. Va en su propia cajita
+                  para distinguirse por forma y no solo por peso. */}
               {resumen && resumen.total > 0 && (
-                <span className="ml-1 tabular-nums text-hueso/60">{resumen.total}</span>
+                <span className="ml-1.5 rounded bg-hueso/10 px-1.5 py-0.5 text-[13px]
+                                 font-bold tabular-nums text-hueso">{resumen.total}</span>
               )}
               {resumen && resumen.faltan > 0 && (
                 <span className="ml-1 text-ambar-texto" title={`Faltan ${resumen.faltan}`}>•</span>

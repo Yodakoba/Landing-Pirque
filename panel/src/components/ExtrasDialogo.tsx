@@ -15,7 +15,7 @@ import { useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
-import { VINO } from '@/lib/equipo';
+import { VINO, porNombre } from '@/lib/equipo';
 import { costoDeExtra, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
 import { normalizar } from '@/lib/columnas';
@@ -60,7 +60,10 @@ export default function ExtrasDialogo({
   const [error, setError] = useState('');
 
   const puestas = new Set(lista.map((e) => normalizar(e.colaborador)));
-  const libres = gente.filter((c) => c.activo && !puestas.has(normalizar(c.nombre)));
+  // En orden alfabético, igual que los trabajadores: dos pantallas que
+  // preguntan lo mismo tienen que preguntarlo igual.
+  const libres = gente.filter((c) => c.activo && !puestas.has(normalizar(c.nombre)))
+                      .sort(porNombre);
   const total = lista.reduce((s, e) => s + costoDeExtra(e), 0);
   const sinConfirmar = lista.filter((e) => !e.estado).length;
 

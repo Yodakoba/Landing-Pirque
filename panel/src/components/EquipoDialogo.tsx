@@ -19,7 +19,7 @@ import { useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
-         repartirPropina, propinaDelDia,
+         repartirPropina, propinaDelDia, porNombre,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { faltaParaCerrar } from '@/lib/cierres';
 import { enPesos } from '@/lib/ocupacion';
@@ -132,8 +132,14 @@ export default function EquipoDialogo({
   );
   // Solo los activos quedan disponibles: alguien dado de baja conserva sus
   // turnos pasados pero no puede recibir uno nuevo.
+  //
+  // **En orden alfabético, no en el que se grabaron las fichas** (2026-11-01,
+  // lo pidió el cliente). El orden de la planilla no le sirve a quien busca a
+  // una persona en una lista de quince, y deja a la recién creada al final,
+  // que es justo la que se va a buscar.
   const libres = useMemo(
-    () => gente.filter((t) => t.activo && !asignados.has(normalizar(t.nombre))),
+    () => gente.filter((t) => t.activo && !asignados.has(normalizar(t.nombre)))
+               .sort(porNombre),
     [gente, asignados]
   );
 
