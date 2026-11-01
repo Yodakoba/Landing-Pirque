@@ -175,9 +175,9 @@ export const PERMISOS = {
    */
   sueldos: [ROL.admin, ROL.pagos],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
-  puestos: [ROL.admin],
+  puestos: [ROL.admin, ROL.pagos],
   /** Crear, renovar y quitar los links personales de los trabajadores. */
-  links: [ROL.admin],
+  links: [ROL.admin, ROL.pagos],
   /**
    * La planilla semanal: mandarla al grupo, crear su link y **renovarlo**.
    *
@@ -217,7 +217,7 @@ export const PERMISOS = {
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
-  bitacora: [ROL.admin],
+  bitacora: [ROL.admin, ROL.pagos],
   /**
    * El informe del mes: cuánto se le pagó a cada persona.
    *
@@ -248,7 +248,7 @@ export const PERMISOS = {
    */
   pagar: [ROL.admin, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
-  configurar: [ROL.admin],
+  configurar: [ROL.admin, ROL.pagos],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
   mantencion: [ROL.admin]
 } as const;

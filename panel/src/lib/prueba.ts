@@ -1611,29 +1611,38 @@ const deEncargado = todas.filter((a) => puede(ROL.encargado, a));
 const dePagos = todas.filter((a) => puede(ROL.pagos, a));
 ok(deEncargado.every((a) => puede(ROL.pagos, a)),
    'quien paga puede todo lo que puede el encargado: no es un rol más chico');
-ok(dePagos.filter((a) => !puede(ROL.encargado, a)).sort().join() === 'pagar,sueldos',
-   'y lo único que tiene de más son las dos cosas de la plata: ver los sueldos de las fichas y registrar pagos');
+ok(deEncargado.length < dePagos.length,
+   'y puede más cosas que él: es el segundo rol más poderoso, no uno más chico');
 
-// **`sueldos` y `links` son dos permisos y no uno, a propósito** (2026-11-01).
-// Eran la misma condición —`esAdmin`— y el cliente pidió que quien paga
-// viera los sueldos; abrir esa condición le habría dado de paso los tokens
-// de los links personales de todo el equipo, que son credenciales.
-ok(puede(ROL.pagos, 'sueldos') && !puede(ROL.pagos, 'links'),
-   'quien paga ve los sueldos de las fichas pero NO los links personales: son plata y credencial, no la misma cosa');
-ok(!puede(ROL.encargado, 'sueldos'),
-   'el encargado sigue sin ver cuánto gana cada compañero: no lo necesita para asignar turnos');
-ok(puede(ROL.admin, 'sueldos') && puede(ROL.admin, 'links'),
-   'el administrador, las dos');
+// **Lo que define al rol, desde el 2026-11-01: puede todo MENOS dos cosas.**
+// Lo fijó el cliente — *"el encargado de pago básicamente tiene todos los
+// derechos más amplios del panel, menos el administrador, que puede tomar
+// ciertas configuraciones, roles, etc."*. Se escribe como la lista de lo que
+// NO puede, porque es corta y es la que importa: cualquier permiso nuevo que
+// se agregue a la tabla y no esté acá, lo tiene.
+const soloDelAdmin = todas.filter((a) => !puede(ROL.pagos, a)).sort();
+ok(soloDelAdmin.join() === 'mantencion,usuarios',
+   'solo dos cosas quedan fuera: las cuentas del panel y la mantención técnica');
+ok(!puede(ROL.pagos, 'usuarios'),
+   'las cuentas del panel NO: quien paga no se cambia el rol a sí mismo ni crea un administrador');
+ok(!puede(ROL.pagos, 'mantencion'),
+   'ni Shopify a mano ni el diagnóstico: eso es mantener el sistema, no operarlo');
+ok(puede(ROL.pagos, 'links') && puede(ROL.pagos, 'puestos')
+   && puede(ROL.pagos, 'bitacora') && puede(ROL.pagos, 'configurar'),
+   'pero sí los links personales, los puestos, la bitácora y la configuración');
+
+// **`sueldos` y `links` siguen siendo dos permisos y no uno.** Hoy los tiene
+// el mismo par de roles, así que no discriminan entre ellos — y se dejan
+// separados igual, porque son cosas distintas: uno es plata y el otro una
+// credencial. La costura está para el día que un rol necesite lo uno sin lo
+// otro, que es exactamente lo que no se pudo hacer mientras eran `esAdmin`.
+ok(!puede(ROL.encargado, 'sueldos') && !puede(ROL.encargado, 'links'),
+   'el encargado no tiene ninguno de los dos: ni cuánto gana cada compañero ni su link');
 ok(puede(ROL.pagos, 'pagar'), 'quien paga puede registrar que pagó');
 ok(!puede(ROL.encargado, 'pagar'),
    'el encargado NO: ve el informe, pero declarar que una plata salió es otra cosa');
 
-// Lo que sigue sin tocar es lo del administrador, que es justamente para lo
-// que esta cuenta existe: no tener que abrir la del admin para pagar.
-ok(!puede(ROL.pagos, 'configurar') && !puede(ROL.pagos, 'usuarios') &&
-   !puede(ROL.pagos, 'bitacora') && !puede(ROL.pagos, 'puestos') &&
-   !puede(ROL.pagos, 'links') && !puede(ROL.pagos, 'mantencion'),
-   'pero no la configuración, ni las cuentas del panel, ni la bitácora, ni los links');
+
 ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
 
 // **El encargado lo ve desde el 2026-11-01**, por decisión del cliente y

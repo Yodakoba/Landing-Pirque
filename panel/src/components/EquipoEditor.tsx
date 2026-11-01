@@ -45,12 +45,14 @@ export default function EquipoEditor() {
   // Lo manda el servidor; la interfaz no lo adivina. Los puestos y los links
   // personales son del administrador, y si el encargado viera esos controles
   // el panel le estaría mintiendo: la ruta se los va a negar igual.
-  const [esAdmin, setEsAdmin] = useState(false);
-  // **Dos banderas y no una.** `esAdmin` es para los links personales, que
-  // son credenciales; `verSueldos` es para la plata —montos y cuenta
-  // bancaria— que desde el 2026-11-01 también ve quien paga. Eran la misma
-  // condición y el cliente pidió abrir una sola de las dos.
+  // **Una bandera por permiso, no un `esAdmin` para todo.** Hasta el
+  // 2026-11-01 la misma condición gobernaba tres cosas sin relación entre
+  // sí —la plata de la ficha, el link personal y la lista de puestos— así
+  // que mover una sola era imposible sin mover las tres. Hoy cada una dice
+  // qué gobierna, y abrirlas es cambiar la tabla de permisos y nada más.
   const [verSueldos, setVerSueldos] = useState(false);
+  const [verLinks, setVerLinks] = useState(false);
+  const [editarPuestos, setEditarPuestos] = useState(false);
   const [avisoLink, setAvisoLink] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -100,8 +102,9 @@ export default function EquipoEditor() {
           cuenta.set(k, (cuenta.get(k) ?? 0) + 1);
         }
         setTurnosDe(cuenta);
-        setEsAdmin(!!d.esAdmin);
         setVerSueldos(!!d.verSueldos);
+        setVerLinks(!!d.verLinks);
+        setEditarPuestos(!!d.editarPuestos);
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -114,7 +117,7 @@ export default function EquipoEditor() {
         // Los puestos solo viajan si quien guarda puede cambiarlos. Mandarlos
         // igual haría fallar la petición entera y se perderían también los
         // cambios de la lista de trabajadores, que sí puede hacer.
-        body: JSON.stringify(esAdmin ? { puestos, trabajadores: gente }
+        body: JSON.stringify(editarPuestos ? { puestos, trabajadores: gente }
                                      : { trabajadores: gente })
       });
       const d = await r.json();
@@ -398,7 +401,7 @@ export default function EquipoEditor() {
           el link personal no se le muestra —es una credencial, y los links
           son del administrador— así que prometerle algo que no va a
           encontrar es peor que no decir nada. */}
-      {esAdmin && (
+      {verLinks && (
         <p className="mb-4 max-w-2xl text-sm text-hueso/70">
           Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.
         </p>
@@ -653,7 +656,7 @@ export default function EquipoEditor() {
                     que con ediciones en pantalla se perderían. Por eso con
                     cambios pendientes el bloque lo dice en vez de desaparecer
                     sin explicación. */}
-                {esAdmin && (
+                {verLinks && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="flex w-28 items-center text-[11px] uppercase
@@ -789,7 +792,7 @@ export default function EquipoEditor() {
           que es la excepción que existe — por eso viene marcada por defecto.
         </p>
       )}
-      {esAdmin && (
+      {verSueldos && (
         <p className="mt-4 max-w-2xl text-xs text-hueso/50">
           <strong>Por turno</strong> se le paga por jornada trabajada, y cada
           turno suma al costo del día. <strong>Contratado</strong> tiene
@@ -810,7 +813,7 @@ export default function EquipoEditor() {
           <button onClick={() => setVerPuestos(true)}
             className="rounded border border-hueso/25 px-4 py-2 text-sm font-semibold
                        hover:border-oro hover:text-oro">
-            {esAdmin ? 'Administrar puestos' : 'Ver los puestos'}
+            {editarPuestos ? 'Administrar puestos' : 'Ver los puestos'}
           </button>
           <span className="text-sm text-hueso/50">
             {puestos.length} {puestos.length === 1 ? 'puesto' : 'puestos'}
@@ -831,10 +834,10 @@ export default function EquipoEditor() {
       {verPuestos && (
         <Dialogo titulo="Puestos" ancho="max-w-3xl"
                  onCerrar={() => setVerPuestos(false)}>
-          {!esAdmin && (
+          {!editarPuestos && (
             <p className="mt-3 max-w-2xl text-sm text-hueso/60">
-              Los puestos y su regla los cambia el administrador. Acá se ven
-              para poder asignar turnos.
+              Los puestos y su regla los cambian el administrador y quien
+              hace los pagos. Acá se ven para poder asignar turnos.
             </p>
           )}
           <p className="mt-3 max-w-2xl text-sm text-hueso/60">
@@ -854,7 +857,7 @@ export default function EquipoEditor() {
             <table className="w-full min-w-[34rem] table-fixed text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
                 <tr className="border-b border-hueso/10">
-                  {esAdmin && <th className="w-16 py-2 pr-2">Orden</th>}
+                  {editarPuestos && <th className="w-16 py-2 pr-2">Orden</th>}
                   <th className="py-2 pr-3">Puesto</th>
                   <th className="w-44 py-2 pr-3">Uno cada N personas</th>
                   <th className="w-16 py-2" />
@@ -863,7 +866,7 @@ export default function EquipoEditor() {
               <tbody>
                 {puestos.map((p, i) => (
                   <tr key={i} className="border-b border-hueso/5">
-                    {esAdmin && (
+                    {editarPuestos && (
                       <td className="whitespace-nowrap py-2 pr-2 text-hueso/50">
                         <button onClick={() => moverPuesto(i, -1)} disabled={i === 0}
                           className="rounded px-2 py-1.5 text-base hover:bg-hueso/5 hover:text-oro disabled:opacity-25"
@@ -882,19 +885,19 @@ export default function EquipoEditor() {
                     )}
                     <td className="py-2 pr-3">
                       <input type="text" value={p.nombre} className={ENTRADA}
-                        placeholder="Garzón, cocina, barra…" disabled={!esAdmin}
+                        placeholder="Garzón, cocina, barra…" disabled={!editarPuestos}
                         aria-label={`Nombre del puesto ${i + 1}`}
                         onChange={(e) => cambiarPuesto(i, 'nombre', e.target.value)} />
                     </td>
                     <td className="py-2 pr-3">
                       <input type="number" min={0} step={1} className={ENTRADA}
                         value={p.cadaCuantas || ''} placeholder="— sin regla"
-                        disabled={!esAdmin}
+                        disabled={!editarPuestos}
                         aria-label={`Uno cada cuántas personas en ${p.nombre || 'este puesto'}`}
                         onChange={(e) => cambiarPuesto(i, 'cadaCuantas', e.target.value)} />
                     </td>
                     <td className="whitespace-nowrap py-2 text-right">
-                      {esAdmin && (
+                      {editarPuestos && (
                         <button
                           onClick={() => { setPuestos(puestos.filter((_, k) => k !== i)); setSucio(true); }}
                           className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
@@ -907,7 +910,7 @@ export default function EquipoEditor() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            {esAdmin && (
+            {editarPuestos && (
               <button
                 onClick={() => { setPuestos([...puestos, { nombre: '', cadaCuantas: 0 }]); setSucio(true); }}
                 className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
@@ -922,7 +925,7 @@ export default function EquipoEditor() {
             </button>
             {/* Guarda las dos listas, como siempre: es una sola petición y
                 un solo botón de guardar en toda la pantalla. */}
-            {esAdmin && (
+            {editarPuestos && (
               <button onClick={guardar} disabled={guardando || !sucio}
                 className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
                            disabled:opacity-40">

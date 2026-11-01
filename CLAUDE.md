@@ -2949,16 +2949,36 @@ Y tiene razón, porque el supuesto de atrás estaba equivocado: quien paga en
 un negocio de este tamaño no es un contador externo que solo recibe una
 planilla, es alguien de confianza que además opera. Entonces:
 
-> **`pagos` = `encargado` + `pagar`.** Ni más ni menos.
+Y el 2026-11-01, en la misma conversación, lo terminó de ubicar: **es el
+segundo rol más poderoso del panel**, el que *"puede hacer casi todo"*. Así
+que la regla se escribe al revés, por lo que **no** puede, que es lo corto:
 
-- **Ve y hace todo lo del encargado**: el calendario, las reservas, los
-  turnos, las actividades extras, los presupuestos, la planilla semanal.
-- **Y es el único además del administrador que puede escribir en la parte
-  de los pagos** del informe. El encargado ve esas columnas y no las toca.
-- **Lo que sigue sin tocar es lo del administrador**: los puestos, los links
-  personales, las cuentas del panel, la bitácora, los precios y la
-  configuración. Eso es exactamente para lo que esta cuenta existe — para no
-  tener que abrir la del admin solo para pagar.
+> **`pagos` puede todo menos dos cosas: las cuentas del panel y la
+> mantención técnica.**
+
+| | |
+|---|---|
+| **No puede** | `usuarios` — crear cuentas y cambiar roles · `mantencion` — Shopify a mano y el diagnóstico de la planilla |
+| **Sí puede**, y el encargado no | registrar pagos · ver y editar los sueldos y cuentas bancarias de las fichas · los links personales · los puestos · la bitácora · los precios y la configuración |
+| **Sí puede**, igual que el encargado | el calendario, las reservas, los turnos, las extras, los presupuestos, la planilla semanal |
+
+Las dos que quedan fuera lo están por motivos distintos y conviene no
+confundirlos:
+
+- **Las cuentas del panel** porque ahí se decide **quién entra y con qué
+  rol**. Una cuenta que pudiera editarlas podría ascenderse sola, y entonces
+  no habría roles, habría un trámite.
+- **La mantención** —consultar Shopify a mano, el diagnóstico de la
+  planilla— porque es para arreglar el sistema, no para operarlo. No es
+  cuestión de confianza: es que no es su trabajo, y el día que algo falle
+  conviene saber quién estuvo tocando.
+
+**La prueba se escribe como la lista de lo que NO puede**, y esa es la
+parte que vale copiar: así, **cualquier permiso que se agregue mañana a la
+tabla y no esté en esa lista, lo tiene**. Al revés —enumerando lo que sí—
+cada permiso nuevo habría nacido fuera del rol sin que nadie lo decidiera,
+que es justo cómo este rol terminó siendo más chico de lo que el cliente
+quería y hubo que corregirlo dos veces.
 
 **La prueba dejó de contar acciones y pasó a fijar la relación entre los dos
 roles**: que `pagos` pueda todo lo del encargado, y que lo único que tenga
@@ -2968,9 +2988,18 @@ tabla crecía, y una prueba que se corrige a mano cada vez deja de proteger.
 **Se comprobó con las tres cuentas**, y lo que importa es la última línea:
 
 ```
-pagos      menú igual al del encargado · 2 botones de pago · POST /api/informe → 200
-encargado  menú igual                  · 0 botones         · POST /api/informe → 403
-admin      menú completo               · 2 botones         · POST /api/informe → 200
+                POST /api/informe   /menus  /config  /bitacora  /usuarios
+pagos      → 200                      ✓        ✓         ✓      ✗ bloqueada
+encargado  → 403                      ✗        ✗         ✗      ✗
+admin      → 200                      ✓        ✓         ✓         ✓
+```
+
+Y abriendo la ficha de una persona en `/equipo`:
+
+```
+pagos      Pago ✓  Transferencia ✓  botón de link ✓  Administrar puestos ✓
+encargado       ✗                ✗                ✗                     ✗
+admin           ✓                ✓                ✓                     ✓
 ```
 
 El encargado **recibe 403 llamando la API directo**, no es que se le esconda
@@ -3011,8 +3040,20 @@ Por eso se partió en dos:
 
 | Permiso | Qué gobierna | Quién |
 |---|---|---|
-| **`sueldos`** | modalidad, jornada, valor hora, propina y cuenta bancaria de la ficha | administrador **y quien paga** |
-| **`links`** | crear, copiar, renovar y quitar el link personal | **solo el administrador** |
+| **`sueldos`** | modalidad, jornada, valor hora, propina y cuenta bancaria de la ficha | administrador y quien paga |
+| **`links`** | crear, copiar, renovar y quitar el link personal | administrador y quien paga |
+
+**Hoy los tiene el mismo par de roles, así que no discriminan entre ellos
+—el cliente terminó dando los dos— y se dejan separados igual.** Son cosas
+distintas: uno es plata y el otro una credencial. La costura queda para el
+día que un rol necesite lo uno sin lo otro, que es exactamente lo que no se
+podía hacer mientras eran `esAdmin`. Lo que sí separan hoy es al
+**encargado**, que no tiene ninguno de los dos.
+
+**Y de paso se fue `esAdmin` de la interfaz de `/equipo`.** Gobernaba tres
+cosas sin relación —la plata, el link y la lista de puestos— así que la
+pantalla manda ahora tres banderas, una por permiso. Cambiar quién ve qué
+es tocar la tabla de permisos y nada más.
 
 - **Vale para las dos pantallas y para las dos puntas.** `/api/equipo` y
   `/api/extras` recortan por `sueldos` al devolver, y **descartan por lo
@@ -3049,11 +3090,13 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
 | Crear y mandar presupuestos | sí | sí | **sí** | — |
 | Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — |
-| Puestos y su regla "uno cada N" | sí | — | — | — |
-| Precios, menús y configuración | sí | — | — | — |
-| Links personales, diagnóstico y Shopify a mano | sí | — | — | — |
+| Puestos y su regla "uno cada N" | sí | — | **sí** | — |
+| Precios, menús y configuración | sí | — | **sí** | — |
+| **Links personales** | sí | — | **sí** | — |
+| Diagnóstico y Shopify a mano | sí | — | — | — |
 | **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — |
-| Cuentas del panel y bitácora | sí | — | — | — |
+| **La bitácora** | sí | — | **sí** | — |
+| Cuentas del panel y sus contraseñas | sí | — | — | — |
 | **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — |
 | **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — |
 | Ver **sus propios** turnos | — | — | — | sí |
