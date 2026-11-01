@@ -118,13 +118,14 @@ const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3';
  * **La regla PlayStation, aplicada al pie de la tarjeta** (2026-11-01).
  *
  * Eran tres textos de 12px al 60% de opacidad, uno al lado del otro: no se
- * leían como botones y, en un teléfono, se fallaban con el dedo. Ahora son
- * botones con borde, con su área de toque y con contraste de verdad. El
- * tamaño sale de lo mismo que el resto del panel: lo que se aprieta mide
- * para el dedo.
+ * leían como botones y, en un teléfono, se fallaban con el dedo.
+ *
+ * El estilo **no se escribe acá**: es `.boton` de `globals.css`, el mismo
+ * que usan la barra de arriba y el menú. Tenerlo en un solo lugar es lo que
+ * evita que cada pantalla invente su propio tamaño, que era justamente el
+ * problema. `.tecla` le da al `<a>` el hundido que un `<button>` ya trae.
  */
-const BOTON = `rounded-md border border-hueso/20 px-2.5 py-1.5 text-[13px] font-medium
-               text-hueso/80 transition hover:border-oro hover:text-oro`;
+const BOTON = 'tecla boton';
 
 export default function TarjetaDia({
   d, resumen, clima, onEditar, onPlanificar
@@ -365,8 +366,7 @@ export default function TarjetaDia({
             {/* El relleno es para el que decide: planificar es a lo que se
                 vino al dar vuelta la tarjeta. */}
             <button onClick={onPlanificar} {...alDorso}
-              className="rounded-md bg-oro px-2.5 py-1.5 text-[13px] font-semibold
-                         text-tinta transition hover:brightness-110">
+              className="boton boton-relleno">
               Planificar
             </button>
           </div>

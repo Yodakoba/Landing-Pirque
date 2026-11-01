@@ -2796,6 +2796,53 @@ explícitamente dejar como está: *"no cambiar el estilo del diurno, está
 súper bonito"*. Lo que cambia es el tamaño, el peso y el contraste de lo que
 ya hay.
 
+### El botón del panel vive en `globals.css`, no en cada pantalla
+
+`.boton` —borde, **36px de alto y 13px**— y `.boton-relleno`, el dorado.
+Nació el mismo día que la regla y por su causa: cada pantalla se escribía su
+propio botón a mano, unos con borde y otros como un texto en gris que
+resultaba ser un enlace, y cada uno con su tamaño. Con una sola definición,
+subir el piso es tocar un archivo.
+
+- **Un `<a>` también lo lleva.** Se le suma `.tecla`, que es lo que le da el
+  hundido al tocarlo que un `<button>` ya trae de fábrica.
+- **El relleno es uno por pantalla**, el que dice a qué se vino. Dos
+  rellenos en la misma vista es no tener ninguno.
+
+### El menú de arriba: pastillas, no una lista (2026-11-01)
+
+Lo pidió el cliente mirándolo en el teléfono: *"no se siente cero
+PlayStation, se parece a una lista de máquina de escribir"*, y *"repensar el
+menú sin cambiar el menú, solo en la presentación"*.
+
+Era eso: **nueve textos de 14px al 70%**, envueltos en dos renglones, sin
+nada que dijera que se aprietan. **El menú no cambió** —las mismas páginas,
+el mismo orden, la misma tabla de permisos—; cambió cómo se ve.
+
+- **Cada página es una pastilla** con su borde y sus 36px, y **la actual va
+  rellena de dorado**. Se distingue por *forma* y no solo por color, que es
+  lo que la regla pide: quien no distinga el dorado igual ve cuál es, y
+  `aria-current` sigue estando para los lectores de pantalla.
+- **La cabecera son dos filas y no una sola que envuelve.** Antes la marca,
+  las nueve páginas, el tema, el nombre y *Salir* iban todos en el mismo
+  `flex-wrap`, así que en un teléfono se mezclaban — el nombre de la cuenta
+  podía terminar entre dos páginas del menú. Arriba va **quién eres y dónde
+  estás**; abajo, **a dónde puedes ir**.
+- **El nombre de la cuenta subió de 12px al 45% a 13 al 70**, y *Salir* pasó
+  a ser un botón. Ese dato contesta "¿con cuál estoy adentro?", y la
+  bitácora entera depende de que alguien se dé cuenta.
+- **Se descartó la fila que se desplaza de lado**, que es lo que haría una
+  app de teléfono: esconde la mitad de las páginas detrás de un gesto que
+  hay que adivinar, y este panel lo usa gente a la que recién se le enseñó
+  dónde queda cada cosa. **El costo a asumir**: en un teléfono las nueve
+  pastillas ocupan tres filas y la cabecera pasó de unos 100px a **197**.
+  Se eligió a sabiendas — ocupa más alto y no esconde nada.
+
+Comprobado a 393 y 1280, en los dos temas: nueve pastillas de 36px, **una
+sola fila en escritorio** y tres en el teléfono, sin corrimiento lateral.
+Cada página se marca sola, y `/dia/…` no marca ninguna —correcto, no es una
+página del menú—. `/login`, `/mi/` y `/semana/` siguen sin menú.
+
 ### La tarjeta del calendario, rehecha con esa regla (2026-11-01)
 
 Lo pidió mirando la portada: *"el icono del tiempo es demasiado chico, nadie
