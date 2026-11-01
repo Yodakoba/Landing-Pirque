@@ -1691,19 +1691,34 @@ dos cosas distintas y conviene no confundirlas:
   además reintenta, y la reconciliación diaria es un tercer escritor. Dos que
   lean la planilla antes de que el otro escriba agregan los dos.
 
-**Se nombra, no se esconde**, que es la regla de este proyecto para los
-fallos callados. Borrar una fila sola sería peor: puede que alguien la haya
-duplicado a mano a propósito.
+**El caso quedó confirmado el 2026-11-01** —las dos filas del pedido
+`7345141809369`, idénticas— así que el panel dejó de solo avisar: **ahora las
+cuenta una sola vez al leer** y además las nombra.
 
-- **`/api/diagnostico` lista `idsRepetidos`** —con cuántas filas tiene cada
-  uno— y `celdasConError`, las filas donde quedó un `#ERROR!`.
-- **La página del día marca la fila** con un *⚠ pedido repetido*, porque
-  quien mira el día es quien lo va a notar. Mientras esté, **ese día cuenta
-  esa gente dos veces**.
+**No es el ambiente de desarrollo ni el re-login del cliente en Shopify.** Los
+webhooks van de servidor a servidor, de Shopify a Vercel, y no pasan por el
+navegador de nadie: la sesión de la tienda no los toca. Si acaso, **en
+producción es más probable**, porque hay más pedidos y más entregas de
+`orders/create` y `orders/paid` casi juntas.
 
-Lo que falta decidir, cuando haya un caso confirmado: si el panel debe
-además **colapsar** las filas repetidas al leer, o dejar que se borren a
-mano. Hoy solo avisa.
+**La ventana no se puede cerrar sin un candado que la API de Sheets no da.**
+Lo que sí se puede es dejar de contar dos veces lo mismo, y eso es correcto
+por definición: **el mismo `ID Orden` es el mismo pedido**. Vive en
+`leerReservasDe()`, que es puro y está en `filas.ts` —sin `googleapis`— para
+poder probarlo sin red.
+
+- **Se queda la primera fila**, que es por la que se edita la reserva, y
+  lleva `duplicadas` con cuántas hay. Las anotadas a mano no entran: su id es
+  `MANUAL-<timestamp>`, único por construcción, y dos iguales solo podrían
+  venir de que alguien copió la fila queriendo.
+- **Se nombra, no se esconde**, que es la regla de este proyecto para los
+  fallos callados: **`/api/diagnostico` lista `idsRepetidos`** —con cuántas
+  filas tiene cada uno— y `celdasConError`, las filas donde quedó un
+  `#ERROR!`; y **la página del día marca la fila** con un *⚠ 2 filas con este
+  pedido*, porque quien mira el día es quien lo va a notar.
+- **Borrar la fila de más sigue siendo a mano**, y eso es a propósito: el
+  panel no sabe si alguien la duplicó queriendo y la editó. Lo que ya no pasa
+  es que el día cuente esa gente dos veces mientras nadie lo note.
 
 ### Los calendarios de celdas necesitan `relative` (2026-10-30)
 

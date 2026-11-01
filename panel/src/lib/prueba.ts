@@ -36,7 +36,8 @@ import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
 import { ahoraEnChile, filaBitacora, leerBitacoraDe, recortar,
          ENCABEZADO_BITACORA } from './bitacora.ts';
 import { cookieDe } from './sesion.ts';
-import { filaReserva, buscarFilaPorId } from './filas.ts';
+import { filaReserva, buscarFilaPorId, leerReservasDe, idsRepetidos }
+  from './filas.ts';
 import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
 import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
@@ -509,6 +510,50 @@ ok(buscarFilaPorId([encR], encR, '1007') === -1, 'una hoja con solo encabezado n
 ok(buscarFilaPorId([], [], '1007') === -1, 'ni una hoja vacia');
 ok(buscarFilaPorId(hoja, ['Otra', 'Cosa'], '1007') === -1,
    'y si la planilla no tiene la columna ID Orden, no se inventa una fila');
+
+/* ---------- y cuando el reintento IGUAL se cuela: el mismo pedido dos veces ---------- */
+// Confirmado por el cliente el 2026-11-01: dos filas con el mismo
+// `ID Orden` 7345141809369. `guardarPedido()` busca por esa columna, pero es
+// leer-y-despues-escribir sin candado, y la API de Sheets no da ninguno. Sin
+// esto el dia cuenta esa gente dos veces: el cupo se achica solo y la cocina
+// prepara de mas.
+const encDup = ['ID Orden', 'Fecha Reserva', 'Nombre', 'Personas', 'Monto'];
+const hojaDup = [encDup,
+  ['7345141809369', '2026-11-14', 'Ana', '4', '176000'],
+  ['7345141809369', '2026-11-14', 'Ana', '4', '176000'],
+  ['7345141809370', '2026-11-14', 'Beto', '3', '132000']];
+const dedup = leerReservasDe(hojaDup);
+ok(dedup.length === 2, 'el mismo ID Orden en dos filas se lee como UN pedido');
+ok(dedup[0].personas + dedup[1].personas === 7,
+   'y el dia suma 7 personas, no 11: el cupo no se achica solo');
+ok(dedup[0].fila === 2,
+   'se queda la PRIMERA fila, que es por la que se edita la reserva');
+ok(dedup[0].duplicadas === 2 && dedup[1].duplicadas === undefined,
+   'la que sobrevive dice cuantas filas hay, para poder avisarlo en pantalla');
+ok(leerReservasDe([encDup, ['7345141809369', '2026-11-14', 'Ana', '4', '1']])[0]
+     .duplicadas === undefined,
+   'una reserva normal NO trae el contador: ausente es "no pasa nada"');
+
+// Las anotadas a mano no entran: su id es unico por construccion, y dos
+// MANUAL- iguales solo podrian venir de que alguien copio la fila a proposito.
+const hojaManual = [encDup,
+  ['MANUAL-1', '2026-11-14', 'A mano', '2', ''],
+  ['MANUAL-1', '2026-11-14', 'A mano', '2', '']];
+ok(leerReservasDe(hojaManual).length === 2,
+   'dos filas MANUAL con el mismo id se dejan las dos: eso lo hizo una persona');
+// Lo mismo una fila sin id: no hay nada por lo que agruparla.
+ok(leerReservasDe([encDup, ['', '2026-11-14', 'X', '2', ''],
+                           ['', '2026-11-14', 'Y', '3', '']]).length === 2,
+   'y dos filas SIN id no son el mismo pedido');
+
+// El diagnostico las nombra igual, porque la fila de mas sigue en la planilla
+// y alguien tiene que borrarla.
+const repes = idsRepetidos(hojaDup);
+ok(repes.length === 1 && repes[0].id === '7345141809369' && repes[0].filas === 2,
+   'el diagnostico nombra el id repetido y cuantas filas tiene');
+ok(idsRepetidos(hojaManual).length === 0, 'y no reclama por las hechas a mano');
+ok(idsRepetidos([encDup]).length === 0 && idsRepetidos([]).length === 0,
+   'una hoja vacia o con solo encabezado no revienta el diagnostico');
 
 /* ---------- que la cocina sepa que preparar ---------- */
 // Antes la columna Menu decia solo "Menu Tradiciones", sin cantidades y sin

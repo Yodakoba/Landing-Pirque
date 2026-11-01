@@ -21,6 +21,13 @@ export interface Reserva {
   // de pago del negocio es dato del cliente, no una lista nuestra.
   notaPago: string;
   fila: number;          // número de fila en la planilla, para poder editarla
+  /**
+   * Cuántas filas de la planilla traen este mismo `ID Orden`. Ausente o 1 es
+   * lo normal. Más de una significa que el mismo pedido quedó anotado dos
+   * veces: `leerReservasDe()` lo cuenta una sola vez y deja esto para que la
+   * pantalla pueda decirlo. Ver su comentario.
+   */
+  duplicadas?: number;
 }
 
 export interface FechaHabil {
