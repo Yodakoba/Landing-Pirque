@@ -45,6 +45,15 @@ export interface Config {
    * —aunque sea con llave— tiene que ser una decisión de alguien.
    */
   tokenPlanilla: string;
+  /**
+   * Cuántos días vale un presupuesto desde que se crea.
+   *
+   * **Lo fijó el cliente en 15** y vive acá y no en el código porque es un
+   * plazo comercial: cambiarlo no puede obligar a redesplegar. En cero
+   * significa **sin vencimiento**, no "vence hoy" — un plazo de cero días
+   * mataría cada presupuesto al nacer, que no es lo que nadie quiso decir.
+   */
+  vigenciaPresupuesto: number;
 }
 
 /**
@@ -63,7 +72,8 @@ export const POR_DEFECTO: Config = {
   diasAbiertos: [6, 0],          // sábado y domingo
   diasAFuturo: 90,
   cortes: { amarillo: 0.6, rojo: 0.85 },
-  tokenPlanilla: ''
+  tokenPlanilla: '',
+  vigenciaPresupuesto: 15
 };
 
 /** Las claves como se escriben en la planilla, en el orden en que se muestran. */
@@ -76,7 +86,8 @@ export const CLAVES = {
   diasAFuturo: 'dias_a_futuro',
   corteAmarillo: 'corte_amarillo',
   corteRojo: 'corte_rojo',
-  tokenPlanilla: 'token_planilla'
+  tokenPlanilla: 'token_planilla',
+  vigenciaPresupuesto: 'vigencia_presupuesto'
 } as const;
 
 /**
@@ -174,7 +185,11 @@ export function leerConfigDe(filas: string[][]): Config {
     diasAbiertos: aDiasSemana(v(CLAVES.diasAbiertos)) ?? POR_DEFECTO.diasAbiertos,
     diasAFuturo: numero(v(CLAVES.diasAFuturo), POR_DEFECTO.diasAFuturo, 1, 3650),
     cortes,
-    tokenPlanilla: String(v(CLAVES.tokenPlanilla) ?? '').trim()
+    tokenPlanilla: String(v(CLAVES.tokenPlanilla) ?? '').trim(),
+    // El mínimo es 0 —sin vencimiento— y no 1: es un valor que alguien puede
+    // querer de verdad, y rechazarlo lo devolvería en silencio a 15.
+    vigenciaPresupuesto: numero(v(CLAVES.vigenciaPresupuesto),
+      POR_DEFECTO.vigenciaPresupuesto, 0, 3650)
   };
 }
 
@@ -190,6 +205,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.diasAFuturo, String(c.diasAFuturo)],
     [CLAVES.corteAmarillo, String(Math.round(c.cortes.amarillo * 100))],
     [CLAVES.corteRojo, String(Math.round(c.cortes.rojo * 100))],
-    [CLAVES.tokenPlanilla, c.tokenPlanilla]
+    [CLAVES.tokenPlanilla, c.tokenPlanilla],
+    [CLAVES.vigenciaPresupuesto, String(c.vigenciaPresupuesto)]
   ];
 }

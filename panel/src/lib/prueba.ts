@@ -27,6 +27,13 @@ import { valorSeguro } from './celdas.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
   from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
+import {
+  ESTADO_PRESUPUESTO, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
+  leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
+  normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible,
+  totalDe, validoHastaDe, personasDe as personasDeLineas,
+  type Presupuesto, type LineaPresupuesto
+} from './presupuestos.ts';
 import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
          ROL, PERMISOS, ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE,
          type Rol, type Accion } from './auth.ts';
@@ -1969,6 +1976,131 @@ ok(emailDe({ email: 'Ana@Ejemplo.CL' } as PedidoShopify) === 'ana@ejemplo.cl',
 
 
 /* ---------- Varios ajustes por turno ---------- */
+
+console.log('\nPresupuestos: la capa que no toca el cupo');
+
+{
+  const HOY = '2026-11-01';
+  const pre = (x: Partial<Presupuesto>): Presupuesto => ({
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '',
+    telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
+    token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', fila: 2, ...x
+  });
+  const li = (x: Partial<LineaPresupuesto>): LineaPresupuesto => ({
+    presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 20,
+    precio: 40000, personas: 20, fila: 2, ...x
+  });
+
+  // --- Lo que se cotiza: menus que son gente, y cosas que no lo son. ---
+  const lineas = [
+    li({}),
+    li({ concepto: 'Niños', cantidad: 10, precio: 19000, personas: 10 }),
+    // El arriendo cuesta plata y no es ni una persona. Si las personas se
+    // dedujeran de la cantidad, este "1" habria sumado una silla.
+    li({ concepto: 'Arriendo del recinto', cantidad: 1, precio: 2500000, personas: 0 })
+  ];
+  ok(personasDeLineas(lineas) === 30,
+     'las personas salen de su propia columna: el arriendo no suma una silla');
+  ok(totalDe(lineas) === 20 * 40000 + 10 * 19000 + 2500000,
+     'el total suma cantidad x precio de cada linea');
+
+  // --- El precio es el negociado, no el de la pestana Menus. ---
+  ok(totalDe([li({ cantidad: 20, precio: 35000 })]) === 700000,
+     'un precio rebajado en la linea manda: la cotizacion es lo acordado');
+
+  // --- LA prueba de esta capa: un presupuesto no mueve la ocupacion. ---
+  const reservas = [r({ fecha: '2026-11-14', personas: 10 })];
+  const soloDia = dia({ fecha: '2026-11-14', capacidad: 60 });
+  const sinPre = ocupacionDe(reservas, soloDia);
+  const posibles = posiblesPorDia([pre({})], lineas, HOY);
+  const conPre = ocupacionDe(reservas, soloDia, CORTES, posibles);
+
+  ok(conPre.tomadas === sinPre.tomadas && conPre.tomadas === 10,
+     'con 30 personas cotizadas, las TOMADAS siguen siendo las 10 confirmadas');
+  ok(conPre.quedan === sinPre.quedan && conPre.quedan === 50,
+     'y QUEDAN los mismos 50 lugares: un presupuesto no le saca el lugar a nadie');
+  ok(conPre.semaforo === sinPre.semaforo,
+     'el semaforo tampoco se mueve por algo que todavia no esta confirmado');
+  ok(conPre.presupuestadas === 30 && conPre.presupuestos === 1,
+     'lo cotizado se ve aparte: 1 presupuesto, 30 personas posibles');
+
+  // Y lo mismo del otro lado de la frontera: al sitio no se filtra.
+  const alSitio = paraElSitio([conPre], 10);
+  ok(Object.keys(alSitio[0]).sort().join(',') === 'fecha,pocos,quedan',
+     'al sitio siguen yendo tres campos: lo cotizado no cruza esa frontera');
+  ok(alSitio[0].quedan === 50,
+     'y el sitio sigue ofreciendo 50 lugares, no 20');
+
+  // --- Cuando un presupuesto deja de contar ---
+  ok(cuentaComoPosible(pre({}), HOY), 'uno enviado y vigente cuenta');
+  ok(cuentaComoPosible(pre({ estado: ESTADO_PRESUPUESTO.borrador }), HOY),
+     'un borrador tambien: es igual de posible, y el dia muestra su estado');
+  ok(!cuentaComoPosible(pre({ idReserva: '7345141809369' }), HOY),
+     'con reserva ya creada NO cuenta: esa gente la cuenta la reserva, y contarla dos veces mostraria el doble');
+  ok(!cuentaComoPosible(pre({ estado: ESTADO_PRESUPUESTO.rechazado }), HOY),
+     'un rechazado no cuenta');
+  ok(!cuentaComoPosible(pre({ validoHasta: '2026-10-31' }), HOY),
+     'uno vencido ayer tampoco');
+  ok(cuentaComoPosible(pre({ validoHasta: HOY }), HOY),
+     'el ULTIMO dia todavia vale: "valido hasta el 1" incluye el 1');
+  ok(cuentaComoPosible(pre({ validoHasta: '' }), HOY),
+     'sin fecha de vencimiento, no vence');
+
+  // Lo que apaga a un aceptado es la RESERVA, no la palabra.
+  ok(cuentaComoPosible(pre({ estado: ESTADO_PRESUPUESTO.aceptado }), HOY),
+     'marcado "Aceptado" pero SIN reserva sigue contando: si no, esa gente no estaria en ninguna de las dos listas');
+
+  // --- Varios presupuestos en el mismo dia se suman ---
+  const dos = posiblesPorDia(
+    [pre({ id: 'PRE-1' }), pre({ id: 'PRE-2' })],
+    [...lineas, li({ presupuesto: 'PRE-2', concepto: 'Tradiciones', cantidad: 13, personas: 13 })],
+    HOY
+  );
+  ok(dos.get('2026-11-14')!.presupuestos === 2,
+     'dos cotizaciones del mismo dia se cuentan como dos');
+  ok(dos.get('2026-11-14')!.personas === 43,
+     'y su gente se suma: 30 + 13 = 43 posibles');
+  ok(posiblesPorDia([pre({})], lineas, '2027-01-01').size === 0,
+     'pasado el plazo, el dia deja de mostrar gente posible sin que nadie lo marque');
+
+  // --- Vigencia ---
+  ok(validoHastaDe('2026-11-01', 15) === '2026-11-16', '15 dias desde el 1 de noviembre');
+  ok(validoHastaDe('2026-11-01', 0) === '',
+     'cero dias es SIN vencimiento, no vencido hoy: un plazo de cero no puede matarlo al nacer');
+
+  // --- Ida y vuelta contra la planilla ---
+  const encP = ENCABEZADO_PRESUPUESTOS;
+  const vuelta = leerPresupuestosDe([encP, filaPresupuesto(encP, pre({ notas: 'matrimonio' }))]);
+  ok(vuelta.length === 1 && vuelta[0].id === 'PRE-1' && vuelta[0].notas === 'matrimonio',
+     'un presupuesto escrito y vuelto a leer es el mismo');
+  const encL = ENCABEZADO_LINEAS;
+  const vueltaL = leerLineasDe([encL, filaLinea(encL, li({ personas: 0, concepto: 'Arriendo' }))]);
+  ok(vueltaL.length === 1 && vueltaL[0].personas === 0,
+     'una linea de cero personas se lee como cero, no se pierde');
+
+  // Una fila a medio escribir no inventa una cotizacion.
+  ok(leerPresupuestosDe([encP, ['', '2026-11-14']]).length === 0,
+     'sin id no hay presupuesto que leer');
+  ok(leerLineasDe([encL, ['PRE-1', '']]).length === 0,
+     'una linea sin concepto no se lee: es una fila a medio escribir');
+
+  // --- Dos lineas del mismo concepto son deliberadas ---
+  const cortesia = normalizarLineas([
+    { presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 20, precio: 40000, personas: 20 },
+    { presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 5, precio: 0, personas: 5 }
+  ]);
+  ok(cortesia.length === 2,
+     'dos lineas del mismo menu NO se juntan: 20 a precio y 5 de cortesia es un acuerdo, no un error');
+  ok(normalizarLineas([
+    { presupuesto: 'PRE-1', concepto: '  ', cantidad: 3, precio: 100, personas: 3 }
+  ]).length === 0, 'una linea sin concepto se descarta al guardar');
+
+  // --- El estado que se muestra resuelve el vencimiento solo ---
+  ok(estadoVisible(pre({ validoHasta: '2026-10-31' }), HOY) === 'Vencido',
+     'vencido se deduce de la fecha, no se guarda');
+  ok(estadoVisible(pre({ idReserva: '123' }), HOY) === 'Confirmado',
+     'con reserva, el presupuesto se lee como confirmado');
+}
 
 console.log('\nOrden alfabético de la gente');
 

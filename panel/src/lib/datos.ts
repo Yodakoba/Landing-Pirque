@@ -40,6 +40,12 @@ import {
   POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno
 } from './equipo.ts';
 import {
+  HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
+  leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
+  normalizarLineas, posiblesPorDia,
+  type Presupuesto, type LineaPresupuesto, type Posibles
+} from './presupuestos.ts';
+import {
   HOJA_COLABORADORES, HOJA_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
   leerColaboradoresDe, aFilasColaboradores, leerExtrasDe, filaExtra,
   normalizarExtras, type Colaborador, type Extra
@@ -537,4 +543,91 @@ export async function reabrirDia(fecha: Fecha): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_CIERRES, ENCABEZADO_CIERRES);
   const previas = leerCierresDe(filas).filter((c) => c.fecha === fecha).map((c) => c.fila);
   await borrarFilas(HOJA_CIERRES, previas);
+}
+
+/* ---------- Presupuestos ---------- */
+
+/**
+ * Todos los presupuestos, de todos los días.
+ *
+ * Devuelve lista vacía si la pestaña no existe, igual que los turnos y las
+ * actividades: **el panel tiene que funcionar antes de que nadie cotice
+ * nada**, y no hay que preparar la planilla para que arranque. Cualquier
+ * otra falla se propaga — ver `esPestanaQueNoExiste()`.
+ */
+export async function leerPresupuestos(): Promise<Presupuesto[]> {
+  try {
+    return leerPresupuestosDe(await leerHoja(HOJA_PRESUPUESTOS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/** Todas las líneas cotizadas, de todos los presupuestos. */
+export async function leerLineasPresupuesto(): Promise<LineaPresupuesto[]> {
+  try {
+    return leerLineasDe(await leerHoja(HOJA_LINEAS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Lo que cada día tiene cotizado y sin confirmar, listo para la ocupación.
+ *
+ * **Si las pestañas no responden, devuelve el mapa vacío y no revienta.**
+ * Es deliberado y es la asimetría correcta: sin esto, una falla leyendo los
+ * presupuestos —una capa comercial— dejaría sin calendario a quien vino a
+ * mirar las reservas, que es lo que de verdad sostiene el día. Lo peor que
+ * puede pasar es que no se vea la línea rosada.
+ */
+export async function posiblesDeLosDias(hoy: Fecha): Promise<Map<string, Posibles>> {
+  try {
+    const [p, l] = await Promise.all([leerPresupuestos(), leerLineasPresupuesto()]);
+    return posiblesPorDia(p, l, hoy);
+  } catch {
+    return new Map();
+  }
+}
+
+/** Escribe un presupuesto: lo agrega si es nuevo, lo pisa si ya está. */
+export async function guardarPresupuesto(p: Omit<Presupuesto, 'fila'>): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_PRESUPUESTOS, ENCABEZADO_PRESUPUESTOS);
+  const enc = filas[0] ?? ENCABEZADO_PRESUPUESTOS;
+  const fila = filaPresupuesto(enc, p);
+  const previo = leerPresupuestosDe(filas).find((x) => x.id === p.id);
+  if (previo) await escribirFila(HOJA_PRESUPUESTOS, previo.fila, fila);
+  else await agregarFilas(HOJA_PRESUPUESTOS, [fila]);
+}
+
+/**
+ * Reemplaza las líneas de UN presupuesto: borra las suyas y escribe las
+ * nuevas, sin tocar las de los demás.
+ *
+ * Mismo criterio que `guardarEquipoDelDia()` y `guardarExtrasDelDia()`: la
+ * pestaña entera son todas las cotizaciones del año, y un error guardando
+ * una no puede llevarse por delante las otras.
+ */
+export async function guardarLineas(
+  id: string, lineas: Omit<LineaPresupuesto, 'fila'>[]
+): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_LINEAS, ENCABEZADO_LINEAS);
+  const enc = filas[0] ?? ENCABEZADO_LINEAS;
+  const previas = leerLineasDe(filas).filter((l) => l.presupuesto === id).map((l) => l.fila);
+  const nuevas = normalizarLineas(lineas.map((l) => ({ ...l, presupuesto: id })));
+  await borrarFilas(HOJA_LINEAS, previas);
+  await agregarFilas(HOJA_LINEAS, nuevas.map((l) => filaLinea(enc, l)));
+}
+
+/** Borra un presupuesto y sus líneas. */
+export async function borrarPresupuesto(id: string): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_PRESUPUESTOS, ENCABEZADO_PRESUPUESTOS);
+  const suya = leerPresupuestosDe(filas).find((x) => x.id === id);
+  // Las líneas primero: si falla entremedio, es preferible un presupuesto
+  // sin líneas —que se ve vacío y se nota— que líneas huérfanas apuntando a
+  // un presupuesto que ya no existe y que nadie va a ir a buscar.
+  await guardarLineas(id, []);
+  if (suya) await borrarFilas(HOJA_PRESUPUESTOS, [suya.fila]);
 }

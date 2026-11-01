@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { exigir } from '@/lib/permisos';
-import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
+import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasAbiertosEntre, hoy, sumarDias, esFecha } from '@/lib/fechas';
 import type { FechaHabil } from '@/lib/tipos';
@@ -47,8 +47,13 @@ export async function GET(req: Request) {
     // El parámetro sigue existiendo para poder pedir otra ventana a mano,
     // pero el valor de siempre sale de la planilla.
     const pedido = Number(new URL(req.url).searchParams.get('dias'));
-    const [reservas, fechas, cfg] = await Promise.all([
-      leerReservas(), leerFechas(), leerConfig()
+    const [reservas, fechas, cfg, posibles] = await Promise.all([
+      leerReservas(), leerFechas(), leerConfig(),
+      // Lo cotizado y sin confirmar. Viaja aparte y no entra en ninguna
+      // cuenta del cupo: ver `ocupacionDe()`. Si no se puede leer vuelve
+      // vacío, porque una falla de la capa comercial no puede dejar sin
+      // calendario a quien vino a mirar las reservas.
+      posiblesDeLosDias(hoy())
     ]);
 
     // Un rango explícito manda sobre la ventana de siempre: es lo que piden
@@ -92,8 +97,11 @@ export async function GET(req: Request) {
     // **Salvo que tenga reservas.** Ahí hay gente que ya reservó y a la
     // que probablemente haya que llamar: esconder el día escondería a esas
     // personas, que es el único resultado peor que una vista sucia.
-    const ocupacion = ocupacionDeTodos(reservas, dias, cfg.cortes)
-      .filter((o) => !o.bloqueada || o.tomadas > 0);
+    const ocupacion = ocupacionDeTodos(reservas, dias, cfg.cortes, posibles)
+      // **O que tenga algo cotizado.** Mismo motivo que las reservas: si
+      // alguien cotizó un día que después se cerró, esconderlo escondería
+      // una conversación abierta con un cliente.
+      .filter((o) => !o.bloqueada || o.tomadas > 0 || o.presupuestos > 0);
 
     return NextResponse.json({ ocupacion, config: cfg });
   } catch (e) {

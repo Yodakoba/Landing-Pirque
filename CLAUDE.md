@@ -1055,6 +1055,162 @@ aprender dos diseños:
 - Una reserva sin modalidad dice **"anotada a mano"** y no un guion mudo:
   decir qué es vale más que decir que falta algo.
 
+## Los presupuestos (2026-11-01)
+
+La capa comercial que faltaba: **cotizar antes de que exista una reserva.**
+Lo pidió el cliente para poder armar un presupuesto para una agencia o un
+matrimonio, mandárselo, y **verlo en el día** — con una condición que fija
+todo el diseño:
+
+> *"No puede que solo por enviar un presupuesto se ocupen cupos confirmados
+> dentro del día. Solo muestra: mira, este día tienes dos presupuestos
+> enviados con 43 posibles reservas, pero si no está confirmado, no toca
+> nada de lo concreto."*
+
+### La tercera categoría, que es lo que no existía
+
+Hasta acá una reserva era una de dos cosas: **ocupa** su lugar, o **lo
+liberó**. Un presupuesto no es ninguna de las dos — es *"todavía no se
+sabe"*. Meterlo como un estado de pago más lo habría mostrado en rojo junto
+a las canceladas, bajo el rótulo "ya no viene", que es exactamente lo
+contrario de lo que es.
+
+| | Cuenta cupo | Dónde se ve |
+|---|---|---|
+| Confirmada (`paid`, `pending`) | **sí** | la barra, el semáforo, el sitio |
+| **Presupuesto vigente** | **no** | su propia línea, aparte |
+| Ya no viene (`cancelled`, `refunded`, `voided`) | no | el azulejo rojo |
+
+### Dos pestañas propias, no columnas en `Reservas`
+
+| Pestaña | Qué guarda |
+|---|---|
+| `Presupuestos` | Una fila por cotización: id, fecha, cliente, contacto, estado, válido hasta, token del link, notas y **`ID Reserva`** |
+| `Presupuesto Líneas` | Una fila por línea: concepto, cantidad, precio unitario y **cuántas personas representa** |
+
+Es el mismo criterio que `Actividades`: vigencia, estado y líneas con precio
+no significan nada en una reserva de Shopify, y una tabla con media fila
+vacía es la forma más segura de que alguien sume lo que no debe. Además un
+presupuesto cotiza cosas que una reserva no modela —el arriendo del recinto,
+el show ecuestre— y eso no cabe en un `Menú` y un `Personas`.
+
+**Las dos van por nombre de columna**, como `Reservas` y `Turnos`: se les
+agregan y se les borran filas de a una y les van a crecer columnas.
+
+### Las personas tienen su propia columna, y eso es la decisión
+
+`20 × Tradiciones` son 20 personas. `1 × Arriendo del recinto` son **cero**,
+y cuesta dos millones y medio. Si el conteo se dedujera de la cantidad, ese
+`1` habría sumado una silla; y no hay forma de saber qué conceptos son gente
+sin adivinar, porque los conceptos los escribe quien cotiza. Adivinar acá
+sería publicar un número de personas que nadie dio.
+
+Al agregar un menú se propone igual a la cantidad; en una línea libre nace
+en cero, y se corrige.
+
+### El precio se propone, no se impone
+
+Lo pidió el cliente con el porqué: la línea nace con el precio de la pestaña
+`Menús` **y se puede editar**, *"porque eso es parte de las negociaciones,
+entonces se necesita esta libertad"*.
+
+Una vez escrito, el precio de la línea **es** el precio: al convertirse en
+reserva se transcribe el negociado, no se recalcula desde `Menús`. Mismo
+criterio que los sueldos de un turno y los montos habituales de un
+colaborador, y por el mismo motivo — lo acordado no puede cambiar solo
+porque mañana cambie una tarifa.
+
+### Qué apaga un presupuesto: la reserva, no la palabra
+
+`cuentaComoPosible()` es **una sola condición** a propósito, porque cubre
+los dos errores opuestos:
+
+- **Contar dos veces.** Al aceptarse, el presupuesto se convierte en reserva
+  y esa reserva ya ocupa cupo. Si además siguiera contando como posible, el
+  día mostraría la misma gente dos veces. Por eso lo que lo apaga es
+  **tener `ID Reserva`**, no estar marcado "Aceptado".
+- **Desaparecer de las dos listas.** Si lo apagara la palabra, un
+  presupuesto marcado "Aceptado" cuya conversión falló no estaría ni entre
+  las reservas ni entre los posibles: gente que viene y que nadie ve.
+
+Un **borrador sí cuenta**: una cotización a medio escribir es igual de
+posible que una mandada, y el día muestra su estado al lado para que se vea
+cuál es cuál.
+
+**"Vencido" no se guarda, se deduce** de `Válido hasta`. Un estado guardado
+habría necesitado que algo lo marcara cada día, y mientras eso no corriera
+un presupuesto se vería vigente por olvido — justo el error que importa,
+porque un presupuesto vencido que parece vigente sigue reservando gente que
+ya no viene. El **último día todavía vale**: "válido hasta el 15" incluye el
+15.
+
+**La vigencia son 15 días**, los fijó el cliente, y vive en `Config`
+(`vigencia_presupuesto`): cambiar un plazo comercial no puede obligar a
+redesplegar. **En cero significa sin vencimiento**, no "vence hoy" — un
+plazo de cero días mataría cada presupuesto al nacer.
+
+### Dos líneas del mismo concepto NO se juntan
+
+Al revés que `normalizarPlan()` y `normalizarExtras()`, y la diferencia es
+real: dos turnos de la misma persona el mismo día son un error —no puede
+estar en dos puestos—, pero *20 × Tradiciones* a precio de lista y
+*5 × Tradiciones* de cortesía a cero son **un acuerdo**. Juntarlas borraría
+lo negociado.
+
+### La garantía, y que la prueba de verdad falla
+
+Lo cotizado viaja **aparte** (`posibles`, un mapa por fecha) y sale en dos
+campos propios de `Ocupacion` —`presupuestos` y `presupuestadas`— que nadie
+más mira: no entran en `tomadas`, no descuentan de `quedan` y no mueven el
+semáforo. Que entre como parámetro y no se calcule dentro de `ocupacionDe()`
+es lo que mantiene esa función pura, y además deja ver de un vistazo que lo
+posible entra y sale sin tocar nada del medio.
+
+**Se comprobó rompiéndolo.** Sumando lo cotizado a `tomadas` a propósito,
+fallan cuatro pruebas de una vez: las tomadas, los lugares que quedan, el
+semáforo **y la que dice que el sitio sigue ofreciendo 50 lugares y no 20**.
+Una prueba que no falla cuando debe no es una prueba.
+
+Y contra los endpoints de verdad, con un día sembrado:
+
+```
+panel   2026-11-14  tomadas=7  quedan=53  semáforo=verde | presupuestos=2  posibles=43
+sitio   { fecha: "2026-11-14", quedan: 53, pocos: false }
+```
+
+Los 43 son los dos vigentes. Un tercero ya convertido en reserva (50
+personas) y un cuarto vencido (99) quedan fuera solos, sin que nadie los
+marque.
+
+### Lo que se lee aunque la pestaña no exista
+
+`leerPresupuestos()` devuelve lista vacía si la pestaña no está, igual que
+los turnos y las actividades: **el panel tiene que funcionar antes de que
+nadie cotice nada.** Y `posiblesDeLosDias()` devuelve el mapa vacío ante
+cualquier falla, que es la asimetría correcta: sin eso, un problema leyendo
+una capa comercial dejaría sin calendario a quien vino a mirar las reservas.
+Lo peor que puede pasar es que no se vea la línea de lo cotizado.
+
+**Un día cerrado con algo cotizado sí se muestra**, igual que uno cerrado
+con reservas: si alguien cotizó un día que después se cerró, esconderlo
+escondería una conversación abierta con un cliente.
+
+### Lo que falta (lotes 2 a 4)
+
+1. ~~El dato y la garantía~~ — **hecho.**
+2. **Crear y editar** — `/presupuestos`, con los precios saliendo de `Menús`.
+3. **El documento** — `/presupuesto/<token>`, imprimible, con su botón de
+   PDF. Se eligió un **link que se imprime** por sobre generar el archivo en
+   el servidor: sin dependencias nuevas, sale un PDF de verdad desde el
+   navegador, se manda por WhatsApp como los otros links del panel, y si se
+   corrige un precio el link ya muestra lo corregido.
+4. **Verlo donde se trabaja** — la línea en rosado en el calendario, en la
+   página del día y en `/turnos`, y convertirlo en reserva al aceptarlo.
+
+**El link del documento no lleva botón de "acepto" para el cliente**, y es
+deliberado: sería una puerta de escritura sin contraseña. El cliente
+responde por WhatsApp y el encargado lo marca.
+
 ## El equipo de trabajadores (panel)
 
 Desde el 2026-10-21 el panel también planifica **quién trabaja cada día**.
