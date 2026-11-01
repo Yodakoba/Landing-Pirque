@@ -23,12 +23,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     cookieDe(headers().get('cookie'), COOKIE_SESION), secretoDeSesion(process.env)
   );
   return (
-    <html lang="es" data-tema="oscuro">
+    <html lang="es" data-tema="claro">
       <head>
         {/*
           **El tema se pinta antes de dibujar nada.** Si esperara a React, cada
-          carga aparecería con el tema oscuro y pegaría un salto a blanco un
-          instante después — el clásico parpadeo, que además desconcierta
+          carga aparecería con el tema por defecto y pegaría un salto al otro
+          un instante después — el clásico parpadeo, que además desconcierta
           justo a quien menos maneja estos sistemas.
 
           Por eso es un guión bloqueante de tres líneas en el `<head>`: no hay
@@ -40,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         */}
         <script dangerouslySetInnerHTML={{ __html:
           "try{var t=localStorage.getItem('brasas-tema');"
-          + "if(t==='claro')document.documentElement.dataset.tema='claro'}catch(e){}"
+          + "if(t==='oscuro')document.documentElement.dataset.tema='oscuro'}catch(e){}"
         }} />
       </head>
       <body className="min-h-screen">

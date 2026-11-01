@@ -3,28 +3,35 @@
 /**
  * El interruptor entre el tema oscuro y el claro.
  *
- * **Arranca en oscuro, no en el del sistema** (2026-10-30). Seguir a
- * `prefers-color-scheme` suena más fino y acá habría sido un problema real:
- * el panel lo usa gente a la que recién se le enseñó dónde queda cada cosa,
- * y la mitad del equipo habría abierto un panel blanco sin haberlo pedido,
- * distinto del que le mostraron. Que sea una decisión de cada uno, y que se
- * recuerde, es más lento de descubrir y mucho más tranquilo de usar.
+ * **Arranca en claro** (2026-11-01, lo decidió el cliente: *"cambia la
+ * configuración predeterminada a diurno, es mucho más lindo"*). Hasta
+ * entonces arrancaba en oscuro, con el argumento de que el equipo había
+ * aprendido el panel así; ganó el otro, que es que esto se abre de día y en
+ * un teléfono, muchas veces al sol.
+ *
+ * **Lo que NO cambió es que no sigue a `prefers-color-scheme`**, y ese
+ * argumento sí se sostiene: el panel lo usa gente a la que recién se le
+ * enseñó dónde queda cada cosa, y que la pantalla dependa de una
+ * configuración del sistema operativo que nadie recuerda haber tocado deja a
+ * media docena de personas viendo cosas distintas. Hay un valor por defecto,
+ * y encima la decisión de cada uno.
  *
  * **Se recuerda en `localStorage`**, o sea por navegador y por dispositivo:
- * el teléfono de la jefa de turno puede estar en claro y el computador de la
- * oficina en oscuro. Si está bloqueado —navegación privada— el panel abre en
- * oscuro y el botón sigue funcionando para esa sesión; molesto, no roto.
+ * el teléfono de la jefa de turno puede estar en oscuro y el computador de
+ * la oficina en claro. Si está bloqueado —navegación privada— el panel abre
+ * en claro y el botón sigue funcionando para esa sesión; molesto, no roto.
  *
  * **Quien pinta el tema al cargar NO es este componente**, sino el guion de
- * `layout.tsx`, que corre antes de dibujar. Si esperara a React, la pantalla
- * aparecería negra y pegaría un salto a blanco en cada carga.
+ * `layout.tsx`, que corre antes de dibujar. Si esperara a React, a quien
+ * eligió el oscuro le aparecería la pantalla clara y pegaría un salto a
+ * negro en cada carga.
  */
 import { useEffect, useState } from 'react';
 
 export const LLAVE_TEMA = 'brasas-tema';
 
 export default function BotonTema() {
-  const [claro, setClaro] = useState(false);
+  const [claro, setClaro] = useState(true);
 
   // Lo que ya pintó el guion del `layout` es la verdad: acá solo se lee,
   // para que el botón nazca diciendo lo que corresponde.
