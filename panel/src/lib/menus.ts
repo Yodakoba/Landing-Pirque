@@ -75,11 +75,11 @@ export const POR_DEFECTO_MENUS: Menu[] = [
   { nombre: 'A Brasas abiertas', precioEnLinea: 0, precioEnLocal: 0 },
   { nombre: 'Sommelier', precioEnLinea: 0, precioEnLocal: 0 },
   { nombre: 'Niños', precioEnLinea: 0, precioEnLocal: 0 },
-  // Publicado en la tienda el 2026-11-02, de 0 a 3 años. Ojo: allá el
-  // producto se llama "Menú de pequeños" y acá la lista va sin el prefijo,
-  // como los otros cinco; mientras los dos nombres no calcen, canonizar()
-  // no empareja y desconocidos() lo reporta en amarillo. Es el aviso que
-  // corresponde: lo arregla renombrar el producto o la fila de la planilla.
+  // Publicado en la tienda el 2026-11-02, de 0 a 3 años. Nació allá como
+  // "Menú de pequeños" —con prefijo, al revés que los otros cinco— y el
+  // cliente lo renombró a "Pequeños" el mismo día, así que canonizar()
+  // empareja. Si vuelven a no calzar, desconocidos() lo reporta en
+  // amarillo: ése es el aviso, no un error.
   { nombre: 'Pequeños', precioEnLinea: 0, precioEnLocal: 0 }
 ];
 

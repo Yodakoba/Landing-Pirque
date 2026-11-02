@@ -802,23 +802,25 @@ años"*), y de ahí salieron el precio y el tramo de edad que dice el sitio.
   menús cobran $5.000 parejos. No rompe nada —el sitio no escribe ese número
   en ninguna parte, lo saca de restar los dos totales— pero conviene que el
   cliente sepa que lo dejó distinto, por si no fue a propósito.
-- **En `experiencias.html` va como una línea, no como un desplegable.** Los
-  otros dos menús abren con su plato principal, acompañamientos y postre;
-  **de éste la tienda no dice qué trae**, solo la edad. Inventarle un
-  contenido sería publicar algo plausible y falso, así que queda dicho el
-  precio y la edad, y el desplegable espera a que el cliente mande el
-  detalle.
+- **En `experiencias.html` tiene su propio desplegable**, como los otros
+  dos. **Nació como una línea suelta** —la tienda dice solo la edad, y
+  escribirle un contenido habría sido publicar algo plausible y falso— y el
+  cliente mandó el detalle el mismo día: *"150g de Pollo o Punta picana,
+  arroz o papas fritas y ensalada"*. **Van dos bloques y no cuatro**: no
+  lleva postre ni bebestible, porque no los nombró y el del menú de niños no
+  sirve de molde.
 - **En `index.html` se corrigió la frase del WhatsApp**, que decía "los niños
   de 4 a 12 años tienen su propio menú" y con el tramo nuevo se leía como
   que un menor de 4 paga como adulto.
-- **Ojo con el nombre, que es lo único que quedó desalineado**: en Shopify el
-  producto se llama **"Menú de pequeños"** mientras los otros tres son
-  `Tradiciones`, `A Brasas Abiertas` y `Niños`, sin el prefijo. El panel
-  empareja por nombre exacto (`canonizar()`), así que mientras no calcen
-  **`desconocidos()` lo va a reportar en amarillo** — que es justamente el
-  aviso que ese mecanismo existe para dar. Se arregla renombrando el producto
-  a `Pequeños` o escribiendo la fila de `Menús` tal cual dice la tienda. **El
-  sitio no se entera**: manda IDs de variante, no nombres.
+- **El nombre quedó desalineado por unas horas y el cliente lo alineó.** El
+  producto nació como *"Menú de pequeños"* mientras los otros tres son
+  `Tradiciones`, `A Brasas Abiertas` y `Niños`, sin el prefijo; el panel
+  empareja por nombre exacto (`canonizar()`), así que `desconocidos()` lo
+  habría reportado en amarillo — que es justamente el aviso que ese mecanismo
+  existe para dar. **Hoy se llama `Pequeños`** y calza con la lista de
+  arranque del panel. Lo que falta es su fila en `/menus` con los dos
+  precios, que es dato del cliente. **El sitio nunca se enteró**: manda IDs
+  de variante, no nombres.
 
 **Probado contra la tienda de verdad**, con tres adultos, dos niños y un
 pequeño:
@@ -826,7 +828,7 @@ pequeño:
 ```
 sin subir   $176.000 / $204.000     subido   $254.000 / $282.000
 cartCreate  userErrors: []  ·  total 204000.0 CLP  ·  las tres líneas con _booking_date
-            3 × Tradiciones/Solo reserva + 2 × Niños/Solo reserva + 1 × Menú de pequeños/Solo reserva
+            3 × Tradiciones/Solo reserva + 2 × Niños/Solo reserva + 1 × Pequeños/Solo reserva
 ```
 
 Y en inglés la fila dice `Little ones' menu · Ages 0 to 3` con `$6,000 CLP`,
@@ -4551,9 +4553,10 @@ Mantenlo así salvo que el cliente pida lo contrario.
   Mapa: `https://maps.app.goo.gl/NPkmd1foma1Uc8nB8`
 - **Email**: `contacto@lopirque.cl` (ojo: dominio distinto al del sitio).
 - **Menú de pequeños**: $6.000, de 0 a 3 años. Se suma igual que el de
-  niños. Publicado en la tienda el 2026-11-02; su descripción en Shopify
-  dice solo la edad, así que **no sabemos qué trae** y por eso no tiene su
-  propio desplegable en `experiencias.html`.
+  niños. **150 g de pollo o punta picana, arroz o papas fritas, y
+  ensalada** — lo dio el cliente el 2026-11-02, porque la descripción del
+  producto en Shopify dice solo la edad. **No lleva postre ni bebestible**,
+  al revés que el de niños: no se inventan, el cliente no los mencionó.
 - **Menú de niños**: $19.000, de 4 a 12 años. Es **uno solo**, no una
   variante por experiencia: se suma a cualquiera de las cuatro. Por eso va
   en un bloque propio en `experiencias.html` y no repetido en cada tarjeta.
