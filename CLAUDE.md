@@ -1675,15 +1675,32 @@ veces y a pasar por una pantalla que para un día de preparación ni siquiera
 existe. Quien marca en la mañana deja los montos como están y listo; quien
 cierra en la noche los llena. Ver "Una sola ventana para el día".
 
-**La línea de cada persona son dos líneas fijas, no una que envuelve**
-(2026-10-30, lo notó el cliente con una captura). Arriba va lo que se
-contesta —quién es y si vino—; abajo lo que se hace: *+ Ajuste*, *Ficha* y
-*Sacar*. Antes era una sola fila con `flex-wrap`, así que con un nombre corto
-—"Alexis"— cabía todo junto y con uno largo *Ficha* y *Sacar* se iban solos
-abajo: dos personas seguidas se veían distintas sin que hubiera cambiado nada
-salvo el largo del nombre, y lo que se aprieta sin querer es justamente lo
-que se movió de lugar. **Ficha y Sacar además van agrupados**, para que bajen
-los dos o no baje ninguno.
+**La línea de cada persona son tres líneas fijas, ninguna que envuelve**
+(2026-10-30, terminado el 2026-11-02). Cada cosa en su línea: **quién es**,
+**si vino**, y **qué se hace con él** —*+ Ajuste*, *Ficha*, *Sacar*—. Antes
+era una sola fila con `flex-wrap`, así que con un nombre corto —"Alexis"—
+cabía todo junto y con uno largo se iba bajando lo que no alcanzaba: dos
+personas seguidas se veían distintas sin que hubiera cambiado nada salvo el
+largo del nombre, y lo que se aprieta sin querer es justamente lo que se
+movió de lugar. **Ficha y Sacar además van agrupados**, para que bajen los
+dos o no baje ninguno.
+
+**El primer arreglo partió la línea de abajo y dejó la de arriba igual**, y
+por eso el cliente volvió a reclamarlo el 2026-11-02 con una captura: *"no
+puede ser que por la longitud del nombre y apellido depende si aparece al
+lado derecho del nombre o abajo del nombre"*. Tenía razón, y es la misma
+causa: mientras *Vino / No vino* compartiera fila con el nombre, el nombre
+decidía dónde quedaban los dos botones que más se aprietan de esa ventana.
+Ahora la asistencia **es su propia línea** y no un hueco al final de la del
+nombre, así que no depende de nada.
+
+Comprobado a 393 y a 1280, en los dos temas: las cuatro personas —"Alexis"
+y "Cristopher Acevedo" incluidas— tienen los botones a la misma distancia
+del nombre y en la misma posición, y ninguna pantalla se corre de lado.
+
+**La lección, que vale para cualquier fila de estas:** `flex-wrap` no
+ordena, solo deja caer lo que no cupo. Si dos cosas tienen que verse
+siempre igual, van en filas distintas; si pueden acomodarse, van juntas.
 
 **Desde el 2026-10-30 son dos botones grandes, no un desplegable.** Lo pidió
 el cliente con el porqué: *"son personas rurales, que no han manejado muchos
