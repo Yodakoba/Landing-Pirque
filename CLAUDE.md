@@ -1552,6 +1552,144 @@ lo dijera.
   `enlaceWhatsApp()` ya está escrito en `contacto.ts` esperando la pantalla
   que lo use, y el teléfono del cliente ya se guarda normalizado.
 
+## El CRM del socio (2026-11-02)
+
+El socio —Asados y Corderos— vende eventos para varios negocios, **Brasas de
+Lo Pirque entre ellos**, desde su propio CRM. Hasta el 2026-11-02 eso no
+llegaba al panel de ninguna forma, y lo que costaba se pudo medir contra los
+dos sistemas de verdad:
+
+```
+sábado  7 de noviembre   el sitio ofrecía 112 lugares  |  el CRM: ganado de  58 personas en Lo Pirque
+domingo 22 de noviembre  el sitio ofrecía 120 lugares  |  el CRM: ganado de 150 personas en Lo Pirque
+```
+
+Nadie en el panel tenía cómo saberlo. Ése es el problema que esto resuelve.
+
+### Lo que hace, y lo que NO
+
+**No toca el cupo**, y ésa es la decisión que fija todo lo demás. Lo que
+entrega es una capa aparte, como `posibles` en los presupuestos: no entra en
+`tomadas`, no descuenta de `quedan` y no mueve el semáforo. El motivo lo dio
+el cliente y vale repetirlo: **un sistema que no controlamos no puede
+cerrarle un sábado al sitio público sin que nadie lo mire.** Si en unas
+semanas los datos calzan, que cuente es cambiar una condición — y esa
+condición **todavía no existe a propósito**.
+
+### El filtro es `lugar`, no `empresa`
+
+La guía del socio recomienda `?empresa=brasas` como *"más fiable que el
+lugar"*. **Para contar ocupación del recinto no lo es**, y se comprobó
+contra los 221 eventos: los dos conjuntos difieren en las **dos**
+direcciones.
+
+```
+empresa=brasas   →  32 eventos   (28 en Lo Pirque + 4 en "Otro")
+lugar=Lo Pirque  →  29 eventos   (28 de brasas   + 1 de ayc)
+```
+
+- **4 eventos que vendió Brasas pero NO ocurren acá** —uno un ganado de 60
+  personas el 24 de noviembre—. Por empresa, marcaríamos un día nuestro por
+  un evento de otra parte.
+- **1 evento en Lo Pirque que vendió el socio**, que **sí** ocupa nuestro
+  recinto. Por empresa, se nos escapaba.
+
+Leyendo su código queda claro por qué: `empresa` sale de `datos->>marca` de
+la cotización más reciente del contacto, o sea contesta **quién lo vendió**.
+`lugar` contesta **dónde ocurre**, que es lo que ocupa sillas.
+
+**Se filtra en la query y otra vez de nuestro lado.** No es paranoia: ese
+mismo día, antes de que el socio lo implementara, `?lugar=` se ignoraba y
+devolvía los 221 eventos de todos los negocios. Sin el segundo filtro
+habríamos pintado Calicanto en nuestro calendario — y **hay una prueba que lo
+fija**: quitando `esNuestro()` fallan siete, entre ellas que las 200 personas
+de un matrimonio en Calicanto se sumaban al sábado 7.
+
+### Dos cosas que el panel no muestra
+
+- **El nombre del cliente.** La API lo entrega; `leerEventos()` no lo lee.
+  Felipe está decidiendo si corresponde y pidió no mostrarlo mientras tanto.
+  **Lo que no se lee no se puede filtrar mal después**, y hay una prueba que
+  comprueba que el campo no existe en lo que sale. Si se autoriza, es
+  agregarlo ahí.
+- **Los períodos, como día.** Más de la mitad de los eventos del CRM son
+  `periodo`: meses aproximados —"entre julio y agosto"— sin día decidido.
+  **No ocupan ninguna fecha**, porque ponerlos en una sería publicar un día
+  que ni el propio CRM sabe. Se devuelven **aparte** en vez de descartarse:
+  un matrimonio de 120 personas que dice "marzo o abril" es una conversación
+  abierta aunque no tenga fecha.
+
+### La costura: una ruta propia, no un campo de la ocupación
+
+`/api/crm/eventos`, con permiso `ver`. **Aparte de `/api/ocupacion` a
+propósito**: si el CRM no responde, el calendario se tiene que dibujar igual.
+Mezclarlo habría puesto un servicio de un tercero en el camino de la pantalla
+que contesta cuánta gente viene — la misma asimetría de
+`posiblesDeLosDias()`.
+
+- **La clave vive en `CRM_API_KEY`**, una variable de Vercel, del lado del
+  servidor. Nunca baja al navegador, y por eso la llamada se hace en la ruta:
+  con esa clave se pueden **escribir y borrar** las fechas que este panel
+  publique en el calendario del socio. **Ojo con el nombre**: cualquier cosa
+  que empiece con `NEXT_PUBLIC_` la publica Next en el bundle del navegador.
+- **Sin la variable no falla**: devuelve vacío con `configurado: false`. El
+  panel tiene que funcionar antes de que nadie configure nada, igual que
+  funciona antes de que exista la pestaña de presupuestos.
+- **La respuesta se guarda una hora** en la caché de Vercel, que es lo que el
+  socio pidió ("leer una vez por hora está perfecto"; no hay cuota).
+- **`desde` y `hasta` son opcionales** y una fecha con basura se ignora en
+  vez de romper, igual que en `/api/ocupacion`.
+- **`confirmado` se deriva de la etapa, no se lee del campo.** El CRM manda
+  los dos; si alguna vez dijeran cosas distintas, el panel obedece a `etapa`
+  —que es lo que el propio CRM usa para pintar su calendario—. Hay una prueba
+  con un `confirmado: true` sobre una etapa `Cotizado` que no cuenta como
+  confirmado.
+- **`etapa` se trata como texto libre.** La guía nombra cinco y los datos de
+  hoy traen cuatro: una lista cerrada convertiría una etapa nueva en un
+  evento que no se dibuja.
+
+### Tolera basura, porque la hay
+
+La data real trae un evento fechado en **2007** por un tipeo, once con los
+invitados en `null` y uno sin tipo. Nada de eso puede tumbar un calendario,
+así que cada campo cae a un valor vacío y el evento se queda. Lo único que se
+descarta es un evento **sin id**: no hay nada que mostrar.
+
+### Probado contra los dos servicios de verdad
+
+```
+/api/crm/eventos   19 días con eventos nuestros · 3 períodos
+                   solo lugar "Lo Pirque" — ningún recinto ajeno se coló
+                   sin campo "nombre" — el nombre del cliente no llega
+  7 nov  1 ganado (58p)      22 nov  1 ganado (150p)      18 dic  2 ganados (190p)
+?desde=2026-11-01&hasta=2026-11-30  →  solo los 4 días de noviembre
+?desde=chao                         →  se ignora, 200 y los 19 días
+sin CRM_API_KEY                     →  200, vacío, configurado: false
+con clave mala                      →  502, vacío, "No se pudo leer el CRM."
+```
+
+### La escritura hacia el CRM todavía no está
+
+Falta el otro sentido: publicar **nuestros** días en su calendario. El
+contrato ya está verificado —`POST /api-eventos/externos`, hasta 500 por
+llamada, `external_id` estable del estilo `brasas-2026-11-07`, y `bloquea`
+distinguiendo *día cerrado* (rojo, con advertencia al vendedor) de *abierto
+con ocupación* (naranjo, solo informa)—, y **nuestra clave puede escribir**:
+se comprobó sin crear nada, porque el permiso se revisa antes de validar el
+cuerpo, así que un POST con cuerpo inválido devuelve 403 si fuera de solo
+lectura y 400 si no. Dio 400.
+
+**Las tildes viajan bien**, comprobado con un registro que se creó y se
+borró: entró `c3ba` y volvió `c3ba`. El `test-2` del socio tiene guardado
+`EF BF BD` —el carácter de reemplazo— en vez de la `ú` de "público": eso lo
+rompió **su `curl`**, no su endpoint, y conviene avisarle antes de que
+repita ese comando con algo de verdad.
+
+Lo que falta decidir antes de escribir: **qué días mandar**. El cliente pidió
+mandarle *todos* con su ocupación, lo que con `bloquea: false` es
+exactamente lo que su API soporta — pero conviene confirmarle que un año
+entero de días naranjos en su calendario es lo que quiere ver.
+
 ## El equipo de trabajadores (panel)
 
 Desde el 2026-10-21 el panel también planifica **quién trabaja cada día**.
