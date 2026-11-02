@@ -226,11 +226,16 @@ ventanita del navegador, y tiene botón de **Salir**. La sesión dura 7 días.
 | `PANEL_USUARIO` / `PANEL_CLAVE` | El administrador. **Son las de siempre**, no hay que cambiarlas. Es además la puerta de emergencia: funciona aunque la planilla no responda. |
 | `PANEL_ENCARGADO_USUARIO` / `PANEL_ENCARGADO_CLAVE` | Opcionales. La clave compartida de encargado, de antes de que hubiera cuentas. |
 | `SESION_SECRETO` | Opcional. Con qué se firman las sesiones. Si no está, se deriva de `PANEL_CLAVE`. |
+| `CRM_API_KEY` | Opcional. La clave del CRM del socio, para leer sus eventos en Lo Pirque. **Márcala como Secret**: con ella se pueden escribir y borrar las fechas que el panel publica allá. Sin ella el panel funciona igual y la línea del CRM no aparece. |
 
-**Ojo con dos cosas:**
+**Ojo con tres cosas:**
 
 - **Cambiar `PANEL_CLAVE` cierra todas las sesiones abiertas.** Es la forma
   de echar a todo el mundo de una vez, y sorprende si no se espera.
+- **`CRM_API_KEY` no puede llamarse `NEXT_PUBLIC_…`.** Cualquier variable
+  con ese prefijo la publica Next dentro del JavaScript que descarga
+  cualquier visitante, y ésta da permiso de escritura sobre el calendario
+  del socio.
 - **La clave compartida de encargado aparece en la bitácora como "encargado
   (clave compartida)"**, a propósito: no identifica a nadie. Si quieres saber
   quién hizo qué, crea cuentas.

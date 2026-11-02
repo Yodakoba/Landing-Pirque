@@ -98,6 +98,11 @@
       noAlcanza: 'Para esa fecha quedan {n} lugares y estás pidiendo {p}.',
       eligeFecha: 'Elige una fecha en el calendario.',
       sinNadie: 'Elige cuántas personas van con cada menú.',
+      // El nombre de la fila de adultos lo escribe el JS, porque cambia con
+      // la casilla. "Tradiciones" y "A Brasas abiertas" son nombres propios
+      // y no se traducen; lo que se traduce es la palabra menú.
+      menuBase: 'Menú Tradiciones',
+      menuAlto: 'Menú A Brasas abiertas',
       locale: 'es-CL',
       moneda: '',
       creando: 'Creando tu reserva\u2026',
@@ -116,6 +121,8 @@
       noAlcanza: 'That date has {n} places left and you are asking for {p}.',
       eligeFecha: 'Pick a date on the calendar.',
       sinNadie: 'Choose how many people go with each menu.',
+      menuBase: 'Tradiciones menu',
+      menuAlto: 'A Brasas abiertas menu',
       locale: 'en-US',
       moneda: ' CLP',
       creando: 'Creating your booking\u2026',
@@ -134,6 +141,8 @@
       noAlcanza: 'Nessa data restam {n} lugares e você está pedindo {p}.',
       eligeFecha: 'Escolha uma data no calendário.',
       sinNadie: 'Escolha quantas pessoas vão com cada menu.',
+      menuBase: 'Menu Tradiciones',
+      menuAlto: 'Menu A Brasas abiertas',
       locale: 'pt-BR',
       moneda: ' CLP',
       creando: 'Criando a sua reserva\u2026',
@@ -163,6 +172,10 @@
 
   var caja = document.querySelector('.reserva-widget');
   if (!caja) return;
+
+  // La casilla que sube todos los adultos a A Brasas abiertas. No agrega un
+  // pedido: cambia cual variante usa la unica fila de adultos.
+  var upgrade = caja.querySelector('[data-upgrade]');
 
   var selFecha = caja.querySelector('#r-fecha');
   var salPersonas = caja.querySelector('[data-total-personas]');
@@ -202,6 +215,13 @@
       precio: parseInt(nodo.getAttribute('data-precio'), 10) || 0,
       varianteLocal: nodo.getAttribute('data-variante-local'),
       precioLocal: parseInt(nodo.getAttribute('data-precio-local'), 10) || 0,
+      // El par de A Brasas abiertas. Solo la fila de adultos lo trae: por
+      // eso el menu de ninos no sube con la casilla, y no por un if.
+      varianteAlta: nodo.getAttribute('data-variante-alta'),
+      precioAlta: parseInt(nodo.getAttribute('data-precio-alta'), 10) || 0,
+      varianteAltaLocal: nodo.getAttribute('data-variante-alta-local'),
+      precioAltaLocal: parseInt(nodo.getAttribute('data-precio-alta-local'), 10) || 0,
+      nombre: nodo.querySelector('[data-nombre-menu]'),
       input: nodo.querySelector('input[type="number"]'),
       menos: nodo.querySelector('[data-menos]'),
       mas: nodo.querySelector('[data-mas]'),
@@ -216,12 +236,36 @@
   // Si a una fila le falta la variante de pagar en el local, cae en la
   // de pagar en línea, que es la más barata: equivocarse cobrando de
   // menos es preferible a cobrar de más sin que lo hayan elegido.
+  // Si la casilla esta marcada. Una fila sin variantes de upgrade —la de
+  // ninos— se comporta igual este marcada o no.
+  function subido() {
+    return !!(upgrade && upgrade.checked);
+  }
+
+  // Primero se elige el MENU y despues la modalidad, en ese orden. Al reves
+  // —preguntando por 'local' y despues por el upgrade— habria cuatro ramas
+  // y una combinacion sin cubrir; asi son dos preguntas independientes.
+  function parDe(op) {
+    if (subido() && op.varianteAlta) {
+      return {
+        variante: op.varianteAlta, varianteLocal: op.varianteAltaLocal,
+        precio: op.precioAlta, precioLocal: op.precioAltaLocal
+      };
+    }
+    return {
+      variante: op.variante, varianteLocal: op.varianteLocal,
+      precio: op.precio, precioLocal: op.precioLocal
+    };
+  }
+
   function varianteDe(op, modo) {
-    return modo === 'local' && op.varianteLocal ? op.varianteLocal : op.variante;
+    var par = parDe(op);
+    return modo === 'local' && par.varianteLocal ? par.varianteLocal : par.variante;
   }
 
   function precioDe(op, modo) {
-    return modo === 'local' && op.precioLocal ? op.precioLocal : op.precio;
+    var par = parDe(op);
+    return modo === 'local' && par.precioLocal ? par.precioLocal : par.precio;
   }
 
   function totalDe(modo) {
@@ -539,6 +583,17 @@
       // entraron al pedido.
       op.nodo.className = n > 0 ? 'reserva-fila activa' : 'reserva-fila';
       if (op.menos) op.menos.disabled = n < 1;
+      // El nombre y el precio de la fila los escribe el JS en cada pasada,
+      // no solo al marcar la casilla: asi no hay forma de que lo que se ve
+      // y lo que se va a cobrar se separen. Sin JS el HTML ya trae el caso
+      // por defecto, que es Tradiciones.
+      if (op.nombre && op.varianteAlta) {
+        op.nombre.textContent = subido() ? T.menuAlto : T.menuBase;
+      }
+      // El precio de la fila es siempre el de pagar en linea, que es el que
+      // anuncia el resto del sitio. El recargo del local sale de restar los
+      // dos totales de los botones.
+      if (op.valor) op.valor.textContent = pesos(precioDe(op, 'directo'));
     }
 
     if (salPersonas) salPersonas.textContent = personas();
@@ -683,6 +738,9 @@
     if (op.menos) op.menos.addEventListener('click', paso(op, -1));
     if (op.mas) op.mas.addEventListener('click', paso(op, 1));
   }
+  // Marcar la casilla no cambia ninguna cantidad, pero si el menu: hay que
+  // repintar el nombre, el precio de la fila y los dos totales.
+  if (upgrade) upgrade.addEventListener('change', recalcular);
   // Cada botón se queda con su modalidad en el closure, igual que los
   // pasos del contador: un bucle que compartiera la variable dejaría a
   // los dos mandando la última.

@@ -25,6 +25,10 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
 import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import {
+  leerEventos, esNuestro, tieneDia, eventosPorFecha, periodosNuestros,
+  haySobreventa, NUESTRO_LUGAR
+} from './crm.ts';
+import {
   ENCABEZADO_PAGOS, leerPagosDe, filaPago, cuentaEnPeriodo, pagadoDe,
   estadoDePago, aTransferirDe, faltaDe, pagoDelCuerpo, nuevoIdPago,
   type PagoEquipo
@@ -2625,6 +2629,122 @@ console.log('\nCosto planificado del día');
      'pero sus horas extra sí: esas son del día y se pagan aparte');
 
   ok(costoPlanificado(plan, '2026-11-15') === 0, 'otro día no suma nada');
+}
+
+/* ---------- Los eventos del CRM del socio ---------- */
+
+console.log('\nEventos del CRM');
+{
+  // La forma real de la respuesta, con la basura que trae de verdad: un
+  // evento fechado en 2007 por un tipeo, invitados en null, tipo vacío.
+  const crudo = {
+    origen: 'crm-asadosycorderos',
+    total: 7,
+    eventos: [
+      { id: 'a', etapa: 'Ganado', confirmado: true, empresa: 'brasas',
+        tipo_evento: 'Otro', lugar: 'Lo Pirque', tipo_fecha: 'fecha',
+        fecha: '2026-11-07', periodo_inicio: null, periodo_fin: null,
+        invitados: 58, vendedor: 'Teresita Mujica' },
+      { id: 'b', etapa: 'Contactado', confirmado: false, empresa: 'brasas',
+        tipo_evento: 'Corporativo', lugar: 'Lo Pirque', tipo_fecha: 'fecha',
+        fecha: '2026-11-07', periodo_inicio: null, periodo_fin: null,
+        invitados: null, vendedor: 'Carmen Barros' },
+      // Lo vendió Brasas pero NO es en nuestro recinto: no ocupa nada acá.
+      { id: 'c', etapa: 'Ganado', confirmado: true, empresa: 'brasas',
+        tipo_evento: 'Corporativo', lugar: 'Otro', tipo_fecha: 'fecha',
+        fecha: '2026-11-24', invitados: 60, vendedor: 'Ismael Barros' },
+      // Lo vendió el socio pero SÍ es acá: ocupa igual.
+      { id: 'd', etapa: 'Ganado', confirmado: true, empresa: 'ayc',
+        tipo_evento: 'Otro', lugar: 'Lo Pirque', tipo_fecha: 'fecha',
+        fecha: '2026-11-22', invitados: 150, vendedor: 'Cristóbal' },
+      { id: 'e', etapa: 'Ganado', confirmado: true, empresa: 'ayc',
+        tipo_evento: 'Matrimonio', lugar: 'Calicanto', tipo_fecha: 'fecha',
+        fecha: '2026-11-07', invitados: 200, vendedor: 'Carmen Barros' },
+      // Un período nuestro: meses aproximados, sin día.
+      { id: 'f', etapa: 'Nuevo', confirmado: false, empresa: 'brasas',
+        tipo_evento: 'Matrimonio', lugar: 'Lo Pirque', tipo_fecha: 'periodo',
+        fecha: null, periodo_inicio: '2027-07-01', periodo_fin: '2027-08-01',
+        invitados: 120, vendedor: 'Carmen Barros' },
+      // El tipeo de 2007: se lee igual, no tumba nada.
+      { id: 'g', etapa: 'Nuevo', confirmado: false, empresa: 'brasas',
+        tipo_evento: '', lugar: 'Lo Pirque', tipo_fecha: 'fecha',
+        fecha: '2007-03-20', invitados: 60, vendedor: '' }
+    ]
+  };
+  const ev = leerEventos(crudo);
+  ok(ev.length === 7, 'se leen los siete, basura incluida');
+  ok(ev[1].invitados === 0, 'invitados en null se lee cero, no NaN');
+  ok(ev[6].tipo === '' && ev[6].fecha === '2007-03-20',
+     'un tipo vacío y una fecha absurda no rompen la lectura');
+  ok(ev[5].fecha === '' && ev[5].periodoInicio === '2027-07-01',
+     'un período no trae fecha y sí sus dos meses');
+
+  // **El nombre del cliente no se lee.** Felipe pidió no mostrarlo mientras
+  // lo decide, y lo que no se lee no se puede filtrar mal después.
+  ok(!Object.keys(ev[0]).includes('nombre'),
+     'el nombre del cliente no entra al panel');
+
+  // **Ésta es la prueba que fija la decisión del filtro.** La guía del socio
+  // recomienda `empresa=brasas`; para ocupar el recinto manda `lugar`, y los
+  // dos conjuntos difieren en las DOS direcciones.
+  const deBrasasEnOtroLado = ev.find((x) => x.id === 'c')!;
+  const delSocioAcá = ev.find((x) => x.id === 'd')!;
+  ok(!esNuestro(deBrasasEnOtroLado),
+     'un evento vendido por Brasas en otro recinto NO ocupa nuestro día');
+  ok(esNuestro(delSocioAcá),
+     'un evento vendido por el socio en Lo Pirque SÍ ocupa nuestro día');
+  ok(!esNuestro(ev.find((x) => x.id === 'e')!), 'Calicanto no es nuestro');
+  ok(NUESTRO_LUGAR === 'Lo Pirque', 'el lugar nuestro es el que escribe el CRM');
+
+  // Un espacio de más no puede hacer desaparecer un evento.
+  ok(esNuestro({ ...ev[0], lugar: '  lo pirque ' }),
+     'el lugar se compara normalizado');
+
+  ok(!tieneDia(ev[5]), 'un período no cae en ningún día');
+  ok(tieneDia(ev[0]), 'uno con fecha sí');
+
+  const dias = eventosPorFecha(ev);
+  // Tres FECHAS, no tres eventos: el 7 tiene dos y es un solo día.
+  ok(dias.size === 3,
+     'tres días nuestros con fecha —el 7, el 22 y el de 2007— y nada de Calicanto');
+  ok(!dias.has('2026-11-24'), 'el de "Otro" no aparece en ningún día nuestro');
+
+  const d7 = dias.get('2026-11-07')!;
+  ok(d7.confirmados.length === 1 && d7.tentativos.length === 1,
+     'el 7 tiene un ganado y un tentativo, separados');
+  ok(d7.personasConfirmadas === 58, 'las personas confirmadas del 7 son 58');
+  ok(d7.personasTentativas === 0, 'el tentativo sin invitados suma cero');
+
+  // El caso real que nadie vio: el sitio ofrecía 112 lugares ese sábado.
+  ok(haySobreventa(d7, 112) === false,
+     '58 personas caben en 112: no hay sobreventa, pero hay que saberlo');
+  const d22 = dias.get('2026-11-22')!;
+  ok(haySobreventa(d22, 120) === true,
+     'el 22 el CRM tiene 150 confirmadas y el sitio ofrecía 120: eso sí es sobreventa');
+
+  const periodos = periodosNuestros(ev);
+  ok(periodos.length === 1 && periodos[0].id === 'f',
+     'el período nuestro se devuelve aparte, no se descarta');
+
+  // **`confirmado` se deriva de la etapa y no se lee del campo.** Si los dos
+  // dijeran cosas distintas, el panel tiene que obedecer a la etapa — que es
+  // lo que el propio CRM usa para pintar su calendario.
+  const mentiroso = leerEventos({ eventos: [
+    { id: 'z', etapa: 'Cotizado', confirmado: true, lugar: 'Lo Pirque',
+      tipo_fecha: 'fecha', fecha: '2026-12-05', invitados: 40 }
+  ] });
+  ok(mentiroso[0].confirmado === false,
+     'un "confirmado: true" con etapa Cotizado NO cuenta como confirmado');
+  ok(eventosPorFecha(mentiroso).get('2026-12-05')!.personasConfirmadas === 0,
+     'y por lo tanto no suma gente confirmada a ese día');
+
+  // Degradar: una respuesta rota no tumba nada.
+  ok(leerEventos(null).length === 0, 'null se lee como lista vacía');
+  ok(leerEventos({ eventos: 'no soy un arreglo' }).length === 0,
+     'un campo eventos que no es arreglo se lee vacío');
+  ok(leerEventos({ eventos: [{ etapa: 'Ganado' }] }).length === 0,
+     'un evento sin id se descarta: no hay nada que mostrar');
+  ok(eventosPorFecha([]).size === 0, 'sin eventos, ningún día');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

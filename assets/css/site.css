@@ -661,6 +661,37 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   color: var(--ink-faint); }
 .reserva-fila.activa .valor{ color: var(--gold); }
 
+/* La casilla que sube todos los adultos a A Brasas abiertas.
+
+   Va pegada bajo la fila de adultos y no entre las dos filas con el mismo
+   aire: pertenece a esa fila —decide que menu se pide— y no es una tercera
+   opcion. Por eso no lleva el borde de arriba que separa una fila de otra.
+
+   Es un <label> con la casilla adentro, asi que el texto entero es
+   clickeable sin una linea de JavaScript ni un atributo for. La casilla va
+   con accent-color para que el tic salga dorado en vez del azul del
+   navegador, y a 20px porque se toca con el dedo. */
+.reserva-upgrade{
+  display:flex; gap:12px; align-items:flex-start; cursor:pointer;
+  padding: 14px 16px; margin-bottom: 4px;
+  border:1px solid var(--line); border-radius:10px;
+  background: rgba(201,162,39,0.05);
+}
+.reserva-upgrade:hover{ border-color: rgba(201,162,39,0.45); }
+.reserva-upgrade input[type="checkbox"]{
+  width:20px; height:20px; margin:1px 0 0; flex:none; accent-color: var(--gold);
+}
+.reserva-upgrade .texto{ display:block; }
+.reserva-upgrade b{ display:block; font-size:0.95rem; }
+.reserva-upgrade small{
+  display:block; margin-top:4px; color: var(--ink-faint);
+  font-size:0.82rem; line-height:1.45;
+}
+/* Marcada, se nota sin leer: el mismo dorado que una fila con gente. */
+.reserva-upgrade:has(input:checked){
+  border-color: var(--gold); background: rgba(201,162,39,0.12);
+}
+
 /* Los dos botones de pago, cada uno con su total.
 
    El total va en <b> con la serif italica, igual que todos los numeros del
