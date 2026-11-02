@@ -9,7 +9,7 @@
  * la decisión de cambiar un cupo se toma mirando la ocupación, que es
  * justamente lo que muestra el calendario.
  */
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Dialogo from './Dialogo';
 import type { Ocupacion } from '@/lib/tipos';
 import { ESTADO_DIA } from '@/lib/columnas';
@@ -64,6 +64,7 @@ export default function DiaEditor({
     capacidad: String(sinDefinir ? cupoNormal : dia!.capacidad),
     apertura: apertura,
     estado: dia?.bloqueada ? ESTADO_DIA.cerrada
+          : dia?.exclusiva ? ESTADO_DIA.exclusiva
           : dia?.privada ? ESTADO_DIA.privada
           : ESTADO_DIA.abierta,
     notas: dia?.notas ?? ''
@@ -79,6 +80,22 @@ export default function DiaEditor({
   // un atajo a eso sería explicar dos caminos para lo mismo.
   const ofrecePreparacion = nueva && !!onPreparacion;
   const esPreparacion = f.estado === PREPARACION;
+  /**
+   * Privado y exclusivo son **una respuesta con una casilla**, no dos
+   * respuestas a "qué día es".
+   *
+   * Lo que cambia entre los dos no es el tipo de día —los dos son privados,
+   * los dos reciben reservas, ninguno se ofrece en el sitio— sino si el
+   * recinto se arrendó completo. Dos radios lo contarían como dos cosas
+   * distintas y obligarían a leer las dos ayudas para notar que casi todo
+   * es igual; una casilla dice exactamente dónde está la diferencia.
+   *
+   * Y como la casilla solo existe mientras "Privado" está elegido, un día
+   * abierto o cerrado **no tiene cómo quedar marcado exclusivo**: es la
+   * misma garantía por forma que el upgrade de menús del sitio.
+   */
+  const esPrivado = f.estado === ESTADO_DIA.privada || f.estado === ESTADO_DIA.exclusiva;
+  const esExclusivo = f.estado === ESTADO_DIA.exclusiva;
 
 
   async function guardar(cambios?: Partial<typeof f>) {
@@ -214,15 +231,37 @@ export default function DiaEditor({
                    'la carne lista. Se le asigna equipo, y con eso queda.'] as const]
                 : [])
             ] as const).map(([valor, titulo, ayuda]) => (
-              <label key={valor} className="flex cursor-pointer gap-3">
-                <input type="radio" name="estado" value={valor} className="mt-1"
-                  checked={f.estado === valor}
-                  onChange={() => setF({ ...f, estado: valor })} />
-                <span>
-                  <span className="block text-sm">{titulo}</span>
-                  <span className="block text-xs text-hueso/50">{ayuda}</span>
-                </span>
-              </label>
+              <Fragment key={valor}>
+                <label className="flex cursor-pointer gap-3">
+                  <input type="radio" name="estado" value={valor} className="mt-1"
+                    // Privado queda elegido con cualquiera de sus dos
+                    // valores; la casilla de abajo decide cuál.
+                    checked={valor === ESTADO_DIA.privada ? esPrivado : f.estado === valor}
+                    onChange={() => setF({ ...f, estado: valor })} />
+                  <span>
+                    <span className="block text-sm">{titulo}</span>
+                    <span className="block text-xs text-hueso/50">{ayuda}</span>
+                  </span>
+                </label>
+                {valor === ESTADO_DIA.privada && esPrivado && (
+                  <label className={'ml-7 flex cursor-pointer gap-3 rounded ' +
+                      'border border-cielo-fuerte/40 bg-cielo-fuerte/5 p-3'}>
+                    <input type="checkbox" className="mt-1" checked={esExclusivo}
+                      onChange={(e) => setF({ ...f,
+                        estado: e.target.checked ? ESTADO_DIA.exclusiva : ESTADO_DIA.privada })} />
+                    <span>
+                      <span className="block text-sm">
+                        El recinto se arrendó <strong>completo y en exclusiva</strong>
+                      </span>
+                      <span className="block text-xs text-hueso/60">
+                        Márcala solo si ese día <strong>no cabe otro evento</strong>.
+                        Sin marcar, el día es privado pero no exclusivo: pueden correr
+                        dos eventos a la vez, que es lo normal.
+                      </span>
+                    </span>
+                  </label>
+                )}
+              </Fragment>
             ))}
           </div>
         </fieldset>

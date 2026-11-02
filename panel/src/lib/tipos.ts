@@ -50,6 +50,15 @@ export interface Ocupacion {
   sinMonto: number;      // reservas por cobrar SIN monto anotado
   privada: boolean;      // recibe reservas, pero el sitio no la ofrece
   /**
+   * El recinto arrendado **completo y en exclusiva** ese día.
+   *
+   * Siempre viene junto con `privada`, nunca sola: un día exclusivo es un
+   * día privado al que además no le cabe otro evento. Lo que distingue es
+   * eso último, y es lo que el calendario del socio necesita — un privado
+   * corriente admite un segundo evento en paralelo, un exclusivo no.
+   */
+  exclusiva: boolean;
+  /**
    * Cuántos presupuestos vigentes hay ese día, y cuánta gente sumarían si
    * todos se confirmaran.
    *

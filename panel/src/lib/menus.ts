@@ -53,8 +53,8 @@ export interface Menu {
 }
 
 /**
- * Los cinco que existen hoy: los cuatro niveles del landing más el de niños,
- * que es uno solo y se suma a cualquiera.
+ * Los seis que existen hoy: los cuatro niveles del landing, el de niños y el
+ * de pequeños, que se suman a cualquiera.
  *
  * **Sin el prefijo "Menú"**, que es como se llaman en el sitio público, en el
  * landing y en CLAUDE.md. Esta lista es solo el punto de partida: vive en la
@@ -74,7 +74,13 @@ export const POR_DEFECTO_MENUS: Menu[] = [
   { nombre: 'Lo Pirque', precioEnLinea: 0, precioEnLocal: 0 },
   { nombre: 'A Brasas abiertas', precioEnLinea: 0, precioEnLocal: 0 },
   { nombre: 'Sommelier', precioEnLinea: 0, precioEnLocal: 0 },
-  { nombre: 'Niños', precioEnLinea: 0, precioEnLocal: 0 }
+  { nombre: 'Niños', precioEnLinea: 0, precioEnLocal: 0 },
+  // Publicado en la tienda el 2026-11-02, de 0 a 3 años. Nació allá como
+  // "Menú de pequeños" —con prefijo, al revés que los otros cinco— y el
+  // cliente lo renombró a "Pequeños" el mismo día, así que canonizar()
+  // empareja. Si vuelven a no calzar, desconocidos() lo reporta en
+  // amarillo: ése es el aviso, no un error.
+  { nombre: 'Pequeños', precioEnLinea: 0, precioEnLocal: 0 }
 ];
 
 /** Un monto escrito a mano. Aguanta "$44.000", "44000" y "44 000". */

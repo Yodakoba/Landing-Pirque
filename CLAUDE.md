@@ -659,6 +659,7 @@ desarrollo, no de producción**: en producción los IDs son otros.
 | Tradiciones | `50684108013785` — $44.000 | `50684108046553` — $49.000 |
 | A Brasas abiertas | `50684143173849` — $70.000 | `50684143206617` — $75.000 |
 | Niños | `50684218081497` — $19.000 | `50684218114265` — $24.000 |
+| Pequeños | `51269453971673` — $6.000 | `51269454004441` — $9.000 |
 
 **El sitio ofrece las dos columnas desde el 2026-10-14.** Lo que significan
 lo aclaró el cliente ese día:
@@ -666,7 +667,11 @@ lo aclaró el cliente ese día:
 - **Pago directo** — paga en línea en el checkout de Shopify, con el precio
   con descuento.
 - **Solo reserva** — reserva ahora y paga en el local. Cuesta **$5.000 más**
-  en los tres menús, que es el recargo por no pagar por adelantado.
+  en los tres primeros menús, que es el recargo por no pagar por adelantado.
+  **El de pequeños, que llegó después, cobra $3.000 más** ($6.000 / $9.000):
+  el recargo dejó de ser parejo el 2026-11-02 y no es un error del sitio —los
+  precios los pone la tienda y el sitio los copia—, pero conviene tenerlo
+  presente al mirar la tabla.
 
 El cliente agregó el método de pago "pago en el local" en Shopify, que es lo
 que hace posible la segunda.
@@ -686,7 +691,8 @@ de cada tipo cuando se toque algo de la tienda.
 
 **El $45.000 de Tradiciones de la tabla de más arriba era un dato equivocado
 del agente**, y por eso esta nota decía antes "$4.000 a $5.000 más". Con el
-precio real, $44.000, la diferencia son $5.000 parejos en los tres.
+precio real, $44.000, la diferencia son $5.000 parejos en esos tres. El de
+pequeños, agregado después, cobra $3.000.
 
 El cliente decidió el 2026-10-13 que en los precios **manda Shopify**, y por
 eso **A Brasas abiertas subió de $60.000 a $70.000** en el sitio público,
@@ -723,12 +729,13 @@ forma del formulario.
 | Fila 1 | **Los adultos**, con los cuatro IDs de variante: el par de Tradiciones y el de A Brasas abiertas, cada uno con su versión en línea y en el local |
 | La casilla | **Cambia cuál par usa esa fila**, no agrega un pedido |
 | Fila 2 | **El menú de niños**, intacto |
+| Fila 3 | **El menú de pequeños** (desde el 2026-11-02), igual de intacto |
 
-- **El menú de niños no sube, y tampoco por un `if`**: esa fila
-  sencillamente no trae las variantes de upgrade, así que `parDe()` le
-  devuelve su par de siempre esté la casilla como esté. Es uno solo y se
-  suma a cualquiera de las dos experiencias — y un bar abierto no aplica a
-  un niño de ocho años.
+- **Los menús de niños y de pequeños no suben, y tampoco por un `if`**: esas
+  filas sencillamente no traen las variantes de upgrade, así que `parDe()`
+  les devuelve su par de siempre esté la casilla como esté. Son uno solo
+  cada uno y se suman a cualquiera de las dos experiencias — y un bar
+  abierto no aplica a un niño de ocho años, menos a uno de dos.
 - **El nombre y el precio de la fila los escribe el JS en cada pasada de
   `recalcular()`**, no solo al marcar la casilla: así no hay forma de que lo
   que se ve y lo que se va a cobrar se separen. Sin JavaScript el HTML ya
@@ -775,6 +782,58 @@ cada uno, y el menú de niños sin moverse. En inglés la fila dice
 `Tradiciones menu` / `A Brasas abiertas menu` y los precios salen
 `$44,000 CLP`, que es lo que el diccionario ya decía.
 
+### El menú de pequeños (2026-11-02)
+
+El cliente lo publicó en la tienda y pidió mostrarlo: **de 0 a 3 años,
+$6.000 pagando en línea y $9.000 pagando en el local.** Con eso se cierra el
+pendiente que este archivo arrastraba desde el 2026-10-22 — una familia con
+una guagua no tenía cómo anotarla.
+
+**Los datos salieron de la tienda, no de nadie**: la Storefront API devolvió
+el producto, sus dos variantes y la descripción (*"Menú para niños de 0 a 3
+años"*), y de ahí salieron el precio y el tramo de edad que dice el sitio.
+
+- **No hizo falta tocar el JavaScript.** `reservas.html` ganó una tercera
+  fila `[data-opcion]` con su par de variantes y nada más: el JS recorre las
+  filas que encuentre. Y **no sube con la casilla**, por lo mismo que el de
+  niños: esa fila no trae variantes de upgrade, así que `parDe()` le
+  devuelve su par de siempre.
+- **El recargo de pagar en el local son $3.000, no $5.000.** Los otros tres
+  menús cobran $5.000 parejos. No rompe nada —el sitio no escribe ese número
+  en ninguna parte, lo saca de restar los dos totales— pero conviene que el
+  cliente sepa que lo dejó distinto, por si no fue a propósito.
+- **En `experiencias.html` tiene su propio desplegable**, como los otros
+  dos. **Nació como una línea suelta** —la tienda dice solo la edad, y
+  escribirle un contenido habría sido publicar algo plausible y falso— y el
+  cliente mandó el detalle el mismo día: *"150g de Pollo o Punta picana,
+  arroz o papas fritas y ensalada"*. **Van dos bloques y no cuatro**: no
+  lleva postre ni bebestible, porque no los nombró y el del menú de niños no
+  sirve de molde.
+- **En `index.html` se corrigió la frase del WhatsApp**, que decía "los niños
+  de 4 a 12 años tienen su propio menú" y con el tramo nuevo se leía como
+  que un menor de 4 paga como adulto.
+- **El nombre quedó desalineado por unas horas y el cliente lo alineó.** El
+  producto nació como *"Menú de pequeños"* mientras los otros tres son
+  `Tradiciones`, `A Brasas Abiertas` y `Niños`, sin el prefijo; el panel
+  empareja por nombre exacto (`canonizar()`), así que `desconocidos()` lo
+  habría reportado en amarillo — que es justamente el aviso que ese mecanismo
+  existe para dar. **Hoy se llama `Pequeños`** y calza con la lista de
+  arranque del panel. Lo que falta es su fila en `/menus` con los dos
+  precios, que es dato del cliente. **El sitio nunca se enteró**: manda IDs
+  de variante, no nombres.
+
+**Probado contra la tienda de verdad**, con tres adultos, dos niños y un
+pequeño:
+
+```
+sin subir   $176.000 / $204.000     subido   $254.000 / $282.000
+cartCreate  userErrors: []  ·  total 204000.0 CLP  ·  las tres líneas con _booking_date
+            3 × Tradiciones/Solo reserva + 2 × Niños/Solo reserva + 1 × Pequeños/Solo reserva
+```
+
+Y en inglés la fila dice `Little ones' menu · Ages 0 to 3` con `$6,000 CLP`,
+que es el formato que el diccionario ya usaba para los otros precios.
+
 ### La tienda de producción, mirada por su catálogo público (2026-10-22)
 
 Con `brasasdelopirque.cl` alcanzable se pudo mirar **la tienda de verdad**,
@@ -794,11 +853,11 @@ producción, y cambia lo que hay que preparar.
   producción no se puede hacer aunque se cambien el token y el dominio.
 - **Los precios de producción hoy**: adultos $44.000, niños (4 a 12)
   $19.000. Coinciden con los del sitio.
-- **Hay un tercer tramo que el sitio nuevo no tiene: "Pequeños (0 a 3 años)"
-  a $6.000.** No es un olvido de nadie: nunca se mencionó. Hay que
-  preguntarle al cliente si se mantiene, porque hoy `reservas.html` solo
-  ofrece adultos y niños de 4 a 12, y una familia con una guagua no tendría
-  cómo anotarla.
+- ~~**Hay un tercer tramo que el sitio nuevo no tiene: "Pequeños (0 a 3
+  años)" a $6.000**~~ — **resuelto el 2026-11-02**: el cliente lo publicó
+  también en la tienda de desarrollo, con el modelo de dos modalidades, y el
+  sitio ya lo ofrece. Ver "El menú de pequeños". Era el caso de la familia
+  con una guagua, que hasta ese día no tenía cómo anotarla.
 - **Las tres variantes del viernes 23 de octubre están todas a $44.000**,
   niños y pequeños incluidos. No alcanza a cobrarle de más a nadie —son
   justo las 3 que están no disponibles de las 39— pero si se reabre ese día
@@ -1668,6 +1727,65 @@ sin CRM_API_KEY                     →  200, vacío, configurado: false
 con clave mala                      →  502, vacío, "No se pudo leer el CRM."
 ```
 
+### Privado, y privado exclusivo (2026-11-02)
+
+Salió al diseñar la escritura hacia el CRM, y resultó ser **un estado que al
+panel le faltaba**, no un detalle del socio. Lo dijo el cliente así:
+
+> *"Existen exactamente los días privados, pero no exclusivos, donde se
+> permiten distintas reservas, dos eventos paralelos. Y existe el privado
+> exclusivo, y esos son cuando se arrendó el recinto completamente y de
+> forma exclusiva a una empresa."*
+
+Hasta acá `Privada` era una sola cosa, y con eso la pregunta **"¿cabe otro
+evento este día?"** no tenía dónde contestarse: un cumpleaños de 40 personas
+en el salón y un recinto arrendado entero se escribían igual.
+
+| Estado | No se ofrece en el sitio | ¿Cabe otro evento? |
+|---|---|---|
+| `Privada` | sí | **sí** — pueden correr dos a la vez, y pasa |
+| `Privada exclusiva` | sí | **no** — el recinto completo, un solo cliente |
+
+- **Un día exclusivo ES un día privado**, y eso no es una sutileza de
+  redacción: `esPrivada()` lo reconoce, así que **todo lo que ya trataba
+  bien a un privado lo sigue tratando bien sin tocarse** — el recorte para
+  el sitio, el azul de la tarjeta, el conteo de la semana, el que no esté
+  cerrado. Lo único que agrega `esExclusiva()` es que no cabe nadie más.
+- **`esExclusiva()` falla hacia lo menos restrictivo**, al revés que
+  `estaCerrado()`, y también a propósito. Los dos errores no cuestan lo
+  mismo: un exclusivo leído como privado deja que alguien cotice un segundo
+  evento, y eso se descubre conversando; un privado leído como exclusivo le
+  marca al socio la fecha como tomada y **le hace perder una venta que sí se
+  podía hacer, sin que nadie se entere nunca**.
+- **En el panel es una casilla dentro de "Privado", no un cuarto radio.** Lo
+  que cambia entre los dos no es el tipo de día —los dos reciben reservas,
+  ninguno se ofrece— sino si el recinto se arrendó completo. Dos radios lo
+  contarían como dos cosas distintas y obligarían a leer las dos ayudas para
+  notar que casi todo es igual.
+- **Y como la casilla solo existe mientras "Privado" está elegido, un día
+  abierto o cerrado no tiene cómo quedar marcado exclusivo.** Es la misma
+  garantía por forma que el upgrade de menús del sitio: no hay dónde
+  escribirlo.
+- **Anotar una reserva a mano nunca deja un día exclusivo** —sigue creando
+  `Privada`— y tampoco le quita lo exclusivo a uno que ya lo era: arrendar
+  el recinto completo es una decisión comercial, no el efecto secundario de
+  anotar una reserva de teléfono. Hay pruebas que fijan las dos cosas.
+- **En la tarjeta se distinguen por la palabra, no por el color**: los dos
+  van en azul, porque son el mismo tipo de día, y debajo del punto dice
+  *privado* o *exclusivo*. Es justamente para lo que `PuntoDia` existe.
+- **El sitio público no cambia en nada**: un exclusivo es privado, así que
+  `paraElSitio()` ya lo omitía. Hay una prueba que lo fija.
+
+**Se comprobó rompiéndolo**: haciendo que `esExclusiva()` devuelva lo mismo
+que `esPrivada()` —o sea, que todo privado cuente como exclusivo— fallan
+seis pruebas de una vez, entre ellas la que dice que un privado a secas no
+lo es y las tres de la reserva a mano.
+
+Y de punta a punta contra la planilla, con el 14 privado y el 21 exclusivo:
+el día abierto no ofrece la casilla, el privado la ofrece sin marcar, el
+exclusivo la ofrece marcada, y marcarla escribe `Privada exclusiva` y deja
+la tarjeta diciendo *exclusivo*. Desmarcarla vuelve a `Privada`.
+
 ### La escritura hacia el CRM todavía no está
 
 Falta el otro sentido: publicar **nuestros** días en su calendario. El
@@ -1685,10 +1803,39 @@ borró: entró `c3ba` y volvió `c3ba`. El `test-2` del socio tiene guardado
 rompió **su `curl`**, no su endpoint, y conviene avisarle antes de que
 repita ese comando con algo de verdad.
 
-Lo que falta decidir antes de escribir: **qué días mandar**. El cliente pidió
-mandarle *todos* con su ocupación, lo que con `bloquea: false` es
-exactamente lo que su API soporta — pero conviene confirmarle que un año
-entero de días naranjos en su calendario es lo que quiere ver.
+**Qué día va en qué color quedó decidido el 2026-11-02**, y la regla terminó
+siendo una sola pregunta: *¿puede pasar otro evento acá ese día?*
+
+| Nuestro día | ¿Se manda? | `bloquea` | Qué ve el vendedor |
+|---|---|---|---|
+| Cerrado | sí | `true` | rojo, fecha tomada, advertencia |
+| **Privado exclusivo** | sí | `true` | rojo, fecha tomada |
+| **Privado** (no exclusivo) | sí | `false` | naranjo, con su ocupación |
+| Abierto con reservas | sí | `false` | naranjo, "8/120 personas" |
+| Abierto y vacío | **no** | — | nada |
+| Preparación | sin decidir | — | — |
+
+**El primer corte mandaba todo privado en rojo, y el cliente lo corrigió**:
+*"privado también debería ser naranjo, porque hay eventos que se hacen sin
+que sea exclusivo… pero sí debería saber de este evento privado y cuántas
+reservas hay"*. De ahí salió el estado nuevo del panel — ver "Privado, y
+privado exclusivo". Lo que vale guardar es que **rojo dejó de significar
+"cerrado" y pasó a significar "no cabe nadie más"**, que es lo que el
+vendedor necesita saber y lo que la propia guía del socio ya decía.
+
+- **Un día abierto y vacío no se manda**, porque no tiene nada que informar
+  y llenaría su calendario de naranjo sin dato. Medido contra el endpoint
+  público el 2026-11-02: de 18 días abiertos hasta el 3 de enero, **3
+  tienen alguna reserva**.
+- **Hace falta la otra mitad, el borrado.** Si un día deja de tener
+  ocupación —se cancela la única reserva, se reabre un día cerrado— hay que
+  sacarlo con `DELETE`, o le queda un día naranjo fantasma. Por eso esto se
+  diseña como **reconciliación** —leer `GET /externos`, mandar lo que
+  cambió, borrar lo que ya no califica— y no como un evento por cambio.
+- **El empujón nunca puede bloquear el guardado de un día.** Si su API no
+  responde, el panel guarda igual y la reconciliación diaria lo pone al día.
+  Es la misma asimetría de `posiblesDeLosDias()`: un servicio de un tercero
+  no se mete en el camino de la pantalla que contesta cuánta gente viene.
 
 ## El equipo de trabajadores (panel)
 
@@ -2238,8 +2385,8 @@ Un contratado sigue sin sumar jornada, y sus horas extra sí: son del día.
 ### La palabra bajo el punto: público, privado, cerrado, preparación (2026-10-23)
 
 **En los tres calendarios, el estado de un día se lee bajo su punto de
-color**, en letra chica: *público*, *privado*, *cerrado*, *preparación* o
-*sin cupo*. Antes era una línea más, debajo del contenido —"PRIVADO · no
+color**, en letra chica: *público*, *privado*, *exclusivo*, *cerrado*,
+*preparación* o *sin cupo*. Antes era una línea más, debajo del contenido —"PRIVADO · no
 está en el sitio"—, y ahí está el problema que lo cambió: **una línea de más
 cambia el alto de la tarjeta**, así que los días de una misma semana dejaban
 de medir lo mismo según su estado. Bajo el punto, en cambio, el aire ya
@@ -4405,6 +4552,11 @@ Mantenlo así salvo que el cliente pida lo contrario.
 - **Dirección**: Casas de San Vicente, lote 4, Pirque, Región Metropolitana.
   Mapa: `https://maps.app.goo.gl/NPkmd1foma1Uc8nB8`
 - **Email**: `contacto@lopirque.cl` (ojo: dominio distinto al del sitio).
+- **Menú de pequeños**: $6.000, de 0 a 3 años. Se suma igual que el de
+  niños. **150 g de pollo o punta picana, arroz o papas fritas, y
+  ensalada** — lo dio el cliente el 2026-11-02, porque la descripción del
+  producto en Shopify dice solo la edad. **No lleva postre ni bebestible**,
+  al revés que el de niños: no se inventan, el cliente no los mencionó.
 - **Menú de niños**: $19.000, de 4 a 12 años. Es **uno solo**, no una
   variante por experiencia: se suma a cualquiera de las cuatro. Por eso va
   en un bloque propio en `experiencias.html` y no repetido en cada tarjeta.
@@ -4511,12 +4663,10 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 
 ## Decisiones abiertas
 
-- **¿Se mantiene el menú de "Pequeños (0 a 3 años)" a $6.000?** Existe en la
-  tienda de producción y el sitio nuevo no lo ofrece: hoy `reservas.html`
-  tiene adultos y niños de 4 a 12, y nada más. Nunca se habló de él —
-  apareció al mirar el catálogo el 2026-10-22. Si se mantiene, es una cuarta
-  fila en el formulario y su par de variantes; si no, no se hace nada, pero
-  conviene que sea una decisión y no un olvido.
+- ~~¿Se mantiene el menú de "Pequeños (0 a 3 años)" a $6.000?~~ —
+  **resuelto el 2026-11-02**: sí. El cliente lo publicó en la tienda de
+  desarrollo con sus dos modalidades y pidió mostrarlo en el sitio. Ver "El
+  menú de pequeños".
 - ~~¿El arriendo del recinto también es con IVA incluido?~~ — **resuelto el
   2026-11-01**: sí. El landing lo anunciaba como "$2.500.000 + IVA" al revés
   que todo lo demás, y el cliente lo cerró en una frase: *"cámbialo en la
