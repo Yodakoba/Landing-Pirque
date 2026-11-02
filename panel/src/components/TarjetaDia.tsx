@@ -126,7 +126,7 @@ const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3';
  * evita que cada pantalla invente su propio tamaño, que era justamente el
  * problema. `.tecla` le da al `<a>` el hundido que un `<button>` ya trae.
  */
-const BOTON = 'tecla boton';
+const BOTON = 'tecla boton boton-angosto';
 
 export default function TarjetaDia({
   d, resumen, clima, onEditar, onPlanificar
@@ -150,9 +150,17 @@ export default function TarjetaDia({
        un hueco debajo del borde, que se lee como un error de dibujo y no
        como aire. El pie va con `mt-auto`, así que el sobrante queda en el
        medio. */
-    <div className="h-full [perspective:1200px]">
+    /* **`min-w-0` es la guarda, y sin ella esto ya se rompió una vez**
+       (2026-11-02). Un ítem de grilla nace con `min-width: auto`, así que
+       **crece por fuera de su columna** cuando algo adentro no cabe, en vez
+       de quedarse en su sitio: el pie de la tarjeta se pasó 10px y se comió
+       la separación con la tarjeta de al lado. Con la guarda, lo que no
+       quepa queda como problema DENTRO de su propio borde, donde se ve, y
+       no ensuciando la grilla entera. */
+    <div className="h-full min-w-0 [perspective:1200px]">
       <div
-        className="grid h-full transition-transform duration-500 [transform-style:preserve-3d]"
+        className="grid h-full min-w-0 grid-cols-1 transition-transform duration-500
+                   [transform-style:preserve-3d]"
         style={{ transform: volteada ? 'rotateY(180deg)' : undefined }}>
 
         {/* ---------- el frente: la ocupación ---------- */}
@@ -163,8 +171,8 @@ export default function TarjetaDia({
                 donde no lo veía nadie; ahora es una pastilla al lado del
                 número, que es lo que se mira. Ver el bloque de abajo. */}
             <a href={`/dia/${d.fecha}`} {...alFrente}
-               className="text-[15px] font-semibold capitalize leading-tight
-                          text-hueso/90 hover:text-oro">
+               className="text-[15px] font-semibold leading-tight
+                          text-hueso/90 first-letter:uppercase hover:text-oro">
               {enPalabras(d.fecha)}
             </a>
             {/* El punto y, debajo, la palabra: público, privado, cerrado.
@@ -224,18 +232,32 @@ export default function TarjetaDia({
                   se distingue por forma y color, no por un punto de 8px al
                   lado de una letra de 12. El punto se queda igual, porque
                   el color solo no alcanza para quien no lo distingue. */}
-              <p className="mt-3 flex flex-wrap gap-2 text-[13px]">
-                <span className="inline-flex items-center gap-1.5 rounded-md border
-                                 border-verde/40 bg-verde/10 px-2 py-1 text-verde-texto">
-                  <span aria-hidden className="h-2 w-2 rounded-full bg-verde-fuerte" />
-                  <strong className="tabular-nums">{d.pagadas}</strong> pagadas
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-md border
-                                 border-ambar/40 bg-ambar/10 px-2 py-1 text-ambar-texto">
-                  <span aria-hidden className="h-2 w-2 rounded-full bg-ambar-fuerte" />
-                  <strong className="tabular-nums">{d.porPagar}</strong> por cobrar
-                </span>
-              </p>
+              {/* **Las dos pastillas aparecen solo si hay alguien**
+                  (2026-11-02, lo notó el cliente mirando un miércoles y un
+                  domingo vacíos). "0 pagadas · 0 por cobrar" no contesta
+                  nada: que no hay nadie ya lo dice el número grande, y las
+                  dos pastillas en cero son ruido justo en la fila que se
+                  mira para saber cuánto falta cobrar. Es el mismo criterio
+                  del azulejo de "ya no vienen" en la página del día, que
+                  tampoco se dibuja en cero.
+
+                  **La barra sí se queda**, aunque vaya vacía: es lo que
+                  dibuja el cupo del día, así que en cero dice "no hay nada
+                  tomado de los 120" — que es un dato, no un relleno. */}
+              {(d.pagadas > 0 || d.porPagar > 0) && (
+                <p className="mt-3 flex flex-wrap gap-2 text-[13px]">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border
+                                   border-verde/40 bg-verde/10 px-2 py-1 text-verde-texto">
+                    <span aria-hidden className="h-2 w-2 rounded-full bg-verde-fuerte" />
+                    <strong className="tabular-nums">{d.pagadas}</strong> pagadas
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border
+                                   border-ambar/40 bg-ambar/10 px-2 py-1 text-ambar-texto">
+                    <span aria-hidden className="h-2 w-2 rounded-full bg-ambar-fuerte" />
+                    <strong className="tabular-nums">{d.porPagar}</strong> por cobrar
+                  </span>
+                </p>
+              )}
 
               {/* **Acá iba "$X por cobrar", y se sacó el 2026-10-23 a pedido
                   del cliente.** El número era la suma de las reservas que
@@ -314,12 +336,25 @@ export default function TarjetaDia({
                   80: el dato quedaba más apagado que su propia etiqueta, que
                   es al revés de lo que alguien mira. Va en su propia cajita
                   para distinguirse por forma y no solo por peso. */}
-              {resumen && resumen.total > 0 && (
+              {resumen && (resumen.total > 0 || resumen.faltan > 0) && (
+                /* **"4 / 5" y no "4" con un punto al lado** (2026-11-02, lo
+                   notó el cliente). Cuando faltaba gente aparecía un `•`
+                   ámbar que solo se explicaba en el `title`, o sea en un
+                   globito del mouse: en un teléfono eso no existe y lo que
+                   queda es un punto que no dice nada. Es el mismo error que
+                   ya se había arreglado en el botón de cerrar el día.
+
+                   El segundo número son los que sugieren las reglas de cada
+                   puesto, así que "4 / 5" se lee solo y no necesita ningún
+                   globito. Va en ámbar porque falta alguien, y el dorso lo
+                   dice con todas sus letras. */
                 <span className="ml-1.5 rounded bg-hueso/10 px-1.5 py-0.5 text-[13px]
-                                 font-bold tabular-nums text-hueso">{resumen.total}</span>
-              )}
-              {resumen && resumen.faltan > 0 && (
-                <span className="ml-1 text-ambar-texto" title={`Faltan ${resumen.faltan}`}>•</span>
+                                 font-bold tabular-nums text-hueso">
+                  {resumen.total}
+                  {resumen.faltan > 0 && (
+                    <span className="text-ambar-texto">/{resumen.total + resumen.faltan}</span>
+                  )}
+                </span>
               )}
             </button>
             <button onClick={onEditar} {...alFrente}
@@ -335,7 +370,8 @@ export default function TarjetaDia({
             volteada ? '' : 'pointer-events-none'}`}
           aria-hidden={!volteada}>
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-[15px] font-semibold capitalize leading-tight text-hueso/90">
+            <h3 className="text-[15px] font-semibold leading-tight text-hueso/90
+                           first-letter:uppercase">
               {enPalabras(d.fecha)}
             </h3>
             {/* **Lo que va a costar ese equipo** (2026-11-01, lo pidió el

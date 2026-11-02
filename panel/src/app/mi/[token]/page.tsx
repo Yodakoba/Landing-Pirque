@@ -186,7 +186,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             return (
               <li key={t.fecha + t.puesto}
                   className="rounded border border-hueso/15 bg-panel p-4">
-                <p className="text-sm capitalize text-hueso/85">{enPalabras(t.fecha)}</p>
+                <p className="text-sm text-hueso/85 first-letter:uppercase">{enPalabras(t.fecha)}</p>
                 <p className="mt-2 text-lg font-bold">
                   {t.puesto || <span className="text-hueso/50">Sin puesto definido</span>}
                 </p>
@@ -253,7 +253,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
                 <li key={t.fecha + t.puesto}
                     className="rounded border border-hueso/15 bg-panel p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <span className="text-sm font-semibold capitalize text-hueso/85">
+                    <span className="text-sm font-semibold text-hueso/85 first-letter:uppercase">
                       {enPalabras(t.fecha)}
                     </span>
                     <span className="text-[13px] text-hueso/60">{t.puesto}</span>

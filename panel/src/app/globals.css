@@ -231,6 +231,22 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 }
 .boton:hover { border-color: rgb(var(--oro)); color: rgb(var(--oro)); }
 
+/**
+ * El mismo botón, con menos aire a los lados.
+ *
+ * Existe por un bug medido el 2026-11-02: en la tarjeta del calendario los
+ * tres botones del pie —Reservas · Equipo N · Editar— sumaban **271px de
+ * ancho mínimo** y solo había 261, así que la tarjeta **crecía 10px por
+ * fuera de su columna** y se comía la separación con la de al lado: los 12px
+ * de la grilla quedaban en 2 y el sábado parecía chocar con el domingo.
+ *
+ * **Lo que cambia es el aire, no el tamaño**: siguen midiendo 36px de alto
+ * y 13px de letra, que es lo que la regla PlayStation pide. Y vive acá y no
+ * en la tarjeta por lo mismo que `.boton`: que ninguna pantalla se invente
+ * su propia medida.
+ */
+.boton-angosto { padding-left: .5rem; padding-right: .5rem; }
+
 .boton-relleno {
   background: rgb(var(--oro));
   border-color: rgb(var(--oro));

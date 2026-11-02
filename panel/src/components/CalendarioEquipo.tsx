@@ -163,7 +163,7 @@ export default function CalendarioEquipo() {
                 <button key={f} onClick={() => setPlanificando(f)}
                   className="rounded border border-ambar/40 px-2 py-1 text-xs
                              hover:border-oro">
-                  <span className="capitalize">{enPalabras(f)}</span>
+                  <span className="inline-block first-letter:uppercase">{enPalabras(f)}</span>
                   {x.sinMarcar > 0 && (
                     <span className="text-ambar-texto"> · {x.sinMarcar} sin marcar</span>
                   )}

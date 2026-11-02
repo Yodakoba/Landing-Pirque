@@ -314,7 +314,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   return (
     <>
       <a href="/" className="tecla boton">← Calendario</a>
-      <h1 className="mt-3 text-xl font-bold uppercase tracking-wide capitalize">
+      <h1 className="mt-3 text-xl font-bold uppercase tracking-wide">
         {enPalabras(fecha)}<Ayuda tema="dia" />
       </h1>
       <Clima c={pronostico.get(fecha)} grande />

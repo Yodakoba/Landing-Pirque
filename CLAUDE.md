@@ -3700,6 +3700,106 @@ Comprobado en los dos temas, a 1280 y a 393px: las 52 caras miden 228, el
 pie entra en una sola línea con botones de 34px de alto, y a 393 la página
 no se corre de lado.
 
+#### El pie no cabía y la tarjeta se salía de su columna (2026-11-02)
+
+Lo notó el cliente con una captura y la pregunta exacta: *"¿por qué los
+paneles de sábado y domingo chocan?"*. No chocaban: **la tarjeta del sábado
+era 10px más ancha que su columna y se metía en el espacio que la separa de
+la del domingo.** Los 12px de separación de la grilla quedaban en 2, y dos
+píxeles se leen como un choque.
+
+Medido antes de tocar nada, a 1280 —cuatro columnas de 294,5px con 12px de
+separación, o sea 261px de contenido por tarjeta—:
+
+| El pie | Ancho mínimo | |
+|---|---|---|
+| `Reservas · Equipo · Editar` | 239px | cabe |
+| `Reservas · Equipo [4] · Editar` | **271px** | se pasa por 10 |
+
+O sea que **lo causó la cajita con el número**, la que el cliente había
+pedido el día anterior. Los tres botones son `white-space: nowrap`, así que
+no había nada que pudiera achicarse.
+
+**La causa de fondo no es el pie, y por eso el arreglo son dos cosas.** Un
+ítem de grilla nace con `min-width: auto`: cuando algo adentro no cabe,
+**crece por fuera de su pista** en vez de quedarse en su sitio. Entonces:
+
+- **`.boton-angosto`** en `globals.css`, que baja el padding lateral de
+  12px a 8. Recupera 24px y **no toca la regla PlayStation**: los botones
+  siguen midiendo 36px de alto y 13px de letra, que es lo que la regla pide
+  — lo que cambia es el aire a los lados. Vive en `globals.css` y no en la
+  tarjeta por lo mismo que `.boton`: que ninguna pantalla se invente su
+  propia medida.
+- **`grid-cols-1` en la cara**, que es la guarda. **`min-w-0` solo no
+  alcanza, y se midió**: con la grilla implícita la *pista* se agranda con
+  el contenido aunque el contenedor pueda encogerse, así que la tarjeta
+  seguía saliéndose 7px. Una columna explícita `minmax(0, 1fr)` no puede
+  pasarse del contenedor, y con eso lo que no quepa queda como problema
+  **dentro** de su propio borde, donde se ve, en vez de ensuciar la grilla
+  entera.
+
+**La lección, que es la misma de `flex-wrap`:** estas propiedades no
+ordenan, solo deciden qué pasa cuando algo no cupo. Si una medida tiene que
+respetarse, hay que declararla.
+
+#### El punto ámbar solo hablaba en un globito (2026-11-02)
+
+En la misma captura, el lunes 2 mostraba `Equipo •` — un punto ámbar que
+significaba "faltan N personas según las reglas de cada puesto" y que
+**solo lo decía el `title`**, o sea un globito que aparece al pasar el
+mouse. En un teléfono eso no existe, y lo que queda es un punto que no dice
+nada. Es exactamente el error que ya se había arreglado en el botón de
+cerrar el día.
+
+Ahora la cajita dice **`4/6`**: los asignados y, en ámbar, los que sugieren
+las reglas. Se lee solo y no necesita ningún globito.
+
+- **Va sin espacios alrededor de la barra**, y no es gusto: con `0 / 6` la
+  tarjeta se pasaba otra vez, 7px. De paso queda igual que el número grande
+  de la propia tarjeta —"8/120 personas"—, que es la convención que este
+  panel ya usa.
+- **Aparece también cuando no hay nadie asignado** (`0/6`), que es justo el
+  caso del lunes de la captura: antes, con cero, la cajita no se dibujaba y
+  quedaba el punto solo.
+- El dorso lo sigue diciendo con todas sus letras.
+
+#### Las pastillas de pago en cero eran ruido (2026-11-02)
+
+El miércoles 4 y el domingo 8 no tenían a nadie y mostraban igual
+`0 pagadas · 0 por cobrar`. Que no hay nadie ya lo dice el número grande, y
+dos pastillas en cero son ruido justo en la fila que se mira para saber
+cuánto falta cobrar. Es el mismo criterio del azulejo de "ya no vienen" en
+la página del día, que tampoco se dibuja en cero.
+
+**La barra sí se queda**, aunque vaya vacía: es lo que dibuja el cupo del
+día, así que en cero dice "no hay nada tomado de los 120" — eso es un dato,
+no un relleno.
+
+#### "Lunes 2 De Noviembre": el `capitalize` del panel (2026-11-02)
+
+En la misma captura, con mayúscula en **cada** palabra. Este archivo ya
+tenía escrito que eso "se lee descuidado", pero solo se había arreglado en
+el documento del presupuesto; en el panel quedó en nueve lugares. Ahora las
+fechas van con `first-letter:uppercase`, igual que el documento.
+
+Dos trampas que vale la pena tener escritas, porque las dos hacen que el
+arreglo *parezca* hecho sin estarlo:
+
+- **`::first-letter` no aplica a un elemento en línea**, solo a un
+  contenedor de bloque. Un `<span className="first-letter:uppercase">`
+  suelto no hace nada. **Un hijo directo de un `flex` sí sirve**, porque se
+  blockifica solo; el único que necesitó `inline-block` fue el de
+  `CalendarioEquipo`, que cuelga de un `<button>` que no es flex.
+- **Una fecha en medio de una frase no lleva mayúscula.** En
+  `PresupuestosEditor` el "Válido hasta el sábado 5 de diciembre" tenía
+  `capitalize`, y ahí lo correcto era **sacarlo**, no reemplazarlo.
+
+Quedan tres `capitalize` a propósito: los dos encabezados de mes
+—"Noviembre 2026", una sola palabra— y un `<select>` del informe, que no es
+una fecha. **El título de la página del día perdió el suyo** y quedó en
+versalitas como el de las demás pantallas, que es lo que ya hacía el
+`uppercase` que tenía al lado.
+
 ### La página del día, rehecha con esa regla (2026-11-01)
 
 Medido antes de tocar nada, a 1280: **28 textos bajo 13px** y **siete
