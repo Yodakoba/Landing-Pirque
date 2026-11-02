@@ -659,6 +659,7 @@ desarrollo, no de producción**: en producción los IDs son otros.
 | Tradiciones | `50684108013785` — $44.000 | `50684108046553` — $49.000 |
 | A Brasas abiertas | `50684143173849` — $70.000 | `50684143206617` — $75.000 |
 | Niños | `50684218081497` — $19.000 | `50684218114265` — $24.000 |
+| Pequeños | `51269453971673` — $6.000 | `51269454004441` — $9.000 |
 
 **El sitio ofrece las dos columnas desde el 2026-10-14.** Lo que significan
 lo aclaró el cliente ese día:
@@ -666,7 +667,11 @@ lo aclaró el cliente ese día:
 - **Pago directo** — paga en línea en el checkout de Shopify, con el precio
   con descuento.
 - **Solo reserva** — reserva ahora y paga en el local. Cuesta **$5.000 más**
-  en los tres menús, que es el recargo por no pagar por adelantado.
+  en los tres primeros menús, que es el recargo por no pagar por adelantado.
+  **El de pequeños, que llegó después, cobra $3.000 más** ($6.000 / $9.000):
+  el recargo dejó de ser parejo el 2026-11-02 y no es un error del sitio —los
+  precios los pone la tienda y el sitio los copia—, pero conviene tenerlo
+  presente al mirar la tabla.
 
 El cliente agregó el método de pago "pago en el local" en Shopify, que es lo
 que hace posible la segunda.
@@ -686,7 +691,8 @@ de cada tipo cuando se toque algo de la tienda.
 
 **El $45.000 de Tradiciones de la tabla de más arriba era un dato equivocado
 del agente**, y por eso esta nota decía antes "$4.000 a $5.000 más". Con el
-precio real, $44.000, la diferencia son $5.000 parejos en los tres.
+precio real, $44.000, la diferencia son $5.000 parejos en esos tres. El de
+pequeños, agregado después, cobra $3.000.
 
 El cliente decidió el 2026-10-13 que en los precios **manda Shopify**, y por
 eso **A Brasas abiertas subió de $60.000 a $70.000** en el sitio público,
@@ -723,12 +729,13 @@ forma del formulario.
 | Fila 1 | **Los adultos**, con los cuatro IDs de variante: el par de Tradiciones y el de A Brasas abiertas, cada uno con su versión en línea y en el local |
 | La casilla | **Cambia cuál par usa esa fila**, no agrega un pedido |
 | Fila 2 | **El menú de niños**, intacto |
+| Fila 3 | **El menú de pequeños** (desde el 2026-11-02), igual de intacto |
 
-- **El menú de niños no sube, y tampoco por un `if`**: esa fila
-  sencillamente no trae las variantes de upgrade, así que `parDe()` le
-  devuelve su par de siempre esté la casilla como esté. Es uno solo y se
-  suma a cualquiera de las dos experiencias — y un bar abierto no aplica a
-  un niño de ocho años.
+- **Los menús de niños y de pequeños no suben, y tampoco por un `if`**: esas
+  filas sencillamente no traen las variantes de upgrade, así que `parDe()`
+  les devuelve su par de siempre esté la casilla como esté. Son uno solo
+  cada uno y se suman a cualquiera de las dos experiencias — y un bar
+  abierto no aplica a un niño de ocho años, menos a uno de dos.
 - **El nombre y el precio de la fila los escribe el JS en cada pasada de
   `recalcular()`**, no solo al marcar la casilla: así no hay forma de que lo
   que se ve y lo que se va a cobrar se separen. Sin JavaScript el HTML ya
@@ -775,6 +782,56 @@ cada uno, y el menú de niños sin moverse. En inglés la fila dice
 `Tradiciones menu` / `A Brasas abiertas menu` y los precios salen
 `$44,000 CLP`, que es lo que el diccionario ya decía.
 
+### El menú de pequeños (2026-11-02)
+
+El cliente lo publicó en la tienda y pidió mostrarlo: **de 0 a 3 años,
+$6.000 pagando en línea y $9.000 pagando en el local.** Con eso se cierra el
+pendiente que este archivo arrastraba desde el 2026-10-22 — una familia con
+una guagua no tenía cómo anotarla.
+
+**Los datos salieron de la tienda, no de nadie**: la Storefront API devolvió
+el producto, sus dos variantes y la descripción (*"Menú para niños de 0 a 3
+años"*), y de ahí salieron el precio y el tramo de edad que dice el sitio.
+
+- **No hizo falta tocar el JavaScript.** `reservas.html` ganó una tercera
+  fila `[data-opcion]` con su par de variantes y nada más: el JS recorre las
+  filas que encuentre. Y **no sube con la casilla**, por lo mismo que el de
+  niños: esa fila no trae variantes de upgrade, así que `parDe()` le
+  devuelve su par de siempre.
+- **El recargo de pagar en el local son $3.000, no $5.000.** Los otros tres
+  menús cobran $5.000 parejos. No rompe nada —el sitio no escribe ese número
+  en ninguna parte, lo saca de restar los dos totales— pero conviene que el
+  cliente sepa que lo dejó distinto, por si no fue a propósito.
+- **En `experiencias.html` va como una línea, no como un desplegable.** Los
+  otros dos menús abren con su plato principal, acompañamientos y postre;
+  **de éste la tienda no dice qué trae**, solo la edad. Inventarle un
+  contenido sería publicar algo plausible y falso, así que queda dicho el
+  precio y la edad, y el desplegable espera a que el cliente mande el
+  detalle.
+- **En `index.html` se corrigió la frase del WhatsApp**, que decía "los niños
+  de 4 a 12 años tienen su propio menú" y con el tramo nuevo se leía como
+  que un menor de 4 paga como adulto.
+- **Ojo con el nombre, que es lo único que quedó desalineado**: en Shopify el
+  producto se llama **"Menú de pequeños"** mientras los otros tres son
+  `Tradiciones`, `A Brasas Abiertas` y `Niños`, sin el prefijo. El panel
+  empareja por nombre exacto (`canonizar()`), así que mientras no calcen
+  **`desconocidos()` lo va a reportar en amarillo** — que es justamente el
+  aviso que ese mecanismo existe para dar. Se arregla renombrando el producto
+  a `Pequeños` o escribiendo la fila de `Menús` tal cual dice la tienda. **El
+  sitio no se entera**: manda IDs de variante, no nombres.
+
+**Probado contra la tienda de verdad**, con tres adultos, dos niños y un
+pequeño:
+
+```
+sin subir   $176.000 / $204.000     subido   $254.000 / $282.000
+cartCreate  userErrors: []  ·  total 204000.0 CLP  ·  las tres líneas con _booking_date
+            3 × Tradiciones/Solo reserva + 2 × Niños/Solo reserva + 1 × Menú de pequeños/Solo reserva
+```
+
+Y en inglés la fila dice `Little ones' menu · Ages 0 to 3` con `$6,000 CLP`,
+que es el formato que el diccionario ya usaba para los otros precios.
+
 ### La tienda de producción, mirada por su catálogo público (2026-10-22)
 
 Con `brasasdelopirque.cl` alcanzable se pudo mirar **la tienda de verdad**,
@@ -794,11 +851,11 @@ producción, y cambia lo que hay que preparar.
   producción no se puede hacer aunque se cambien el token y el dominio.
 - **Los precios de producción hoy**: adultos $44.000, niños (4 a 12)
   $19.000. Coinciden con los del sitio.
-- **Hay un tercer tramo que el sitio nuevo no tiene: "Pequeños (0 a 3 años)"
-  a $6.000.** No es un olvido de nadie: nunca se mencionó. Hay que
-  preguntarle al cliente si se mantiene, porque hoy `reservas.html` solo
-  ofrece adultos y niños de 4 a 12, y una familia con una guagua no tendría
-  cómo anotarla.
+- ~~**Hay un tercer tramo que el sitio nuevo no tiene: "Pequeños (0 a 3
+  años)" a $6.000**~~ — **resuelto el 2026-11-02**: el cliente lo publicó
+  también en la tienda de desarrollo, con el modelo de dos modalidades, y el
+  sitio ya lo ofrece. Ver "El menú de pequeños". Era el caso de la familia
+  con una guagua, que hasta ese día no tenía cómo anotarla.
 - **Las tres variantes del viernes 23 de octubre están todas a $44.000**,
   niños y pequeños incluidos. No alcanza a cobrarle de más a nadie —son
   justo las 3 que están no disponibles de las 39— pero si se reabre ese día
@@ -4493,6 +4550,10 @@ Mantenlo así salvo que el cliente pida lo contrario.
 - **Dirección**: Casas de San Vicente, lote 4, Pirque, Región Metropolitana.
   Mapa: `https://maps.app.goo.gl/NPkmd1foma1Uc8nB8`
 - **Email**: `contacto@lopirque.cl` (ojo: dominio distinto al del sitio).
+- **Menú de pequeños**: $6.000, de 0 a 3 años. Se suma igual que el de
+  niños. Publicado en la tienda el 2026-11-02; su descripción en Shopify
+  dice solo la edad, así que **no sabemos qué trae** y por eso no tiene su
+  propio desplegable en `experiencias.html`.
 - **Menú de niños**: $19.000, de 4 a 12 años. Es **uno solo**, no una
   variante por experiencia: se suma a cualquiera de las cuatro. Por eso va
   en un bloque propio en `experiencias.html` y no repetido en cada tarjeta.
@@ -4599,12 +4660,10 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 
 ## Decisiones abiertas
 
-- **¿Se mantiene el menú de "Pequeños (0 a 3 años)" a $6.000?** Existe en la
-  tienda de producción y el sitio nuevo no lo ofrece: hoy `reservas.html`
-  tiene adultos y niños de 4 a 12, y nada más. Nunca se habló de él —
-  apareció al mirar el catálogo el 2026-10-22. Si se mantiene, es una cuarta
-  fila en el formulario y su par de variantes; si no, no se hace nada, pero
-  conviene que sea una decisión y no un olvido.
+- ~~¿Se mantiene el menú de "Pequeños (0 a 3 años)" a $6.000?~~ —
+  **resuelto el 2026-11-02**: sí. El cliente lo publicó en la tienda de
+  desarrollo con sus dos modalidades y pidió mostrarlo en el sitio. Ver "El
+  menú de pequeños".
 - ~~¿El arriendo del recinto también es con IVA incluido?~~ — **resuelto el
   2026-11-01**: sí. El landing lo anunciaba como "$2.500.000 + IVA" al revés
   que todo lo demás, y el cliente lo cerró en una frase: *"cámbialo en la

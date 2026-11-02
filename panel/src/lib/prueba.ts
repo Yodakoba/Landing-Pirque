@@ -769,7 +769,8 @@ ok(leerMenusDe([['Menú'], ['']]).length === 0,
    'una fila sin nombre se ignora en vez de crear un menu vacio');
 ok(leerMenusDe([['Menú'], ['Tradiciones'], ['TRADICIONES']]).length === 1,
    'y el mismo nombre dos veces no crea dos menus');
-ok(POR_DEFECTO_MENUS.length === 5, 'los cuatro niveles del landing mas el de ninos');
+ok(POR_DEFECTO_MENUS.length === 6,
+   'los cuatro niveles del landing mas el de ninos y el de pequenos');
 
 /* ---------- los precios, que solo rigen para las reservas a mano ---------- */
 ok(POR_DEFECTO_MENUS.every((m) => m.precioEnLinea === 0 && m.precioEnLocal === 0),

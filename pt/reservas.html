@@ -129,6 +129,27 @@
         <div class="valor">$19.000 CLP</div>
       </div>
 
+      <!-- El menu de pequenos. El cliente lo publico en la tienda el
+           2026-11-02 y hasta entonces una familia con una guagua no tenia
+           como anotarla: el formulario ofrecia adultos y ninos de 4 a 12 y
+           nada mas.
+
+           Tampoco sube con la casilla, por lo mismo que el de ninos: esta
+           fila no trae variantes de upgrade, asi que parDe() le devuelve su
+           par de siempre este marcada o no. No hace falta ningun "if". -->
+      <div class="reserva-fila" data-opcion
+           data-variante="51269453971673" data-precio="6000"
+           data-variante-local="51269454004441" data-precio-local="9000"
+           role="group" aria-labelledby="r-op-pequenos">
+        <div class="quien" id="r-op-pequenos">Menu para os pequenos <small>De 0 a 3 anos</small></div>
+        <div class="contador">
+          <button class="paso" type="button" data-menos aria-label="Remover uma pessoa">−</button>
+          <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Quantidade de pessoas">
+          <button class="paso" type="button" data-mas aria-label="Adicionar uma pessoa">+</button>
+        </div>
+        <div class="valor">$6.000 CLP</div>
+      </div>
+
       <!-- Las tres opciones nacen en cero: el pedido lo arma la persona,
            el sitio no elige por ella. Estos dos numeros dicen la verdad
            aunque el JS no corra, y recalcular() los reescribe apenas corre. -->
