@@ -133,7 +133,7 @@ export default function DiaEditor({
               <input type="date" className={ENTRADA} value={f.fecha} autoFocus
                 onChange={(e) => setF({ ...f, fecha: e.target.value })} />
               {f.fecha && (
-                <span className="mt-1 block text-xs capitalize text-hueso/50">
+                <span className="mt-1 block text-xs text-hueso/50 first-letter:uppercase">
                   {enPalabras(f.fecha)}
                 </span>
               )}

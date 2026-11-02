@@ -136,7 +136,7 @@ export default async function Pagina({
                   </th>
                   {conEquipo.map((f) => (
                     <th key={f} className="py-2 pr-3">
-                      <span className="block capitalize text-hueso/85">{enPalabras(f)}</span>
+                      <span className="block text-hueso/85 first-letter:uppercase">{enPalabras(f)}</span>
                       <span className="block text-sm font-normal text-hueso/45">
                         {porFecha.get(f)?.apertura || cfg.horaApertura}
                         {/* Un día sin público y con equipo es preparación, y

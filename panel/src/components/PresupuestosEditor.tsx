@@ -366,7 +366,7 @@ export default function PresupuestosEditor() {
                     {esteAbierto ? '−' : '+'}
                   </span>
                   <span className="font-semibold">{p.cliente || 'Sin nombre'}</span>
-                  <span className="text-[13px] capitalize text-hueso/60">
+                  <span className="text-[13px] text-hueso/60 first-letter:uppercase">
                     {enPalabras(p.fecha)}
                   </span>
                   <Pastilla>{est}</Pastilla>
@@ -548,7 +548,7 @@ export default function PresupuestosEditor() {
                     </Campo>
                     <div className="pt-4 text-[13px] text-hueso/60">
                       {borrador.p.validoHasta
-                        ? <>Válido hasta el <strong className="capitalize">
+                        ? <>Válido hasta el <strong>
                             {enPalabras(borrador.p.validoHasta)}</strong></>
                         : 'Sin fecha de vencimiento'}
                     </div>
