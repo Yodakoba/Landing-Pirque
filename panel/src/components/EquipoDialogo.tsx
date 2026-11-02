@@ -332,43 +332,49 @@ export default function EquipoDialogo({
                   const t = plan.find(
                     (x) => normalizar(x.trabajador) === normalizar(nombre));
                   return (
-                    /* **Dos líneas fijas, no una que envuelve.** Con un
-                       nombre corto —"Alexis"— cabía todo junto y *Ficha* y
-                       *Sacar* quedaban pegados a los botones de asistencia;
-                       con uno largo se iban solos abajo. Dos personas
-                       seguidas se veían distintas sin que nada hubiera
-                       cambiado salvo el largo del nombre, y lo que se
-                       aprieta sin querer es justamente lo que se movió de
-                       lugar. Arriba lo que se contesta —quién es y si
-                       vino—, abajo lo que se hace. */
+                    /* **Tres líneas fijas, ninguna que envuelve.** Con un
+                       nombre corto —"Alexis"— cabía todo junto; con uno
+                       largo —"Cristopher Acevedo"— los botones se iban
+                       solos abajo. Dos personas seguidas se veían distintas
+                       sin que nada hubiera cambiado salvo el largo del
+                       nombre, y lo que se aprieta sin querer es justamente
+                       lo que se movió de lugar. Cada cosa en su línea:
+                       quién es, si vino, y qué se hace con él. */
                     <li key={nombre}
                       className={`rounded border px-2 py-1.5 text-xs ${
                         t?.asistencia === VINO.si ? 'border-verde/25 bg-verde/5'
                         : t?.asistencia === VINO.no ? 'border-rojo/25 bg-rojo/5'
                         : 'border-hueso/10 bg-panel'}`}>
+                      {/* La primera línea: quién es. */}
                       <div className="flex flex-wrap items-center gap-2">
-                      <span className={`text-sm ${
-                        t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
-                        : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
-                        {nombre}
-                      </span>
-                      {/* Mientras nadie diga si llegó, el turno no suma nada:
-                          por eso se dice con todas sus letras y no con un
-                          guion, que no pide nada. */}
-                      {!t?.asistencia && (
-                        <span className="text-[10px] uppercase tracking-wide text-ambar-texto/70">
-                          sin marcar
+                        <span className={`text-sm ${
+                          t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
+                          : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
+                          {nombre}
                         </span>
-                      )}
-                      <span className="flex-1" />
-                      {/* Marcar quién llegó **acá mismo**: quien abre el día a
-                          las once de la mañana es la jefa de turno, y lo que
-                          tiene delante es esta ventana. */}
-                      <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
-                        onCambio={(v) => marcar(nombre, v)} />
+                        {/* Mientras nadie diga si llegó, el turno no suma
+                            nada: por eso se dice con todas sus letras y no
+                            con un guion, que no pide nada. */}
+                        {!t?.asistencia && (
+                          <span className="text-[10px] uppercase tracking-wide text-ambar-texto/70">
+                            sin marcar
+                          </span>
+                        )}
                       </div>
 
-                      {/* La segunda línea: lo que se hace con esa persona.
+                      {/* La segunda línea: la pregunta. **Siempre debajo del
+                          nombre, nunca al lado.** Es su propia línea y no un
+                          hueco al final de la del nombre, así que dos
+                          personas se ven iguales se llamen como se llamen.
+                          Marcar quién llegó va **acá mismo**: quien abre el
+                          día a las once de la mañana es la jefa de turno, y
+                          lo que tiene delante es esta ventana. */}
+                      <div className="mt-1.5">
+                        <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
+                          onCambio={(v) => marcar(nombre, v)} />
+                      </div>
+
+                      {/* La tercera línea: lo que se hace con esa persona.
                           Va separada por un filete para que no se lea como
                           parte de la pregunta de arriba. */}
                       <div className="mt-1.5 flex flex-wrap items-center gap-1
