@@ -81,7 +81,7 @@ import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
          diasPorCerrar, leerCierresDe, type Cierre } from './cierres.ts';
 import { climaDe, iconoDe, climaEnPalabras, urlPronostico, horaEnChile } from './clima.ts';
 import { createHmac } from 'node:crypto';
-import { estaCerrado, ESTADO_DIA } from './columnas.ts';
+import { estaCerrado, esExclusiva, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
          sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
@@ -950,6 +950,67 @@ const abierto = ocupacionDe(
 ok(paraElSitio([abierto]).length === 1, 'y uno abierto si, para que la prueba signifique algo');
 ok(paraElSitio([privado, abierto])[0].fecha === '2026-11-21',
    'mezclados, solo pasa el abierto');
+
+/* ---------- privado exclusivo: el recinto completo ---------------------- */
+// El cliente lo separo el 2026-11-02, y la distincion es del negocio: un dia
+// privado corriente NO toma el recinto en exclusiva --pueden correr dos
+// eventos privados a la vez-- y uno exclusivo si. La pregunta "cabe otro
+// evento este dia?" tiene respuestas opuestas, y hasta ahi el panel no tenia
+// donde anotarla.
+console.log('\nPrivado exclusivo');
+
+ok(esExclusiva('Privada exclusiva') && esExclusiva('privado exclusivo')
+   && esExclusiva('EXCLUSIVA') && esExclusiva('Recinto completo'),
+   'se reconoce escrito de varias formas');
+ok(!esExclusiva(ESTADO_DIA.privada) && !esExclusiva(ESTADO_DIA.abierta)
+   && !esExclusiva(ESTADO_DIA.cerrada) && !esExclusiva(''),
+   'y un dia privado a secas NO es exclusivo: es justo lo que hay que distinguir');
+
+// LA invariante: un exclusivo ES privado. Con eso, todo lo que ya trataba
+// bien a un privado --el recorte para el sitio, el color, el conteo de la
+// semana-- lo sigue tratando bien sin tocarse.
+ok(esPrivada(ESTADO_DIA.exclusiva),
+   'un dia exclusivo tambien es privado: no se ofrece en el sitio');
+ok(!estaCerrado(ESTADO_DIA.exclusiva),
+   'y NO esta cerrado: recibe reservas, tiene cupo, hay que cocinar');
+
+const exclusivo = ocupacionDe(
+  [r({ fecha: '2026-12-05', personas: 40 })],
+  dia({ fecha: '2026-12-05', estado: ESTADO_DIA.exclusiva })
+);
+ok(exclusivo.exclusiva === true && exclusivo.privada === true,
+   'la ocupacion marca las dos, nunca exclusiva sola');
+ok(exclusivo.bloqueada === false, 'y no lo marca como cerrado');
+ok(exclusivo.tomadas === 40 && exclusivo.quedan === 20,
+   'cuenta sus reservas y su cupo como cualquier otro dia');
+ok(paraElSitio([exclusivo]).length === 0,
+   'y el sitio no lo ofrece, igual que un privado');
+ok(privado.exclusiva === false,
+   'mientras un privado corriente sigue sin ser exclusivo');
+
+// Falla hacia lo menos restrictivo, al revés que estaCerrado(). Un
+// exclusivo leido como privado deja cotizar un segundo evento y se descubre
+// conversando; un privado leido como exclusivo le marca al socio la fecha
+// como tomada y le hace perder una venta sin que nadie se entere.
+ok(!ocupacionDe([], dia({ estado: 'Privada con bar' })).exclusiva,
+   'lo que no se reconoce queda como privado, no como exclusivo');
+
+// Anotar una reserva a mano abre el dia en privado, NUNCA en exclusivo:
+// arrendar el recinto completo es una decision comercial, no el efecto
+// secundario de anotar una reserva de telefono.
+const cfgExcl = { ...POR_DEFECTO, cupoNormal: 60, horaApertura: '13:00' };
+for (const antes of [undefined, dia({ estado: ESTADO_DIA.cerrada }),
+                     dia({ capacidad: 0, estado: '' })]) {
+  const d = diaParaReservaManual(antes, '2026-12-05', cfgExcl);
+  ok(d === null || !esExclusiva(d.estado),
+     'anotar una reserva NUNCA deja un dia exclusivo');
+}
+// Y uno que ya era exclusivo no se degrada a privado por anotarle una
+// reserva mas: el segundo nombre de la misma empresa es lo normal.
+ok(diaParaReservaManual(
+     dia({ fecha: '2026-12-05', capacidad: 60, estado: ESTADO_DIA.exclusiva }),
+     '2026-12-05', cfgExcl) === null,
+   'ni le quita lo exclusivo a uno que ya lo era');
 
 /* ---------- sin configurar NO es cerrado ---------- */
 // Un dia que aparece solo porque tiene reservas no tiene fila en la hoja, y

@@ -130,6 +130,27 @@ export const ESTADO_DIA = {
    * y abrirlo lo publicaba. Eran dos cosas que no tenían por qué ir juntas.
    */
   privada: 'Privada',
+  /**
+   * **Privado y exclusivo**: el recinto se arrendó completo a un solo
+   * cliente.
+   *
+   * Es la distinción que pidió el cliente el 2026-11-02, y no es un matiz:
+   * un día privado corriente **no toma el recinto en exclusiva** —pueden
+   * correr dos eventos privados a la vez, y de hecho pasa—, mientras que un
+   * día exclusivo sí. O sea que la pregunta "¿cabe otro evento este día?"
+   * tiene respuestas opuestas en los dos, y hasta acá el panel no tenía
+   * dónde anotar la diferencia.
+   *
+   * Para el panel es un día privado con todas sus letras: no se ofrece en el
+   * sitio, recibe reservas, tiene cupo y hay que cocinar. Por eso
+   * `esPrivada()` también lo reconoce, y todo lo que ya trataba bien a un
+   * privado lo sigue tratando bien sin cambiar una línea.
+   *
+   * Lo que agrega es **que no cabe nadie más**, y eso es lo que el
+   * calendario del socio necesita saber: un privado va en naranjo con su
+   * ocupación, un exclusivo en rojo como un día cerrado.
+   */
+  exclusiva: 'Privada exclusiva',
   cerrada: 'Cerrada'
 } as const;
 
@@ -143,11 +164,36 @@ export const ESTADO_DIA = {
 const ABIERTOS = new Set([
   'activa', 'activo', 'abierta', 'abierto', 'disponible', 'habil', 'si', 'ok',
   // Un día privado NO está cerrado: recibe reservas, solo que no se ofrece.
-  'privada', 'privado'
+  // Y uno exclusivo tampoco: es un privado al que no le cabe nadie más.
+  'privada', 'privado', 'privada exclusiva', 'privado exclusivo',
+  'exclusiva', 'exclusivo'
 ]);
 
-/** Las formas de escribir "privada". Mismo criterio tolerante que el resto. */
-const PRIVADOS = new Set(['privada', 'privado', 'evento privado', 'cerrado al publico']);
+/**
+ * Las formas de escribir "privada". Mismo criterio tolerante que el resto.
+ *
+ * **Las exclusivas entran acá a propósito**: un día exclusivo es un día
+ * privado, y lo que no hace es admitir otro evento. Así todo lo que ya
+ * pregunta `esPrivada()` —el recorte para el sitio, el color de la tarjeta,
+ * el conteo de la semana— sigue acertando sin tocarse.
+ */
+const PRIVADOS = new Set([
+  'privada', 'privado', 'evento privado', 'cerrado al publico',
+  'privada exclusiva', 'privado exclusivo', 'exclusiva', 'exclusivo',
+  'recinto completo', 'arriendo exclusivo'
+]);
+
+/**
+ * Las formas de escribir "exclusiva": el recinto completo, un solo cliente.
+ *
+ * Es un subconjunto de PRIVADOS y no una lista paralela de estados. Lo que
+ * se escribe de aquí en adelante es `Privada exclusiva`; los sinónimos están
+ * para lo que alguien teclee a mano en la planilla.
+ */
+const EXCLUSIVOS = new Set([
+  'privada exclusiva', 'privado exclusivo', 'exclusiva', 'exclusivo',
+  'recinto completo', 'arriendo exclusivo'
+]);
 
 /**
  * Si el día NO se ofrece en el sitio, aunque sí reciba reservas.
@@ -158,6 +204,26 @@ const PRIVADOS = new Set(['privada', 'privado', 'evento privado', 'cerrado al pu
  */
 export function esPrivada(estado: unknown): boolean {
   return PRIVADOS.has(normalizar(String(estado ?? '')));
+}
+
+/**
+ * Si el recinto se arrendó **completo y en exclusiva** ese día.
+ *
+ * Se pregunta aparte de `esPrivada()`, y las dos son ciertas a la vez en un
+ * día exclusivo: lo primero dice *no se ofrece en el sitio*, lo segundo
+ * dice *no cabe otro evento*. Juntarlas en un estado solo era justamente lo
+ * que impedía distinguir los dos casos que el cliente nombró.
+ *
+ * **Falla hacia lo menos restrictivo**, al revés que `estaCerrado()`, y
+ * también a propósito: lo que no se reconoce queda como privado corriente.
+ * Los dos errores no cuestan lo mismo. Un exclusivo leído como privado
+ * deja que alguien cotice un segundo evento, y eso se descubre
+ * conversando; un privado leído como exclusivo le marca al socio la fecha
+ * como tomada y le hace perder una venta que sí se podía hacer, sin que
+ * nadie se entere nunca.
+ */
+export function esExclusiva(estado: unknown): boolean {
+  return EXCLUSIVOS.has(normalizar(String(estado ?? '')));
 }
 
 /**

@@ -1668,6 +1668,65 @@ sin CRM_API_KEY                     →  200, vacío, configurado: false
 con clave mala                      →  502, vacío, "No se pudo leer el CRM."
 ```
 
+### Privado, y privado exclusivo (2026-11-02)
+
+Salió al diseñar la escritura hacia el CRM, y resultó ser **un estado que al
+panel le faltaba**, no un detalle del socio. Lo dijo el cliente así:
+
+> *"Existen exactamente los días privados, pero no exclusivos, donde se
+> permiten distintas reservas, dos eventos paralelos. Y existe el privado
+> exclusivo, y esos son cuando se arrendó el recinto completamente y de
+> forma exclusiva a una empresa."*
+
+Hasta acá `Privada` era una sola cosa, y con eso la pregunta **"¿cabe otro
+evento este día?"** no tenía dónde contestarse: un cumpleaños de 40 personas
+en el salón y un recinto arrendado entero se escribían igual.
+
+| Estado | No se ofrece en el sitio | ¿Cabe otro evento? |
+|---|---|---|
+| `Privada` | sí | **sí** — pueden correr dos a la vez, y pasa |
+| `Privada exclusiva` | sí | **no** — el recinto completo, un solo cliente |
+
+- **Un día exclusivo ES un día privado**, y eso no es una sutileza de
+  redacción: `esPrivada()` lo reconoce, así que **todo lo que ya trataba
+  bien a un privado lo sigue tratando bien sin tocarse** — el recorte para
+  el sitio, el azul de la tarjeta, el conteo de la semana, el que no esté
+  cerrado. Lo único que agrega `esExclusiva()` es que no cabe nadie más.
+- **`esExclusiva()` falla hacia lo menos restrictivo**, al revés que
+  `estaCerrado()`, y también a propósito. Los dos errores no cuestan lo
+  mismo: un exclusivo leído como privado deja que alguien cotice un segundo
+  evento, y eso se descubre conversando; un privado leído como exclusivo le
+  marca al socio la fecha como tomada y **le hace perder una venta que sí se
+  podía hacer, sin que nadie se entere nunca**.
+- **En el panel es una casilla dentro de "Privado", no un cuarto radio.** Lo
+  que cambia entre los dos no es el tipo de día —los dos reciben reservas,
+  ninguno se ofrece— sino si el recinto se arrendó completo. Dos radios lo
+  contarían como dos cosas distintas y obligarían a leer las dos ayudas para
+  notar que casi todo es igual.
+- **Y como la casilla solo existe mientras "Privado" está elegido, un día
+  abierto o cerrado no tiene cómo quedar marcado exclusivo.** Es la misma
+  garantía por forma que el upgrade de menús del sitio: no hay dónde
+  escribirlo.
+- **Anotar una reserva a mano nunca deja un día exclusivo** —sigue creando
+  `Privada`— y tampoco le quita lo exclusivo a uno que ya lo era: arrendar
+  el recinto completo es una decisión comercial, no el efecto secundario de
+  anotar una reserva de teléfono. Hay pruebas que fijan las dos cosas.
+- **En la tarjeta se distinguen por la palabra, no por el color**: los dos
+  van en azul, porque son el mismo tipo de día, y debajo del punto dice
+  *privado* o *exclusivo*. Es justamente para lo que `PuntoDia` existe.
+- **El sitio público no cambia en nada**: un exclusivo es privado, así que
+  `paraElSitio()` ya lo omitía. Hay una prueba que lo fija.
+
+**Se comprobó rompiéndolo**: haciendo que `esExclusiva()` devuelva lo mismo
+que `esPrivada()` —o sea, que todo privado cuente como exclusivo— fallan
+seis pruebas de una vez, entre ellas la que dice que un privado a secas no
+lo es y las tres de la reserva a mano.
+
+Y de punta a punta contra la planilla, con el 14 privado y el 21 exclusivo:
+el día abierto no ofrece la casilla, el privado la ofrece sin marcar, el
+exclusivo la ofrece marcada, y marcarla escribe `Privada exclusiva` y deja
+la tarjeta diciendo *exclusivo*. Desmarcarla vuelve a `Privada`.
+
 ### La escritura hacia el CRM todavía no está
 
 Falta el otro sentido: publicar **nuestros** días en su calendario. El
@@ -1685,10 +1744,39 @@ borró: entró `c3ba` y volvió `c3ba`. El `test-2` del socio tiene guardado
 rompió **su `curl`**, no su endpoint, y conviene avisarle antes de que
 repita ese comando con algo de verdad.
 
-Lo que falta decidir antes de escribir: **qué días mandar**. El cliente pidió
-mandarle *todos* con su ocupación, lo que con `bloquea: false` es
-exactamente lo que su API soporta — pero conviene confirmarle que un año
-entero de días naranjos en su calendario es lo que quiere ver.
+**Qué día va en qué color quedó decidido el 2026-11-02**, y la regla terminó
+siendo una sola pregunta: *¿puede pasar otro evento acá ese día?*
+
+| Nuestro día | ¿Se manda? | `bloquea` | Qué ve el vendedor |
+|---|---|---|---|
+| Cerrado | sí | `true` | rojo, fecha tomada, advertencia |
+| **Privado exclusivo** | sí | `true` | rojo, fecha tomada |
+| **Privado** (no exclusivo) | sí | `false` | naranjo, con su ocupación |
+| Abierto con reservas | sí | `false` | naranjo, "8/120 personas" |
+| Abierto y vacío | **no** | — | nada |
+| Preparación | sin decidir | — | — |
+
+**El primer corte mandaba todo privado en rojo, y el cliente lo corrigió**:
+*"privado también debería ser naranjo, porque hay eventos que se hacen sin
+que sea exclusivo… pero sí debería saber de este evento privado y cuántas
+reservas hay"*. De ahí salió el estado nuevo del panel — ver "Privado, y
+privado exclusivo". Lo que vale guardar es que **rojo dejó de significar
+"cerrado" y pasó a significar "no cabe nadie más"**, que es lo que el
+vendedor necesita saber y lo que la propia guía del socio ya decía.
+
+- **Un día abierto y vacío no se manda**, porque no tiene nada que informar
+  y llenaría su calendario de naranjo sin dato. Medido contra el endpoint
+  público el 2026-11-02: de 18 días abiertos hasta el 3 de enero, **3
+  tienen alguna reserva**.
+- **Hace falta la otra mitad, el borrado.** Si un día deja de tener
+  ocupación —se cancela la única reserva, se reabre un día cerrado— hay que
+  sacarlo con `DELETE`, o le queda un día naranjo fantasma. Por eso esto se
+  diseña como **reconciliación** —leer `GET /externos`, mandar lo que
+  cambió, borrar lo que ya no califica— y no como un evento por cambio.
+- **El empujón nunca puede bloquear el guardado de un día.** Si su API no
+  responde, el panel guarda igual y la reconciliación diaria lo pone al día.
+  Es la misma asimetría de `posiblesDeLosDias()`: un servicio de un tercero
+  no se mete en el camino de la pantalla que contesta cuánta gente viene.
 
 ## El equipo de trabajadores (panel)
 
@@ -2238,8 +2326,8 @@ Un contratado sigue sin sumar jornada, y sus horas extra sí: son del día.
 ### La palabra bajo el punto: público, privado, cerrado, preparación (2026-10-23)
 
 **En los tres calendarios, el estado de un día se lee bajo su punto de
-color**, en letra chica: *público*, *privado*, *cerrado*, *preparación* o
-*sin cupo*. Antes era una línea más, debajo del contenido —"PRIVADO · no
+color**, en letra chica: *público*, *privado*, *exclusivo*, *cerrado*,
+*preparación* o *sin cupo*. Antes era una línea más, debajo del contenido —"PRIVADO · no
 está en el sitio"—, y ahí está el problema que lo cambió: **una línea de más
 cambia el alto de la tarjeta**, así que los días de una misma semana dejaban
 de medir lo mismo según su estado. Bajo el punto, en cambio, el aire ya

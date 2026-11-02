@@ -17,12 +17,17 @@
  *
  * - **preparación** — hay equipo y no entra público. Gana sobre "cerrado"
  *   porque es más específico: ese día igual se trabaja.
- * - **cerrado** · **privado** · **sin cupo** · **público**.
+ * - **cerrado** · **exclusivo** · **privado** · **sin cupo** · **público**.
+ *
+ * **Exclusivo gana sobre privado** porque es más específico, igual que
+ * preparación gana sobre cerrado: los dos no se ofrecen en el sitio, y lo
+ * que el exclusivo agrega —el recinto completo, no cabe otro evento— es
+ * justamente el dato por el que alguien mira esta palabra.
  */
 import type { Ocupacion } from '@/lib/tipos';
 import { PUNTO_TARJETA, sinConfigurar } from './TarjetaDia';
 
-type Estado = 'preparacion' | 'cerrado' | 'privado' | 'sinCupo' | 'publico';
+type Estado = 'preparacion' | 'cerrado' | 'exclusivo' | 'privado' | 'sinCupo' | 'publico';
 
 /**
  * **La palabra se lee, no se adivina** (2026-11-01). Estaba a 9px y con
@@ -34,6 +39,10 @@ type Estado = 'preparacion' | 'cerrado' | 'privado' | 'sinCupo' | 'publico';
 const PALABRA: Record<Estado, { texto: string; clase: string; punto?: string }> = {
   preparacion: { texto: 'preparación', clase: 'text-oro', punto: '🟡' },
   cerrado: { texto: 'cerrado', clase: 'text-rojo-texto' },
+  // Las dos en el mismo azul y distinguidas por la palabra, que es para lo
+  // que este componente existe: son el mismo tipo de día —no se ofrece en el
+  // sitio— y lo que cambia es si le cabe alguien más.
+  exclusivo: { texto: 'exclusivo', clase: 'text-cielo-texto' },
   privado: { texto: 'privado', clase: 'text-cielo-texto' },
   sinCupo: { texto: 'sin cupo', clase: 'text-hueso/60' },
   publico: { texto: 'público', clase: 'text-hueso/65' }
@@ -43,6 +52,7 @@ export function estadoDia(d: Ocupacion | undefined, preparacion = false): Estado
   if (preparacion) return 'preparacion';
   if (!d) return null;
   if (d.bloqueada) return 'cerrado';
+  if (d.exclusiva) return 'exclusivo';
   if (d.privada) return 'privado';
   if (sinConfigurar(d)) return 'sinCupo';
   return 'publico';

@@ -3,7 +3,7 @@
  * lo que se puede probar de verdad, y por eso vive separada de las rutas.
  */
 import type { Reserva, FechaHabil, Ocupacion, Semaforo } from './tipos.ts';
-import { ESTADO_PAGO, estaCerrado, esPrivada } from './columnas.ts';
+import { ESTADO_PAGO, estaCerrado, esPrivada, esExclusiva } from './columnas.ts';
 import { liberaCupo } from './pagos.ts';
 import { SIN_POSIBLES, type Posibles } from './presupuestos.ts';
 import type { Fecha } from './fechas.ts';
@@ -121,6 +121,9 @@ export function ocupacionDe(
   const bloqueada = estaCerrado(dia.estado);
   // Distinto de cerrada: recibe reservas, pero el sitio no la ofrece.
   const privada = esPrivada(dia.estado);
+  // Y distinto de privada a secas: el recinto completo, sin espacio para
+  // otro evento ese día. Las dos son ciertas en un día exclusivo.
+  const exclusiva = esExclusiva(dia.estado);
 
   // Lo cotizado y sin confirmar. Se copia y no se usa: ver arriba.
   const pos = posibles?.get(dia.fecha) ?? SIN_POSIBLES;
@@ -135,6 +138,7 @@ export function ocupacionDe(
     porCobrar,
     sinMonto,
     privada,
+    exclusiva,
     presupuestos: pos.presupuestos,
     presupuestadas: pos.personas,
     semaforo: bloqueada ? 'rojo' : semaforo(tomadas, dia.capacidad, cortes),
