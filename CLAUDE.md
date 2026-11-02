@@ -504,11 +504,12 @@ del servidor, que nunca sale al navegador.
   Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
   variante: **viaja como propiedad de línea** para que Cowlendar la
   registre. El modelo se simplificó solo.
-- **Las tres opciones van visibles a la vez, cada una con su contador**
-  (2026-10-14). Antes era un desplegable y un solo menú por pedido, lo que
-  dejaba fuera algo tan corriente como tres personas con Tradiciones y dos
-  con A Brasas abiertas. Ahora cada fila `[data-opcion]` es una línea del
-  carrito y las que quedan en cero no se agregan.
+- **Los adultos no se pueden mezclar: hay UN contador y una casilla**
+  (2026-11-02). Ver "Los adultos van todos al mismo menú" más abajo. Hasta
+  ese día había una fila por menú y un pedido podía llevar tres personas en
+  Tradiciones y dos en A Brasas abiertas; eso se acabó. Cada fila
+  `[data-opcion]` sigue siendo una línea del carrito y la que queda en cero
+  no se agrega.
 - **Los contadores son botones de 44px, no las flechitas del
   `<input type=number>`**, que son de unos 10px y en celular no se aciertan.
   El input sigue debajo y se puede escribir: los botones son una comodidad
@@ -693,6 +694,86 @@ que es lo que dice la tienda y lo que ya decía el landing B2B. Con eso
 desaparece la diferencia de precio entre los dos entregables.
 
 **Los tres montos coinciden hoy**: tienda, sitio público y landing.
+
+### Los adultos van todos al mismo menú (2026-11-02)
+
+Lo pidió el cliente: *"no vamos a dar la opción de que el cliente pueda
+elegir de forma mezclada menú Tradiciones y menú A Brasas abiertas… por
+defecto está el menú Tradiciones, pero le damos una casilla donde puede
+subir todos los menús"*. Y con una condición: **"tiene que ser
+garantizado"** que no se mezclen.
+
+**La razón es del negocio y es buena**: A Brasas abiertas trae **bar
+abierto**, y un bar abierto no se le puede servir a 2 de 5 personas. Por eso
+esto **da vuelta la decisión del 2026-10-14** —que era justamente poder
+mezclar— sin contradecirla: aquella resolvía un problema de interfaz, un
+desplegable que dejaba fuera un pedido corriente; ésta dice que ese pedido
+no existe. La mezcla no era un caso de uso, era un problema.
+
+### Garantizado quiere decir que no hay dónde escribirlo
+
+**Hay un solo contador de adultos.** No hay una validación que impida la
+mezcla: **no hay un segundo contador** donde poner un número, así que
+`lineas()` no tiene cómo emitir dos líneas de adulto. Una regla se puede
+romper —un bug, una llamada directa, alguien tocando el DOM—; esto no, es la
+forma del formulario.
+
+| | Qué es |
+|---|---|
+| Fila 1 | **Los adultos**, con los cuatro IDs de variante: el par de Tradiciones y el de A Brasas abiertas, cada uno con su versión en línea y en el local |
+| La casilla | **Cambia cuál par usa esa fila**, no agrega un pedido |
+| Fila 2 | **El menú de niños**, intacto |
+
+- **El menú de niños no sube, y tampoco por un `if`**: esa fila
+  sencillamente no trae las variantes de upgrade, así que `parDe()` le
+  devuelve su par de siempre esté la casilla como esté. Es uno solo y se
+  suma a cualquiera de las dos experiencias — y un bar abierto no aplica a
+  un niño de ocho años.
+- **El nombre y el precio de la fila los escribe el JS en cada pasada de
+  `recalcular()`**, no solo al marcar la casilla: así no hay forma de que lo
+  que se ve y lo que se va a cobrar se separen. Sin JavaScript el HTML ya
+  trae escrito el caso por defecto, que es Tradiciones a $44.000.
+- **`parDe()` elige primero el menú y después la modalidad, en ese orden.**
+  Al revés —preguntando por "local" y después por el upgrade— quedan cuatro
+  ramas y una combinación sin cubrir; así son dos preguntas independientes.
+
+#### Los textos del JS tienen que decir lo mismo que el diccionario
+
+El nombre de la fila lo escribe `reserva.js`, así que vive en su objeto
+`TEXTOS` y no en `traducciones/`. **Eso es una trampa**: el diccionario ya
+traducía `Menú A Brasas abiertas` como `A Brasas abiertas menu` en inglés, y
+la primera versión del JS decía `Menu A Brasas abiertas` — la misma fila se
+habría leído distinto según si el JS alcanzó a reescribirla. Hay que
+copiarlos del diccionario, no redactarlos de nuevo.
+
+Y como esa fila del HTML desapareció, la llave quedó sin usar y
+`traducir.py` lo avisa en cada corrida. **Se sacó del diccionario** —es
+verdad que ninguna página la usa— y en su lugar quedó un comentario
+`_reserva_js` con la traducción exacta a la que el JS tiene que calzar. Un
+aviso permanente enseña a ignorar los avisos.
+
+#### Comprobado de punta a punta
+
+Con tres adultos y dos niños, en español y en inglés, a 393px:
+
+```
+                fila                      precio        los dos botones
+sin marcar      Menú Tradiciones          $44.000       $170.000 / $195.000
+marcada         Menú A Brasas abiertas    $70.000       $248.000 / $273.000
+```
+
+Y lo que de verdad importa, las líneas que salen al carrito:
+
+```
+casilla sin marcar  → 50684108013785 ×3 (Tradiciones)  + 50684218081497 ×2 (niños)
+casilla marcada     → 50684143173849 ×3 (Brasas)       + 50684218081497 ×2 (niños)
+pagar en el local   → 50684108046553   /  50684143206617
+```
+
+**Una sola línea de adulto en los cuatro casos**, la variante correcta en
+cada uno, y el menú de niños sin moverse. En inglés la fila dice
+`Tradiciones menu` / `A Brasas abiertas menu` y los precios salen
+`$44,000 CLP`, que es lo que el diccionario ya decía.
 
 ### La tienda de producción, mirada por su catálogo público (2026-10-22)
 

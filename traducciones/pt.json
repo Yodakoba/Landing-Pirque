@@ -1,6 +1,5 @@
 {
   "_nota": "Traducción al portugués (variante de Brasil, que es el mercado emisor grande). La llave es el texto en español tal como aparece en los archivos de la raíz. Una llave 'archivo.html|texto' le gana a la llave suelta solo en ese archivo. No editar pt/ a mano: se regenera con python3 tools/traducir.py",
-
   "_precios": "El separador de miles con punto ya es el correcto en portugués de Brasil. Se agrega la sigla CLP porque el signo $ se confunde con el real.",
   "$44.000": "$44.000 CLP",
   "$49.000": "$49.000 CLP",
@@ -14,7 +13,6 @@
   "$1.500.000": "$1.500.000 CLP",
   "$8.000 + IVA por persona": "$8.000 CLP + IVA por pessoa",
   "4 a 12 años · $19.000": "4 a 12 anos · $19.000 CLP",
-
   "_navegacion": "Menú, pie de página y elementos compartidos",
   "Abrir menú": "Abrir menu",
   "Reserva": "Reservar",
@@ -28,7 +26,6 @@
   "Casas de San Vicente, lote 4, Pirque, Región Metropolitana": "Casas de San Vicente, lote 4, Pirque, Região Metropolitana",
   "Escríbenos por WhatsApp": "Fale com a gente no WhatsApp",
   "Hola, quiero información sobre Brasas de Lo Pirque": "Olá, gostaria de informações sobre o Brasas de Lo Pirque",
-
   "Horario general: sábados y domingos desde las 13:00 hasta el cierre.": "Horário geral: sábados e domingos a partir das 13h até o fechamento.",
   "Para otras fechas, consulta": "Para outras datas, veja",
   "la página de reserva": "a página de reserva",
@@ -52,12 +49,10 @@
   "Ir a contacto →": "Ir para contato →",
   "Programa para agencias, municipalidades y empresas que revenden el lugar.": "Programa para agências, prefeituras e empresas que revendem o lugar.",
   "Ver el programa →": "Ver o programa →",
-
   "_contacto": "Stub de redirección",
   "Reserva — Brasas de Lo Pirque": "Reservar — Brasas de Lo Pirque",
   "Esta página ahora está en": "Esta página agora está em",
   "Te estamos llevando para allá.": "Estamos te levando para lá.",
-
   "_index": "Portada",
   "Brasas de Lo Pirque — Restaurante campestre y centro de eventos": "Brasas de Lo Pirque — Restaurante de campo e centro de eventos",
   "Parrilla a carbón y leña, show ecuestre y actividades al aire libre para pasar el día en familia o celebrar con tu grupo.": "Parrilla na brasa e na lenha, show equestre e atividades ao ar livre para passar o dia em família ou celebrar com o seu grupo.",
@@ -119,7 +114,6 @@
   "Corte del día": "Corte do dia",
   "¿Vienes con grupo? Cuéntanos y armamos tu día": "Vem com um grupo? Conte para a gente e montamos o seu dia",
   "Escríbenos con la fecha y cuántos son, y te confirmamos disponibilidad. Los niños de 4 a 12 años tienen su propio menú.": "Escreva com a data e quantas pessoas são, e confirmamos a disponibilidade. As crianças de 4 a 12 anos têm o seu próprio menu.",
-
   "_actividades": "Página de actividades",
   "Actividades — Brasas de Lo Pirque": "Atividades — Brasas de Lo Pirque",
   "Show ecuestre, cabalgatas y juegos incluidos en el recinto, más talleres y actividades que se coordinan aparte.": "Show equestre, cavalgadas e brincadeiras inclusos no espaço, além de oficinas e atividades combinadas à parte.",
@@ -168,7 +162,6 @@
   "Hola, quiero información sobre las actividades de Brasas de Lo Pirque": "Olá, gostaria de informações sobre as atividades do Brasas de Lo Pirque",
   "Consultar por WhatsApp": "Consultar pelo WhatsApp",
   "Ver eventos y arriendo": "Ver eventos e locação",
-
   "_experiencias": "Página de experiencias culinarias",
   "Experiencias culinarias — Brasas de Lo Pirque": "Experiências gastronômicas — Brasas de Lo Pirque",
   "Dos experiencias culinarias con parrilla a carbón y leña, menú de cuatro tiempos y show ecuestre incluido.": "Duas experiências gastronômicas com parrilla na brasa e na lenha, menu de quatro tempos e show equestre incluso.",
@@ -225,7 +218,6 @@
   "Cuéntanos cuántos son y qué fecha tienes en mente, y te confirmamos disponibilidad.": "Conte para a gente quantas pessoas são e que data você tem em mente, e confirmamos a disponibilidade.",
   "Hola, quiero información sobre las experiencias culinarias de Brasas de Lo Pirque": "Olá, gostaria de informações sobre as experiências gastronômicas do Brasas de Lo Pirque",
   "Ver qué más hay": "Ver o que mais tem",
-
   "_eventos": "Página de eventos y arriendo",
   "Eventos y arriendo — Brasas de Lo Pirque": "Eventos e locação — Brasas de Lo Pirque",
   "Celebraciones, matrimonios y eventos de empresa en un recinto de campo, con catering propio o solo arriendo del lugar.": "Celebrações, casamentos e eventos corporativos em um espaço de campo, com buffet próprio ou apenas a locação do lugar.",
@@ -271,7 +263,6 @@
   "Hola, quiero cotizar un evento en Brasas de Lo Pirque": "Olá, gostaria de um orçamento para um evento no Brasas de Lo Pirque",
   "Cotizar mi evento": "Orçar meu evento",
   "Ver contacto": "Ver contato",
-
   "_reservas": "Página de reserva",
   "Reserva y paga en línea tu día de campo: elige la fecha, la cantidad de adultos y niños, y confirma tu cupo en pocos pasos.": "Reserve e pague online o seu dia de campo: escolha a data, a quantidade de adultos e crianças, e confirme as suas vagas em poucos passos.",
   "Asegúrate ahora": "Garanta já",
@@ -280,10 +271,9 @@
   "Menú Tradiciones": "Menu Tradiciones",
   "Reserva en línea": "Reserva online",
   "Por adulto": "Por adulto",
-  "Menú A Brasas abiertas": "Menu A Brasas abiertas",
   "Pagar ahora": "Pagar agora",
   "Solo reservar": "Só reservar",
-  "Con «Solo reservar» tomas tu cupo y pagas al llegar. Cuesta un poco más que pagar en línea.": "Com \u201cSó reservar\u201d você garante os seus lugares e paga ao chegar. Custa um pouco mais do que pagar online.",
+  "Con «Solo reservar» tomas tu cupo y pagas al llegar. Cuesta un poco más que pagar en línea.": "Com “Só reservar” você garante os seus lugares e paga ao chegar. Custa um pouco mais do que pagar online.",
   "Elegir fecha": "Escolher data",
   "Elige la fecha correcta antes de continuar.": "Escolha a data certa antes de continuar.",
   "Menú de niños": "Menu infantil",
@@ -331,7 +321,6 @@
   "Valores del recinto para fin de semana y días de semana, sin catering.": "Valores do espaço para fim de semana e dias de semana, sem buffet.",
   "¿Trabajas en turismo o en una empresa?": "Você trabalha com turismo ou em uma empresa?",
   "Si vendes experiencias a terceros, tenemos un programa de socios comerciales con condiciones especiales.": "Se você vende experiências para terceiros, temos um programa de parceiros comerciais com condições especiais.",
-
   "_landing": "Landing de socios comerciales (B2B)",
   "Programa de Socios Comerciales — Brasas de Lo Pirque": "Programa de Parceiros Comerciais — Brasas de Lo Pirque",
   "Trabaja con nosotros": "Trabalhe com a gente",
@@ -455,5 +444,8 @@
   "Por qué sumarte": "Por que se juntar",
   "Los segmentos, los beneficios y cómo funciona": "Os segmentos, os benefícios e como funciona",
   "Por qué acá": "Por que aqui",
-  "Los tres momentos, lo que resuelve y cómo funciona": "Os três momentos, o que resolve e como funciona"
+  "Los tres momentos, lo que resuelve y cómo funciona": "Os três momentos, o que resolve e como funciona",
+  "Subir todos los menús a A Brasas abiertas": "Subir todos os menus para A Brasas abiertas",
+  "Todos los adultos pasan a A Brasas abiertas, con bar abierto para todos: bebidas, cervezas, pisco sour, vino reserva y más, a libre elección.": "Todos os adultos passam para A Brasas abiertas, com bar aberto para todos: bebidas, cervejas, pisco sour, vinho reserva e mais, à vontade.",
+  "_reserva_js": "el nombre de la fila de adultos lo escribe assets/js/reserva.js, no el HTML, porque cambia con la casilla de upgrade. Si se toca, TEXTOS del JS tiene que decir lo mismo: menuBase = \"Menu Tradiciones\", menuAlto = \"Menu A Brasas abiertas\""
 }

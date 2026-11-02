@@ -1,6 +1,5 @@
 {
   "_nota": "Traducción al inglés. La llave es el texto en español tal como aparece en los archivos de la raíz. Una llave con el formato 'archivo.html|texto' le gana a la llave suelta solo en ese archivo. No editar en/ a mano: se regenera con python3 tools/traducir.py",
-
   "_precios": "Los precios llevan coma de miles y la sigla CLP. En formato chileno, $44.000 se lee como cuarenta y cuatro dólares en inglés.",
   "$44.000": "$44,000 CLP",
   "$49.000": "$49,000 CLP",
@@ -14,7 +13,6 @@
   "$1.500.000": "$1,500,000 CLP",
   "$8.000 + IVA por persona": "$8,000 CLP + VAT per person",
   "4 a 12 años · $19.000": "Ages 4 to 12 · $19,000 CLP",
-
   "_navegacion": "Menú, pie de página y elementos compartidos",
   "Abrir menú": "Open menu",
   "Reserva": "Book",
@@ -28,7 +26,6 @@
   "Casas de San Vicente, lote 4, Pirque, Región Metropolitana": "Casas de San Vicente, lot 4, Pirque, Metropolitan Region",
   "Escríbenos por WhatsApp": "Message us on WhatsApp",
   "Hola, quiero información sobre Brasas de Lo Pirque": "Hello, I would like information about Brasas de Lo Pirque",
-
   "Horario general: sábados y domingos desde las 13:00 hasta el cierre.": "Opening hours: Saturdays and Sundays from 1 pm until closing.",
   "Para otras fechas, consulta": "For other dates, see",
   "la página de reserva": "the booking page",
@@ -52,12 +49,10 @@
   "Ir a contacto →": "Go to contact →",
   "Programa para agencias, municipalidades y empresas que revenden el lugar.": "A programme for agencies, local councils and companies that resell the venue.",
   "Ver el programa →": "See the programme →",
-
   "_contacto": "Stub de redirección",
   "Reserva — Brasas de Lo Pirque": "Book — Brasas de Lo Pirque",
   "Esta página ahora está en": "This page has moved to",
   "Te estamos llevando para allá.": "We're taking you there now.",
-
   "_index": "Portada",
   "Brasas de Lo Pirque — Restaurante campestre y centro de eventos": "Brasas de Lo Pirque — Countryside restaurant and events venue",
   "Parrilla a carbón y leña, show ecuestre y actividades al aire libre para pasar el día en familia o celebrar con tu grupo.": "Charcoal and wood-fired grill, an equestrian show and outdoor activities for a day with the family or a celebration with your group.",
@@ -119,7 +114,6 @@
   "Corte del día": "Cut of the day",
   "¿Vienes con grupo? Cuéntanos y armamos tu día": "Coming with a group? Tell us and we'll put your day together",
   "Escríbenos con la fecha y cuántos son, y te confirmamos disponibilidad. Los niños de 4 a 12 años tienen su propio menú.": "Write to us with the date and how many you are, and we'll confirm availability. Children aged 4 to 12 have their own menu.",
-
   "_actividades": "Página de actividades",
   "Actividades — Brasas de Lo Pirque": "Activities — Brasas de Lo Pirque",
   "Show ecuestre, cabalgatas y juegos incluidos en el recinto, más talleres y actividades que se coordinan aparte.": "Equestrian show, horseback rides and games included on the grounds, plus workshops and activities arranged separately.",
@@ -168,7 +162,6 @@
   "Hola, quiero información sobre las actividades de Brasas de Lo Pirque": "Hello, I would like information about the activities at Brasas de Lo Pirque",
   "Consultar por WhatsApp": "Ask on WhatsApp",
   "Ver eventos y arriendo": "See events and venue hire",
-
   "_experiencias": "Página de experiencias culinarias",
   "Experiencias culinarias — Brasas de Lo Pirque": "Culinary experiences — Brasas de Lo Pirque",
   "Dos experiencias culinarias con parrilla a carbón y leña, menú de cuatro tiempos y show ecuestre incluido.": "Two culinary experiences with a charcoal and wood-fired grill, a four-course menu and the equestrian show included.",
@@ -225,7 +218,6 @@
   "Cuéntanos cuántos son y qué fecha tienes en mente, y te confirmamos disponibilidad.": "Tell us how many you are and what date you have in mind, and we'll confirm availability.",
   "Hola, quiero información sobre las experiencias culinarias de Brasas de Lo Pirque": "Hello, I would like information about the culinary experiences at Brasas de Lo Pirque",
   "Ver qué más hay": "See what else there is",
-
   "_eventos": "Página de eventos y arriendo",
   "Eventos y arriendo — Brasas de Lo Pirque": "Events and venue hire — Brasas de Lo Pirque",
   "Celebraciones, matrimonios y eventos de empresa en un recinto de campo, con catering propio o solo arriendo del lugar.": "Celebrations, weddings and corporate events on a country estate, with our own catering or venue hire only.",
@@ -271,7 +263,6 @@
   "Hola, quiero cotizar un evento en Brasas de Lo Pirque": "Hello, I would like a quote for an event at Brasas de Lo Pirque",
   "Cotizar mi evento": "Get a quote for my event",
   "Ver contacto": "See contact",
-
   "_reservas": "Página de reserva",
   "Reserva y paga en línea tu día de campo: elige la fecha, la cantidad de adultos y niños, y confirma tu cupo en pocos pasos.": "Book and pay for your day in the country online: choose the date, the number of adults and children, and confirm your places in a few steps.",
   "Asegúrate ahora": "Secure your place",
@@ -280,10 +271,9 @@
   "Menú Tradiciones": "Tradiciones menu",
   "Reserva en línea": "Book online",
   "Por adulto": "Per adult",
-  "Menú A Brasas abiertas": "A Brasas abiertas menu",
   "Pagar ahora": "Pay now",
   "Solo reservar": "Book only",
-  "Con «Solo reservar» tomas tu cupo y pagas al llegar. Cuesta un poco más que pagar en línea.": "With \u201cBook only\u201d you take your places and pay when you arrive. It costs a little more than paying online.",
+  "Con «Solo reservar» tomas tu cupo y pagas al llegar. Cuesta un poco más que pagar en línea.": "With “Book only” you take your places and pay when you arrive. It costs a little more than paying online.",
   "Elegir fecha": "Choose a date",
   "Elige la fecha correcta antes de continuar.": "Choose the right date before continuing.",
   "Menú de niños": "Children's menu",
@@ -331,7 +321,6 @@
   "Valores del recinto para fin de semana y días de semana, sin catering.": "Venue rates for weekends and weekdays, without catering.",
   "¿Trabajas en turismo o en una empresa?": "Do you work in tourism or for a company?",
   "Si vendes experiencias a terceros, tenemos un programa de socios comerciales con condiciones especiales.": "If you sell experiences to third parties, we have a trade partner programme with special terms.",
-
   "_landing": "Landing de socios comerciales (B2B)",
   "Programa de Socios Comerciales — Brasas de Lo Pirque": "Trade Partner Programme — Brasas de Lo Pirque",
   "Trabaja con nosotros": "Work with us",
@@ -455,5 +444,8 @@
   "Por qué sumarte": "Why join us",
   "Los segmentos, los beneficios y cómo funciona": "The segments, the benefits and how it works",
   "Por qué acá": "Why here",
-  "Los tres momentos, lo que resuelve y cómo funciona": "The three moments, what it solves and how it works"
+  "Los tres momentos, lo que resuelve y cómo funciona": "The three moments, what it solves and how it works",
+  "Subir todos los menús a A Brasas abiertas": "Upgrade every menu to A Brasas abiertas",
+  "Todos los adultos pasan a A Brasas abiertas, con bar abierto para todos: bebidas, cervezas, pisco sour, vino reserva y más, a libre elección.": "Every adult moves to A Brasas abiertas, with an open bar for everyone: soft drinks, beers, pisco sour, reserva wine and more, all you like.",
+  "_reserva_js": "el nombre de la fila de adultos lo escribe assets/js/reserva.js, no el HTML, porque cambia con la casilla de upgrade. Si se toca, TEXTOS del JS tiene que decir lo mismo: menuBase = \"Tradiciones menu\", menuAlto = \"A Brasas abiertas menu\""
 }

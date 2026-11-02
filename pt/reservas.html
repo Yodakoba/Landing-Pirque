@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;0,9..144,600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/site.css?v=502fbd9d">
+<link rel="stylesheet" href="../assets/css/site.css?v=6dbe3c73">
 <!--i18n:alternate-->
 <link rel="alternate" hreflang="es" href="https://brasasdelopirque.cl/reservas.html">
 <link rel="alternate" hreflang="en" href="https://brasasdelopirque.cl/en/reservas.html">
@@ -49,11 +49,10 @@
          hay un solo lugar que editar y el formulario sigue diciendo la
          verdad aunque el JS falle.
 
-         Las tres opciones van visibles al mismo tiempo, cada una con su
-         contador, para que un mismo pedido pueda llevar dos menus
-         distintos: tres personas con Tradiciones y dos con A Brasas
-         abiertas es un pedido normal y antes no se podia armar. Cada fila
-         es una linea del carrito; las que quedan en cero no se agregan. -->
+         Son DOS filas: los adultos y los ninos. Los adultos van todos al
+         mismo menu —la casilla decide a cual— asi que un pedido con tres
+         personas en Tradiciones y dos en A Brasas abiertas no existe. Cada
+         fila es una linea del carrito; la que queda en cero no se agrega. -->
     <div class="reserva-widget">
 
       <h2 class="reserva-titulo">Reserva online</h2>
@@ -70,31 +69,52 @@
       </div>
       <p class="aviso" data-aviso-fecha>Escolha a data certa antes de continuar.</p>
 
+      <!-- UN SOLO contador de adultos, y la casilla de abajo decide cual de
+           los dos menus se pide. Hasta el 2026-11-02 habia una fila por menu
+           y se podian mezclar; ya no, y la razon es del negocio: A Brasas
+           abiertas trae BAR ABIERTO, y un bar abierto no se le puede servir
+           a 2 de 5 personas. La mezcla no era un caso de uso, era un
+           problema.
+
+           Que este garantizado no depende de ninguna validacion: no hay un
+           segundo contador de adultos donde escribir un numero, asi que
+           mezclar es imposible por construccion. lineas() no tiene como
+           emitir dos lineas de adulto.
+
+           Por eso la fila lleva CUATRO variantes: el par de Tradiciones y el
+           par de A Brasas abiertas, cada uno con su version de pagar en
+           linea y de pagar en el local. Siguen viviendo en el HTML, que es
+           el unico lugar que hay que editar al pasar a produccion. -->
       <div class="reserva-fila" data-opcion
            data-variante="50684108013785" data-precio="44000"
            data-variante-local="50684108046553" data-precio-local="49000"
-           role="group" aria-labelledby="r-op-tradiciones">
-        <div class="quien" id="r-op-tradiciones">Menu Tradiciones <small>Por adulto</small></div>
+           data-variante-alta="50684143173849" data-precio-alta="70000"
+           data-variante-alta-local="50684143206617" data-precio-alta-local="75000"
+           role="group" aria-labelledby="r-op-adulto">
+        <div class="quien" id="r-op-adulto"><span data-nombre-menu>Menu Tradiciones</span> <small>Por adulto</small></div>
         <div class="contador">
           <button class="paso" type="button" data-menos aria-label="Remover uma pessoa">−</button>
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Quantidade de pessoas">
           <button class="paso" type="button" data-mas aria-label="Adicionar uma pessoa">+</button>
         </div>
-        <div class="valor">$44.000 CLP</div>
+        <div class="valor" data-valor>$44.000 CLP</div>
       </div>
 
-      <div class="reserva-fila" data-opcion
-           data-variante="50684143173849" data-precio="70000"
-           data-variante-local="50684143206617" data-precio-local="75000"
-           role="group" aria-labelledby="r-op-brasas">
-        <div class="quien" id="r-op-brasas">Menu A Brasas abiertas <small>Por adulto</small></div>
-        <div class="contador">
-          <button class="paso" type="button" data-menos aria-label="Remover uma pessoa">−</button>
-          <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Quantidade de pessoas">
-          <button class="paso" type="button" data-mas aria-label="Adicionar uma pessoa">+</button>
-        </div>
-        <div class="valor">$70.000 CLP</div>
-      </div>
+      <!-- La casilla NO agrega un pedido: cambia cual variante usa la fila
+           de arriba, y con ella el nombre y el precio que se ven. Nace
+           desmarcada, asi que el pedido por defecto es Tradiciones.
+
+           El menu de ninos no sube: es uno solo que se suma a cualquiera de
+           las dos experiencias, y un bar abierto no aplica a un nino. Eso
+           tampoco es una regla del JS: esa fila simplemente no trae las
+           variantes de upgrade. -->
+      <label class="reserva-upgrade">
+        <input type="checkbox" data-upgrade>
+        <span class="texto">
+          <b>Subir todos os menus para A Brasas abiertas</b>
+          <small>Todos os adultos passam para A Brasas abiertas, com bar aberto para todos: bebidas, cervejas, pisco sour, vinho reserva e mais, à vontade.</small>
+        </span>
+      </label>
 
       <div class="reserva-fila" data-opcion
            data-variante="50684218081497" data-precio="19000"
@@ -344,7 +364,7 @@
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
 </a>
 
-<script src="../assets/js/reserva.js?v=79bf7589" defer></script>
+<script src="../assets/js/reserva.js?v=52f3cd60" defer></script>
 
 </body>
 </html>
