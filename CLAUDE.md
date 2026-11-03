@@ -4911,8 +4911,11 @@ Siempre a la vista:
    en promociones es la secuencia de tres tiempos.
 2. **Solo en el B2B**: tres paneles de comisión (5% / 10% / 15%) y la bajada
    "Una experiencia chilena auténtica" con el 2º botón de WhatsApp.
-   **Solo en promociones**: el bloque de oferta (11% / 44 personas / sin
-   costo de arriendo) con los botones.
+   **Solo en promociones**: el bloque de oferta (11% / 22 personas / sin
+   costo de arriendo, **solo de lunes a viernes**) con los botones. El
+   mínimo bajó de 44 a 22 y la condición de los días se agregó el
+   2026-11-03, por pedido del cliente; la condición va bajo el rótulo del
+   arriendo, en dorado (`.oferta-cond`).
 3. Contacto: botón WhatsApp + formulario de email.
 4. Footer.
 
