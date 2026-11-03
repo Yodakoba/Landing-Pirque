@@ -1879,12 +1879,20 @@ en ninguna parte del proyecto; sembrarlo con un número plausible haría que el
 panel diera consejos que nadie dio. Mismo criterio que los precios de los
 menús.
 
-### La lista de arranque la corrigió el cliente (2026-10-22)
+### La lista de arranque la corrigió el cliente (2026-10-22, y otra vez el 2026-11-02)
 
-Los puestos que trae el código al partir son hoy **nueve**: jefe de turno,
+Los puestos que trae el código al partir son hoy **once**: jefe de turno,
 parrillero, asistente parrillero, jefe de cocina, asistente de cocina,
-garzón, runner, barman y asistente de bar. Antes eran siete y el cambio no
-es cosmético: `Cocina`, `Barra` y `Asistente` juntaban en una palabra cosas
+garzón, **comandero**, **copero**, runner, barman y asistente de bar.
+
+**Los dos últimos salieron de pasar su lista de gente real al panel**: en la
+planilla del cliente los departamentos son `COMANDAS` y `COPERIA`, y ninguno
+de los dos cabía en los otros nueve sin decir otra cosa — un comandero no es
+un garzón, y un copero no es un asistente de cocina. Se los había mapeado al
+más cercano y el cliente corrigió las dos: *"el puesto es comandero"*,
+*"existe el puesto copero"*.
+
+Antes eran siete y el cambio no es cosmético: `Cocina`, `Barra` y `Asistente` juntaban en una palabra cosas
 que en el local son puestos distintos. Quien manda la parrilla no hace lo
 mismo que quien lo asiste, y `Asistente` a secas no dice de qué. Un puesto
 que no distingue no sirve para contestar si el equipo alcanza, que es para

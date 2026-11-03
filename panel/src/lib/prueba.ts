@@ -1143,7 +1143,8 @@ ok(!esPreparacion({ conEquipo: true, abierto: false, personas: 12 }),
    'y uno cerrado con gente adentro es un evento privado, tampoco');
 
 /* ---------- el equipo: puestos ---------- */
-ok(POR_DEFECTO_PUESTOS.length === 9, 'los nueve puestos que nombró el cliente');
+ok(POR_DEFECTO_PUESTOS.length === 11,
+   'los once puestos que nombró el cliente, comandero y copero incluidos');
 ok(POR_DEFECTO_PUESTOS.some((p) => p.nombre === 'Parrillero')
    && POR_DEFECTO_PUESTOS.some((p) => p.nombre === 'Jefe de turno'),
    'con la parrilla y el jefe de turno, que antes no estaban');

@@ -416,6 +416,13 @@ export const POR_DEFECTO_PUESTOS: Puesto[] = [
   { nombre: 'Jefe de cocina', cadaCuantas: 0 },
   { nombre: 'Asistente de cocina', cadaCuantas: 0 },
   { nombre: 'Garzón', cadaCuantas: 0 },
+  // **Comandero** y **copero** los nombró el cliente el 2026-11-02, al pasar
+  // su lista de gente al panel: en su planilla los departamentos son
+  // COMANDAS y COPERIA, y ninguno de los dos cabe en los otros nueve sin
+  // decir otra cosa. Un comandero no es un garzón —toma y despacha las
+  // comandas— y un copero no es un asistente de cocina.
+  { nombre: 'Comandero', cadaCuantas: 0 },
+  { nombre: 'Copero', cadaCuantas: 0 },
   { nombre: 'Runner', cadaCuantas: 0 },
   { nombre: 'Barman', cadaCuantas: 0 },
   { nombre: 'Asistente de bar', cadaCuantas: 0 }
