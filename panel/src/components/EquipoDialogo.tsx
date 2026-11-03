@@ -21,7 +21,7 @@ import Dialogo from './Dialogo';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
          repartirPropina, propinaDelDia, porNombre,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
-import { faltaParaCerrar } from '@/lib/cierres';
+import { faltaParaCerrar, type Cierre } from '@/lib/cierres';
 import { enPesos } from '@/lib/ocupacion';
 import type { Extra } from '@/lib/extras';
 
@@ -33,6 +33,8 @@ import { enPalabras } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
 import Asistencia from './Asistencia';
 import AvisoGuardado from './AvisoGuardado';
+import ReservasDelDia from './ReservasDelDia';
+import { AvisoCierre, PieCorreccion } from './Correccion';
 import { usarAutoguardado } from './usarAutoguardado';
 
 /**
@@ -56,7 +58,7 @@ function Rotulo({ children }: { children: React.ReactNode }) {
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
   conCierre = false, verSueldos = false, enfocarPropina = false,
-  onListo, onCancelar
+  conReservas = false, cierre, puedeCorregir = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -97,6 +99,21 @@ export default function EquipoDialogo({
   verSueldos?: boolean;
   /** Abre con el cursor en la propina, para quien viene justo a eso. */
   enfocarPropina?: boolean;
+  /**
+   * Si la ventana tiene **la otra cara, la de las reservas** (2026-11-03).
+   * Solo la pide `/turnos`: la página del día ya muestra las reservas
+   * debajo, y el calendario de la portada las tiene en el frente de su
+   * tarjeta. Ver `ReservasDelDia`.
+   */
+  conReservas?: boolean;
+  /** Quién cerró el día y cuándo, para decirlo arriba. */
+  cierre?: Cierre;
+  /**
+   * Si quien mira puede **corregir** un día cerrado (permiso `corregir`:
+   * administrador y quien paga). Solo decide qué se dibuja; el servidor lo
+   * vuelve a comprobar en cada ruta.
+   */
+  puedeCorregir?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -104,16 +121,51 @@ export default function EquipoDialogo({
   // es tan posible como agregarlo. Se conserva el turno entero, no solo
   // nombre y puesto: si alguien ya pasó lista, replanificar el día no puede
   // borrarle la asistencia ni el monto.
-  const [plan, setPlan] = useState<Omit<Turno, 'fila'>[]>(
-    () => turnos.filter((t) => t.fecha === fecha).map(({ fila, ...resto }) => resto)
-  );
+  const [inicial] = useState(() => ({
+    plan: turnos.filter((t) => t.fecha === fecha).map(({ fila, ...resto }) => resto),
+    propina: propinaDelDia(turnos.filter((t) => t.fecha === fecha), fecha)
+  }));
+  const [plan, setPlan] = useState<Omit<Turno, 'fila'>[]>(() => inicial.plan);
   const [error, setError] = useState('');
   const [cerrando, setCerrando] = useState(false);
+  /**
+   * Qué cara de la ventana se ve. **Se cambia de cara, no de ventana**: lo
+   * escrito en la de trabajadores vive en el estado de este componente y no
+   * en lo que se dibuja, así que girar y volver no pierde nada, y lo que
+   * quede en el reloj del autoguardado se manda igual.
+   */
+  const [cara, setCara] = useState<'equipo' | 'reservas'>('equipo');
+  const [nReservas, setNReservas] = useState<number | null>(null);
   // La propina del día, que se escribe UNA vez y el panel reparte. Lo que
   // se guarda es la parte de cada uno, no el pozo: ver `repartirPropina`.
-  const [propina, setPropina] = useState(
-    () => propinaDelDia(turnos.filter((t) => t.fecha === fecha), fecha)
-  );
+  const [propina, setPropina] = useState(() => inicial.propina);
+
+  /**
+   * **Un día cerrado está en solo lectura, y se corrige, no se reabre**
+   * (2026-11-03, decidido con el cliente).
+   *
+   * Hasta ese día cerrar era solo una marca: la ventana se seguía editando
+   * igual y lo escrito se guardaba solo. Ahora, con el día cerrado, nada se
+   * puede tocar —ni el equipo ni las reservas— y quien tiene el permiso
+   * `corregir` ve *Corregir este día*. Mientras corrige **no se guarda
+   * nada solo**: todo va junto al apretar *Guardar corrección*, con el
+   * motivo escrito, y el día **nunca deja de estar cerrado**. Así no puede
+   * quedar un día reabierto y olvidado, que era el riesgo de reabrir,
+   * corregir y volver a cerrar en tres pasos.
+   */
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  /** La asistencia de las reservas que se cambió durante la corrección. */
+  const [pendientes, setPendientes] = useState<Record<number, string>>({});
+  const bloqueado = cerrado && !corrigiendo;
+
+  function descartarCorreccion() {
+    setPlan(inicial.plan);
+    setPropina(inicial.propina);
+    setPendientes({});
+    setMotivo('');
+    setCorrigiendo(false);
+  }
 
   // La lista se guarda en estado y no se lee del prop: crear a alguien desde
   // acá tiene que dejarlo disponible en TODOS los puestos de esta misma
@@ -250,17 +302,25 @@ export default function EquipoDialogo({
       });
       const d = await r.json();
       return d.error || undefined;
-    }
+    },
+    600,
+    // En un día cerrado nada se guarda solo: ver `corrigiendo`.
+    !cerrado
   );
 
   /** Cierra la ventana, mandando antes lo que quede en el reloj. */
   async function salir() {
+    if (corrigiendo && !confirm('¿Salir sin guardar la corrección? Lo que cambiaste se descarta.')) {
+      return;
+    }
+    if (cerrado) { onCancelar(); return; }
     await guardado.forzar();
     if (guardado.hubo.current) onListo(); else onCancelar();
   }
 
   /**
-   * Cerrar o reabrir el día.
+   * Cerrar el día. Reabrirlo ya no se ofrece: un día cerrado se corrige,
+   * ver `corrigiendo`.
    *
    * **Se guarda primero y se cierra después, en ese orden**: si fuera al
    * revés, el servidor comprobaría si falta alguien por marcar mirando lo
@@ -274,7 +334,8 @@ export default function EquipoDialogo({
   async function cambiarCierre(cerrar: boolean) {
     const pregunta = cerrar
       ? `¿Cerrar el ${enPalabras(fecha)}? Queda anotado que lo cerraste tú, `
-        + 'con la hora. Se puede reabrir después.'
+        + 'con la hora. Después, solo el administrador o quien hace los pagos '
+        + 'podrá corregirlo, con un motivo.'
       : `¿Reabrir el ${enPalabras(fecha)} para corregirlo?`;
     if (!confirm(pregunta)) return;
 
@@ -294,8 +355,98 @@ export default function EquipoDialogo({
     } finally { setCerrando(false); }
   }
 
+  /**
+   * Manda la corrección entera: el equipo del día y la asistencia de las
+   * reservas que se cambió, todo con el mismo motivo.
+   *
+   * Primero el equipo y después las reservas. Son peticiones distintas y
+   * no hay transacción que las junte; si una reserva falla, el equipo ya
+   * quedó y el error se dice en pantalla, con la ventana abierta para
+   * reintentar. Cada una queda en la bitácora con su motivo.
+   */
+  async function guardarCorreccion() {
+    const m = motivo.trim();
+    if (!m) return;
+    setCerrando(true);
+    setError('');
+    try {
+      const r = await fetch('/api/equipo/turnos', {
+        method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          fecha, turnos: repartirPropina(plan, propina, participa),
+          correccion: { motivo: m }
+        })
+      });
+      const d = await r.json();
+      if (d.error) { setError(d.error); return; }
+      for (const [fila, asistencia] of Object.entries(pendientes)) {
+        const rr = await fetch(`/api/reservas/${fila}`, {
+          method: 'PATCH', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ asistencia, correccion: { motivo: m } })
+        });
+        const dr = await rr.json();
+        if (dr.error) {
+          setError(`El equipo quedó corregido, pero una reserva no: ${dr.error}`);
+          return;
+        }
+      }
+      onListo();
+    } catch (e) {
+      setError(String(e));
+    } finally { setCerrando(false); }
+  }
+
   return (
-    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
+    <Dialogo titulo={`${cara === 'reservas' ? 'Reservas' : 'Equipo'} · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
+      {/* **El switch de las dos caras** (2026-11-03, lo pidió el cliente):
+          un lado son los trabajadores y el otro el resumen de reservas,
+          como la tarjeta del calendario de la portada. Son dos botones a la
+          vista y no uno que diga "Ver reservas", para que se lea en qué
+          cara se está y a cuál se vuelve sin adivinar. El elegido va con
+          tinte y borde dorado, no relleno: el relleno de esta ventana es
+          *Cerrar el día*. */}
+      {/* **El estado del cierre, arriba y a la vista de las dos caras.**
+          Un día cerrado se ve en solo lectura, y la ventana dice por qué y
+          qué se puede hacer: corregir, si se puede, o a quién pedírselo. */}
+      {cerrado && (
+        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir}
+          corrigiendo={corrigiendo} onCorregir={() => setCorrigiendo(true)} />
+      )}
+
+      {conReservas && (
+        <div role="tablist" aria-label="Qué mirar de este día"
+          className="mt-3 grid grid-cols-2 gap-2 sm:inline-grid">
+          {([['equipo', 'Trabajadores'], ['reservas', 'Reservas']] as const).map(([k, rotulo]) => (
+            <button key={k} role="tab" aria-selected={cara === k}
+              onClick={() => setCara(k)}
+              className={`boton justify-center ${cara === k
+                ? 'border-oro bg-oro/15 font-semibold text-hueso' : ''}`}>
+              {k === 'equipo' ? '↺ ' : '↻ '}{rotulo}
+              {k === 'equipo' && plan.length > 0 && (
+                <span className="ml-1.5 tabular-nums text-hueso/70">{plan.length}</span>
+              )}
+              {k === 'reservas' && nReservas !== null && (
+                <span className="ml-1.5 tabular-nums text-hueso/70">{nReservas}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* La cara se gira al cambiar: `key` la vuelve a montar y con eso
+          corre la animación de `.girar` (ver `globals.css`). */}
+      <div key={cara} className={conReservas ? 'girar' : undefined}>
+      {cara === 'reservas' ? (
+        <ReservasDelDia fecha={fecha} onCuantas={setNReservas}
+          modo={bloqueado ? 'bloqueado' : corrigiendo ? 'corrigiendo' : 'libre'}
+          pendientes={pendientes}
+          onPendiente={(fila, v) => setPendientes((p) => ({ ...p, [fila]: v }))} />
+      ) : (
+      /* `fieldset disabled` apaga de una vez todo lo que se escribe o se
+         aprieta adentro —campos, selectores y botones—, sin tener que
+         acordarse de cada uno. Es lo que deja un día cerrado en solo
+         lectura en la pantalla; el servidor lo comprueba por su cuenta. */
+      <fieldset disabled={bloqueado} className="m-0 min-w-0 border-0 p-0">
       {/* El `?` de esta ventana explica lo único que de verdad se aprende
           acá: qué significa dejar a alguien sin marcar. */}
       <p className="mt-3 text-sm text-hueso/60">
@@ -713,7 +864,6 @@ export default function EquipoDialogo({
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
       {/* **El resumen arriba y las acciones en una sola línea abajo.**
           Antes compartían una fila que envolvía, así que con el resumen
@@ -755,7 +905,7 @@ export default function EquipoDialogo({
           `title` del botón apagado, o sea en un globito que aparece al pasar
           el mouse: en un teléfono eso no existe, y lo que queda es un botón
           muerto sin explicación. */}
-      {conCierre && !cerrado && !listo && (
+      {((conCierre && !cerrado) || corrigiendo) && !listo && (
         <p className="mt-3 rounded border border-ambar/40 bg-ambar/5
                       px-3 py-2 text-sm text-ambar-texto/90">
           {falta.conEquipo === 0
@@ -771,7 +921,7 @@ export default function EquipoDialogo({
           creería que lo escrito se pierde al cerrar. Y sin el botón de
           cerrar hay que decir dónde está, o parecería que el día no se
           puede cerrar en ninguna parte. */}
-      {plan.length > 0 && (
+      {plan.length > 0 && !cerrado && (
         <p className="mt-2 text-xs text-hueso/45">
           Lo que escribas acá <strong>se guarda solo</strong>.
           {!conCierre && <> <strong>El día se cierra en{' '}
@@ -779,6 +929,10 @@ export default function EquipoDialogo({
             que es donde el panel va mostrando los días que quedaron pendientes.</>}
         </p>
       )}
+
+      </fieldset>
+      )}
+      </div>
 
       {/* **Abajo queda una sola acción, y es la que declara algo.** Lo
           escrito ya está guardado —la línea de la izquierda lo dice—, así
@@ -789,9 +943,35 @@ export default function EquipoDialogo({
           `flex-nowrap`: se quedan en la línea pase lo que pase. En un
           teléfono el día se recorta a "Cerrar", que dice lo mismo en menos
           espacio. */}
+      {/* El error va fuera de las caras, para verse desde las dos. */}
+      {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
+
+      {/* **Mientras se corrige, el pie es otro**: el motivo —obligatorio,
+          porque es lo que se va a preguntar un mes después— y dos botones,
+          descartar o guardar. *Guardar corrección* es el único relleno. */}
+      {corrigiendo ? (
+        <PieCorreccion motivo={motivo} onMotivo={setMotivo}
+          onCancelar={descartarCorreccion} onGuardar={() => void guardarCorreccion()}
+          guardando={cerrando}
+          porQueNo={listo ? undefined
+            : 'El día sigue cerrado después: no puede quedar nadie sin marcar si vino o no.'} />
+      ) : (
+      /* **Abajo queda una sola acción, y es la que declara algo.** Lo
+         escrito ya está guardado —la línea de la izquierda lo dice—, así
+         que *Listo* solo cierra la ventana y *Cerrar el día* pregunta
+         antes.
+
+         **Ya no hay *Reabrir*** (2026-11-03): un día cerrado no se reabre,
+         se corrige desde arriba con *Corregir este día*. Ver `corrigiendo`.
+
+         `flex-nowrap`: se quedan en la línea pase lo que pase. En un
+         teléfono el día se recorta a "Cerrar", que dice lo mismo en menos
+         espacio. */
       <div className="mt-3 flex flex-nowrap items-center gap-2">
-        <AvisoGuardado estado={guardado.estado} error={guardado.error}
-          onReintentar={() => void guardado.reintentar()} />
+        {!cerrado && (
+          <AvisoGuardado estado={guardado.estado} error={guardado.error}
+            onReintentar={() => void guardado.reintentar()} />
+        )}
         <span className="flex-1" />
         <button onClick={() => void salir()}
           className="whitespace-nowrap rounded border border-hueso/20 px-4 py-1.5
@@ -804,14 +984,7 @@ export default function EquipoDialogo({
             no se puede, y arriba dice por qué.
 
             **No aparece en el calendario de la portada**: ver `conCierre`. */}
-        {!conCierre ? null : cerrado ? (
-          <button onClick={() => void cambiarCierre(false)} disabled={cerrando}
-            className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
-                       font-semibold text-tinta disabled:opacity-40"
-            title="Vuelve a dejar el día abierto para corregirlo">
-            Reabrir<span className="hidden sm:inline"> el día</span>
-          </button>
-        ) : (
+        {conCierre && !cerrado && (
           <button onClick={() => void cambiarCierre(true)}
             disabled={cerrando || !listo}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
@@ -826,6 +999,7 @@ export default function EquipoDialogo({
           </button>
         )}
       </div>
+      )}
     </Dialogo>
   );
 }

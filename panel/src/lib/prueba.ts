@@ -80,7 +80,7 @@ import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
          avisoTelefono, correoNormal, correoValido, avisoCorreo,
          FORMATO_TELEFONO } from './contacto.ts';
 import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
-         diasPorCerrar, leerCierresDe, type Cierre } from './cierres.ts';
+         diasPorCerrar, leerCierresDe, corregirDiaCerrado, type Cierre } from './cierres.ts';
 import { climaDe, iconoDe, climaEnPalabras, urlPronostico, horaEnChile } from './clima.ts';
 import { createHmac } from 'node:crypto';
 import { estaCerrado, esExclusiva, ESTADO_DIA } from './columnas.ts';
@@ -2957,6 +2957,37 @@ console.log('\nEventos del CRM');
      'un campo externos que no es arreglo se lee vacío');
   ok(leerPublicados({ externos: [{ fecha: '2026-11-07' }] }).length === 0,
      'una fila sin external_id se descarta: no hay nada que reconciliar');
+}
+
+/* ---------- corregir un día cerrado (2026-11-03) ---------- */
+{
+  // Un día abierto recibe cualquier cambio, como siempre: sin motivo y de
+  // cualquiera que tenga el permiso de la ruta.
+  const abierto = corregirDiaCerrado({ cerrado: false, puedeCorregir: false });
+  ok(abierto.ok && abierto.correccion === '', 'un día abierto no pide nada');
+
+  // **Cerrado quiere decir bloqueado.** Antes era solo una marca y el día se
+  // seguía editando igual; esta es la prueba de que ya no.
+  const encargado = corregirDiaCerrado({ cerrado: true, puedeCorregir: false, motivo: 'me equivoqué' });
+  ok(!encargado.ok && encargado.status === 409,
+     'un día cerrado NO se toca sin el permiso de corregir, aunque traiga motivo');
+
+  const sinMotivo = corregirDiaCerrado({ cerrado: true, puedeCorregir: true });
+  ok(!sinMotivo.ok && sinMotivo.status === 400, 'quien puede corregir igual tiene que escribir el motivo');
+  ok(!corregirDiaCerrado({ cerrado: true, puedeCorregir: true, motivo: '   ' }).ok,
+     'un motivo en blanco no es un motivo');
+  ok(!corregirDiaCerrado({ cerrado: true, puedeCorregir: true, motivo: 42 }).ok,
+     'y un motivo que no es texto tampoco');
+
+  const bien = corregirDiaCerrado({ cerrado: true, puedeCorregir: true, motivo: '  faltó la propina  ' });
+  ok(bien.ok && bien.correccion === 'faltó la propina',
+     'con permiso y motivo la corrección entra, con el motivo limpio para la bitácora');
+
+  // Quién corrige: el administrador y quien paga. El encargado cierra el día,
+  // pero corregirlo después le toca a alguien de arriba.
+  ok(puede(ROL.admin, 'corregir') && puede(ROL.pagos, 'corregir'),
+     'corrigen el administrador y quien paga');
+  ok(!puede(ROL.encargado, 'corregir'), 'el encargado no corrige un día cerrado');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

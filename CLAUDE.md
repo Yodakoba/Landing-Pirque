@@ -3010,6 +3010,42 @@ envolver —delineado el que solo guarda, relleno el que cierra—, y en un
 teléfono el tercero se recorta a "Guardar y cerrar", que dice lo mismo en
 menos espacio.
 
+### La ventana del día en `/turnos` tiene dos caras: trabajadores y reservas (2026-11-03)
+
+Lo pidió el cliente: *"un lado de las tarjetas son trabajadores y el otro
+switch es de resumen reservas"*, con la posibilidad de volver. Son las dos
+listas que la jefa de turno marca el mismo día —quién vino a trabajar y
+quién vino a comer— y antes una vivía en esta ventana y la otra en la página
+del día.
+
+- **Dos botones a la vista, `Trabajadores` y `Reservas`**, no uno que diga
+  "Ver reservas": así se lee en qué cara se está y a cuál se vuelve. El
+  elegido va con tinte y borde dorado, no relleno — el relleno de la ventana
+  es *Cerrar el día*. Cada uno lleva su cuenta (personas del equipo,
+  reservas del día).
+- **La cara que entra gira desde el canto** (`.girar` en `globals.css`), y
+  no se usa el volteo de dos caras en la misma celda de la tarjeta del
+  calendario: allá las caras miden lo mismo, acá una es una lista larga de
+  puestos y la otra de reservas, y forzarlas al mismo alto dejaría un hueco
+  enorme en la corta. Respeta `prefers-reduced-motion`.
+- **Girar no pierde nada.** Lo escrito en la cara de trabajadores vive en el
+  estado de `EquipoDialogo`, no en lo que se dibuja, y el autoguardado sigue
+  corriendo. El pie —*Listo* y *Cerrar el día*— es de la ventana y se ve en
+  las dos caras.
+- **La cara de reservas (`ReservasDelDia.tsx`) es un resumen para marcar,
+  no la página del día**: quién vino / no llegó / sin marcar, qué preparar,
+  cómo viene el pago y una tarjeta por reserva con *Vino / No vino*, que
+  guarda al instante igual que en la página del día. **Editar, borrar o
+  anotar una reserva sigue allá**, con un enlace: repetir el formulario acá
+  serían dos lugares donde se edita lo mismo.
+- Una reserva que liberó su lugar se ve apagada y **sin los botones**: no
+  viene, no hay nada que marcar.
+- **Solo en `/turnos`** (`conReservas`). La página del día ya muestra las
+  reservas debajo, y el calendario de la portada en el frente de su tarjeta.
+- Pide las reservas cada vez que se gira a esa cara: un viaje más, y a
+  cambio lo que se ve está al día aunque otra persona esté marcando en el
+  mesón.
+
 ### Lo que es un valor se guarda solo; lo que declara algo se aprieta (2026-10-30)
 
 Lo pidió el cliente con la distinción ya hecha: *"una cosa es guardar un
@@ -3038,8 +3074,10 @@ hay que recordar:
   de verdad.
 - **Cerrar el día nunca se guarda solo.** Es una declaración con nombre y
   hora: se aprieta, y **pregunta antes** — *"¿Cerrar el martes 20 de octubre?
-  Queda anotado que lo cerraste tú, con la hora. Se puede reabrir después."*
-  Reabrir también pregunta.
+  Queda anotado que lo cerraste tú, con la hora. Después, solo el
+  administrador o quien hace los pagos podrá corregirlo, con un motivo."*
+  Desde el 2026-11-03 ya no hay *Reabrir*: ver "Un día cerrado no se edita:
+  se corrige".
 
 Detalles que vale la pena tener escritos, todos en `usarAutoguardado.ts`:
 
@@ -3057,7 +3095,66 @@ Detalles que vale la pena tener escritos, todos en `usarAutoguardado.ts`:
   último cambio y rechazaría cerrar un día que se acaba de completar.
 - **Editar un día cerrado ya no lo reabre.** Antes *Guardar* en un día
   cerrado mandaba `cerrar: false`, o sea que corregir un ajuste olvidado lo
-  reabría sin que nadie lo pidiera. Hoy reabrir es un botón propio.
+  reabría sin que nadie lo pidiera. **Y desde el 2026-11-03 un día cerrado
+  no guarda nada solo**: el autoguardado se apaga (`activo` en
+  `usarAutoguardado`), y lo que se cambie va en una corrección con motivo.
+
+### Un día cerrado no se edita: se corrige (2026-11-03)
+
+Lo conversó el cliente mirando el botón *Reabrir el día*: *"una vez que
+cerramos un día, queremos que el día en cierto modo no se cambie más… pero
+a veces habrá que hacer un cambio"*. Y al revisarlo salió que **cerrar no
+protegía nada**: era una marca con nombre y hora, el día se seguía editando
+igual —montos, propina, *Vino / No vino*— y *Reabrir* borraba una marca que
+no bloqueaba nada.
+
+Ahora **cerrado quiere decir bloqueado**, y la única forma de cambiarlo es
+una **corrección**:
+
+| | Qué pasa |
+|---|---|
+| Día abierto | Como siempre: se escribe y se guarda solo |
+| Día cerrado, encargado | **Solo lectura.** La ventana dice quién lo cerró y que, si hay que cambiar algo, se lo pida al administrador o a quien paga |
+| Día cerrado, administrador o pagos | Solo lectura, con un botón **Corregir este día** |
+| Corrigiendo | Se edita, **nada se guarda solo**, y abajo hay un motivo obligatorio y *Guardar corrección* |
+
+- **El día nunca deja de estar cerrado.** Reabrir, corregir y volver a
+  cerrar son tres pasos, y el que se olvida es el último: queda un día
+  abierto que nadie nota. Por eso la corrección entra con el día cerrado y
+  el día sigue cerrado después — *Reabrir* se sacó de la pantalla. La API
+  lo conserva, pero solo para quien tiene `corregir`; si no, el bloqueo se
+  saltaría reabriendo.
+- **Corrigen el administrador y quien paga** (permiso `corregir`). El
+  encargado cierra el día, que es quien lo vive; corregirlo después, cuando
+  ya es lo que se paga, le toca a alguien de arriba. Lo decidió el cliente.
+- **El motivo es obligatorio** y queda en la bitácora con el nombre —
+  *"Corrigió el equipo de un día cerrado · motivo: faltó la propina"*—. Es lo
+  que se va a preguntar un mes después, sobre todo si ese día ya se pagó.
+- **Cubre el día completo**: el equipo, la asistencia de las reservas y las
+  actividades extras, en las tres ventanas que lo muestran —`/turnos`, el
+  calendario de la portada, la página del día y `/extras`—. En la ventana
+  del día de `/turnos`, la corrección incluye las dos caras: el equipo y el
+  *Vino / No vino* de las reservas van juntos, con un solo motivo.
+- **En la página del día**, editar, borrar o anotar una reserva de un día
+  cerrado pide el motivo (en el formulario, o en una pregunta al borrar), y
+  *Vino / No vino* de la tabla queda apagado: se corrige en `/turnos`.
+- **Una corrección deja el día como un día cerrado tiene que estar**: con
+  equipo y sin nadie sin marcar. Si no, el servidor la rechaza, igual que
+  rechazaría cerrar.
+- **La regla vive en una función pura**, `corregirDiaCerrado()` en
+  `cierres.ts`, con sus pruebas, y la usan todas las rutas que escriben un
+  día a través de `guardaDelDia()` (`lib/guardaCierre.ts`): el equipo, las
+  extras y las reservas (crear, editar —mirando el día de origen y el de
+  destino— y borrar). **La comprueba el servidor**: una llamada directa a la
+  API con un encargado recibe 409; la pantalla apagada es solo la cara
+  visible.
+- **En la pantalla, el bloqueo es un `<fieldset disabled>`**, que apaga de
+  una vez todo lo que se escribe o se aprieta adentro sin tener que
+  acordarse de cada control. `globals.css` les baja la opacidad para que se
+  **vean** apagados: un botón que no responde y se ve igual se lee como roto.
+- **Lo que no pasa por esto**: lo que escribe Shopify. Un pedido que llega o
+  se actualiza para un día cerrado entra igual, porque es un hecho de la
+  tienda y no una edición de nadie.
 
 ### Cerrar el día
 
@@ -3071,8 +3168,10 @@ vería completo justamente porque falta. Por eso el cierre se guarda con el
 
 - Vive en una pestaña propia, **`Cierres`** (Fecha · Cerrado por · Cuándo),
   una fila por día cerrado. Cerrar dos veces no agrega dos filas.
-- **Se puede reabrir**: aparece un ajuste olvidado, alguien reclama su
-  propina. Queda en la bitácora como cualquier otra acción.
+- **No se reabre: se corrige** (desde el 2026-11-03). Aparece un ajuste
+  olvidado, alguien reclama su propina: el administrador o quien paga
+  aprieta *Corregir este día*, arregla y guarda con el motivo, y el día
+  sigue cerrado. Ver la sección que sigue.
 - **Lo único que bloquea el cierre es la asistencia sin marcar**, y se
   comprueba en el servidor además de en la pantalla. Un turno sin marcar no
   suma, así que cerrar con turnos a medias sería cerrar con el total mal.
@@ -3164,10 +3263,10 @@ Dos causas, las dos arregladas:
 Lo pidió confirmado el cliente: *"siempre puede ser que necesito agregar o
 cambiar algo en una fecha que ya está en el pasado… por lo menos poder
 revisarla"*. En `/turnos` se llega a cualquier mes con *Mes anterior*, se
-abre cualquier día y **se edita, esté cerrado o no**. Comprobado contra un
-sábado pasado y ya cerrado: se le agregó un ajuste, quedó guardado y **el día
-siguió cerrado** — editar no reabre, que es lo que se arregló el 2026-10-30.
-Reabrir es un botón propio y queda en la bitácora.
+abre cualquier día y se revisa. **Un día abierto se edita; uno cerrado se
+corrige** (desde el 2026-11-03): el administrador o quien paga aprieta
+*Corregir este día* y guarda con un motivo, y el día sigue cerrado. Ver "Un
+día cerrado no se edita: se corrige".
 
 Lo que el panel no hace, y conviene tenerlo claro: **si ese día ya se pagó,
 el arreglo es con la persona**. Acá queda anotado el porqué, con su monto y
@@ -3616,13 +3715,16 @@ es tocar la tabla de permisos y nada más.
 - **Vale para las dos pantallas y para las dos puntas.** `/api/equipo` y
   `/api/extras` recortan por `sueldos` al devolver, y **descartan por lo
   mismo al guardar**: quien no recibe un monto tampoco lo puede pisar, que
-  es la regla de siempre acá. El token sigue recortándose por `esAdmin`.
-- **Y el texto de arriba de `/equipo` —"dentro de cada trabajador puedes
-  copiar su link personal"— pasó a mostrarse solo al administrador.**
-  Prometerle a la cuenta de pagos algo que no va a encontrar es peor que no
-  decir nada.
-- **Hay una prueba que lo fija**: que `pagos` tenga `sueldos` y **no**
-  `links`. Si algún día alguien junta las dos condiciones otra vez, falla.
+  es la regla de siempre acá. El token se recorta por `links` (`verLinks`).
+- **El texto de arriba de `/equipo` —"dentro de cada trabajador puedes
+  copiar su link personal"— se muestra solo a quien tiene `links`.**
+  Prometerle algo a quien no lo va a encontrar es peor que no decir nada.
+- ~~Una prueba fijaba que `pagos` tuviera `sueldos` y **no** `links`~~ —
+  **ya no**: ese mismo 2026-11-01 el cliente le dio también los links a
+  quien paga (*"él gestiona al equipo, a él le van a pedir el link"*). Hoy
+  la prueba fija lo contrario, que `pagos` solo no puede `usuarios` ni
+  `mantencion`. La tabla de abajo es del primer corte, cuando pagos todavía
+  no veía el link.
 
 Comprobado con las tres cuentas contra la planilla falsa:
 
@@ -3651,6 +3753,7 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Puestos y su regla "uno cada N" | sí | — | **sí** | — |
 | Precios, menús y configuración | sí | — | **sí** | — |
 | **Links personales** | sí | — | **sí** | — |
+| **Corregir un día cerrado** (con motivo) | sí | — | **sí** | — |
 | Diagnóstico y Shopify a mano | sí | — | — | — |
 | **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — |
 | **La bitácora** | sí | — | **sí** | — |
@@ -3792,9 +3895,16 @@ Una pestaña `Bitácora` con cuándo, quién, rol, acción y detalle. Se lee en
 
 `/mi/<token>`. Se manda por WhatsApp y no pide contraseña ni correo. Se
 administra desde `/equipo`, columna **Link personal**: crear, copiar, renovar
-y quitar — **solo el administrador**, aunque el encargado sí edite la lista.
-Un encargado ni siquiera recibe los tokens: la ruta se los borra de la
-respuesta.
+y quitar — **el administrador y quien paga** (permiso `links`), aunque el
+encargado sí edite la lista. Un encargado ni siquiera recibe los tokens: la
+ruta se los borra de la respuesta.
+
+**Si alguien de pagos no ve el botón *Crear link personal*, casi seguro su
+sesión dice encargado** (pasó con la cuenta de Felipe el 2026-11-03). El rol
+viaja firmado dentro de la sesión, que dura 7 días: cambiarle el rol en
+`/usuarios` no toca la sesión que ya tiene abierta. Se arregla con *Salir* y
+volver a entrar. El rol con que se entró se lee arriba a la derecha, junto
+al nombre.
 
 Se eligió sobre una clave compartida de solo lectura por una razón concreta:
 **cuando el panel tenga sueldos y ajustes, una clave compartida dejaría que
@@ -3882,7 +3992,8 @@ con su motivo**, la propina y el total.
   sueldo tienen reglas en Chile. Conviene confirmarlo con quien les lleve la
   contabilidad antes de usarlo así.
 - ~~Si "el encargado de pagos" no es el administrador~~ — **resuelto el
-  2026-10-22**: existe el rol `pagos`, que solo lee el informe.
+  2026-10-22**: existe el rol `pagos`, que desde el 2026-11-01 es el
+  encargado más la plata — ver "El rol de pagos".
 
 ## El panel se explica solo (2026-10-30)
 

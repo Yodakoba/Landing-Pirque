@@ -23,7 +23,7 @@ import ReservaForm from './ReservaForm';
 import Clima, { usePronostico } from './Clima';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
-import { estaCerrado, type Cierre } from '@/lib/cierres';
+import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { extrasDelDia, costoExtrasDelDia, costoDeExtra,
@@ -112,7 +112,7 @@ export default function DayView({ fecha }: { fecha: string }) {
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
-    cierres: Cierre[]; verSueldos: boolean;
+    cierres: Cierre[]; verSueldos: boolean; puedeCorregir: boolean;
   } | null>(null);
   // **Ya no hay "Pasar lista".** Los dos caminos —planificar y anotar la
   // propina— abren la MISMA ventana, que es la del día completo; lo único
@@ -158,7 +158,8 @@ export default function DayView({ fecha }: { fecha: string }) {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], cierres: d.cierres ?? [], verSueldos: !!d.verSueldos
+          turnos: d.turnos ?? [], cierres: d.cierres ?? [], verSueldos: !!d.verSueldos,
+          puedeCorregir: !!d.puedeCorregir
         });
       })
       .catch(() => {});
@@ -272,7 +273,18 @@ export default function DayView({ fecha }: { fecha: string }) {
 
   async function borrar(r: Reserva) {
     if (!confirm(`¿Borrar la reserva de ${r.nombre || r.id}? No se puede deshacer.`)) return;
-    const res = await fetch(`/api/reservas/${r.fila}`, { method: 'DELETE' });
+    // En un día cerrado, borrar es corregirlo: va con su motivo.
+    let correccion: { motivo: string } | undefined;
+    if (diaCerrado) {
+      const m = prompt('El día está cerrado. ¿Por qué se borra esta reserva?');
+      if (!m || !m.trim()) return;
+      correccion = { motivo: m.trim() };
+    }
+    const res = await fetch(`/api/reservas/${r.fila}`, {
+      method: 'DELETE',
+      ...(correccion ? { headers: { 'content-type': 'application/json' },
+                         body: JSON.stringify({ correccion }) } : {})
+    });
     const d = await res.json();
     if (d.error) alert(d.error); else cargar();
   }
@@ -285,6 +297,10 @@ export default function DayView({ fecha }: { fecha: string }) {
   const conGente = plan.filter((l) => l.asignados.length > 0);
   const faltan = plan.reduce((n, l) => n + l.faltan, 0);
   const turnosDelDia = (equipo?.turnos ?? []).filter((t) => t.fecha === fecha);
+  // Si el día está cerrado, y si quien mira lo puede corregir. Ver
+  // `corregirDiaCerrado()`; el servidor lo comprueba por su cuenta.
+  const diaCerrado = !!equipo && estaCerrado(equipo.cierres, fecha);
+  const puedeCorregir = !!equipo?.puedeCorregir;
   const vinieron = turnosDelDia.filter((t) => t.asistencia === VINO.si).length;
   const faltaron = turnosDelDia.filter((t) => t.asistencia === VINO.no).length;
   const costo = costoDelDia(turnosDelDia, fecha);
@@ -579,6 +595,9 @@ export default function DayView({ fecha }: { fecha: string }) {
           extras={extras.extras}
           colaboradores={extras.colaboradores}
           verSueldos={extras.verSueldos}
+          cerrado={!!equipo && estaCerrado(equipo.cierres, fecha)}
+          cierre={equipo ? cierreDe(equipo.cierres, fecha) : undefined}
+          puedeCorregir={!!equipo?.puedeCorregir}
           onListo={() => { setAgendando(false); cargarExtras(); }}
           onCancelar={() => setAgendando(false)}
         />
@@ -593,11 +612,34 @@ export default function DayView({ fecha }: { fecha: string }) {
           turnos={equipo.turnos}
           extras={extras?.extras ?? []}
           cerrado={estaCerrado(equipo.cierres, fecha)}
+          cierre={cierreDe(equipo.cierres, fecha)}
+          puedeCorregir={equipo.puedeCorregir}
           verSueldos={equipo.verSueldos}
           enfocarPropina={planificando === 'propina'}
           onListo={() => { setPlanificando('no'); cargarEquipo(); }}
           onCancelar={() => setPlanificando('no')}
         />
+      )}
+
+      {/* **Un día cerrado está en solo lectura** (2026-11-03), y lo dice
+          arriba de la tabla. *Vino / No vino* de las reservas se corrige en
+          `/turnos`, junto con el equipo y con un solo motivo; editar, borrar
+          o anotar una reserva se puede acá, pidiendo el motivo, a quien
+          puede corregir. */}
+      {diaCerrado && (
+        <p className="mt-6 rounded border border-verde/40 bg-verde/5 px-3 py-2 text-sm
+                      text-hueso/80">
+          <strong className="text-verde-texto">✓ Día cerrado</strong>
+          {cierreDe(equipo!.cierres, fecha)?.quien &&
+            <> por {cierreDe(equipo!.cierres, fecha)!.quien}</>}. Las reservas están en
+          solo lectura.{' '}
+          {puedeCorregir
+            ? <>Puedes editar, borrar o anotar una reserva escribiendo el motivo;
+                <em> Vino / No vino</em> se corrige en{' '}
+                <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>
+            : <>Si hay que cambiar algo, pídeselo al administrador o a quien hace
+                los pagos.</>}
+        </p>
       )}
 
       {/* El filtro: **el elegido va pintado**, no solo con el borde de otro
@@ -616,6 +658,7 @@ export default function DayView({ fecha }: { fecha: string }) {
         <span className="flex-1" />
         <button onClick={exportar} className="boton">Exportar CSV</button>
         <button onClick={() => { setEditando(null); setCreando(true); }}
+          disabled={diaCerrado && !puedeCorregir}
           className="boton boton-relleno">
           Agregar reserva
         </button>
@@ -725,9 +768,11 @@ export default function DayView({ fecha }: { fecha: string }) {
                       )}
                     </td>
                     <td className="py-2 pr-3">
-                      <Asistencia valor={r.asistencia || ''}
-                        quien={r.nombre || 'esta reserva'}
-                        onCambio={(v) => marcar(r, v)} />
+                      <fieldset disabled={diaCerrado} className="m-0 min-w-0 border-0 p-0">
+                        <Asistencia valor={r.asistencia || ''}
+                          quien={r.nombre || 'esta reserva'}
+                          onCambio={(v) => marcar(r, v)} />
+                      </fieldset>
                     </td>
                     {/* **Dos botones, no dos textos en gris de 20px.** Son
                         las dos acciones de la fila y una de ellas borra: lo
@@ -736,8 +781,10 @@ export default function DayView({ fecha }: { fecha: string }) {
                     <td className="py-2 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-2">
                         <button onClick={() => { setCreando(false); setEditando(r); }}
+                          disabled={diaCerrado && !puedeCorregir}
                           className="boton">Editar</button>
                         <button onClick={() => borrar(r)}
+                          disabled={diaCerrado && !puedeCorregir}
                           className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
                           Borrar
                         </button>
@@ -757,6 +804,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           menusConocidos={conocidos}
           catalogo={catalogo}
           reserva={editando}
+          pideMotivo={diaCerrado}
           onListo={() => { setCreando(false); setEditando(null); cargar(); }}
           onCancelar={() => { setCreando(false); setEditando(null); }}
         />

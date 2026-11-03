@@ -42,9 +42,10 @@ export default function EquipoEditor() {
    * leyó al abrir sigue siendo cierto.
    */
   const [turnosDe, setTurnosDe] = useState<Map<string, number>>(new Map());
-  // Lo manda el servidor; la interfaz no lo adivina. Los puestos y los links
-  // personales son del administrador, y si el encargado viera esos controles
-  // el panel le estaría mintiendo: la ruta se los va a negar igual.
+  // Lo manda el servidor; la interfaz no lo adivina. Los puestos, los links
+  // personales y los sueldos son del administrador y de quien paga, y si el
+  // encargado viera esos controles el panel le estaría mintiendo: la ruta se
+  // los va a negar igual.
   // **Una bandera por permiso, no un `esAdmin` para todo.** Hasta el
   // 2026-11-01 la misma condición gobernaba tres cosas sin relación entre
   // sí —la plata de la ficha, el link personal y la lista de puestos— así
@@ -397,10 +398,9 @@ export default function EquipoEditor() {
       <p className="mb-3 max-w-2xl text-sm text-hueso/70">
         Acá puedes agregar y editar trabajadores.
       </p>
-      {/* Solo para quien de verdad tiene ese bloque. A la cuenta de pagos
-          el link personal no se le muestra —es una credencial, y los links
-          son del administrador— así que prometerle algo que no va a
-          encontrar es peor que no decir nada. */}
+      {/* Solo para quien de verdad tiene ese bloque: el administrador y
+          quien paga (permiso `links`). Al encargado no se le muestra, porque
+          prometerle algo que no va a encontrar es peor que no decir nada. */}
       {verLinks && (
         <p className="mb-4 max-w-2xl text-sm text-hueso/70">
           Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.
@@ -695,7 +695,7 @@ export default function EquipoEditor() {
                   </div>
                 )}
 
-                {/* Cuánto gana. Solo el administrador. */}
+                {/* Cuánto gana. El administrador y quien paga (`sueldos`). */}
                 {verSueldos && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
@@ -739,7 +739,7 @@ export default function EquipoEditor() {
                   </div>
                 )}
 
-                {/* Dónde se le transfiere. También solo el administrador. */}
+                {/* Dónde se le transfiere. También `sueldos`. */}
                 {verSueldos && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-start gap-3">

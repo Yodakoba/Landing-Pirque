@@ -39,12 +39,18 @@ import CampoTelefono from './CampoTelefono';
 import { correoNormal, avisoCorreo } from '@/lib/contacto';
 
 export default function ReservaForm({
-  fecha, reserva, menusConocidos, catalogo, onListo, onCancelar
+  fecha, reserva, menusConocidos, catalogo, pideMotivo = false, onListo, onCancelar
 }: {
   fecha: string;
   reserva: Reserva | null;
   menusConocidos: string[];
   catalogo: Menu[];
+  /**
+   * Si el día está cerrado y esto es una **corrección** (2026-11-03): pide
+   * el motivo y no deja guardar sin él. El servidor lo exige igual; acá se
+   * pide para que el error no aparezca recién al apretar Guardar.
+   */
+  pideMotivo?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -107,6 +113,7 @@ export default function ReservaForm({
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [motivo, setMotivo] = useState('');
 
   const campo = (k: keyof typeof f) => ({
     value: f[k],
@@ -127,6 +134,9 @@ export default function ReservaForm({
 
   async function guardar() {
     setError('');
+    if (pideMotivo && !motivo.trim()) {
+      return setError('El día está cerrado: escribe el motivo de la corrección.');
+    }
     if (!f.nombre.trim()) return setError('Falta el nombre.');
     if (personas < 1) return setError('Tiene que haber al menos una persona en algún menú.');
 
@@ -135,7 +145,8 @@ export default function ReservaForm({
       ...f, personas, menu: componerMenu(cuenta),
       // Sin precios puestos el sugerido da 0; eso se guarda en blanco, que
       // es lo mismo que hacia antes de pedir el monto.
-      monto: monto > 0 ? monto : null
+      monto: monto > 0 ? monto : null,
+      ...(pideMotivo ? { correccion: { motivo: motivo.trim() } } : {})
     };
     const res = reserva
       ? await fetch(`/api/reservas/${reserva.fila}`,
@@ -307,6 +318,15 @@ export default function ReservaForm({
             )}
           </p>
         </div>
+        {pideMotivo && (
+          <label className="mt-4 block rounded border border-ambar/50 p-3 text-[13px]
+                            font-semibold text-ambar-texto">
+            Este día está cerrado. Motivo de la corrección
+            <input value={motivo} onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ej.: la reserva era de 6, no de 4"
+              className={`${ENTRADA} mt-1 font-normal text-hueso`} />
+          </label>
+        )}
         {error && <p className="mt-3 text-sm font-semibold text-rojo-texto">{error}</p>}
 
         <div className="mt-5 flex gap-3">

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
-  leerColaboradores, guardarColaboradores, leerExtras, anotar
+  leerColaboradores, guardarColaboradores, leerExtras, leerCierres, anotar
 } from '@/lib/datos';
 import { aEntero, esSi } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
@@ -34,14 +34,18 @@ export async function GET(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
   try {
-    const [colaboradores, extras] = await Promise.all([
-      leerColaboradores(), leerExtras()
+    // Los cierres viajan porque un día cerrado se dibuja en solo lectura
+    // también acá: un día cerrado es el día completo, extras incluidas.
+    const [colaboradores, extras, cierres] = await Promise.all([
+      leerColaboradores(), leerExtras(), leerCierres()
     ]);
-    const verSueldos = puede((await quienEs(req)).rol as Rol, 'sueldos');
+    const rol = (await quienEs(req)).rol as Rol;
+    const verSueldos = puede(rol, 'sueldos');
     return NextResponse.json({
       colaboradores: verSueldos ? colaboradores : sinPlata(colaboradores),
-      extras,
-      verSueldos
+      extras, cierres,
+      verSueldos,
+      puedeCorregir: puede(rol, 'corregir')
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
