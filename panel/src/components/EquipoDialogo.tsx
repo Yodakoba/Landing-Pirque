@@ -33,6 +33,7 @@ import { enPalabras } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
 import Asistencia from './Asistencia';
 import AvisoGuardado from './AvisoGuardado';
+import ReservasDelDia from './ReservasDelDia';
 import { usarAutoguardado } from './usarAutoguardado';
 
 /**
@@ -56,7 +57,7 @@ function Rotulo({ children }: { children: React.ReactNode }) {
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
   conCierre = false, verSueldos = false, enfocarPropina = false,
-  onListo, onCancelar
+  conReservas = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -97,6 +98,13 @@ export default function EquipoDialogo({
   verSueldos?: boolean;
   /** Abre con el cursor en la propina, para quien viene justo a eso. */
   enfocarPropina?: boolean;
+  /**
+   * Si la ventana tiene **la otra cara, la de las reservas** (2026-11-03).
+   * Solo la pide `/turnos`: la página del día ya muestra las reservas
+   * debajo, y el calendario de la portada las tiene en el frente de su
+   * tarjeta. Ver `ReservasDelDia`.
+   */
+  conReservas?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -109,6 +117,14 @@ export default function EquipoDialogo({
   );
   const [error, setError] = useState('');
   const [cerrando, setCerrando] = useState(false);
+  /**
+   * Qué cara de la ventana se ve. **Se cambia de cara, no de ventana**: lo
+   * escrito en la de trabajadores vive en el estado de este componente y no
+   * en lo que se dibuja, así que girar y volver no pierde nada, y lo que
+   * quede en el reloj del autoguardado se manda igual.
+   */
+  const [cara, setCara] = useState<'equipo' | 'reservas'>('equipo');
+  const [nReservas, setNReservas] = useState<number | null>(null);
   // La propina del día, que se escribe UNA vez y el panel reparte. Lo que
   // se guarda es la parte de cada uno, no el pozo: ver `repartirPropina`.
   const [propina, setPropina] = useState(
@@ -295,7 +311,41 @@ export default function EquipoDialogo({
   }
 
   return (
-    <Dialogo titulo={`Equipo · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
+    <Dialogo titulo={`${cara === 'reservas' ? 'Reservas' : 'Equipo'} · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
+      {/* **El switch de las dos caras** (2026-11-03, lo pidió el cliente):
+          un lado son los trabajadores y el otro el resumen de reservas,
+          como la tarjeta del calendario de la portada. Son dos botones a la
+          vista y no uno que diga "Ver reservas", para que se lea en qué
+          cara se está y a cuál se vuelve sin adivinar. El elegido va con
+          tinte y borde dorado, no relleno: el relleno de esta ventana es
+          *Cerrar el día*. */}
+      {conReservas && (
+        <div role="tablist" aria-label="Qué mirar de este día"
+          className="mt-3 grid grid-cols-2 gap-2 sm:inline-grid">
+          {([['equipo', 'Trabajadores'], ['reservas', 'Reservas']] as const).map(([k, rotulo]) => (
+            <button key={k} role="tab" aria-selected={cara === k}
+              onClick={() => setCara(k)}
+              className={`boton justify-center ${cara === k
+                ? 'border-oro bg-oro/15 font-semibold text-hueso' : ''}`}>
+              {k === 'equipo' ? '↺ ' : '↻ '}{rotulo}
+              {k === 'equipo' && plan.length > 0 && (
+                <span className="ml-1.5 tabular-nums text-hueso/70">{plan.length}</span>
+              )}
+              {k === 'reservas' && nReservas !== null && (
+                <span className="ml-1.5 tabular-nums text-hueso/70">{nReservas}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* La cara se gira al cambiar: `key` la vuelve a montar y con eso
+          corre la animación de `.girar` (ver `globals.css`). */}
+      <div key={cara} className={conReservas ? 'girar' : undefined}>
+      {cara === 'reservas' ? (
+        <ReservasDelDia fecha={fecha} onCuantas={setNReservas} />
+      ) : (
+      <>
       {/* El `?` de esta ventana explica lo único que de verdad se aprende
           acá: qué significa dejar a alguien sin marcar. */}
       <p className="mt-3 text-sm text-hueso/60">
@@ -779,6 +829,10 @@ export default function EquipoDialogo({
             que es donde el panel va mostrando los días que quedaron pendientes.</>}
         </p>
       )}
+
+      </>
+      )}
+      </div>
 
       {/* **Abajo queda una sola acción, y es la que declara algo.** Lo
           escrito ya está guardado —la línea de la izquierda lo dice—, así

@@ -2843,6 +2843,42 @@ envolver —delineado el que solo guarda, relleno el que cierra—, y en un
 teléfono el tercero se recorta a "Guardar y cerrar", que dice lo mismo en
 menos espacio.
 
+### La ventana del día en `/turnos` tiene dos caras: trabajadores y reservas (2026-11-03)
+
+Lo pidió el cliente: *"un lado de las tarjetas son trabajadores y el otro
+switch es de resumen reservas"*, con la posibilidad de volver. Son las dos
+listas que la jefa de turno marca el mismo día —quién vino a trabajar y
+quién vino a comer— y antes una vivía en esta ventana y la otra en la página
+del día.
+
+- **Dos botones a la vista, `Trabajadores` y `Reservas`**, no uno que diga
+  "Ver reservas": así se lee en qué cara se está y a cuál se vuelve. El
+  elegido va con tinte y borde dorado, no relleno — el relleno de la ventana
+  es *Cerrar el día*. Cada uno lleva su cuenta (personas del equipo,
+  reservas del día).
+- **La cara que entra gira desde el canto** (`.girar` en `globals.css`), y
+  no se usa el volteo de dos caras en la misma celda de la tarjeta del
+  calendario: allá las caras miden lo mismo, acá una es una lista larga de
+  puestos y la otra de reservas, y forzarlas al mismo alto dejaría un hueco
+  enorme en la corta. Respeta `prefers-reduced-motion`.
+- **Girar no pierde nada.** Lo escrito en la cara de trabajadores vive en el
+  estado de `EquipoDialogo`, no en lo que se dibuja, y el autoguardado sigue
+  corriendo. El pie —*Listo* y *Cerrar el día*— es de la ventana y se ve en
+  las dos caras.
+- **La cara de reservas (`ReservasDelDia.tsx`) es un resumen para marcar,
+  no la página del día**: quién vino / no llegó / sin marcar, qué preparar,
+  cómo viene el pago y una tarjeta por reserva con *Vino / No vino*, que
+  guarda al instante igual que en la página del día. **Editar, borrar o
+  anotar una reserva sigue allá**, con un enlace: repetir el formulario acá
+  serían dos lugares donde se edita lo mismo.
+- Una reserva que liberó su lugar se ve apagada y **sin los botones**: no
+  viene, no hay nada que marcar.
+- **Solo en `/turnos`** (`conReservas`). La página del día ya muestra las
+  reservas debajo, y el calendario de la portada en el frente de su tarjeta.
+- Pide las reservas cada vez que se gira a esa cara: un viaje más, y a
+  cambio lo que se ve está al día aunque otra persona esté marcando en el
+  mesón.
+
 ### Lo que es un valor se guarda solo; lo que declara algo se aprieta (2026-10-30)
 
 Lo pidió el cliente con la distinción ya hecha: *"una cosa es guardar un
