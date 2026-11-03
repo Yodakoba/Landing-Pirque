@@ -26,7 +26,9 @@ import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import {
   leerEventos, esNuestro, tieneDia, eventosPorFecha, periodosNuestros,
-  haySobreventa, NUESTRO_LUGAR
+  haySobreventa, NUESTRO_LUGAR,
+  PREFIJO, TITULOS, idExterno, esNuestroId, fechaDelId, diaParaElCRM,
+  leerPublicados, reconciliar, cuerpoDe, tandas, type DiaDelPanel
 } from './crm.ts';
 import {
   ENCABEZADO_PAGOS, leerPagosDe, filaPago, cuentaEnPeriodo, pagadoDe,
@@ -2810,6 +2812,152 @@ console.log('\nEventos del CRM');
   ok(eventosPorFecha([]).size === 0, 'sin eventos, ningún día');
 }
 
+// ---------------------------------------------------------------------------
+{
+  console.log('\nPublicar nuestros días en el calendario del socio');
+
+  const pd = (p: Partial<DiaDelPanel>): DiaDelPanel => ({
+    fecha: '2026-11-07', capacidad: 120, tomadas: 0,
+    bloqueada: false, privada: false, exclusiva: false, ...p
+  });
+
+  // **La regla es una sola pregunta: ¿puede pasar otro evento acá ese día?**
+  // `bloquea: true` es rojo —fecha tomada— y `false` es naranjo con la
+  // ocupación. Fue lo que el cliente corrigió del primer corte, que mandaba
+  // todo privado en rojo y le habría hecho perder ventas al socio.
+  const cerrado = diaParaElCRM(pd({ bloqueada: true }))!;
+  ok(cerrado.bloquea === true, 'un día cerrado bloquea');
+  ok(cerrado.titulo === TITULOS.cerrado, 'y se anuncia como cerrado');
+
+  const exclusivo = diaParaElCRM(pd({ privada: true, exclusiva: true, tomadas: 40 }))!;
+  ok(exclusivo.bloquea === true, 'un privado EXCLUSIVO bloquea: el recinto completo');
+  ok(exclusivo.titulo === TITULOS.exclusivo, 'y lo dice con todas sus letras');
+
+  const privado = diaParaElCRM(pd({ privada: true, tomadas: 40 }))!;
+  ok(privado.bloquea === false,
+     'un privado NO exclusivo no bloquea: pueden correr dos eventos a la vez');
+  ok(privado.titulo === TITULOS.privado, 'y sale como evento privado');
+  ok(privado.ocupacion === 40 && privado.capacidad === 120,
+     'con su ocupación, que es lo que el vendedor necesita saber');
+
+  const conReservas = diaParaElCRM(pd({ tomadas: 8 }))!;
+  ok(conReservas.bloquea === false && conReservas.titulo === TITULOS.abierto,
+     'un día abierto con reservas va naranjo');
+  ok(conReservas.ocupacion === 8 && conReservas.capacidad === 120,
+     'y manda los dos enteros: el CRM arma el chip "8/120"');
+
+  // **Un día abierto y vacío no se manda.** No tiene nada que informar y
+  // llenaría el calendario del socio de naranjo sin dato.
+  ok(diaParaElCRM(pd({})) === null, 'un día abierto y vacío no se publica');
+
+  // Los números van solo cuando hay gente: "Cerrado · 0/120" leería como un
+  // dato lo que es la ausencia de uno.
+  ok(cerrado.ocupacion === null && cerrado.capacidad === null,
+     'un día que bloquea y no tiene a nadie va sin números');
+  ok(diaParaElCRM(pd({ bloqueada: true, tomadas: 5 }))!.ocupacion === 5,
+     'pero si hay gente reservada en un día cerrado, se dice');
+
+  // **El orden de las preguntas importa.** Exclusivo antes que privado: al
+  // revés, todo exclusivo saldría naranjo y el socio podría vender un recinto
+  // arrendado completo. Y cerrado primero, consistente con estaCerrado().
+  ok(diaParaElCRM(pd({ privada: true, exclusiva: true }))!.bloquea === true,
+     'un exclusivo nunca se lee como privado a secas');
+
+  // Nada de lo interno viaja: la descripción la arma el propio archivo.
+  for (const d of [cerrado, exclusivo, privado, conReservas]) {
+    ok(d.titulo.length <= 30, `"${d.titulo}" cabe en el chip del CRM`);
+    ok(!!d.descripcion, 'y lleva su descripción para el detalle');
+  }
+
+  // El id sale de la fecha y de nada más: publicar dos veces es un upsert.
+  ok(idExterno('2026-11-07') === 'brasas-2026-11-07', 'el id sale de la fecha');
+  ok(esNuestroId(idExterno('2026-11-07')), 'y se reconoce como nuestro');
+  ok(!esNuestroId('ayc-2026-11-07'), 'el de otro origen no es nuestro');
+  ok(fechaDelId('brasas-2026-11-07') === '2026-11-07', 'y se le saca la fecha');
+  ok(fechaDelId('ayc-2026-11-07') === '', 'de uno ajeno no se saca ninguna');
+  ok(fechaDelId(`${PREFIJO}chao`) === '', 'ni de uno nuestro con basura');
+
+  // --- La reconciliación -------------------------------------------------
+  const pub = (id: string, extra: Record<string, unknown> = {}) => ({
+    external_id: id, fecha: id.slice(PREFIJO.length), titulo: TITULOS.abierto,
+    descripcion: 'El restaurante abre al público ese día. Hay 8 personas con reserva.',
+    bloquea: false, ocupacion: 8, capacidad: 120, ...extra
+  });
+
+  const deseado = diaParaElCRM(pd({ fecha: '2026-11-07', tomadas: 8 }))!;
+  const yaIgual = leerPublicados({ externos: [pub('brasas-2026-11-07')] });
+  ok(yaIgual.length === 1, 'se lee lo ya publicado');
+  const sinCambios = reconciliar([deseado], yaIgual, '2026-11-01', '2027-01-30');
+  ok(sinCambios.publicar.length === 0 && sinCambios.borrar.length === 0,
+     'un día que ya dice lo mismo no se vuelve a mandar ni se borra');
+
+  const cambiado = reconciliar(
+    [diaParaElCRM(pd({ fecha: '2026-11-07', tomadas: 9 }))!],
+    yaIgual, '2026-11-01', '2027-01-30');
+  ok(cambiado.publicar.length === 1,
+     'si cambió la ocupación se vuelve a mandar');
+
+  // Lo que dejó de calificar dentro de la ventana se saca: sin esto le
+  // quedaría un día naranjo fantasma.
+  const yaNo = reconciliar([], yaIgual, '2026-11-01', '2027-01-30');
+  ok(yaNo.borrar.length === 1 && yaNo.borrar[0] === 'brasas-2026-11-07',
+     'un día nuestro que dejó de calificar se borra');
+
+  // **Lo que no es nuestro no se toca nunca**, aunque caiga en nuestro día.
+  const ajeno = leerPublicados({ externos: [
+    { external_id: 'ayc-2026-11-07', fecha: '2026-11-07', titulo: 'Matrimonio',
+      bloquea: true }
+  ] });
+  ok(reconciliar([], ajeno, '2026-11-01', '2027-01-30').borrar.length === 0,
+     'un id de otro origen no se borra: la tabla es compartida');
+
+  // Un día que ya pasó se saca: nadie vende el pasado, y sin esto la tabla
+  // del socio crece para siempre.
+  ok(reconciliar([], leerPublicados({ externos: [pub('brasas-2026-10-04')] }),
+                 '2026-11-01', '2027-01-30').borrar.length === 1,
+     'un día nuestro que ya pasó se borra');
+
+  // **Y más allá de la ventana no se borra nada.** Es la decisión con filo:
+  // un día rojo viejo le cuesta al socio una venta que sí se podía hacer; uno
+  // borrado de más le deja vender un recinto arrendado en exclusiva, que es
+  // un doble arriendo. Más allá de `hasta`, esta función no opina.
+  ok(reconciliar([], leerPublicados({ externos: [pub('brasas-2027-06-12')] }),
+                 '2026-11-01', '2027-01-30').borrar.length === 0,
+     'un día nuestro más allá de la ventana se deja quieto');
+
+  // --- El cuerpo del POST ------------------------------------------------
+  // Es un array pelado, comprobado contra la API de verdad: con un objeto
+  // envolvente responde "Ítem 0: falta external_id".
+  const cuerpo = cuerpoDe([deseado, cerrado]) as Record<string, unknown>[];
+  ok(Array.isArray(cuerpo), 'el cuerpo es un array');
+  ok(cuerpo[0].external_id === 'brasas-2026-11-07' &&
+     cuerpo[0].lugar === NUESTRO_LUGAR,
+     'cada ítem lleva su external_id y nuestro lugar');
+  ok(cuerpo[0].ocupacion === 8 && cuerpo[0].capacidad === 120,
+     'la ocupación va en sus campos, no escrita en el título');
+  ok(!(cuerpo[0].titulo as string).includes('/'),
+     'el título NO trae el "8/120": el chip lo arma el CRM');
+  ok(!('ocupacion' in cuerpo[1]) && !('capacidad' in cuerpo[1]),
+     'un día sin números no manda los campos en null: los omite');
+
+  // Nada interno viaja. Es lo que hace que no se pueda filtrar.
+  const cuerpoEnTexto = JSON.stringify(cuerpo);
+  for (const prohibido of ['nota', 'Nota', 'cliente', 'nombre']) {
+    ok(!cuerpoEnTexto.includes(prohibido),
+       `el cuerpo no lleva "${prohibido}": ni notas internas ni clientes`);
+  }
+
+  ok(tandas([1, 2, 3, 4, 5], 2).length === 3, 'se parte en tandas de a 2');
+  ok(tandas([]).length === 0, 'una lista vacía no hace ninguna llamada');
+
+  // Degradar, igual que al leer: una respuesta rota no tumba la
+  // reconciliación de los demás días.
+  ok(leerPublicados(null).length === 0, 'null se lee como lista vacía');
+  ok(leerPublicados({ externos: 'no soy un arreglo' }).length === 0,
+     'un campo externos que no es arreglo se lee vacío');
+  ok(leerPublicados({ externos: [{ fecha: '2026-11-07' }] }).length === 0,
+     'una fila sin external_id se descarta: no hay nada que reconciliar');
+}
 
 /* ---------- corregir un día cerrado (2026-11-03) ---------- */
 {

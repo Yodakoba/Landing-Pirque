@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { editarReserva, borrarReserva, anotar, leerReservas } from '@/lib/datos';
+import { empujarDias } from '@/lib/crm-escribir';
 import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';
@@ -22,14 +23,23 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // `correccion` tampoco es un campo de la reserva: es el motivo para
     // tocar una de un día cerrado, y se saca antes de escribir.
     const { tipoPago, id, creada, fila: _f, correccion, ...cambios } = await req.json();
+    // **Se lee ANTES de escribir, y sirve para dos cosas**: la guarda del día
+    // cerrado necesita saber en qué día está la reserva, y el empujón al CRM
+    // necesita el día del que sale —una edición puede moverla de fecha, y
+    // entonces el día que la pierde también cambia para el socio—.
+    const antes = (await leerReservas()).find((r) => r.fila === fila);
     // **Una reserva de un día cerrado solo se corrige** (2026-11-03): mirando
     // el día donde está y, si se la mueve, el día adonde va.
-    const antes = (await leerReservas()).find((r) => r.fila === fila);
     const guarda = await guardaDelDia(
       req, [antes?.fecha ?? '', typeof cambios.fecha === 'string' ? cambios.fecha : ''],
       correccion);
+    // La guarda va **antes** de escribir: es lo que puede rechazar la
+    // edición. El empujón al socio va después, cuando ya es un hecho.
     if ('error' in guarda) return guarda.error;
     await editarReserva(fila, cambios);
+    // Los dos días, el de antes y el de después. Si no se movió es el mismo y
+    // `empujarDias()` lo manda una sola vez.
+    await empujarDias([antes?.fecha ?? '', cambios.fecha ?? antes?.fecha ?? '']);
     const quien = await quienEs(req);
     // Qué campos se tocaron, no sus valores: la bitácora es un rastro para
     // poder preguntar, no una copia de la planilla. Ver bitacora.ts.
@@ -58,6 +68,10 @@ export async function DELETE(req: Request, { params }: { params: { fila: string 
     const guarda = await guardaDelDia(req, [antes?.fecha ?? ''], cuerpo?.correccion);
     if ('error' in guarda) return guarda.error;
     await borrarReserva(fila);
+    // Borrar la única reserva de un día abierto lo deja sin nada que
+    // informar, y entonces hay que sacarlo del calendario del socio. Eso lo
+    // decide `empujarDias()`; acá solo se le dice qué día mirar.
+    await empujarDias([antes?.fecha ?? '']);
     const quien = await quienEs(req);
     await anotar({ ...quien,
       accion: guarda.motivo ? 'Borró una reserva de un día cerrado' : 'Borró una reserva',

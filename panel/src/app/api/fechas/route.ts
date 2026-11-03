@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { leerFechas, guardarFecha , anotar } from '@/lib/datos';
+import { empujarDia } from '@/lib/crm-escribir';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,11 @@ export async function POST(req: Request) {
       estado: b.estado || 'Abierta',
       notas: b.notas ?? ''
     });
+    // El calendario del socio se entera ahora mismo. **No puede bloquear el
+    // guardado**: `empujarDia()` no lanza, y lo que se pierda lo recupera la
+    // reconciliación diaria. Va después de guardar, nunca antes.
+    await empujarDia(b.fecha);
+
     const quien = await quienEs(req);
     await anotar({ ...quien, accion: 'Cambió un día',
       detalle: `${b.fecha} · ${b.estado || 'Abierta'} · cupo ${Number(b.capacidad) || 0}` });
