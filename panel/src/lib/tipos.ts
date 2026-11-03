@@ -20,6 +20,8 @@ export interface Reserva {
   // "efectivo en el mesón". Texto libre a propósito: cuáles son los medios
   // de pago del negocio es dato del cliente, no una lista nuestra.
   notaPago: string;
+  /** El id del evento del CRM del socio del que salió, o vacío. */
+  eventoCRM: string;
   fila: number;          // número de fila en la planilla, para poder editarla
   /**
    * Cuántas filas de la planilla traen este mismo `ID Orden`. Ausente o 1 es

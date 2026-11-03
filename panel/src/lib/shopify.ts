@@ -286,6 +286,7 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
     // `camposDeShopify()` la deja fuera para no pisar lo que alguien
     // escribiera a mano sobre un pedido.
     notaPago: '',
+    eventoCRM: '',
     estadoPago: estadoDe(p),
     creada: texto(p.created_at),
     asistencia: ''
@@ -302,12 +303,16 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  *
  * Tampoco se reescribe `creada`: la fecha en que entró el pedido no cambia.
  *
+ * Ni `eventoCRM`: lo escribe quien anota un ganado del socio como reserva, y
+ * un pedido que se actualiza lo borraría — con eso el ganado volvería a
+ * aparecer como pendiente y el día contaría la misma gente dos veces.
+ *
  * Ni `notaPago`, por el mismo motivo que la asistencia: esa nota la escribe
  * una persona —"pagó la diferencia en efectivo"— y un pedido que se
  * actualiza la borraría.
  */
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
-  const { asistencia, creada, notaPago, ...resto } = r;
+  const { asistencia, creada, notaPago, eventoCRM, ...resto } = r;
   return resto;
 }
 

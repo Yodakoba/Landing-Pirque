@@ -36,10 +36,6 @@
  *
  * ## Dos cosas que el panel no muestra
  *
- * - **El nombre del cliente.** La API lo entrega y acá no se lee: Felipe
- *   está decidiendo si corresponde, y hasta entonces pidió no mostrarlo. Lo
- *   que no se lee no se puede filtrar mal más adelante. Si se autoriza, es
- *   agregar el campo en `leerEventos()`.
  * - **Los períodos, como día.** Un evento `periodo` es un mes aproximado
  *   —"entre enero y marzo"— y **no ocupa ninguna fecha concreta**. Meterlo
  *   en un día sería inventar: el propio CRM no sabe cuál es.
@@ -69,6 +65,13 @@ export const ETAPA_GANADO = 'Ganado';
 /**
  * Un evento del CRM, con lo que el panel usa.
  *
+ * **El nombre del cliente se lee desde el 2026-11-03.** Hasta ese día no: la
+ * API lo entregaba y acá se descartaba, porque Felipe estaba decidiendo si
+ * correspondía mostrarlo y pidió no hacerlo mientras tanto. El cliente lo
+ * autorizó, y la razón es buena — "1 evento ganado · 150 personas" obliga a
+ * ir a preguntarle al socio de quién es, que es justo el llamado que esto
+ * viene a ahorrar.
+ *
  * `etapa` se trata como **texto libre y no como lista cerrada**: la guía
  * nombra cinco —Nuevo, Contactado, Cotizado, Negociación, Ganado— y los
  * datos de hoy solo traen cuatro. Una lista cerrada acá convertiría una
@@ -76,6 +79,8 @@ export const ETAPA_GANADO = 'Ganado';
  */
 export interface EventoCRM {
   id: string;
+  /** Quién es el cliente. Viene con espacios de sobra: `texto()` los saca. */
+  nombre: string;
   /** Tal cual la manda el CRM; `confirmado` es lo que se mira para contar. */
   etapa: string;
   confirmado: boolean;
@@ -119,6 +124,7 @@ export function leerEventos(crudo: unknown): EventoCRM[] {
     if (!id) continue;              // sin id no hay evento que mostrar
     salida.push({
       id,
+      nombre: texto(e.nombre),
       etapa: texto(e.etapa),
       // Se deriva de la etapa y no se lee `confirmado`: así el panel no
       // depende de que los dos campos del CRM digan lo mismo.
@@ -147,6 +153,35 @@ export const esNuestro = (e: EventoCRM) =>
  */
 export const tieneDia = (e: EventoCRM) => !!e.fecha;
 
+/**
+ * Si un ganado del socio **ya está anotado como reserva acá**.
+ *
+ * Es la misma pregunta que `cuentaComoPosible()` en los presupuestos, y
+ * resuelve el mismo par de errores opuestos:
+ *
+ * - **Contar dos veces.** Al anotarlo, esa gente pasa a ocupar cupo de
+ *   verdad. Si además siguiera apareciendo como evento del socio pendiente,
+ *   el día mostraría las mismas 150 personas en los dos lados.
+ * - **Perderlo de vista.** Lo que lo apaga es que **exista una reserva que
+ *   lo nombre**, no una marca que alguien ponga: una marca puesta a mano
+ *   sobre una conversión que falló lo sacaría de las dos listas, y esa gente
+ *   llegaría sin que nadie la hubiera visto venir.
+ *
+ * Por eso la condición es un hecho de la planilla y no un estado guardado.
+ */
+export const yaEstaAnotado = (e: EventoCRM, anotados: ReadonlySet<string>) =>
+  anotados.has(e.id);
+
+/**
+ * Los ids de eventos del socio que ya tienen su reserva.
+ *
+ * Sale de la columna `ID Evento CRM` de `Reservas`, que es donde queda
+ * escrito al anotarlo. Vive acá y no en quien llama para que las tres
+ * pantallas que lo preguntan no tengan tres copias de la condición.
+ */
+export const anotadosDe = (reservas: ReadonlyArray<{ eventoCRM?: string }>) =>
+  new Set(reservas.map((r) => (r.eventoCRM ?? '').trim()).filter(Boolean));
+
 /** Lo que el panel muestra de un día: dos grupos y nada más. */
 export interface EventosDelDia {
   /** Ganados: gente que de verdad viene a nuestro recinto ese día. */
@@ -170,10 +205,15 @@ export const DIA_VACIO: EventosDelDia = {
  * evento ocupa este día de nuestro recinto", y repartirla en dos pantallas
  * es lo que se desalinea cuando cambie.
  */
-export function eventosPorFecha(eventos: EventoCRM[]): Map<Fecha, EventosDelDia> {
+export function eventosPorFecha(
+  eventos: EventoCRM[], anotados: ReadonlySet<string> = new Set()
+): Map<Fecha, EventosDelDia> {
   const mapa = new Map<Fecha, EventosDelDia>();
   for (const e of eventos) {
     if (!esNuestro(e) || !tieneDia(e)) continue;
+    // **Lo que ya tiene su reserva acá desaparece de esta capa**, porque ya
+    // está contado en el cupo. Ver `yaEstaAnotado()`.
+    if (yaEstaAnotado(e, anotados)) continue;
     const dia = mapa.get(e.fecha) ?? {
       confirmados: [], tentativos: [], personasConfirmadas: 0, personasTentativas: 0
     };

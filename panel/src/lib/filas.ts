@@ -46,6 +46,7 @@ export function filaReserva(
   poner(i.creada, r.creada);
   poner(i.asistencia, r.asistencia);
   poner(i.notaPago, r.notaPago);
+  poner(i.eventoCRM, r.eventoCRM);
   return fila;
 }
 
@@ -159,6 +160,7 @@ export function leerReservasDe(filas: string[][]): Reserva[] {
       creada: String(en(f, i.creada)),
       asistencia: String(en(f, i.asistencia)),
       notaPago: String(en(f, i.notaPago)),
+      eventoCRM: String(en(f, i.eventoCRM)),
       fila: n + 1                            // 1-based, y la 1 es el encabezado
     };
     salida.push(reserva);

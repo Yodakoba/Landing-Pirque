@@ -29,7 +29,21 @@ export const COL_RESERVAS = {
   estadoPago: 'Estado Pago Shopify',
   creada: 'Creada',
   asistencia: 'Asistencia',
-  notaPago: 'Nota de pago'
+  notaPago: 'Nota de pago',
+  /**
+   * De qué evento del CRM del socio salió esta reserva.
+   *
+   * **Es lo que impide contar la misma gente dos veces** (2026-11-03). Un
+   * ganado del socio se ve en el panel como gente que viene y que el cupo no
+   * cuenta; al anotarlo como reserva pasa a contar, y entonces tiene que
+   * dejar de verse como pendiente — si no, el día mostraría las mismas 150
+   * personas en los dos lados. Mismo papel que el `ID Reserva` de un
+   * presupuesto, y por el mismo motivo.
+   *
+   * Vacío en todas las demás: una reserva de Shopify o anotada a mano no
+   * viene de ningún evento del socio.
+   */
+  eventoCRM: 'ID Evento CRM'
 } as const;
 
 export const COL_FECHAS = {

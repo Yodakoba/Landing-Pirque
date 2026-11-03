@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { exigir } from '@/lib/permisos';
 import {
-  CRM_API, NUESTRO_LUGAR, leerEventos, eventosPorFecha, periodosNuestros
+  CRM_API, NUESTRO_LUGAR, leerEventos, eventosPorFecha, periodosNuestros,
+  anotadosDe
 } from '@/lib/crm';
+import { leerReservas } from '@/lib/datos';
 import { esFecha } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
@@ -63,8 +65,13 @@ export async function GET(req: Request) {
     });
     if (!r.ok) throw new Error(`El CRM respondió ${r.status}`);
     const eventos = leerEventos(await r.json());
+    // **Lo ya anotado se filtra acá y no en la caché.** La respuesta del CRM
+    // se guarda una hora; las reservas cambian en cualquier momento, así que
+    // quién ya tiene su reserva se vuelve a preguntar en cada llamada. Si la
+    // planilla no responde, se sigue mostrando todo: de más, nunca de menos.
+    const anotados = anotadosDe(await leerReservas().catch(() => []));
     return NextResponse.json({
-      dias: Object.fromEntries(eventosPorFecha(eventos)),
+      dias: Object.fromEntries(eventosPorFecha(eventos, anotados)),
       periodos: periodosNuestros(eventos),
       configurado: true
     });

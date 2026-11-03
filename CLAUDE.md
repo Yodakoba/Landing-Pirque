@@ -1664,13 +1664,8 @@ habríamos pintado Calicanto en nuestro calendario — y **hay una prueba que lo
 fija**: quitando `esNuestro()` fallan siete, entre ellas que las 200 personas
 de un matrimonio en Calicanto se sumaban al sábado 7.
 
-### Dos cosas que el panel no muestra
+### Lo que el panel no muestra
 
-- **El nombre del cliente.** La API lo entrega; `leerEventos()` no lo lee.
-  Felipe está decidiendo si corresponde y pidió no mostrarlo mientras tanto.
-  **Lo que no se lee no se puede filtrar mal después**, y hay una prueba que
-  comprueba que el campo no existe en lo que sale. Si se autoriza, es
-  agregarlo ahí.
 - **Los períodos, como día.** Más de la mitad de los eventos del CRM son
   `periodo`: meses aproximados —"entre julio y agosto"— sin día decidido.
   **No ocupan ninguna fecha**, porque ponerlos en una sería publicar un día
@@ -1726,6 +1721,144 @@ descarta es un evento **sin id**: no hay nada que mostrar.
 sin CRM_API_KEY                     →  200, vacío, configurado: false
 con clave mala                      →  502, vacío, "No se pudo leer el CRM."
 ```
+
+### Se veía en la ruta y en ninguna pantalla (2026-11-03)
+
+**La mitad que lee el CRM se escribió el 2026-11-02 y nunca se dibujó.** La
+ruta funcionaba, tenía pruebas y estaba probada contra el servicio real — y
+**ninguna pantalla la llamaba**. O sea que el panel ya le contaba al socio lo
+que pasa acá y todavía no mostraba lo que pasa allá.
+
+Lo notó el cliente mirando el domingo 22 de noviembre: *"no debería mostrarse
+la reserva ganada ya?"*, con la tarjeta diciendo `0/150 personas` sobre un día
+que el socio tiene vendido a 150. En la ventana había **12 eventos sin ver**,
+incluidos los 190 ya ganados del 18 de diciembre.
+
+Vale tenerlo escrito porque el modo de falla es el peor que hay: **todo verde
+y nada a la vista.** Las pruebas pasaban, la ruta respondía, el build estaba
+limpio. Lo único que faltaba era que alguien la llamara, y eso no lo dice
+ningún error. La regla que deja: **una ruta sin pantalla no está hecha.**
+
+### No es una vista paralela: es una bandeja de entrada
+
+Y esa es la decisión de fondo, y la puso el cliente al ver el primer corte
+—que solo mostraba—: *"cuando viene un presupuesto ganado desde el CRM, que
+nosotros lo vemos, pero nosotros lo convertimos en una reserva y le damos las
+informaciones que solo nosotros sabemos poner en sistema. Ya son tantos menús
+de esto, etcétera."*
+
+Es mejor que mostrarlo y listo, porque **mostrar no resuelve nada**: un ganado
+del socio seguiría siendo gente que viene y que el cupo no cuenta, para
+siempre. Anotarlo lo pasa a reserva de verdad.
+
+| Lo que sabe el socio | Lo que solo sabemos acá |
+|---|---|
+| quién, qué día, cuánta gente | **cuántos de cada menú**, el monto, el teléfono, el correo |
+
+Por eso lo del socio **se propone y lo nuestro se escribe**: el nombre viene
+puesto y la gente se dice en una línea, pero **no se reparte sola en los
+menús**. Cuántos van de cada uno es justamente el dato que el socio no tiene,
+y rellenarlo con un menú cualquiera sería inventar lo que hay que cocinar.
+
+- **Solo los ganados se ofrecen para anotar.** Un cotizado todavía no es
+  gente que viene, y anotarlo le quitaría el lugar a alguien por un evento
+  que el propio socio no ha cerrado.
+- **Al anotarlo desaparece de esta capa**, porque ya ocupa cupo. Seguir
+  mostrándolo sería contar la misma gente dos veces — el día mostraría las
+  mismas 150 personas en los dos lados.
+
+#### La columna `ID Evento CRM`, que es lo que impide contarlo dos veces
+
+Vive en `Reservas` y **se agrega sola** la primera vez (`asegurarColumna()`),
+como la `Nota de pago`. Guarda de qué evento del socio salió esa reserva.
+
+Es el mismo papel que el `ID Reserva` de un presupuesto, y cubre el mismo par
+de errores opuestos: **contar dos veces** si el ganado siguiera apareciendo, y
+**perderlo de vista** si lo apagara una marca a mano en vez de un hecho. Por
+eso lo que lo apaga es **que exista una reserva que lo nombre**.
+
+- **Se asegura siempre al crear una reserva, no solo cuando viene con
+  valor.** Si se creara recién al anotar el primer ganado, la fila que lo
+  estrena sería justamente la que no encuentra la columna.
+- **El sincronizador de Shopify no la pisa**, igual que la asistencia y la
+  nota de pago: un pedido que se actualiza la borraría, y con eso el ganado
+  volvería a aparecer como pendiente.
+- **Sí se acepta del navegador**, al revés que el `ID Reserva` de un
+  presupuesto. La diferencia es real: acá la misma llamada **crea** la
+  reserva que dice estar anotando, así que no hay forma de apagar el conteo
+  de un día sin agregar también a esa gente.
+- **Lo ya anotado se filtra en cada llamada, no en la caché.** La respuesta
+  del CRM se guarda una hora; las reservas cambian en cualquier momento. Si
+  la planilla no responde se muestra todo: de más, nunca de menos.
+
+**Se comprobó rompiéndolo**: dejando pasar el ganado ya anotado falla la
+prueba que dice que deja de contarse, y tomando los `eventoCRM` vacíos como
+ids falla la que dice que una reserva sin evento no apaga nada.
+
+#### Dos colores, porque son dos cosas
+
+El cliente propuso el rosado de los presupuestos —*"en verdad es como de
+presupuestos"*— y tiene razón **para la mitad**: un evento en `Cotizado`,
+`Nuevo` o `Contactado` **es** un presupuesto, el de otro, y rosado ya
+significa exactamente eso acá. Mismo significado, mismo color.
+
+**Para un `Ganado` diría lo contrario de lo que es.** Rosado quiere decir
+"todavía no se sabe", y de un ganado sí se sabe: es gente que viene. Y es
+justo la mitad peligrosa, así que pintarla del color de lo que no se sabe
+sería tranquilizar sobre lo único que no hay que estar tranquilo. Los ganados
+van en **cielo**, el color de un día privado y por el mismo motivo: gente que
+viene por un camino que no es el formulario del sitio.
+
+| Dónde | Qué muestra |
+|---|---|
+| Tarjeta del calendario | una pastilla **debajo** de la barra: *1 ganado · 150 del socio*, y los cotizados aparte en rosado |
+| Página del día | un bloque propio con quién, cuánta gente, en qué va y **el botón de anotarlo** |
+| Planilla semanal y link personal | **nunca**, igual que los presupuestos |
+| Sitio público | **nunca** |
+
+**Y el aviso de choque, por fin usado.** `haySobreventa()` estaba escrito
+desde el 2026-11-02 sin que nadie lo llamara: cuando lo que el socio ya cerró
+no cabe en lo que el panel todavía ofrece, la pastilla pasa a **ámbar** y el
+bloque del día lo dice con todas sus letras. **Solo donde se sabe el cupo** —
+la tarjeta lo tiene, la página del día no, y ahí un `quedan` inventado haría
+aparecer la alarma por un dato que nadie miró.
+
+#### El contador de menús se podía apretar y no escribir
+
+Salió de esto y es de los que no se notan hasta que aparece el caso: en el
+formulario de reserva del panel la cantidad de cada menú era un `<span>`
+entre dos botones. Para una familia de seis da lo mismo; **para anotar un
+evento de 150 personas el único camino era apretar `+` ciento cincuenta
+veces.**
+
+El formulario del sitio público ya tenía la regla escrita —*"los botones son
+una comodidad encima, no el único camino"*— y el del panel la había perdido.
+Ahora la cantidad es un campo que se escribe, con los botones al lado.
+
+### Probado de punta a punta (2026-11-03)
+
+Con el 22 de noviembre exclusivo y vacío, y el ganado de 150 del socio:
+
+```
+tarjeta del 22   0/150 personas  ·  ● 1 ganado · 150 del socio   (cielo)
+página del día   FELIPE IZQUIERDO · Otro · 150 personas · Ganado
+                 lo lleva Cristóbal       [Anotar como reserva]
+```
+
+Apretando el botón, el formulario abre como **"Anotar el evento del socio"**,
+con el nombre puesto y la línea *"Viene del CRM del socio, con 150 personas"*.
+Repartidas en un menú y guardado, la planilla quedó con:
+
+```
+Nombre: FELIPE IZQUIERDO · Personas: 150 · Menú: 150 × Tradiciones
+ID Evento CRM: bc4a7262-72dd-40b2-886c-640cd9627dd2
+```
+
+y **el ganado desapareció de la capa del socio** —ya ocupa cupo— mientras el
+del 7 de noviembre, sin anotar, sigue mostrando sus 58.
+
+Y el aviso: bajándole el cupo al 7 de noviembre a 40 lugares con 58 ya
+ganadas por el socio, la pastilla pasó a ámbar.
 
 ### Privado, y privado exclusivo (2026-11-02)
 
