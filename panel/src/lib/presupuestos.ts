@@ -441,6 +441,7 @@ export function reservaDesdePresupuesto(
   fecha: Fecha; nombre: string; email: string; telefono: string;
   menu: string; personas: number; monto: number;
   tipoPago: ''; estadoPago: string; asistencia: string; notaPago: string;
+  eventoCRM: '';
 } {
   const cuenta: Record<string, number> = {};
   for (const l of lineas) {
@@ -463,7 +464,9 @@ export function reservaDesdePresupuesto(
     tipoPago: '',
     estadoPago: ESTADO_PAGO.pendiente,
     asistencia: '',
-    notaPago: `Del presupuesto N° ${folioDe(p)}`
+    notaPago: `Del presupuesto N° ${folioDe(p)}`,
+    // No sale del CRM del socio: sale de un presupuesto nuestro.
+    eventoCRM: ''
   };
 }
 

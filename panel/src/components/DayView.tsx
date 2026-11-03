@@ -20,6 +20,8 @@ import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
+import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
+import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
@@ -107,6 +109,9 @@ export default function DayView({ fecha }: { fecha: string }) {
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [editando, setEditando] = useState<Reserva | null>(null);
   const [creando, setCreando] = useState(false);
+  /** El ganado del socio que se está pasando al panel, si hay alguno. */
+  const [anotandoCRM, setAnotandoCRM] = useState<EventoCRM | null>(null);
+  const [delSocio, setDelSocio] = useState<EventosDelDia>(SIN_EVENTOS);
   // El catalogo de menus. Distinto de `menus`, que mas abajo son los
   // totales por plato de este dia.
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
@@ -191,7 +196,22 @@ export default function DayView({ fecha }: { fecha: string }) {
       })
       .catch(() => {});
 
-  useEffect(() => { cargar(); cargarEquipo(); cargarExtras(); cargarCotizado(); }, []);
+  /**
+   * Lo que el socio tiene para este día.
+   *
+   * **Si el CRM no responde, la página se dibuja igual**: es un servicio de
+   * un tercero y no puede meterse en el camino de la pantalla que contesta
+   * cuánta gente viene. Misma asimetría que lo cotizado.
+   */
+  const cargarCRM = () =>
+    fetch(`/api/crm/eventos?desde=${fecha}&hasta=${fecha}`)
+      .then((r) => r.json())
+      .then((d) => setDelSocio(d?.dias?.[fecha] ?? SIN_EVENTOS))
+      .catch(() => {});
+
+  useEffect(() => {
+    cargar(); cargarEquipo(); cargarExtras(); cargarCotizado(); cargarCRM();
+  }, []);
 
   const delDia = useMemo(
     () => (todas ?? []).filter((r) => r.fecha === fecha),
@@ -539,6 +559,14 @@ export default function DayView({ fecha }: { fecha: string }) {
         )}
       </div>
 
+      {/* **Lo que el socio tiene vendido para este día** (2026-11-03). Va
+          antes de lo cotizado porque acá sí hay algo que hacer: un ganado
+          suyo es gente que viene y que el panel todavía no cuenta, y el
+          botón lo pasa a reserva. Ver `EventosCRM.tsx`. */}
+      <BloqueCRM e={delSocio}
+                 onAnotar={(ev) => { setEditando(null); setCreando(false);
+                                     setAnotandoCRM(ev); }} />
+
       {/* **Lo cotizado para este día, en su propio bloque y en rosado**
           (2026-11-01). Va debajo del equipo y de las extras porque es lo
           único de esta pantalla que **todavía no es un hecho**: arriba está
@@ -798,15 +826,26 @@ export default function DayView({ fecha }: { fecha: string }) {
         </div>
       )}
 
-      {(creando || editando) && (
+      {(creando || editando || anotandoCRM) && (
         <ReservaForm
           fecha={fecha}
           menusConocidos={conocidos}
           catalogo={catalogo}
           reserva={editando}
           pideMotivo={diaCerrado}
-          onListo={() => { setCreando(false); setEditando(null); cargar(); }}
-          onCancelar={() => { setCreando(false); setEditando(null); }}
+          desdeCRM={anotandoCRM
+            ? { id: anotandoCRM.id, nombre: anotandoCRM.nombre,
+                personas: anotandoCRM.invitados }
+            : undefined}
+          onListo={() => {
+            setCreando(false); setEditando(null); setAnotandoCRM(null);
+            // Las dos: la reserva nueva, y el ganado que acaba de dejar de
+            // estar pendiente.
+            cargar(); cargarCRM();
+          }}
+          onCancelar={() => {
+            setCreando(false); setEditando(null); setAnotandoCRM(null);
+          }}
         />
       )}
     </>

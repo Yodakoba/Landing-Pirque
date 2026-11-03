@@ -67,11 +67,18 @@ export { leerReservasDe };
 
 export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): Promise<string> {
   const filas = await leerHoja(HOJA_RESERVAS);
-  // La nota de pago llegó después que la planilla, así que la columna puede
-  // no estar. Se agrega sola la primera vez: sin esto el campo se escribiría
-  // en el formulario y no quedaría en ninguna parte.
-  const enc = await asegurarColumna(
+  // La nota de pago y el evento del CRM llegaron después que la planilla, así
+  // que sus columnas pueden no estar. Se agregan solas la primera vez: sin
+  // esto el campo se escribiría en el formulario y no quedaría en ninguna
+  // parte — una columna que el panel conoce y la planilla no se lee vacía, y
+  // `filaReserva()` saltea su índice en silencio.
+  //
+  // **El del CRM se asegura siempre, no solo cuando viene con valor.** Si se
+  // creara recién al anotar el primer ganado, la fila que lo estrena sería
+  // justamente la que no lo encuentra.
+  let enc = await asegurarColumna(
     HOJA_RESERVAS, filas[0] ?? [], COL_RESERVAS.notaPago);
+  enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.eventoCRM);
   // MANUAL- para que no pueda chocar con un id de Shopify, que es numérico.
   const id = 'MANUAL-' + Date.now();
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, {

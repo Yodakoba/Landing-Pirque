@@ -6,6 +6,7 @@
  * cobrada y cuánta hay que cobrar el mismo día.
  */
 import { useEffect, useMemo, useState } from 'react';
+import type { EventosDelDia } from '@/lib/crm';
 import Ayuda from './Ayuda';
 import { verRecorrido } from './Recorrido';
 import type { Ocupacion, Reserva } from '@/lib/tipos';
@@ -76,6 +77,14 @@ export default function CalendarView() {
   const [planificando, setPlanificando] =
     useState<{ fecha: string; personas: number } | null>(null);
   const [avisoPlanilla, setAvisoPlanilla] = useState('');
+  /**
+   * Lo que el CRM del socio tiene, por fecha, **sin lo que ya está anotado**.
+   *
+   * Vacío mientras no llegue, y vacío si el CRM no responde: el calendario
+   * se dibuja igual. Es un servicio de un tercero y no puede meterse en el
+   * camino de la pantalla que contesta cuánta gente viene.
+   */
+  const [delSocio, setDelSocio] = useState<Record<string, EventosDelDia>>({});
 
   /** Crear o renovar la llave. Devuelve la nueva, o `''` si algo falló. */
   async function pedirToken(accion: 'crear' | 'renovar') {
@@ -150,6 +159,10 @@ export default function CalendarView() {
         if (d.reservas) setReservas(d.reservas);
         if (d.menus) setMenus(d.menus);
       })
+      .catch(() => {});
+    fetch('/api/crm/eventos')
+      .then((r) => r.json())
+      .then((d) => setDelSocio(d?.dias ?? {}))
       .catch(() => {});
     fetch('/api/equipo')
       .then((r) => r.json())
@@ -357,6 +370,7 @@ export default function CalendarView() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
               <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
+                delSocio={delSocio[d.fecha]}
                 resumen={equipo
                   ? resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas)
                   : null}

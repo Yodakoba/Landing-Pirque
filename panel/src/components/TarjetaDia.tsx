@@ -29,6 +29,8 @@
  *   alcanzables, así que sin esto se podría tabular hacia botones invisibles.
  */
 import { useState } from 'react';
+import { LineaCRM } from './EventosCRM';
+import type { EventosDelDia } from '@/lib/crm';
 import type { Ocupacion } from '@/lib/tipos';
 import type { ResumenEquipo } from '@/lib/equipo';
 import { enPesos } from '@/lib/ocupacion';
@@ -129,9 +131,11 @@ const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3';
 const BOTON = 'tecla boton boton-angosto';
 
 export default function TarjetaDia({
-  d, resumen, clima, onEditar, onPlanificar
+  d, resumen, clima, delSocio, onEditar, onPlanificar
 }: {
   d: Ocupacion;
+  /** Lo que el CRM del socio tiene para este día y acá no está anotado. */
+  delSocio?: EventosDelDia;
   /** El pronóstico de ese día, si cae dentro de los que hay (unos 9 o 10). */
   clima?: DatoClima;
   /** El equipo de este día. `null` mientras todavía no se cargó. */
@@ -289,6 +293,12 @@ export default function TarjetaDia({
 
               Aparece solo si hay alguno: un "0 presupuestos" es ruido en una
               tarjeta que se mira para decidir. */}
+          {/* **Lo que el socio tiene vendido para este día** (2026-11-03).
+              Va junto a lo cotizado y debajo de todo, por lo mismo: son las
+              dos capas de gente que el cupo no cuenta. Los ganados en cielo
+              y los cotizados en rosado — ver `EventosCRM.tsx`. */}
+          {delSocio && <LineaCRM e={delSocio} quedan={d.quedan} />}
+
           {d.presupuestos > 0 && (
             <p className="mt-2 flex flex-wrap gap-2 text-[13px]">
               <span className="inline-flex items-center gap-1.5 rounded-md border

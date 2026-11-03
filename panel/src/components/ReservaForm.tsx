@@ -39,10 +39,21 @@ import CampoTelefono from './CampoTelefono';
 import { correoNormal, avisoCorreo } from '@/lib/contacto';
 
 export default function ReservaForm({
-  fecha, reserva, menusConocidos, catalogo, pideMotivo = false, onListo, onCancelar
+  fecha, reserva, menusConocidos, catalogo, pideMotivo = false, desdeCRM,
+  onListo, onCancelar
 }: {
   fecha: string;
   reserva: Reserva | null;
+  /**
+   * El ganado del socio que se está pasando al panel (2026-11-03).
+   *
+   * **Lo que el CRM sabe se propone; lo que solo sabemos acá se escribe.**
+   * El nombre viene puesto y la gente se dice en una línea, pero **no se
+   * reparte sola en los menús**: cuántos van de cada uno es justamente el
+   * dato que el socio no tiene, y rellenarlo con un menú cualquiera sería
+   * inventar lo que hay que cocinar.
+   */
+  desdeCRM?: { id: string; nombre: string; personas: number };
   menusConocidos: string[];
   catalogo: Menu[];
   /**
@@ -56,7 +67,7 @@ export default function ReservaForm({
 }) {
   const [f, setF] = useState({
     fecha: reserva?.fecha ?? fecha,
-    nombre: reserva?.nombre ?? '',
+    nombre: reserva?.nombre ?? desdeCRM?.nombre ?? '',
     email: reserva?.email ?? '',
     telefono: reserva?.telefono ?? '',
     // **La modalidad NO se edita acá**: sale del `variant_title` del pedido,
@@ -125,6 +136,20 @@ export default function ReservaForm({
     setCuenta((c) => ({ ...c, [menu]: Math.max(0, (c[menu] ?? 0) + n) }));
   }
 
+  /**
+   * Escribir la cantidad de un menú a mano.
+   *
+   * **Los botones son una comodidad encima, no el único camino** — es la
+   * misma regla que el formulario del sitio público, y acá se había perdido:
+   * la cantidad era un `<span>`. Para una familia de seis da lo mismo; se
+   * notó al anotar un evento del socio de **150 personas**, donde el único
+   * camino era apretar `+` ciento cincuenta veces.
+   */
+  function poner(menu: string, v: string) {
+    const n = Math.max(0, Math.trunc(Number(v)) || 0);
+    setCuenta((c) => ({ ...c, [menu]: n }));
+  }
+
   function agregarMenu() {
     const m = nuevoMenu.trim();
     if (!m) return;
@@ -146,6 +171,9 @@ export default function ReservaForm({
       // Sin precios puestos el sugerido da 0; eso se guarda en blanco, que
       // es lo mismo que hacia antes de pedir el monto.
       monto: monto > 0 ? monto : null,
+      // De qué ganado del socio sale, para que deje de aparecer como
+      // pendiente y el día no cuente esa gente dos veces.
+      ...(desdeCRM ? { eventoCRM: desdeCRM.id } : {}),
       ...(pideMotivo ? { correccion: { motivo: motivo.trim() } } : {})
     };
     const res = reserva
@@ -161,8 +189,24 @@ export default function ReservaForm({
   }
 
   return (
-    <Dialogo titulo={reserva ? 'Editar reserva' : 'Agregar reserva'} onCerrar={onCancelar}>
+    <Dialogo
+      titulo={desdeCRM ? 'Anotar el evento del socio'
+                       : reserva ? 'Editar reserva' : 'Agregar reserva'}
+      onCerrar={onCancelar}>
       <>
+        {/* Lo que el socio sabe, dicho una vez y arriba: el nombre ya está
+            puesto abajo, y la gente es el número que hay que repartir en los
+            menús. Va como aviso y no como campo porque **no se guarda**: lo
+            que se guarda son los menús que se escriban. */}
+        {desdeCRM && (
+          <p className="mt-3 rounded border border-cielo/40 bg-cielo/[0.08] px-3 py-2 text-[13px]">
+            Viene del <strong>CRM del socio</strong>, con{' '}
+            <strong className="tabular-nums">{desdeCRM.personas}</strong>{' '}
+            {desdeCRM.personas === 1 ? 'persona' : 'personas'}. Reparte esa
+            gente en los menús de abajo; lo que el socio no sabe —los menús,
+            el monto, el contacto— se escribe acá.
+          </p>
+        )}
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Campo etiqueta="Fecha" ancho><input type="date" {...campo('fecha')} className={ENTRADA} /></Campo>
@@ -268,7 +312,13 @@ export default function ReservaForm({
                   className="h-9 w-9 rounded border border-hueso/20 text-lg leading-none
                              hover:border-oro disabled:opacity-30"
                   disabled={!(cuenta[m] > 0)}>−</button>
-                <span className="w-8 text-center tabular-nums">{cuenta[m] ?? 0}</span>
+                <input type="number" min={0} inputMode="numeric"
+                  aria-label={`Cuántos de ${m}`}
+                  value={cuenta[m] ?? 0}
+                  onChange={(e) => poner(m, e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  className="h-9 w-16 rounded border border-hueso/20 bg-transparent
+                             text-center tabular-nums focus:border-oro" />
                 <button type="button" onClick={() => sumar(m, 1)}
                   aria-label={`Agregar uno de ${m}`}
                   className="h-9 w-9 rounded border border-hueso/20 text-lg leading-none

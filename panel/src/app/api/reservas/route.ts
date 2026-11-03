@@ -58,6 +58,14 @@ export async function POST(req: Request) {
       // nace sin ella, que es lo que de verdad pasó.
       tipoPago: '', estadoPago: b.estadoPago ?? '',
       notaPago: String(b.notaPago ?? '').trim(),
+      // **De qué ganado del socio sale esta reserva**, cuando sale de uno.
+      // Al revés que `tipoPago`, este campo SÍ se acepta del navegador: no
+      // es una opinión sobre la reserva, es de dónde viene — y acá no se
+      // puede usar para mentir, porque la misma llamada crea la reserva que
+      // dice estar anotando. (El `ID Reserva` de un presupuesto no se acepta
+      // justamente porque ahí sí se podría apagar el conteo de un día sin
+      // que existiera ninguna reserva.)
+      eventoCRM: String(b.eventoCRM ?? '').trim(),
       // Sin marcar: a una reserva que se acaba de crear todavía no se le
       // puede saber si la persona apareció.
       asistencia: ASISTENCIA.sinMarcar

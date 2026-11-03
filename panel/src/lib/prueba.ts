@@ -26,7 +26,7 @@ import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import {
   leerEventos, esNuestro, tieneDia, eventosPorFecha, periodosNuestros,
-  haySobreventa, NUESTRO_LUGAR,
+  haySobreventa, NUESTRO_LUGAR, yaEstaAnotado, anotadosDe,
   PREFIJO, TITULOS, idExterno, esNuestroId, fechaDelId, diaParaElCRM,
   leerPublicados, reconciliar, cuerpoDe, tandas, type DiaDelPanel
 } from './crm.ts';
@@ -95,7 +95,7 @@ const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA
 const r = (p: Partial<Reserva>): Reserva => ({
   id: 'x', fecha: '2026-11-14', nombre: '', email: '', telefono: '',
   menu: 'Tradiciones', personas: 1, monto: null, tipoPago: TIPO_PAGO.directo, asistencia: '',
-  estadoPago: 'paid', creada: '', notaPago: '', fila: 2, ...p
+  estadoPago: 'paid', creada: '', notaPago: '', eventoCRM: '', fila: 2, ...p
 });
 const tu = (p: Partial<Turno>): Turno => ({
   fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
@@ -187,7 +187,7 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
-               'Asistencia','Nota de pago'];
+               'Asistencia','Nota de pago','ID Evento CRM'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -2707,6 +2707,7 @@ console.log('\nEventos del CRM');
     total: 7,
     eventos: [
       { id: 'a', etapa: 'Ganado', confirmado: true, empresa: 'brasas',
+        nombre: 'Matrimonio Perez ',
         tipo_evento: 'Otro', lugar: 'Lo Pirque', tipo_fecha: 'fecha',
         fecha: '2026-11-07', periodo_inicio: null, periodo_fin: null,
         invitados: 58, vendedor: 'Teresita Mujica' },
@@ -2744,10 +2745,13 @@ console.log('\nEventos del CRM');
   ok(ev[5].fecha === '' && ev[5].periodoInicio === '2027-07-01',
      'un período no trae fecha y sí sus dos meses');
 
-  // **El nombre del cliente no se lee.** Felipe pidió no mostrarlo mientras
-  // lo decide, y lo que no se lee no se puede filtrar mal después.
-  ok(!Object.keys(ev[0]).includes('nombre'),
-     'el nombre del cliente no entra al panel');
+  // **El nombre del cliente sí se lee, desde el 2026-11-03.** Hasta ese día
+  // no, mientras Felipe lo decidía. Viene con espacios de sobra —en los datos
+  // de verdad, `'FELIPE IZQUIERDO '`— y `texto()` los saca: un nombre con un
+  // espacio al final se ve mal justo donde va a quedar al lado de un monto.
+  ok(ev[0].nombre === 'Matrimonio Perez', 'el nombre del cliente entra al panel');
+  ok(leerEventos({ eventos: [{ id: 'x', nombre: '  ACME  ' }] })[0].nombre === 'ACME',
+     'y entra sin los espacios de sobra');
 
   // **Ésta es la prueba que fija la decisión del filtro.** La guía del socio
   // recomienda `empresa=brasas`; para ocupar el recinto manda `lugar`, y los
@@ -2802,6 +2806,39 @@ console.log('\nEventos del CRM');
      'un "confirmado: true" con etapa Cotizado NO cuenta como confirmado');
   ok(eventosPorFecha(mentiroso).get('2026-12-05')!.personasConfirmadas === 0,
      'y por lo tanto no suma gente confirmada a ese día');
+
+  // --- Anotar un ganado del socio como reserva nuestra (2026-11-03) -------
+  //
+  // Lo pidió el cliente: *"cuando viene un presupuesto ganado desde el CRM,
+  // nosotros lo convertimos en una reserva y le damos las informaciones que
+  // solo nosotros sabemos poner"*. Lo que esto fija es que **no se cuente
+  // dos veces**: anotado acá, deja de aparecer como evento del socio.
+  const delSocio = leerEventos({ eventos: [
+    { id: 'g1', etapa: 'Ganado', lugar: 'Lo Pirque', nombre: 'Empresa Uno',
+      tipo_fecha: 'fecha', fecha: '2026-11-22', invitados: 150 },
+    { id: 'g2', etapa: 'Cotizado', lugar: 'Lo Pirque', nombre: 'Empresa Dos',
+      tipo_fecha: 'fecha', fecha: '2026-11-22', invitados: 40 }
+  ] });
+
+  const sinAnotar = eventosPorFecha(delSocio).get('2026-11-22')!;
+  ok(sinAnotar.personasConfirmadas === 150 && sinAnotar.personasTentativas === 40,
+     'sin anotar, el día muestra el ganado y el cotizado del socio');
+
+  // Y la columna de la planilla es la que lo apaga.
+  const anotados = anotadosDe([
+    { eventoCRM: 'g1' }, { eventoCRM: '' }, { eventoCRM: '  ' }, {}
+  ]);
+  ok(anotados.size === 1 && anotados.has('g1'),
+     'solo los ids escritos de verdad cuentan: los vacíos no apagan nada');
+
+  const yaAnotado = eventosPorFecha(delSocio, anotados).get('2026-11-22')!;
+  ok(yaAnotado.personasConfirmadas === 0,
+     'anotado como reserva, el ganado deja de contarse en esta capa: ya ocupa cupo');
+  ok(yaAnotado.personasTentativas === 40,
+     'y el cotizado de al lado sigue ahí, que no tiene nada que ver');
+
+  ok(yaEstaAnotado(delSocio[0], anotados) && !yaEstaAnotado(delSocio[1], anotados),
+     'la pregunta se contesta por el id del evento, no por su etapa');
 
   // Degradar: una respuesta rota no tumba nada.
   ok(leerEventos(null).length === 0, 'null se lee como lista vacía');
