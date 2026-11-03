@@ -1965,30 +1965,44 @@ vez de duplicar**; las tildes van y vuelven intactas (`Día público, ñandú`);
 `DELETE` existente da `{"eliminados":1}` e inexistente `{"eliminados":0}`. La
 tabla del socio quedó vacía, como la dejó él.
 
-Y la cadena completa con un fin de semana sembrado —los cinco casos— contra
-un servidor local que imita su API, para no ensuciarle la tabla:
+Y **la cadena completa contra su tabla de verdad**, con un fin de semana
+sembrado en la planilla —los cinco casos—. Esto es lo que su API devolvió
+después de que el panel escribiera, o sea el chip tal como lo va a ver el
+vendedor:
 
 ```
-2026-11-14  naranjo  Abierto con reservas        12/120
-2026-11-15  —        abierto y vacío: NO se manda
-2026-11-21  naranjo  Evento privado              40/120
-2026-11-22  ROJO     Recinto arrendado completo  90/120
-2026-11-28  ROJO     Cerrado                     sin números
-2027-06-12  —        más allá de la ventana: NO se manda
+2026-11-14  naranjo  Abierto con reservas · 12/120
+2026-11-15  —        abierto y vacío: NO se mandó
+2026-11-21  naranjo  Evento privado · 40/120
+2026-11-22  ROJO     Recinto arrendado completo · 90/120
+2026-11-28  ROJO     Cerrado                      (sin números)
+2027-06-12  —        más allá de la ventana: NO se mandó
 ```
 
+- **Las tildes llegaron bien**: *"El restaurante abre al público ese día"*,
+  *"El recinto está arrendado completo y en exclusiva"*.
 - La `NOTA INTERNA` del día 14 y los nombres de los cinco clientes **no
-  aparecen en ningún cuerpo**.
-- El día 28 está cerrado y su única reserva está cancelada, así que va sin
-  números — una cancelada no ocupa lugar.
-- **Correr de nuevo sin cambiar nada manda 0 y borra 0.**
-- Pasar el 22 a privado a secas lo republica en naranjo; reabrir el 28 y
-  cancelar la reserva del 14 los **saca** a los dos.
-- Un `ayc-2026-11-21` ajeno sembrado en el mismo día **se deja quieto**; un
-  `brasas-2027-06-12` nuestro más allá de la ventana también; y un
-  `brasas-2026-09-05` que ya pasó se borra.
-- El empujón de un día solo: marcar el 15 exclusivo lo publica en rojo, y
-  volverlo a abierto y vacío lo **borra**.
+  aparecen en ninguna fila**. Su API nos estampa `origen: restaurante_koba`
+  y deja `datos` en `null`: no viaja nada más que los seis campos.
+- El día 28 está cerrado y su única reserva está cancelada, así que llegó
+  **sin `ocupacion` ni `capacidad`** — una cancelada no ocupa lugar.
+- **Correr de nuevo sin cambiar nada mandó 0 y borró 0.**
+- Pasar el 22 a privado a secas lo republicó en naranjo; reabrir el 28 y
+  cancelar la reserva del 14 **los sacó a los dos**.
+- Sembrando a mano un `brasas-2027-06-12` —fuera de la ventana— y un
+  `brasas-2026-09-05` —ya pasado—, la reconciliación **borró solo el
+  pasado** y dejó el de 2027 quieto, que es la regla con filo de más arriba.
+- El empujón de un día solo: marcar el 15 exclusivo lo publicó en rojo, y
+  volverlo a abierto y vacío **lo borró**.
+
+**Lo único que no se probó contra su tabla es que un id ajeno se deje
+quieto**, y es a propósito: para eso habría que escribirle una fila con el
+prefijo de otro origen, o sea inventarle un dato a su sistema — y además su
+API nos estampa `origen: restaurante_koba`, así que no sería una imitación
+fiel de nada. Esa mitad quedó comprobada contra un servidor local que imita
+su API, más la prueba de `reconciliar()`.
+
+**La tabla del socio quedó vacía al terminar**, como la dejó él.
 
 ## El equipo de trabajadores (panel)
 
