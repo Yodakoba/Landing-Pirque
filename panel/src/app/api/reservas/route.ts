@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
+import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
 import { leerReservas, crearReserva, leerMenus, leerFechas, leerConfig,
          guardarFecha } from '@/lib/datos';
@@ -57,6 +58,10 @@ export async function POST(req: Request) {
       asistencia: ASISTENCIA.sinMarcar
     });
     await abrirElDiaSiHaceFalta(b.fecha);
+    // Un día abierto sin reservas no se le manda al socio; con esta pasa a
+    // tener algo que informar. Va después de abrir el día, que es lo que
+    // decide el estado que se publica.
+    await empujarDia(b.fecha);
 
     const quien = await quienEs(req);
     await anotar({ ...quien, accion: 'Anotó una reserva',

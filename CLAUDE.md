@@ -1786,34 +1786,23 @@ el día abierto no ofrece la casilla, el privado la ofrece sin marcar, el
 exclusivo la ofrece marcada, y marcarla escribe `Privada exclusiva` y deja
 la tarjeta diciendo *exclusivo*. Desmarcarla vuelve a `Privada`.
 
-### La escritura hacia el CRM todavía no está
+### La escritura hacia el CRM (2026-11-03)
 
-Falta el otro sentido: publicar **nuestros** días en su calendario. El
-contrato ya está verificado —`POST /api-eventos/externos`, hasta 500 por
-llamada, `external_id` estable del estilo `brasas-2026-11-07`, y `bloquea`
-distinguiendo *día cerrado* (rojo, con advertencia al vendedor) de *abierto
-con ocupación* (naranjo, solo informa)—, y **nuestra clave puede escribir**:
-se comprobó sin crear nada, porque el permiso se revisa antes de validar el
-cuerpo, así que un POST con cuerpo inválido devuelve 403 si fuera de solo
-lectura y 400 si no. Dio 400.
+El otro sentido: publicar **nuestros** días en su calendario. Vive en
+`panel/src/lib/crm.ts` —la lógica pura y con pruebas— y en
+`crm-escribir.ts`, que es lo que toca la red y la planilla.
 
-**Las tildes viajan bien**, comprobado con un registro que se creó y se
-borró: entró `c3ba` y volvió `c3ba`. El `test-2` del socio tiene guardado
-`EF BF BD` —el carácter de reemplazo— en vez de la `ú` de "público": eso lo
-rompió **su `curl`**, no su endpoint, y conviene avisarle antes de que
-repita ese comando con algo de verdad.
+**Qué día va en qué color es una sola pregunta**: *¿puede pasar otro evento
+acá ese día?*
 
-**Qué día va en qué color quedó decidido el 2026-11-02**, y la regla terminó
-siendo una sola pregunta: *¿puede pasar otro evento acá ese día?*
-
-| Nuestro día | ¿Se manda? | `bloquea` | Qué ve el vendedor |
+| Nuestro día | ¿Se manda? | `bloquea` | Título que ve el vendedor |
 |---|---|---|---|
-| Cerrado | sí | `true` | rojo, fecha tomada, advertencia |
-| **Privado exclusivo** | sí | `true` | rojo, fecha tomada |
-| **Privado** (no exclusivo) | sí | `false` | naranjo, con su ocupación |
-| Abierto con reservas | sí | `false` | naranjo, "8/120 personas" |
+| Cerrado | sí | `true` | rojo · *Cerrado* |
+| **Privado exclusivo** | sí | `true` | rojo · *Recinto arrendado completo* |
+| **Privado** (no exclusivo) | sí | `false` | naranjo · *Evento privado* |
+| Abierto con reservas | sí | `false` | naranjo · *Abierto con reservas* |
 | Abierto y vacío | **no** | — | nada |
-| Preparación | sin decidir | — | — |
+| Preparación | **no** | — | nada |
 
 **El primer corte mandaba todo privado en rojo, y el cliente lo corrigió**:
 *"privado también debería ser naranjo, porque hay eventos que se hacen sin
@@ -1827,15 +1816,179 @@ vendedor necesita saber y lo que la propia guía del socio ya decía.
   y llenaría su calendario de naranjo sin dato. Medido contra el endpoint
   público el 2026-11-02: de 18 días abiertos hasta el 3 de enero, **3
   tienen alguna reserva**.
-- **Hace falta la otra mitad, el borrado.** Si un día deja de tener
-  ocupación —se cancela la única reserva, se reabre un día cerrado— hay que
-  sacarlo con `DELETE`, o le queda un día naranjo fantasma. Por eso esto se
-  diseña como **reconciliación** —leer `GET /externos`, mandar lo que
-  cambió, borrar lo que ya no califica— y no como un evento por cambio.
-- **El empujón nunca puede bloquear el guardado de un día.** Si su API no
-  responde, el panel guarda igual y la reconciliación diaria lo pone al día.
-  Es la misma asimetría de `posiblesDeLosDias()`: un servicio de un tercero
-  no se mete en el camino de la pantalla que contesta cuánta gente viene.
+- **Un día de preparación tampoco, y no por un `if`.** Un día de preparación
+  es uno con equipo asignado que no recibe público: si no está en `Fechas
+  Hábiles` ni tiene reservas, no existe para la ocupación, así que no hay
+  desde dónde publicarlo; y si está cerrado, se manda por la fila "Cerrado",
+  que es lo correcto. Es la misma garantía por forma que el upgrade de menús
+  del sitio: no hay dónde escribirlo.
+- **El orden de las preguntas importa.** Cerrado, después exclusivo, después
+  privado. Al revés —privado antes que exclusivo— todo exclusivo saldría
+  naranjo y el vendedor podría vender un recinto arrendado completo; se
+  comprobó dando vuelta las dos ramas y **fallan cuatro pruebas**. Cerrado va
+  primero por consistencia con `estaCerrado()`, que falla cerrando: si no
+  sabemos leer el estado de un día propio, nosotros tampoco deberíamos
+  estarlo vendiendo.
+
+### La ocupación va en sus campos, no escrita en el título
+
+Lo confirmó el socio: *"El texto va en `titulo`. La ocupación mándala en
+`ocupacion` y `capacidad` (enteros), no en el texto: el CRM arma el chip
+solo."* Así `titulo: "Abierto con reservas", ocupacion: 8, capacidad: 120` se
+ve como **"Abierto con reservas · 8/120"** del otro lado. Escribirlo a mano
+habría dejado dos formatos el día que él cambie el suyo, y **hay una prueba
+que falla si el título trae un `/`**.
+
+El título se queda **bajo 30 caracteres** porque el chip lo trunca en
+escritorio; el detalle va en `descripcion`, que se ve en celular y al pasar
+el mouse.
+
+**Los números van solo cuando hay gente.** Un día que bloquea se entiende con
+su título —"Cerrado", "Recinto arrendado completo"— y un "0/120" al lado
+leería como un dato lo que es la ausencia de uno. Cuando sí hay reservas, se
+dicen: el socio pidió explícitamente *"manden todos los días con
+ocupación"*. Y un campo ausente no es lo mismo que uno en `null`, así que
+cuando no hay nada que contar **se omiten** en vez de mandarse vacíos.
+
+**Lo que NUNCA sale de acá**: las `Notas` internas de un día y el nombre de
+un cliente. Lo que viaja son un título, una descripción que arma el propio
+archivo y dos enteros — y lo que no se manda no se puede filtrar. Hay una
+prueba que busca esas palabras en el cuerpo del POST.
+
+### El cuerpo es un array pelado, y eso costó cuatro intentos
+
+Comprobado contra la API de verdad el 2026-11-03: `{"eventos":[…]}` y
+`{"items":[…]}` devuelven **`Ítem 0: falta external_id`** —el endpoint ve el
+objeto envolvente como un solo ítem— mientras `[{…}]` y un objeto solo
+guardan bien. Queda anotado porque el mensaje de error manda a buscar el
+problema donde no está: dice que falta un campo que sí venía.
+
+Se manda siempre el array, también para un día solo, para tener un camino y
+no dos.
+
+### Es reconciliación, no un evento por cambio
+
+Esa es la decisión de fondo, y la razón es **la mitad que falta de cualquier
+diseño de empujón**: un sistema que solo manda novedades no tiene cómo
+enterarse de una ausencia. Si un día deja de calificar —se cancela la única
+reserva, se reabre un día cerrado, se le quita lo exclusivo— hay que ir a
+sacarlo con `DELETE`, o le queda un día naranjo fantasma.
+
+El `external_id` es `brasas-<fecha>`, y **sale de la fecha y de nada más**:
+publicar el mismo día dos veces es un `upsert`, no dos filas. Es lo que hace
+que la reconciliación sea idempotente y que un empujón perdido se recupere
+solo al día siguiente. `DELETE /externos/<id>` también es idempotente del
+lado del socio: un id que no existe responde 200 con `{"eliminados": 0}`.
+
+**Primero mandar, después borrar.** Si algo falla en el medio, lo peor que
+puede pasar es que quede un día de más en su calendario —que es visible y se
+arregla mañana— y no un día que desaparece de los dos lados sin que nadie se
+entere. Mismo criterio que convertir un presupuesto en reserva.
+
+**Y un borrado que falla no detiene a los que vienen detrás**, al revés que el
+`POST`. La diferencia es real: el `POST` es una llamada para toda la tanda,
+así que si falla no hay nada que salvar; los borrados son una llamada por id,
+y abortar en el primero dejaría que **un solo id permanentemente malo
+bloqueara la limpieza para siempre** — cada corrida volvería a estrellarse en
+el mismo. Los que fallan salen nombrados en la respuesta (`fallaron`) y se
+reintentan mañana; uno que aparezca todos los días es algo que hay que ir a
+mirar.
+
+#### Qué se borra, y qué se deja quieto a propósito
+
+| | Qué pasa |
+|---|---|
+| Un id que **no es nuestro** | no se toca nunca, aunque caiga en uno de nuestros días: la tabla es compartida |
+| Nuestro, **dentro de la ventana**, ya no califica | se borra. Es el caso corriente |
+| Nuestro, **antes de la ventana** (ya pasó) | se borra: nadie vende el pasado, y sin esto la tabla crece para siempre |
+| Nuestro, **después de la ventana** | **se deja quieto** |
+
+La última fila es la decisión con filo, y se eligió mirando cuál de los dos
+errores cuesta más: un día rojo que quedó viejo le hace perder al socio una
+venta que sí se podía hacer; un día rojo borrado de más le deja vender un
+recinto que está arrendado en exclusiva, o sea un doble arriendo. Así que más
+allá de `dias_a_futuro` esta función **no opina**, y la limpieza llega cuando
+el día entra en la ventana — 90 días antes del evento, tiempo de sobra.
+
+**"No toques lo ajeno" y "no toques un id nuestro que no sabés leer" son una
+sola condición**, no dos: `fechaDelId()` devuelve vacío para cualquier otro
+origen. Estuvieron partidas en dos guardas y se juntaron al revisarlas con
+una mutación — sacándole una, **ninguna prueba fallaba**, porque la otra
+tapaba el hueco. Una prueba que no falla cuando se le saca la guarda no está
+protegiendo nada.
+
+### Las dos puertas: el empujón y la tarea diaria
+
+- **El empujón**, al guardar un día (`/api/fechas`), al borrarlo, y al
+  anotar, editar o borrar una reserva a mano. Da inmediatez.
+- **La reconciliación completa**, en `/api/crm/publicar`, una vez al día por
+  `vercel.json`. Recupera lo que se haya perdido y es lo que hace que el
+  calendario del socio se repare solo.
+
+**El empujón nunca bloquea el guardado.** `empujarDias()` no lanza: si el CRM
+no responde, el panel guarda igual y la tarea diaria lo pone al día. Es la
+misma asimetría de `posiblesDeLosDias()`. Comprobado con el CRM caído: el día
+se guardó en 22 ms y la reconciliación devolvió 502 con el motivo.
+
+- **Se espera la respuesta en vez de dejarla corriendo sola**, con un tope de
+  6 segundos. En Vercel la función se apaga cuando la petición termina, así
+  que un `fetch` sin `await` se queda a medio camino.
+- **Recibe varios días y lee la planilla una sola vez.** Editar una reserva
+  puede moverla de fecha, y entonces hay dos días que cambiaron: el que la
+  perdió y el que la ganó. Llamar dos veces costaría seis lecturas para
+  contestar lo mismo.
+- **Es una ruta aparte de `/api/shopify/sincronizar`** y una tarea aparte: son
+  dos servicios de terceros distintos y una falla en uno no puede dejar al
+  otro sin correr. **El orden entre las dos no está garantizado** —en el plan
+  gratuito de Vercel la hora es aproximada y el minuto no se respeta— y no
+  hace falta que lo esté: esto publica la ocupación que haya en ese momento.
+- **El plan gratuito permite 100 tareas por proyecto, una vez al día cada
+  una** (dato de noviembre de 2026; el límite viejo, que eran 2, es el que
+  este archivo tenía en la cabeza). Hay dos usadas.
+- **Lo que queda con retraso de hasta un día es una reserva comprada por
+  Shopify**: llega por webhook y ahí no hay empujón, a propósito — los
+  webhooks vienen de a dos por pedido y con reintentos, y meterle tres
+  lecturas de planilla y una llamada al CRM a cada uno es caro y arriesga el
+  ACK que Shopify espera. La diferencia que el socio vería es "8/120" en vez
+  de "9/120", que no le cierra ninguna fecha.
+- **Disparar la reconciliación a mano es del permiso `mantencion`**, igual
+  que la de Shopify: es para arreglar el sistema, no para operarlo.
+  Comprobado: un encargado recibe **403 llamando la API directo**.
+- **Sin `CRM_API_KEY` no falla**: responde 200 con `configurado: false` y no
+  hace nada. El panel tiene que funcionar antes de que nadie configure nada.
+
+### Probado de punta a punta (2026-11-03)
+
+El contrato, contra su API de verdad: `POST` con array pelado guarda y
+devuelve `{"guardados":1}`; el mismo `external_id` otra vez **actualiza en
+vez de duplicar**; las tildes van y vuelven intactas (`Día público, ñandú`);
+`DELETE` existente da `{"eliminados":1}` e inexistente `{"eliminados":0}`. La
+tabla del socio quedó vacía, como la dejó él.
+
+Y la cadena completa con un fin de semana sembrado —los cinco casos— contra
+un servidor local que imita su API, para no ensuciarle la tabla:
+
+```
+2026-11-14  naranjo  Abierto con reservas        12/120
+2026-11-15  —        abierto y vacío: NO se manda
+2026-11-21  naranjo  Evento privado              40/120
+2026-11-22  ROJO     Recinto arrendado completo  90/120
+2026-11-28  ROJO     Cerrado                     sin números
+2027-06-12  —        más allá de la ventana: NO se manda
+```
+
+- La `NOTA INTERNA` del día 14 y los nombres de los cinco clientes **no
+  aparecen en ningún cuerpo**.
+- El día 28 está cerrado y su única reserva está cancelada, así que va sin
+  números — una cancelada no ocupa lugar.
+- **Correr de nuevo sin cambiar nada manda 0 y borra 0.**
+- Pasar el 22 a privado a secas lo republica en naranjo; reabrir el 28 y
+  cancelar la reserva del 14 los **saca** a los dos.
+- Un `ayc-2026-11-21` ajeno sembrado en el mismo día **se deja quieto**; un
+  `brasas-2027-06-12` nuestro más allá de la ventana también; y un
+  `brasas-2026-09-05` que ya pasó se borra.
+- El empujón de un día solo: marcar el 15 exclusivo lo publica en rojo, y
+  volverlo a abierto y vacío lo **borra**.
 
 ## El equipo de trabajadores (panel)
 

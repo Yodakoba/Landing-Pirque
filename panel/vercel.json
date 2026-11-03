@@ -3,6 +3,10 @@
     {
       "path": "/api/shopify/sincronizar",
       "schedule": "17 9 * * *"
+    },
+    {
+      "path": "/api/crm/publicar",
+      "schedule": "41 11 * * *"
     }
   ]
 }
