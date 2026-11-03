@@ -34,7 +34,7 @@ import Clima, { usePronostico } from './Clima';
 import { resumenEquipo, esPreparacion,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import type { Ocupacion } from '@/lib/tipos';
-import { estaCerrado, faltaParaCerrar, diasPorCerrar, type Cierre } from '@/lib/cierres';
+import { estaCerrado, cierreDe, faltaParaCerrar, diasPorCerrar, type Cierre } from '@/lib/cierres';
 import type { Extra } from '@/lib/extras';
 import { diasDelMes, sumarMeses, mesDe, mesEnPalabras, diaSemana, hoy,
          enPalabras } from '@/lib/fechas';
@@ -49,7 +49,7 @@ export default function CalendarioEquipo() {
   const pronostico = usePronostico();
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
-    cierres: Cierre[]; extras: Extra[]; verSueldos: boolean;
+    cierres: Cierre[]; extras: Extra[]; verSueldos: boolean; puedeCorregir: boolean;
   } | null>(null);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
   const [planificando, setPlanificando] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function CalendarioEquipo() {
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
           turnos: d.turnos ?? [], cierres: d.cierres ?? [], extras: d.extras ?? [],
-          verSueldos: !!d.verSueldos
+          verSueldos: !!d.verSueldos, puedeCorregir: !!d.puedeCorregir
         });
       })
       .catch((e) => setError(String(e)));
@@ -328,6 +328,8 @@ export default function CalendarioEquipo() {
           turnos={equipo.turnos}
           extras={equipo.extras}
           cerrado={cerrado(planificando)}
+          cierre={cierreDe(cierres, planificando)}
+          puedeCorregir={equipo.puedeCorregir}
           // La única pantalla que cierra un día: ver `conCierre`.
           conCierre
           // La otra cara, la de las reservas: ver `conReservas`.

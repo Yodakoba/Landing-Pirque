@@ -58,10 +58,26 @@ function Rotulo({ children }: { children: React.ReactNode }) {
 const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + (Number(r.personas) || 0), 0);
 const reservas = (n: number) => `${n} reserva${n === 1 ? '' : 's'}`;
 
-export default function ReservasDelDia({ fecha, onCuantas }: {
+export default function ReservasDelDia({
+  fecha, onCuantas, modo = 'libre', pendientes = {}, onPendiente
+}: {
   fecha: string;
   /** Avisa cuántas reservas hay, para que el switch lo pueda decir. */
   onCuantas?: (n: number) => void;
+  /**
+   * Cómo se puede marcar (2026-11-03):
+   *
+   * - `libre`: *Vino / No vino* guarda al apretarlo, como siempre.
+   * - `bloqueado`: **el día está cerrado** y nada se puede tocar.
+   * - `corrigiendo`: se marca, pero **no se guarda acá**: queda en
+   *   `pendientes` y lo manda la ventana del día junto con el resto de la
+   *   corrección y su motivo. Si se guardara al apretar, el día cerrado
+   *   cambiaría por partes y sin motivo, que es lo que la corrección evita.
+   */
+  modo?: 'libre' | 'bloqueado' | 'corrigiendo';
+  /** La asistencia cambiada durante una corrección, por fila. */
+  pendientes?: Record<number, string>;
+  onPendiente?: (fila: number, asistencia: string) => void;
 }) {
   const [todas, setTodas] = useState<Reserva[] | null>(null);
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
@@ -78,8 +94,12 @@ export default function ReservasDelDia({ fecha, onCuantas }: {
 
   useEffect(() => { cargar(); }, []);
 
+  // Lo cambiado durante una corrección se ve como si ya estuviera: los
+  // azulejos de arriba tienen que contar lo que se va a guardar.
   const delDia = useMemo(
-    () => (todas ?? []).filter((r) => r.fecha === fecha), [todas, fecha]
+    () => (todas ?? []).filter((r) => r.fecha === fecha)
+      .map((r) => (r.fila in pendientes ? { ...r, asistencia: pendientes[r.fila] } : r)),
+    [todas, fecha, pendientes]
   );
   const cuentan = useMemo(() => delDia.filter(ocupaLugar), [delDia]);
   const menus = useMemo(() => menusDe(cuentan, catalogo), [cuentan, catalogo]);
@@ -88,6 +108,8 @@ export default function ReservasDelDia({ fecha, onCuantas }: {
 
   /** Igual que en la página del día: guarda al instante, sin confirmar. */
   async function marcar(r: Reserva, asistencia: string) {
+    if (modo === 'bloqueado') return;
+    if (modo === 'corrigiendo') { onPendiente?.(r.fila, asistencia); return; }
     // Se pinta antes de que vuelva el servidor: es un botón que se aprieta
     // con gente esperando en el mesón, y un segundo sin respuesta se lee
     // como que no funcionó. Si falla, la recarga deja lo que de verdad hay.
@@ -163,6 +185,7 @@ export default function ReservasDelDia({ fecha, onCuantas }: {
               propia línea. Es la lección de la ventana del equipo: si los
               botones compartieran fila con el nombre, el largo del nombre
               decidiría dónde quedan. */}
+          <fieldset disabled={modo === 'bloqueado'} className="m-0 min-w-0 border-0 p-0">
           <ul className="mt-2 space-y-2">
             {delDia.map((r) => {
               const enElLocal = String(r.tipoPago).includes(TIPO_PAGO.local);
@@ -215,12 +238,15 @@ export default function ReservasDelDia({ fecha, onCuantas }: {
               );
             })}
           </ul>
+          </fieldset>
         </>
       )}
 
       <p className="mt-4 text-[13px] text-hueso/60">
-        <em>Vino / No vino</em> se guarda al apretarlo. Para editar o borrar una
-        reserva, o anotar una nueva, abre{' '}
+        {modo === 'libre' && <><em>Vino / No vino</em> se guarda al apretarlo. </>}
+        {modo === 'corrigiendo' && <><em>Vino / No vino</em> se guarda junto con la
+          corrección. </>}
+        Para editar o borrar una reserva, o anotar una nueva, abre{' '}
         <a href={`/dia/${fecha}`} className="text-oro hover:underline">la página del día</a>.
       </p>
     </div>

@@ -15,9 +15,13 @@
  * quien llegó de más se vería completo justamente porque falta. Cerrar es
  * alguien diciendo "ya está", con su nombre y la hora.
  *
- * Por lo mismo **se puede reabrir**: aparece un ajuste olvidado, alguien
- * reclama su propina. Reabrir queda anotado en la bitácora como cualquier
- * otra acción.
+ * **Un día cerrado no se edita: se corrige** (2026-11-03, decidido con el
+ * cliente). Hasta ese día cerrar era solo una marca —el día se seguía
+ * editando igual, y *Reabrir* borraba la marca sin desbloquear nada, porque
+ * no había nada bloqueado—. Ahora cerrado quiere decir que ningún cambio
+ * entra, salvo una **corrección**: la hace el administrador o quien paga
+ * (`corregir`), lleva un motivo escrito, y el día **nunca deja de estar
+ * cerrado** mientras tanto. Ver `corregirDiaCerrado()`.
  */
 import { VINO, type Turno } from './equipo.ts';
 import type { Extra } from './extras.ts';
@@ -118,4 +122,42 @@ export function diasPorCerrar(
   return [...fechas]
     .filter((f) => !estaCerrado(cierres, f))
     .sort();
+}
+
+/**
+ * Si un cambio puede entrar a un día, mirando si está cerrado.
+ *
+ * **Es la única puerta**, y la usan todas las rutas que escriben algo de
+ * un día —el equipo, las actividades extras y las reservas—, así que la
+ * regla vive en un solo lugar:
+ *
+ * - **Un día abierto** recibe cualquier cambio, como siempre.
+ * - **Un día cerrado** solo recibe una **corrección**: de quien tenga el
+ *   permiso `corregir`, y **con su motivo escrito**. El motivo no es un
+ *   adorno: es lo que se va a preguntar un mes después, sobre todo si ese
+ *   día ya se pagó, y queda en la bitácora.
+ *
+ * **El día no se reabre para corregirlo.** Abrir, cambiar y volver a cerrar
+ * son tres pasos, y el que se olvida es el último: queda un día abierto que
+ * nadie nota. Así, la corrección entra con el día cerrado y el día sigue
+ * cerrado después.
+ *
+ * Es pura —recibe si está cerrado y si quien llama puede corregir— para
+ * poder probarla sin planilla.
+ */
+export function corregirDiaCerrado(
+  { cerrado, puedeCorregir, motivo }:
+  { cerrado: boolean; puedeCorregir: boolean; motivo?: unknown }
+): { ok: true; correccion: string } | { ok: false; status: number; error: string } {
+  if (!cerrado) return { ok: true, correccion: '' };
+  if (!puedeCorregir) {
+    return { ok: false, status: 409, error:
+      'Este día está cerrado. Solo el administrador o quien hace los pagos puede corregirlo.' };
+  }
+  const m = typeof motivo === 'string' ? motivo.trim() : '';
+  if (!m) {
+    return { ok: false, status: 400, error:
+      'Para corregir un día cerrado hay que escribir el motivo.' };
+  }
+  return { ok: true, correccion: m };
 }

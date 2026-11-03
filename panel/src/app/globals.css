@@ -314,3 +314,18 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 @media (prefers-reduced-motion: reduce) {
   .girar { animation: none; }
 }
+
+/**
+ * Lo que queda apagado dentro de un día cerrado (2026-11-03).
+ *
+ * La ventana del día envuelve lo editable en un `<fieldset disabled>`, que
+ * apaga todos los controles de una vez. Esto hace que se **vea** apagado y
+ * no solo que deje de responder: un botón que no reacciona y se ve igual
+ * que siempre se lee como roto. Se baja la opacidad y no se borra el color,
+ * porque el estado —quién vino, quién no— tiene que seguir leyéndose.
+ */
+fieldset:disabled :is(button, input, select, textarea) {
+  cursor: not-allowed;
+  opacity: .6;
+}
+fieldset:disabled :is(button, .tecla):active { transform: none; }

@@ -23,13 +23,16 @@ import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import FichaColaborador from './FichaColaborador';
 import Asistencia from './Asistencia';
+import { AvisoCierre, PieCorreccion } from './Correccion';
+import type { Cierre } from '@/lib/cierres';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
   'focus:border-oro focus:outline-none';
 
 export default function ExtrasDialogo({
-  fecha, extras, colaboradores, verSueldos = false, onListo, onCancelar
+  fecha, extras, colaboradores, verSueldos = false,
+  cerrado = false, cierre, puedeCorregir = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Todas las actividades, de todos los días. Acá se filtra esta fecha. */
@@ -37,15 +40,30 @@ export default function ExtrasDialogo({
   colaboradores: Colaborador[];
   /** Si puede fijar el monto habitual al crear a alguien. */
   verSueldos?: boolean;
+  /**
+   * Si el día está cerrado (2026-11-03). Un día cerrado es el día completo,
+   * así que sus actividades también quedan en solo lectura y se corrigen
+   * igual que el equipo: ver `corregirDiaCerrado()`.
+   */
+  cerrado?: boolean;
+  cierre?: Cierre;
+  puedeCorregir?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
   // Se edita en memoria y se guarda el día completo, igual que el equipo:
   // así quitar una actividad es tan posible como agregarla, y nada se
   // escribe hasta apretar Guardar.
-  const [lista, setLista] = useState<Omit<Extra, 'fila'>[]>(
+  const [inicial] = useState(
     () => extras.filter((e) => e.fecha === fecha).map(({ fila, ...resto }) => resto)
   );
+  const [lista, setLista] = useState<Omit<Extra, 'fila'>[]>(() => inicial);
+  // Un día cerrado: solo lectura, salvo una corrección con motivo que se
+  // manda entera con un botón. Igual que la ventana del equipo.
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
+  const bloqueado = cerrado && !corrigiendo;
   // La lista de fichas se guarda en estado y no se lee del prop: crear a
   // alguien desde acá tiene que dejarlo disponible sin cerrar la ventana.
   const [gente, setGente] = useState<Colaborador[]>(colaboradores);
@@ -103,10 +121,32 @@ export default function ExtrasDialogo({
     });
     const d = await r.json();
     return d.error || undefined;
-  });
+  }, 600, !cerrado);
+
+  async function guardarCorreccion() {
+    const m = motivo.trim();
+    if (!m) return;
+    setGuardandoCorreccion(true);
+    setError('');
+    try {
+      const r = await fetch('/api/extras/dia', {
+        method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fecha, extras: lista, correccion: { motivo: m } })
+      });
+      const d = await r.json();
+      if (d.error) { setError(d.error); return; }
+      onListo();
+    } catch (e) {
+      setError(String(e));
+    } finally { setGuardandoCorreccion(false); }
+  }
 
   /** Cierra la ventana, mandando antes lo que quede en el reloj. */
   async function salir() {
+    if (corrigiendo && !confirm('¿Salir sin guardar la corrección? Lo que cambiaste se descarta.')) {
+      return;
+    }
+    if (cerrado) { onCancelar(); return; }
     await guardado.forzar();
     if (guardado.hubo.current) onListo(); else onCancelar();
   }
@@ -114,6 +154,13 @@ export default function ExtrasDialogo({
   return (
     <Dialogo titulo={`Actividades · ${enPalabras(fecha)}`} onCerrar={() => void salir()}
              ancho="max-w-4xl">
+      {cerrado && (
+        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir}
+          corrigiendo={corrigiendo} onCorregir={() => setCorrigiendo(true)} />
+      )}
+      {/* Todo lo editable va en un `fieldset disabled` mientras el día está
+          cerrado: ver la ventana del equipo. */}
+      <fieldset disabled={bloqueado} className="m-0 min-w-0 border-0 p-0">
       <p className="mt-3 text-sm text-hueso/60">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
         castillo inflable. <strong>Una actividad sin confirmar no suma</strong>:
@@ -287,9 +334,13 @@ export default function ExtrasDialogo({
       </p>
 
       {/* Sin botón de guardar hay que decirlo una vez. */}
-      <p className="mt-2 text-xs text-hueso/45">
-        Lo que escribas acá <strong>se guarda solo</strong>.
-      </p>
+      </fieldset>
+
+      {!cerrado && (
+        <p className="mt-2 text-xs text-hueso/45">
+          Lo que escribas acá <strong>se guarda solo</strong>.
+        </p>
+      )}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {lista.length > 0 && (
@@ -303,15 +354,25 @@ export default function ExtrasDialogo({
             )}
           </span>
         )}
-        <AvisoGuardado estado={guardado.estado} error={guardado.error}
-          onReintentar={() => void guardado.reintentar()} />
+        {!cerrado && (
+          <AvisoGuardado estado={guardado.estado} error={guardado.error}
+            onReintentar={() => void guardado.reintentar()} />
+        )}
         <span className="flex-1" />
-        <button onClick={() => void salir()}
-          className="rounded border border-hueso/20 px-4 py-1.5 text-sm
-                     hover:border-hueso/40">
-          Listo
-        </button>
+        {!corrigiendo && (
+          <button onClick={() => void salir()}
+            className="rounded border border-hueso/20 px-4 py-1.5 text-sm
+                       hover:border-hueso/40">
+            Listo
+          </button>
+        )}
       </div>
+      {corrigiendo && (
+        <PieCorreccion motivo={motivo} onMotivo={setMotivo}
+          onCancelar={() => { setLista(inicial); setMotivo(''); setCorrigiendo(false); }}
+          onGuardar={() => void guardarCorreccion()}
+          guardando={guardandoCorreccion} />
+      )}
     </Dialogo>
   );
 }

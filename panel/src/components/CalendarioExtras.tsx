@@ -17,6 +17,7 @@
  * para un día sin reservas es justo el error que esto tiene que hacer
  * evidente.
  */
+import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
@@ -50,6 +51,9 @@ export default function CalendarioExtras() {
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [verSueldos, setVerSueldos] = useState(false);
+  // Los días cerrados se abren en solo lectura también acá: ver `corregirDiaCerrado()`.
+  const [cierres, setCierres] = useState<Cierre[]>([]);
+  const [puedeCorregir, setPuedeCorregir] = useState(false);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
   const [editando, setEditando] = useState<string | null>(null);
   const [sucio, setSucio] = useState(false);
@@ -64,6 +68,8 @@ export default function CalendarioExtras() {
         setColaboradores(d.colaboradores ?? []);
         setExtras(d.extras ?? []);
         setVerSueldos(!!d.verSueldos);
+        setCierres(d.cierres ?? []);
+        setPuedeCorregir(!!d.puedeCorregir);
         setSucio(false);
       })
       .catch((e) => setError(String(e)));
@@ -457,6 +463,9 @@ export default function CalendarioExtras() {
           extras={extras}
           colaboradores={colaboradores}
           verSueldos={verSueldos}
+          cerrado={estaCerrado(cierres, editando)}
+          cierre={cierreDe(cierres, editando)}
+          puedeCorregir={puedeCorregir}
           onListo={() => { setEditando(null); cargar(); }}
           onCancelar={() => setEditando(null)}
         />

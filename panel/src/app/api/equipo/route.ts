@@ -69,10 +69,13 @@ export async function GET(req: Request) {
     const verSueldos = puede(rol, 'sueldos');
     const verLinks = puede(rol, 'links');
     const editarPuestos = puede(rol, 'puestos');
+    // Si puede corregir un día cerrado. Solo decide qué botón se dibuja: la
+    // regla de verdad la vuelve a comprobar cada ruta que escribe un día.
+    const puedeCorregir = puede(rol, 'corregir');
     return NextResponse.json({
       puestos,
       trabajadores: recortada(trabajadores, verLinks, verSueldos),
-      turnos, cierres, extras, verSueldos, verLinks, editarPuestos,
+      turnos, cierres, extras, verSueldos, verLinks, editarPuestos, puedeCorregir,
       // Quién tiene turnos y no está en la lista. Pasa al renombrar a
       // alguien que ya estaba asignado; el panel lo muestra en vez de que
       // se descubra cuando el conteo del día no cuadre.

@@ -3,6 +3,7 @@ import { exigir, quienEs } from '@/lib/permisos';
 import { guardarExtrasDelDia, leerExtras, anotar } from '@/lib/datos';
 import { esFecha } from '@/lib/fechas';
 import { aEntero } from '@/lib/equipo';
+import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,12 +14,15 @@ export const dynamic = 'force-dynamic';
  * guarda completo, así que quitar una actividad tiene que ser tan posible
  * como agregarla. Una lista vacía deja el día sin extras, que es una
  * operación válida —se cayó el show— y no un error.
+ *
+ * Un día cerrado solo acepta una corrección, igual que el equipo: ver
+ * `guardaDelDia()`.
  */
 export async function PUT(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
   try {
-    const { fecha, extras } = await req.json();
+    const { fecha, extras, correccion } = await req.json();
     if (!esFecha(fecha)) {
       return NextResponse.json(
         { error: 'Falta la fecha, o no tiene el formato AAAA-MM-DD.' }, { status: 400 }
@@ -30,6 +34,9 @@ export async function PUT(req: Request) {
         { status: 400 }
       );
     }
+
+    const guarda = await guardaDelDia(req, [fecha], correccion);
+    if ('error' in guarda) return guarda.error;
 
     await guardarExtrasDelDia(fecha, extras.map((e) => ({
       fecha,
@@ -46,8 +53,11 @@ export async function PUT(req: Request) {
     // descartó por repetido, la vista tiene que mostrar la verdad.
     const todas = await leerExtras();
     const delDia = todas.filter((e) => e.fecha === fecha);
-    await anotar({ ...(await quienEs(req)), accion: 'Cambió las actividades de un día',
-      detalle: `${fecha} · ${delDia.length} actividades · ` +
+    await anotar({ ...(await quienEs(req)),
+      accion: guarda.motivo ? 'Corrigió las actividades de un día cerrado'
+                            : 'Cambió las actividades de un día',
+      detalle: `${fecha} · ` + (guarda.motivo ? `motivo: ${guarda.motivo} · ` : '') +
+               `${delDia.length} actividades · ` +
                delDia.map((e) => `${e.colaborador} (${e.actividad || 'sin actividad'})`)
                  .join(', ') });
     return NextResponse.json({ extras: delDia });

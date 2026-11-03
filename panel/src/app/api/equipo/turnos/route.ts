@@ -3,6 +3,7 @@ import { exigir, quienEs } from '@/lib/permisos';
 import { guardarEquipoDelDia, leerTurnos, anotar } from '@/lib/datos';
 import { esFecha } from '@/lib/fechas';
 import { aEntero, esContratado, MODALIDAD } from '@/lib/equipo';
+import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,12 +16,17 @@ export const dynamic = 'force-dynamic';
  * y eso es una operación válida —se canceló el turno de todos— no un error.
  *
  * Lo que NO hace es tocar otros días: ver `guardarEquipoDelDia()`.
+ *
+ * **Un día cerrado solo acepta una corrección** (2026-11-03): de quien
+ * tenga `corregir` y con `correccion.motivo`. El día sigue cerrado después,
+ * así que la corrección tiene que dejarlo como un día cerrado tiene que
+ * estar: con gente y sin nadie por marcar. Ver `corregirDiaCerrado()`.
  */
 export async function PUT(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
   try {
-    const { fecha, turnos } = await req.json();
+    const { fecha, turnos, correccion } = await req.json();
     if (!esFecha(fecha)) {
       return NextResponse.json(
         { error: 'Falta la fecha, o no tiene el formato AAAA-MM-DD.' }, { status: 400 }
@@ -31,6 +37,15 @@ export async function PUT(req: Request) {
         { error: 'Falta la lista de turnos. Para dejar el día sin equipo, manda [].' },
         { status: 400 }
       );
+    }
+
+    const guarda = await guardaDelDia(req, [fecha], correccion);
+    if ('error' in guarda) return guarda.error;
+    if (guarda.motivo && (turnos.length === 0 ||
+        turnos.some((t) => !String(t?.asistencia ?? '').trim()))) {
+      return NextResponse.json({ error:
+        'El día sigue cerrado después de corregirlo, así que no puede quedar sin ' +
+        'equipo ni con nadie sin marcar si vino o no.' }, { status: 400 });
     }
 
     await guardarEquipoDelDia(fecha, turnos.map((t) => ({
@@ -60,8 +75,10 @@ export async function PUT(req: Request) {
     // que mostrar lo que quedó guardado y no lo que se intentó guardar.
     const todos = await leerTurnos();
     const delDia = todos.filter((t) => t.fecha === fecha);
-    await anotar({ ...(await quienEs(req)), accion: 'Planificó el equipo',
-      detalle: `${fecha} · ${delDia.length} personas · ` +
+    await anotar({ ...(await quienEs(req)),
+      accion: guarda.motivo ? 'Corrigió el equipo de un día cerrado' : 'Planificó el equipo',
+      detalle: `${fecha} · ` + (guarda.motivo ? `motivo: ${guarda.motivo} · ` : '') +
+               `${delDia.length} personas · ` +
                delDia.map((t) => `${t.trabajador} (${t.puesto || 'sin puesto'})`).join(', ') });
     return NextResponse.json({ turnos: delDia });
   } catch (e) {

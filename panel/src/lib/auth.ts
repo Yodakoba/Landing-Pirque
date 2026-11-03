@@ -74,14 +74,13 @@ export const ROL = {
    * derechos que el encargado, pero él sí tiene adicionalmente los derechos
    * de configurar o reescribir montos en estas filas y columnas de pago"*.
    *
-   * O sea que no es un rol más chico que el encargado, es **el mismo más
-   * una cosa**: `pagar`. Quien paga es alguien de confianza del negocio que
-   * además entra a operar; la diferencia con el encargado no es cuánto ve,
-   * es que puede declarar que una plata salió.
-   *
-   * Lo que sigue sin tocar es lo del administrador: los puestos, los links
-   * personales, las cuentas del panel, la bitácora, los precios y la
-   * configuración. Eso es lo que esta cuenta existe para no tener que abrir.
+   * O sea que no es un rol más chico que el encargado: **es el encargado
+   * más la plata**, y ese mismo día el cliente lo terminó de ubicar como el
+   * segundo rol más poderoso del panel. Puede todo **menos dos cosas**: las
+   * cuentas del panel (`usuarios`) y la mantención técnica (`mantencion`).
+   * Ahí entran los pagos, los sueldos de las fichas, **los links
+   * personales**, los puestos, la bitácora, la configuración y corregir un
+   * día cerrado. La prueba se escribe como la lista de lo que NO puede.
    */
   pagos: 'pagos',
   /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
@@ -169,14 +168,20 @@ export const PERMISOS = {
    * los sueldos, abrir `esAdmin` le habría dado de paso los tokens de todo
    * el equipo.
    *
-   * Entonces se partió en dos. Esto es la plata, y la tiene quien paga; los
-   * links siguen en `links`, que es solo del administrador porque es de
-   * quien son.
+   * Entonces se partió en dos. Esto es la plata; los links van aparte, en
+   * `links`. Hoy los dos los tienen el administrador y quien paga —el
+   * cliente terminó dando los dos—, pero siguen separados porque uno es
+   * plata y el otro una credencial, y algún día un rol puede necesitar lo
+   * uno sin lo otro.
    */
   sueldos: [ROL.admin, ROL.pagos],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
   puestos: [ROL.admin, ROL.pagos],
-  /** Crear, renovar y quitar los links personales de los trabajadores. */
+  /**
+   * Crear, copiar, renovar y quitar los links personales de los
+   * trabajadores. **Lo tiene quien paga** además del administrador: es quien
+   * gestiona al equipo, y a quien le van a pedir el link.
+   */
   links: [ROL.admin, ROL.pagos],
   /**
    * La planilla semanal: mandarla al grupo, crear su link y **renovarlo**.
@@ -195,7 +200,8 @@ export const PERMISOS = {
    * mandar el link— es el mismo encargado. Dejarle mandar la planilla y no
    * cerrarla cuando hace falta era partir el trabajo en dos personas.
    *
-   * **Quitarlo sigue siendo de `links`**, o sea del administrador: renovar
+   * **Quitarlo sigue siendo de `links`** —el administrador y quien paga, no
+   * el encargado—: renovar
    * deja la planilla andando con un link nuevo, quitarlo la apaga hasta que
    * alguien la vuelva a encender. Lo primero es seguir trabajando; lo
    * segundo es cerrar una puerta del panel.
@@ -247,6 +253,17 @@ export const PERMISOS = {
    * y hora, como cerrar un día, y lo hace quien hizo la transferencia.
    */
   pagar: [ROL.admin, ROL.pagos],
+  /**
+   * **Corregir un día ya cerrado**: el equipo, las reservas o las
+   * actividades extras de ese día (2026-11-03, lo decidió el cliente).
+   *
+   * Cerrar un día es del encargado, que es quien lo vive; corregirlo
+   * después **no**. Un día cerrado es lo que se paga, y cambiarlo cuando ya
+   * se revisó es justamente lo que tiene que pasar por alguien de arriba.
+   * Si el encargado se equivocó, le pide la corrección al administrador o a
+   * quien paga. Cada corrección lleva motivo: ver `corregirDiaCerrado()`.
+   */
+  corregir: [ROL.admin, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin, ROL.pagos],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */

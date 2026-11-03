@@ -6,6 +6,7 @@ import { leerReservas, crearReserva, leerMenus, leerFechas, leerConfig,
 import { diaParaReservaManual } from '@/lib/dias';
 import { ASISTENCIA } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
+import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
@@ -35,6 +36,10 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Una reserva sin personas no es una reserva.' }, { status: 400 });
     }
+    // Anotar una reserva en un día ya cerrado también es corregirlo.
+    const guarda = await guardaDelDia(req, [String(b.fecha)], b.correccion);
+    if ('error' in guarda) return guarda.error;
+
     const id = await crearReserva({
       fecha: b.fecha, nombre: b.nombre, email: correoNormal(b.email),
       // Se guarda con la misma forma que las de Shopify: una reserva
@@ -59,8 +64,10 @@ export async function POST(req: Request) {
     await abrirElDiaSiHaceFalta(b.fecha);
 
     const quien = await quienEs(req);
-    await anotar({ ...quien, accion: 'Anotó una reserva',
-      detalle: `${b.nombre} · ${b.fecha} · ${b.personas} personas · ${b.menu ?? 'sin menú'}` });
+    await anotar({ ...quien,
+      accion: guarda.motivo ? 'Anotó una reserva en un día cerrado' : 'Anotó una reserva',
+      detalle: `${b.nombre} · ${b.fecha} · ${b.personas} personas · ${b.menu ?? 'sin menú'}` +
+               (guarda.motivo ? ` · motivo: ${guarda.motivo}` : '') });
 
     return NextResponse.json({ id });
   } catch (e) {
