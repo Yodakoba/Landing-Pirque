@@ -330,6 +330,8 @@ export default function CalendarioEquipo() {
           cerrado={cerrado(planificando)}
           // La única pantalla que cierra un día: ver `conCierre`.
           conCierre
+          // La otra cara, la de las reservas: ver `conReservas`.
+          conReservas
           verSueldos={equipo.verSueldos}
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}
