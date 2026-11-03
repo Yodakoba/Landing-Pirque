@@ -95,7 +95,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Marca Vino o No vino de cada una.',
       'Escribe la jornada, los ajustes y la propina del día.',
       'Cerrar el día deja dicho que alguien lo revisó, con tu nombre y la '
-      + 'hora. Se puede reabrir después.'
+      + 'hora. Desde ahí el día queda en solo lectura.',
+      'Si un día cerrado tiene un error, el administrador o quien hace los '
+      + 'pagos aprieta Corregir este día, arregla lo que haga falta y lo '
+      + 'guarda con el motivo. El día sigue cerrado.'
     ],
     ojo: 'Planificar un día cerrado no lo abre al público: los turnos no '
        + 'tocan lo que ve el sitio.'

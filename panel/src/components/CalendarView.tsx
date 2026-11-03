@@ -14,6 +14,7 @@ import DiaEditor from './DiaEditor';
 import TarjetaDia from './TarjetaDia';
 import { usePronostico } from './Clima';
 import EquipoDialogo from './EquipoDialogo';
+import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { POR_DEFECTO, type Config } from '@/lib/config';
 import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
@@ -67,6 +68,7 @@ export default function CalendarView() {
   // Lo que no hay es el resumen, y el dorso de la tarjeta lo dice.
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[]; verSueldos: boolean;
+    cierres: Cierre[]; puedeCorregir: boolean;
   } | null>(null);
   // **Una fecha, no una Ocupacion**: a un día de preparación se le asigna
   // equipo sin que exista en el calendario, así que no hay ocupación que
@@ -155,7 +157,8 @@ export default function CalendarView() {
         if (d.error) return;
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], verSueldos: !!d.verSueldos
+          turnos: d.turnos ?? [], verSueldos: !!d.verSueldos,
+          cierres: d.cierres ?? [], puedeCorregir: !!d.puedeCorregir
         });
       })
       .catch(() => {});
@@ -266,6 +269,11 @@ export default function CalendarView() {
           puestos={equipo.puestos}
           trabajadores={equipo.trabajadores}
           turnos={equipo.turnos}
+          // Un día cerrado se abre en solo lectura también desde acá: si no,
+          // la pantalla dejaría escribir y el servidor rechazaría cada cambio.
+          cerrado={estaCerrado(equipo.cierres, planificando.fecha)}
+          cierre={cierreDe(equipo.cierres, planificando.fecha)}
+          puedeCorregir={equipo.puedeCorregir}
           verSueldos={equipo.verSueldos}
           onListo={() => { setPlanificando(null); cargar(); }}
           onCancelar={() => setPlanificando(null)}

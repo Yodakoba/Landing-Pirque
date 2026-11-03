@@ -61,7 +61,14 @@ export function usarAutoguardado<T>(
   valor: T,
   /** Guarda de verdad. Devuelve un texto si el servidor se quejó. */
   guardar: (v: T) => Promise<string | void>,
-  espera = 600
+  espera = 600,
+  /**
+   * Si guarda solo. **Apagado en un día cerrado** (2026-11-03): ahí nada
+   * entra sin una corrección con motivo, que se manda entera con un botón.
+   * Mientras está apagado, un cambio no deja nada pendiente que se mande al
+   * cerrar la ventana.
+   */
+  activo = true
 ) {
   const [estado, setEstado] = useState<EstadoGuardado>('quieto');
   const [error, setError] = useState('');
@@ -104,11 +111,12 @@ export function usarAutoguardado<T>(
     // El primer dibujado no es un cambio: sin esto, abrir la ventana
     // escribiría el día entero sin que nadie tocara nada.
     if (primera.current) { primera.current = false; return; }
+    if (!activo) return;
     sucio.current = true;
     if (reloj.current) clearTimeout(reloj.current);
     reloj.current = setTimeout(() => { void correr(); }, espera);
     return () => { if (reloj.current) clearTimeout(reloj.current); };
-  }, [valor, espera, correr]);
+  }, [valor, espera, correr, activo]);
 
   useEffect(() => () => {
     if (sucio.current) void guardarRef.current(valorRef.current);

@@ -34,6 +34,13 @@ export async function PUT(req: Request) {
 
     const quien = await quienEs(req);
     if (cerrar === false) {
+      // **Reabrir es de quien puede corregir** (2026-11-03). La pantalla ya
+      // no lo ofrece —un día cerrado se corrige sin abrirlo, ver
+      // `corregirDiaCerrado()`—, pero la API lo conserva para el
+      // administrador y quien paga. Si lo pudiera cualquiera, el bloqueo se
+      // saltaría reabriendo.
+      const sinPermiso = await exigir(req, 'corregir');
+      if (sinPermiso) return sinPermiso;
       await reabrirDia(fecha);
       await anotar({ ...quien, accion: 'Reabrió un día', detalle: fecha });
       return NextResponse.json({ cerrado: false });
