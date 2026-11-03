@@ -313,6 +313,10 @@
     display:block; margin-top:8px; font-size:0.78rem; color: var(--ink-dim);
     text-transform:uppercase; letter-spacing:0.06em; line-height:1.4;
   }
+  /* La condición de un dato, debajo de su rótulo (2026-11-03): el arriendo
+     sin costo rige solo de lunes a viernes. Va en minúscula y en dorado para
+     leerse como condición y no como un tercer rótulo. */
+  .oferta-cond{ display:block; margin-top:6px; font-size:0.86rem; color: var(--gold); }
   .oferta-nota{ margin-top:16px; font-size:0.88rem; color: var(--ink-dim); max-width:62ch; }
 
   .intro-text .wrap{ max-width: 760px; }
@@ -670,8 +674,8 @@
 
       <div class="oferta">
         <div class="oferta-dato"><b>11%</b><span>de desconto no consumo</span></div>
-        <div class="oferta-dato"><b>44</b><span>pessoas ou mais</span></div>
-        <div class="oferta-dato"><b>Sem custo</b><span>de aluguel exclusivo</span></div>
+        <div class="oferta-dato"><b>22</b><span>pessoas ou mais</span></div>
+        <div class="oferta-dato"><b>Sem custo</b><span>de aluguel exclusivo</span><small class="oferta-cond">Somente de segunda a sexta</small></div>
       </div>
       <p class="oferta-nota">Entre em contato para conversarmos sobre o que você precisa, sempre temos um ouvido aberto.</p>
 
