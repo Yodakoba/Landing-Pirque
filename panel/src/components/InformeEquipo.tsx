@@ -39,10 +39,12 @@ import { aCSV } from '@/lib/csv';
 import { totalAjustes, motivosDe } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
          type Banco } from '@/lib/banco';
-import { pagadoDe, aTransferirDe, faltaDe, estadoDePago,
-         type PagoEquipo } from '@/lib/remuneraciones';
+import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, boletaDe,
+         boletaEnPlanilla, textoTransferencia, glosaDe,
+         type PagoEquipo, type Boleta, type Concepto, type Parte } from '@/lib/remuneraciones';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
+import { copiarConAviso, avisar } from './AvisoFlotante';
 
 type Tipo = 'mes' | 'semana' | 'rango';
 
@@ -59,12 +61,10 @@ type Tipo = 'mes' | 'semana' | 'rango';
  * montos que tiene al lado.
  */
 function CeldasPago({
-  aTransferir, pagado, falta, estado, puedePagar, onCobrar
+  aTransferir, pagado, falta, estado
 }: {
   aTransferir: number; pagado: number; falta: number;
   estado: 'pagado' | 'parcial' | 'pendiente';
-  puedePagar: boolean;
-  onCobrar: () => void;
 }) {
   return (
     <>
@@ -103,90 +103,258 @@ function CeldasPago({
           ? <strong className="text-ambar-texto">{enPesos(falta)}</strong>
           : <span className="text-hueso/25">—</span>}
       </td>
-      <td className="py-2 text-right">
-        {puedePagar && falta > 0 && (
-          <button onClick={onCobrar} className="boton whitespace-nowrap">
-            Registrar pago
-          </button>
-        )}
-      </td>
     </>
   );
 }
 
+/** Una de las partes que se pueden pagar: sueldo, propina o servicio. */
+interface Opcion { concepto: Concepto; parte: Parte }
+
 /**
- * El formulario de un pago.
+ * **El formulario de un pago, con dos preguntas y nada más** (2026-11-04).
  *
- * **Al nivel del módulo** por lo mismo que `CeldasPago`: declarado dentro
- * del componente, React lo desmontaría en cada dibujado y el input perdería
+ * Lo pidió el cliente, con la regla PlayStation: *"que simple se pueda decir
+ * yo le pagué esta parte: la propina, los sueldos, o una parte"*. Entonces:
+ *
+ * 1. **¿Qué le pagaste?** — un botón grande por concepto, con lo que falta
+ *    escrito adentro, y *Los dos* cuando faltan los dos. Son dos
+ *    transferencias porque legalmente son dos pagos; *Los dos* anota dos
+ *    filas, una por concepto, no una sola por el total.
+ * 2. **¿Cuánto?** — *Todo* o *Una parte*. Todo es lo normal y no pide
+ *    escribir nada; una parte abre el campo del monto.
+ *
+ * **Al nivel del módulo**, como todo componente de este proyecto: declarado
+ * adentro de otro, React lo desmontaría en cada dibujado y el campo perdería
  * el foco a cada tecla.
- *
- * El monto **nace con lo que falta**, que es el caso de siempre: lo normal
- * es pagar todo, y entonces esto es apretar dos botones. Bajarlo es lo que
- * convierte el pago en parcial, sin un modo aparte que haya que elegir.
  */
 function FormularioPago({
-  quien, propuesto, periodo, onGuardar, onCancelar
+  quien, opciones, inicial, boletaPendiente, periodo, onGuardar, onCancelar
 }: {
-  quien: string; propuesto: number; periodo: string;
-  onGuardar: (monto: number, nota: string) => void;
+  quien: string;
+  opciones: Opcion[];
+  inicial: Concepto | 'ambos';
+  /** Si la boleta de este periodo todavía no está marcada. */
+  boletaPendiente: boolean;
+  periodo: string;
+  onGuardar: (lineas: { concepto: Concepto; monto: number }[], nota: string) => void;
   onCancelar: () => void;
 }) {
-  const [monto, setMonto] = useState(String(propuesto));
+  const conFalta = opciones.filter((o) => o.parte.falta > 0);
+  const [que, setQue] = useState<Concepto | 'ambos'>(inicial);
+  const [modo, setModo] = useState<'todo' | 'parte'>('todo');
+  const [monto, setMonto] = useState('');
   const [nota, setNota] = useState('');
+
+  const elegida = opciones.find((o) => o.concepto === que);
   const n = Math.round(Number(monto.replace(/[^\d-]/g, '')) || 0);
-  const parcial = n > 0 && n < propuesto;
+  const lineas: { concepto: Concepto; monto: number }[] = que === 'ambos'
+    ? conFalta.map((o) => ({ concepto: o.concepto, monto: o.parte.falta }))
+    : elegida
+      ? [{ concepto: elegida.concepto, monto: modo === 'todo' ? elegida.parte.falta : n }]
+      : [];
+  const suma = lineas.reduce((s, l) => s + l.monto, 0);
+  const tocaSueldo = lineas.some((l) => l.concepto !== CONCEPTO.propina);
+  const parcial = !!elegida && modo === 'parte' && n > 0 && n < elegida.parte.falta;
+
+  const grande = (activo: boolean) =>
+    `tecla flex min-h-[64px] flex-1 flex-col items-start justify-center rounded-xl border-2
+     px-4 py-2 text-left ${activo
+       ? 'border-oro bg-oro/15'
+       : 'border-hueso/20 bg-panel hover:border-oro/60'}`;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <p className="text-sm text-hueso/70">
-        Lo que falta transferirle a <strong className="text-hueso">{quien}</strong>{' '}
-        por {periodo} son <strong className="text-hueso">{enPesos(propuesto)}</strong>.
+        Pago a <strong className="text-hueso">{quien}</strong> por {periodo}.
       </p>
-      <div className="flex flex-wrap gap-3">
-        <Campo etiqueta="Cuánto se le pagó" ancho="w-44">
-          <input type="text" inputMode="numeric" value={monto} autoFocus
-            aria-label="Monto pagado"
-            onChange={(e) => setMonto(e.target.value)}
-            className="w-full rounded border border-hueso/20 bg-transparent px-2 py-1.5
-                       text-sm tabular-nums outline-none focus:border-oro/60" />
-        </Campo>
-        <Campo etiqueta="Nota (opcional)" ancho="w-full sm:w-72">
-          <input type="text" value={nota} placeholder="Transferencia 2/11"
-            aria-label="Nota del pago"
-            onChange={(e) => setNota(e.target.value)}
-            className="w-full rounded border border-hueso/20 bg-transparent px-2 py-1.5
-                       text-sm outline-none focus:border-oro/60" />
-        </Campo>
+
+      <div>
+        <p className="mb-2 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+          ¿Qué le pagaste?
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {opciones.map((o) => (
+            <button key={o.concepto} type="button" disabled={o.parte.falta <= 0}
+              aria-pressed={que === o.concepto}
+              onClick={() => { setQue(o.concepto); setModo('todo'); }}
+              className={grande(que === o.concepto)}>
+              <span className="text-[16px] font-bold">{o.concepto}</span>
+              <span className="text-[13px] text-hueso/70">
+                {o.parte.falta > 0 ? <>falta {enPesos(o.parte.falta)}</> : '✓ ya pagado'}
+              </span>
+            </button>
+          ))}
+          {conFalta.length > 1 && (
+            <button type="button" aria-pressed={que === 'ambos'}
+              onClick={() => setQue('ambos')} className={grande(que === 'ambos')}>
+              <span className="text-[16px] font-bold">Los dos</span>
+              <span className="text-[13px] text-hueso/70">
+                {enPesos(conFalta.reduce((s, o) => s + o.parte.falta, 0))} en dos pagos
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Que va a quedar parcial se dice antes de guardar, no después: es
-          justamente lo que alguien querría saber si se equivocó de cifra. */}
-      {parcial && (
-        <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[13px]
-                      text-ambar-texto">
-          Queda como pago parcial: faltarían {enPesos(propuesto - n)}.
-        </p>
+      {que !== 'ambos' && elegida && (
+        <div>
+          <p className="mb-2 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+            ¿Cuánto?
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" aria-pressed={modo === 'todo'}
+              onClick={() => setModo('todo')} className={grande(modo === 'todo')}>
+              <span className="text-[16px] font-bold">Todo</span>
+              <span className="text-[13px] text-hueso/70">{enPesos(elegida.parte.falta)}</span>
+            </button>
+            <button type="button" aria-pressed={modo === 'parte'}
+              onClick={() => setModo('parte')} className={grande(modo === 'parte')}>
+              <span className="text-[16px] font-bold">Una parte</span>
+              <span className="text-[13px] text-hueso/70">escribes cuánto</span>
+            </button>
+          </div>
+          {modo === 'parte' && (
+            <div className="mt-3">
+              <Campo etiqueta="Cuánto le pagaste" ancho="w-48">
+                <input type="text" inputMode="numeric" value={monto} autoFocus
+                  aria-label="Monto pagado" placeholder="50000"
+                  onChange={(e) => setMonto(e.target.value)}
+                  className="w-full rounded border border-hueso/20 bg-transparent px-2 py-2
+                             text-[16px] tabular-nums outline-none focus:border-oro/60" />
+              </Campo>
+              {parcial && (
+                <p className="mt-2 text-[13px] text-ambar-texto">
+                  Queda pendiente {enPesos(elegida.parte.falta - n)}.
+                </p>
+              )}
+              {n > elegida.parte.falta && (
+                <p className="mt-2 text-[13px] text-ambar-texto">
+                  Es más de lo que falta. Se anota igual.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
-      {n > propuesto && (
-        <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[13px]
+
+      {/* La boleta avisa pero no bloquea: puede llegar después del pago, y
+          trabar el registro obligaría a anotar el pago en otro lado mientras
+          tanto, que es peor que un aviso. */}
+      {tocaSueldo && boletaPendiente && (
+        <p className="rounded-lg border-2 border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
                       text-ambar-texto">
-          Es más de lo que falta. Se anota igual, y el periodo queda pagado de más.
+          Todavía no está marcada la boleta de esta semana. Se puede registrar
+          igual; márcala cuando llegue.
         </p>
       )}
 
+      <Campo etiqueta="Nota (opcional)" ancho="w-full">
+        <input type="text" value={nota} placeholder="Transferencia 10/11"
+          aria-label="Nota del pago" onChange={(e) => setNota(e.target.value)}
+          className="w-full rounded border border-hueso/20 bg-transparent px-2 py-2
+                     text-sm outline-none focus:border-oro/60" />
+      </Campo>
+
       <div className="flex flex-wrap items-center gap-3">
-        <button onClick={() => onGuardar(n, nota)} disabled={!n}
-          className="boton boton-relleno">
-          Registrar pago
+        <button onClick={() => onGuardar(lineas.filter((l) => l.monto), nota)}
+          disabled={!suma} className="boton boton-relleno min-h-[44px] text-[15px]">
+          Registrar {suma ? enPesos(suma) : 'pago'}
         </button>
-        <button onClick={onCancelar} className="boton">Cancelar</button>
-        <span className="flex-1" />
-        <span className="text-[13px] text-hueso/55">
+        <button onClick={onCancelar} className="boton min-h-[44px]">Cancelar</button>
+        <span className="text-[13px] text-hueso/60">
           Queda anotado con tu nombre y la fecha.
         </span>
       </div>
     </div>
+  );
+}
+
+/**
+ * **La tarjeta de pago de una persona** (2026-11-04).
+ *
+ * Lo pidió el cliente pensando en quien hace las transferencias: *"dos
+ * botones en cada línea: copiar los datos de transferencia con el monto de
+ * propina, y con el monto de sueldo"*. Son dos porque legalmente son dos
+ * pagos.
+ *
+ * Cada parte es un bloque con su monto, su estado y sus dos botones
+ * —**Copiar datos** y **Registrar pago**—, y arriba a la derecha el check de
+ * la **boleta**, cuando aplica. Es tarjeta y no columnas de la tabla porque
+ * la tabla ya tiene once columnas: cuatro botones más por fila la habrían
+ * vuelto ilegible en un teléfono, y la regla PlayStation pide botones
+ * grandes, que no caben en una celda.
+ */
+function TarjetaPago({
+  nombre, detalle, partes, sinCuenta, boleta, onCopiar, onPagar, onBoleta
+}: {
+  nombre: string;
+  /** "contratado", la actividad de un extra, o nada. */
+  detalle: string;
+  partes: Opcion[];
+  sinCuenta: boolean;
+  /** `null` si no aplica; si aplica, si ya llegó. */
+  boleta: boolean | null;
+  onCopiar: (o: Opcion) => void;
+  onPagar: (concepto: Concepto) => void;
+  onBoleta: (recibida: boolean) => void;
+}) {
+  return (
+    <li className="rounded-2xl border-2 border-hueso/15 bg-panel p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[17px] font-bold">{nombre}</p>
+          {detalle && <p className="text-[13px] text-hueso/60">{detalle}</p>}
+        </div>
+        {boleta !== null && (
+          <button type="button" aria-pressed={boleta} onClick={() => onBoleta(!boleta)}
+            className={`tecla flex min-h-[44px] items-center gap-2 rounded-xl border-2 px-3
+                        text-[14px] font-bold ${boleta
+              ? 'border-verde-fuerte bg-verde/10 text-verde-texto'
+              : 'border-ambar/60 text-ambar-texto hover:border-ambar-fuerte'}`}>
+            <span aria-hidden className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
+              boleta ? 'border-verde-fuerte bg-verde-fuerte text-tinta' : 'border-ambar/70'}`}>
+              {boleta ? '✓' : ''}
+            </span>
+            {boleta ? 'Boleta recibida' : 'Falta la boleta'}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {partes.map((o) => (
+          <div key={o.concepto} className={`rounded-xl border-2 p-3 ${
+            o.parte.estado === 'pagado' ? 'border-verde/40 bg-verde/[0.04]' : 'border-hueso/15'}`}>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+                {o.concepto}
+              </span>
+              <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${
+                o.parte.estado === 'pagado' ? 'border-verde/50 text-verde-texto'
+                : o.parte.estado === 'parcial' ? 'border-ambar/50 text-ambar-texto'
+                : 'border-hueso/25 text-hueso/60'}`}>
+                {o.parte.estado === 'pagado' ? '✓ pagado'
+                  : o.parte.estado === 'parcial' ? `falta ${enPesos(o.parte.falta)}`
+                  : 'sin pagar'}
+              </span>
+            </div>
+            <p className="mt-1 text-[24px] font-bold tabular-nums">{enPesos(o.parte.debe)}</p>
+            {o.parte.falta > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={() => onCopiar(o)} disabled={sinCuenta}
+                  title={sinCuenta ? 'Falta completar su cuenta' : undefined}
+                  className="boton min-h-[40px]">
+                  📋 {sinCuenta ? 'Falta su cuenta' : 'Copiar datos'}
+                </button>
+                <button type="button" onClick={() => onPagar(o.concepto)}
+                  className="boton min-h-[40px] border-oro/60 font-semibold">
+                  Registrar pago
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </li>
   );
 }
 
@@ -197,7 +365,6 @@ function EncabezadosPago() {
       <th className="w-32 py-2 pr-3 text-right">A transferir</th>
       <th className="w-28 py-2 pr-3 text-right">Pagado</th>
       <th className="w-28 py-2 pr-3 text-right">Falta</th>
-      <th className="w-32 py-2" />
     </>
   );
 }
@@ -214,13 +381,22 @@ export default function InformeEquipo() {
   // plata. Ver `remuneraciones.ts`.
   const [pagos, setPagos] = useState<PagoEquipo[]>([]);
   const [puedePagar, setPuedePagar] = useState(false);
-  // A quién se le está registrando un pago, con el monto propuesto.
-  const [cobrando, setCobrando] = useState<
-    { quien: string; propuesto: number } | null>(null);
+  // Las boletas marcadas. Igual que los pagos, el check se deduce de que
+  // exista la fila: si no está, no llegó.
+  const [boletas, setBoletas] = useState<Boleta[]>([]);
+  // A quién se le está registrando un pago, con qué partes y cuál viene
+  // elegida al abrir.
+  const [pagando, setPagando] = useState<{
+    quien: string; opciones: Opcion[]; inicial: Concepto | 'ambos'; boletaPendiente: boolean;
+  } | null>(null);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
-  const [tipo, setTipo] = useState<Tipo>('mes');
-  const [periodo, setPeriodo] = useState(hoy().slice(0, 7));
+  // **Abre en la semana pasada** (2026-11-04): se paga el lunes la semana
+  // que terminó el domingo, y el cliente pidió los pagos "por ahora
+  // semanal". Es la misma semana con que abre el link personal de cada
+  // trabajador, así que los dos miran lo mismo.
+  const [tipo, setTipo] = useState<Tipo>('semana');
+  const [periodo, setPeriodo] = useState(sumarDias(semanaDe(hoy()), -7));
   // El rango libre lleva sus propias fechas: no se puede derivar de un
   // periodo con nombre, que es justamente la gracia.
   const [desdeLibre, setDesdeLibre] = useState(hoy().slice(0, 7) + '-01');
@@ -237,6 +413,7 @@ export default function InformeEquipo() {
         setExtras(d.extras ?? []);
         setCuentas(d.cuentas ?? {});
         setPagos(d.pagos ?? []);
+        setBoletas(d.boletas ?? []);
         setPuedePagar(!!d.puedePagar);
       })
       .catch((e) => setError(String(e)));
@@ -248,8 +425,10 @@ export default function InformeEquipo() {
     const conTurnos = tipo === 'mes'
       ? mesesConTurnos(turnos ?? [])
       : semanasConTurnos(turnos ?? []);
-    const actual = tipo === 'mes' ? hoy().slice(0, 7) : semanaDe(hoy());
-    return conTurnos.includes(actual) ? conTurnos : [actual, ...conTurnos];
+    const actuales = tipo === 'mes'
+      ? [hoy().slice(0, 7)]
+      : [semanaDe(hoy()), sumarDias(semanaDe(hoy()), -7)];
+    return [...new Set([...actuales, ...conTurnos])].sort().reverse();
   }, [turnos, tipo]);
 
   const { desde, hasta } = tipo === 'rango'
@@ -285,12 +464,10 @@ export default function InformeEquipo() {
    * que sumar dos columnas a mano.
    */
   const pagoDeFila = (nombre: string, tot: number, prop: number) => {
-    const aTransferir = aTransferirDe(tot, prop);
-    const pagado = pagadoDe(pagos, nombre, desde, hasta);
+    const d = desglosePago(pagos, nombre, desde, hasta, tot, prop);
     return {
-      aTransferir, pagado,
-      falta: faltaDe(aTransferir, pagado),
-      estado: estadoDePago(aTransferir, pagado)
+      aTransferir: aTransferirDe(tot, prop), pagado: d.total.pagado,
+      falta: d.total.falta, estado: d.total.estado
     };
   };
 
@@ -311,18 +488,68 @@ export default function InformeEquipo() {
     lineasExtras.map((l) => ({ nombre: l.colaborador, tot: l.total, prop: 0 }))
   );
 
-  async function registrarPago(quien: string, monto: number, nota: string) {
-    const r = await fetch('/api/informe', {
+  /**
+   * Registra uno o dos pagos —*Los dos* son dos filas, una por concepto,
+   * porque legalmente son dos pagos—. Van uno detrás del otro y no en
+   * paralelo: si el segundo falla, el primero ya quedó y se ve en pantalla,
+   * en vez de no saber cuál de los dos entró.
+   */
+  async function registrarPagos(
+    quien: string, lineasPago: { concepto: Concepto; monto: number }[], nota: string
+  ) {
+    for (const l of lineasPago) {
+      const r = await fetch('/api/informe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quien, monto: l.monto, concepto: l.concepto, desde, hasta, nota })
+      });
+      const d = await r.json();
+      if (d.error) return setError(d.error);
+      // Se agrega a lo que ya hay en pantalla en vez de recargar todo.
+      if (d.pago) setPagos((antes) => [...antes, d.pago]);
+    }
+    setPagando(null);
+    avisar(`Pago de ${quien} registrado`);
+  }
+
+  /** Marca o desmarca la boleta de alguien para el periodo que se mira. */
+  async function cambiarBoleta(quien: string, recibida: boolean) {
+    const r = await fetch('/api/informe/boleta', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quien, monto, desde, hasta, nota })
+      body: JSON.stringify({ quien, desde, hasta, recibida })
     });
     const d = await r.json();
     if (d.error) return setError(d.error);
-    // Se agrega a lo que ya hay en pantalla en vez de recargar todo: el
-    // informe de un mes son muchas filas y lo único que cambió es esta.
-    if (d.pago) setPagos((antes) => [...antes, d.pago]);
-    setCobrando(null);
+    setBoletas((antes) => recibida
+      ? [...antes, { quien, desde, hasta, registradoPor: '', cuando: '', nota: '', fila: -1 }]
+      : antes.filter((b) => !(normalizar(b.quien) === normalizar(quien)
+          && b.desde === desde && b.hasta === hasta)));
+    avisar(recibida ? `Boleta de ${quien} marcada` : `Boleta de ${quien} desmarcada`);
   }
+
+  /** Copia los datos de la transferencia de una parte, con lo que falta. */
+  function copiarTransferencia(quien: string, o: Opcion) {
+    const b = cuentaDe(quien);
+    const texto = textoTransferencia({
+      titular: titularDe(b, quien), rut: rutLimpio(b.rut), banco: b.banco,
+      tipo: b.tipo, numero: b.numero, monto: o.parte.falta, correo: b.correo,
+      glosa: glosaDe(o.concepto, desde, hasta)
+    });
+    copiarConAviso(texto, `${o.concepto} de ${quien} copiado · ${enPesos(o.parte.falta)}`,
+                   `Datos de ${o.concepto.toLowerCase()} de ${quien}:`);
+  }
+
+  /** Las partes que se le pagan a alguien: sueldo y propina, o el servicio. */
+  const partesDe = (nombre: string, tot: number, prop: number, extra: boolean): Opcion[] => {
+    const d = desglosePago(pagos, nombre, desde, hasta, tot, prop);
+    if (extra) return [{ concepto: CONCEPTO.servicio, parte: d.sueldo }];
+    const salida: Opcion[] = [{ concepto: CONCEPTO.sueldo, parte: d.sueldo }];
+    // Sin propina en el periodo no hay bloque de propina: un "$0 sin pagar"
+    // sería un botón que no lleva a nada.
+    if (d.propina.debe > 0) salida.push({ concepto: CONCEPTO.propina, parte: d.propina });
+    return salida;
+  };
+
+  const boletaRecibida = (nombre: string) => !!boletaDe(boletas, nombre, desde, hasta);
 
   // Quién aparece en el periodo y no se le puede transferir con lo que hay
   // anotado. Se avisa acá porque es el momento en que importa: descubrirlo
@@ -374,10 +601,16 @@ export default function InformeEquipo() {
    * mismo. En blanco en las demás filas la columna suma exactamente lo que
    * hay que transferir, que es para lo que se abre esta planilla.
    */
-  const columnasPago = (nombre: string, tot: number, prop: number, primera: boolean) => {
-    if (!primera) return ['', '', ''];
-    const x = pagoDeFila(nombre, tot, prop);
-    return [x.aTransferir, x.pagado, x.falta];
+  const columnasPago = (
+    nombre: string, tot: number, prop: number, primera: boolean, aplicaBoleta: boolean
+  ) => {
+    if (!primera) return ['', '', '', '', '', ''];
+    const d = desglosePago(pagos, nombre, desde, hasta, tot, prop);
+    return [aTransferirDe(tot, prop), d.total.pagado, d.total.falta,
+            // Para Chipax: si el pago está respaldado. En blanco si no
+            // llegó, que es lo que pidió el cliente.
+            boletaEnPlanilla(aplicaBoleta, boletaRecibida(nombre)),
+            d.sueldo.pagado || '', d.propina.pagado || ''];
   };
 
   function exportar() {
@@ -393,7 +626,8 @@ export default function InformeEquipo() {
       ['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
        'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo',
        'Total', 'Propina',
-       'A transferir', 'Pagado', 'Falta',
+       'A transferir', 'Pagado', 'Falta', 'Boleta', 'Pagado sueldo o servicio',
+       'Pagado propina',
        'Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
        'Correo del comprobante', 'Nota de pago'],
       [
@@ -417,7 +651,9 @@ export default function InformeEquipo() {
             lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.propina ?? 0,
             // La primera fila de esa persona: las filas vienen ordenadas por
             // nombre, así que es la que no tiene a nadie igual encima.
-            i === 0 || normalizar(delPeriodo[i - 1].trabajador) !== normalizar(t.trabajador)
+            i === 0 || normalizar(delPeriodo[i - 1].trabajador) !== normalizar(t.trabajador),
+            pideBoleta('equipo', esContratado(
+              lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.modalidad ?? ''))
           ),
           ...columnasBanco(t.trabajador)
         ]),
@@ -436,7 +672,8 @@ export default function InformeEquipo() {
             e.colaborador,
             lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(e.colaborador))?.total ?? 0,
             0,
-            i === 0 || normalizar(extrasDelPeriodo[i - 1].colaborador) !== normalizar(e.colaborador)
+            i === 0 || normalizar(extrasDelPeriodo[i - 1].colaborador) !== normalizar(e.colaborador),
+            pideBoleta('extra', false)
           ),
           ...columnasBanco(e.colaborador)
         ])
@@ -611,12 +848,7 @@ export default function InformeEquipo() {
                     <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
                       {l.propina ? enPesos(l.propina) : <span className="text-hueso/25">—</span>}
                     </td>
-                    <CeldasPago {...pagoDeFila(l.trabajador, l.total, l.propina)}
-                      puedePagar={puedePagar}
-                      onCobrar={() => setCobrando({
-                        quien: l.trabajador,
-                        propuesto: pagoDeFila(l.trabajador, l.total, l.propina).falta
-                      })} />
+                    <CeldasPago {...pagoDeFila(l.trabajador, l.total, l.propina)} />
                   </tr>
                 ))}
               </tbody>
@@ -646,7 +878,6 @@ export default function InformeEquipo() {
                       ? <strong className="text-ambar-texto">{enPesos(sumaEquipo.falta)}</strong>
                       : <span className="text-hueso/25">—</span>}
                   </td>
-                  <td />
                 </tr>
               </tfoot>
             </table>
@@ -710,12 +941,7 @@ export default function InformeEquipo() {
                             propina, así que su "a transferir" es su total y
                             nada más: el cero va escrito para que se lea como
                             decisión y no como un campo que faltó. */}
-                        <CeldasPago {...pagoDeFila(l.colaborador, l.total, 0)}
-                          puedePagar={puedePagar}
-                          onCobrar={() => setCobrando({
-                            quien: l.colaborador,
-                            propuesto: pagoDeFila(l.colaborador, l.total, 0).falta
-                          })} />
+                        <CeldasPago {...pagoDeFila(l.colaborador, l.total, 0)} />
                       </tr>
                     ))}
                   </tbody>
@@ -742,12 +968,64 @@ export default function InformeEquipo() {
                           ? <strong className="text-ambar-texto">{enPesos(sumaExtras.falta)}</strong>
                           : <span className="text-hueso/25">—</span>}
                       </td>
-                      <td />
                     </tr>
                   </tfoot>
                 </table>
               </div>
             </>
+          )}
+
+          {/* **Pagar, persona por persona** (2026-11-04). Solo para quien puede
+              registrar pagos: es su herramienta. Cada tarjeta trae lo que
+              hay que transferirle partido en sueldo y propina —o el servicio
+              de una actividad extra—, con el botón para copiar los datos de
+              la transferencia y el de registrar el pago, y el check de la
+              boleta cuando aplica. Las que ya están pagadas del todo bajan
+              al final, para que lo pendiente quede arriba. */}
+          {puedePagar && (
+            <div className="mb-8">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-hueso/70">
+                Pagar
+              </h2>
+              <p className="mb-3 max-w-2xl text-[13px] text-hueso/60">
+                <strong>Copiar datos</strong> copia la cuenta y el monto que falta,
+                listos para pegar en el banco. El sueldo y la propina van en
+                transferencias separadas.
+              </p>
+              <ul className="grid gap-3 lg:grid-cols-2">
+                {[
+                  ...lineas.map((l) => ({
+                    nombre: l.trabajador,
+                    detalle: esContratado(l.modalidad) ? 'Contratado · horas extra y ajustes' : 'Por turno',
+                    partes: partesDe(l.trabajador, l.total, l.propina, false),
+                    aplica: pideBoleta('equipo', esContratado(l.modalidad))
+                  })),
+                  ...lineasExtras.map((l) => ({
+                    nombre: l.colaborador,
+                    detalle: `Actividad extra${l.actividad ? ` · ${l.actividad}` : ''}`,
+                    partes: partesDe(l.colaborador, l.total, 0, true),
+                    aplica: pideBoleta('extra', false)
+                  }))
+                ]
+                  // Quien no tiene nada que cobrar en el periodo no necesita
+                  // tarjeta: no vino, o quedó sin marcar (eso lo avisa arriba).
+                  .filter((x) => x.partes.some((o) => o.parte.debe > 0))
+                  .sort((a, b) => Number(a.partes.every((o) => o.parte.falta <= 0))
+                    - Number(b.partes.every((o) => o.parte.falta <= 0)))
+                  .map((x) => (
+                    <TarjetaPago key={x.nombre} nombre={x.nombre} detalle={x.detalle}
+                      partes={x.partes}
+                      sinCuenta={!sePuedeTransferir(cuentaDe(x.nombre))}
+                      boleta={x.aplica ? boletaRecibida(x.nombre) : null}
+                      onCopiar={(o) => copiarTransferencia(x.nombre, o)}
+                      onBoleta={(r) => void cambiarBoleta(x.nombre, r)}
+                      onPagar={(concepto) => setPagando({
+                        quien: x.nombre, opciones: x.partes, inicial: concepto,
+                        boletaPendiente: x.aplica && !boletaRecibida(x.nombre)
+                      })} />
+                  ))}
+              </ul>
+            </div>
           )}
 
           {/* **Dos números y no uno**, porque son dos preguntas distintas y
@@ -833,15 +1111,17 @@ export default function InformeEquipo() {
 
           No hay una casilla "pagado": se deduce de que la suma cubra lo que
           hay que transferir. Ver `remuneraciones.ts`. */}
-      {cobrando && (
-        <Dialogo titulo={`Registrar pago · ${cobrando.quien}`}
-          onCerrar={() => setCobrando(null)}>
+      {pagando && (
+        <Dialogo titulo={`Registrar pago · ${pagando.quien}`} ancho="max-w-xl"
+          onCerrar={() => setPagando(null)}>
           <FormularioPago
-            quien={cobrando.quien}
-            propuesto={cobrando.propuesto}
+            quien={pagando.quien}
+            opciones={pagando.opciones}
+            inicial={pagando.inicial}
+            boletaPendiente={pagando.boletaPendiente}
             periodo={rangoEnPalabras([desde, hasta])}
-            onGuardar={(monto, nota) => void registrarPago(cobrando.quien, monto, nota)}
-            onCancelar={() => setCobrando(null)} />
+            onGuardar={(ls, nota) => void registrarPagos(pagando.quien, ls, nota)}
+            onCancelar={() => setPagando(null)} />
         </Dialogo>
       )}
 

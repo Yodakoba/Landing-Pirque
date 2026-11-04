@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { leerTurnos, leerTrabajadores, leerExtras, leerColaboradores,
-         leerPagosEquipo, anotarPagoEquipo, borrarPagoEquipo, anotar } from '@/lib/datos';
+         leerPagosEquipo, anotarPagoEquipo, borrarPagoEquipo, leerBoletas,
+         anotar } from '@/lib/datos';
 import { exigir, quienEs } from '@/lib/permisos';
 import { normalizar } from '@/lib/columnas';
 import { pagoDelCuerpo } from '@/lib/remuneraciones';
@@ -41,9 +42,9 @@ export async function GET(req: Request) {
   const no = await exigir(req, 'informe');
   if (no) return no;
   try {
-    const [turnos, extras, gente, colaboradores, pagos] = await Promise.all([
+    const [turnos, extras, gente, colaboradores, pagos, boletas] = await Promise.all([
       leerTurnos(), leerExtras(), leerTrabajadores(), leerColaboradores(),
-      leerPagosEquipo()
+      leerPagosEquipo(), leerBoletas()
     ]);
     const cuentas: Record<string, Banco> = {};
     for (const p of [...gente, ...colaboradores]) {
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
     // no en la pantalla: el botón se esconde por comodidad, pero lo que de
     // verdad cierra la puerta es el `exigir('pagar')` del POST.
     return NextResponse.json({
-      turnos, extras, cuentas, pagos,
+      turnos, extras, cuentas, pagos, boletas,
       puedePagar: puede((await quienEs(req)).rol, 'pagar')
     });
   } catch (e) {
@@ -86,7 +87,8 @@ export async function POST(req: Request) {
     const quien = await quienEs(req);
     const pago = await anotarPagoEquipo(limpio, quien.usuario);
     await anotar({ ...quien, accion: 'Registró un pago',
-      detalle: `${limpio.quien} · ${enPesos(limpio.monto)} · ${limpio.desde} a ${limpio.hasta}` });
+      detalle: `${limpio.quien} · ${limpio.concepto || 'sin concepto'} · `
+        + `${enPesos(limpio.monto)} · ${limpio.desde} a ${limpio.hasta}` });
     return NextResponse.json({ pago });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
