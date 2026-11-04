@@ -317,6 +317,60 @@
      sin costo rige solo de lunes a viernes. Va en minúscula y en dorado para
      leerse como condición y no como un tercer rótulo. */
   .oferta-cond{ display:block; margin-top:6px; font-size:0.86rem; color: var(--gold); }
+  /* Los menús con el 11% aplicado, como etiquetas de precio (2026-11-04).
+     Lo pidió el cliente "fácil y juguetón", con la regla de botones y letras
+     grandes del panel: el precio nuevo es lo más grande de la etiqueta, el de
+     antes se lee pero tachado, y lo ahorrado va en una pastilla con borde.
+     El juego es solo forma —el sticker girado, las etiquetas un poco
+     chuecas que se enderezan al pasarles encima—, sin JavaScript. */
+  .precios-promo{ margin-top:34px; }
+  .precios-titulo{
+    font-family: var(--sans); font-weight:700; text-transform:uppercase;
+    letter-spacing:0.04em; font-size:clamp(1.05rem,2.4vw,1.3rem); color: var(--ink); margin:0;
+  }
+  .precios-bajada{ margin:6px 0 0; font-size:0.95rem; color: var(--ink-dim); }
+  .etiquetas{
+    display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:22px 20px; margin-top:24px;
+    max-width:640px;
+  }
+  /* Dos por fila y no cuatro: esta sección es una columna angosta, y con
+     cuatro el precio grande no cabía en su etiqueta. En un teléfono, una. */
+  @media (max-width: 560px){ .etiquetas{ grid-template-columns: 1fr; } }
+  .etiqueta{
+    position:relative; display:flex; flex-direction:column; gap:6px;
+    background: var(--bg-panel); border:1.5px solid rgba(201,162,39,0.55);
+    border-radius:14px; padding:22px 18px 18px;
+    transform: rotate(-1.2deg); transition: transform .18s ease, border-color .18s ease;
+  }
+  .etiqueta:nth-child(even){ transform: rotate(1.2deg); }
+  .etiqueta:hover{ transform: rotate(0) translateY(-4px); border-color: var(--gold); }
+  .sticker{
+    position:absolute; top:-14px; right:-8px;
+    width:54px; height:54px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background: var(--gold); color:#0B0B0A; font-weight:800; font-size:0.95rem;
+    transform: rotate(14deg); box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+  }
+  .etq-nombre{
+    font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+    font-size:0.95rem; color: var(--ink); padding-right:46px;
+  }
+  .etq-antes{ font-size:0.92rem; color: var(--ink-dim); white-space:nowrap; }
+  .etq-antes s{ text-decoration-thickness:2px; }
+  .etq-ahora{
+    font-family: var(--serif); font-style:italic; font-weight:400; line-height:1;
+    color: var(--gold); font-size: clamp(1.9rem, 4vw, 2.5rem);
+  }
+  .etq-ahorro{
+    align-self:flex-start; margin-top:4px;
+    border:1.5px solid rgba(201,162,39,0.6); border-radius:999px;
+    padding:5px 12px; font-size:0.88rem; font-weight:600; color: var(--ink);
+    white-space:nowrap;
+  }
+  .etq-ahorro b{ display:inline; font-weight:700; color: var(--gold); }
+  @media (prefers-reduced-motion: reduce){
+    .etiqueta, .etiqueta:nth-child(even), .etiqueta:hover{ transform:none; transition:none; }
+  }
   .oferta-nota{ margin-top:16px; font-size:0.88rem; color: var(--ink-dim); max-width:62ch; }
 
   .intro-text .wrap{ max-width: 760px; }
@@ -678,6 +732,45 @@
         <div class="oferta-dato"><b>Sem custo</b><span>de aluguel exclusivo</span><small class="oferta-cond">Somente de segunda a sexta</small></div>
       </div>
       <p class="oferta-nota">Entre em contato para conversarmos sobre o que você precisa, sempre temos um ouvido aberto.</p>
+
+      <!-- Los menús con el 11% ya aplicado (2026-11-04, lo pidió el cliente).
+           Los montos son los de las tarjetas de más abajo menos el 11%, y se
+           escriben a mano en el HTML como el resto de los precios: si cambia
+           un precio de las tarjetas, hay que cambiarlo también acá. -->
+      <div class="precios-promo">
+        <p class="precios-titulo">Assim ficam os menus com seus 11%</p>
+        <p class="precios-bajada">Por pessoa, com o desconto já aplicado.</p>
+        <div class="etiquetas">
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="etq-nombre">Tradiciones</span>
+            <span class="etq-antes">Antes <s>$49.000 CLP</s></span>
+            <b class="etq-ahora">$43.610 CLP</b>
+            <span class="etq-ahorro">Você economiza <b>$5.390 CLP</b></span>
+          </div>
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="etq-nombre">Lo Pirque</span>
+            <span class="etq-antes">Antes <s>$55.000 CLP</s></span>
+            <b class="etq-ahora">$48.950 CLP</b>
+            <span class="etq-ahorro">Você economiza <b>$6.050 CLP</b></span>
+          </div>
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="etq-nombre">Brasas</span>
+            <span class="etq-antes">Antes <s>$75.000 CLP</s></span>
+            <b class="etq-ahora">$66.750 CLP</b>
+            <span class="etq-ahorro">Você economiza <b>$8.250 CLP</b></span>
+          </div>
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="etq-nombre">Sommelier</span>
+            <span class="etq-antes">Antes <s>$95.000 CLP</s></span>
+            <b class="etq-ahora">$84.550 CLP</b>
+            <span class="etq-ahorro">Você economiza <b>$10.450 CLP</b></span>
+          </div>
+        </div>
+      </div>
 
       <div class="hero-cta" style="margin-top:26px;">
         <a href="https://wa.me/56933858575?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20as%20promo%C3%A7%C3%B5es%20do%20Brasas%20de%20Lo%20Pirque" class="btn btn-whatsapp" target="_blank" rel="noopener">

@@ -4916,6 +4916,12 @@ Siempre a la vista:
    mínimo bajó de 44 a 22 y la condición de los días se agregó el
    2026-11-03, por pedido del cliente; la condición va bajo el rótulo del
    arriendo, en dorado (`.oferta-cond`).
+   **Debajo, los cuatro menús con el 11% ya aplicado** (2026-11-04), como
+   etiquetas de precio: el nuevo grande, el de antes tachado y lo que se
+   ahorra en una pastilla. Tradiciones $43.610 · Lo Pirque $48.950 · Brasas
+   $66.750 · Sommelier $95.000 → $84.550. **Están escritos a mano**, como
+   todos los precios del sitio: si cambia el precio de una tarjeta, hay que
+   cambiar su etiqueta, y las llaves `$…` de los dos diccionarios.
 3. Contacto: botón WhatsApp + formulario de email.
 4. Footer.
 
@@ -5179,6 +5185,12 @@ donde revisa. Lo que cambia es que la revisión tiene dónde ocurrir sin un
 paso extra. El PR lleva **qué cambió y por qué**, no un listado de archivos:
 es el lugar donde queda escrito el motivo de una decisión, y buena parte de
 este CLAUDE.md salió de ahí.
+
+**Mergear es caso a caso** (decidido el 2026-11-03). La herramienta de
+GitHub permite mergear desde acá, y la cuenta tiene permiso, pero solo se
+usa cuando el cliente lo pide para ese PR ("mergéalo"). Si no lo pide, el PR
+queda abierto y lo mergea él: su merge es el último filtro antes de
+producción, y el panel en Vercel se despliega solo desde `main`.
 
 Esto **no cambia** la regla de proponer antes de aplicar: los cambios al
 contenido se siguen conversando antes de hacerlos. Lo que se abre solo es el
