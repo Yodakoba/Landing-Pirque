@@ -34,7 +34,8 @@ export default function DatosBancarios({
 
   const etiqueta = (texto: string, hijo: React.ReactNode) => (
     <label className="block">
-      <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-hueso/35">
+      <span className="mb-0.5 block text-[13px] font-semibold uppercase
+                       tracking-wide text-hueso/60">
         {texto}
       </span>
       {hijo}
@@ -98,7 +99,7 @@ export default function DatosBancarios({
               onBlur={(e) => set('correo', correoNormal(e.target.value))} />
           ))}
           {avisoCorreo(banco.correo) && (
-            <p className="mt-0.5 text-[11px] leading-tight text-ambar-texto/80">
+            <p className="mt-0.5 text-[13px] leading-tight text-ambar-texto">
               {avisoCorreo(banco.correo)}
             </p>
           )}
@@ -115,7 +116,7 @@ export default function DatosBancarios({
 
       {falta.length > 0 && (banco.titular || banco.rut || banco.banco
         || banco.tipo || banco.numero || banco.nota) && (
-        <p className="mt-1 text-[11px] text-ambar-texto/80">
+        <p className="mt-1 text-[13px] text-ambar-texto">
           Falta {falta.join(', ')} para poder transferirle.
         </p>
       )}

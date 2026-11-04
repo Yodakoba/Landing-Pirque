@@ -214,7 +214,7 @@ export default function EquipoEditor() {
    */
   const botonGuardar = (
     <>
-      {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
+      {sucio && <span className="text-[13px] text-hueso/70">Hay cambios sin guardar.</span>}
       <button onClick={guardar} disabled={guardando || !sucio}
         className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
                    disabled:opacity-40">
@@ -282,12 +282,12 @@ export default function EquipoEditor() {
     return (
       <>
         {dif.length > 0 && (
-          <span className="text-xs text-ambar-texto/85">
+          <span className="text-[13px] text-ambar-texto">
             Cambiaste {dif.join(', ')}.
           </span>
         )}
         <button onClick={guardar} disabled={guardando}
-          className="rounded bg-oro px-3 py-1 text-xs font-semibold text-tinta
+          className="boton boton-relleno
                      disabled:opacity-40"
           title="Guarda los cambios de esta pantalla">
           {guardando ? 'Guardando…' : 'Guardar cambios'}
@@ -427,7 +427,7 @@ export default function EquipoEditor() {
         </div>
       )}
 
-      <h2 className="mb-3 text-xs uppercase tracking-widest text-hueso/45">
+      <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
         Trabajadores
       </h2>
       {/* El párrafo que explicaba el link personal se fue al `?` que está
@@ -457,7 +457,7 @@ export default function EquipoEditor() {
           trae de vuelta, y dice cuántos son para que nadie los dé por
           perdidos. */}
       {inactivos > 0 && (
-        <label className="mb-3 flex items-center gap-2 text-xs text-hueso/55">
+        <label className="mb-3 flex items-center gap-2 text-[13px] text-hueso/70">
           <input type="checkbox" checked={verInactivos} className="h-4 w-4 accent-oro"
             onChange={(e) => { setVerInactivos(e.target.checked); setAbierta(null); }} />
           Ver desactivados ({inactivos})
@@ -518,10 +518,11 @@ export default function EquipoEditor() {
                   <span className="font-semibold">
                     {t.nombre.trim() || <span className="text-hueso/40">Sin nombre</span>}
                   </span>
-                  <span className="text-xs text-hueso/45">{t.puesto || 'sin puesto'}</span>
-                  <span className="text-xs text-hueso/35">{t.telefono}</span>
+                  <span className="text-[13px] text-hueso/70">{t.puesto || 'sin puesto'}</span>
+                  <span className="text-[13px] text-hueso/60">{t.telefono}</span>
                   {!t.activo && (
-                    <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+                    <span className="rounded-full border border-hueso/25 px-2 py-0.5
+                                     text-[13px] font-semibold text-hueso/60">
                       inactivo
                     </span>
                   )}
@@ -529,7 +530,10 @@ export default function EquipoEditor() {
                       cerrada**: adentro ya lo avisa `DatosBancarios`, pero
                       cerrada es donde se mira la lista antes de pagar. */}
                   {verSueldos && t.nombre.trim() && !sePuedeTransferir(t.banco) && (
-                    <span className="text-[11px] text-ambar-texto/80">falta su cuenta</span>
+                    <span className="rounded-full border border-ambar/50 px-2 py-0.5
+                                     text-[13px] font-semibold text-ambar-texto">
+                      falta su cuenta
+                    </span>
                   )}
                 </button>
 
@@ -551,9 +555,7 @@ export default function EquipoEditor() {
                         + 'turno guardado, así que no se pierde ninguna historia.')) return;
                       void quitarFicha(i);
                     }}
-                    className="shrink-0 rounded border border-hueso/25 px-3 py-1.5 text-xs
-                               font-semibold text-hueso/70 hover:border-rojo-fuerte
-                               hover:text-rojo-texto"
+                    className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto"
                     title="Todavía no tiene ningún turno guardado">Quitar</button>
                 ) : t.activo ? (
                   <button
@@ -564,9 +566,7 @@ export default function EquipoEditor() {
                         + 'volver a activar cuando quieras.')) return;
                       void cambiarActivo(i, false);
                     }}
-                    className="shrink-0 rounded border border-hueso/25 px-3 py-1.5 text-xs
-                               font-semibold text-hueso/70 hover:border-rojo-fuerte
-                               hover:text-rojo-texto"
+                    className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto"
                     title={`Tiene ${turnos} turnos guardados, así que su ficha `
                            + 'no se quita: se desactiva y conserva su historia'}>
                     Desactivar
@@ -574,8 +574,7 @@ export default function EquipoEditor() {
                 ) : (
                   <button
                     onClick={() => void cambiarActivo(i, true)}
-                    className="shrink-0 rounded border border-oro/50 px-3 py-1.5 text-xs
-                               font-semibold text-oro hover:bg-oro/10"
+                    className="boton shrink-0 border-oro/50 text-oro hover:bg-oro/10"
                     title="Vuelve al planificador y su link personal abre de nuevo">
                     Activar
                   </button>
@@ -624,7 +623,7 @@ export default function EquipoEditor() {
 
                   <span className="flex-1" />
 
-                  <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-xs">
+                  <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-[13px]">
                     {guardarEnTarjeta(i)}
                     {/* Dar de baja vive **en la línea de la persona**, abierta
                         o cerrada: ver arriba. Acá adentro quedaban los dos
@@ -656,10 +655,14 @@ export default function EquipoEditor() {
                 {verLinks && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="flex w-28 items-center text-[11px] uppercase
-                                       tracking-widest text-hueso/50">
-                        Link personal<Ayuda tema="link" />
+                      {/* **El `?` va fuera del rótulo.** Adentro le comía 30px
+                          a la caja y "LINK PERSONAL" se partía en dos líneas
+                          mientras "PAGO" y "TRANSFERENCIA" iban en una. */}
+                      <span className="w-36 whitespace-nowrap text-[13px] font-semibold
+                                       uppercase tracking-widest text-hueso/60">
+                        Link personal
                       </span>
+                      <Ayuda tema="link" />
                       {!t.nombre.trim() ? (
                         <span className="text-[13px] text-hueso/55">
                           Ponle nombre y guarda para poder crearle su link.
@@ -668,10 +671,37 @@ export default function EquipoEditor() {
                         <span className="text-[13px] text-ambar-texto/85">
                           Guarda los cambios para administrar su link.
                         </span>
-                      ) : t.token ? (
+                      ) : (
                         <>
-                          <button onClick={() => copiar(t.token, t.nombre)}
+                          {/* **Un solo botón, y siempre el mismo** (2026-11-04,
+                              lo pidió el cliente: *"se debería copiar lo más
+                              fácil posible… si se puede hacerlo sin crear el
+                              link y luego tener que copiarlo, sino
+                              directamente copiar el link"*).
+
+                              Eran dos según el estado —*Crear* la primera vez,
+                              *Copiar* después— y esa diferencia **era nuestra,
+                              no suya**: por dentro `crear` ya copiaba. Quien
+                              abre una ficha para mandarle el link a alguien
+                              viene a una sola cosa.
+
+                              **El nombre se queda en "link personal"**: la
+                              página ya no es solo lo que ganó, también son los
+                              turnos que vienen, así que llamarlo "sus datos de
+                              sueldo" la nombraría a medias.
+
+                              No contradice que un link sin contraseña sea una
+                              decisión: eso vale para la **planilla semanal**,
+                              que abre datos de todo el equipo. Éste es de una
+                              persona y **nace para mandarse**, igual que el
+                              documento de un presupuesto. */}
+                          <button
+                            onClick={() => (t.token
+                              ? copiar(t.token, t.nombre)
+                              : void link(t.nombre, 'crear'))}
                             className="boton boton-relleno">Copiar link personal</button>
+                          {t.token && (
+                            <>
                           <button onClick={() => link(t.nombre, 'renovar')}
                             className="boton"
                             title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
@@ -683,10 +713,9 @@ export default function EquipoEditor() {
                             className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
                             Quitar link
                           </button>
+                            </>
+                          )}
                         </>
-                      ) : (
-                        <button onClick={() => link(t.nombre, 'crear')}
-                          className="boton boton-relleno">Crear link personal</button>
                       )}
                     </div>
                   </div>
@@ -696,8 +725,8 @@ export default function EquipoEditor() {
                 {verSueldos && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
-                      <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
-                                       text-hueso/35">Pago</span>
+                      <span className="w-36 pt-4 text-[13px] font-semibold uppercase
+                                       tracking-widest text-hueso/60">Pago</span>
                       <Campo etiqueta="Modalidad" ancho="w-40">
                         <select value={t.modalidad} className={ENTRADA}
                           aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
@@ -728,7 +757,7 @@ export default function EquipoEditor() {
                           className="h-4 w-4 accent-oro"
                           aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
                           onChange={(e) => cambiarPersona(i, 'propina', e.target.checked)} />
-                        <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+                        <span className="text-[13px] text-hueso/70">
                           Entra en la propina
                         </span>
                       </label>
@@ -740,8 +769,8 @@ export default function EquipoEditor() {
                 {verSueldos && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
-                      <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
-                                       text-hueso/35">Transferencia</span>
+                      <span className="w-36 pt-4 text-[13px] font-semibold uppercase
+                                       tracking-widest text-hueso/60">Transferencia</span>
                       <div className="min-w-[20rem] flex-1">
                         <DatosBancarios
                           banco={t.banco} nombre={t.nombre}
@@ -790,7 +819,7 @@ export default function EquipoEditor() {
         </p>
       )}
       {verSueldos && (
-        <p className="mt-4 max-w-2xl text-xs text-hueso/50">
+        <p className="mt-4 max-w-2xl text-[13px] text-hueso/70">
           <strong>Por turno</strong> se le paga por jornada trabajada, y cada
           turno suma al costo del día. <strong>Contratado</strong> tiene
           sueldo, y ese sueldo no sale de acá: sus turnos no suman jornada,
@@ -820,7 +849,7 @@ export default function EquipoEditor() {
         </div>
       </div>
 
-      <p className="mt-6 max-w-2xl text-xs text-hueso/50">
+      <p className="mt-6 max-w-2xl text-[13px] text-hueso/70">
         <strong>A quien ya trabajó se le desactiva, no se le quita.</strong>{' '}
         <em>Desactivar</em> lo saca del planificador y le cierra su link
         personal, pero conserva sus turnos, que son el registro de quién
@@ -845,14 +874,15 @@ export default function EquipoEditor() {
           </p>
           {/* **El orden de esta lista es el orden del planificador**, así que
               se puede acomodar al orden en que se arma un turno. */}
-          <p className="mt-2 max-w-2xl text-xs text-hueso/45">
+          <p className="mt-2 max-w-2xl text-[13px] text-hueso/70">
             El orden manda: así salen en la ventana de planificar un día.
             Muévelos con las flechas.
           </p>
 
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[34rem] table-fixed text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
+              <thead className="text-left text-[13px] font-semibold uppercase
+                                tracking-wide text-hueso/60">
                 <tr className="border-b border-hueso/10">
                   {editarPuestos && <th className="w-16 py-2 pr-2">Orden</th>}
                   <th className="py-2 pr-3">Puesto</th>

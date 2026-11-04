@@ -34,12 +34,12 @@ import {
 import { informeDeExtras, costoDeExtra, type Extra } from '@/lib/extras';
 import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
-import { mesEnPalabras, rangoEnPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
+import { mesEnPalabras, rangoEnPalabras, enPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 import { totalAjustes, motivosDe } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
          type Banco } from '@/lib/banco';
-import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, boletaDe,
+import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, boletaDe, pagosEnPeriodo,
          boletaEnPlanilla, textoTransferencia, glosaDe, filaTransferencia,
          ORDEN_TRANSFERENCIA, NOMBRE_COLUMNA_TRANSFERENCIA,
          type PagoEquipo, type Boleta, type Concepto, type Parte,
@@ -245,7 +245,8 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
  */
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, avisos, sinCuenta,
-  boleta, puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta
+  boleta, puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta,
+  anotados, onVerPagos
 }: {
   nombre: string;
   detalle: string;
@@ -267,6 +268,9 @@ function LineaPersona({
   /** *Pagado completo*: anota lo que falta de esa parte, sin ventana. */
   onPagarCompleto: (o: Opcion) => Promise<void>;
   onBoleta: (recibida: boolean) => void;
+  /** Cuántos pagos tiene anotados en el periodo. */
+  anotados: number;
+  onVerPagos: () => void;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
   // Qué parte se está guardando con "Pagado completo": mientras tanto el
@@ -461,6 +465,23 @@ function LineaPersona({
             </div>
           ))}
           </div>
+
+          {/* **Con todo pagado esta tarjeta no tenía ningún botón**, que es
+              justo el caso en que alguien necesita volver: el cliente apretó
+              *Pagado completo* sin querer y no tenía dónde deshacerlo
+              (2026-11-04). Mientras haya algo anotado, hay por dónde mirarlo.
+
+              **Va por persona y no por parte**: los pagos viejos vienen sin
+              concepto y `desglosePago()` los reparte entre sueldo y propina
+              con una regla suya. Filtrar acá por concepto sería reescribir
+              esa regla en un segundo lugar, y el día que cambie una de las
+              dos diría otra cosa. */}
+          {anotados > 0 && (
+            <button type="button" onClick={onVerPagos}
+              className="boton w-full md:w-auto">
+              {anotados === 1 ? 'Ver el pago anotado' : `Ver los ${anotados} pagos anotados`}
+            </button>
+          )}
         </div>
       )}
     </li>
@@ -618,6 +639,8 @@ export default function InformeEquipo() {
     quien: string; opciones: Opcion[]; inicial: Concepto | 'ambos'; boletaPendiente: boolean;
     modo?: 'todo' | 'parte';
   } | null>(null);
+  // De quién se están mirando los pagos ya anotados, para poder deshacer uno.
+  const [viendoPagos, setViendoPagos] = useState<string | null>(null);
   // La línea abierta. Una a la vez, como las fichas de /equipo: se paga a
   // una persona, no se comparan dos.
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -757,6 +780,46 @@ export default function InformeEquipo() {
     } else {
       avisar(`${o.concepto} de ${quien} pagado · ${enPesos(o.parte.falta)}`);
     }
+  }
+
+  /**
+   * Deshace un pago anotado por error.
+   *
+   * Lo pidió el cliente con el caso exacto: *"apreté el botón pago completo
+   * en un trabajador, queda como pagado, pero necesito igual la posibilidad
+   * de rehacer esta acción, porque si lo aprieto por no querer, tengo que
+   * tener la posibilidad de volver y decir: no, esto no se pagó aún"*.
+   *
+   * **Borra la fila; no anota un negativo**, y la diferencia es real:
+   *
+   * - **Se apretó sin querer** y ese pago nunca ocurrió. No hubo ningún
+   *   movimiento que registrar, así que dejar una fila y su contraria sería
+   *   inventar dos. Que alguien lo deshizo queda en la bitácora, que es
+   *   donde corresponde.
+   * - **Se pagó de más, o devolvieron plata.** Ahí sí hubo dos movimientos y
+   *   se anota **un pago en negativo**, que el formulario ya acepta. Borrar
+   *   uno de los dos escondería la mitad de lo que pasó.
+   *
+   * **`DELETE /api/informe` existía desde el 2026-11-01** —con su permiso y
+   * su bitácora— **y ninguna pantalla lo llamaba.** Lo que faltaba era el
+   * botón, no la lógica: una ruta sin pantalla no está hecha.
+   */
+  async function deshacerPago(pago: PagoEquipo) {
+    if (!confirm(
+      `¿Deshacer el pago de ${enPesos(pago.monto)} a ${pago.quien}?\n\n`
+      + 'Es para cuando se anotó por error: la fila se borra y vuelve a quedar '
+      + 'como no pagado. Si de verdad se pagó de más o devolvieron plata, en '
+      + 'vez de esto anota un pago en negativo.')) return;
+    const r = await fetch('/api/informe', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: pago.id })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    // Se saca de lo que hay en pantalla en vez de recargar el informe
+    // entero, igual que al registrarlo: lo único que cambió es esta fila.
+    setPagos((antes) => antes.filter((x) => x.id !== pago.id));
+    avisar(`Pago de ${pago.quien} deshecho`);
   }
 
   /** Marca o desmarca la boleta de alguien para el periodo que se mira. */
@@ -1174,7 +1237,14 @@ export default function InformeEquipo() {
                             ? 'en su sueldo' : enPesos(l.jornadas) },
                         { que: 'Horas extra', valor: l.horasExtra
                             ? `${enPesos(l.montoHorasExtra)} (${l.horasExtra} h)` : '—' },
-                        { que: 'Ajustes', valor: l.ajustes ? enPesos(l.ajustes) : '—',
+                        { que: 'Ajustes',
+                          // El signo adelante —`−$20.000`, no `$-20.000`—, que
+                          // es la convención del panel: el menos pegado al peso
+                          // se lee como un error de tipeo justo donde importa
+                          // saber si se suma o se resta.
+                          valor: l.ajustes
+                            ? (l.ajustes < 0 ? '−' : '') + enPesos(Math.abs(l.ajustes))
+                            : '—',
                           tono: l.ajustes < 0 ? 'rojo' : undefined },
                         { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' },
                         { que: 'Propina', valor: l.propina ? enPesos(l.propina) : '—' }
@@ -1186,6 +1256,8 @@ export default function InformeEquipo() {
                       onAbrir={() => setAbierta((a) => a === 'e-' + l.trabajador ? null : 'e-' + l.trabajador)}
                       onCopiar={(o) => copiarTransferencia(l.trabajador, o)}
                       onBoleta={(r) => void cambiarBoleta(l.trabajador, r)}
+                      anotados={pagosEnPeriodo(pagos, l.trabajador, desde, hasta).length}
+                      onVerPagos={() => setViendoPagos(l.trabajador)}
                       onPagar={(concepto) => setPagando({
                         quien: l.trabajador,
                         opciones: partesDe(l.trabajador, l.total, l.propina, false),
@@ -1233,7 +1305,10 @@ export default function InformeEquipo() {
                       partes={partesDe(l.colaborador, l.total, 0, true)}
                       datos={[
                         { que: 'Montos', valor: l.montos ? enPesos(l.montos) : '—' },
-                        { que: 'Ajustes', valor: l.ajustes ? enPesos(l.ajustes) : '—',
+                        { que: 'Ajustes',
+                          valor: l.ajustes
+                            ? (l.ajustes < 0 ? '−' : '') + enPesos(Math.abs(l.ajustes))
+                            : '—',
                           tono: l.ajustes < 0 ? 'rojo' : undefined },
                         { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' }
                       ]}
@@ -1244,6 +1319,8 @@ export default function InformeEquipo() {
                       onAbrir={() => setAbierta((a) => a === 'x-' + l.colaborador ? null : 'x-' + l.colaborador)}
                       onCopiar={(o) => copiarTransferencia(l.colaborador, o)}
                       onBoleta={(r) => void cambiarBoleta(l.colaborador, r)}
+                      anotados={pagosEnPeriodo(pagos, l.colaborador, desde, hasta).length}
+                      onVerPagos={() => setViendoPagos(l.colaborador)}
                       onPagar={(concepto) => setPagando({
                         quien: l.colaborador,
                         opciones: partesDe(l.colaborador, l.total, 0, true),
@@ -1355,6 +1432,58 @@ export default function InformeEquipo() {
             {...pendientesDe(marcando)}
             onGuardar={(nota) => void marcarTodos(marcando, nota)}
             onCancelar={() => setMarcando(null)} />
+        </Dialogo>
+      )}
+
+      {/* Los pagos ya anotados de una persona, con su Deshacer. Es la única
+          puerta que queda cuando ya no falta nada por transferir. */}
+      {viendoPagos && (
+        <Dialogo titulo={`Pagos de ${viendoPagos}`}
+          onCerrar={() => setViendoPagos(null)}>
+          <p className="text-[14px] text-hueso/70">
+            Por {rangoEnPalabras([desde, hasta])}.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {pagosEnPeriodo(pagos, viendoPagos, desde, hasta).map((x) => (
+              <li key={x.id || x.fila}
+                  className="flex flex-wrap items-center justify-between gap-3
+                             rounded-xl border-2 border-hueso/15 p-3">
+                <span className="text-[14px]">
+                  <strong className={`text-[17px] tabular-nums ${
+                    x.monto < 0 ? 'text-rojo-texto' : 'text-hueso/85'}`}>
+                    {x.monto < 0 && '−'}{enPesos(Math.abs(x.monto))}
+                  </strong>
+                  {x.concepto && (
+                    <span className="ml-2 whitespace-nowrap rounded-full border-2
+                                     border-hueso/25 px-2 py-0.5 text-[13px] font-bold
+                                     text-hueso/65">{x.concepto}</span>
+                  )}
+                  <span className="block text-hueso/65 first-letter:uppercase">
+                    {x.fecha ? enPalabras(x.fecha) : 'sin fecha'}
+                    {x.nota && ` · ${x.nota}`}
+                    {x.registradoPor && ` · lo anotó ${x.registradoPor}`}
+                  </span>
+                </span>
+                {puedePagar && (
+                  <button type="button" onClick={() => void deshacerPago(x)}
+                    className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                    Deshacer
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {/* La distinción que hay que hacer **antes** de apretar. */}
+          <p className="mt-3 text-[14px] text-hueso/70">
+            <strong className="text-hueso/85">Deshacer</strong> es para un pago
+            anotado por error: borra la fila y vuelve a quedar como no pagado.
+            Si de verdad se pagó de más o devolvieron plata, anota un pago en
+            negativo, y así queda el rastro de los dos movimientos.
+          </p>
+          <div className="mt-4 flex justify-end">
+            <button type="button" onClick={() => setViendoPagos(null)}
+              className="boton">Listo</button>
+          </div>
         </Dialogo>
       )}
 
