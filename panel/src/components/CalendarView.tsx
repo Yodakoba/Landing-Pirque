@@ -21,6 +21,7 @@ import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
+import { copiarConAviso } from './AvisoFlotante';
 
 /**
  * Lo que se dice de una semana completa, de un vistazo.
@@ -111,9 +112,7 @@ export default function CalendarView() {
     const token = cfg.tokenPlanilla || await pedirToken('crear');
     if (!token) return;
     const url = `${window.location.origin}/semana/${token}?semana=${lunes}`;
-    navigator.clipboard?.writeText(url)
-      .then(() => setAvisoPlanilla('Link de la planilla copiado. Mándalo al grupo.'))
-      .catch(() => window.prompt('Link de la planilla:', url));
+    copiarConAviso(url, 'Link de la planilla copiado', 'Link de la planilla:');
   }
 
   /**

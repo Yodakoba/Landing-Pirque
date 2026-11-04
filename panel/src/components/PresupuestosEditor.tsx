@@ -28,6 +28,7 @@ import {
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import type { Menu } from '@/lib/menus';
+import { copiarConAviso } from './AvisoFlotante';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1.5 text-sm ' +
@@ -193,10 +194,8 @@ export default function PresupuestosEditor() {
 
   function copiarLink(p: Presupuesto) {
     const url = `${window.location.origin}/presupuesto/${p.token}`;
-    navigator.clipboard?.writeText(url)
-      .then(() => setAviso(`Link del presupuesto de ${p.cliente} copiado. `
-                         + 'Mándaselo por WhatsApp.'))
-      .catch(() => window.prompt(`Link del presupuesto de ${p.cliente}:`, url));
+    copiarConAviso(url, `Link del presupuesto de ${p.cliente} copiado`,
+                   `Link del presupuesto de ${p.cliente}:`);
   }
 
   /* ---------- las líneas ---------- */
