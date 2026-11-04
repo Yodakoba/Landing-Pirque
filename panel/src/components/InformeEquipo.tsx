@@ -398,12 +398,32 @@ function LineaPersona({
               {o.parte.pagado > 0 && o.parte.estado !== 'pagado' && (
                 <p className="text-[13px] text-hueso/65">Pagado {enPesos(o.parte.pagado)}</p>
               )}
+              {/* **Los dos pasos de pagar, en el orden en que se hacen**:
+                  copiar los datos y pegarlos en el banco, y después anotar
+                  que se pagó. Copiar va primero y delineado; registrar,
+                  relleno, porque es lo que cierra. */}
               {puedePagar && o.parte.falta > 0 && (
-                <button type="button" onClick={() => onPagar(o.concepto)}
-                  className="tecla mt-2 flex min-h-[48px] w-full items-center justify-center
-                             rounded-xl border-2 border-oro bg-oro text-[15px] font-bold text-tinta">
-                  Registrar pago de {o.concepto.toLowerCase()}
-                </button>
+                <div className="mt-2 grid gap-2">
+                  {sinCuenta ? (
+                    <p className="rounded-xl border-2 border-ambar/50 px-3 py-2 text-center
+                                  text-[14px] font-semibold text-ambar-texto">
+                      Falta su cuenta para transferir
+                    </p>
+                  ) : (
+                    <button type="button" onClick={() => onCopiar(o)}
+                      className="tecla flex min-h-[48px] w-full items-center justify-center gap-2
+                                 rounded-xl border-2 border-oro/70 bg-oro/[0.07] text-[15px]
+                                 font-bold hover:border-oro">
+                      <span aria-hidden>📋</span>
+                      Copiar datos de transferencia
+                    </button>
+                  )}
+                  <button type="button" onClick={() => onPagar(o.concepto)}
+                    className="tecla flex min-h-[48px] w-full items-center justify-center
+                               rounded-xl border-2 border-oro bg-oro text-[15px] font-bold text-tinta">
+                    Registrar pago de {o.concepto.toLowerCase()}
+                  </button>
+                </div>
               )}
             </div>
           ))}
@@ -411,6 +431,136 @@ function LineaPersona({
         </div>
       )}
     </li>
+  );
+}
+
+/** Lo pendiente de un concepto, para la transferencia masiva. */
+interface Pendientes { entran: { nombre: string; o: Opcion }[]; fuera: string[]; total: number }
+
+/**
+ * **La transferencia masiva, en una tarjeta** (2026-11-04).
+ *
+ * Una fila por concepto —sueldos y propinas, porque son dos pagos— con lo
+ * que falta, la planilla para subir al banco y el botón para marcar a todos
+ * pagados después. **En ese orden, a propósito**: primero se baja la
+ * planilla, se sube al banco, y recién entonces se marca. Los dos botones
+ * de una fila trabajan sobre la misma lista (`pendientesDe()`), así que lo
+ * que se marca es exactamente lo que salió en la planilla.
+ *
+ * En el celular cada fila se apila: el texto arriba, los dos botones abajo
+ * a todo el ancho. En pantalla ancha, todo en una línea.
+ */
+function TransferenciaMasiva({ sueldos, propinas, onDescargar, onMarcar }: {
+  sueldos: Pendientes;
+  propinas: Pendientes;
+  onDescargar: (cual: 'sueldos' | 'propinas') => void;
+  onMarcar: (cual: 'sueldos' | 'propinas') => void;
+}) {
+  const fila = (cual: 'sueldos' | 'propinas', p: Pendientes) => (
+    <div key={cual} className="flex flex-col gap-2 rounded-xl border-2 border-hueso/15 p-3
+                               md:flex-row md:items-center">
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-bold first-letter:uppercase">{cual}</p>
+        <p className="text-[13px] text-hueso/70">
+          {p.entran.length
+            ? <>{p.entran.length} {p.entran.length === 1 ? 'persona' : 'personas'} ·{' '}
+                <strong className="tabular-nums text-hueso">{enPesos(p.total)}</strong></>
+            : '✓ nada pendiente'}
+          {p.fuera.length > 0 && (
+            <span className="text-ambar-texto"> · sin cuenta: {p.fuera.join(', ')}</span>
+          )}
+        </p>
+      </div>
+      {p.entran.length > 0 && (
+        <div className="grid grid-cols-[auto_1fr] gap-2 md:flex">
+          <button type="button" onClick={() => onDescargar(cual)}
+            className="tecla flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl
+                       border-2 border-oro/70 px-3 text-[14px] font-bold hover:border-oro">
+            ⬇ Planilla
+          </button>
+          <button type="button" onClick={() => onMarcar(cual)}
+            className="tecla flex min-h-[48px] items-center justify-center gap-1.5 whitespace-nowrap
+                       rounded-xl border-2 border-oro bg-oro px-3 text-[14px] font-bold text-tinta">
+            ✓ Todos pagados
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <div className="mb-6 rounded-2xl border-2 border-oro/40 bg-panel p-4">
+      <p className="text-[13px] font-bold uppercase tracking-widest text-hueso/65">
+        Transferencia masiva
+      </p>
+      <p className="mb-3 mt-1 text-[14px] text-hueso/70">
+        Baja la planilla, súbela al banco, y cuando esté pagada marca todos
+        pagados.
+      </p>
+      <div className="grid gap-2">
+        {fila('sueldos', sueldos)}
+        {fila('propinas', propinas)}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * La confirmación de "todos pagados". **Muestra a quién y cuánto antes de
+ * guardar**, porque es el único botón del informe que anota muchos pagos de
+ * un golpe: lo que se ve en la lista es exactamente lo que se va a anotar.
+ */
+function ConfirmarTodos({ cual, periodo, entran, fuera, total, onGuardar, onCancelar }: Pendientes & {
+  cual: 'sueldos' | 'propinas';
+  periodo: string;
+  onGuardar: (nota: string) => void;
+  onCancelar: () => void;
+}) {
+  const [nota, setNota] = useState('Transferencia masiva');
+  const [guardando, setGuardando] = useState(false);
+  return (
+    <div className="space-y-4">
+      <p className="text-[15px] text-hueso/80">
+        Se anota como pagado {cual === 'sueldos' ? 'el sueldo' : 'la propina'} de la
+        semana del {periodo} de estas {entran.length} personas:
+      </p>
+      <ul className="divide-y-2 divide-hueso/10 rounded-xl border-2 border-hueso/15">
+        {entran.map(({ nombre, o }) => (
+          <li key={nombre} className="flex items-center justify-between gap-3 px-3 py-2 text-[15px]">
+            <span className="min-w-0 truncate">{nombre}
+              {o.concepto === CONCEPTO.servicio && (
+                <span className="text-[13px] text-hueso/60"> · servicio</span>
+              )}
+            </span>
+            <strong className="shrink-0 tabular-nums">{enPesos(o.parte.falta)}</strong>
+          </li>
+        ))}
+        <li className="flex items-center justify-between px-3 py-2 text-[16px]">
+          <span className="font-bold">Total</span>
+          <strong className="tabular-nums text-oro">{enPesos(total)}</strong>
+        </li>
+      </ul>
+      {fuera.length > 0 && (
+        <p className="rounded-lg border-2 border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                      text-ambar-texto">
+          No van: {fuera.join(', ')}. Les falta la cuenta, así que tampoco estaban
+          en la planilla del banco.
+        </p>
+      )}
+      <Campo etiqueta="Nota" ancho="w-full">
+        <input type="text" value={nota} aria-label="Nota de los pagos"
+          onChange={(e) => setNota(e.target.value)}
+          className="w-full rounded border border-hueso/20 bg-transparent px-2 py-2
+                     text-sm outline-none focus:border-oro/60" />
+      </Campo>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" disabled={guardando}
+          onClick={() => { setGuardando(true); onGuardar(nota); }}
+          className="boton boton-relleno min-h-[48px] text-[15px]">
+          {guardando ? 'Guardando…' : `Marcar ${entran.length} pagados · ${enPesos(total)}`}
+        </button>
+        <button type="button" onClick={onCancelar} className="boton min-h-[48px]">Cancelar</button>
+      </div>
+    </div>
   );
 }
 
@@ -437,6 +587,8 @@ export default function InformeEquipo() {
   // La línea abierta. Una a la vez, como las fichas de /equipo: se paga a
   // una persona, no se comparan dos.
   const [abierta, setAbierta] = useState<string | null>(null);
+  // Qué "todos pagados" se está confirmando.
+  const [marcando, setMarcando] = useState<'sueldos' | 'propinas' | null>(null);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   // **Abre en la semana pasada** (2026-11-04): se paga el lunes la semana
@@ -604,27 +756,46 @@ export default function InformeEquipo() {
    *   botón de copiar. El orden exacto que pide el banco todavía no está
    *   confirmado: cuando lo esté, se cambia ahí una vez.
    */
-  function descargarBanco(cual: 'sueldos' | 'propinas') {
+  /**
+   * Lo pendiente de un concepto en el periodo, persona por persona: quiénes
+   * entran en la transferencia masiva y quiénes no, porque les falta la
+   * cuenta.
+   *
+   * **Una sola lista para la planilla y para el "todos pagados"**, a
+   * propósito: lo que se marca como pagado tiene que ser exactamente lo que
+   * salió en la planilla. Si las dos armaran su lista por su cuenta, el día
+   * que una cambie se marcaría pagado a alguien que nunca estuvo en la
+   * transferencia.
+   */
+  function pendientesDe(cual: 'sueldos' | 'propinas') {
     const personas = [
       ...lineas.map((l) => ({ nombre: l.trabajador,
         partes: partesDe(l.trabajador, l.total, l.propina, false) })),
       ...(cual === 'sueldos' ? lineasExtras.map((l) => ({ nombre: l.colaborador,
         partes: partesDe(l.colaborador, l.total, 0, true) })) : [])
     ];
-    const filas: string[][] = [];
+    const entran: { nombre: string; o: Opcion }[] = [];
     const fuera: string[] = [];
     for (const x of personas) {
       const o = x.partes.find((p) => cual === 'propinas'
         ? p.concepto === CONCEPTO.propina : p.concepto !== CONCEPTO.propina);
       if (!o || o.parte.falta <= 0) continue;
-      const b = cuentaDe(x.nombre);
-      if (!sePuedeTransferir(b)) { fuera.push(x.nombre); continue; }
-      filas.push(filaTransferencia({
-        titular: titularDe(b, x.nombre), rut: rutLimpio(b.rut), banco: b.banco,
+      if (!sePuedeTransferir(cuentaDe(x.nombre))) { fuera.push(x.nombre); continue; }
+      entran.push({ nombre: x.nombre, o });
+    }
+    return { entran, fuera, total: entran.reduce((t, x) => t + x.o.parte.falta, 0) };
+  }
+
+  function descargarBanco(cual: 'sueldos' | 'propinas') {
+    const { entran, fuera } = pendientesDe(cual);
+    const filas = entran.map(({ nombre, o }) => {
+      const b = cuentaDe(nombre);
+      return filaTransferencia({
+        titular: titularDe(b, nombre), rut: rutLimpio(b.rut), banco: b.banco,
         tipo: b.tipo, numero: b.numero, monto: o.parte.falta, correo: b.correo,
         glosa: glosaDe(o.concepto, desde, hasta)
-      }));
-    }
+      });
+    });
     if (!filas.length) {
       avisar(fuera.length
         ? `Nadie con cuenta completa: falta la de ${fuera.join(', ')}`
@@ -645,6 +816,28 @@ export default function InformeEquipo() {
       avisar(`Planilla de ${cual}: ${filas.length} `
              + `${filas.length === 1 ? 'transferencia' : 'transferencias'}`);
     }
+  }
+
+  /**
+   * **Todos los sueldos —o todas las propinas— de la semana, pagados**, en
+   * una sola escritura (2026-11-04). Es lo que se aprieta después de una
+   * transferencia masiva: anota un pago por persona, con lo que le faltaba,
+   * y cada uno queda como su propia fila con su concepto.
+   */
+  async function marcarTodos(cual: 'sueldos' | 'propinas', nota: string) {
+    const { entran } = pendientesDe(cual);
+    if (!entran.length) return setMarcando(null);
+    const r = await fetch('/api/informe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pagos: entran.map(({ nombre, o }) => ({
+        quien: nombre, monto: o.parte.falta, concepto: o.concepto, desde, hasta, nota
+      })) })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    setPagos((antes) => [...antes, ...(d.pagos ?? [])]);
+    setMarcando(null);
+    avisar(`${entran.length} ${cual} marcados como pagados`);
   }
 
   /** Las partes que se le pagan a alguien: sueldo y propina, o el servicio. */
@@ -847,22 +1040,6 @@ export default function InformeEquipo() {
           </select>
         )}
         <span className="flex-1" />
-        {/* Las dos planillas para la transferencia masiva: una por
-            concepto, solo para quien paga. */}
-        {puedePagar && (
-          <>
-            <button onClick={() => descargarBanco('sueldos')}
-              disabled={lineas.length === 0 && lineasExtras.length === 0}
-              className="boton min-h-[40px] font-semibold">
-              ⬇ Banco · sueldos
-            </button>
-            <button onClick={() => descargarBanco('propinas')}
-              disabled={propina <= 0}
-              className="boton min-h-[40px] font-semibold">
-              ⬇ Banco · propinas
-            </button>
-          </>
-        )}
         <button onClick={exportar}
           disabled={lineas.length === 0 && lineasExtras.length === 0}
           className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
@@ -908,6 +1085,12 @@ export default function InformeEquipo() {
         </p>
       ) : (
         <>
+          {puedePagar && (
+            <TransferenciaMasiva
+              sueldos={pendientesDe('sueldos')} propinas={pendientesDe('propinas')}
+              onDescargar={descargarBanco} onMarcar={setMarcando} />
+          )}
+
           {puedePagar && (
             <p className="mb-4 max-w-2xl text-[14px] text-hueso/70">
               <strong>📋 Copia el sueldo y la propina</strong> de cada persona y
@@ -1113,6 +1296,16 @@ export default function InformeEquipo() {
 
           No hay una casilla "pagado": se deduce de que la suma cubra lo que
           hay que transferir. Ver `remuneraciones.ts`. */}
+      {marcando && (
+        <Dialogo titulo={`Marcar pagados · ${marcando}`} ancho="max-w-xl"
+          onCerrar={() => setMarcando(null)}>
+          <ConfirmarTodos cual={marcando} periodo={rangoEnPalabras([desde, hasta])}
+            {...pendientesDe(marcando)}
+            onGuardar={(nota) => void marcarTodos(marcando, nota)}
+            onCancelar={() => setMarcando(null)} />
+        </Dialogo>
+      )}
+
       {pagando && (
         <Dialogo titulo={`Registrar pago · ${pagando.quien}`} ancho="max-w-xl"
           onCerrar={() => setPagando(null)}>

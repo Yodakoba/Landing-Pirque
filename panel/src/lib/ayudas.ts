@@ -220,8 +220,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',
       'Aprieta la línea para abrirla: ahí registras el pago, todo o una '
       + 'parte, y marcas la boleta cuando llegue.',
-      'Si el banco hace transferencias masivas, Banco · sueldos y Banco · '
-      + 'propinas bajan una planilla para cada una.',
+      'Para una transferencia masiva, arriba está su tarjeta: baja la '
+      + 'planilla de sueldos o de propinas, súbela al banco, y cuando esté '
+      + 'pagada aprieta Todos pagados.',
       'Descarga la planilla: trae si cada pago tiene boleta.'
     ],
     ojo: 'El sueldo y la propina se pagan en dos transferencias. La propina '

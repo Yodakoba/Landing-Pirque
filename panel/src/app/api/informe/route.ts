@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { leerTurnos, leerTrabajadores, leerExtras, leerColaboradores,
-         leerPagosEquipo, anotarPagoEquipo, borrarPagoEquipo, leerBoletas,
+         leerPagosEquipo, anotarPagoEquipo, anotarPagosEquipo, borrarPagoEquipo, leerBoletas,
          anotar } from '@/lib/datos';
 import { exigir, quienEs } from '@/lib/permisos';
 import { normalizar } from '@/lib/columnas';
@@ -78,7 +78,27 @@ export async function POST(req: Request) {
   const no = await exigir(req, 'pagar');
   if (no) return no;
   try {
-    const limpio = pagoDelCuerpo(await req.json());
+    const cuerpo = await req.json();
+    // **Varios pagos juntos**: el "todos pagados" de una transferencia
+    // masiva. Se limpian uno por uno con la misma regla que un pago suelto;
+    // si alguno no sirve, no se anota ninguno, para que no quede la mitad.
+    if (Array.isArray(cuerpo?.pagos)) {
+      const limpios = (cuerpo.pagos as unknown[]).map(pagoDelCuerpo);
+      if (!limpios.length || limpios.some((x) => !x)) {
+        return NextResponse.json(
+          { error: 'Algún pago viene sin persona, periodo o monto.' }, { status: 400 }
+        );
+      }
+      const lista = limpios as NonNullable<ReturnType<typeof pagoDelCuerpo>>[];
+      const quien = await quienEs(req);
+      const pagosNuevos = await anotarPagosEquipo(lista, quien.usuario);
+      const suma = lista.reduce((t, x) => t + x.monto, 0);
+      await anotar({ ...quien, accion: 'Registró pagos en bloque',
+        detalle: `${lista.length} pagos · ${lista[0].concepto || 'sin concepto'} · `
+          + `${enPesos(suma)} · ${lista[0].desde} a ${lista[0].hasta}` });
+      return NextResponse.json({ pagos: pagosNuevos });
+    }
+    const limpio = pagoDelCuerpo(cuerpo);
     if (!limpio) {
       return NextResponse.json(
         { error: 'Falta el trabajador, el periodo o el monto.' }, { status: 400 }
