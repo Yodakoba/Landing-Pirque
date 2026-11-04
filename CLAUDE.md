@@ -91,11 +91,74 @@ entran el `+` y el `−` de los contadores del formulario de reserva—. Los nom
 (`Tradiciones`, `Sommelier`, `Pirque`, `WhatsApp`) están en la lista
 `PROPIOS` del script.
 
-**Los precios sí están en el diccionario, a propósito.** En formato chileno
-`$44.000` son cuarenta y cuatro mil pesos, pero en inglés se lee como
-cuarenta y cuatro dólares con cero centavos. Por eso en `en/` sale
-`$44,000 CLP` y en `pt/` `$44.000 CLP`. `assets/js/reserva.js` formatea el
-total calculado con el mismo criterio.
+**Los precios NO están en el diccionario: salen de `precios.json`** (desde
+el 2026-11-04, ver "La lista de precios"). El script los escribe ya
+formateados para cada idioma, porque en formato chileno `$44.000` son
+cuarenta y cuatro mil pesos y en inglés se lee como cuarenta y cuatro
+dólares con cero centavos: en `en/` sale `$44,000 CLP` y en `pt/`
+`$44.000 CLP`. `assets/js/reserva.js` formatea el total calculado con el
+mismo criterio.
+
+### La lista de precios (`precios.json`, 2026-11-04)
+
+Lo pidió el cliente: *"así queda coherente siempre en todo el sitio los
+precios, para no mostrar uno que aquí cuesta 49 y el otro 44"*. **Cada
+precio del sitio se escribe en un solo lugar**, `precios.json`, y
+`traducir.py` lo copia a todas las páginas, en los tres idiomas.
+
+Cambiar un precio es:
+
+1. Cambiarlo en `precios.json`.
+2. `python3 tools/traducir.py`.
+3. Commitear la lista y las páginas juntas.
+
+**Y cambiarlo igual en Shopify**: los menús se cobran con el precio de la
+tienda, no con éste. La lista hace que el sitio no se contradiga consigo
+mismo; que no contradiga al checkout sigue siendo a mano.
+
+**Cómo se marca un precio en el HTML**: el elemento lleva
+`data-lista="destino:clave[:cálculo]"`, varios separados por espacio.
+
+| Destino | Qué escribe |
+|---|---|
+| `texto` | el texto del elemento, formateado según el idioma |
+| cualquier atributo (`data-precio`, `data-precio-local`…) | el número pelado, que es lo que lee `reserva.js` |
+
+| Cálculo | Qué da |
+|---|---|
+| *(nada)* | el valor tal cual |
+| `descuento` | ese precio menos `promociones.descuento`, redondeado al peso |
+| `ahorro` | cuánto se ahorra con ese descuento |
+| `porcentaje` / `porcentaje-negativo` | `11%` / `−11%` |
+
+La clave es un camino con puntos: `tradiciones.local`,
+`recinto.fin_de_semana`. **El elemento marcado lleva solo el monto**: lo que
+lo rodea —"+ IVA por persona", "4 a 12 años ·"— va fuera de la marca y sí
+pasa por el diccionario.
+
+**Las etiquetas de `promociones.html` se calculan solas**: subir
+Tradiciones en el local cambia la tarjeta, la etiqueta con el 11%, lo que
+se ahorra y los dos idiomas de una vez. Y si el descuento pasa a ser 15, se
+cambia un número.
+
+**La guarda es la otra mitad, y es la que hace que esto dure.** La corrida
+**se niega a generar** si encuentra en una página un `$N.NNN` escrito a mano
+fuera de una marca, o un `data-precio` sin `data-lista`, y lo nombra. Sin
+eso, el primer precio nuevo que alguien escribiera directo en el HTML
+volvería a abrir la puerta a los dos precios. Lo mismo con una clave que no
+existe en la lista o una marca mal escrita.
+
+- **Es lo segundo que el script escribe en los archivos españoles**,
+  después del `?v=` de los assets. `--revisar` nombra las páginas con
+  precios viejos como *(precios de la lista)*.
+- **Qué precio usa cada página es una decisión que vive en la marca**, no
+  en la lista: el sitio público anuncia `linea` (pagar por adelantado) al
+  frente y `local` atrás; el landing y promociones muestran `local`. La
+  lista solo dice cuánto vale cada uno.
+- **El texto de campaña de la cabecera de promociones (`¿11?`) no está
+  marcado**, a propósito: es copy, y cambia de campaña en campaña.
+- **El `$8.000 + IVA` del desayuno y la once va sin el IVA en la lista**,
+  porque así se anuncia: el "+ IVA" es texto de la página.
 
 ### El selector de idiomas
 
@@ -464,7 +527,7 @@ del servidor, que nunca sale al navegador.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
   `assets/js/reserva.js`: token, dominio, versión de API y la URL del
-  backend. Los precios ya no están ahí, se fueron al HTML.
+  backend. Los precios ya no están ahí: viven en `precios.json`.
 - **`CONFIG.backend` apunta al panel** desde el 2026-10-21:
   `https://landing-pirque-alpha.vercel.app/api/publico/fechas`. Antes era el
   Web App de Apps Script. Si el panel cambia de URL en Vercel, hay que
@@ -522,7 +585,9 @@ del servidor, que nunca sale al navegador.
   fila `[data-opcion]` lleva **dos pares** —`data-variante`/`data-precio`
   para pagar en línea y `data-variante-local`/`data-precio-local` para pagar
   en el local—. Se hizo así para tener un solo lugar que editar al pasar a
-  producción, donde los IDs son otros.
+  producción, donde los IDs son otros. **Los `data-precio*` los escribe
+  `traducir.py` desde `precios.json`** (2026-11-04); los IDs se siguen
+  editando en el HTML.
 - **Las dos modalidades son dos botones, cada uno con su propio total**
   —"Pagar ahora $177.000" / "Solo reservar $197.000"— y no un selector
   (2026-10-14). Así la diferencia de precio se ve sin tener que cambiar
@@ -4919,9 +4984,9 @@ Siempre a la vista:
    **Debajo, los cuatro menús con el 11% ya aplicado** (2026-11-04), como
    etiquetas de precio: el nuevo grande, el de antes tachado y lo que se
    ahorra en una pastilla. Tradiciones $43.610 · Lo Pirque $48.950 · Brasas
-   $66.750 · Sommelier $84.550. **Están escritos a mano**, como
-   todos los precios del sitio: si cambia el precio de una tarjeta, hay que
-   cambiar su etiqueta, y las llaves `$…` de los dos diccionarios.
+   $66.750 · Sommelier $84.550. **Se calculan solas** desde
+   `precios.json` (el precio del local menos `promociones.descuento`): ver
+   "La lista de precios".
 3. Contacto: botón WhatsApp + formulario de email.
 4. Footer.
 

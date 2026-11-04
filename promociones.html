@@ -727,47 +727,47 @@
       <p class="lede" style="margin-top:16px;">Campo, fuego y tradición chilena en Pirque — para cerrar el año, premiar un buen semestre o simplemente juntar al equipo sin pantallas de por medio. Si te toca organizarlo, acá está todo junto: coordinamos contigo la comida, el show y las actividades, y tú llegas con el equipo.</p>
 
       <div class="oferta">
-        <div class="oferta-dato"><b>11%</b><span>de descuento al consumo</span></div>
+        <div class="oferta-dato"><b data-lista="texto:promociones.descuento:porcentaje">11%</b><span>de descuento al consumo</span></div>
         <div class="oferta-dato"><b>22</b><span>personas en adelante</span></div>
         <div class="oferta-dato"><b>Sin costo</b><span>de arriendo exclusivo</span><small class="oferta-cond">Solo de lunes a viernes</small></div>
       </div>
       <p class="oferta-nota">Por favor contáctanos para conversar lo que tú necesitas, siempre tenemos un oído abierto.</p>
 
-      <!-- Los menús con el 11% ya aplicado (2026-11-04, lo pidió el cliente).
-           Los montos son los de las tarjetas de más abajo menos el 11%, y se
-           escriben a mano en el HTML como el resto de los precios: si cambia
-           un precio de las tarjetas, hay que cambiarlo también acá. -->
+      <!-- Los menús con el descuento ya aplicado (2026-11-04, lo pidió el
+           cliente). Los montos NO se escriben acá: salen de precios.json,
+           el precio de pagar en el local menos promociones.descuento, y los
+           escribe tools/traducir.py. Ver "La lista de precios" en CLAUDE.md. -->
       <div class="precios-promo">
-        <p class="precios-titulo">Así quedan los menús con tu 11%</p>
+        <p class="precios-titulo">Así quedan los menús con tu <span data-lista="texto:promociones.descuento:porcentaje">11%</span></p>
         <p class="precios-bajada">Por persona, con el descuento ya aplicado.</p>
         <div class="etiquetas">
           <div class="etiqueta">
-            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
             <span class="etq-nombre">Tradiciones</span>
-            <span class="etq-antes">Antes <s>$49.000</s></span>
-            <b class="etq-ahora">$43.610</b>
-            <span class="etq-ahorro">Ahorras <b>$5.390</b></span>
+            <span class="etq-antes">Antes <s data-lista="texto:tradiciones.local">$49.000</s></span>
+            <b class="etq-ahora" data-lista="texto:tradiciones.local:descuento">$43.610</b>
+            <span class="etq-ahorro">Ahorras <b data-lista="texto:tradiciones.local:ahorro">$5.390</b></span>
           </div>
           <div class="etiqueta">
-            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
             <span class="etq-nombre">Lo Pirque</span>
-            <span class="etq-antes">Antes <s>$55.000</s></span>
-            <b class="etq-ahora">$48.950</b>
-            <span class="etq-ahorro">Ahorras <b>$6.050</b></span>
+            <span class="etq-antes">Antes <s data-lista="texto:lo_pirque.local">$55.000</s></span>
+            <b class="etq-ahora" data-lista="texto:lo_pirque.local:descuento">$48.950</b>
+            <span class="etq-ahorro">Ahorras <b data-lista="texto:lo_pirque.local:ahorro">$6.050</b></span>
           </div>
           <div class="etiqueta">
-            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
             <span class="etq-nombre">Brasas</span>
-            <span class="etq-antes">Antes <s>$75.000</s></span>
-            <b class="etq-ahora">$66.750</b>
-            <span class="etq-ahorro">Ahorras <b>$8.250</b></span>
+            <span class="etq-antes">Antes <s data-lista="texto:a_brasas_abiertas.local">$75.000</s></span>
+            <b class="etq-ahora" data-lista="texto:a_brasas_abiertas.local:descuento">$66.750</b>
+            <span class="etq-ahorro">Ahorras <b data-lista="texto:a_brasas_abiertas.local:ahorro">$8.250</b></span>
           </div>
           <div class="etiqueta">
-            <span class="sticker" aria-hidden="true">−11%</span>
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
             <span class="etq-nombre">Sommelier</span>
-            <span class="etq-antes">Antes <s>$95.000</s></span>
-            <b class="etq-ahora">$84.550</b>
-            <span class="etq-ahorro">Ahorras <b>$10.450</b></span>
+            <span class="etq-antes">Antes <s data-lista="texto:sommelier.local">$95.000</s></span>
+            <b class="etq-ahora" data-lista="texto:sommelier.local:descuento">$84.550</b>
+            <span class="etq-ahorro">Ahorras <b data-lista="texto:sommelier.local:ahorro">$10.450</b></span>
           </div>
         </div>
       </div>
@@ -799,12 +799,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="assets/imgs/img-004.jpg" alt="Experiencia Tradiciones" width="1651" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Tradiciones</span><span class="price">$49.000</span></span>
+                  <span class="tier-cap"><span class="name">Tradiciones</span><span class="price" data-lista="texto:tradiciones.local">$49.000</span></span>
                   <span class="flip-hint">Ver detalle</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Tradiciones</span>
-                  <div class="fb-price">$49.000</div>
+                  <div class="fb-price" data-lista="texto:tradiciones.local">$49.000</div>
                   <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
                   <span class="fb-note">Show ecuestre incluido</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> elección de 1 opción: bebidas, jugos de fruta natural, cervezas o pisco sour.</p>
@@ -817,12 +817,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="assets/imgs/img-005.jpg" alt="Experiencia Lo Pirque" width="1650" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Lo Pirque</span><span class="price">$55.000</span></span>
+                  <span class="tier-cap"><span class="name">Lo Pirque</span><span class="price" data-lista="texto:lo_pirque.local">$55.000</span></span>
                   <span class="flip-hint">Ver detalle</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Lo Pirque</span>
-                  <div class="fb-price">$55.000</div>
+                  <div class="fb-price" data-lista="texto:lo_pirque.local">$55.000</div>
                   <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
                   <span class="fb-note">Show ecuestre incluido</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> elección de 2 opciones: bebidas, jugos naturales, cervezas, pisco sour, sangría, copa de vino reserva, michelada, chelada, Aperol o Ramazzotti spritz.</p>
@@ -835,12 +835,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="assets/imgs/img-006.jpg" alt="Experiencia Brasas" width="1650" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Brasas</span><span class="price">$75.000</span></span>
+                  <span class="tier-cap"><span class="name">Brasas</span><span class="price" data-lista="texto:a_brasas_abiertas.local">$75.000</span></span>
                   <span class="flip-hint">Ver detalle</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Brasas</span>
-                  <div class="fb-price">$75.000</div>
+                  <div class="fb-price" data-lista="texto:a_brasas_abiertas.local">$75.000</div>
                   <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
                   <span class="fb-note">Show ecuestre incluido</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> bar abierto: bebidas, jugos naturales, cervezas, pisco sour, sangría, copa de vino reserva, michelada, chelada, Aperol o Ramazzotti spritz, a libre elección.</p>
@@ -853,12 +853,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="assets/imgs/img-007.jpg" alt="Experiencia Sommelier" width="1650" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Sommelier</span><span class="price">$95.000</span></span>
+                  <span class="tier-cap"><span class="name">Sommelier</span><span class="price" data-lista="texto:sommelier.local">$95.000</span></span>
                   <span class="flip-hint">Ver detalle</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Sommelier</span>
-                  <div class="fb-price">$95.000</div>
+                  <div class="fb-price" data-lista="texto:sommelier.local">$95.000</div>
                   <div class="fb-meta">pp. IVA incluido, propina extra · sobre 25 personas</div>
                   <span class="fb-note">Sommelier + show ecuestre incluidos</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Bebestibles —</b> bar abierto, misma libertad que Brasas. Un sommelier guía el almuerzo, comparte maridajes y datos de cada vino.</p>
@@ -1142,12 +1142,12 @@
           <div class="service-photo"><img src="assets/imgs2/SPREAD.jpg" alt="Mesa servida con platos de la parrilla" width="1200" height="1600" loading="lazy" decoding="async"></div>
           <div class="service-cards">
             <div class="service-card">
-              <span class="tag">$8.000 + IVA por persona</span>
+              <span class="tag"><span data-lista="texto:desayuno_de_campo.por_persona">$8.000</span> + IVA por persona</span>
               <h3>Desayuno de campo</h3>
               <p>Pan amasado, huevos revueltos, tapaditos de jamón y queso, café de grano, té, jugo natural de naranja, ensalada de fruta y muffin. Extra: sándwich mechado, pie o kuchen (consultar valor).</p>
             </div>
             <div class="service-card">
-              <span class="tag">$8.000 + IVA por persona</span>
+              <span class="tag"><span data-lista="texto:once_campesina.por_persona">$8.000</span> + IVA por persona</span>
               <h3>Once campesina</h3>
               <p>Misma propuesta que el desayuno de campo, en formato once.</p>
             </div>
@@ -1163,8 +1163,8 @@
           <h2>Arriendo exclusivo del recinto</h2>
           <p class="lede" style="margin-top:10px;">Valores sin catering, IVA incluido.</p>
           <div class="venue-price">
-            <div><div class="amount">$2.500.000</div><div class="label">Viernes, sábado y domingo</div></div>
-            <div><div class="amount">$1.500.000</div><div class="label">Días de semana</div></div>
+            <div><div class="amount" data-lista="texto:recinto.fin_de_semana">$2.500.000</div><div class="label">Viernes, sábado y domingo</div></div>
+            <div><div class="amount" data-lista="texto:recinto.dias_de_semana">$1.500.000</div><div class="label">Días de semana</div></div>
           </div>
         </div>
       </div>

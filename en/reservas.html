@@ -86,6 +86,7 @@
            linea y de pagar en el local. Siguen viviendo en el HTML, que es
            el unico lugar que hay que editar al pasar a produccion. -->
       <div class="reserva-fila" data-opcion
+           data-lista="data-precio:tradiciones.linea data-precio-local:tradiciones.local data-precio-alta:a_brasas_abiertas.linea data-precio-alta-local:a_brasas_abiertas.local"
            data-variante="50684108013785" data-precio="44000"
            data-variante-local="50684108046553" data-precio-local="49000"
            data-variante-alta="50684143173849" data-precio-alta="70000"
@@ -97,7 +98,7 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Number of people">
           <button class="paso" type="button" data-mas aria-label="Add one person">+</button>
         </div>
-        <div class="valor" data-valor>$44,000 CLP</div>
+        <div class="valor" data-valor data-lista="texto:tradiciones.linea">$44,000 CLP</div>
       </div>
 
       <!-- La casilla NO agrega un pedido: cambia cual variante usa la fila
@@ -117,6 +118,7 @@
       </label>
 
       <div class="reserva-fila" data-opcion
+           data-lista="data-precio:ninos.linea data-precio-local:ninos.local"
            data-variante="50684218081497" data-precio="19000"
            data-variante-local="50684218114265" data-precio-local="24000"
            role="group" aria-labelledby="r-op-ninos">
@@ -126,7 +128,7 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Number of people">
           <button class="paso" type="button" data-mas aria-label="Add one person">+</button>
         </div>
-        <div class="valor">$19,000 CLP</div>
+        <div class="valor" data-lista="texto:ninos.linea">$19,000 CLP</div>
       </div>
 
       <!-- El menu de pequenos. El cliente lo publico en la tienda el
@@ -138,6 +140,7 @@
            fila no trae variantes de upgrade, asi que parDe() le devuelve su
            par de siempre este marcada o no. No hace falta ningun "if". -->
       <div class="reserva-fila" data-opcion
+           data-lista="data-precio:pequenos.linea data-precio-local:pequenos.local"
            data-variante="51269453971673" data-precio="6000"
            data-variante-local="51269454004441" data-precio-local="9000"
            role="group" aria-labelledby="r-op-pequenos">
@@ -147,7 +150,7 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" aria-label="Number of people">
           <button class="paso" type="button" data-mas aria-label="Add one person">+</button>
         </div>
-        <div class="valor">$6,000 CLP</div>
+        <div class="valor" data-lista="texto:pequenos.linea">$6,000 CLP</div>
       </div>
 
       <!-- Las tres opciones nacen en cero: el pedido lo arma la persona,
