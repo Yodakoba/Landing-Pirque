@@ -35,7 +35,7 @@ import {
   estadoDePago, aTransferirDe, faltaDe, pagoDelCuerpo, nuevoIdPago,
   desglosePago, conceptoDe, CONCEPTO, pideBoleta, leerBoletasDe, filaBoleta,
   ENCABEZADO_BOLETAS, boletaDe, boletaEnPlanilla, textoTransferencia, glosaDe,
-  ORDEN_TRANSFERENCIA,
+  ORDEN_TRANSFERENCIA, filaTransferencia, NOMBRE_COLUMNA_TRANSFERENCIA,
   pagosEnPeriodo, pagosQueNoCaben,
   type PagoEquipo
 } from './remuneraciones.ts';
@@ -2702,6 +2702,13 @@ console.log('\nPagos al equipo');
      'y la glosa dice qué es y de qué semana, corta y sin guiones largos ni tildes');
   ok(glosaDe('Propina', '2026-11-09', '2026-11-15').length <= 30,
      'y cabe en los 30 caracteres que dejan los bancos');
+  ok(ORDEN_TRANSFERENCIA.every((k) => !!NOMBRE_COLUMNA_TRANSFERENCIA[k]),
+     'cada columna de la planilla para el banco tiene su nombre');
+  ok(textoTransferencia({ titular: 'A', rut: '1-9', banco: 'B', tipo: 'T', numero: '7',
+       monto: 5, correo: 'c', glosa: 'G' })
+     === filaTransferencia({ titular: 'A', rut: '1-9', banco: 'B', tipo: 'T', numero: '7',
+       monto: 5, correo: 'c', glosa: 'G' }).join('\t'),
+     'copiar y la planilla para el banco salen del mismo orden: se cambia una vez y vale para los dos');
   ok(CONCEPTO.propina === 'Propina', 'el concepto propina se llama así en la planilla');
 
   ok(leerPagosDe([ENCABEZADO_PAGOS]).length === 0, 'una pestaña vacía no inventa pagos');

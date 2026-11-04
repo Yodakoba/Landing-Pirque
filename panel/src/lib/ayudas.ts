@@ -216,11 +216,12 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'semana, el mes, o dos fechas sueltas.',
       'Mira arriba si quedan días sin confirmar: mientras los haya, el total '
       + 'está incompleto.',
-      'Abajo, en Pagar, cada persona tiene su sueldo y su propina por '
-      + 'separado. Copiar datos copia la cuenta y el monto para pegarlos en el '
-      + 'banco; Registrar pago anota que ya transferiste, todo o una parte.',
-      'Cuando llegue la boleta de alguien que cobra por turno, o de una '
-      + 'actividad extra, aprieta su botón de boleta.',
+      'En la línea de cada persona están los botones para copiar su sueldo y '
+      + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',
+      'Aprieta la línea para abrirla: ahí registras el pago, todo o una '
+      + 'parte, y marcas la boleta cuando llegue.',
+      'Si el banco hace transferencias masivas, Banco · sueldos y Banco · '
+      + 'propinas bajan una planilla para cada una.',
       'Descarga la planilla: trae si cada pago tiene boleta.'
     ],
     ojo: 'El sueldo y la propina se pagan en dos transferencias. La propina '

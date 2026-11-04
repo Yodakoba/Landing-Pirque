@@ -40,72 +40,15 @@ import { totalAjustes, motivosDe } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
          type Banco } from '@/lib/banco';
 import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, boletaDe,
-         boletaEnPlanilla, textoTransferencia, glosaDe,
-         type PagoEquipo, type Boleta, type Concepto, type Parte } from '@/lib/remuneraciones';
+         boletaEnPlanilla, textoTransferencia, glosaDe, filaTransferencia,
+         ORDEN_TRANSFERENCIA, NOMBRE_COLUMNA_TRANSFERENCIA,
+         type PagoEquipo, type Boleta, type Concepto, type Parte,
+         type EstadoPago } from '@/lib/remuneraciones';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
 import { copiarConAviso, avisar } from './AvisoFlotante';
 
 type Tipo = 'mes' | 'semana' | 'rango';
-
-/**
- * Las tres celdas del pago, iguales en las dos tablas.
- *
- * **Va al nivel del módulo, nunca dentro del componente**: una función
- * declarada adentro es, para React, otro tipo de elemento en cada dibujado,
- * y lo desmonta y lo vuelve a montar. Ya nos costó el foco de los inputs de
- * `/equipo` una vez.
- *
- * El **check es derivado**: sale de comparar lo pagado con lo que hay que
- * transferir, no de un campo guardado. Por eso no puede contradecir a los
- * montos que tiene al lado.
- */
-function CeldasPago({
-  aTransferir, pagado, falta, estado
-}: {
-  aTransferir: number; pagado: number; falta: number;
-  estado: 'pagado' | 'parcial' | 'pendiente';
-}) {
-  return (
-    <>
-      <td className="py-2 pr-3 text-right tabular-nums">
-        {aTransferir > 0
-          ? <strong className="text-[15px]">{enPesos(aTransferir)}</strong>
-          : <span className="text-hueso/25">—</span>}
-      </td>
-      <td className="py-2 pr-3 text-right">
-        {pagado > 0 ? (
-          <>
-            <div className="tabular-nums text-hueso/75">{enPesos(pagado)}</div>
-            {/* Se distingue por forma y no solo por color: una pastilla con
-                borde se reconoce sin leerla y sin distinguir el verde del
-                ámbar, que es lo que pide la regla del panel. */}
-            <span className={`mt-0.5 inline-block whitespace-nowrap rounded-full border
-                              px-2 py-0.5 text-[13px] font-semibold ${
-              estado === 'pagado'
-                ? 'border-verde/50 text-verde-texto'
-                : 'border-ambar/50 text-ambar-texto'}`}>
-              {estado === 'pagado' ? '✓ pagado' : 'parcial'}
-            </span>
-          </>
-        ) : estado === 'pagado' ? (
-          // Nada que transferir: no queda eternamente "pendiente" por cero.
-          <span className="text-hueso/25">—</span>
-        ) : (
-          <span className="whitespace-nowrap rounded-full border border-hueso/25
-                           px-2 py-0.5 text-[13px] font-semibold text-hueso/60">
-            sin pagar
-          </span>
-        )}
-      </td>
-      <td className="py-2 pr-3 text-right tabular-nums">
-        {falta > 0
-          ? <strong className="text-ambar-texto">{enPesos(falta)}</strong>
-          : <span className="text-hueso/25">—</span>}
-      </td>
-    </>
-  );
-}
 
 /** Una de las partes que se pueden pagar: sueldo, propina o servicio. */
 interface Opcion { concepto: Concepto; parte: Parte }
@@ -269,103 +212,205 @@ function FormularioPago({
   );
 }
 
+/** Un dato del detalle de una persona: qué es y cuánto. */
+interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' }
+
 /**
- * **La tarjeta de pago de una persona** (2026-11-04).
+ * **La línea de una persona: cerrada se copia, abierta se paga**
+ * (2026-11-04, segundo corte).
  *
- * Lo pidió el cliente pensando en quien hace las transferencias: *"dos
- * botones en cada línea: copiar los datos de transferencia con el monto de
- * propina, y con el monto de sueldo"*. Son dos porque legalmente son dos
- * pagos.
+ * El primer corte puso los pagos en una sección aparte, debajo de las
+ * tablas, y el cliente lo pidió al revés: *"en esta línea acotada ya están
+ * los dos botones, copiar la línea de propina, copiar la línea de sueldo, y
+ * al apretar la línea del trabajador se abre y ahí das las opciones"*. Y
+ * que funcione perfecto en el celular, *"más PlayStation que en cualquier
+ * otro lado"*: la mayoría lo va a usar ahí.
  *
- * Cada parte es un bloque con su monto, su estado y sus dos botones
- * —**Copiar datos** y **Registrar pago**—, y arriba a la derecha el check de
- * la **boleta**, cuando aplica. Es tarjeta y no columnas de la tabla porque
- * la tabla ya tiene once columnas: cuatro botones más por fila la habrían
- * vuelto ilegible en un teléfono, y la regla PlayStation pide botones
- * grandes, que no caben en una celda.
+ * Por eso **dejó de ser una tabla**: once columnas no caben en un teléfono,
+ * y botones de 40px dentro de una celda tampoco. Es una línea-tarjeta como
+ * las fichas de `/equipo`, con la misma regla: **se abre una a la vez**.
+ *
+ * - **Cerrada**: el nombre, lo que hay que transferirle, su estado y los
+ *   botones de copiar —uno por parte—. Es lo que se usa el lunes al pagar:
+ *   copiar, pegar en el banco, siguiente.
+ * - **Abierta**: el detalle de la semana (días, jornadas, horas extra,
+ *   ajustes, propina), cada parte con su estado y **Registrar pago**, y la
+ *   **boleta**.
+ *
+ * **Los botones de copiar no viven dentro del botón que abre la línea**: un
+ * botón dentro de otro no es HTML válido, y el toque se iría a los dos.
+ * Van en su propia fila, debajo.
  */
-function TarjetaPago({
-  nombre, detalle, partes, sinCuenta, boleta, onCopiar, onPagar, onBoleta
+function LineaPersona({
+  nombre, detalle, aTransferir, estado, partes, datos, avisos, sinCuenta,
+  boleta, puedePagar, abierta, onAbrir, onCopiar, onPagar, onBoleta
 }: {
   nombre: string;
-  /** "contratado", la actividad de un extra, o nada. */
   detalle: string;
+  aTransferir: number;
+  estado: EstadoPago;
   partes: Opcion[];
+  datos: Dato[];
+  /** "1 no vino", "2 sin marcar": lo que hace que el total esté incompleto. */
+  avisos: string[];
   sinCuenta: boolean;
   /** `null` si no aplica; si aplica, si ya llegó. */
   boleta: boolean | null;
+  puedePagar: boolean;
+  abierta: boolean;
+  onAbrir: () => void;
   onCopiar: (o: Opcion) => void;
   onPagar: (concepto: Concepto) => void;
   onBoleta: (recibida: boolean) => void;
 }) {
-  return (
-    <li className="rounded-2xl border-2 border-hueso/15 bg-panel p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[17px] font-bold">{nombre}</p>
-          {detalle && <p className="text-[13px] text-hueso/60">{detalle}</p>}
-        </div>
-        {boleta !== null && (
-          <button type="button" aria-pressed={boleta} onClick={() => onBoleta(!boleta)}
-            className={`tecla flex min-h-[44px] items-center gap-2 rounded-xl border-2 px-3
-                        text-[14px] font-bold ${boleta
-              ? 'border-verde-fuerte bg-verde/10 text-verde-texto'
-              : 'border-ambar/60 text-ambar-texto hover:border-ambar-fuerte'}`}>
-            <span aria-hidden className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
-              boleta ? 'border-verde-fuerte bg-verde-fuerte text-tinta' : 'border-ambar/70'}`}>
-              {boleta ? '✓' : ''}
-            </span>
-            {boleta ? 'Boleta recibida' : 'Falta la boleta'}
-          </button>
-        )}
-      </div>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {partes.map((o) => (
-          <div key={o.concepto} className={`rounded-xl border-2 p-3 ${
-            o.parte.estado === 'pagado' ? 'border-verde/40 bg-verde/[0.04]' : 'border-hueso/15'}`}>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
-                {o.concepto}
-              </span>
-              <span className={`rounded-full border px-2 py-0.5 text-[13px] font-semibold ${
-                o.parte.estado === 'pagado' ? 'border-verde/50 text-verde-texto'
-                : o.parte.estado === 'parcial' ? 'border-ambar/50 text-ambar-texto'
-                : 'border-hueso/25 text-hueso/60'}`}>
-                {o.parte.estado === 'pagado' ? '✓ pagado'
-                  : o.parte.estado === 'parcial' ? `falta ${enPesos(o.parte.falta)}`
-                  : 'sin pagar'}
-              </span>
-            </div>
-            <p className="mt-1 text-[24px] font-bold tabular-nums">{enPesos(o.parte.debe)}</p>
-            {o.parte.falta > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button type="button" onClick={() => onCopiar(o)} disabled={sinCuenta}
-                  title={sinCuenta ? 'Falta completar su cuenta' : undefined}
-                  className="boton min-h-[40px]">
-                  📋 {sinCuenta ? 'Falta su cuenta' : 'Copiar datos'}
-                </button>
-                <button type="button" onClick={() => onPagar(o.concepto)}
-                  className="boton min-h-[40px] border-oro/60 font-semibold">
-                  Registrar pago
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </li>
+  const pendientes = partes.filter((o) => o.parte.falta > 0);
+  const estadoPill = (e: EstadoPago, falta: number) => (
+    <span className={`whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${
+      e === 'pagado' ? 'border-verde/60 text-verde-texto'
+      : e === 'parcial' ? 'border-ambar/60 text-ambar-texto'
+      : 'border-hueso/25 text-hueso/65'}`}>
+      {e === 'pagado' ? '✓ pagado' : e === 'parcial' ? `falta ${enPesos(falta)}` : 'sin pagar'}
+    </span>
   );
-}
 
-/** Los encabezados de esas mismas tres columnas, para no escribirlos dos veces. */
-function EncabezadosPago() {
   return (
-    <>
-      <th className="w-32 py-2 pr-3 text-right">A transferir</th>
-      <th className="w-28 py-2 pr-3 text-right">Pagado</th>
-      <th className="w-28 py-2 pr-3 text-right">Falta</th>
-    </>
+    <li className={`rounded-2xl border-2 bg-panel ${
+      abierta ? 'border-oro/70' : estado === 'pagado' && aTransferir > 0
+        ? 'border-verde/40' : 'border-hueso/15'}`}>
+      {/* **En el celular son dos filas**: arriba quién es y cuánto, abajo
+          los botones de copiar a todo el ancho, para el dedo. **En una
+          pantalla ancha es una sola fila**: los botones van entre el nombre
+          y el monto, con su ancho natural; estirados a lo largo de 1.200px
+          serían barras, no botones. */}
+      <div className="md:flex md:items-center">
+      <button type="button" onClick={onAbrir} aria-expanded={abierta}
+        className="tecla flex w-full items-start gap-3 rounded-2xl px-4 pb-2 pt-3 text-left
+                   md:order-1 md:min-w-0 md:flex-1 md:items-center md:pb-3">
+        <span aria-hidden className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center
+                                     rounded-full border-2 text-[15px] font-bold ${
+          abierta ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
+          {abierta ? '−' : '+'}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[17px] font-bold leading-tight">{nombre}</span>
+          <span className="block text-[13px] text-hueso/65">
+            {detalle}
+            {avisos.map((a) => (
+              <span key={a} className="text-ambar-texto"> · {a}</span>
+            ))}
+          </span>
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-1 md:hidden">
+          <span className="text-[19px] font-bold tabular-nums">
+            {aTransferir > 0 ? enPesos(aTransferir) : '—'}
+          </span>
+          {aTransferir > 0 && estadoPill(estado,
+            partes.reduce((s, o) => s + o.parte.falta, 0))}
+        </span>
+      </button>
+
+      {/* Los de copiar, a la vista con la línea cerrada: es lo que se hace
+          el lunes, persona tras persona. Solo lo que falta pagar. */}
+      {puedePagar && pendientes.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 pb-3 md:order-2 md:flex-nowrap md:py-3 md:pl-0">
+          {sinCuenta ? (
+            <span className="rounded-lg border-2 border-ambar/50 px-3 py-2 text-[13px]
+                             font-semibold text-ambar-texto">
+              Falta su cuenta para transferir
+            </span>
+          ) : partes.filter((o) => o.parte.debe > 0).map((o) => o.parte.falta <= 0 ? (
+            // Ya pagada: se queda en la línea como pastilla verde, para que
+            // cada persona muestre siempre sus dos partes y se vea de un
+            // vistazo cuál falta.
+            <span key={o.concepto}
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5
+                         whitespace-nowrap rounded-xl border-2 border-verde/50 bg-verde/[0.06] px-3
+                         text-[14px] font-bold text-verde-texto md:flex-none">
+              ✓ {o.concepto}
+            </span>
+          ) : (
+            <button key={o.concepto} type="button" onClick={() => onCopiar(o)}
+              className="tecla flex min-h-[44px] flex-1 items-center justify-center gap-2
+                         whitespace-nowrap rounded-xl border-2 border-oro/60 bg-oro/[0.07] px-3
+                         text-[14px] font-bold hover:border-oro md:flex-none">
+              <span aria-hidden>📋</span>
+              <span>{o.concepto}</span>
+              <span className="tabular-nums text-hueso/75">{enPesos(o.parte.falta)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <span className="hidden shrink-0 flex-col items-end gap-1 py-3 pr-4 md:order-3 md:flex
+                       md:w-40">
+        <span className="text-[19px] font-bold tabular-nums">
+          {aTransferir > 0 ? enPesos(aTransferir) : '—'}
+        </span>
+        {aTransferir > 0 && estadoPill(estado, partes.reduce((s, o) => s + o.parte.falta, 0))}
+      </span>
+      </div>
+
+      {abierta && (
+        <div className="space-y-3 border-t-2 border-hueso/10 px-4 pb-4 pt-3">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[14px] sm:grid-cols-3 md:max-w-2xl">
+            {datos.map((d) => (
+              <div key={d.que} className="flex items-baseline justify-between gap-2">
+                <dt className="text-hueso/65">{d.que}</dt>
+                <dd className={`tabular-nums ${d.tono === 'rojo' ? 'text-rojo-texto'
+                  : d.tono === 'ambar' ? 'text-ambar-texto'
+                  : d.tono === 'fuerte' ? 'font-bold' : 'text-hueso/85'}`}>{d.valor}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {boleta !== null && (
+            puedePagar ? (
+              <button type="button" aria-pressed={boleta} onClick={() => onBoleta(!boleta)}
+                className={`tecla flex min-h-[48px] w-full items-center gap-3 rounded-xl border-2
+                            px-4 text-[15px] font-bold md:w-auto ${boleta
+                  ? 'border-verde-fuerte bg-verde/10 text-verde-texto'
+                  : 'border-ambar/60 text-ambar-texto hover:border-ambar-fuerte'}`}>
+                <span aria-hidden className={`flex h-6 w-6 items-center justify-center rounded-md
+                                             border-2 ${boleta
+                  ? 'border-verde-fuerte bg-verde-fuerte text-tinta' : 'border-ambar/70'}`}>
+                  {boleta ? '✓' : ''}
+                </span>
+                {boleta ? 'Boleta recibida' : 'Falta la boleta'}
+              </button>
+            ) : (
+              <p className={`text-[14px] font-semibold ${boleta ? 'text-verde-texto' : 'text-ambar-texto'}`}>
+                {boleta ? '✓ Boleta recibida' : 'Falta la boleta'}
+              </p>
+            )
+          )}
+
+          <div className="grid gap-3 md:grid-cols-2">
+          {partes.filter((o) => o.parte.debe > 0).map((o) => (
+            <div key={o.concepto} className={`rounded-xl border-2 p-3 ${
+              o.parte.estado === 'pagado' ? 'border-verde/40 bg-verde/[0.04]' : 'border-hueso/15'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-bold uppercase tracking-widest text-hueso/65">
+                  {o.concepto}
+                </span>
+                {estadoPill(o.parte.estado, o.parte.falta)}
+              </div>
+              <p className="mt-1 text-[24px] font-bold tabular-nums">{enPesos(o.parte.debe)}</p>
+              {o.parte.pagado > 0 && o.parte.estado !== 'pagado' && (
+                <p className="text-[13px] text-hueso/65">Pagado {enPesos(o.parte.pagado)}</p>
+              )}
+              {puedePagar && o.parte.falta > 0 && (
+                <button type="button" onClick={() => onPagar(o.concepto)}
+                  className="tecla mt-2 flex min-h-[48px] w-full items-center justify-center
+                             rounded-xl border-2 border-oro bg-oro text-[15px] font-bold text-tinta">
+                  Registrar pago de {o.concepto.toLowerCase()}
+                </button>
+              )}
+            </div>
+          ))}
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -389,6 +434,9 @@ export default function InformeEquipo() {
   const [pagando, setPagando] = useState<{
     quien: string; opciones: Opcion[]; inicial: Concepto | 'ambos'; boletaPendiente: boolean;
   } | null>(null);
+  // La línea abierta. Una a la vez, como las fichas de /equipo: se paga a
+  // una persona, no se comparan dos.
+  const [abierta, setAbierta] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   // **Abre en la semana pasada** (2026-11-04): se paga el lunes la semana
@@ -536,6 +584,67 @@ export default function InformeEquipo() {
     });
     copiarConAviso(texto, `${o.concepto} de ${quien} copiado · ${enPesos(o.parte.falta)}`,
                    `Datos de ${o.concepto.toLowerCase()} de ${quien}:`);
+  }
+
+  /**
+   * **La planilla para la transferencia masiva del banco** (2026-11-04).
+   *
+   * Lo pidió el cliente para cuando tengan un banco con transferencia
+   * masiva: *"dos botones: descargar planilla semanal propina y descargar
+   * planilla semanal sueldos"*. Una por concepto, porque son dos pagos.
+   *
+   * - **Una fila por persona con algo pendiente** de ese concepto, con lo
+   *   que **falta**: lo ya pagado no se vuelve a transferir.
+   * - **Los sueldos llevan también las actividades extras** (su servicio):
+   *   es la misma transferencia de pago, y el banco no distingue.
+   * - **Quien no tiene la cuenta completa queda fuera**, y el aviso lo
+   *   nombra: una fila con datos a medias suele hacer rechazar el archivo
+   *   entero en la carga masiva.
+   * - **Las columnas salen de `ORDEN_TRANSFERENCIA`**, el mismo orden del
+   *   botón de copiar. El orden exacto que pide el banco todavía no está
+   *   confirmado: cuando lo esté, se cambia ahí una vez.
+   */
+  function descargarBanco(cual: 'sueldos' | 'propinas') {
+    const personas = [
+      ...lineas.map((l) => ({ nombre: l.trabajador,
+        partes: partesDe(l.trabajador, l.total, l.propina, false) })),
+      ...(cual === 'sueldos' ? lineasExtras.map((l) => ({ nombre: l.colaborador,
+        partes: partesDe(l.colaborador, l.total, 0, true) })) : [])
+    ];
+    const filas: string[][] = [];
+    const fuera: string[] = [];
+    for (const x of personas) {
+      const o = x.partes.find((p) => cual === 'propinas'
+        ? p.concepto === CONCEPTO.propina : p.concepto !== CONCEPTO.propina);
+      if (!o || o.parte.falta <= 0) continue;
+      const b = cuentaDe(x.nombre);
+      if (!sePuedeTransferir(b)) { fuera.push(x.nombre); continue; }
+      filas.push(filaTransferencia({
+        titular: titularDe(b, x.nombre), rut: rutLimpio(b.rut), banco: b.banco,
+        tipo: b.tipo, numero: b.numero, monto: o.parte.falta, correo: b.correo,
+        glosa: glosaDe(o.concepto, desde, hasta)
+      }));
+    }
+    if (!filas.length) {
+      avisar(fuera.length
+        ? `Nadie con cuenta completa: falta la de ${fuera.join(', ')}`
+        : `No hay ${cual} pendientes en este periodo`, 'atencion');
+      return;
+    }
+    const csv = aCSV(ORDEN_TRANSFERENCIA.map((k) => NOMBRE_COLUMNA_TRANSFERENCIA[k]), filas);
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `banco-${cual}-${desde}-a-${hasta}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (fuera.length) {
+      avisar(`${filas.length} ${cual} en la planilla · quedó fuera ${fuera.join(', ')} `
+             + '(falta su cuenta)', 'atencion');
+    } else {
+      avisar(`Planilla de ${cual}: ${filas.length} `
+             + `${filas.length === 1 ? 'transferencia' : 'transferencias'}`);
+    }
   }
 
   /** Las partes que se le pagan a alguien: sueldo y propina, o el servicio. */
@@ -738,6 +847,22 @@ export default function InformeEquipo() {
           </select>
         )}
         <span className="flex-1" />
+        {/* Las dos planillas para la transferencia masiva: una por
+            concepto, solo para quien paga. */}
+        {puedePagar && (
+          <>
+            <button onClick={() => descargarBanco('sueldos')}
+              disabled={lineas.length === 0 && lineasExtras.length === 0}
+              className="boton min-h-[40px] font-semibold">
+              ⬇ Banco · sueldos
+            </button>
+            <button onClick={() => descargarBanco('propinas')}
+              disabled={propina <= 0}
+              className="boton min-h-[40px] font-semibold">
+              ⬇ Banco · propinas
+            </button>
+          </>
+        )}
         <button onClick={exportar}
           disabled={lineas.length === 0 && lineasExtras.length === 0}
           className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
@@ -783,249 +908,126 @@ export default function InformeEquipo() {
         </p>
       ) : (
         <>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-hueso/70">
+          {puedePagar && (
+            <p className="mb-4 max-w-2xl text-[14px] text-hueso/70">
+              <strong>📋 Copia el sueldo y la propina</strong> de cada persona y
+              pégalos en el banco: son dos transferencias. <strong>Aprieta la
+              línea</strong> para registrar el pago o marcar la boleta.
+            </p>
+          )}
+
+          <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
             Equipo del restaurante
           </h2>
           {lineas.length === 0 ? (
-            <p className="mb-8 text-sm text-hueso/50">
-              Sin turnos anotados en este periodo.
-            </p>
+            <p className="mb-8 text-sm text-hueso/60">Sin turnos anotados en este periodo.</p>
           ) : (
-          <div className="relative mb-8 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-[13px] uppercase tracking-wide text-hueso/50">
-                <tr className="border-b border-hueso/10">
-                  <th className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">Quién</th>
-                  <th className="w-24 py-2 pr-3">Días</th>
-                  <th className="w-28 py-2 pr-3 text-right">Jornadas</th>
-                  <th className="w-32 py-2 pr-3 text-right">Horas extra</th>
-                  <th className="w-28 py-2 pr-3 text-right">Ajustes</th>
-                  <th className="w-28 py-2 pr-3 text-right">Total</th>
-                  <th className="w-28 py-2 pr-3 text-right">Propina</th>
-                  <EncabezadosPago />
-                </tr>
-              </thead>
-              <tbody>
-                {lineas.map((l) => (
-                  <tr key={l.trabajador} className="border-b border-hueso/5">
-                    <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">
-                      {l.trabajador}
-                      {esContratado(l.modalidad) && (
-                        <span className="ml-1 text-[13px] text-hueso/40">contratado</span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">
-                      {l.dias}
-                      {l.noVino > 0 && (
-                        <span className="ml-1 text-[13px] text-rojo-texto/80">
-                          · {l.noVino} no vino
-                        </span>
-                      )}
-                      {l.sinMarcar > 0 && (
-                        <span className="ml-1 text-[13px] text-ambar-texto/80">
-                          · {l.sinMarcar} sin marcar
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
-                      {l.jornadas ? enPesos(l.jornadas) : <span className="text-hueso/25">—</span>}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
-                      {l.horasExtra
-                        ? <>{enPesos(l.montoHorasExtra)}
-                            <span className="ml-1 text-[13px] text-hueso/40">
-                              ({l.horasExtra} h)
-                            </span></>
-                        : <span className="text-hueso/25">—</span>}
-                    </td>
-                    <td className={`py-2 pr-3 text-right tabular-nums ${
-                      l.ajustes < 0 ? 'text-rojo-texto/80' : 'text-hueso/70'}`}>
-                      {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      <strong>{enPesos(l.total)}</strong>
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
-                      {l.propina ? enPesos(l.propina) : <span className="text-hueso/25">—</span>}
-                    </td>
-                    <CeldasPago {...pagoDeFila(l.trabajador, l.total, l.propina)} />
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-hueso/15">
-                  <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-3 pr-3 text-[13px] uppercase tracking-wide text-hueso/45">
-                    {lineas.length} {lineas.length === 1 ? 'persona' : 'personas'}
-                  </td>
-                  <td colSpan={4} />
-                  <td className="py-3 pr-3 text-right tabular-nums">
-                    <strong className="text-oro">{enPesos(total)}</strong>
-                  </td>
-                  <td className="py-3 pr-3 text-right tabular-nums">
-                    {propina > 0
-                      ? <strong className="text-hueso/80">{enPesos(propina)}</strong>
-                      : <span className="text-hueso/25">—</span>}
-                  </td>
-                  <td className="py-3 pr-3 text-right tabular-nums">
-                    <strong className="text-[15px]">{enPesos(sumaEquipo.aTransferir)}</strong>
-                  </td>
-                  <td className="py-3 pr-3 text-right tabular-nums text-hueso/75">
-                    {sumaEquipo.pagado > 0
-                      ? enPesos(sumaEquipo.pagado) : <span className="text-hueso/25">—</span>}
-                  </td>
-                  <td className="py-3 pr-3 text-right tabular-nums">
-                    {sumaEquipo.falta > 0
-                      ? <strong className="text-ambar-texto">{enPesos(sumaEquipo.falta)}</strong>
-                      : <span className="text-hueso/25">—</span>}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          )}
-
-          {/* Las actividades extras van en su propia tabla y no mezcladas con
-              el equipo: un jinete no cobra una jornada ni entra en el reparto
-              de la propina, así que sumarlos en una sola lista haría ilegibles
-              las dos columnas donde eso se ve. Juntos aparecen en el total del
-              periodo y en el CSV, que es donde hacen falta juntos. */}
-          {lineasExtras.length > 0 && (
             <>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-hueso/70">
-                Actividades extras
-              </h2>
-              <div className="relative mb-8 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-[13px] uppercase tracking-wide text-hueso/50">
-                    <tr className="border-b border-hueso/10">
-                      <th className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">Quién</th>
-                      <th className="w-48 py-2 pr-3">Actividad</th>
-                      <th className="w-40 py-2 pr-3">Días</th>
-                      <th className="w-28 py-2 pr-3 text-right">Montos</th>
-                      <th className="w-28 py-2 pr-3 text-right">Ajustes</th>
-                      <th className="w-28 py-2 pr-3 text-right">Total</th>
-                      <EncabezadosPago />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineasExtras.map((l) => (
-                      <tr key={l.colaborador} className="border-b border-hueso/5">
-                        <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-2 pr-3">{l.colaborador}</td>
-                        <td className="py-2 pr-3 text-hueso/70">
-                          {l.actividad || <span className="text-hueso/25">—</span>}
-                        </td>
-                        <td className="py-2 pr-3 tabular-nums">
-                          {l.dias}
-                          {l.noVino > 0 && (
-                            <span className="ml-1 text-[13px] text-rojo-texto/80">
-                              · {l.noVino} no vino
-                            </span>
-                          )}
-                          {l.sinConfirmar > 0 && (
-                            <span className="ml-1 text-[13px] text-ambar-texto/80">
-                              · {l.sinConfirmar} sin confirmar
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums text-hueso/70">
-                          {l.montos ? enPesos(l.montos) : <span className="text-hueso/25">—</span>}
-                        </td>
-                        <td className={`py-2 pr-3 text-right tabular-nums ${
-                          l.ajustes < 0 ? 'text-rojo-texto/80' : 'text-hueso/70'}`}>
-                          {l.ajustes ? enPesos(l.ajustes) : <span className="text-hueso/25">—</span>}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums">
-                          <strong>{enPesos(l.total)}</strong>
-                        </td>
-                        {/* Un colaborador no entra en el reparto de la
-                            propina, así que su "a transferir" es su total y
-                            nada más: el cero va escrito para que se lea como
-                            decisión y no como un campo que faltó. */}
-                        <CeldasPago {...pagoDeFila(l.colaborador, l.total, 0)} />
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-hueso/15">
-                      <td className="sticky left-0 z-10 bg-tinta [box-shadow:1px_0_0_0_rgb(var(--hueso)/0.15)] py-3 pr-3 text-[13px] uppercase tracking-wide text-hueso/45">
-                        {lineasExtras.length}{' '}
-                        {lineasExtras.length === 1 ? 'colaborador' : 'colaboradores'}
-                      </td>
-                      <td colSpan={3} />
-                      <td className="py-3 pr-3" />
-                      <td className="py-3 pr-3 text-right tabular-nums">
-                        <strong className="text-oro">{enPesos(totalExtras)}</strong>
-                      </td>
-                      <td className="py-3 pr-3 text-right tabular-nums">
-                        <strong className="text-[15px]">{enPesos(sumaExtras.aTransferir)}</strong>
-                      </td>
-                      <td className="py-3 pr-3 text-right tabular-nums text-hueso/75">
-                        {sumaExtras.pagado > 0
-                          ? enPesos(sumaExtras.pagado) : <span className="text-hueso/25">—</span>}
-                      </td>
-                      <td className="py-3 pr-3 text-right tabular-nums">
-                        {sumaExtras.falta > 0
-                          ? <strong className="text-ambar-texto">{enPesos(sumaExtras.falta)}</strong>
-                          : <span className="text-hueso/25">—</span>}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              <ul className="space-y-2">
+                {lineas.map((l) => {
+                  const pago = pagoDeFila(l.trabajador, l.total, l.propina);
+                  const aplica = pideBoleta('equipo', esContratado(l.modalidad));
+                  return (
+                    <LineaPersona key={'e-' + l.trabajador}
+                      nombre={l.trabajador}
+                      detalle={`${esContratado(l.modalidad) ? 'Contratado' : 'Por turno'} · ${
+                        l.dias} ${l.dias === 1 ? 'día' : 'días'}`}
+                      avisos={[
+                        ...(l.noVino ? [`${l.noVino} no vino`] : []),
+                        ...(l.sinMarcar ? [`${l.sinMarcar} sin marcar`] : [])
+                      ]}
+                      aTransferir={pago.aTransferir} estado={pago.estado}
+                      partes={partesDe(l.trabajador, l.total, l.propina, false)}
+                      datos={[
+                        { que: 'Jornadas', valor: esContratado(l.modalidad)
+                            ? 'en su sueldo' : enPesos(l.jornadas) },
+                        { que: 'Horas extra', valor: l.horasExtra
+                            ? `${enPesos(l.montoHorasExtra)} (${l.horasExtra} h)` : '—' },
+                        { que: 'Ajustes', valor: l.ajustes ? enPesos(l.ajustes) : '—',
+                          tono: l.ajustes < 0 ? 'rojo' : undefined },
+                        { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' },
+                        { que: 'Propina', valor: l.propina ? enPesos(l.propina) : '—' }
+                      ]}
+                      sinCuenta={!sePuedeTransferir(cuentaDe(l.trabajador))}
+                      boleta={aplica ? boletaRecibida(l.trabajador) : null}
+                      puedePagar={puedePagar}
+                      abierta={abierta === 'e-' + l.trabajador}
+                      onAbrir={() => setAbierta((a) => a === 'e-' + l.trabajador ? null : 'e-' + l.trabajador)}
+                      onCopiar={(o) => copiarTransferencia(l.trabajador, o)}
+                      onBoleta={(r) => void cambiarBoleta(l.trabajador, r)}
+                      onPagar={(concepto) => setPagando({
+                        quien: l.trabajador,
+                        opciones: partesDe(l.trabajador, l.total, l.propina, false),
+                        inicial: concepto,
+                        boletaPendiente: aplica && !boletaRecibida(l.trabajador)
+                      })} />
+                  );
+                })}
+              </ul>
+              <p className="mb-8 mt-2 px-1 text-[14px] text-hueso/70">
+                {lineas.length} {lineas.length === 1 ? 'persona' : 'personas'}
+                {' · '}total <strong className="text-oro">{enPesos(total)}</strong>
+                {propina > 0 && <> · propina <strong>{enPesos(propina)}</strong></>}
+                {sumaEquipo.falta > 0 && (
+                  <> · <strong className="text-ambar-texto">falta {enPesos(sumaEquipo.falta)}</strong></>
+                )}
+              </p>
             </>
           )}
 
-          {/* **Pagar, persona por persona** (2026-11-04). Solo para quien puede
-              registrar pagos: es su herramienta. Cada tarjeta trae lo que
-              hay que transferirle partido en sueldo y propina —o el servicio
-              de una actividad extra—, con el botón para copiar los datos de
-              la transferencia y el de registrar el pago, y el check de la
-              boleta cuando aplica. Las que ya están pagadas del todo bajan
-              al final, para que lo pendiente quede arriba. */}
-          {puedePagar && (
-            <div className="mb-8">
-              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-hueso/70">
-                Pagar
+          {/* Las actividades extras van en su propia lista y no mezcladas con
+              el equipo: un jinete no cobra una jornada ni entra en el reparto
+              de la propina. Juntos aparecen en el total del periodo y en el
+              CSV, que es donde hacen falta juntos. */}
+          {lineasExtras.length > 0 && (
+            <>
+              <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
+                Actividades extras
               </h2>
-              <p className="mb-3 max-w-2xl text-[13px] text-hueso/60">
-                <strong>Copiar datos</strong> copia la cuenta y el monto que falta,
-                listos para pegar en el banco. El sueldo y la propina van en
-                transferencias separadas.
-              </p>
-              <ul className="grid gap-3 lg:grid-cols-2">
-                {[
-                  ...lineas.map((l) => ({
-                    nombre: l.trabajador,
-                    detalle: esContratado(l.modalidad) ? 'Contratado · horas extra y ajustes' : 'Por turno',
-                    partes: partesDe(l.trabajador, l.total, l.propina, false),
-                    aplica: pideBoleta('equipo', esContratado(l.modalidad))
-                  })),
-                  ...lineasExtras.map((l) => ({
-                    nombre: l.colaborador,
-                    detalle: `Actividad extra${l.actividad ? ` · ${l.actividad}` : ''}`,
-                    partes: partesDe(l.colaborador, l.total, 0, true),
-                    aplica: pideBoleta('extra', false)
-                  }))
-                ]
-                  // Quien no tiene nada que cobrar en el periodo no necesita
-                  // tarjeta: no vino, o quedó sin marcar (eso lo avisa arriba).
-                  .filter((x) => x.partes.some((o) => o.parte.debe > 0))
-                  .sort((a, b) => Number(a.partes.every((o) => o.parte.falta <= 0))
-                    - Number(b.partes.every((o) => o.parte.falta <= 0)))
-                  .map((x) => (
-                    <TarjetaPago key={x.nombre} nombre={x.nombre} detalle={x.detalle}
-                      partes={x.partes}
-                      sinCuenta={!sePuedeTransferir(cuentaDe(x.nombre))}
-                      boleta={x.aplica ? boletaRecibida(x.nombre) : null}
-                      onCopiar={(o) => copiarTransferencia(x.nombre, o)}
-                      onBoleta={(r) => void cambiarBoleta(x.nombre, r)}
+              <ul className="space-y-2">
+                {lineasExtras.map((l) => {
+                  const pago = pagoDeFila(l.colaborador, l.total, 0);
+                  return (
+                    <LineaPersona key={'x-' + l.colaborador}
+                      nombre={l.colaborador}
+                      detalle={`${l.actividad || 'Actividad extra'} · ${l.dias} ${
+                        l.dias === 1 ? 'día' : 'días'}`}
+                      avisos={[
+                        ...(l.noVino ? [`${l.noVino} no vino`] : []),
+                        ...(l.sinConfirmar ? [`${l.sinConfirmar} sin confirmar`] : [])
+                      ]}
+                      aTransferir={pago.aTransferir} estado={pago.estado}
+                      partes={partesDe(l.colaborador, l.total, 0, true)}
+                      datos={[
+                        { que: 'Montos', valor: l.montos ? enPesos(l.montos) : '—' },
+                        { que: 'Ajustes', valor: l.ajustes ? enPesos(l.ajustes) : '—',
+                          tono: l.ajustes < 0 ? 'rojo' : undefined },
+                        { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' }
+                      ]}
+                      sinCuenta={!sePuedeTransferir(cuentaDe(l.colaborador))}
+                      boleta={pideBoleta('extra', false) ? boletaRecibida(l.colaborador) : null}
+                      puedePagar={puedePagar}
+                      abierta={abierta === 'x-' + l.colaborador}
+                      onAbrir={() => setAbierta((a) => a === 'x-' + l.colaborador ? null : 'x-' + l.colaborador)}
+                      onCopiar={(o) => copiarTransferencia(l.colaborador, o)}
+                      onBoleta={(r) => void cambiarBoleta(l.colaborador, r)}
                       onPagar={(concepto) => setPagando({
-                        quien: x.nombre, opciones: x.partes, inicial: concepto,
-                        boletaPendiente: x.aplica && !boletaRecibida(x.nombre)
+                        quien: l.colaborador,
+                        opciones: partesDe(l.colaborador, l.total, 0, true),
+                        inicial: concepto,
+                        boletaPendiente: !boletaRecibida(l.colaborador)
                       })} />
-                  ))}
+                  );
+                })}
               </ul>
-            </div>
+              <p className="mb-8 mt-2 px-1 text-[14px] text-hueso/70">
+                {lineasExtras.length} {lineasExtras.length === 1 ? 'colaborador' : 'colaboradores'}
+                {' · '}total <strong className="text-oro">{enPesos(totalExtras)}</strong>
+                {sumaExtras.falta > 0 && (
+                  <> · <strong className="text-ambar-texto">falta {enPesos(sumaExtras.falta)}</strong></>
+                )}
+              </p>
+            </>
           )}
 
           {/* **Dos números y no uno**, porque son dos preguntas distintas y

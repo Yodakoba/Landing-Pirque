@@ -23,9 +23,14 @@ import { useEffect, useRef, useState } from 'react';
 
 const EVENTO = 'brasas-aviso';
 
-/** Muestra un aviso corto abajo de la pantalla. */
-export function avisar(texto: string) {
-  window.dispatchEvent(new CustomEvent(EVENTO, { detail: texto }));
+/**
+ * Muestra un aviso corto abajo de la pantalla. `atencion` lo pinta en ámbar
+ * y con "!" en vez del ✓ verde: un aviso de que **no** pasó lo esperado
+ * —no se descargó nada, quedó alguien fuera— no puede verse igual que uno
+ * de que salió bien.
+ */
+export function avisar(texto: string, tono: 'ok' | 'atencion' = 'ok') {
+  window.dispatchEvent(new CustomEvent(EVENTO, { detail: { texto, tono } }));
 }
 
 /**
@@ -41,14 +46,14 @@ export function copiarConAviso(texto: string, aviso: string, siFalla: string) {
 }
 
 export default function AvisoFlotante() {
-  const [texto, setTexto] = useState('');
+  const [aviso, setAviso] = useState<{ texto: string; tono: 'ok' | 'atencion' } | null>(null);
   const reloj = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const oir = (e: Event) => {
-      setTexto((e as CustomEvent<string>).detail);
+      setAviso((e as CustomEvent<{ texto: string; tono: 'ok' | 'atencion' }>).detail);
       clearTimeout(reloj.current);
-      reloj.current = setTimeout(() => setTexto(''), 3000);
+      reloj.current = setTimeout(() => setAviso(null), 3000);
     };
     window.addEventListener(EVENTO, oir);
     return () => { window.removeEventListener(EVENTO, oir); clearTimeout(reloj.current); };
@@ -57,12 +62,15 @@ export default function AvisoFlotante() {
   return (
     <div role="status" aria-live="polite"
       className="pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
-      {texto && (
-        <p className="aviso-flotante flex items-center gap-2 rounded-full border-2
-                      border-verde-fuerte bg-panel px-5 py-3 text-[15px] font-semibold
-                      text-hueso shadow-lg">
-          <span aria-hidden className="text-verde-texto">✓</span>
-          {texto}
+      {aviso && (
+        <p className={`aviso-flotante flex items-center gap-2 rounded-full border-2 bg-panel
+                       px-5 py-3 text-[15px] font-semibold text-hueso shadow-lg ${
+          aviso.tono === 'ok' ? 'border-verde-fuerte' : 'border-ambar-fuerte'}`}>
+          <span aria-hidden className={aviso.tono === 'ok'
+            ? 'text-verde-texto' : 'font-black text-ambar-texto'}>
+            {aviso.tono === 'ok' ? '✓' : '!'}
+          </span>
+          {aviso.texto}
         </p>
       )}
     </div>
