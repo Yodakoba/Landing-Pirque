@@ -4919,7 +4919,7 @@ Siempre a la vista:
    **Debajo, los cuatro menús con el 11% ya aplicado** (2026-11-04), como
    etiquetas de precio: el nuevo grande, el de antes tachado y lo que se
    ahorra en una pastilla. Tradiciones $43.610 · Lo Pirque $48.950 · Brasas
-   $66.750 · Sommelier $95.000 → $84.550. **Están escritos a mano**, como
+   $66.750 · Sommelier $84.550. **Están escritos a mano**, como
    todos los precios del sitio: si cambia el precio de una tarjeta, hay que
    cambiar su etiqueta, y las llaves `$…` de los dos diccionarios.
 3. Contacto: botón WhatsApp + formulario de email.
