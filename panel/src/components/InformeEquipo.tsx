@@ -71,11 +71,13 @@ interface Opcion { concepto: Concepto; parte: Parte }
  * el foco a cada tecla.
  */
 function FormularioPago({
-  quien, opciones, inicial, boletaPendiente, periodo, onGuardar, onCancelar
+  quien, opciones, inicial, modoInicial = 'todo', boletaPendiente, periodo, onGuardar, onCancelar
 }: {
   quien: string;
   opciones: Opcion[];
   inicial: Concepto | 'ambos';
+  /** Con qué respuesta abre "¿Cuánto?": *Pago parcial* la abre en *Una parte*. */
+  modoInicial?: 'todo' | 'parte';
   /** Si la boleta de este periodo todavía no está marcada. */
   boletaPendiente: boolean;
   periodo: string;
@@ -84,7 +86,7 @@ function FormularioPago({
 }) {
   const conFalta = opciones.filter((o) => o.parte.falta > 0);
   const [que, setQue] = useState<Concepto | 'ambos'>(inicial);
-  const [modo, setModo] = useState<'todo' | 'parte'>('todo');
+  const [modo, setModo] = useState<'todo' | 'parte'>(modoInicial);
   const [monto, setMonto] = useState('');
   const [nota, setNota] = useState('');
 
@@ -243,7 +245,7 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
  */
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, avisos, sinCuenta,
-  boleta, puedePagar, abierta, onAbrir, onCopiar, onPagar, onBoleta
+  boleta, puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta
 }: {
   nombre: string;
   detalle: string;
@@ -260,10 +262,16 @@ function LineaPersona({
   abierta: boolean;
   onAbrir: () => void;
   onCopiar: (o: Opcion) => void;
+  /** *Pago parcial*: abre la ventana con el campo del monto. */
   onPagar: (concepto: Concepto) => void;
+  /** *Pagado completo*: anota lo que falta de esa parte, sin ventana. */
+  onPagarCompleto: (o: Opcion) => Promise<void>;
   onBoleta: (recibida: boolean) => void;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
+  // Qué parte se está guardando con "Pagado completo": mientras tanto el
+  // botón se apaga, para que dos toques seguidos no anoten dos pagos.
+  const [enviando, setEnviando] = useState<Concepto | null>(null);
   const estadoPill = (e: EstadoPago, falta: number) => (
     <span className={`whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${
       e === 'pagado' ? 'border-verde/60 text-verde-texto'
@@ -311,9 +319,12 @@ function LineaPersona({
 
       {/* Los de copiar, a la vista con la línea cerrada: es lo que se hace
           el lunes, persona tras persona. Solo lo que falta pagar. */}
-      {puedePagar && pendientes.length > 0 && (
+      {/* La fila sigue a la vista cuando todo está pagado: dos pastillas
+          verdes son la confirmación de un vistazo, y que la fila desapareciera
+          se leía como que algo se había perdido. */}
+      {puedePagar && partes.some((o) => o.parte.debe > 0) && (
         <div className="flex flex-wrap gap-2 px-4 pb-3 md:order-2 md:flex-nowrap md:py-3 md:pl-0">
-          {sinCuenta ? (
+          {sinCuenta && pendientes.length > 0 ? (
             <span className="rounded-lg border-2 border-ambar/50 px-3 py-2 text-[13px]
                              font-semibold text-ambar-texto">
               Falta su cuenta para transferir
@@ -418,11 +429,33 @@ function LineaPersona({
                       Copiar datos de transferencia
                     </button>
                   )}
-                  <button type="button" onClick={() => onPagar(o.concepto)}
-                    className="tecla flex min-h-[48px] w-full items-center justify-center
-                               rounded-xl border-2 border-oro bg-oro text-[15px] font-bold text-tinta">
-                    Registrar pago de {o.concepto.toLowerCase()}
-                  </button>
+                  {/* **Completo o parcial, dos botones** (2026-11-04, lo pidió el
+                      cliente para acortar el trabajo). Lo normal es pagar
+                      todo, y entonces es un toque: *Pagado completo* anota lo
+                      que falta sin abrir ninguna ventana. *Pago parcial* abre
+                      la ventana con el campo del monto ya listo. */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" disabled={enviando === o.concepto}
+                      onClick={() => {
+                        setEnviando(o.concepto);
+                        void onPagarCompleto(o).finally(() => setEnviando(null));
+                      }}
+                      className="tecla flex min-h-[56px] flex-col items-center justify-center
+                                 rounded-xl border-2 border-oro bg-oro px-1 text-tinta">
+                      <span className="whitespace-nowrap text-[14px] font-bold">
+                        {enviando === o.concepto ? 'Guardando…' : '✓ Pagado completo'}
+                      </span>
+                      <span className="text-[13px] font-semibold tabular-nums">
+                        {enPesos(o.parte.falta)}
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => onPagar(o.concepto)}
+                      className="tecla flex min-h-[56px] flex-col items-center justify-center
+                                 rounded-xl border-2 border-oro/70 px-2 hover:border-oro">
+                      <span className="text-[15px] font-bold">Pago parcial</span>
+                      <span className="text-[13px] text-hueso/65">escribes cuánto</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -583,6 +616,7 @@ export default function InformeEquipo() {
   // elegida al abrir.
   const [pagando, setPagando] = useState<{
     quien: string; opciones: Opcion[]; inicial: Concepto | 'ambos'; boletaPendiente: boolean;
+    modo?: 'todo' | 'parte';
   } | null>(null);
   // La línea abierta. Una a la vez, como las fichas de /equipo: se paga a
   // una persona, no se comparan dos.
@@ -709,6 +743,20 @@ export default function InformeEquipo() {
     }
     setPagando(null);
     avisar(`Pago de ${quien} registrado`);
+  }
+
+  /**
+   * *Pagado completo*: anota lo que falta de una parte, de un toque. La
+   * boleta no lo frena —puede llegar después—, pero si falta lo dice en el
+   * aviso, en ámbar, que es el momento en que alguien lo va a leer.
+   */
+  async function pagarCompleto(quien: string, o: Opcion, boletaPendiente: boolean) {
+    await registrarPagos(quien, [{ concepto: o.concepto, monto: o.parte.falta }], '');
+    if (boletaPendiente && o.concepto !== CONCEPTO.propina) {
+      avisar(`${o.concepto} de ${quien} pagado · falta marcar su boleta`, 'atencion');
+    } else {
+      avisar(`${o.concepto} de ${quien} pagado · ${enPesos(o.parte.falta)}`);
+    }
   }
 
   /** Marca o desmarca la boleta de alguien para el periodo que se mira. */
@@ -1141,9 +1189,11 @@ export default function InformeEquipo() {
                       onPagar={(concepto) => setPagando({
                         quien: l.trabajador,
                         opciones: partesDe(l.trabajador, l.total, l.propina, false),
-                        inicial: concepto,
+                        inicial: concepto, modo: 'parte',
                         boletaPendiente: aplica && !boletaRecibida(l.trabajador)
-                      })} />
+                      })}
+                      onPagarCompleto={(o) => pagarCompleto(l.trabajador, o,
+                        aplica && !boletaRecibida(l.trabajador))} />
                   );
                 })}
               </ul>
@@ -1197,9 +1247,11 @@ export default function InformeEquipo() {
                       onPagar={(concepto) => setPagando({
                         quien: l.colaborador,
                         opciones: partesDe(l.colaborador, l.total, 0, true),
-                        inicial: concepto,
+                        inicial: concepto, modo: 'parte',
                         boletaPendiente: !boletaRecibida(l.colaborador)
-                      })} />
+                      })}
+                      onPagarCompleto={(o) => pagarCompleto(l.colaborador, o,
+                        !boletaRecibida(l.colaborador))} />
                   );
                 })}
               </ul>
@@ -1313,6 +1365,7 @@ export default function InformeEquipo() {
             quien={pagando.quien}
             opciones={pagando.opciones}
             inicial={pagando.inicial}
+            modoInicial={pagando.modo}
             boletaPendiente={pagando.boletaPendiente}
             periodo={rangoEnPalabras([desde, hasta])}
             onGuardar={(ls, nota) => void registrarPagos(pagando.quien, ls, nota)}

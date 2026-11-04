@@ -218,8 +218,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'está incompleto.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
       + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',
-      'Aprieta la línea para abrirla: ahí registras el pago, todo o una '
-      + 'parte, y marcas la boleta cuando llegue.',
+      'Aprieta la línea para abrirla. Si pagaste todo, aprieta Pagado '
+      + 'completo; si fue una parte, Pago parcial. Ahí también marcas la '
+      + 'boleta cuando llegue.',
       'Para una transferencia masiva, arriba está su tarjeta: baja la '
       + 'planilla de sueldos o de propinas, súbela al banco, y cuando esté '
       + 'pagada aprieta Todos pagados.',

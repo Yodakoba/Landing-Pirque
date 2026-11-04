@@ -2803,6 +2803,19 @@ el orden en que se hacen: **📋 Copiar datos de transferencia** (delineado) y
 **Registrar pago de sueldo / propina** (relleno, porque es lo que cierra).
 Los botones de la línea cerrada se quedaron: son el atajo del lunes.
 
+**Y registrar son dos botones, completo o parcial** (lo pidió el cliente
+para acortar el trabajo): **✓ Pagado completo · $X** anota lo que falta de
+esa parte **de un toque, sin ventana**, y **Pago parcial** abre la ventana
+con el campo del monto ya listo. Lo normal es pagar todo, así que lo normal
+es un toque.
+
+- Mientras guarda, el botón dice *Guardando…* y se apaga: dos toques
+  seguidos no pueden anotar dos pagos.
+- Si falta la boleta no lo frena —puede llegar después—, pero el aviso lo
+  dice en ámbar: *"Sueldo de Ana pagado · falta marcar su boleta"*.
+- Con todo pagado, la línea cerrada sigue mostrando **✓ Sueldo ✓ Propina**
+  en verde: que la fila desapareciera se leía como que algo se perdió.
+
 #### La transferencia masiva
 
 Una tarjeta arriba de las líneas, **solo para quien paga**, con una fila por
