@@ -40,10 +40,20 @@
  * justamente lo que hay que poder ver para ir a reclamarlo. Antes se
  * filtraban y desaparecían.
  *
+ * ## Dos pestañas, y semanas con nombre (2026-11-04)
+ *
+ * Arriba, **💰 Lo que gané** y **📅 Lo que viene** (`?v=viene`), como dos
+ * botones grandes: son las dos preguntas con que se abre este link. En lo
+ * ganado, la semana elegida va en grande con su etiqueta —*Semana pasada*,
+ * *En curso*, *Próxima semana*— y **flechas a los lados, sin tope**; debajo,
+ * la escalera de semanas, cada una diciendo si tuvo actividad. Lo que viene
+ * son los turnos asignados en tarjetas grandes, con cuánta gente y cuántas
+ * reservas hay, y el pronóstico del día.
+ *
  * ## El filtro no usa una línea de JavaScript
  *
  * El periodo viaja en la URL (`?p=2026-11-10` una semana, `?p=2026-11` un
- * mes) y las pastillas son enlaces. Es un componente de servidor, así que no
+ * mes) y las flechas, las filas y las pastillas son enlaces. Es un componente de servidor, así que no
  * hacía falta nada más — misma idea que el selector de idiomas del sitio
  * público, que es un `<details>`.
  *
@@ -56,12 +66,15 @@ import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
 import { menusDe } from '@/lib/shopify';
 import { trabajadorPorToken, turnosDe, pagoDe, esContratado, esPreparacion,
          totalAjustes, informeDelPeriodo, rangoDelPeriodo, semanaPorDefecto,
-         periodosDelLink, esPeriodo, VINO, type Turno } from '@/lib/equipo';
+         periodosDelLink, esPeriodo, VINO, etiquetaSemana, escaleraDeSemanas,
+         type Turno } from '@/lib/equipo';
 import { pagosEnPeriodo, pagosQueNoCaben, aTransferirDe, faltaDe,
          estadoDePago } from '@/lib/remuneraciones';
 import { enPesos, ocupaLugar } from '@/lib/ocupacion';
-import { enPalabras, mesEnPalabras, rangoEnPalabras, hoy, diaSemana,
-         type Fecha } from '@/lib/fechas';
+import { enPalabras, mesEnPalabras, rangoEnPalabras, hoy, diaSemana, semanaDe,
+         sumarDias, type Fecha } from '@/lib/fechas';
+import { climaDe, urlPronostico, IDENTIFICACION, iconoDe, FUENTE,
+         type Clima } from '@/lib/clima';
 import { estaCerrado } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
@@ -160,11 +173,180 @@ function Pastilla({ token, periodo, actual, children }: {
   );
 }
 
+/**
+ * El pronóstico de un día, para quien va a trabajar: si hay que venir con
+ * bloqueador o con parka. Lo pide el servidor a MET Norway, igual que el
+ * panel, y se guarda una hora. **Si MET no responde, la página sale igual**,
+ * sin el ícono: nada de esto depende del tiempo.
+ */
+async function pronostico(): Promise<Clima[]> {
+  try {
+    const r = await fetch(urlPronostico(), {
+      headers: { 'User-Agent': IDENTIFICACION },
+      next: { revalidate: 60 * 60 }
+    });
+    return r.ok ? climaDe(await r.json()) : [];
+  } catch { return []; }
+}
+
+/**
+ * La etiqueta de una semana: *En curso*, *Semana pasada*, *Próxima semana*…
+ *
+ * **Cada una con su color**, que es lo que la hace reconocible sin leerla:
+ * la en curso va **rellena de dorado y con un punto que late** —es la que
+ * corre—, la pasada en verde porque es la que te pagan, las que vienen en
+ * celeste. Y con borde, para que se distingan por forma y no solo por color.
+ */
+function EtiquetaSemana({ texto }: { texto: string }) {
+  const tono = texto === 'En curso'
+    ? 'border-oro bg-oro text-tinta'
+    : texto === 'Semana pasada'
+      ? 'border-verde-fuerte/60 bg-verde/10 text-verde-texto'
+      : texto.startsWith('En ') || texto === 'Próxima semana'
+        ? 'border-cielo-fuerte/60 bg-cielo/10 text-cielo-texto'
+        : 'border-hueso/25 text-hueso/70';
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full
+                      border-2 px-2.5 py-0.5 text-[13px] font-bold ${tono}`}>
+      {texto === 'En curso' && (
+        <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-tinta" />
+      )}
+      {texto}
+    </span>
+  );
+}
+
+/** Lo que la tarjeta de un turno que viene necesita saber de su día. */
+interface DatosDelTurno {
+  fecha: Fecha;
+  puesto: string;
+  apertura: string;
+  personas: number;
+  reservas: number;
+  preparando: boolean;
+  menus: { menu: string; cantidad: number }[];
+  notas: string;
+  clima?: Clima;
+  esHoy: boolean;
+}
+
+/**
+ * **Un turno que viene, como tarjeta grande** (2026-11-04, lo pidió el
+ * cliente: *"ayuda al trabajador a identificar: ok, eso es lo que se me
+ * viene"*). Lo que se mira de lejos va grande —el día, el puesto, el sol—
+ * y lo que se lee de cerca va debajo: a qué hora, cuánta gente, qué se
+ * prepara.
+ *
+ * **Cuánta gente y cuántas reservas, y nada más de ellas**: ni nombres ni
+ * montos. Es cuánto trabajo viene, no de quién.
+ */
+function TarjetaTurno({ d }: { d: DatosDelTurno }) {
+  const cielo = d.clima ? iconoDe(d.clima.simbolo) : null;
+  return (
+    <li className={`rounded-2xl border-2 bg-panel p-4 ${
+      d.esHoy ? 'border-oro shadow-lg' : 'border-hueso/20'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {d.esHoy && (
+            <span className="mb-1 inline-block rounded-full bg-oro px-2.5 py-0.5
+                             text-[13px] font-bold text-tinta">Hoy</span>
+          )}
+          <p className="text-lg font-bold leading-tight first-letter:uppercase">
+            {enPalabras(d.fecha)}
+          </p>
+          <p className="mt-1.5 inline-block rounded-lg border-2 border-oro/60 bg-oro/10
+                        px-2.5 py-1 text-[15px] font-bold text-oro">
+            {d.puesto || 'Sin puesto definido'}
+          </p>
+        </div>
+        {cielo && d.clima && (
+          <div title={`Pronóstico de ${FUENTE.texto}`}
+               className="flex shrink-0 flex-col items-center rounded-xl border-2
+                          border-hueso/15 px-3 py-2 text-center">
+            <span aria-hidden className="text-[30px] leading-none">{cielo.icono}</span>
+            {d.clima.max !== null && (
+              <span className="mt-1 text-[17px] font-bold tabular-nums">
+                {Math.round(d.clima.max)}°
+              </span>
+            )}
+            <span className="text-[13px] text-hueso/70">{cielo.texto}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-[14px]">
+        <span className="rounded-lg border border-hueso/20 px-2.5 py-1">
+          🕐 Desde las <strong>{d.apertura}</strong>
+        </span>
+        {d.preparando ? (
+          <span className="rounded-lg border border-oro/50 bg-oro/10 px-2.5 py-1 text-oro">
+            🔧 Día de preparación, no abre al público
+          </span>
+        ) : (
+          <span className="rounded-lg border border-hueso/20 px-2.5 py-1">
+            👥 <strong className="tabular-nums">{d.personas}</strong>{' '}
+            {d.personas === 1 ? 'persona' : 'personas'}
+            <span className="text-hueso/60"> · {d.reservas}{' '}
+              {d.reservas === 1 ? 'reserva' : 'reservas'}</span>
+          </span>
+        )}
+      </div>
+
+      {d.menus.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {d.menus.map(({ menu, cantidad }) => (
+            <li key={menu}
+                className="rounded border border-hueso/15 px-2 py-1 text-[13px]">
+              <strong className="tabular-nums text-oro">{cantidad}</strong>
+              <span className="text-hueso/60"> × </span>
+              <span className="text-hueso/80">{menu}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {d.notas && <p className="mt-2 text-[13px] text-hueso/70">{d.notas}</p>}
+    </li>
+  );
+}
+
+/**
+ * Las dos pestañas de arriba: **lo que gané** y **lo que viene**. Son las dos
+ * preguntas con que se abre este link, y por eso van como dos botones
+ * grandes y no como un enlace al pie. La elegida va rellena de dorado.
+ */
+function Pestana({ href, elegida, children }: {
+  href: string; elegida: boolean; children: React.ReactNode;
+}) {
+  return (
+    <a href={href} aria-current={elegida ? 'page' : undefined}
+       className={`tecla flex min-h-[56px] flex-1 items-center justify-center gap-1.5
+                   whitespace-nowrap rounded-xl border-2 px-2 text-center text-[15px] font-bold ${
+         elegida ? 'border-oro bg-oro text-tinta'
+                 : 'border-hueso/25 bg-panel text-hueso/85 hover:border-oro'}`}>
+      {children}
+    </a>
+  );
+}
+
+/** Una flecha del navegador de semanas: 48px, para el dedo. */
+function Flecha({ href, children, etiqueta }: {
+  href: string; children: React.ReactNode; etiqueta: string;
+}) {
+  return (
+    <a href={href} aria-label={etiqueta} title={etiqueta}
+       className="tecla flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
+                  border-2 border-hueso/25 bg-panel text-xl font-bold text-hueso/85
+                  hover:border-oro hover:text-oro">
+      {children}
+    </a>
+  );
+}
+
 export default async function Pagina({ params, searchParams }: {
   params: { token: string };
-  searchParams: { p?: string };
+  searchParams: { p?: string; v?: string };
 }) {
-  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos] = await Promise.all([
+  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima] = await Promise.all([
     leerTrabajadores(), leerTurnos(),
     // Igual que las reservas: la hora de apertura y las notas del día son un
     // extra. `leerFechas()` no atrapa sus errores —las pantallas del panel
@@ -179,7 +361,8 @@ export default async function Pagina({ params, searchParams }: {
     leerMenus().catch(() => []),
     // Y si no se pueden leer los pagos, lo peor que pasa es que se vea todo
     // sin pagar — que es exactamente lo que se ve cuando nadie ha pagado.
-    leerPagosEquipo().catch(() => [])
+    leerPagosEquipo().catch(() => []),
+    pronostico()
   ]);
 
   // La lista vacía no es "tu link no sirve": no existe el caso de un token
@@ -234,13 +417,18 @@ export default async function Pagina({ params, searchParams }: {
   const { desde, hasta } = rangoDelPeriodo(periodo);
   const comoSeLlama = esMes ? mesEnPalabras(periodo) : rangoEnPalabras([desde, hasta]);
 
-  const { semanas, meses } = periodosDelLink(trabajados, ahora);
-  // Si alguien escribió un periodo más atrás que las pastillas que se
-  // ofrecen, se le agrega: sin esto estaría mirando un periodo y ninguna
-  // pastilla se vería elegida, que se lee como que el filtro está roto.
-  const lista = esMes ? meses : semanas;
-  if (!lista.includes(periodo)) {
-    lista.push(periodo);
+  const { meses } = periodosDelLink(trabajados, ahora);
+  /**
+   * La escalera de semanas: la que viene, la en curso, la pasada y las
+   * anteriores con turnos. Si alguien llegó con las flechas a una que no
+   * está, se le agrega: sin esto estaría mirando una semana y ninguna fila
+   * se vería marcada, que se lee como que el filtro está roto. Lo mismo con
+   * los meses.
+   */
+  const escalera = escaleraDeSemanas(suyos, ahora);
+  const lista = esMes ? meses : escalera;
+  if (!lista.includes(esMes ? periodo : desde)) {
+    lista.push(esMes ? periodo : desde);
     lista.sort().reverse();
   }
 
@@ -284,6 +472,62 @@ export default async function Pagina({ params, searchParams }: {
     delDia(fecha).reduce((s, r) => s + (Number(r.personas) || 0), 0);
 
   const rotulo = 'text-[13px] font-semibold uppercase tracking-widest text-hueso/60';
+  const enlace = (q: string) => `/mi/${encodeURIComponent(params.token)}${q}`;
+  const vista = searchParams?.v === 'viene' ? 'viene' : 'gane';
+  const estaSemana = semanaDe(ahora);
+  const climaPorFecha = new Map(clima.map((c) => [c.fecha, c]));
+
+  /** Lo que la tarjeta de un turno que viene muestra de su día. */
+  const datosDe = (t: Turno): DatosDelTurno => {
+    const dia = porFecha.get(t.fecha);
+    const personas = personasDe(t.fecha);
+    return {
+      fecha: t.fecha,
+      puesto: t.puesto,
+      apertura: dia?.apertura || cfg.horaApertura,
+      personas,
+      reservas: delDia(t.fecha).length,
+      // Un día sin público y con equipo es preparación: quien lo lee tiene
+      // que saber si va a atender o a montar.
+      preparando: esPreparacion({
+        conEquipo: true,
+        abierto: dia ? !estaCerrado(dia.estado) : cfg.diasAbiertos.includes(diaSemana(t.fecha)),
+        personas
+      }),
+      menus: menusDe(delDia(t.fecha), catalogo),
+      notas: dia?.notas || '',
+      clima: climaPorFecha.get(t.fecha),
+      esHoy: t.fecha === ahora
+    };
+  };
+
+  /**
+   * Lo que dice cada fila de la escalera a la derecha: **si esa semana tuvo
+   * actividad**. Una semana ya trabajada dice cuántos días y cuánto; una que
+   * viene, cuántos turnos tiene; una vacía lo dice con palabras.
+   */
+  const actividadDe = (lunes: Fecha): { texto: string; hay: boolean } => {
+    const hasta = sumarDias(lunes, 6);
+    const porVenir = mios.filter((t) => t.fecha >= lunes && t.fecha <= hasta).length;
+    const hecho = informeDelPeriodo(trabajados, lunes, hasta)[0];
+    const partes: string[] = [];
+    if (hecho && hecho.dias > 0) {
+      partes.push(`${hecho.dias} ${hecho.dias === 1 ? 'día' : 'días'} · `
+        + enPesos(aTransferirDe(hecho.total, hecho.propina)));
+    } else if (hecho && hecho.sinMarcar > 0) {
+      partes.push(`${hecho.sinMarcar} sin cerrar`);
+    }
+    if (porVenir > 0) partes.push(`${porVenir} ${porVenir === 1 ? 'turno' : 'turnos'} por venir`);
+    return partes.length ? { texto: partes.join(' · '), hay: true } : { texto: 'sin turnos', hay: false };
+  };
+
+  // La semana que se mira **todavía no empieza**: no hay nada que cobrar, y
+  // lo que sirve mostrar son sus turnos.
+  const futura = !esMes && desde > estaSemana;
+  const porVenirDelPeriodo = esMes ? [] : mios.filter((t) => t.fecha >= desde && t.fecha <= hasta);
+
+  // Lo que viene, agrupado por semana para la pestaña "Lo que viene".
+  const semanasQueVienen = [...new Set(mios.map((t) => semanaDe(t.fecha)))].sort();
 
   return (
     <section className="mx-auto max-w-md">
@@ -292,31 +536,116 @@ export default async function Pagina({ params, searchParams }: {
       </p>
       <h1 className="mt-1 text-xl font-bold uppercase tracking-wide">{quien.nombre}</h1>
 
-      {/* ---------- El filtro ---------- */}
-
-      <p className={`${rotulo} mt-6`}>Semana</p>
-      <nav className="mt-1.5 flex flex-wrap gap-1.5">
-        {semanas.map((s) => (
-          <Pastilla key={s} token={params.token} periodo={s} actual={periodo}>
-            {rangoEnPalabras([s, rangoDelPeriodo(s).hasta])}
-          </Pastilla>
-        ))}
+      {/* **Las dos preguntas con que se abre este link, como dos botones
+          grandes** (2026-11-04, lo pidió el cliente: *"un poco más presente
+          un botón futuras semanas"*). Antes lo que viene estaba al final de
+          la página, debajo de todas las cuentas, y había que saber que
+          existía para bajar a buscarlo. */}
+      <nav className="mt-4 flex gap-2">
+        <Pestana href={enlace('')} elegida={vista === 'gane'}>
+          <span aria-hidden>💰</span> Lo que gané
+        </Pestana>
+        <Pestana href={enlace('?v=viene')} elegida={vista === 'viene'}>
+          <span aria-hidden>📅</span> Lo que viene
+          {mios.length > 0 && (
+            <span className={`rounded-full px-2 py-0.5 text-[13px] tabular-nums ${
+              vista === 'viene' ? 'bg-tinta/15' : 'bg-oro text-tinta'}`}>
+              {mios.length}
+            </span>
+          )}
+        </Pestana>
       </nav>
 
-      <p className={`${rotulo} mt-4`}>Mes</p>
-      <nav className="mt-1.5 flex flex-wrap gap-1.5">
-        {meses.map((m) => (
-          <Pastilla key={m} token={params.token} periodo={m} actual={periodo}>
-            {mesEnPalabras(m)}
-          </Pastilla>
-        ))}
-      </nav>
+      {vista === 'viene' ? (
+        /* ====================== LO QUE VIENE ====================== */
+        <>
+          {mios.length === 0 ? (
+            <p className="mt-6 rounded-2xl border-2 border-hueso/20 bg-panel p-4 text-[15px] text-hueso/80">
+              No tienes turnos asignados por ahora. Cuando te asignen uno,
+              aparece acá — este mismo link sigue sirviendo, no hace falta
+              pedir otro.
+            </p>
+          ) : (
+            semanasQueVienen.map((lunes) => (
+              <div key={lunes} className="mt-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <EtiquetaSemana texto={etiquetaSemana(lunes, ahora)} />
+                  <span className="text-[15px] font-semibold first-letter:uppercase">
+                    {rangoEnPalabras([lunes, sumarDias(lunes, 6)])}
+                  </span>
+                </div>
+                <ul className="mt-2 space-y-3">
+                  {mios.filter((t) => semanaDe(t.fecha) === lunes).map((t) => (
+                    <TarjetaTurno key={t.fecha + t.puesto} d={datosDe(t)} />
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
+          {clima.length > 0 && mios.length > 0 && (
+            <p className="mt-4 text-[13px] text-hueso/60">
+              El pronóstico llega a unos 9 días y es de {FUENTE.texto}. Más
+              adelante todavía no hay.
+            </p>
+          )}
+        </>
+      ) : (
+        /* ====================== LO QUE GANÉ ====================== */
+        <>
+          {/* ---------- La semana que se mira, con flechas ---------- */}
 
-      {/* ---------- Los números del periodo ---------- */}
+          {!esMes && (
+            /* **La semana elegida en grande, con flechas a los lados**
+               (2026-11-04). Se lee qué semana es —*Semana pasada*, *En
+               curso*— y no solo sus fechas, y las flechas llevan a la
+               anterior o a la siguiente sin tope: se puede ir próxima,
+               próxima, próxima. Son enlaces, así que no hay JavaScript. */
+            <div className="mt-5 flex items-center gap-2 rounded-2xl border-2 border-oro/60
+                            bg-oro/[0.06] p-2.5">
+              <Flecha href={enlace(`?p=${sumarDias(desde, -7)}`)} etiqueta="Semana anterior">◀</Flecha>
+              <div className="min-w-0 flex-1 text-center">
+                <EtiquetaSemana texto={etiquetaSemana(desde, ahora)} />
+                <p className="mt-1 text-[17px] font-bold leading-tight first-letter:uppercase">
+                  {comoSeLlama}
+                </p>
+              </div>
+              <Flecha href={enlace(`?p=${sumarDias(desde, 7)}`)} etiqueta="Semana siguiente">▶</Flecha>
+            </div>
+          )}
 
-      <h2 className="mt-7 text-base font-bold first-letter:uppercase">{comoSeLlama}</h2>
+          {/* ---------- Los números del periodo ---------- */}
 
-      {delPeriodo.length === 0 && recibidos.length === 0 ? (
+          {esMes && (
+            <h2 className="mt-7 text-base font-bold first-letter:uppercase">{comoSeLlama}</h2>
+          )}
+
+          {/* Los turnos que todavía vienen en esta semana: en la semana en
+              curso y en las que vienen, es lo primero que hay que ver. */}
+          {porVenirDelPeriodo.length > 0 && (
+            <>
+              <h3 className={`${rotulo} mt-5`}>Por trabajar</h3>
+              <ul className="mt-2 space-y-3">
+                {porVenirDelPeriodo.map((t) => (
+                  <TarjetaTurno key={t.fecha + t.puesto} d={datosDe(t)} />
+                ))}
+              </ul>
+            </>
+          )}
+
+          {futura ? (
+            porVenirDelPeriodo.length === 0 && (
+              <p className="mt-4 text-sm text-hueso/70">
+                No tienes turnos asignados esta semana todavía.
+              </p>
+            )
+          ) : delPeriodo.length === 0 && recibidos.length === 0
+              && porVenirDelPeriodo.length > 0 ? (
+            // En la semana en curso, con turnos que todavía no llegan, el
+            // aviso de "no hay nada anotado" sobra: arriba ya están los
+            // turnos, y debajo de ellos se lee como que algo falló.
+            null
+          ) : (
+      delPeriodo.length === 0 && recibidos.length === 0 ? (
         // **Antes acá no se dibujaba nada**, y una pantalla en blanco se lee
         // como que la página está mala. Decir que no hay nada anotado, y
         // cuándo aparece, manda a reclamar al lugar correcto.
@@ -525,70 +854,55 @@ export default async function Pagina({ params, searchParams }: {
               : 'Es lo que quedó anotado al cerrar cada día. Si ves algo raro, dilo.'}
           </p>
         </>
-      )}
+      )
+          )}
 
-      {/* ---------- Los turnos que vienen ---------- */}
+          {/* ---------- La escalera de semanas ---------- */}
 
-      <h2 className={`${rotulo} mt-9`}>Tus próximos turnos</h2>
+          {/* **Todas las semanas en orden, de la que viene a las anteriores**,
+              cada una con su etiqueta y con si tuvo actividad. La elegida va
+              marcada con borde dorado. Antes eran pastillas sueltas con
+              fechas, y había que leerlas para saber cuál era la que pagan. */}
+          <h3 className={`${rotulo} mt-9`}>Tus semanas</h3>
+          <nav className="mt-2 space-y-2">
+            {escalera.map((lunes) => {
+              const elegida = !esMes && lunes === desde;
+              const act = actividadDe(lunes);
+              return (
+                <a key={lunes} href={enlace(`?p=${lunes}`)}
+                   aria-current={elegida ? 'page' : undefined}
+                   className={`tecla flex min-h-[52px] items-center gap-3 rounded-xl border-2
+                               px-3 py-2 ${elegida
+                     ? 'border-oro bg-oro/10'
+                     : 'border-hueso/15 bg-panel hover:border-oro/60'}`}>
+                  <span className="w-[8.5rem] shrink-0">
+                    <EtiquetaSemana texto={etiquetaSemana(lunes, ahora)} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold first-letter:uppercase">
+                      {rangoEnPalabras([lunes, sumarDias(lunes, 6)])}
+                    </span>
+                    <span className={`block text-[13px] ${act.hay ? 'text-hueso/75' : 'text-hueso/50'}`}>
+                      {act.texto}
+                    </span>
+                  </span>
+                  <span aria-hidden className={`text-lg ${elegida ? 'text-oro' : 'text-hueso/40'}`}>
+                    {elegida ? '●' : '›'}
+                  </span>
+                </a>
+              );
+            })}
+          </nav>
 
-      {mios.length === 0 ? (
-        <p className="mt-1.5 text-sm text-hueso/70">
-          No tienes turnos asignados por ahora. Cuando te asignen uno, aparece
-          acá — este mismo link sigue sirviendo, no hace falta pedir otro.
-        </p>
-      ) : (
-        <ul className="mt-2 space-y-3">
-          {mios.map((t) => {
-            const dia = porFecha.get(t.fecha);
-            const personas = personasDe(t.fecha);
-            const menus = menusDe(delDia(t.fecha), catalogo);
-            // Un día sin público y con equipo es preparación. Sin esto se
-            // veía igual que un día de atención sin reservas, que es otra
-            // cosa: quien lo lee tiene que saber si va a atender o a montar.
-            const preparando = esPreparacion({
-              conEquipo: true,
-              abierto: dia ? !estaCerrado(dia.estado) : cfg.diasAbiertos.includes(diaSemana(t.fecha)),
-              personas
-            });
-            return (
-              <li key={t.fecha + t.puesto}
-                  className="rounded border border-hueso/15 bg-panel p-4">
-                <p className="text-sm text-hueso/85 first-letter:uppercase">{enPalabras(t.fecha)}</p>
-                <p className="mt-2 text-lg font-bold">
-                  {t.puesto || <span className="text-hueso/60">Sin puesto definido</span>}
-                </p>
-                <p className="mt-1 text-[13px] text-hueso/70">
-                  Desde las {dia?.apertura || cfg.horaApertura}
-                  {personas > 0 && (
-                    <> · {personas} {personas === 1 ? 'persona' : 'personas'} esperada
-                      {personas === 1 ? '' : 's'}</>
-                  )}
-                  {preparando && (
-                    <span className="text-oro"> · día de preparación, no abre al público</span>
-                  )}
-                </p>
-                {menus.length > 0 && (
-                  <>
-                    <p className="mt-3 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
-                      Qué se prepara
-                    </p>
-                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                      {menus.map(({ menu, cantidad }) => (
-                        <li key={menu}
-                            className="rounded border border-hueso/15 bg-panel px-2 py-1 text-[13px]">
-                          <strong className="tabular-nums text-oro">{cantidad}</strong>
-                          <span className="text-hueso/60"> × </span>
-                          <span className="text-hueso/80">{menu}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-                {dia?.notas && <p className="mt-2 text-[13px] text-hueso/70">{dia.notas}</p>}
-              </li>
-            );
-          })}
-        </ul>
+          <p className={`${rotulo} mt-6`}>O mira un mes entero</p>
+          <nav className="mt-1.5 flex flex-wrap gap-1.5">
+            {meses.map((m) => (
+              <Pastilla key={m} token={params.token} periodo={m} actual={periodo}>
+                {mesEnPalabras(m)}
+              </Pastilla>
+            ))}
+          </nav>
+        </>
       )}
 
       <p className="mt-8 text-[13px] text-hueso/60">

@@ -25,6 +25,7 @@ import { bancoVacio, sePuedeTransferir, type Banco } from '@/lib/banco';
 import Dialogo from './Dialogo';
 import CampoTelefono from './CampoTelefono';
 import Campo from './Campo';
+import { copiarConAviso } from './AvisoFlotante';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
@@ -169,11 +170,7 @@ export default function EquipoEditor() {
 
   function copiar(token: string, nombre: string) {
     const url = `${window.location.origin}/mi/${token}`;
-    navigator.clipboard?.writeText(url)
-      .then(() => setAvisoLink(`Link de ${nombre} copiado. Mándaselo por WhatsApp.`))
-      // Sin portapapeles —pasa en algunos navegadores sin HTTPS— se muestra
-      // para copiarlo a mano, en vez de no hacer nada.
-      .catch(() => window.prompt(`Link de ${nombre}:`, url));
+    copiarConAviso(url, `Link de ${nombre} copiado`, `Link de ${nombre}:`);
   }
 
   /**

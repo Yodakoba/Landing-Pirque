@@ -311,8 +311,16 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 }
 .girar { animation: girar-cara .35s ease-out; transform-origin: center; }
 
+/* El aviso flotante (`AvisoFlotante.tsx`) sube un poco al aparecer: un
+   texto que aparece sin moverse, abajo de la pantalla, se pierde. */
+@keyframes subir-aviso {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.aviso-flotante { animation: subir-aviso .2s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
-  .girar { animation: none; }
+  .girar, .aviso-flotante { animation: none; }
 }
 
 /**

@@ -69,6 +69,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
          semanaPorDefecto, periodosDelLink, esPeriodo,
+         semanasEntre, etiquetaSemana, escaleraDeSemanas,
          repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
          POR_DEFECTO_PUESTOS, esPreparacion,
@@ -2715,6 +2716,29 @@ console.log('\nEl link personal del trabajador');
      'quien no tiene ningún turno igual ve la semana pasada y la actual');
   ok(vacio.meses.length === 1 && vacio.meses[0] === '2026-11',
      'y el mes en curso');
+
+  /* --- La escalera de semanas del link personal --- */
+  ok(semanasEntre('2026-11-02', '2026-11-02') === 0
+     && semanasEntre('2026-11-02', '2026-10-26') === -1
+     && semanasEntre('2026-11-02', '2026-11-16') === 2
+     && semanasEntre('2026-11-02', '2026-03-02') === -35,
+     'semanasEntre cuenta hacia los dos lados, también cruzando el cambio de horario');
+  ok(etiquetaSemana('2026-11-02', '2026-11-04') === 'En curso'
+     && etiquetaSemana('2026-10-26', '2026-11-04') === 'Semana pasada'
+     && etiquetaSemana('2026-11-09', '2026-11-04') === 'Próxima semana'
+     && etiquetaSemana('2026-10-12', '2026-11-04') === 'Hace 3 semanas'
+     && etiquetaSemana('2026-11-16', '2026-11-04') === 'En 2 semanas',
+     'cada semana dice qué es, no solo sus fechas');
+  ok(etiquetaSemana('2026-11-02', '2026-11-08') === 'En curso',
+     'el domingo todavía es la semana en curso: parte en lunes');
+  const esc = escaleraDeSemanas(suyos, '2026-11-03');
+  ok(esc.slice(0, 4).join() === '2026-11-16,2026-11-09,2026-11-02,2026-10-26',
+     'arriba lo que viene: una semana futura con turno, la próxima, la en curso y la pasada');
+  ok(esc.includes('2026-10-19') && esc.includes('2026-09-07'),
+     'abajo las anteriores que tienen turnos');
+  ok(esc.join() === [...esc].sort().reverse().join(), 'de la más nueva a la más vieja');
+  ok(escaleraDeSemanas([], '2026-11-03').join() === '2026-11-09,2026-11-02,2026-10-26',
+     'sin un solo turno igual están la próxima, la en curso y la pasada');
 
   /* --- El periodo llega de la URL, así que se comprueba --- */
   ok(esPeriodo('2026-11'), 'un mes es un periodo');
