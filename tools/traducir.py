@@ -356,7 +356,7 @@ def traducir_etiqueta(tag, traducir, idioma):
     return tag
 
 
-def traducir_pagina(fuente, pagina, traducir, idioma):
+def traducir_pagina(fuente, pagina, traducir, idioma, lista):
     traducir.pagina = pagina
 
     # Los bloques que arma el script salen del texto antes de traducir:
@@ -366,6 +366,9 @@ def traducir_pagina(fuente, pagina, traducir, idioma):
 
     salida = []
     opaco = 0
+    # El texto de un precio marcado no pasa por el diccionario: lo escribe
+    # la lista, ya con el formato del idioma. Ver aplicar_lista().
+    precio = False
     for seg in TAG.split(fuente):
         if seg.startswith('<'):
             if ABRE_OPACO.match(seg) and not seg.rstrip().endswith('/>'):
@@ -373,12 +376,14 @@ def traducir_pagina(fuente, pagina, traducir, idioma):
             elif CIERRA_OPACO.match(seg):
                 opaco = max(0, opaco - 1)
             salida.append(traducir_etiqueta(seg, traducir, idioma))
-        elif opaco:
+            precio = reescribe_texto(seg)
+        elif opaco or precio:
             salida.append(seg)
+            precio = False
         else:
             salida.append(traducir(seg))
 
-    texto = ''.join(salida)
+    texto = aplicar_lista(''.join(salida), lista, idioma, pagina)
     texto = texto.replace(MARCA_IDIOMAS, selector_idiomas(pagina, idioma))
     texto = texto.replace(MARCA_ALTERNATE, enlaces_alternate(pagina))
     return texto
@@ -457,6 +462,170 @@ def sellar_assets(html):
     return ASSET.sub(cambiar, html)
 
 
+# ----------------------------------------------------------------------
+# la lista de precios (2026-11-04)
+# ----------------------------------------------------------------------
+
+# Todos los precios del sitio salen de precios.json, en la raíz. Lo pidió
+# el cliente para que un precio no pueda decir una cosa en una página y
+# otra en la otra: hasta ese día cada monto estaba escrito a mano en cada
+# página donde aparecía —Tradiciones en cuatro—, y bastaba cambiar uno y
+# olvidar otro para mostrar $49.000 acá y $44.000 allá.
+#
+# En el HTML, el elemento que muestra un precio lleva una marca que dice
+# de dónde sale:
+#
+#     <span class="price" data-lista="texto:tradiciones.linea">$44.000</span>
+#
+# y el script reescribe su texto desde la lista: en el español de la raíz
+# (como hace con la versión de los assets) y en en/ y pt/ con el formato
+# de cada idioma. La marca puede llevar varias piezas separadas por
+# espacios, cada una "destino:clave" o "destino:clave:cálculo":
+#
+#   destino   "texto" reescribe el texto del elemento, que tiene que ser
+#             solo texto, sin etiquetas adentro. Cualquier otro nombre es
+#             un atributo de la etiqueta, y se escribe el número pelado
+#             (data-precio="44000"): es lo que lee reserva.js.
+#   clave     el camino dentro de precios.json: "tradiciones.linea".
+#   cálculo   "descuento" (el precio menos el porcentaje de
+#             promociones.descuento), "ahorro" (la diferencia),
+#             "porcentaje" (11%) o "porcentaje-negativo" (−11%).
+#
+# Un precio con forma de pesos escrito fuera de una marca, o una marca que
+# apunta a algo que no está en la lista, cuenta como problema y la corrida
+# falla: así no puede volver a colarse un monto escrito a mano.
+LISTA_PRECIOS = os.path.join(RAIZ, 'precios.json')
+MARCA_LISTA = re.compile(r'<[a-zA-Z][\w-]*[^>]*?\sdata-lista="(?P<lista>[^"]*)"[^>]*>')
+PESOS_SUELTOS = re.compile(r'\$\s?\d{1,3}(?:\.\d{3})+')
+ATRIBUTO_PRECIO = re.compile(r'\bdata-precio[\w-]*="\d+"')
+
+
+def cargar_lista():
+    with open(LISTA_PRECIOS, encoding='utf-8') as f:
+        return json.load(f)
+
+
+def valor_de(lista, clave):
+    """El número de la lista en ese camino, o KeyError."""
+    v = lista
+    for parte in clave.split('.'):
+        if parte.startswith('_') or not isinstance(v, dict) or parte not in v:
+            raise KeyError(clave)
+        v = v[parte]
+    if isinstance(v, bool) or not isinstance(v, int):
+        raise KeyError(clave)
+    return v
+
+
+def calcular(lista, clave, calculo):
+    n = valor_de(lista, clave)
+    if calculo in ('', 'porcentaje', 'porcentaje-negativo'):
+        return n
+    if calculo == 'descuento':
+        d = valor_de(lista, 'promociones.descuento')
+        # Al peso más cercano, con aritmética entera: un float acá es
+        # justo lo que deja un $43.609 donde debía decir $43.610.
+        return (n * (100 - d) + 50) // 100
+    if calculo == 'ahorro':
+        return n - calcular(lista, clave, 'descuento')
+    raise ValueError(calculo)
+
+
+def pesos(n, idioma):
+    """Pesos chilenos como los escribe cada idioma del sitio. En inglés
+    "$44.000" se lee como cuarenta y cuatro dólares, por eso va con coma y
+    con CLP; en portugués el punto se entiende, pero el $ solo no."""
+    miles = '{:,}'.format(n)
+    if idioma == 'en':
+        return '$' + miles + ' CLP'
+    con_punto = '$' + miles.replace(',', '.')
+    return con_punto if idioma == 'es' else con_punto + ' CLP'
+
+
+def formatear(n, calculo, idioma):
+    if calculo == 'porcentaje':
+        return '%d%%' % n
+    if calculo == 'porcentaje-negativo':
+        return '−%d%%' % n
+    return pesos(n, idioma)
+
+
+def reescribe_texto(etiqueta):
+    """¿Esta etiqueta lleva una marca que reescribe su texto?"""
+    m = MARCA_LISTA.match(etiqueta)
+    return bool(m) and any(p.split(':')[0] == 'texto'
+                           for p in m.group('lista').split())
+
+
+def aplicar_lista(html, lista, idioma, pagina, problemas=None):
+    """Escribe en el HTML los precios de la lista, donde haya marcas."""
+    salida, pos = [], 0
+    for m in MARCA_LISTA.finditer(html):
+        etiqueta, texto = m.group(0), None
+        for pieza in m.group('lista').split():
+            partes = pieza.split(':')
+            if len(partes) not in (2, 3):
+                if problemas is not None:
+                    problemas.append('%s: data-lista mal escrito: "%s"' % (pagina, pieza))
+                continue
+            destino, clave = partes[0], partes[1]
+            calculo = partes[2] if len(partes) == 3 else ''
+            try:
+                n = calcular(lista, clave, calculo)
+            except (KeyError, ValueError):
+                if problemas is not None:
+                    problemas.append('%s: data-lista="%s": "%s" no está en precios.json'
+                                     % (pagina, m.group('lista'), pieza))
+                continue
+            if destino == 'texto':
+                texto = formatear(n, calculo, idioma)
+                continue
+            patron = re.compile(r'(?<![\w-])' + re.escape(destino) + r'="[^"]*"')
+            if patron.search(etiqueta):
+                etiqueta = patron.sub('%s="%d"' % (destino, n), etiqueta, count=1)
+            elif problemas is not None:
+                problemas.append('%s: data-lista pide escribir %s, y la etiqueta no '
+                                 'tiene ese atributo' % (pagina, destino))
+        salida.append(html[pos:m.start()])
+        salida.append(etiqueta)
+        pos = m.end()
+        if texto is not None:
+            fin = html.find('<', pos)
+            if fin == -1:
+                fin = len(html)
+            viejo = html[pos:fin]
+            salida.append(conservar_espacios(viejo, texto) if viejo.strip() else texto)
+            pos = fin
+    salida.append(html[pos:])
+    return ''.join(salida)
+
+
+def precios_sueltos(html, pagina, problemas):
+    """Un monto en pesos escrito fuera de una marca es justo lo que la
+    lista viene a evitar: se avisa y la corrida falla."""
+    opaco, saltar = 0, False
+    for seg in TAG.split(html):
+        if seg.startswith('<'):
+            if ABRE_OPACO.match(seg) and not seg.rstrip().endswith('/>'):
+                opaco += 1
+            elif CIERRA_OPACO.match(seg):
+                opaco = max(0, opaco - 1)
+            if seg.startswith('<!--'):
+                continue
+            if ATRIBUTO_PRECIO.search(seg) and 'data-lista=' not in seg:
+                problemas.append('%s: un atributo data-precio escrito a mano, sin '
+                                 'data-lista: %s' % (pagina, ATRIBUTO_PRECIO.search(seg).group(0)))
+            saltar = reescribe_texto(seg)
+            continue
+        if opaco or saltar:
+            saltar = False
+            continue
+        for monto in PESOS_SUELTOS.findall(seg):
+            problemas.append('%s: "%s" está escrito a mano. Los precios van en '
+                             'precios.json, con una marca data-lista en el HTML'
+                             % (pagina, monto))
+
+
 def main():
     ap = argparse.ArgumentParser(
         description='Genera en/ y pt/ a partir del español de la raíz.')
@@ -469,6 +638,7 @@ def main():
     escritos = 0
     sellados = 0
 
+    lista = cargar_lista()
     fuentes = {}
     for pagina in PAGINAS:
         ruta = os.path.join(RAIZ, pagina)
@@ -482,17 +652,26 @@ def main():
         # que es lo que se publica. Es lo único que este script le escribe
         # a la raíz, y no es contenido: es la versión de un archivo que él
         # mismo calcula. En --revisar solo se avisa.
+        #
+        # Los precios de la lista se escriben ahí mismo, y por lo mismo: no
+        # son contenido que alguien redacte en la página, son un dato que
+        # vive en precios.json y que el script copia.
         sellado = sellar_assets(original)
-        if sellado != original:
+        con_precios = aplicar_lista(sellado, lista, 'es', pagina, problemas)
+        if con_precios != original:
             if args.revisar:
-                desfasados.append(pagina + ' (versión de los assets)')
+                if sellado != original:
+                    desfasados.append(pagina + ' (versión de los assets)')
+                if con_precios != sellado:
+                    desfasados.append(pagina + ' (precios de la lista)')
             else:
                 with open(ruta, 'w', encoding='utf-8') as f:
-                    f.write(sellado)
+                    f.write(con_precios)
                 sellados += 1
 
-        fuentes[pagina] = sellado
+        fuentes[pagina] = con_precios
         verificar_fuente(fuentes[pagina], pagina, problemas)
+        precios_sueltos(fuentes[pagina], pagina, problemas)
 
     for idioma in IDIOMAS:
         if idioma == 'es':
@@ -503,7 +682,7 @@ def main():
             os.makedirs(carpeta, exist_ok=True)
 
         for pagina, fuente in sorted(fuentes.items()):
-            salida = traducir_pagina(fuente, pagina, traducir, idioma)
+            salida = traducir_pagina(fuente, pagina, traducir, idioma, lista)
             destino = os.path.join(carpeta, pagina)
             if args.revisar:
                 actual = None
@@ -561,8 +740,8 @@ def main():
         print('Escritas %d páginas en %s.'
               % (escritos, ' y '.join(i for i in IDIOMAS if i != 'es')))
         if sellados:
-            print('Versión de los assets actualizada en %d página(s) del '
-                  'español.' % sellados)
+            print('Versión de los assets o precios de la lista actualizados '
+                  'en %d página(s) del español.' % sellados)
     return 0
 
 

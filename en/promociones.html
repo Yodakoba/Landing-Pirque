@@ -317,6 +317,60 @@
      sin costo rige solo de lunes a viernes. Va en minúscula y en dorado para
      leerse como condición y no como un tercer rótulo. */
   .oferta-cond{ display:block; margin-top:6px; font-size:0.86rem; color: var(--gold); }
+  /* Los menús con el 11% aplicado, como etiquetas de precio (2026-11-04).
+     Lo pidió el cliente "fácil y juguetón", con la regla de botones y letras
+     grandes del panel: el precio nuevo es lo más grande de la etiqueta, el de
+     antes se lee pero tachado, y lo ahorrado va en una pastilla con borde.
+     El juego es solo forma —el sticker girado, las etiquetas un poco
+     chuecas que se enderezan al pasarles encima—, sin JavaScript. */
+  .precios-promo{ margin-top:34px; }
+  .precios-titulo{
+    font-family: var(--sans); font-weight:700; text-transform:uppercase;
+    letter-spacing:0.04em; font-size:clamp(1.05rem,2.4vw,1.3rem); color: var(--ink); margin:0;
+  }
+  .precios-bajada{ margin:6px 0 0; font-size:0.95rem; color: var(--ink-dim); }
+  .etiquetas{
+    display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:22px 20px; margin-top:24px;
+    max-width:640px;
+  }
+  /* Dos por fila y no cuatro: esta sección es una columna angosta, y con
+     cuatro el precio grande no cabía en su etiqueta. En un teléfono, una. */
+  @media (max-width: 560px){ .etiquetas{ grid-template-columns: 1fr; } }
+  .etiqueta{
+    position:relative; display:flex; flex-direction:column; gap:6px;
+    background: var(--bg-panel); border:1.5px solid rgba(201,162,39,0.55);
+    border-radius:14px; padding:22px 18px 18px;
+    transform: rotate(-1.2deg); transition: transform .18s ease, border-color .18s ease;
+  }
+  .etiqueta:nth-child(even){ transform: rotate(1.2deg); }
+  .etiqueta:hover{ transform: rotate(0) translateY(-4px); border-color: var(--gold); }
+  .sticker{
+    position:absolute; top:-14px; right:-8px;
+    width:54px; height:54px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background: var(--gold); color:#0B0B0A; font-weight:800; font-size:0.95rem;
+    transform: rotate(14deg); box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+  }
+  .etq-nombre{
+    font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+    font-size:0.95rem; color: var(--ink); padding-right:46px;
+  }
+  .etq-antes{ font-size:0.92rem; color: var(--ink-dim); white-space:nowrap; }
+  .etq-antes s{ text-decoration-thickness:2px; }
+  .etq-ahora{
+    font-family: var(--serif); font-style:italic; font-weight:400; line-height:1;
+    color: var(--gold); font-size: clamp(1.9rem, 4vw, 2.5rem);
+  }
+  .etq-ahorro{
+    align-self:flex-start; margin-top:4px;
+    border:1.5px solid rgba(201,162,39,0.6); border-radius:999px;
+    padding:5px 12px; font-size:0.88rem; font-weight:600; color: var(--ink);
+    white-space:nowrap;
+  }
+  .etq-ahorro b{ display:inline; font-weight:700; color: var(--gold); }
+  @media (prefers-reduced-motion: reduce){
+    .etiqueta, .etiqueta:nth-child(even), .etiqueta:hover{ transform:none; transition:none; }
+  }
   .oferta-nota{ margin-top:16px; font-size:0.88rem; color: var(--ink-dim); max-width:62ch; }
 
   .intro-text .wrap{ max-width: 760px; }
@@ -673,11 +727,50 @@
       <p class="lede" style="margin-top:16px;">Countryside, open fire and Chilean tradition in Pirque — to close out the year, reward a good run or simply get the team together away from screens. If organising it falls to you, it is all in one place: we arrange the food, the show and the activities with you, and you just arrive with your team.</p>
 
       <div class="oferta">
-        <div class="oferta-dato"><b>11%</b><span>off your bill</span></div>
+        <div class="oferta-dato"><b data-lista="texto:promociones.descuento:porcentaje">11%</b><span>off your bill</span></div>
         <div class="oferta-dato"><b>22</b><span>people and up</span></div>
         <div class="oferta-dato"><b>No charge</b><span>for exclusive hire</span><small class="oferta-cond">Monday to Friday only</small></div>
       </div>
       <p class="oferta-nota">Please get in touch so we can talk about what you need — we always have an open ear.</p>
+
+      <!-- Los menús con el descuento ya aplicado (2026-11-04, lo pidió el
+           cliente). Los montos NO se escriben acá: salen de precios.json,
+           el precio de pagar en el local menos promociones.descuento, y los
+           escribe tools/traducir.py. Ver "La lista de precios" en CLAUDE.md. -->
+      <div class="precios-promo">
+        <p class="precios-titulo">Your menus with a discount of <span data-lista="texto:promociones.descuento:porcentaje">11%</span></p>
+        <p class="precios-bajada">Per person, with the discount already applied.</p>
+        <div class="etiquetas">
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
+            <span class="etq-nombre">Tradiciones</span>
+            <span class="etq-antes">Was <s data-lista="texto:tradiciones.local">$49,000 CLP</s></span>
+            <b class="etq-ahora" data-lista="texto:tradiciones.local:descuento">$43,610 CLP</b>
+            <span class="etq-ahorro">You save <b data-lista="texto:tradiciones.local:ahorro">$5,390 CLP</b></span>
+          </div>
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
+            <span class="etq-nombre">Lo Pirque</span>
+            <span class="etq-antes">Was <s data-lista="texto:lo_pirque.local">$55,000 CLP</s></span>
+            <b class="etq-ahora" data-lista="texto:lo_pirque.local:descuento">$48,950 CLP</b>
+            <span class="etq-ahorro">You save <b data-lista="texto:lo_pirque.local:ahorro">$6,050 CLP</b></span>
+          </div>
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
+            <span class="etq-nombre">Brasas</span>
+            <span class="etq-antes">Was <s data-lista="texto:a_brasas_abiertas.local">$75,000 CLP</s></span>
+            <b class="etq-ahora" data-lista="texto:a_brasas_abiertas.local:descuento">$66,750 CLP</b>
+            <span class="etq-ahorro">You save <b data-lista="texto:a_brasas_abiertas.local:ahorro">$8,250 CLP</b></span>
+          </div>
+          <div class="etiqueta">
+            <span class="sticker" aria-hidden="true" data-lista="texto:promociones.descuento:porcentaje-negativo">−11%</span>
+            <span class="etq-nombre">Sommelier</span>
+            <span class="etq-antes">Was <s data-lista="texto:sommelier.local">$95,000 CLP</s></span>
+            <b class="etq-ahora" data-lista="texto:sommelier.local:descuento">$84,550 CLP</b>
+            <span class="etq-ahorro">You save <b data-lista="texto:sommelier.local:ahorro">$10,450 CLP</b></span>
+          </div>
+        </div>
+      </div>
 
       <div class="hero-cta" style="margin-top:26px;">
         <a href="https://wa.me/56933858575?text=Hello%2C%20I%20would%20like%20information%20about%20the%20Brasas%20de%20Lo%20Pirque%20offers" class="btn btn-whatsapp" target="_blank" rel="noopener">
@@ -706,12 +799,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="../assets/imgs/img-004.jpg" alt="Tradiciones experience" width="1651" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Tradiciones</span><span class="price">$49,000 CLP</span></span>
+                  <span class="tier-cap"><span class="name">Tradiciones</span><span class="price" data-lista="texto:tradiciones.local">$49,000 CLP</span></span>
                   <span class="flip-hint">See details</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Tradiciones</span>
-                  <div class="fb-price">$49,000 CLP</div>
+                  <div class="fb-price" data-lista="texto:tradiciones.local">$49,000 CLP</div>
                   <div class="fb-meta">pp. VAT included, gratuity extra · groups over 25</div>
                   <span class="fb-note">Equestrian show included</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Drinks —</b> choice of 1 option: soft drinks, fresh fruit juices, beers or pisco sour.</p>
@@ -724,12 +817,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="../assets/imgs/img-005.jpg" alt="Lo Pirque experience" width="1650" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Lo Pirque</span><span class="price">$55,000 CLP</span></span>
+                  <span class="tier-cap"><span class="name">Lo Pirque</span><span class="price" data-lista="texto:lo_pirque.local">$55,000 CLP</span></span>
                   <span class="flip-hint">See details</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Lo Pirque</span>
-                  <div class="fb-price">$55,000 CLP</div>
+                  <div class="fb-price" data-lista="texto:lo_pirque.local">$55,000 CLP</div>
                   <div class="fb-meta">pp. VAT included, gratuity extra · groups over 25</div>
                   <span class="fb-note">Equestrian show included</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Drinks —</b> choice of 2 options: soft drinks, fresh juices, beers, pisco sour, sangria, a glass of reserva wine, michelada, chelada, Aperol or Ramazzotti spritz.</p>
@@ -742,12 +835,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="../assets/imgs/img-006.jpg" alt="Brasas experience" width="1650" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Brasas</span><span class="price">$75,000 CLP</span></span>
+                  <span class="tier-cap"><span class="name">Brasas</span><span class="price" data-lista="texto:a_brasas_abiertas.local">$75,000 CLP</span></span>
                   <span class="flip-hint">See details</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Brasas</span>
-                  <div class="fb-price">$75,000 CLP</div>
+                  <div class="fb-price" data-lista="texto:a_brasas_abiertas.local">$75,000 CLP</div>
                   <div class="fb-meta">pp. VAT included, gratuity extra · groups over 25</div>
                   <span class="fb-note">Equestrian show included</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Drinks —</b> open bar: soft drinks, fresh juices, beers, pisco sour, sangria, a glass of reserva wine, michelada, chelada, Aperol or Ramazzotti spritz, all freely chosen.</p>
@@ -760,12 +853,12 @@
               <div class="flip-inner">
                 <div class="flip-front">
                   <img src="../assets/imgs/img-007.jpg" alt="Sommelier experience" width="1650" height="482" loading="lazy" decoding="async">
-                  <span class="tier-cap"><span class="name">Sommelier</span><span class="price">$95,000 CLP</span></span>
+                  <span class="tier-cap"><span class="name">Sommelier</span><span class="price" data-lista="texto:sommelier.local">$95,000 CLP</span></span>
                   <span class="flip-hint">See details</span>
                 </div>
                 <div class="flip-back">
                   <span class="fb-name">Sommelier</span>
-                  <div class="fb-price">$95,000 CLP</div>
+                  <div class="fb-price" data-lista="texto:sommelier.local">$95,000 CLP</div>
                   <div class="fb-meta">pp. VAT included, gratuity extra · groups over 25</div>
                   <span class="fb-note">Sommelier + equestrian show included</span>
                   <p class="fb-desc"><b style="color:var(--ink);">Drinks —</b> open bar, the same freedom as Brasas. A sommelier guides the lunch, suggesting pairings and telling the story of each wine.</p>
@@ -1049,12 +1142,12 @@
           <div class="service-photo"><img src="../assets/imgs2/SPREAD.jpg" alt="A table laid with dishes from the grill" width="1200" height="1600" loading="lazy" decoding="async"></div>
           <div class="service-cards">
             <div class="service-card">
-              <span class="tag">$8,000 CLP + VAT per person</span>
+              <span class="tag"><span data-lista="texto:desayuno_de_campo.por_persona">$8,000 CLP</span> + VAT per person</span>
               <h3>Country breakfast</h3>
               <p>Pan amasado, scrambled eggs, ham and cheese rolls, ground coffee, tea, fresh orange juice, fruit salad and a muffin. Extra: pulled beef sandwich, pie or kuchen (ask for the price).</p>
             </div>
             <div class="service-card">
-              <span class="tag">$8,000 CLP + VAT per person</span>
+              <span class="tag"><span data-lista="texto:once_campesina.por_persona">$8,000 CLP</span> + VAT per person</span>
               <h3>Country onces</h3>
               <p>The same spread as the country breakfast, served as an afternoon tea.</p>
             </div>
@@ -1070,8 +1163,8 @@
           <h2>Exclusive hire of the venue</h2>
           <p class="lede" style="margin-top:10px;">Rates without catering, VAT included.</p>
           <div class="venue-price">
-            <div><div class="amount">$2,500,000 CLP</div><div class="label">Friday, Saturday and Sunday</div></div>
-            <div><div class="amount">$1,500,000 CLP</div><div class="label">Weekdays</div></div>
+            <div><div class="amount" data-lista="texto:recinto.fin_de_semana">$2,500,000 CLP</div><div class="label">Friday, Saturday and Sunday</div></div>
+            <div><div class="amount" data-lista="texto:recinto.dias_de_semana">$1,500,000 CLP</div><div class="label">Weekdays</div></div>
           </div>
         </div>
       </div>

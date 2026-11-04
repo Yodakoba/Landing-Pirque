@@ -1,0 +1,22 @@
+{
+  "_que_es": "LA LISTA DE PRECIOS DEL SITIO. Es el unico lugar donde se escribe un precio: tools/traducir.py los copia a todas las paginas (espanol, ingles y portugues), asi que un precio nunca puede decir una cosa en una pagina y otra en la otra. Para cambiar un precio: se cambia aca, se corre python3 tools/traducir.py y se suben juntos este archivo y las paginas.",
+  "_ojo": "Manda Shopify: los menus del sitio publico se cobran con el precio de la tienda, no con este. Si se cambia un precio aca, hay que cambiarlo igual en Shopify, o el sitio va a mostrar un monto y el checkout va a cobrar otro.",
+  "_linea_y_local": "linea = pagando por adelantado, en el sitio. local = reservando ahora y pagando en el local. Lo Pirque y Sommelier solo existen en el landing de socios y en promociones, y ahi se muestra el precio de pagar en el local.",
+
+  "tradiciones":       { "linea": 44000, "local": 49000 },
+  "a_brasas_abiertas": { "linea": 70000, "local": 75000 },
+  "ninos":             { "linea": 19000, "local": 24000 },
+  "pequenos":          { "linea": 6000,  "local": 9000 },
+  "lo_pirque":         { "local": 55000 },
+  "sommelier":         { "local": 95000 },
+
+  "_por_persona": "Mas IVA: el sitio los anuncia como \"$8.000 + IVA por persona\", y ese \"+ IVA\" va escrito en la pagina, no aca.",
+  "desayuno_de_campo": { "por_persona": 8000 },
+  "once_campesina":    { "por_persona": 8000 },
+
+  "_recinto": "Arriendo del recinto, IVA incluido, solo arriendo y sin catering.",
+  "recinto":           { "fin_de_semana": 2500000, "dias_de_semana": 1500000 },
+
+  "_promociones": "El descuento de la pagina de promociones, en porcentaje. Las etiquetas de esa pagina se calculan solas con el precio de pagar en el local menos este porcentaje.",
+  "promociones":       { "descuento": 11 }
+}
