@@ -2757,23 +2757,60 @@ tocar ninguna fila.
 - *"Los dos"* registra **dos filas**, una por concepto, no una por el total:
   son dos pagos.
 
-#### La tarjeta de pago
+#### La línea de cada persona: cerrada se copia, abierta se paga
 
-Debajo de las tablas, **solo para quien puede pagar** (`pagar`: admin y
-pagos), una tarjeta por persona con sus partes —**Sueldo** y **Propina**, o
-**Servicio** para una actividad extra—. Cada parte tiene su monto, su estado
-(*sin pagar*, *falta $X*, *✓ pagado*) y dos botones:
+**El primer corte puso los pagos en una sección aparte, debajo de las
+tablas, y el cliente lo pidió al revés el mismo día**: *"en esta línea
+acotada ya están los dos botones… y al apretar la línea del trabajador se
+abre y ahí das las opciones"*. Y que funcione perfecto en el celular, que es
+donde se va a usar: *"más PlayStation que en cualquier otro lado"*.
 
-- **Copiar datos** copia la cuenta y **lo que falta** de esa parte, separado
-  por tabulación, listo para pegar. Avisa abajo con el aviso flotante.
+Por eso **el informe dejó de ser una tabla**. Once columnas no caben en un
+teléfono, y botones de 44px dentro de una celda tampoco. Cada persona es una
+línea-tarjeta (`LineaPersona`), como las fichas de `/equipo`, y **se abre una
+a la vez**:
+
+| | Qué muestra |
+|---|---|
+| **Cerrada** | nombre, modalidad y días, lo que hay que transferirle con su estado, y **un botón por parte**: *📋 Sueldo $X* y *📋 Propina $Y* (o *Servicio*). Una parte ya pagada se queda como pastilla verde *✓ Propina*, para que siempre se vean las dos |
+| **Abierta** | el detalle (jornadas, horas extra, ajustes, total, propina), el botón de **boleta** cuando aplica, y cada parte con su estado y **Registrar pago de sueldo / propina** |
+
+- **Celular y escritorio son distintos a propósito.** En el celular la línea
+  cerrada son dos filas —quién y cuánto arriba, los botones de copiar abajo a
+  todo el ancho, para el dedo—. En una pantalla ancha es **una sola fila**,
+  con los botones entre el nombre y el monto con su ancho natural: estirados
+  a lo largo de 1.200px serían barras, no botones. Abierta, en escritorio el
+  sueldo y la propina van lado a lado.
+- **Los botones de copiar no van dentro del botón que abre la línea**: un
+  botón dentro de otro no es HTML válido y el toque se iría a los dos.
+- **Quien no tiene la cuenta completa** muestra *Falta su cuenta para
+  transferir* en vez de los botones de copiar.
+- **El encargado ve las líneas sin botones**: ve el informe, pero copiar
+  cuentas y registrar pagos es del permiso `pagar`.
 - **Registrar pago** abre una ventana de dos preguntas con botones grandes:
   **¿Qué le pagaste?** (sueldo, propina, o *Los dos*) y **¿Cuánto?** (*Todo*
   o *Una parte*, que abre el campo del monto).
+- **Abre en la semana pasada**, que es la que se paga y la misma con que
+  abre el link personal.
 
-Va en tarjetas y no en columnas de la tabla porque la tabla ya tiene once
-columnas: cuatro botones grandes más por fila no caben en un teléfono. Las
-pagadas del todo bajan al final. **Abre en la semana pasada**, que es la que
-se paga y la misma con que abre el link personal.
+#### Las planillas para la transferencia masiva
+
+También lo pidió el cliente, para cuando tengan un banco con transferencia
+masiva: **⬇ Banco · sueldos** y **⬇ Banco · propinas**, una planilla por
+concepto porque son dos pagos. Solo para quien paga.
+
+- **Una fila por persona con algo pendiente**, con **lo que falta**: lo ya
+  pagado no se vuelve a transferir.
+- **Los sueldos llevan también las actividades extras** (su servicio).
+- **Quien no tiene la cuenta completa queda fuera y el aviso lo nombra**,
+  en ámbar: una fila a medias suele hacer rechazar el archivo entero.
+- **Las columnas salen del mismo `ORDEN_TRANSFERENCIA` que el botón de
+  copiar** (`filaTransferencia()`): cuando se confirme lo que pide el banco
+  se cambia una vez y vale para los dos.
+
+El aviso flotante ganó un segundo tono para esto: **ámbar con "!"** cuando
+no pasó lo esperado —no se descargó nada, quedó alguien fuera—. Un ✓ verde
+sobre "nadie con cuenta completa" se leía como que había salido bien.
 
 #### El orden de los datos copiados todavía no está confirmado
 

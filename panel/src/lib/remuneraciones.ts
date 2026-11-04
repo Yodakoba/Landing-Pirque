@@ -498,9 +498,26 @@ export interface DatosTransferencia {
   monto: number; correo: string; glosa: string;
 }
 
-/** Los datos de una transferencia como texto para pegar. */
+/** El nombre de cada columna en la planilla para el banco. */
+export const NOMBRE_COLUMNA_TRANSFERENCIA: Record<typeof ORDEN_TRANSFERENCIA[number], string> = {
+  titular: 'Nombre del titular', rut: 'RUT', banco: 'Banco', tipo: 'Tipo de cuenta',
+  numero: 'N° de cuenta', monto: 'Monto', correo: 'Correo', glosa: 'Glosa'
+};
+
+/** Una transferencia como fila, en el orden de `ORDEN_TRANSFERENCIA`. */
+export const filaTransferencia = (d: DatosTransferencia): string[] =>
+  ORDEN_TRANSFERENCIA.map((k) => String(d[k] ?? ''));
+
+/**
+ * Los datos de una transferencia como texto para pegar.
+ *
+ * **Es la misma fila que la planilla para el banco**, separada por tabs: el
+ * botón de copiar y la transferencia masiva salen del mismo orden, así que
+ * cuando se confirme lo que pide el banco se cambia una vez y vale para los
+ * dos.
+ */
 export const textoTransferencia = (d: DatosTransferencia) =>
-  ORDEN_TRANSFERENCIA.map((k) => String(d[k] ?? '')).join('\t');
+  filaTransferencia(d).join('\t');
 
 /**
  * La glosa de la transferencia: qué es y de qué periodo —*"Sueldo 26/10 al
