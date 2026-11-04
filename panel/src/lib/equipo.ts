@@ -1025,6 +1025,64 @@ export function periodosDelLink(
   };
 }
 
+/* ---------- La escalera de semanas del link personal (2026-11-04) ---------- */
+
+/**
+ * Cuántas semanas hay de una a otra: `0` la misma, `-1` la anterior, `2` la
+ * subsiguiente. Las dos tienen que ser lunes (`semanaDe()`).
+ *
+ * Cuenta sumando de a siete días sobre el texto, que es la regla de todo el
+ * proyecto: restar dos `Date` se corre una hora con el cambio de horario y
+ * un `Math.floor` mal puesto lo convierte en un día.
+ */
+export function semanasEntre(desde: Fecha, hasta: Fecha): number {
+  if (desde === hasta) return 0;
+  const paso = hasta > desde ? 7 : -7;
+  let n = 0;
+  for (let f = desde; n < 600 && (paso > 0 ? f < hasta : f > hasta); f = sumarDias(f, paso)) n++;
+  return paso > 0 ? n : -n;
+}
+
+/**
+ * El nombre de una semana mirada desde hoy: *En curso*, *Semana pasada*,
+ * *Próxima semana*, *Hace 3 semanas*, *En 2 semanas*.
+ *
+ * Lo pidió el cliente para el link personal: que se lea **qué semana es** y
+ * no solo sus fechas. "3 al 9 de noviembre" obliga a mirar el calendario
+ * para saber si es la que te pagan; "Semana pasada" no.
+ */
+export function etiquetaSemana(lunes: Fecha, hoy: Fecha): string {
+  const n = semanasEntre(semanaDe(hoy), lunes);
+  if (n === 0) return 'En curso';
+  if (n === -1) return 'Semana pasada';
+  if (n === 1) return 'Próxima semana';
+  return n < 0 ? `Hace ${-n} semanas` : `En ${n} semanas`;
+}
+
+/**
+ * Las semanas que el link personal ofrece en su escalera, **de la más nueva
+ * a la más vieja**.
+ *
+ * - **La próxima, la en curso y la pasada van siempre**, tengan algo o no:
+ *   son las tres que alguien viene a mirar —la que viene, la que va
+ *   corriendo y la que le pagan—, y "todavía no hay nada" es un dato.
+ * - **Las demás, solo si tienen turnos**, hacia atrás y hacia adelante: una
+ *   semana vacía de hace dos meses es una fila que no lleva a nada.
+ * - **Se recortan las viejas** (`cuantasViejas`): la escalera es para lo
+ *   reciente. Para ir más atrás están las flechas, que no tienen tope.
+ */
+export function escaleraDeSemanas(
+  turnos: Turno[], hoy: Fecha, cuantasViejas = 6
+): Fecha[] {
+  const estaSemana = semanaDe(hoy);
+  const pasada = sumarDias(estaSemana, -7);
+  const proxima = sumarDias(estaSemana, 7);
+  const conTurnos = [...new Set(turnos.map((t) => semanaDe(t.fecha)))];
+  const futuras = conTurnos.filter((s) => s > proxima);
+  const viejas = conTurnos.filter((s) => s < pasada).sort().reverse().slice(0, cuantasViejas);
+  return [...new Set([...futuras, proxima, estaSemana, pasada, ...viejas])].sort().reverse();
+}
+
 /**
  * Si un texto es un periodo que se puede mirar: un mes `AAAA-MM` o la fecha
  * de un día, que `rangoDelPeriodo()` lleva a su semana.

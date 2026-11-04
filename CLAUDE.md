@@ -4287,6 +4287,37 @@ con su motivo**, la propina y el total.
 - **Sigue sin mostrar lo de nadie más**, y las actividades extras siguen sin
   aparecer acá: el desglose es de sus propios turnos.
 
+#### Lo que gané y lo que viene: dos pestañas, semanas con nombre (2026-11-04)
+
+Lo pidió el cliente: que se distinga bien qué semana se está mirando, con
+flechas para ir *"próxima semana, próxima semana"*, y **un botón presente
+para las semanas futuras** con lo básico de cada turno.
+
+- **Arriba, dos botones grandes**: **💰 Lo que gané** y **📅 Lo que viene**
+  (`?v=viene`), con cuántos turnos vienen en una cuenta dorada. Antes lo que
+  viene estaba al pie, debajo de todas las cuentas.
+- **La semana elegida va en grande, con su nombre** —*Semana pasada*, *En
+  curso*, *Próxima semana*, *Hace 3 semanas*— y **flechas ◀ ▶ de 48px sin
+  tope**. Sigue abriendo en la semana pasada, que es la que se paga.
+- **Debajo, la escalera de semanas** (`escaleraDeSemanas()`): la próxima, la
+  en curso y la pasada siempre, y las demás solo si tienen turnos. Cada fila
+  dice si tuvo actividad —*2 días · $71.000*, *1 turno por venir*, *sin
+  turnos*—. La en curso va rellena de dorado con un punto que late; la
+  pasada en verde, porque es la que te pagan; las que vienen en celeste.
+- **Un turno que viene es una tarjeta grande**: el día, el puesto, **el
+  pronóstico** (ícono, máxima y en palabras), desde qué hora, **cuánta gente y
+  cuántas reservas**, y qué se prepara. Ni nombres ni montos de clientes: es
+  cuánto trabajo viene, no de quién. Un día de preparación lo dice.
+- **El pronóstico lo pide el servidor** a MET Norway, con la misma caché de
+  una hora que `/api/clima`; si no responde, la página sale igual sin el
+  ícono. Llega a unos 9 días.
+- **En la semana en curso, los turnos que todavía no llegan van arriba**, en
+  *Por trabajar*, y ahí no se dice "no hay nada anotado": debajo de turnos
+  que vienen se leía como que algo falló.
+- **Se probó con una copia de la página sobre datos falsos**, porque `/mi`
+  lee la planilla directo y no hay ruta que simular. A 393px no se corre de
+  lado, y tres ▶ desde la semana pasada llegan a *En 2 semanas*.
+
 ### Lo que falta decidir
 
 - **De dónde sale el monto de la propina.** Hoy lo escribe a mano un
@@ -4557,6 +4588,20 @@ Qué significa en concreto, que es lo que hay que poder revisar:
 explícitamente dejar como está: *"no cambiar el estilo del diurno, está
 súper bonito"*. Lo que cambia es el tamaño, el peso y el contraste de lo que
 ya hay.
+
+### Copiar un link avisa abajo de la pantalla (2026-11-04)
+
+Lo reclamó el cliente: al apretar *Copiar link personal* no pasaba nada a la
+vista. El aviso existía, pero se dibujaba **arriba de la página** y el botón
+vive más abajo, en una ficha o en una semana. Copiar no cambia nada visible,
+así que sin un aviso que se vea el botón parecía muerto.
+
+Ahora hay **un solo aviso flotante para todo el panel** (`AvisoFlotante.tsx`,
+montado en el layout): sale abajo al centro, por encima de las ventanas, y se
+va solo a los 3 segundos. Las pantallas no lo dibujan, llaman `avisar('…')`, y
+`copiarConAviso()` junta copiar, avisar y el `prompt` de respaldo sin
+portapapeles. Lo usan los tres links que se copian: el personal, el de la
+planilla semanal y el de un presupuesto.
 
 ### El botón del panel vive en `globals.css`, no en cada pantalla
 
