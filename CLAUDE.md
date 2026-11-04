@@ -136,9 +136,9 @@ La clave es un camino con puntos: `tradiciones.local`,
 lo rodea —"+ IVA por persona", "4 a 12 años ·"— va fuera de la marca y sí
 pasa por el diccionario.
 
-**Las etiquetas de `promociones.html` se calculan solas**: subir
-Tradiciones en el local cambia la tarjeta, la etiqueta con el 11%, lo que
-se ahorra y los dos idiomas de una vez. Y si el descuento pasa a ser 15, se
+**Los precios con descuento de `promociones.html` se calculan solos**:
+subir Tradiciones en el local cambia el precio tachado, el que queda con el
+11% y los dos idiomas de una vez. Y si el descuento pasa a ser 15, se
 cambia un número.
 
 **La guarda es la otra mitad, y es la que hace que esto dure.** La corrida
@@ -5134,16 +5134,21 @@ Siempre a la vista:
    mínimo bajó de 44 a 22 y la condición de los días se agregó el
    2026-11-03, por pedido del cliente; la condición va bajo el rótulo del
    arriendo, en dorado (`.oferta-cond`).
-   **Debajo, los cuatro menús con el 11% ya aplicado** (2026-11-04), como
-   etiquetas de precio: el nuevo grande, el de antes tachado y lo que se
-   ahorra en una pastilla. Tradiciones $43.610 · Lo Pirque $48.950 · Brasas
-   $66.750 · Sommelier $84.550. **Se calculan solas** desde
-   `precios.json` (el precio del local menos `promociones.descuento`): ver
-   "La lista de precios".
+   **El descuento se ve en las propias tarjetas de experiencias**
+   (2026-11-04): cada una muestra el precio normal tachado, debajo el que
+   queda con el 11% y una pastilla *−11%* en la foto. Tradiciones $43.610 ·
+   Lo Pirque $48.950 · Brasas $66.750 · Sommelier $84.550. **Se calculan
+   solas** desde `precios.json` (el precio del local menos
+   `promociones.descuento`): ver "La lista de precios". Hubo un primer corte
+   con cuatro etiquetas aparte, bajo la oferta, y **al cliente no le
+   gustaron**: el precio con descuento va donde ya está el menú.
 3. Contacto: botón WhatsApp + formulario de email.
 4. Footer.
 
-Dentro de los paneles, en este orden:
+Dentro de los paneles, en este orden. **En promociones el primero no se
+pliega** (2026-11-04): las experiencias con su precio con descuento son lo
+que la oferta vende, así que van siempre abiertas, sin el `+`.
+
 
 | Panel | Qué trae |
 |---|---|
