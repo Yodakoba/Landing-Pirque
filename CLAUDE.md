@@ -2693,6 +2693,59 @@ entra; ésta es plata que sale.
 - **`pagar` es justamente lo único que distingue a `pagos` de
   `encargado`** — ver "El rol de pagos".
 
+#### Deshacer un pago anotado por error (2026-11-04)
+
+Lo pidió el cliente con el caso exacto: *"apreté el botón pago completo en un
+trabajador, queda como pagado, pero necesito igual la posibilidad de rehacer
+esta acción, porque si lo aprieto por no querer, tengo que tener la
+posibilidad de volver y decir: no, esto no se pagó aún"*.
+
+**`DELETE /api/informe` existía desde el 2026-11-01** —con su permiso `pagar`
+y su línea de bitácora ya escritas— **y ninguna pantalla lo llamaba.** Es el
+mismo caso que la mitad que lee el CRM, y la misma regla: **una ruta sin
+pantalla no está hecha.** Lo que faltaba era el botón, no la lógica.
+
+Y había algo que lo agravaba: con la parte pagada del todo, su tarjeta
+**se quedaba sin un solo botón** — justo en el caso que lo dispara. Ahora,
+mientras la persona tenga algún pago en el periodo, su tarjeta abierta
+termina en **Ver el pago anotado** (o *Ver los N pagos anotados*), que abre
+la lista con fecha, concepto, nota, quién lo anotó y su **Deshacer**.
+
+**Va por persona y no por parte**, y eso importa: los pagos viejos vienen
+**sin concepto** y `desglosePago()` los reparte entre sueldo y propina con
+una regla suya. Filtrar acá por concepto sería reescribir esa regla en un
+segundo lugar, y el día que cambie una de las dos diría otra cosa.
+
+**Borra la fila; no anota un negativo**, y la diferencia es real:
+
+| | Qué corresponde |
+|---|---|
+| **Se apretó sin querer** — ese pago nunca ocurrió | **Deshacer**, que borra la fila. No hubo movimiento que registrar, y dejar una fila y su contraria sería inventar dos. Que alguien lo deshizo queda en la bitácora |
+| **Se pagó de más, o devolvieron plata** | Un **pago en negativo**, que el formulario ya acepta: ahí sí hubo dos movimientos y borrar uno escondería la mitad |
+
+La ventana lo dice con palabras, porque es justo la distinción que alguien
+tiene que hacer **antes** de apretar.
+
+- **Deshacer solo con permiso `pagar`**, y lo comprueba la ruta: el encargado
+  ve el informe pero no deshace pagos, igual que no los registra.
+- Se saca de lo que hay en pantalla en vez de recargar el informe entero,
+  igual que al registrarlo: lo único que cambió es esa fila.
+
+Comprobado el circuito completo contra la planilla, que es el que el cliente
+describió:
+
+```
+al llegar              SUELDO: sin pagar
+✓ Pagado completo      SUELDO: ✓ pagado        · bitácora: "Registró un pago"
+Deshacer               SUELDO: sin pagar       · bitácora: "Borró un pago"
+```
+
+y la pestaña `Pagos` quedó sin la fila.
+
+**De paso, los ajustes de esa pantalla pasaron a llevar el signo adelante** —
+`−$18.000` y no `$-18.000`—, que es la convención escrita del panel y la
+única de sus tablas que no la cumplía.
+
 #### La columna que faltaba: a transferir
 
 **La propina se queda aparte del total de remuneración**, como siempre: esa
@@ -4278,6 +4331,41 @@ viaja firmado dentro de la sesión, que dura 7 días: cambiarle el rol en
 `/usuarios` no toca la sesión que ya tiene abierta. Se arregla con *Salir* y
 volver a entrar. El rol con que se entró se lee arriba a la derecha, junto
 al nombre.
+
+#### Un solo botón, y siempre el mismo (2026-11-04)
+
+Lo pidió el cliente: *"se debería copiar lo más fácil posible… si se puede
+hacerlo sin crear el link y luego tener que copiarlo, sino directamente
+copiar el link"*.
+
+Eran dos botones según el estado —**Crear link personal** la primera vez,
+**Copiar link personal** después— y esa diferencia **era nuestra, no suya**:
+por dentro `crear` ya copiaba. Quien abre una ficha para mandarle el link a
+alguien viene a una sola cosa, y tenía que aprender que la primera vez el
+botón se llamaba distinto. Hoy dice siempre **Copiar link personal**, y si no
+hay token lo crea y lo copia en el mismo clic. *Renovar* y *Quitar link*
+aparecen solo cuando ya hay uno, que es cuando significan algo.
+
+**No contradice que un link sin contraseña tenga que ser una decisión**: eso
+vale para la **planilla semanal**, que abre datos de todo el equipo. Éste es
+de una persona y **nace para mandarse**, igual que el documento de un
+presupuesto, que también crea su token al crearse.
+
+**Y el nombre se queda en "link personal"**, que es lo otro que el cliente
+cerró ese día: la página ya no es solo lo que ganó, también son los turnos
+que vienen, así que llamarlo "sus datos de sueldo" la nombraría a medias.
+
+**En la misma pasada, la ficha entera pasó la regla PlayStation**: de **16
+textos bajo 13px a cero**. Los peores eran los siete rótulos de la cuenta
+bancaria, a **10px** — el campo donde un dígito mal leído manda la plata a
+otra cuenta. Y *Quitar*, *Desactivar*, *Activar* y *Descargar planilla*
+dejaron de escribirse su propio botón a mano y usan `.boton`, que es para lo
+que existe.
+
+**El `?` de la ayuda salió de adentro del rótulo**: le comía 30px a la caja
+de 144 y "LINK PERSONAL" se partía en dos líneas mientras "PAGO" y
+"TRANSFERENCIA" iban en una — la misma etiqueta viéndose distinta según qué
+tuviera al lado.
 
 Se eligió sobre una clave compartida de solo lectura por una razón concreta:
 **cuando el panel tenga sueldos y ajustes, una clave compartida dejaría que
