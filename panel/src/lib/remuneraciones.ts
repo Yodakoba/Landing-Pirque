@@ -214,3 +214,50 @@ export function pagoDelCuerpo(crudo: unknown): {
   if (!monto) return null;
   return { quien, desde, hasta, monto, nota: String(c.nota ?? '').trim() };
 }
+
+/**
+ * Los pagos de una persona que cuentan en el periodo, del más nuevo al más
+ * viejo.
+ *
+ * Es `pagadoDe()` sin sumar: lo que el link personal necesita para mostrar
+ * **cada** transferencia con su fecha y su nota, en vez de un total que no
+ * se puede revisar. La condición de qué cuenta es la misma —
+ * `cuentaEnPeriodo()`— para que la lista y la suma no puedan decir cosas
+ * distintas.
+ */
+export function pagosEnPeriodo(
+  pagos: PagoEquipo[], quien: string, desde: Fecha, hasta: Fecha
+): PagoEquipo[] {
+  const clave = normalizar(quien);
+  if (!clave) return [];
+  return pagos
+    .filter((p) => normalizar(p.quien) === clave && cuentaEnPeriodo(p, desde, hasta))
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+}
+
+/**
+ * Los pagos que **tocan** el periodo pero no caben entero dentro de él.
+ *
+ * Existen por la contra que `cuentaEnPeriodo()` tiene escrita: un pago
+ * registrado por una quincena no aparece al mirar una sola de sus semanas,
+ * porque no es de esa semana. Para quien paga eso es una nota al pie; para
+ * el trabajador que abre su link es **"no me pagaron"**, que es lo contrario
+ * de lo que pasó.
+ *
+ * Así que en vez de cambiar la regla —repartir un pago a prorrata sería
+ * inventar: nadie pagó "un tercio del martes"— se nombra el caso y se dice
+ * dónde mirarlo. Lo normal es que esta lista vaya vacía.
+ */
+export function pagosQueNoCaben(
+  pagos: PagoEquipo[], quien: string, desde: Fecha, hasta: Fecha
+): PagoEquipo[] {
+  const clave = normalizar(quien);
+  if (!clave) return [];
+  return pagos.filter((p) =>
+    normalizar(p.quien) === clave
+    && !!p.desde && !!p.hasta
+    // Se cruza con el periodo…
+    && p.desde <= hasta && p.hasta >= desde
+    // …pero no cabe entero, así que la suma no lo está contando.
+    && !cuentaEnPeriodo(p, desde, hasta));
+}
