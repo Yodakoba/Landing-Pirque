@@ -29,8 +29,9 @@ import { normalizar } from './columnas.ts';
 import { HOJA_USUARIOS, leerUsuariosDe, aFilasUsuarios, type Usuario } from './usuarios.ts';
 import { HOJA_CIERRES, COL_CIERRES, ENCABEZADO_CIERRES, leerCierresDe,
          type Cierre } from './cierres';
-import { HOJA_PAGOS, ENCABEZADO_PAGOS, leerPagosDe, filaPago, nuevoIdPago,
-         type PagoEquipo } from './remuneraciones';
+import { HOJA_PAGOS, ENCABEZADO_PAGOS, COL_PAGOS, leerPagosDe, filaPago, nuevoIdPago,
+         HOJA_BOLETAS, ENCABEZADO_BOLETAS, leerBoletasDe, filaBoleta,
+         type PagoEquipo, type Boleta } from './remuneraciones';
 import {
   HOJA_BITACORA, ENCABEZADO_BITACORA, filaBitacora, leerBitacoraDe,
   ahoraEnChile, recortar, type Anotacion
@@ -585,7 +586,12 @@ export async function anotarPagoEquipo(
   registradoPor: string
 ): Promise<PagoEquipo> {
   const filas = await asegurarEncabezado(HOJA_PAGOS, ENCABEZADO_PAGOS);
-  const enc = filas[0] ?? ENCABEZADO_PAGOS;
+  // La columna Concepto llegó después que la pestaña (2026-11-04): se agrega
+  // sola la primera vez, al final y sin tocar ninguna fila, igual que la
+  // Nota de pago de las reservas. Sin esto el concepto se escribiría en
+  // ninguna parte y el pago quedaría sin decir qué es.
+  const enc = await asegurarColumna(HOJA_PAGOS, filas[0] ?? ENCABEZADO_PAGOS,
+                                    COL_PAGOS.concepto);
   const completo = {
     ...p,
     id: nuevoIdPago(),
@@ -607,6 +613,46 @@ export async function borrarPagoEquipo(id: string): Promise<boolean> {
   if (!suyas.length) return false;
   await borrarFilas(HOJA_PAGOS, suyas);
   return true;
+}
+
+/* ---------- Boletas (2026-11-04) ---------- */
+
+/**
+ * Las boletas recibidas. **Lista vacía si la pestaña no existe**: el
+ * informe tiene que funcionar antes de que nadie marque ninguna, y entonces
+ * todas se ven pendientes, que es lo que son.
+ */
+export async function leerBoletas(): Promise<Boleta[]> {
+  try {
+    return leerBoletasDe(await leerHoja(HOJA_BOLETAS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Marca o desmarca la boleta de una persona para un periodo.
+ *
+ * **Marcar dos veces no agrega dos filas**, igual que cerrar un día. Y
+ * desmarcar borra la fila en vez de escribir un "No": si no está, no llegó,
+ * y así no hay dos filas que puedan decir cosas distintas.
+ */
+export async function marcarBoleta(
+  quien: string, desde: Fecha, hasta: Fecha, recibida: boolean, registradoPor: string
+): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_BOLETAS, ENCABEZADO_BOLETAS);
+  const clave = normalizar(quien);
+  const suyas = leerBoletasDe(filas)
+    .filter((b) => normalizar(b.quien) === clave && b.desde === desde && b.hasta === hasta);
+  if (recibida) {
+    if (suyas.length) return;
+    await agregarFilas(HOJA_BOLETAS, [filaBoleta({
+      quien, desde, hasta, registradoPor, cuando: ahoraEnChile(), nota: ''
+    }, filas[0] ?? ENCABEZADO_BOLETAS)]);
+  } else if (suyas.length) {
+    await borrarFilas(HOJA_BOLETAS, suyas.map((b) => b.fila));
+  }
 }
 
 /* ---------- Presupuestos ---------- */

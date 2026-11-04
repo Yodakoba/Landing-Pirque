@@ -2728,6 +2728,95 @@ quien paga, con propina). Juntarlas obligaba a contestar mal una de las dos.
   componente compartido— y **la columna del nombre queda fija** al correr la
   tabla, como en la planilla semanal y en la página del día.
 
+### Pagar: sueldo y propina por separado, copiar datos y la boleta (2026-11-04)
+
+Lo pidió el cliente pensando en quien hace las transferencias, con tres
+ideas que van juntas:
+
+1. *"Dos botones en cada línea de trabajador: copiar los datos de
+   transferencia con el monto de propina, y con el monto de sueldo"*.
+2. *"Legalmente tiene que ser un pago por propina y un pago por sueldos"*,
+   así que registrar un pago tiene que poder decir **cuál** —el sueldo, la
+   propina o una parte— de forma simple, estilo PlayStation.
+3. *"Una casilla de mandó boleta"* para los que cobran por turno y las
+   actividades extras, porque este mismo informe se exporta para alimentar
+   **Chipax**, el sistema del resultado operacional.
+
+#### Los pagos llevan concepto
+
+La pestaña `Pagos` ganó una columna **`Concepto`** —*Sueldo*, *Propina* o
+*Servicio*, este último para las actividades extras—. **Se agrega sola** la
+primera vez que se registra un pago (`asegurarColumna()`), al final y sin
+tocar ninguna fila.
+
+- **Un pago viejo, sin concepto, sigue contando** (`desglosePago()`):
+  primero cubre el sueldo y lo que sobra va a la propina. El total no
+  cambia, y no hay que migrar nada.
+- **Un concepto inventado se descarta en el servidor**, igual que un tipo de
+  cuenta: llegaría hasta la planilla de Chipax.
+- *"Los dos"* registra **dos filas**, una por concepto, no una por el total:
+  son dos pagos.
+
+#### La tarjeta de pago
+
+Debajo de las tablas, **solo para quien puede pagar** (`pagar`: admin y
+pagos), una tarjeta por persona con sus partes —**Sueldo** y **Propina**, o
+**Servicio** para una actividad extra—. Cada parte tiene su monto, su estado
+(*sin pagar*, *falta $X*, *✓ pagado*) y dos botones:
+
+- **Copiar datos** copia la cuenta y **lo que falta** de esa parte, separado
+  por tabulación, listo para pegar. Avisa abajo con el aviso flotante.
+- **Registrar pago** abre una ventana de dos preguntas con botones grandes:
+  **¿Qué le pagaste?** (sueldo, propina, o *Los dos*) y **¿Cuánto?** (*Todo*
+  o *Una parte*, que abre el campo del monto).
+
+Va en tarjetas y no en columnas de la tabla porque la tabla ya tiene once
+columnas: cuatro botones grandes más por fila no caben en un teléfono. Las
+pagadas del todo bajan al final. **Abre en la semana pasada**, que es la que
+se paga y la misma con que abre el link personal.
+
+#### El orden de los datos copiados todavía no está confirmado
+
+Hoy es **titular, RUT, banco, tipo, número, monto, correo, glosa**, y vive
+en una sola lista, `ORDEN_TRANSFERENCIA` en `remuneraciones.ts`: **cambiarlo
+es mover una línea ahí**. Falta probarlo con el panel del banco del cliente,
+que es lo que dirá el orden en que pega bien campo por campo.
+
+- **El monto va pelado** —`60000`, sin puntos ni signo peso—, que es lo que
+  un formulario de banco acepta pegar.
+- **La glosa es corta y sin símbolos**: *"Sueldo 26/10 al 01/11"*. La
+  primera versión decía *"26 de octubre – 1 de noviembre"*, y los bancos
+  cortan la glosa a unos 30 caracteres y varios rechazan el guion largo y
+  las tildes.
+
+#### La boleta
+
+Una pestaña nueva, **`Boletas`** (Trabajador · Periodo desde · Periodo hasta
+· Registrado por · Cuándo · Nota): **una fila por persona y periodo con la
+boleta recibida**. Desmarcar borra la fila; si no está, no llegó. Es el
+mismo criterio que los cierres: se guarda el hecho, la ausencia se deduce.
+
+| | ¿Pide boleta? |
+|---|---|
+| Por turno | **sí** — por su sueldo de la semana |
+| Actividad extra | **sí** — por su servicio |
+| Contratado | **no** — va por la liquidación. Sus horas extra y ajustes quedaron para después: el cliente lo pidió así (*"no te quiero complicar la vida completa"*) |
+| Propina | **nunca** |
+
+- **Es una boleta por la semana**, no una por día: *"cuando mandó las
+  boletas por los 4 días de la semana, se puede dar un check"*. La regla
+  vive en `pideBoleta()`.
+- **Avisa, no bloquea.** Registrar el sueldo sin boleta marcada muestra un
+  aviso ámbar y se puede guardar igual: la boleta puede llegar después de la
+  transferencia, y trabar el registro obligaría a anotar el pago en otro
+  lado mientras tanto.
+- **Marcarla es del permiso `pagar`**, por `/api/informe/boleta`, y queda en
+  la bitácora.
+- **En el CSV**, columna **Boleta**: *Sí*, en blanco si no llegó (lo pidió
+  así el cliente) y *No aplica* para un contratado. Van además **Pagado
+  sueldo o servicio** y **Pagado propina**, en la primera fila de cada
+  persona como las demás columnas del pago.
+
 ### Lo que va a costar el equipo de un día, en la tarjeta (2026-11-01)
 
 Lo pidió el cliente: en el espacio libre de arriba a la derecha del dorso,

@@ -33,6 +33,9 @@ import {
 import {
   ENCABEZADO_PAGOS, leerPagosDe, filaPago, cuentaEnPeriodo, pagadoDe,
   estadoDePago, aTransferirDe, faltaDe, pagoDelCuerpo, nuevoIdPago,
+  desglosePago, conceptoDe, CONCEPTO, pideBoleta, leerBoletasDe, filaBoleta,
+  ENCABEZADO_BOLETAS, boletaDe, boletaEnPlanilla, textoTransferencia, glosaDe,
+  ORDEN_TRANSFERENCIA,
   pagosEnPeriodo, pagosQueNoCaben,
   type PagoEquipo
 } from './remuneraciones.ts';
@@ -2553,7 +2556,7 @@ console.log('\nPagos al equipo');
   const pago = (x: Partial<PagoEquipo>): PagoEquipo => ({
     id: 'PAGO-1', fecha: '2026-11-16', quien: 'Ana Soto',
     desde: '2026-11-09', hasta: '2026-11-15', monto: 50000,
-    nota: '', registradoPor: 'jefe', fila: 2, ...x
+    nota: '', registradoPor: 'jefe', concepto: '', fila: 2, ...x
   });
 
   // --- A transferir: la remuneración MÁS la propina ---
@@ -2617,7 +2620,7 @@ console.log('\nPagos al equipo');
   const fila = filaPago({
     id: 'PAGO-X', fecha: '2026-11-16', quien: 'Ana Soto',
     desde: '2026-11-09', hasta: '2026-11-15', monto: 80000,
-    nota: 'Transferencia 16/11', registradoPor: 'tesorera'
+    nota: 'Transferencia 16/11', registradoPor: 'tesorera', concepto: 'Propina'
   }, ENCABEZADO_PAGOS);
   const vuelta = leerPagosDe([ENCABEZADO_PAGOS, fila.map(String)]);
   ok(vuelta.length === 1, 'una fila escrita se vuelve a leer');
@@ -2625,6 +2628,82 @@ console.log('\nPagos al equipo');
      'con su monto y su persona');
   ok(vuelta[0].nota === 'Transferencia 16/11' && vuelta[0].registradoPor === 'tesorera',
      'y con el rastro de quién lo anotó, que es lo que un check no deja');
+  ok(vuelta[0].concepto === 'Propina', 'y con su concepto');
+  // Una planilla de antes, sin la columna Concepto, se sigue leyendo.
+  const vieja = leerPagosDe([ENCABEZADO_PAGOS.slice(0, -1),
+    filaPago(pago({ id: 'V' }), ENCABEZADO_PAGOS.slice(0, -1)).map(String)]);
+  ok(vieja.length === 1 && vieja[0].concepto === '',
+     'una pestaña de antes, sin la columna Concepto, se lee igual: el pago queda sin concepto');
+  ok(conceptoDe('propina') === 'Propina' && conceptoDe(' SUELDO ') === 'Sueldo'
+     && conceptoDe('servicio') === 'Servicio' && conceptoDe('bono') === '',
+     'el concepto se lee sin distinguir mayúsculas, y uno inventado se descarta');
+  ok(pagoDelCuerpo({ quien: 'Ana', desde: '2026-11-09', hasta: '2026-11-15',
+                     monto: 1000, concepto: 'regalo' })?.concepto === '',
+     'del navegador tampoco se acepta un concepto inventado: llegaría a la planilla de Chipax');
+
+  /* --- Sueldo y propina, cada uno con su pago --- */
+  const sem = { desde: '2026-11-09', hasta: '2026-11-15' };
+  const d0 = desglosePago([], 'Ana Soto', sem.desde, sem.hasta, 120000, 18000);
+  ok(d0.sueldo.falta === 120000 && d0.propina.falta === 18000 && d0.total.falta === 138000,
+     'sin pagos, falta el sueldo y falta la propina, por separado');
+  const soloPropina = desglosePago([pago({ monto: 18000, concepto: 'Propina' })],
+    'Ana Soto', sem.desde, sem.hasta, 120000, 18000);
+  ok(soloPropina.propina.estado === 'pagado' && soloPropina.sueldo.estado === 'pendiente',
+     'pagar la propina deja la propina pagada y el sueldo pendiente: son dos transferencias');
+  const parcial = desglosePago([pago({ monto: 50000, concepto: 'Sueldo' })],
+    'Ana Soto', sem.desde, sem.hasta, 120000, 18000);
+  ok(parcial.sueldo.estado === 'parcial' && parcial.sueldo.falta === 70000
+     && parcial.propina.falta === 18000,
+     'una parte del sueldo deja el sueldo parcial, y la propina intacta');
+  const viejo = desglosePago([pago({ monto: 130000 })],
+    'Ana Soto', sem.desde, sem.hasta, 120000, 18000);
+  ok(viejo.sueldo.estado === 'pagado' && viejo.propina.pagado === 10000
+     && viejo.total.pagado === 130000,
+     'un pago viejo sin concepto cubre primero el sueldo y lo que sobra va a la propina: el total no cambia');
+  const viejoChico = desglosePago([pago({ monto: 40000 })],
+    'Ana Soto', sem.desde, sem.hasta, 120000, 18000);
+  ok(viejoChico.sueldo.pagado === 40000 && viejoChico.propina.pagado === 0,
+     'y si no alcanza para el sueldo, no toca la propina');
+  const extra = desglosePago([pago({ quien: 'Jinete', monto: 60000, concepto: 'Servicio' })],
+    'Jinete', sem.desde, sem.hasta, 60000, 0);
+  ok(extra.sueldo.estado === 'pagado' && extra.propina.debe === 0,
+     'el servicio de una actividad extra cuenta en su parte, y no tiene propina');
+
+  /* --- La boleta --- */
+  ok(pideBoleta('equipo', false) && pideBoleta('extra', false),
+     'quien cobra por turno y una actividad extra mandan boleta');
+  ok(!pideBoleta('equipo', true), 'un contratado no: su sueldo va por la liquidación');
+  const filaB = filaBoleta({ quien: 'Ana Soto', desde: sem.desde, hasta: sem.hasta,
+    registradoPor: 'tesorera', cuando: '2026-11-16 10:00', nota: '' }, ENCABEZADO_BOLETAS);
+  const boletas = leerBoletasDe([ENCABEZADO_BOLETAS, filaB]);
+  ok(boletas.length === 1 && boletas[0].registradoPor === 'tesorera',
+     'una boleta escrita se vuelve a leer, con quién la marcó');
+  ok(!!boletaDe(boletas, 'ana SOTO', sem.desde, sem.hasta),
+     'la boleta de la semana aparece al mirar esa semana');
+  ok(!!boletaDe(boletas, 'Ana Soto', '2026-11-01', '2026-11-30'),
+     'y al mirar el mes, igual que un pago');
+  ok(!boletaDe(boletas, 'Ana Soto', '2026-11-16', '2026-11-22'),
+     'pero no en la semana siguiente');
+  ok(!boletaDe(boletas, 'Otra Persona', sem.desde, sem.hasta),
+     'ni para otra persona');
+  ok(boletaEnPlanilla(true, true) === 'Sí' && boletaEnPlanilla(true, false) === ''
+     && boletaEnPlanilla(false, false) === 'No aplica',
+     'en la planilla: Sí, en blanco si no llegó, y No aplica para un contratado');
+
+  /* --- Copiar los datos de la transferencia --- */
+  const texto = textoTransferencia({ titular: 'Ana Soto', rut: '11111111-1',
+    banco: 'BancoEstado', tipo: 'Cuenta RUT', numero: '11111111', monto: 120000,
+    correo: 'ana@correo.cl', glosa: glosaDe('Sueldo', '2026-11-09', '2026-11-15') });
+  ok(texto.split('\t').length === ORDEN_TRANSFERENCIA.length,
+     'un campo por tabulación, en el orden de ORDEN_TRANSFERENCIA');
+  ok(texto.split('\t')[ORDEN_TRANSFERENCIA.indexOf('monto')] === '120000',
+     'el monto va sin puntos ni signo peso: es lo que un banco acepta pegar');
+  ok(texto.endsWith('Sueldo 09/11 al 15/11'),
+     'y la glosa dice qué es y de qué semana, corta y sin guiones largos ni tildes');
+  ok(glosaDe('Propina', '2026-11-09', '2026-11-15').length <= 30,
+     'y cabe en los 30 caracteres que dejan los bancos');
+  ok(CONCEPTO.propina === 'Propina', 'el concepto propina se llama así en la planilla');
+
   ok(leerPagosDe([ENCABEZADO_PAGOS]).length === 0, 'una pestaña vacía no inventa pagos');
   ok(leerPagosDe([]).length === 0, 'y una que no existe tampoco');
   // Una fila sin nombre no es un pago a nadie: se saltea.
@@ -2664,7 +2743,7 @@ console.log('\nEl link personal del trabajador');
   const pago = (x: Partial<PagoEquipo>): PagoEquipo => ({
     id: 'PAGO-1', fecha: '2026-11-16', quien: 'Ana Soto',
     desde: '2026-11-09', hasta: '2026-11-15', monto: 50000,
-    nota: '', registradoPor: 'jefe', fila: 2, ...x
+    nota: '', registradoPor: 'jefe', concepto: '', fila: 2, ...x
   });
 
   /* --- Abre en la semana PASADA, que es la que le están pagando --- */
