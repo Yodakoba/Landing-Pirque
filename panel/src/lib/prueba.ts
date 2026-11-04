@@ -13,7 +13,7 @@ import { pagoEnEspanol, pagoConGlosa, ESTADOS_QUE_LIBERAN,
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
          diasAbiertosEntre, mesDe, mesEnPalabras, semanaDe, diasDelMes, sumarMeses,
-         rangoEnPalabras } from './fechas.ts';
+         rangoEnPalabras, esFecha } from './fechas.ts';
 import { paraElSitio } from './publico.ts';
 import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
          desglosarMenu, menusDe, menusConocidos, componerMenu, personasDeCuenta,
@@ -33,6 +33,7 @@ import {
 import {
   ENCABEZADO_PAGOS, leerPagosDe, filaPago, cuentaEnPeriodo, pagadoDe,
   estadoDePago, aTransferirDe, faltaDe, pagoDelCuerpo, nuevoIdPago,
+  pagosEnPeriodo, pagosQueNoCaben,
   type PagoEquipo
 } from './remuneraciones.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
@@ -67,6 +68,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          nuevoToken, trabajadorPorToken, turnosDe, pagoDe, costoDelDia, costoPlanificado,
          contratadosDelDia, esContratado, MODALIDAD, VINO,
          informeDelPeriodo, rangoDelPeriodo, mesesConTurnos, semanasConTurnos,
+         semanaPorDefecto, periodosDelLink, esPeriodo,
          repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
          POR_DEFECTO_PUESTOS, esPreparacion,
@@ -2652,6 +2654,121 @@ console.log('\nPagos al equipo');
                       id: 'MIO', registradoPor: 'otro' } as unknown) as Record<string, unknown>)
        ?.id === undefined,
      'el id y quién lo registró NO se aceptan del navegador');
+}
+
+/* ---------- El link personal: qué periodo abre y qué pagos muestra ---------- */
+
+console.log('\nEl link personal del trabajador');
+{
+  const pago = (x: Partial<PagoEquipo>): PagoEquipo => ({
+    id: 'PAGO-1', fecha: '2026-11-16', quien: 'Ana Soto',
+    desde: '2026-11-09', hasta: '2026-11-15', monto: 50000,
+    nota: '', registradoPor: 'jefe', fila: 2, ...x
+  });
+
+  /* --- Abre en la semana PASADA, que es la que le están pagando --- */
+  // Se paga el lunes la semana que terminó el domingo, así que lo primero
+  // que alguien quiere ver es ésa y no la que va corriendo.
+  ok(semanaPorDefecto('2026-11-03') === '2026-10-26',
+     'un martes abre en la semana pasada, no en la que va corriendo');
+  ok(semanaPorDefecto('2026-11-02') === '2026-10-26',
+     'y el lunes mismo también: es justo el día en que se paga');
+  ok(semanaPorDefecto('2026-11-08') === '2026-10-26',
+     'el domingo en la tarde sigue siendo la pasada: la actual todavía no termina');
+  ok(semanaPorDefecto('2026-11-09') === '2026-11-02',
+     'y al lunes siguiente se corre una semana sola');
+  ok(rangoDelPeriodo(semanaPorDefecto('2026-11-03')).hasta === '2026-11-01',
+     'la semana pasada termina el domingo anterior a hoy');
+  // No depende de que haya turnos: abrir siempre en el mismo lugar es el
+  // punto. Una semana vacía lo dice con palabras en la pantalla.
+  ok(semanaPorDefecto('2026-11-03') === semanaPorDefecto('2026-11-03'),
+     'no mira los turnos: el periodo que abre no cambia según lo que haya anotado');
+
+  /* --- Las pastillas que se ofrecen --- */
+  // **Ninguno cae en la semana pasada, y es a propósito**: si hubiera uno,
+  // la prueba de que esa pastilla "va siempre" pasaría por casualidad —y de
+  // hecho pasaba, hasta que una mutación lo delató.
+  const suyos: Turno[] = [
+    tu({ fecha: '2026-10-24', asistencia: VINO.si, pagoJornada: 30000 }),
+    tu({ fecha: '2026-09-12', asistencia: VINO.si, pagoJornada: 30000 }),
+    // Un turno de mañana: no es un periodo que alguien venga a revisar.
+    tu({ fecha: '2026-11-21' })
+  ];
+  const p1 = periodosDelLink(suyos, '2026-11-03');
+  ok(p1.semanas[0] === '2026-11-02', 'la primera pastilla es la semana en curso');
+  ok(p1.semanas.includes('2026-10-26'),
+     'y la pasada va siempre, aunque no tenga ni un turno: es la que abre por defecto');
+  ok(p1.semanas.includes('2026-10-19') && p1.semanas.includes('2026-09-07'),
+     'más las semanas que sí tienen turnos');
+  ok(!p1.semanas.includes('2026-11-16'),
+     'una semana que todavía no llega NO se ofrece: no hay nada que revisar ahí');
+  ok(p1.semanas.join() === [...p1.semanas].sort().reverse().join(),
+     'van de la más nueva a la más vieja');
+  ok(p1.meses[0] === '2026-11' && p1.meses.includes('2026-10') && p1.meses.includes('2026-09'),
+     'los meses igual, con el actual primero');
+  ok(periodosDelLink(suyos, '2026-11-03', 2, 1).semanas.length === 2
+     && periodosDelLink(suyos, '2026-11-03', 2, 1).meses.length === 1,
+     'se recortan a unas pocas: veinte pastillas no son un filtro');
+  // Sin un solo turno la pantalla igual tiene con qué abrir.
+  const vacio = periodosDelLink([], '2026-11-03');
+  ok(vacio.semanas.length === 2 && vacio.semanas.includes('2026-10-26'),
+     'quien no tiene ningún turno igual ve la semana pasada y la actual');
+  ok(vacio.meses.length === 1 && vacio.meses[0] === '2026-11',
+     'y el mes en curso');
+
+  /* --- El periodo llega de la URL, así que se comprueba --- */
+  ok(esPeriodo('2026-11'), 'un mes es un periodo');
+  ok(esPeriodo('2026-11-09'), 'y un día también: lleva a su semana');
+  ok(!esPeriodo('chao') && !esPeriodo('') && !esPeriodo('2026-13'),
+     'basura, vacío y un mes 13 NO lo son: sin esto el rango saldría con NaN y la página se vería vacía sin decir por qué');
+  // `esFecha()` mira la forma y no el calendario, que es la tolerancia de
+  // todo el proyecto. Un día que no existe pasa el filtro y se corre solo a
+  // una semana real, o sea a un periodo vacío — la página lo dice con
+  // palabras. Queda fijado para que nadie lo "arregle" creyendo que rompe.
+  ok(esPeriodo('2026-11-99'),
+     'un día imposible pasa el filtro: esFecha() mira la forma, igual que en el resto del proyecto');
+  ok(esFecha(rangoDelPeriodo('2026-11-99').desde)
+     && esFecha(rangoDelPeriodo('2026-11-99').hasta),
+     'y aun así sale un rango con forma de fecha, así que la pantalla no se cae: queda un periodo vacío');
+
+  /* --- Los pagos del periodo, uno por uno --- */
+  const pagos = [
+    pago({ id: 'A', monto: 50000, fecha: '2026-11-16' }),
+    pago({ id: 'B', monto: 30000, fecha: '2026-11-18' }),
+    pago({ id: 'C', quien: 'Hugo Vergara', monto: 99000 }),
+    pago({ id: 'D', monto: 70000, desde: '2026-11-02', hasta: '2026-11-08' })
+  ];
+  const suya = pagosEnPeriodo(pagos, 'Ana Soto', '2026-11-09', '2026-11-15');
+  ok(suya.length === 2, 'solo los pagos de esa persona por ese periodo');
+  ok(suya[0].id === 'B', 'del más nuevo al más viejo: el último que llegó va arriba');
+  ok(suya.reduce((s, x) => s + x.monto, 0)
+     === pagadoDe(pagos, 'Ana Soto', '2026-11-09', '2026-11-15'),
+     'la lista suma exactamente lo mismo que pagadoDe(): una sola condición de qué cuenta');
+  ok(!pagosEnPeriodo(pagos, 'Ana Soto', '2026-11-09', '2026-11-15')
+       .some((x) => x.quien === 'Hugo Vergara'),
+     'y nunca aparece el pago de otra persona, que es lo único que esta página no puede mostrar');
+  ok(pagosEnPeriodo(pagos, '', '2026-11-01', '2026-11-30').length === 0,
+     'un nombre vacío no junta los pagos de todos');
+  ok(pagosEnPeriodo(pagos, 'Ana Soto', '2026-11-01', '2026-11-30').length === 3,
+     'al mirar el mes se ven los pagos de sus dos semanas');
+
+  /* --- El aviso del pago que no cabe en el periodo --- */
+  // Un pago por una quincena no cuenta al mirar una sola de sus semanas, y
+  // para quien abre su link eso se lee como "no me pagaron".
+  const quincena = [pago({ id: 'Q', monto: 160000, desde: '2026-11-02', hasta: '2026-11-15' })];
+  ok(pagadoDe(quincena, 'Ana Soto', '2026-11-09', '2026-11-15') === 0,
+     'el pago de una quincena no se cuenta al mirar una de sus semanas');
+  const aviso = pagosQueNoCaben(quincena, 'Ana Soto', '2026-11-09', '2026-11-15');
+  ok(aviso.length === 1 && aviso[0].id === 'Q',
+     'pero se nombra, para que no se lea como que no le pagaron');
+  ok(pagosQueNoCaben(quincena, 'Ana Soto', '2026-11-01', '2026-11-30').length === 0,
+     'al mirar el mes ya cabe, así que no hay nada que avisar');
+  ok(pagosQueNoCaben(pagos, 'Ana Soto', '2026-11-09', '2026-11-15').length === 0,
+     'un pago que cabe entero no dispara el aviso');
+  ok(pagosQueNoCaben(quincena, 'Ana Soto', '2026-12-01', '2026-12-31').length === 0,
+     'ni uno que no toca el periodo para nada');
+  ok(pagosQueNoCaben(quincena, 'Hugo Vergara', '2026-11-09', '2026-11-15').length === 0,
+     'y el aviso tampoco delata el pago de otra persona');
 }
 
 /* ---------- Lo que va a costar el equipo de un día ---------- */

@@ -972,3 +972,66 @@ export function rangoDelPeriodo(periodo: string): { desde: Fecha; hasta: Fecha }
   const lunes = semanaDe(periodo);
   return { desde: lunes, hasta: sumarDias(lunes, 6) };
 }
+
+/* ---------- Los periodos que ofrece el link personal ---------- */
+
+/**
+ * La semana que el link personal abre por defecto: **la pasada.**
+ *
+ * Lo fijó el cliente el 2026-11-03, y el motivo es el calendario del pago:
+ * se paga el lunes la semana que terminó el domingo, así que *"lo primero
+ * que quiere ver es la semana pasada"* — la que le están pagando, no la que
+ * va corriendo.
+ *
+ * **Se eligió sobre abrir en la semana más reciente con días trabajados**,
+ * que era la otra forma de no mostrar nunca una pantalla vacía. Esa regla
+ * tiene un problema peor: a quien no trabajó hace un mes le abriría un
+ * periodo de hace un mes sin que lo haya pedido, y entonces los números que
+ * ve no son de cuando cree. Es mejor abrir siempre en el mismo lugar y que
+ * una semana sin nada lo diga con palabras.
+ */
+export const semanaPorDefecto = (hoy: Fecha): Fecha => sumarDias(semanaDe(hoy), -7);
+
+/**
+ * Las semanas y los meses que el link personal ofrece como pastillas.
+ *
+ * **La semana pasada y la actual van siempre**, tengan algo o no: son las
+ * dos que alguien quiere mirar —la que le pagan y la que va corriendo— y la
+ * respuesta "todavía no hay nada" es un dato, no un error. Las demás
+ * aparecen solo si tienen turnos: una pastilla que lleva a una pantalla en
+ * blanco enseña a desconfiar de las otras.
+ *
+ * **Se recortan a unas pocas** por lo mismo que el menú del panel dejó de
+ * ser una lista: veinte pastillas no son un filtro, son un muro. Quien
+ * necesite ir más atrás puede escribir el periodo en la URL, y entonces se
+ * le agrega para que se vea cuál está mirando.
+ */
+export function periodosDelLink(
+  turnos: Turno[], hoy: Fecha, cuantasSemanas = 4, cuantosMeses = 3
+): { semanas: Fecha[]; meses: string[] } {
+  const estaSemana = semanaDe(hoy);
+  const esteMes = hoy.slice(0, 7);
+  // Solo lo ya trabajado: un turno de mañana no es un periodo que alguien
+  // venga a revisar para ver cuánto le toca.
+  const pasados = turnos.filter((t) => t.fecha < hoy);
+  const bajar = (xs: string[], tope: string, cuantos: number) =>
+    [...new Set(xs)].filter((x) => x <= tope).sort().reverse().slice(0, cuantos);
+  return {
+    semanas: bajar([estaSemana, semanaPorDefecto(hoy),
+                    ...pasados.map((t) => semanaDe(t.fecha))],
+                   estaSemana, cuantasSemanas),
+    meses: bajar([esteMes, ...pasados.map((t) => t.fecha.slice(0, 7))],
+                 esteMes, cuantosMeses)
+  };
+}
+
+/**
+ * Si un texto es un periodo que se puede mirar: un mes `AAAA-MM` o la fecha
+ * de un día, que `rangoDelPeriodo()` lleva a su semana.
+ *
+ * Existe porque el periodo llega en la URL, o sea de afuera: sin esto,
+ * `?p=chao` armaría un rango con `NaN` y la página se vería vacía sin que
+ * nada dijera por qué. Mismo criterio que `?desde=` en `/api/ocupacion`.
+ */
+export const esPeriodo = (p: string) =>
+  /^\d{4}-(0[1-9]|1[0-2])$/.test(p) || esFecha(p);

@@ -4078,17 +4078,125 @@ cocina, y **va para todos los puestos por igual**, también por decisión
 suya: saber qué viene sirve lo mismo para montar las mesas que para calcular
 la parrilla, y hacer dos versiones de esta página sería mantener dos.
 
-**No ve reservas, ni nombres de clientes, ni montos, ni a los demás
-trabajadores.** Los totales por menú son cuánto hay que cocinar; quién lo
-pidió y cuánto pagó no es dato de un turno.
+**No ve reservas, ni nombres de clientes, ni lo que pagó nadie, ni a los
+demás trabajadores.** Los totales por menú son cuánto hay que cocinar; quién
+lo pidió y cuánto pagó no es dato de un turno. **Su propia plata sí la ve
+entera** —y es a lo que viene; ver abajo.
 
-#### Su propia plata, desglosada (2026-11-01)
+#### Es un estado de cuenta, no una agenda con montos al final (2026-11-03)
+
+Lo pidió el cliente mirando el link y diciendo que **no mostraba los
+sueldos**: *"la idea de crear link personal tiene que ser que cada
+trabajador ve de forma fácil, recuerdo a la regla PlayStation, el resumen de
+lo que ganó, que pueda filtrar por cada semana, mensual… eso es su
+herramienta para controlar: oye, se ingresó todo el dato correcto de cuándo
+trabajé, cuánta propina gané y qué me han pagado a la cuenta"*.
+
+**Los sueldos sí estaban, y aun así tenía razón**, por cuatro razones que se
+sumaban:
+
+1. **El dinero iba abajo de todo**, después de los turnos que vienen. Con
+   tres turnos asignados había que pasarlos todos para llegar.
+2. **Si nadie había pasado lista, no aparecía nada.** El bloque se dibujaba
+   solo con días de asistencia marcada, así que a quien no le hubieran
+   cerrado sus días la página le salía **sin una sola cifra y sin nada que
+   dijera por qué** — el modo de falla más caro que hay, porque se lee como
+   que la página está mala.
+3. **No se podía filtrar**: eran 30 días fijos hacia atrás.
+4. **Lo que le pagaron no estaba.** La pestaña `Pagos` existía desde el
+   2026-11-01 y esta página **nunca la leía**, o sea que no podía contestar
+   justo la pregunta por la que se abre.
+
+Ahora el orden es el otro: **primero su plata, después los turnos que
+vienen.** Las tres preguntas y dónde se contestan:
+
+| Pregunta | Dónde |
+|---|---|
+| ¿Cuándo trabajé, y quedó bien anotado? | el día por día, **con los días sin cerrar a la vista** |
+| ¿Cuánta propina gané? | su azulejo, y su línea en cada día |
+| ¿Qué me pagaron a la cuenta? | el bloque de pagos, con lo que falta |
+
+##### Abre en la semana pasada
+
+Lo fijó el cliente: *"es la semana pasada, no la actual… porque lo primero
+que quiere ver es la semana pasada"*. Y el motivo es el calendario del pago:
+se paga el lunes la semana que terminó el domingo, así que la semana que le
+están pagando es la pasada, no la que va corriendo.
+
+**Se evaluó abrir en la semana más reciente con días trabajados** —que era
+la forma de no mostrar nunca una pantalla vacía— y se descartó: a quien no
+trabajó hace un mes le abriría un periodo de hace un mes sin que lo haya
+pedido, y entonces los números que ve no son de cuando cree. Es mejor abrir
+siempre en el mismo lugar y que una semana sin nada **lo diga con
+palabras**, que es lo que ahora hace.
+
+##### El filtro no usa una línea de JavaScript
+
+El periodo viaja en la URL —`?p=2026-11-10` una semana, `?p=2026-11` un
+mes— y las pastillas son enlaces. Es un componente de servidor, así que no
+hacía falta nada más; misma idea que el selector de idiomas del sitio
+público, que es un `<details>`.
+
+- **La semana pasada y la actual van siempre**, tengan algo o no: son las
+  dos que alguien quiere mirar, y "todavía no hay nada" es un dato. Las
+  demás aparecen solo si tienen turnos, porque una pastilla que lleva a una
+  pantalla en blanco enseña a desconfiar de las otras.
+- **Se recortan a cuatro semanas y tres meses**, por lo mismo que el menú
+  del panel dejó de ser una lista: veinte pastillas no son un filtro.
+- **El periodo llega de afuera, así que se comprueba** (`esPeriodo()`).
+  `?p=chao` se ignora y abre en el de siempre, en vez de armar un rango con
+  `NaN` y verse vacío sin decir por qué. Un periodo más atrás que las
+  pastillas **se agrega a la lista**: sin eso estaría mirando un periodo y
+  ninguna pastilla se vería elegida, que se lee como que el filtro se rompió.
+- **Las cuentas salen de `informeDelPeriodo()`**, la misma función con la
+  que quien paga arma su planilla. Es a propósito: si la persona y quien le
+  paga vieran números calculados por caminos distintos, el día que no
+  coincidan nadie sabría cuál creer.
+
+##### Los días sin cerrar se muestran
+
+Antes se filtraban y desaparecían. **Es media razón de ser de la página**:
+sirve para controlar que el dato esté bien, y un sábado que nadie cerró es
+justamente lo que hay que poder ver para ir a reclamarlo. Va con su pastilla
+ámbar en el día, y arriba un aviso que dice cuántos son y que no están
+contados.
+
+##### El pago que no cabe en el periodo
+
+`cuentaEnPeriodo()` tiene escrita una contra desde que nació: un pago cuenta
+solo si **cabe entero** en lo que se está mirando, así que uno registrado
+por una quincena no aparece al mirar una de sus semanas. Para quien paga eso
+es una nota al pie; para el trabajador que abre su link es **"no me
+pagaron"**, que es lo contrario de lo que pasó.
+
+Se resolvió **nombrando el caso**, no cambiando la regla —repartir un pago a
+prorrata sería inventar: nadie pagó "un tercio del martes"—. Y dos detalles
+que costaron una pasada:
+
+- **El aviso va pegado a los azulejos, no al final de la lista de pagos.**
+  Al mirar un mes con una quincena pagada, los azulejos dicen *"Te pagaron
+  $0 · Te falta $68.000"*, que es cierto para ese periodo y se lee como un
+  error. La explicación tiene que estar donde está la duda.
+- **No dice a dónde ir a buscarlo.** La primera versión decía "míralo en el
+  mes", y una quincena que cruza de mes no cabe en **ningún** periodo que
+  las pastillas ofrezcan: era un consejo que no funciona justo en el caso
+  que lo dispara. Dice qué es y que no está sumado, que sí es siempre
+  verdad.
+
+##### Lo que no cambió
+
+**Sigue sin mostrar a los demás trabajadores, ni clientes, ni reservas, ni
+las actividades extras**, y hay pruebas que lo fijan — incluida una de que
+el aviso del pago que no cabe tampoco delata el de otra persona. El sueldo
+de un contratado sigue sin salir de acá.
+
+#### El desglose de cada día (2026-11-01)
 
 Lo pidió el cliente: que al abrir su link la persona *"ve todos sus datos de
 forma ordenada, cuánto por turno, cuánto propina, cuánto se le restó por
 alguna razón, los extras"*.
 
-Abajo de sus turnos van sus **últimos 30 días**, y hasta ahora cada día era
+Cada día del periodo es una tarjeta. Hasta ese día era
 **una línea con una sola cifra** — que es justo la que no se puede revisar:
 quien ve $35.000 y esperaba $40.000 no tiene cómo saber si le descontaron
 algo, si le pagaron horas extra o si está mal. Ahora cada día es una tarjeta
