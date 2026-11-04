@@ -322,10 +322,16 @@
      queda con el descuento, más una pastilla con el porcentaje. Los montos
      salen de precios.json (el precio del local menos promociones.descuento)
      y los escribe tools/traducir.py: acá no se escribe ningún número. */
+  /* El tachado va casi del tamaño del nuevo (lo pidió el cliente): si se
+     lee de un vistazo, la rebaja se entiende sin hacer la cuenta. Es la
+     misma tipografía que el nuevo y más apagado; lo que los distingue es
+     la raya y el color, no el tamaño. */
   .precio-antes{
-    display:block; font-family: var(--sans); font-style:normal; font-size:0.85rem;
-    color: rgba(244,240,230,0.72); text-decoration: line-through; text-decoration-thickness:2px;
+    display:block; font-family: var(--serif); font-style:italic; font-size:1.15rem; line-height:1.15;
+    color: rgba(244,240,230,0.78); text-decoration: line-through;
+    text-decoration-thickness:2px; text-decoration-color: rgba(244,240,230,0.85);
   }
+  @media (max-width: 760px){ .tier-cap .precio-antes{ font-size:1.02rem; } }
   .precio-ahora{ display:block; }
   .dcto{
     position:absolute; top:10px; left:10px; z-index:2;
