@@ -604,6 +604,32 @@ export async function anotarPagoEquipo(
   return { ...completo, fila: -1 };
 }
 
+/**
+ * Anota **varios pagos de una vez**, en una sola escritura (2026-11-04).
+ *
+ * Es para *"todos los sueldos de esta semana pagados"*: una transferencia
+ * masiva salda a todos juntos, y anotarlos de a uno serían veinte idas a la
+ * planilla. Cada pago sigue siendo **su propia fila**, con su persona y su
+ * concepto: lo que se ahorra es el viaje, no el rastro.
+ */
+export async function anotarPagosEquipo(
+  lista: Omit<PagoEquipo, 'fila' | 'id' | 'fecha' | 'registradoPor'>[],
+  registradoPor: string
+): Promise<PagoEquipo[]> {
+  if (!lista.length) return [];
+  const filas = await asegurarEncabezado(HOJA_PAGOS, ENCABEZADO_PAGOS);
+  const enc = await asegurarColumna(HOJA_PAGOS, filas[0] ?? ENCABEZADO_PAGOS,
+                                    COL_PAGOS.concepto);
+  const base = Date.now();
+  // Un id distinto por fila: el mismo milisegundo daría ids repetidos, y
+  // borrar uno por error se llevaría a los demás.
+  const completos = lista.map((p, k) => ({
+    ...p, id: nuevoIdPago(base + k), fecha: hoy(), registradoPor
+  }));
+  await agregarFilas(HOJA_PAGOS, completos.map((c) => filaPago(c, enc)));
+  return completos.map((c) => ({ ...c, fila: -1 }));
+}
+
 /** Borra un pago anotado por error. Se busca por id, no por posición. */
 export async function borrarPagoEquipo(id: string): Promise<boolean> {
   const buscado = String(id ?? '').trim();

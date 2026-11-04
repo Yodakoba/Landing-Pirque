@@ -2793,11 +2793,47 @@ a la vez**:
 - **Abre en la semana pasada**, que es la que se paga y la misma con que
   abre el link personal.
 
+#### Copiar desde adentro del bloque
+
+**El cliente no vio los botones de copiar de la línea cerrada como lo que
+eran**, y pidió el botón **dentro** de cada bloque abierto: *"dentro de la
+sección sueldo, tanto como en la sección propina, copiar datos de
+transferencia"*. Ahora cada bloque, abierto, tiene los dos pasos de pagar en
+el orden en que se hacen: **📋 Copiar datos de transferencia** (delineado) y
+**Registrar pago de sueldo / propina** (relleno, porque es lo que cierra).
+Los botones de la línea cerrada se quedaron: son el atajo del lunes.
+
+#### La transferencia masiva
+
+Una tarjeta arriba de las líneas, **solo para quien paga**, con una fila por
+concepto —**Sueldos** y **Propinas**, porque son dos pagos—: cuántas personas
+y cuánto falta, quién queda fuera por no tener cuenta, y dos botones:
+
+1. **⬇ Planilla** — la planilla para subir al banco.
+2. **✓ Todos pagados** — lo pidió el cliente: *"todos los sueldos de esta
+   semana pagados, porque se hizo a través de una transferencia masiva… y
+   guardar"*. Abre una confirmación con **la lista de personas y montos y el
+   total**, y la nota "Transferencia masiva" ya puesta. Guardar anota **un
+   pago por persona**, cada uno con su concepto, en **una sola escritura**
+   (`anotarPagosEquipo()`; `POST /api/informe` acepta `{ pagos: [...] }`).
+
+- **Los dos botones de una fila salen de la misma lista** (`pendientesDe()`):
+  lo que se marca pagado es exactamente lo que salió en la planilla. Si
+  cada uno armara su lista, el día que una cambie se marcaría pagado a
+  alguien que nunca estuvo en la transferencia.
+- **Quien no tiene cuenta no se marca**: tampoco estaba en la planilla, y la
+  confirmación lo dice.
+- **Si algún pago del lote viene mal, no se anota ninguno**: un lote a medias
+  dejaría a la mitad del equipo pagado sin que se note cuál.
+- **Cada pago lleva su propio id** aunque se anoten en el mismo milisegundo:
+  con ids repetidos, borrar uno por error se llevaría a los demás.
+
 #### Las planillas para la transferencia masiva
 
 También lo pidió el cliente, para cuando tengan un banco con transferencia
-masiva: **⬇ Banco · sueldos** y **⬇ Banco · propinas**, una planilla por
-concepto porque son dos pagos. Solo para quien paga.
+masiva: una planilla de **sueldos** y una de **propinas** —el *⬇ Planilla*
+de cada fila de la tarjeta—, una por concepto porque son dos pagos. Solo
+para quien paga.
 
 - **Una fila por persona con algo pendiente**, con **lo que falta**: lo ya
   pagado no se vuelve a transferir.
