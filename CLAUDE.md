@@ -2959,6 +2959,24 @@ El aviso flotante ganó un segundo tono para esto: **ámbar con "!"** cuando
 no pasó lo esperado —no se descargó nada, quedó alguien fuera—. Un ✓ verde
 sobre "nadie con cuenta completa" se leía como que había salido bien.
 
+#### Sueldo en celeste, propina en dorado (2026-11-05)
+
+Lo pidió el cliente: *"distinguir siguiendo la regla PlayStation un poco más
+sueldos y propinas… con un fondo decente, de distintos colores… sin ser muy
+gritón"*. Son dos pagos y se veían iguales salvo por la palabra.
+
+- **Sueldo —y el servicio de una actividad extra— en cielo; propina en
+  dorado**, como tinte suave (fondo al 7% y borde), con un punto de su
+  color junto al nombre. Vive en `TINTE` / `tinteDe()` de
+  `InformeEquipo.tsx`, en un solo lugar para las tres partes donde
+  aparece: las filas de la transferencia masiva, los botones de copiar de
+  la línea cerrada y los dos bloques de la línea abierta.
+- **El verde y el ámbar del estado no cambiaron**: siguen diciendo si está
+  pagado o no, en su pastilla. El tinte dice *qué* es; la pastilla, *cómo
+  va*. Por eso el bloque ya no se pinta verde al quedar pagado.
+- Dentro de un bloque, *Copiar datos de transferencia* va con fondo blanco
+  (`bg-panel`) para despegarse del tinte.
+
 #### Filtrar: *Por pagar* y buscar por nombre (2026-11-05)
 
 Lo pidió el cliente: *"un botón por pagar, justo arriba de la lista… y el
