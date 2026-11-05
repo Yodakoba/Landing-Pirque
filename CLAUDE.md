@@ -263,6 +263,43 @@ El texto de la tarjeta va **en el idioma que se ofrece**, no en el de la
 página: a alguien que lee inglés hay que ofrecerle el cambio en inglés. Los
 tres textos viven en el objeto `TEXTOS` del archivo.
 
+### La vista diurna (2026-11-05)
+
+Lo pidió el cliente para presentarla en una reunión: *"una vista diurna del
+sitio y de los landing pages… un diseño más limpio, que transmite la
+experiencia limpia de un restaurante con familia, salir del mundo negro"*.
+**Por ahora es una segunda opción**: el sitio sigue abriendo en negro y la
+barra trae un botón **☀ Diurno / ☾ Nocturno**, en las ocho páginas del
+español y en las generadas.
+
+- **Los colores viven en `assets/css/tema.css`**, una sola hoja para el sitio
+  público y los dos landings. Funciona porque los tres ya usan las mismas
+  variables (`--bg`, `--ink`, `--gold`, `--line`…): de día solo cambia su
+  valor —papel tibio `#FAF7F0`, tarjetas blancas, tinta casi negra cálida—.
+  Lo poco que estaba en hex a mano se corrige ahí, regla por regla.
+- **El dorado se oscurece a `#8A6B12`**, igual que en el tema claro del
+  panel: el del sitio sobre crema da menos de 2,5:1. Los rellenos dorados
+  pasan a texto blanco.
+- **Sobre una foto el texto sigue claro**: el héroe, las franjas a sangre y
+  las tarjetas de experiencias vuelven a las variables de noche (con un
+  degradado más corto y fotos más luminosas). Blanco sobre foto es lo que se
+  lee.
+- **`:is()` toma la especificidad de su argumento más fuerte.** Por eso los
+  botones delineados y los de WhatsApp se excluyen con `:not()` dentro de la
+  regla de los rellenos, y no con una regla posterior: la posterior perdía y
+  "Ver las experiencias" salía relleno.
+- **Es la tercera excepción a la regla de cero JS** (`assets/js/tema.js`),
+  pedida por el cliente: recordar la elección entre páginas no se puede sin
+  JS. Va en el `<head>` **sin `defer`**, para pintar el tema antes del primer
+  dibujo y no hacer parpadear de negro a claro. Se recuerda en
+  `localStorage` (`blp-tema`).
+- **El botón nace con `hidden`** y lo muestra el script: si el JS no carga no
+  queda un botón muerto. Bajo 440px queda solo el ícono; el texto se oculta
+  a la vista pero no se borra.
+- **Si se decide dejar el día como el que abre**, es invertir la condición en
+  `tema.js` —poner `data-tema="dia"` salvo que se haya guardado `noche`— y
+  revisar este archivo, que en muchos lugares describe el sitio como negro.
+
 ### Lo que no sigue al idioma de la página
 
 - **El checkout de Shopify, que sale en español y no sigue a la página.**
@@ -315,12 +352,13 @@ unos pocos KB; las imágenes se cachean entre páginas.
 - **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
   tarjetas que giran y los carruseles son CSS. **El selector de idiomas
   tampoco usa JS**: es un `<details>` con enlaces a la misma página en otra
-  carpeta. Hay exactamente **dos** excepciones, las dos decididas
+  carpeta. Hay exactamente **tres** excepciones, todas decididas
   explícitamente con el cliente, y ninguna sirve de precedente:
   `assets/js/reserva.js` (solo en `reservas.html`; la integración con
   Shopify no se puede hacer sin JS) y `assets/js/idioma.js` (en todas; la
-  sugerencia de idioma no se puede hacer sin JS en un sitio estático).
-  **Para interfaz no se usa JavaScript.**
+  sugerencia de idioma no se puede hacer sin JS en un sitio estático), y
+  `assets/js/tema.js` (en todas; recuerda la vista diurna, ver "La vista
+  diurna"). **Para interfaz no se usa JavaScript.**
 - El menú de celular **sí existe acá** (hamburguesa bajo 920px). El landing de
   socios no tiene: ahí el menú simplemente desaparece bajo 900px.
 - **El sitio público vende DOS experiencias, el landing sigue con CUATRO**
