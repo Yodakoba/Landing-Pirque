@@ -50,13 +50,19 @@ function Foco({ encendido }: { encendido: boolean }) {
   );
 }
 
-export default function Asistencia({ valor, onCambio, quien }: {
+export default function Asistencia({ valor, onCambio, quien, compacto = false }: {
   /** Lo que hay guardado: `VINO.si`, `VINO.no` o vacío. */
   valor: string;
   onCambio: (v: string) => void;
   /** Para los lectores de pantalla: "¿Vino Ana Soto?". */
   quien: string;
+  /**
+   * Menos aire a los lados en un teléfono, para que quepa en la misma
+   * línea que el nombre. El alto —lo que se acierta con el dedo— no cambia.
+   */
+  compacto?: boolean;
 }) {
+  const base = compacto ? BASE.replace('px-3', 'px-2 sm:px-3') : BASE;
   const vino = valor === VINO.si;
   const falto = valor === VINO.no;
   const cambiar = (a: string) => onCambio(valor === a ? VINO.sinMarcar : a);
@@ -66,14 +72,14 @@ export default function Asistencia({ valor, onCambio, quien }: {
          className="flex shrink-0 flex-wrap gap-1">
       <button type="button" aria-pressed={vino} onClick={() => cambiar(VINO.si)}
         title={vino ? 'Apreta de nuevo para dejarlo sin marcar' : `${quien} llegó`}
-        className={`${BASE} ${vino
+        className={`${base} ${vino
           ? 'border-verde bg-verde/15 text-verde-texto shadow-[0_0_0_3px_rgb(var(--verde)/0.14)]'
           : 'border-hueso/20 text-hueso/50 hover:border-verde/60 hover:text-verde-texto'}`}>
         <Foco encendido={vino} /> Vino
       </button>
       <button type="button" aria-pressed={falto} onClick={() => cambiar(VINO.no)}
         title={falto ? 'Apreta de nuevo para dejarlo sin marcar' : `${quien} no llegó`}
-        className={`${BASE} ${falto
+        className={`${base} ${falto
           ? 'border-rojo bg-rojo/15 text-rojo-texto shadow-[0_0_0_3px_rgb(var(--rojo)/0.14)]'
           : 'border-hueso/20 text-hueso/50 hover:border-rojo/60 hover:text-rojo-texto'}`}>
         <Foco encendido={falto} /> No vino

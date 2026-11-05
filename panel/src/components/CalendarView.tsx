@@ -13,6 +13,7 @@ import type { Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
 import TarjetaDia from './TarjetaDia';
+import DiaCompacto from './DiaCompacto';
 import { usePronostico } from './Clima';
 import EquipoDialogo from './EquipoDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
@@ -78,6 +79,12 @@ export default function CalendarView() {
   const [planificando, setPlanificando] =
     useState<{ fecha: string; personas: number } | null>(null);
   const [avisoPlanilla, setAvisoPlanilla] = useState('');
+  /**
+   * Las semanas de más adelante que alguien abrió. Las dos primeras van
+   * siempre abiertas; desde la tercera, en chico hasta que se aprietan.
+   * Ver `DiaCompacto`.
+   */
+  const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
   /**
    * Lo que el CRM del socio tiene, por fecha, **sin lo que ya está anotado**.
    *
@@ -316,6 +323,18 @@ export default function CalendarView() {
         const mes = mesDe(deLaSemana[0].fecha);
         const anterior = i > 0 ? mesDe(semanas[i - 1].dias[0].fecha) : null;
         const estrena = mes !== anterior;
+        // **Las dos primeras semanas, completas; las demás, en chico**
+        // (2026-11-05, lo pidió el cliente). La lista parte en la semana en
+        // curso, así que son la de ahora y la que viene. Más adelante se
+        // mira poco y a 90 días las tarjetas completas hacían perder la
+        // orientación a fuerza de scroll.
+        const lejana = i >= 2;
+        const chica = lejana && !abiertas.has(semana);
+        const alternar = () => setAbiertas((antes) => {
+          const otra = new Set(antes);
+          if (otra.has(semana)) otra.delete(semana); else otra.add(semana);
+          return otra;
+        });
         return (
         <div key={semana}>
           {estrena && (
@@ -361,11 +380,24 @@ export default function CalendarView() {
                 {resumen.dias && <span className="text-hueso/35"> · {resumen.dias}</span>}
               </span>
               <span className="flex-1" />
+              {lejana && (
+                <button type="button" onClick={alternar} aria-expanded={!chica}
+                  className="boton boton-angosto">
+                  {chica ? '+ Abrir la semana' : '− Achicar'}
+                </button>
+              )}
               <button onClick={() => mandarPlanilla(semana)}
                 className="text-xs text-hueso/45 hover:text-oro">
                 Enviar planilla semanal
               </button>
             </div>
+            {chica ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {deLaSemana.map((d) => (
+                  <DiaCompacto key={d.fecha} d={d} onAbrir={alternar} />
+                ))}
+              </div>
+            ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {deLaSemana.map((d) => (
               <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
@@ -377,6 +409,7 @@ export default function CalendarView() {
                 onPlanificar={() => setPlanificando({ fecha: d.fecha, personas: d.tomadas })} />
             ))}
             </div>
+            )}
           </div>
         </div>
         );
