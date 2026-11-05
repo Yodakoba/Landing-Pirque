@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { guardarEquipoDelDia, leerTurnos, anotar } from '@/lib/datos';
-import { esFecha } from '@/lib/fechas';
+import { esFecha, hoy } from '@/lib/fechas';
+import { yaLlego } from '@/lib/cierres';
 import { aEntero, esContratado, MODALIDAD } from '@/lib/equipo';
 import { guardaDelDia } from '@/lib/guardaCierre';
 
@@ -48,11 +49,16 @@ export async function PUT(req: Request) {
         'equipo ni con nadie sin marcar si vino o no.' }, { status: 400 });
     }
 
+    // **Quién vino se marca desde el mismo día** (2026-11-05): de un día
+    // que todavía no llega se descarta, en vez de rechazar el guardado. Así
+    // un día futuro que arrastre una marca vieja se sigue pudiendo editar, y
+    // la marca se limpia sola.
+    const llego = yaLlego(fecha, hoy());
     await guardarEquipoDelDia(fecha, turnos.map((t) => ({
       fecha,
       trabajador: String(t?.trabajador ?? '').trim(),
       puesto: String(t?.puesto ?? '').trim(),
-      asistencia: String(t?.asistencia ?? '').trim(),
+      asistencia: llego ? String(t?.asistencia ?? '').trim() : '',
       modalidad: esContratado(t?.modalidad) ? MODALIDAD.contratado : MODALIDAD.porTurno,
       pagoJornada: aEntero(t?.pagoJornada),
       horasExtra: aEntero(t?.horasExtra),

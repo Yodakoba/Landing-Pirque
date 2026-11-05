@@ -20,7 +20,8 @@ import { costoDeExtra, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
 import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
-import { enPalabras } from '@/lib/fechas';
+import { enPalabras, hoy } from '@/lib/fechas';
+import { yaLlego } from '@/lib/cierres';
 import FichaColaborador from './FichaColaborador';
 import Asistencia from './Asistencia';
 import BuscarPersona from './BuscarPersona';
@@ -223,7 +224,8 @@ export default function ExtrasDialogo({
                   {/* Los mismos dos botones que el equipo: dos pantallas
                       que preguntan lo mismo tienen que preguntarlo igual. */}
                   <Asistencia quien={e.colaborador} valor={e.estado}
-                    onCambio={(v) => cambiar(i, 'estado', v)} compacto />
+                    onCambio={(v) => cambiar(i, 'estado', v)} compacto
+                    esperar={!yaLlego(fecha, hoy())} />
                 </div>
 
                 {abierta && (

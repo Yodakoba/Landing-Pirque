@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { guardarExtrasDelDia, leerExtras, anotar } from '@/lib/datos';
-import { esFecha } from '@/lib/fechas';
+import { esFecha, hoy } from '@/lib/fechas';
+import { yaLlego } from '@/lib/cierres';
 import { aEntero } from '@/lib/equipo';
 import { guardaDelDia } from '@/lib/guardaCierre';
 
@@ -38,11 +39,16 @@ export async function PUT(req: Request) {
     const guarda = await guardaDelDia(req, [fecha], correccion);
     if ('error' in guarda) return guarda.error;
 
+    // **Quién vino se marca desde el mismo día** (2026-11-05): de un día
+    // que todavía no llega se descarta, en vez de rechazar el guardado. Así
+    // un día futuro que arrastre una marca vieja se sigue pudiendo editar, y
+    // la marca se limpia sola.
+    const llego = yaLlego(fecha, hoy());
     await guardarExtrasDelDia(fecha, extras.map((e) => ({
       fecha,
       colaborador: String(e?.colaborador ?? '').trim(),
       actividad: String(e?.actividad ?? '').trim(),
-      estado: String(e?.estado ?? '').trim(),
+      estado: llego ? String(e?.estado ?? '').trim() : '',
       monto: aEntero(e?.monto),
       // Con signo: un descuento es justamente un número negativo.
       ajuste: aEntero(e?.ajuste, true),

@@ -3684,8 +3684,18 @@ vería completo justamente porque falta. Por eso el cierre se guarda con el
   quién vino, y eso no se sabe de un día que no ha ocurrido. La regla es
   `yaLlego()` en `cierres.ts`, comparando fechas en texto contra `hoy()` de
   Chile; la comprueba el servidor (400 con el motivo) y la ventana del día
-  apaga el botón y lo dice en una línea azul. *Vino / No vino* sí se puede
-  marcar antes, porque eso no declara nada.
+  apaga el botón y lo dice en una línea azul.
+- **Y quién vino tampoco se marca antes del día** (2026-11-05, el cliente lo
+  pidió a continuación). En un día futuro, en vez de *Vino / No vino* va una
+  pastilla punteada que dice *se marca el día*, del mismo alto, en las tres
+  listas: el equipo, las reservas y las actividades extras. El servidor lo
+  comprueba con la misma `yaLlego()`:
+  - **El equipo y las extras descartan la marca** al guardar un día futuro,
+    en vez de rechazar el guardado: así un día que arrastre una marca vieja
+    se sigue pudiendo editar, y la marca se limpia sola.
+  - **Una reserva la rechaza** (400 con el motivo), porque marcar es lo
+    único que pide esa llamada y descartarlo callado se vería como que se
+    guardó.
 - **Lo único que bloquea el cierre es la asistencia sin marcar**, y se
   comprueba en el servidor además de en la pantalla. Un turno sin marcar no
   suma, así que cerrar con turnos a medias sería cerrar con el total mal.

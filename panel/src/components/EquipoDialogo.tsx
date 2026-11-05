@@ -618,7 +618,7 @@ export default function EquipoDialogo({
                         </button>
                         {conAsistencia && (
                           <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
-                            onCambio={(v) => marcar(nombre, v)} compacto />
+                            onCambio={(v) => marcar(nombre, v)} compacto esperar={!llego} />
                         )}
                       </div>
 
