@@ -3638,10 +3638,14 @@ por quien hace los pagos**.
   - **Compensar en la semana siguiente**: un ajuste con su motivo en un día
     abierto —*"+$5.000 propina que faltó el 1/11"*—, y la semana ya pagada
     queda tal como se pagó. Es lo más común.
-  - **El encargado sigue anotando ajustes en los días abiertos** —un
-    atraso, un adelanto de caja—, porque eso es del día que vive. Lo que no
-    puede es tocar un día cerrado; decidir cómo se arregla lo ya pagado no
-    es suyo.
+  - **El encargado fija cuánto se paga cada día, y anota los ajustes**,
+    en los días abiertos (lo confirmó el cliente el 2026-11-05: *"muchas
+    veces el encargado es el que hace el negocio con el runner que viene, ya
+    te pago 25, luego te pago 35"*). La **jornada del día** es suya: es un
+    campo del turno y no de la ficha, así que la escribe sin ver los
+    sueldos habituales de nadie. Lo mismo un atraso o un adelanto de caja,
+    como ajuste. Lo que no puede es tocar un día cerrado; decidir cómo se
+    arregla lo ya pagado no es suyo.
 
 ### Cerrar el día
 
