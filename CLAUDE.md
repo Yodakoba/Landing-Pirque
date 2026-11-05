@@ -4898,6 +4898,26 @@ demás. Una abierta a la vez.**
   puesto por fuera de la ventana en un teléfono (la misma trampa de la
   tarjeta del calendario).
 
+### Agregar a alguien se busca escribiendo (2026-11-05)
+
+Lo pidió el cliente: *"con tantos trabajadores ya sería útil que cuando
+aprietas agregar… se puede buscar por nombre"*. El `<select>` de cada puesto
+—y el de las actividades extras— pasó a ser `BuscarPersona`: un botón
+*+ Agregar…* que abre un campo con el cursor puesto y la lista que calza
+debajo, un botón de 44px por nombre.
+
+- **Busca sin tildes ni mayúsculas, en el nombre y en el detalle** (el
+  puesto habitual o la actividad): "jose" encuentra a José, "garz" a los
+  garzones.
+- **Elegir deja el buscador abierto y vacío**, como el desplegable volvía a
+  "" después de elegir: se agregan varios seguidos. **Enter agrega al
+  primero** de la lista, y *Listo* o Escape lo cierran.
+- **Escape cierra el buscador y no la ventana**, y eso costó un arreglo en
+  `Dialogo`: en Next la raíz de React es el propio `document`, el mismo nodo
+  donde la ventana escucha el teclado, así que `stopPropagation` no la
+  frena. El buscador marca el Escape con `preventDefault` y `Dialogo` ignora
+  un evento ya usado (`defaultPrevented`).
+
 ### Vino / No vino se marca solo en `/turnos` (2026-11-05)
 
 Lo pidió el cliente: *"saca la opción vino o no vino de la parte del
