@@ -1888,6 +1888,16 @@ bloque del día lo dice con todas sus letras. **Solo donde se sabe el cupo** —
 la tarjeta lo tiene, la página del día no, y ahí un `quedan` inventado haría
 aparecer la alarma por un dato que nadie miró.
 
+#### Al anotar una reserva no se inventan menús (2026-11-05)
+
+El formulario de reserva del panel tenía un campo **"Otro menú…"** con su
+*Agregar*, y se sacó a pedido del cliente: *"si se agrega un nuevo menú,
+alguna variante… eso es una decisión estratégica y no alguien que pueda
+hacer una reserva"*. La lista son los menús conocidos —los que vendió
+Shopify y los de `/menus`— más los que ya traiga la reserva que se edita,
+para no perder el desglose de una vieja. Un menú nuevo se crea en la tienda
+y se le pone precio en `/menus`; recién ahí aparece para anotar.
+
 #### El contador de menús se podía apretar y no escribir
 
 Salió de esto y es de los que no se notan hasta que aparece el caso: en el
