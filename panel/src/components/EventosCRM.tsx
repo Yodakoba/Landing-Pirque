@@ -90,7 +90,7 @@ export function LineaCRM({ e, quedan }: { e: EventosDelDia; quedan?: number }) {
           <strong className="tabular-nums">{e.confirmados.length}</strong>
           {e.confirmados.length === 1 ? 'ganado' : 'ganados'}
           {' · '}
-          <strong className="tabular-nums">{e.personasConfirmadas}</strong> del socio
+          <strong className="tabular-nums">{e.personasConfirmadas}</strong> del CRM
         </span>
       )}
       {e.tentativos.length > 0 && (
@@ -124,7 +124,7 @@ export function BloqueCRM(
   return (
     <section className="mt-6">
       <h2 className="text-[13px] font-semibold uppercase tracking-wide text-hueso/60">
-        En el CRM del socio
+        En el CRM
       </h2>
 
       {/* El aviso va arriba del todo: es lo único de este bloque sobre lo que
@@ -132,7 +132,7 @@ export function BloqueCRM(
       {choca && (
         <p className="mt-2 rounded border border-ambar/50 bg-ambar/10 px-3 py-2 text-[13px]
                       text-ambar-texto">
-          <strong>El socio ya cerró {gente(e.personasConfirmadas)} para este día</strong> y
+          <strong>El CRM ya tiene ganadas {gente(e.personasConfirmadas)} para este día</strong> y
           acá quedan {quedan} lugares. No caben juntos: conviene cerrar el día o
           avisarle antes de que el sitio siga vendiéndolo.
         </p>
@@ -158,8 +158,8 @@ export function BloqueCRM(
             {x.vendedor && <span className="text-hueso/45">lo lleva {x.vendedor}</span>}
             {/* **Solo los ganados se ofrecen para anotar.** Un cotizado
                 todavía no es gente que viene, y anotarlo le quitaría el
-                lugar a alguien por un evento que el propio socio no ha
-                cerrado. */}
+                lugar a alguien por un evento que el CRM todavía no da
+                por ganado. */}
             {x.confirmado && onAnotar && (
               <button type="button" className="boton boton-angosto w-full sm:w-auto"
                       onClick={() => onAnotar(x)}>

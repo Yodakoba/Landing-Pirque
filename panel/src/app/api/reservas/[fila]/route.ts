@@ -3,6 +3,8 @@ import { exigir, quienEs } from '@/lib/permisos';
 import { editarReserva, borrarReserva, anotar, leerReservas } from '@/lib/datos';
 import { empujarDias } from '@/lib/crm-escribir';
 import { guardaDelDia } from '@/lib/guardaCierre';
+import { yaLlego } from '@/lib/cierres';
+import { hoy } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +38,16 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // La guarda va **antes** de escribir: es lo que puede rechazar la
     // edición. El empujón al socio va después, cuando ya es un hecho.
     if ('error' in guarda) return guarda.error;
+    // **Quién vino se marca desde el mismo día** (2026-11-05). Acá se
+    // rechaza en vez de descartarse, porque marcar es lo único que pide
+    // esta llamada: descartarlo callado se vería como que se guardó.
+    const diaDeLaReserva = typeof cambios.fecha === 'string' ? cambios.fecha : antes?.fecha ?? '';
+    if (String(cambios.asistencia ?? '').trim() && diaDeLaReserva
+        && !yaLlego(diaDeLaReserva, hoy())) {
+      return NextResponse.json(
+        { error: 'Ese día todavía no llega: quién vino se marca desde el mismo día.' },
+        { status: 400 });
+    }
     await editarReserva(fila, cambios);
     // Los dos días, el de antes y el de después. Si no se movió es el mismo y
     // `empujarDias()` lo manda una sola vez.

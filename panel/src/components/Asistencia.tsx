@@ -50,7 +50,7 @@ function Foco({ encendido }: { encendido: boolean }) {
   );
 }
 
-export default function Asistencia({ valor, onCambio, quien, compacto = false }: {
+export default function Asistencia({ valor, onCambio, quien, compacto = false, esperar = false }: {
   /** Lo que hay guardado: `VINO.si`, `VINO.no` o vacío. */
   valor: string;
   onCambio: (v: string) => void;
@@ -61,7 +61,23 @@ export default function Asistencia({ valor, onCambio, quien, compacto = false }:
    * línea que el nombre. El alto —lo que se acierta con el dedo— no cambia.
    */
   compacto?: boolean;
+  /**
+   * **El día todavía no llega** (2026-11-05, lo pidió el cliente): quién
+   * vino se marca desde el mismo día en adelante, nunca antes. En vez de
+   * los botones va una pastilla punteada que lo dice, del mismo alto, para
+   * que la línea no cambie de forma.
+   */
+  esperar?: boolean;
 }) {
+  if (esperar) {
+    return (
+      <span className="flex min-h-[40px] shrink-0 items-center rounded-lg border-2 border-dashed
+                       border-hueso/20 px-2.5 text-[13px] font-semibold text-hueso/60"
+        title="Quién vino se marca desde el mismo día">
+        se marca el día
+      </span>
+    );
+  }
   const base = compacto ? BASE.replace('px-3', 'px-2 sm:px-3') : BASE;
   const vino = valor === VINO.si;
   const falto = valor === VINO.no;

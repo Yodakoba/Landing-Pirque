@@ -21,6 +21,8 @@
  * otra persona puede estar marcando en el mesón al mismo tiempo.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { yaLlego } from '@/lib/cierres';
+import { hoy } from '@/lib/fechas';
 import type { Reserva } from '@/lib/tipos';
 import { ASISTENCIA, TIPO_PAGO, esManual } from '@/lib/columnas';
 import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
@@ -231,7 +233,8 @@ export default function ReservasDelDia({
                     <div className="mt-2">
                       <Asistencia valor={r.asistencia || ''}
                         quien={r.nombre || 'esta reserva'}
-                        onCambio={(v) => void marcar(r, v)} />
+                        onCambio={(v) => void marcar(r, v)}
+                        esperar={!yaLlego(fecha, hoy())} />
                     </div>
                   )}
                 </li>

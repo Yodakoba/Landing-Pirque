@@ -1787,6 +1787,15 @@ sin CRM_API_KEY                     →  200, vacío, configurado: false
 con clave mala                      →  502, vacío, "No se pudo leer el CRM."
 ```
 
+### En pantalla se dice "del CRM", no "del socio" (2026-11-05)
+
+Lo pidió el cliente: *"tú estás hablando siempre del socio cuando hablamos de
+lo que viene desde el CRM… el equipo tiene que entenderlo"*. Para quien usa
+el panel, "el socio" no dice nada; "el CRM" es el sistema donde se vende.
+Los textos visibles dicen **del CRM** —la pastilla *150 del CRM*, el bloque
+*En el CRM*, *Anotar el evento del CRM*—. En los comentarios del código y en
+este archivo "el socio" sigue nombrando a quien es dueño del CRM.
+
 ### Se veía en la ruta y en ninguna pantalla (2026-11-03)
 
 **La mitad que lee el CRM se escribió el 2026-11-02 y nunca se dibujó.** La
@@ -1876,7 +1885,7 @@ viene por un camino que no es el formulario del sitio.
 
 | Dónde | Qué muestra |
 |---|---|
-| Tarjeta del calendario | una pastilla **debajo** de la barra: *1 ganado · 150 del socio*, y los cotizados aparte en rosado |
+| Tarjeta del calendario | una pastilla **debajo** de la barra: *1 ganado · 150 del CRM*, y los cotizados aparte en rosado |
 | Página del día | un bloque propio con quién, cuánta gente, en qué va y **el botón de anotarlo** |
 | Planilla semanal y link personal | **nunca**, igual que los presupuestos |
 | Sitio público | **nunca** |
@@ -1915,13 +1924,13 @@ Ahora la cantidad es un campo que se escribe, con los botones al lado.
 Con el 22 de noviembre exclusivo y vacío, y el ganado de 150 del socio:
 
 ```
-tarjeta del 22   0/150 personas  ·  ● 1 ganado · 150 del socio   (cielo)
+tarjeta del 22   0/150 personas  ·  ● 1 ganado · 150 del CRM   (cielo)
 página del día   FELIPE IZQUIERDO · Otro · 150 personas · Ganado
                  lo lleva Cristóbal       [Anotar como reserva]
 ```
 
-Apretando el botón, el formulario abre como **"Anotar el evento del socio"**,
-con el nombre puesto y la línea *"Viene del CRM del socio, con 150 personas"*.
+Apretando el botón, el formulario abre como **"Anotar el evento del CRM"**,
+con el nombre puesto y la línea *"Viene del CRM, con 150 personas"*.
 Repartidas en un menú y guardado, la planilla quedó con:
 
 ```
@@ -2556,11 +2565,37 @@ gris sobre una grilla corrida— justamente al revés de cómo se usa. Ahora
 precede: sigue marcado, que es la referencia para ubicarse entre 90 días,
 pero dejó de ser lo que agrupa.
 
-En la cabecera de cada semana: el rango en palabras, **cuánta gente viene en
-toda la semana** y de qué días son —*"13 personas · 2 públicos"*—, y el botón
-de mandar la planilla, que ya estaba. Los estados de cada día siguen en su
-tarjeta, con `PuntoDia`; acá va el conteo, que es lo único que no se puede
-ver sin sumarlo.
+En la cabecera de cada semana: el rango en palabras, **cuánta gente y
+cuántas reservas** —*"17 personas · 5 reservas"*—, hasta tres avisos, y el
+botón de mandar la planilla.
+
+#### La línea de la semana avisa lo que se sale de lo normal (2026-11-05)
+
+Decía *"13 personas · 2 públicos"*, y ese "2 públicos" contaba **días**
+abiertos al público: el cliente lo leyó como reservas, y además ya se ve en
+cada tarjeta. Pidió aprovechar la línea para *"subrayar ciertos casos
+especiales"*. Ahora, después del conteo, van **pastillas solo cuando
+aplican**, en orden de urgencia y **tres como máximo** (`lineaDeSemana()` en
+`semana.ts`, con sus pruebas):
+
+| Aviso | Ejemplo | Color |
+|---|---|---|
+| Día cerrado con gente reservada | *Sáb cerrado con 4 personas* | rojo |
+| Lleno / casi lleno (semáforo rojo) | *Sáb lleno* · *Dom casi lleno* | rojo / ámbar |
+| Grupo grande | *Dom: grupo de 30* · *3 grupos grandes · sáb y dom* | dorado |
+| Falta equipo según las reglas de cada puesto | *Falta equipo el sáb* | ámbar |
+| Ganados del CRM sin anotar | *150 del CRM el dom* | cielo |
+| Presupuestos vigentes | *2 presupuestos · 43 posibles* | rosado |
+
+- **Uno por tipo, nombrando los días**: *"Sáb y dom casi llenos"*, no dos
+  pastillas que dicen lo mismo.
+- **Sin avisos, la línea es solo el conteo**, y eso ya dice que es una
+  semana normal.
+- **"Grupo grande" es desde 30 personas** y vive en `Config`
+  (`grupo_grande`, editable en `/configuracion`), porque es dato del
+  negocio. En cero no se avisa nunca.
+- Cuántas personas hay que cobrar **no** va acá: ya está en cada tarjeta y
+  no es algo que haya que hacer en la semana.
 
 **La semana en curso va delineada en dorado y dice "esta semana".** Es la
 que se mira al entrar.
@@ -3684,8 +3719,18 @@ vería completo justamente porque falta. Por eso el cierre se guarda con el
   quién vino, y eso no se sabe de un día que no ha ocurrido. La regla es
   `yaLlego()` en `cierres.ts`, comparando fechas en texto contra `hoy()` de
   Chile; la comprueba el servidor (400 con el motivo) y la ventana del día
-  apaga el botón y lo dice en una línea azul. *Vino / No vino* sí se puede
-  marcar antes, porque eso no declara nada.
+  apaga el botón y lo dice en una línea azul.
+- **Y quién vino tampoco se marca antes del día** (2026-11-05, el cliente lo
+  pidió a continuación). En un día futuro, en vez de *Vino / No vino* va una
+  pastilla punteada que dice *se marca el día*, del mismo alto, en las tres
+  listas: el equipo, las reservas y las actividades extras. El servidor lo
+  comprueba con la misma `yaLlego()`:
+  - **El equipo y las extras descartan la marca** al guardar un día futuro,
+    en vez de rechazar el guardado: así un día que arrastre una marca vieja
+    se sigue pudiendo editar, y la marca se limpia sola.
+  - **Una reserva la rechaza** (400 con el motivo), porque marcar es lo
+    único que pide esa llamada y descartarlo callado se vería como que se
+    guardó.
 - **Lo único que bloquea el cierre es la asistencia sin marcar**, y se
   comprueba en el servidor además de en la pantalla. Un turno sin marcar no
   suma, así que cerrar con turnos a medias sería cerrar con el total mal.

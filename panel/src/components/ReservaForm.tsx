@@ -187,7 +187,7 @@ export default function ReservaForm({
 
   return (
     <Dialogo
-      titulo={desdeCRM ? 'Anotar el evento del socio'
+      titulo={desdeCRM ? 'Anotar el evento del CRM'
                        : reserva ? 'Editar reserva' : 'Agregar reserva'}
       onCerrar={onCancelar}>
       <>
@@ -197,10 +197,10 @@ export default function ReservaForm({
             que se guarda son los menús que se escriban. */}
         {desdeCRM && (
           <p className="mt-3 rounded border border-cielo/40 bg-cielo/[0.08] px-3 py-2 text-[13px]">
-            Viene del <strong>CRM del socio</strong>, con{' '}
+            Viene del <strong>CRM</strong>, con{' '}
             <strong className="tabular-nums">{desdeCRM.personas}</strong>{' '}
             {desdeCRM.personas === 1 ? 'persona' : 'personas'}. Reparte esa
-            gente en los menús de abajo; lo que el socio no sabe —los menús,
+            gente en los menús de abajo; lo que el CRM no trae —los menús,
             el monto, el contacto— se escribe acá.
           </p>
         )}

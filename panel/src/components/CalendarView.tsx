@@ -21,36 +21,18 @@ import { POR_DEFECTO, type Config } from '@/lib/config';
 import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
+import { lineaDeSemana, type Tono } from '@/lib/semana';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
 import { copiarConAviso } from './AvisoFlotante';
 
-/**
- * Lo que se dice de una semana completa, de un vistazo.
- *
- * **En el local se piensa por semana**, que es lo que pidió el cliente el
- * 2026-10-30: el mes sigue marcado, pero la unidad que se mira es la semana.
- * Por eso cada una es ahora una caja con su cabecera, y no una línea gris
- * sobre una grilla corrida.
- *
- * Los días cerrados no se cuentan como públicos ni como privados: se nombran
- * aparte, porque "3 días" que incluyen uno que no abre no es lo que alguien
- * lee ahí.
- */
-function resumenSemana(dias: Ocupacion[]) {
-  let personas = 0, publicos = 0, privados = 0, cerrados = 0;
-  for (const d of dias) {
-    personas += d.tomadas;
-    if (d.bloqueada) cerrados++;
-    else if (d.privada) privados++;
-    else publicos++;
-  }
-  const partes = [
-    publicos ? `${publicos} ${publicos === 1 ? 'público' : 'públicos'}` : null,
-    privados ? `${privados} ${privados === 1 ? 'privado' : 'privados'}` : null,
-    cerrados ? `${cerrados} ${cerrados === 1 ? 'cerrado' : 'cerrados'}` : null
-  ].filter(Boolean);
-  return { personas, dias: partes.join(' · ') };
-}
+/** El color de cada aviso de la línea de la semana: el mismo significado que en el resto del panel. */
+const TONO: Record<Tono, string> = {
+  rojo: 'border-rojo/50 bg-rojo/10 text-rojo-texto',
+  ambar: 'border-ambar/60 bg-ambar/10 text-ambar-texto',
+  oro: 'border-oro/50 bg-oro/10 text-oro',
+  cielo: 'border-cielo/50 bg-cielo/10 text-cielo-texto',
+  rosa: 'border-rosa/50 bg-rosa/10 text-rosa-texto'
+};
 
 export default function CalendarView() {
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
@@ -314,7 +296,11 @@ export default function CalendarView() {
       )}
 
       {semanas.map(({ semana, dias: deLaSemana }, i) => {
-        const resumen = resumenSemana(deLaSemana);
+        const resumen = lineaDeSemana({
+          dias: deLaSemana, reservas, grupoGrande: cfg.grupoGrande, crm: delSocio,
+          faltanEquipo: equipo ? Object.fromEntries(deLaSemana.map((d) => [d.fecha,
+            resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas).faltan])) : {}
+        });
         const esta = semana === semanaDe(hoy());
         // El mes se anuncia antes de la PRIMERA semana que lo estrena, y no
         // envolviendo las semanas: así una que cruza de mes sigue entera y
@@ -371,14 +357,23 @@ export default function CalendarView() {
                   esta semana
                 </span>
               )}
-              {/* Lo que se pregunta de una semana: cuánta gente viene y qué
-                  días son. Los estados ya están en cada tarjeta; acá va el
-                  conteo, que es lo que no se puede ver sin sumarlo. */}
-              <span className="text-xs text-hueso/50">
-                <strong className="tabular-nums text-hueso/75">{resumen.personas}</strong>
+              {/* **Cuánta gente y cuántas reservas, y solo lo que se sale de
+                  lo normal** (2026-11-05). Antes decía "2 públicos", que
+                  contaba días y no se entendía. Ver `lineaDeSemana()`. */}
+              <span className="text-[13px] text-hueso/60">
+                <strong className="tabular-nums text-hueso/85">{resumen.personas}</strong>
                 {resumen.personas === 1 ? ' persona' : ' personas'}
-                {resumen.dias && <span className="text-hueso/35"> · {resumen.dias}</span>}
+                {' · '}
+                <strong className="tabular-nums text-hueso/85">{resumen.reservas}</strong>
+                {resumen.reservas === 1 ? ' reserva' : ' reservas'}
               </span>
+              {resumen.avisos.map((a) => (
+                <span key={a.texto}
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5
+                              text-[13px] font-semibold ${TONO[a.tono]}`}>
+                  {a.texto}
+                </span>
+              ))}
               <span className="flex-1" />
               {lejana && (
                 <button type="button" onClick={alternar} aria-expanded={!chica}

@@ -158,6 +158,12 @@ export default function ConfigEditor() {
             onBlur={(e) => e.target.value !== deDiasSemana(config.diasAbiertos) &&
               guardar({ diasAbiertos: e.target.value }, 'dias')} />)}
 
+        {campo('grupo', 'Grupo grande',
+          'Desde cuántas personas una reserva cuenta como grupo grande. La ' +
+          'línea de cada semana del calendario lo avisa —“Dom: grupo de 30”— ' +
+          'para que se vea antes de armar el equipo. En cero no avisa nunca.',
+          numerico('grupo', config.grupoGrande, (n) => ({ grupoGrande: n })))}
+
         {campo('futuro', 'Días hacia adelante',
           'Hasta cuántos días en el futuro se ofrecen fechas en el sitio. Una ' +
           'fecha más lejana que esto no se muestra aunque esté abierta en la ' +
