@@ -383,7 +383,7 @@ export default function CalendarView() {
               {lejana && (
                 <button type="button" onClick={alternar} aria-expanded={!chica}
                   className="boton boton-angosto">
-                  {chica ? '+ Abrir la semana' : '− Achicar'}
+                  {chica ? '+ Ampliar' : '− Achicar'}
                 </button>
               )}
               <button onClick={() => mandarPlanilla(semana)}

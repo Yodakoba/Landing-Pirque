@@ -3619,8 +3619,14 @@ por quien hace los pagos**.
   - **Equipo**: cuántos vinieron y cuántos no llegaron.
   - **Propina del día**: el monto, o *"Sin propina anotada"* con !.
   - **Lo que se paga**: el total, o cuántos vinieron sin jornada anotada.
-    **Solo para quien ve los sueldos**: el encargado no recibe los montos
-    de la ficha, así que para él un cero no querría decir nada.
+    **Lo ve también el encargado** (2026-11-05, lo pidió el cliente: que
+    todos tengan claro cuánto costó el equipo, *"todos están en el mismo
+    barco"*). Para que ese total sea cierto, la ventana del día **rellena
+    con lo que guardó el servidor** las jornadas que tenía en cero: un
+    turno sin monto hereda el de la ficha al guardarse, y el encargado, que
+    no recibe las fichas, antes seguía viendo el campo vacío. Lo escrito a
+    mano nunca se pisa. Los sueldos habituales de la ficha siguen siendo
+    solo de quien paga.
   - **Actividades extras**, si hay: *"Todas confirmadas"* o cuántas faltan.
 - **El ! no impide cerrar**, pide mirarlo: un día sin propina existe. Lo que
   sí impide —alguien sin marcar— ni deja llegar a esta ventana. Con algún !
@@ -3679,6 +3685,19 @@ día"*. Cada día pendiente es un botón que abre su ventana, y dice qué le
 falta: cuánta gente sin marcar, cuántas extras sin confirmar, si nadie anotó
 propina. **Un día que todavía no llega no aparece**: nadie puede decir quién
 vino a un sábado que no ha ocurrido.
+
+**Y cada celda del mes lo dice con una pastilla** (2026-11-05, lo pidió el
+cliente: el *"✓ cerrado"* era una palabra en gris que no se veía):
+
+| | Qué muestra la celda |
+|---|---|
+| Cerrado | **✓ Cerrado**, pastilla verde llena con un brillo |
+| Ya pasó y no está cerrado | **! Sin cerrar**, pastilla ámbar con borde, y debajo qué le falta: *N por marcar*, *N extras por confirmar*, o *listo para cerrar* |
+| Sin equipo, o todavía no llega | nada |
+
+Se distinguen por **forma además de color**: relleno contra borde. *Listo
+para cerrar* es el caso que más se olvida —ya está todo marcado y solo
+falta apretar el botón— y por eso tiene su propia frase.
 
 ### Lo que cuesta un día
 
@@ -4945,7 +4964,7 @@ demás. Una abierta a la vez.**
 |---|---|---|
 | **Ventana del día** (`/turnos` y *Equipo* del calendario) | nombre, cuánto lleva, y **Vino / No vino** | jornada, horas extra, ajustes con su motivo, propina, total, *Ficha* y *Sacar del día* |
 | **Ventana de actividades** (`/extras`) | quién, qué hace, y **Vino / No vino** | actividad, monto, ajuste y motivo, total, *Ficha* y *Sacar del día* |
-| **Calendario de la portada** | desde la **tercera semana**, cada día es un campo chico: fecha, estado, barra y gente | apretar un día —o *+ Abrir la semana*— abre la semana entera con sus tarjetas de siempre |
+| **Calendario de la portada** | desde la **tercera semana**, cada día es un campo chico: fecha, estado, barra y gente | apretar un día —o *+ Ampliar*— abre la semana entera con sus tarjetas de siempre |
 
 - **En la ventana del día desapareció la segunda lista**, la de *"Lo que se
   paga este día"*, que repetía a la misma gente con sus montos y doblaba el

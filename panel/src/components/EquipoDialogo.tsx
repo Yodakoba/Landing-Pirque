@@ -274,7 +274,11 @@ export default function EquipoDialogo({
       valor: propina > 0 ? enPesos(propina) : 'Sin propina anotada',
       bien: propina > 0 || vinieron === 0
     }];
-    if (verSueldos) {
+    // **Lo ve también el encargado** (2026-11-05, lo pidió el cliente):
+    // cuánto costó el equipo de un día es algo que conviene que todos
+    // tengan claro. La jornada del día es suya —la escribe él—; lo que
+    // sigue siendo de quien paga son los sueldos habituales de la ficha.
+    {
       const sinJornada = plan.filter((t) => t.asistencia === VINO.si
         && !esContratado(t.modalidad) && !t.pagoJornada).length;
       p.push({
@@ -335,7 +339,29 @@ export default function EquipoDialogo({
         })
       });
       const d = await r.json();
-      return d.error || undefined;
+      if (d.error) return d.error;
+      // **Lo que el servidor completó desde la ficha vuelve a la pantalla.**
+      // Un turno que llega sin jornada hereda la de la ficha al guardarse
+      // (`guardarEquipoDelDia`), y el encargado —que no recibe las fichas—
+      // seguía viendo un campo vacío y un total en cero. Solo se rellena lo
+      // que acá está en cero: lo que alguien escribió nunca se pisa, y como
+      // después de rellenar ya no queda nada en cero, no hay otra vuelta.
+      const guardados = new Map<string, Omit<Turno, 'fila'>>(
+        (d.turnos ?? []).map((t: Omit<Turno, 'fila'>) => [t.trabajador, t]));
+      setPlan((antes) => {
+        let cambio = false;
+        const nuevo = antes.map((t) => {
+          const g = guardados.get(t.trabajador);
+          if (!g) return t;
+          const pagoJornada = t.pagoJornada || g.pagoJornada || 0;
+          const valorHora = t.valorHora || g.valorHora || 0;
+          if (pagoJornada === t.pagoJornada && valorHora === t.valorHora) return t;
+          cambio = true;
+          return { ...t, pagoJornada, valorHora };
+        });
+        return cambio ? nuevo : antes;
+      });
+      return undefined;
     },
     600,
     // En un día cerrado nada se guarda solo: ver `corrigiendo`.

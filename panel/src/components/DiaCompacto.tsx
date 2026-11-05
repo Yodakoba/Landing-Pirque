@@ -27,7 +27,7 @@ export default function DiaCompacto({ d, onAbrir }: {
   const conCupo = !sinConfigurar(d) && d.capacidad > 0;
   return (
     <button type="button" onClick={onAbrir}
-      title="Abrir la semana completa"
+      title="Ampliar la semana"
       className={`tecla flex w-full min-w-0 flex-col gap-1.5 rounded-xl border-2 px-3 py-2
                   text-left hover:border-oro/70 ${COLOR_TARJETA(d)}`}>
       {/* Arriba la fecha y el estado; abajo la barra y cuánta gente. En
