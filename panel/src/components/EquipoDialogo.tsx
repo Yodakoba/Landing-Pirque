@@ -37,23 +37,12 @@ import ReservasDelDia from './ReservasDelDia';
 import { AvisoCierre, PieCorreccion } from './Correccion';
 import { usarAutoguardado } from './usarAutoguardado';
 
-/**
- * El rótulo de un campo, **solo mientras la pantalla sea angosta**: en el
- * escritorio ese nombre ya está en el encabezado de la columna, y repetirlo
- * en cada fila sería ruido.
- *
- * Va al nivel del módulo y no dentro del componente: una función nueva en
- * cada dibujado es, para React, otro tipo de elemento, y con un `input` al
- * lado eso significa perder el foco. Ver `Campo.tsx`.
- */
-function Rotulo({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="mb-0.5 block text-[11px] uppercase tracking-wide
-                     text-hueso/45 md:hidden">
-      {children}
-    </span>
-  );
-}
+/** El rótulo encima de cada campo de la línea abierta de una persona. */
+const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
+/** Los campos de plata de la línea abierta: 40px, para el dedo. */
+const ENTRADA_GRANDE =
+  'rounded-lg border-2 border-hueso/20 bg-tinta px-2.5 py-1.5 text-[15px] ' +
+  'tabular-nums focus:border-oro focus:outline-none';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
@@ -228,27 +217,14 @@ export default function EquipoDialogo({
    * `nombre#posición` y se limpia al enfocar, así que no vuelve a saltar.
    */
   const [recienAjuste, setRecienAjuste] = useState('');
+  /** La persona cuya línea está abierta, normalizada; una a la vez. */
+  const [abierto, setAbierto] = useState('');
 
   const agregarAjuste = (i: number) => {
     const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
     setRecienAjuste(`${copia[i].trabajador}#${copia[i].ajustes.length}`);
     copia[i].ajustes.push({ monto: 0, motivo: '' });
     setPlan(copia);
-  };
-
-  /**
-   * Un ajuste para esa persona, desde su línea de arriba.
-   *
-   * **Existe porque el cliente no encontraba dónde se hacía**, y el caso que
-   * dio es el de todos los días: llegó dos horas tarde y hay que descontarle,
-   * o se le adelantó plata de la caja, o le toca más por feriado o por hora
-   * extra. Estaba —son los mismos ajustes de la tabla de abajo, no una
-   * segunda forma de anotar lo mismo—, pero había que bajar hasta ella
-   * sabiendo de antemano que estaba ahí.
-   */
-  const agregarAjustePara = (nombre: string) => {
-    const i = plan.findIndex((t) => normalizar(t.trabajador) === normalizar(nombre));
-    if (i !== -1) agregarAjuste(i);
   };
 
   const quitarAjuste = (i: number, k: number) => {
@@ -465,145 +441,219 @@ export default function EquipoDialogo({
         <Ayuda tema="asistencia" />
       </p>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
         {lineas.map((l) => (
-          <div key={l.puesto} className="rounded border border-hueso/15 p-3">
+          <div key={l.puesto} className="min-w-0 rounded-xl border border-hueso/15 p-2 sm:p-3">
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-sm font-semibold">{l.puesto}</h3>
-              <span className={`text-xs tabular-nums ${
-                l.faltan > 0 ? 'text-ambar-texto' : 'text-hueso/45'}`}>
+              <h3 className="px-1 text-[15px] font-semibold">{l.puesto}</h3>
+              <span className={`px-1 text-[13px] font-semibold tabular-nums ${
+                l.faltan > 0 ? 'text-ambar-texto' : 'text-hueso/60'}`}>
                 {l.asignados.length}
                 {l.sugeridos > 0 && <> / {l.sugeridos}</>}
               </span>
             </div>
 
             {l.asignados.length > 0 ? (
-              <ul className="mt-2 space-y-1.5">
+              <ul className="mt-2 space-y-2">
                 {l.asignados.map((nombre) => {
-                  const t = plan.find(
+                  const i = plan.findIndex(
                     (x) => normalizar(x.trabajador) === normalizar(nombre));
+                  const t = i === -1 ? undefined : plan[i];
+                  const abierta = abierto === normalizar(nombre);
+                  const total = t ? pagoDe(t) : 0;
                   return (
-                    /* **Tres líneas fijas, ninguna que envuelve.** Con un
-                       nombre corto —"Alexis"— cabía todo junto; con uno
-                       largo —"Cristopher Acevedo"— los botones se iban
-                       solos abajo. Dos personas seguidas se veían distintas
-                       sin que nada hubiera cambiado salvo el largo del
-                       nombre, y lo que se aprieta sin querer es justamente
-                       lo que se movió de lugar. Cada cosa en su línea:
-                       quién es, si vino, y qué se hace con él. */
+                    /* **Una línea por persona: el nombre y Vino / No vino**
+                       (2026-11-05, lo pidió el cliente). Antes eran tres
+                       líneas fijas por persona —quién, si vino, y qué se
+                       hace con él— más una segunda lista abajo con los
+                       montos de la misma gente: con un equipo de quince,
+                       había que hacer scroll hasta perder la orientación.
+
+                       Cerrada, la línea trae **solo lo que se hace en la
+                       mañana**: marcar si vino. Apretando el nombre se abre
+                       la tarjeta completa —jornada, horas extra, ajustes,
+                       propina, total, ficha y sacar—, **una a la vez**,
+                       igual que las fichas de `/equipo`.
+
+                       El nombre se recorta (`truncate`) en vez de envolver,
+                       así que los dos botones quedan siempre en el mismo
+                       lugar, se llame como se llame. */
                     <li key={nombre}
-                      className={`rounded border px-2 py-1.5 text-xs ${
-                        t?.asistencia === VINO.si ? 'border-verde/25 bg-verde/5'
-                        : t?.asistencia === VINO.no ? 'border-rojo/25 bg-rojo/5'
-                        : 'border-hueso/10 bg-panel'}`}>
-                      {/* La primera línea: quién es. */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-sm ${
-                          t?.asistencia === VINO.no ? 'text-hueso/35 line-through'
-                          : t?.asistencia === VINO.si ? 'text-hueso' : 'text-hueso/75'}`}>
-                          {nombre}
-                        </span>
-                        {/* Mientras nadie diga si llegó, el turno no suma
-                            nada: por eso se dice con todas sus letras y no
-                            con un guion, que no pide nada. */}
-                        {!t?.asistencia && (
-                          <span className="text-[10px] uppercase tracking-wide text-ambar-texto/70">
-                            sin marcar
+                      className={`rounded-xl border-2 ${
+                        abierta ? 'border-oro/70'
+                        : t?.asistencia === VINO.si ? 'border-verde/30 bg-verde/5'
+                        : t?.asistencia === VINO.no ? 'border-rojo/30 bg-rojo/5'
+                        : 'border-hueso/15 bg-panel'}`}>
+                      <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
+                        <button type="button" aria-expanded={abierta}
+                          onClick={() => setAbierto(abierta ? '' : normalizar(nombre))}
+                          title={abierta ? 'Cerrar' : `Montos, ajustes y ficha de ${nombre}`}
+                          className="tecla flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5
+                                     rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
+                          <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center
+                                                       justify-center rounded-full border-2
+                                                       text-[14px] font-bold ${abierta
+                            ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
+                            {abierta ? '−' : '+'}
                           </span>
-                        )}
-                      </div>
-
-                      {/* La segunda línea: la pregunta. **Siempre debajo del
-                          nombre, nunca al lado.** Es su propia línea y no un
-                          hueco al final de la del nombre, así que dos
-                          personas se ven iguales se llamen como se llamen.
-                          Marcar quién llegó va **acá mismo**: quien abre el
-                          día a las once de la mañana es la jefa de turno, y
-                          lo que tiene delante es esta ventana. */}
-                      <div className="mt-1.5">
-                        <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
-                          onCambio={(v) => marcar(nombre, v)} />
-                      </div>
-
-                      {/* La tercera línea: lo que se hace con esa persona.
-                          Va separada por un filete para que no se lea como
-                          parte de la pregunta de arriba. */}
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1
-                                      border-t border-hueso/10 pt-1">
-                        {/* **Sumar o restar plata de ese día, acá mismo.**
-                            El caso que lo pidió: llegó dos horas tarde, se
-                            le adelantó de la caja, le toca más por feriado.
-                            Es el mismo ajuste de la tabla de abajo —no una
-                            segunda forma de anotar lo mismo—, y el cursor
-                            se va hasta él. */}
-                        <button onClick={() => agregarAjustePara(nombre)}
-                          className="rounded px-2 py-2 text-xs text-oro hover:bg-oro/10"
-                          title={`Sumar o restar un monto del día de ${nombre}, con su motivo`}>
-                          + Ajuste
+                          <span className="min-w-0">
+                            <span className={`block truncate text-[15px] font-semibold ${
+                              t?.asistencia === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
+                              {nombre}
+                            </span>
+                            {/* Mientras nadie diga si llegó, el turno no
+                                suma nada: se dice con todas sus letras. */}
+                            <span className={`block truncate text-[13px] ${
+                              !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
+                              {!t?.asistencia ? 'sin marcar'
+                                : t.asistencia === VINO.no ? 'no llegó'
+                                : total > 0 ? enPesos(total) : 'vino'}
+                              {!!t?.ajustes.length && (
+                                <> · {t.ajustes.length} {t.ajustes.length === 1 ? 'ajuste' : 'ajustes'}</>
+                              )}
+                            </span>
+                          </span>
                         </button>
-                        {!!t?.ajustes.length && (
-                          /* **El signo va adelante y aparte**: `enPesos()`
-                             de un negativo da "$-18.000", que se lee como
-                             un error de tipeo justo donde importa saber si
-                             a esa persona se le suma o se le resta. */
-                          <span className="min-w-0 text-[11px] tabular-nums text-hueso/45">
-                            {t.ajustes.length > 1 && <>{t.ajustes.length} ajustes · </>}
-                            {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
-                            {enPesos(Math.abs(totalAjustes(t.ajustes)))}
-                            {t.ajustes.length === 1 && t.ajustes[0].motivo
-                              && <span className="text-hueso/35"> · {t.ajustes[0].motivo}</span>}
-                          </span>
-                        )}
-                        <span className="flex-1" />
-                        {/* **Ficha y Sacar van juntos y no se separan.**
-                            Con `flex-wrap` sueltos, un nombre largo o un
-                            resumen de ajustes dejaba a *Sacar* solo en una
-                            tercera línea. Agrupados, bajan los dos o no
-                            baja ninguno. */}
-                        <span className="flex shrink-0 items-center gap-1">
-                      {/* **La ficha, desde acá.** Lo que no cambia de un día
-                          a otro —teléfono, sueldo habitual, cuenta
-                          bancaria— vivía solo en `/equipo`, y quien arma un
-                          sábado no pasa por ahí. */}
-                      <button
-                        // Si no tiene ficha —pasa al renombrar a alguien que
-                        // ya tenía turnos— se abre para crearla con su
-                        // nombre, en vez de con el formulario en blanco.
-                        onClick={() => setFicha({
-                          t: gente.find(
-                            (x) => normalizar(x.nombre) === normalizar(nombre)),
-                          nombre
-                        })}
-                        className="rounded px-3 py-2.5 text-xs text-hueso/45
-                                   hover:bg-hueso/5 hover:text-oro"
-                        title={`Teléfono, pago y datos bancarios de ${nombre}`}>
-                        Ficha
-                      </button>
-                      {/* **Dice lo que hace y pregunta antes.** Era una ✕ de
-                          diez píxeles que borraba sin avisar: el único botón
-                          de esta ventana que deshace algo, y el más fácil de
-                          apretar sin querer con el dedo. */}
-                      <button
-                        onClick={() => {
-                          if (!confirm(`¿Sacar a ${nombre} de este día?\n\n`
-                                     + 'Se va de la planificación de esta fecha. '
-                                     + 'Su ficha y sus otros días no se tocan.')) return;
-                          setPlan(plan.filter(
-                            (x) => normalizar(x.trabajador) !== normalizar(nombre)));
-                        }}
-                        className="rounded px-3 py-2.5 text-xs text-hueso/45
-                                   hover:bg-rojo/10 hover:text-rojo-texto"
-                        title={`Sacar a ${nombre} de este día`}>
-                        Sacar
-                      </button>
-                      </span>
+                        <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
+                          onCambio={(v) => marcar(nombre, v)} compacto />
                       </div>
+
+                      {abierta && t && (
+                        <div className="space-y-3 border-t-2 border-hueso/10 px-3 pb-3 pt-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block">
+                              <span className={ROTULO}>Jornada</span>
+                              {/* A un contratado no se le paga jornada: su
+                                  sueldo no sale de esta caja. */}
+                              {esContratado(t.modalidad) ? (
+                                <span className="block py-2 text-[14px] text-hueso/60">
+                                  contratado · no aplica
+                                </span>
+                              ) : (
+                                <input type="number" min={0} step={1000} className={`${ENTRADA_GRANDE} w-full`}
+                                  value={t.pagoJornada || ''} placeholder="—"
+                                  aria-label={`Jornada de ${t.trabajador}`}
+                                  onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
+                              )}
+                            </label>
+                            <label className="block">
+                              <span className={ROTULO}>Horas extra</span>
+                              <input type="number" min={0} step={1} className={`${ENTRADA_GRANDE} w-full`}
+                                value={t.horasExtra || ''} placeholder="0"
+                                aria-label={`Horas extra de ${t.trabajador}`}
+                                onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
+                            </label>
+                          </div>
+
+                          {/* **Sumar o restar plata de ese día.** Llegó
+                              tarde, se le adelantó de la caja, le toca más
+                              por feriado: va como ajuste con su motivo, no
+                              editando la jornada, para que quede el porqué. */}
+                          <div>
+                            <span className={ROTULO}>Ajustes</span>
+                            {t.ajustes.map((a, k) => (
+                              <div key={k} className="mb-2 flex items-center gap-1.5">
+                                <input type="number" step={1000}
+                                  className={`${ENTRADA_GRANDE} w-24 shrink-0`}
+                                  value={a.monto || ''} placeholder="−5000"
+                                  aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
+                                  /* El que se acaba de agregar se trae el
+                                     cursor; la llave se limpia para que no
+                                     vuelva a saltar en cada dibujado. */
+                                  ref={(el) => {
+                                    if (!el || recienAjuste !== `${t.trabajador}#${k}`) return;
+                                    setRecienAjuste('');
+                                    el.focus();
+                                  }}
+                                  onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
+                                <input type="text" className={`${ENTRADA_GRANDE} w-full min-w-0 flex-1`}
+                                  value={a.motivo} placeholder="por qué"
+                                  aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
+                                  onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
+                                <button type="button" onClick={() => quitarAjuste(i, k)}
+                                  className="boton shrink-0 hover:border-rojo/60 hover:text-rojo-texto"
+                                  aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
+                                  title="Quitar este ajuste">✕</button>
+                              </div>
+                            ))}
+                            <button type="button" onClick={() => agregarAjuste(i)}
+                              className="boton border-oro/60 text-oro">
+                              + {t.ajustes.length ? 'Otro ajuste' : 'Ajuste'}
+                            </button>
+                            {t.ajustes.length > 1 && (
+                              /* El signo va adelante y aparte: "$-18.000" se
+                                 lee como un error de tipeo. */
+                              <span className="ml-2 text-[13px] tabular-nums text-hueso/65">
+                                suman {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
+                                {enPesos(Math.abs(totalAjustes(t.ajustes)))}
+                              </span>
+                            )}
+                          </div>
+
+                          <dl className="grid grid-cols-2 gap-3 rounded-lg bg-hueso/[0.04]
+                                         px-3 py-2 text-[14px] tabular-nums">
+                            <div>
+                              <dt className={ROTULO}>Propina</dt>
+                              <dd>
+                                {repartida[i]?.propina
+                                  ? enPesos(repartida[i].propina)
+                                  : t.asistencia === VINO.si && !participa(t.trabajador)
+                                    ? <span className="text-hueso/60">no participa</span>
+                                    : <span className="text-hueso/45">—</span>}
+                              </dd>
+                            </div>
+                            <div className="text-right">
+                              <dt className={ROTULO}>Total del día</dt>
+                              <dd>
+                                {t.asistencia === VINO.si
+                                  ? <strong className="text-[17px]">{enPesos(total)}</strong>
+                                  : <span className="text-hueso/60">
+                                      {t.asistencia === VINO.no ? 'no llegó' : 'falta marcar'}
+                                    </span>}
+                              </dd>
+                            </div>
+                          </dl>
+
+                          <div className="flex items-center gap-2">
+                            {/* La ficha, desde acá: teléfono, sueldo
+                                habitual y cuenta. Si no tiene ficha —pasa al
+                                renombrar a alguien con turnos— se abre para
+                                crearla con su nombre. */}
+                            <button type="button"
+                              onClick={() => setFicha({
+                                t: gente.find(
+                                  (x) => normalizar(x.nombre) === normalizar(nombre)),
+                                nombre
+                              })}
+                              className="boton flex-1 justify-center"
+                              title={`Teléfono, pago y datos bancarios de ${nombre}`}>
+                              Ficha
+                            </button>
+                            {/* Dice lo que hace y pregunta antes: es lo único
+                                de esta ventana que deshace algo. */}
+                            <button type="button"
+                              onClick={() => {
+                                if (!confirm(`¿Sacar a ${nombre} de este día?\n\n`
+                                           + 'Se va de la planificación de esta fecha. '
+                                           + 'Su ficha y sus otros días no se tocan.')) return;
+                                setAbierto('');
+                                setPlan(plan.filter(
+                                  (x) => normalizar(x.trabajador) !== normalizar(nombre)));
+                              }}
+                              className="boton flex-1 justify-center hover:border-rojo/60
+                                         hover:text-rojo-texto"
+                              title={`Sacar a ${nombre} de este día`}>
+                              Sacar del día
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </li>
                   );
                 })}
               </ul>
             ) : (
-              <p className="mt-2 text-xs text-hueso/40">Nadie asignado.</p>
+              <p className="mt-2 text-[13px] text-hueso/60">Nadie asignado.</p>
             )}
 
             {/* El selector vuelve a "" después de elegir, así se puede
@@ -625,8 +675,8 @@ export default function EquipoDialogo({
                   ajustes: [], propina: 0
                 }]);
               }}
-              className="mt-3 w-full rounded border border-hueso/20 bg-tinta px-2 py-1
-                         text-xs focus:border-oro focus:outline-none disabled:opacity-40">
+              className="mt-2 min-h-[40px] w-full rounded-lg border-2 border-hueso/20 bg-tinta px-2
+                         text-[14px] focus:border-oro focus:outline-none disabled:opacity-40">
               <option value="">
                 {libres.length === 0 ? 'No queda nadie libre' : '+ Agregar…'}
               </option>
@@ -641,8 +691,8 @@ export default function EquipoDialogo({
                 en que la lista está vacía: sin esto hay que irse a /equipo,
                 agregarlo, volver y empezar la planificación de nuevo. */}
             <button onClick={() => setFicha({ puesto: l.puesto })}
-              className="mt-2 w-full rounded border border-dashed border-hueso/20
-                         px-2 py-1 text-xs text-hueso/55 hover:border-oro hover:text-oro">
+              className="tecla mt-2 min-h-[40px] w-full rounded-lg border-2 border-dashed border-hueso/25
+                         px-2 text-[14px] font-semibold text-hueso/70 hover:border-oro hover:text-oro">
               + Nuevo trabajador
             </button>
           </div>
@@ -691,153 +741,11 @@ export default function EquipoDialogo({
           nada que cerrar y sería una tabla vacía pidiendo atención. */}
       {plan.length > 0 && (
         <div className="mt-6 border-t border-hueso/10 pt-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-hueso/70">
-            Lo que se paga este día
-          </h3>
-          <p className="mt-1 text-xs text-hueso/50">
-            Se llena a quien <strong>vino</strong>; a quien no, el panel no le
-            paga nada. Si hay una diferencia por un acuerdo aparte
-            —un montaje, un atraso, un adelanto, un feriado— va en un{' '}
-            <strong>ajuste con su motivo</strong> y no editando la jornada:
-            los dos dan el mismo total, pero solo uno deja escrito el porqué.
-            Pueden ser varios, en más y en menos, y también se agregan desde
-            el <strong>+ Ajuste</strong> de cada persona, arriba.
-          </p>
-
-          {/* **Una tarjeta por persona en el teléfono, una fila en el
-              escritorio.** Eran seis columnas dentro de una tabla que se
-              desplazaba de lado: en un teléfono se veían dos, y las dos sin
-              su encabezado, porque el encabezado se había ido para la
-              izquierda. O sea que para saber si esa caja era la jornada o
-              las horas extra había que acordarse — justo acá, donde lo que
-              se escribe es lo que se le paga a alguien.
-
-              El encabezado se muestra solo donde cabe entero (`md:`), y
-              abajo cada campo lleva su rótulo encima mientras la pantalla
-              sea angosta. Es el mismo criterio que las fichas de `/equipo`:
-              con tarjetas, una fila de encabezados allá arriba obligaría a
-              contar columnas. */}
-          <div className="mt-3">
-            <div className="hidden border-b border-hueso/10 pb-2 text-xs uppercase
-                            tracking-wide text-hueso/50
-                            md:grid md:grid-cols-[11rem_6rem_5rem_1fr_6rem_6rem] md:gap-x-3">
-              <span>Quién</span>
-              <span>Jornada</span>
-              <span>Hs extra</span>
-              <span>Ajustes</span>
-              <span className="text-right">Propina</span>
-              <span className="text-right">Total</span>
-            </div>
-
-            <div className="space-y-3 md:space-y-0">
-              {plan.map((t, i) => (
-                <div key={t.trabajador}
-                  className="rounded border border-hueso/15 p-3 text-sm
-                             md:grid md:grid-cols-[11rem_6rem_5rem_1fr_6rem_6rem]
-                             md:items-start md:gap-x-3 md:rounded-none md:border-0
-                             md:border-b md:border-hueso/5 md:p-0 md:py-2">
-                  <div>
-                    <span className={t.asistencia === VINO.no
-                      ? 'text-hueso/35 line-through' : ''}>{t.trabajador}</span>
-                    <span className="block text-xs text-hueso/40">
-                      {t.puesto}
-                      {t.asistencia === VINO.sinMarcar && (
-                        <span className="text-ambar-texto"> · sin marcar</span>
-                      )}
-                      {esContratado(t.modalidad) && <> · contratado</>}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 md:mt-0">
-                    <Rotulo>Jornada</Rotulo>
-                    {/* A un contratado no se le paga jornada: su sueldo no
-                        sale de esta caja. Se dice, en vez de mostrar un campo
-                        vacío que parece un dato que falta. */}
-                    {esContratado(t.modalidad) ? (
-                      <span className="text-xs text-hueso/45">no aplica</span>
-                    ) : (
-                      <input type="number" min={0} step={1000} className={ENTRADA}
-                        value={t.pagoJornada || ''} placeholder="—"
-                        aria-label={`Jornada de ${t.trabajador}`}
-                        onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
-                    )}
-                  </div>
-
-                  <div className="mt-2 md:mt-0">
-                    <Rotulo>Horas extra</Rotulo>
-                    <input type="number" min={0} step={1} className={ENTRADA}
-                      value={t.horasExtra || ''} placeholder="0"
-                      aria-label={`Horas extra de ${t.trabajador}`}
-                      onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
-                  </div>
-
-                  <div className="mt-2 md:mt-0">
-                    <Rotulo>Ajustes</Rotulo>
-                    {t.ajustes.map((a, k) => (
-                      <div key={k} className="mb-1 flex items-center gap-1">
-                        <input type="number" step={1000} className={`${ENTRADA} w-24`}
-                          value={a.monto || ''} placeholder="0"
-                          aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
-                          /* El que se acaba de agregar desde la línea de
-                             arriba se trae el cursor y la pantalla: el campo
-                             está más abajo, y sin esto el botón parecería no
-                             haber hecho nada. Se limpia la llave para que no
-                             vuelva a saltar en cada dibujado. */
-                          ref={(el) => {
-                            if (!el || recienAjuste !== `${t.trabajador}#${k}`) return;
-                            setRecienAjuste('');
-                            el.scrollIntoView({ block: 'center' });
-                            el.focus();
-                          }}
-                          onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
-                        <input type="text" className={ENTRADA} value={a.motivo}
-                          placeholder="por qué"
-                          aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
-                          onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
-                        <button onClick={() => quitarAjuste(i, k)}
-                          className="px-2 py-1.5 text-hueso/40 hover:text-rojo-texto"
-                          aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
-                          title="Quitar este ajuste">✕</button>
-                      </div>
-                    ))}
-                    <button onClick={() => agregarAjuste(i)}
-                      className="text-xs text-oro hover:underline">
-                      + {t.ajustes.length ? 'Otro ajuste' : 'Agregar ajuste'}
-                    </button>
-                    {t.ajustes.length > 1 && (
-                      <span className="ml-2 text-xs tabular-nums text-hueso/45">
-                        suman {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
-                        {enPesos(Math.abs(totalAjustes(t.ajustes)))}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-2 flex items-baseline justify-between
-                                  tabular-nums text-hueso/70 md:mt-0 md:block md:text-right">
-                    <Rotulo>Propina</Rotulo>
-                    <span>
-                      {repartida[i]?.propina
-                        ? enPesos(repartida[i].propina)
-                        : t.asistencia === VINO.si && !participa(t.trabajador)
-                          ? <span className="text-xs text-hueso/35">no participa</span>
-                          : <span className="text-hueso/25">—</span>}
-                    </span>
-                  </div>
-
-                  <div className="mt-1 flex items-baseline justify-between
-                                  tabular-nums md:mt-0 md:block md:text-right">
-                    <Rotulo>Total</Rotulo>
-                    <span>
-                      {t.asistencia === VINO.si
-                        ? <strong>{enPesos(pagoDe(t))}</strong>
-                        : <span className="text-hueso/35">—</span>}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          {/* **Los montos de cada persona viven en su línea**, arriba
+              (2026-11-05): se abre con el `+` de su nombre. Antes iban en
+              una segunda lista con la misma gente, que alargaba la ventana
+              al doble. Acá queda lo único que es del día y no de una
+              persona: la propina total. */}
           {/* La propina se escribe UNA vez, como total del día, y el panel
               la reparte en partes iguales entre quienes vinieron y
               participan. Lo que se guarda es la parte de cada uno. */}

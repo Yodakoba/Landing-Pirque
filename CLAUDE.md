@@ -4866,6 +4866,38 @@ va solo a los 3 segundos. Las pantallas no lo dibujan, llaman `avisar('…')`, y
 portapapeles. Lo usan los tres links que se copian: el personal, el de la
 planilla semanal y el de un presupuesto.
 
+### Las listas largas se achican en líneas que se abren (2026-11-05)
+
+Lo pidió el cliente como regla para todo el panel: *"siempre donde
+alineamos muchos datos hacia abajo, que los compactamos de forma
+inteligente… acortar cuánto tengo que hacer scroll hasta que pierdo la
+orientación"*. Es el mismo patrón de las fichas de `/equipo` y de las líneas
+del informe: **cerrada, una línea con lo que se hace siempre; apretándola, lo
+demás. Una abierta a la vez.**
+
+| Dónde | Cerrada | Abierta |
+|---|---|---|
+| **Ventana del día** (`/turnos` y *Equipo* del calendario) | nombre, cuánto lleva, y **Vino / No vino** | jornada, horas extra, ajustes con su motivo, propina, total, *Ficha* y *Sacar del día* |
+| **Ventana de actividades** (`/extras`) | quién, qué hace, y **Vino / No vino** | actividad, monto, ajuste y motivo, total, *Ficha* y *Sacar del día* |
+| **Calendario de la portada** | desde la **tercera semana**, cada día es un campo chico: fecha, estado, barra y gente | apretar un día —o *+ Abrir la semana*— abre la semana entera con sus tarjetas de siempre |
+
+- **En la ventana del día desapareció la segunda lista**, la de *"Lo que se
+  paga este día"*, que repetía a la misma gente con sus montos y doblaba el
+  largo de la ventana. Los montos viven ahora en la línea de cada persona;
+  abajo quedó solo la propina del día, que es del día y no de alguien.
+- **La línea cerrada no envuelve**: el nombre se recorta (`truncate`) y
+  *Vino / No vino* queda siempre en el mismo lugar, se llame como se llame
+  —la lección de `flex-wrap` de más arriba—. En un teléfono los dos botones
+  van con menos aire a los lados (`compacto` en `Asistencia`), sin perder
+  alto.
+- **Las dos primeras semanas del calendario van siempre abiertas**: la que
+  corre y la que viene, que son las que se trabajan. Las abiertas a mano se
+  recuerdan solo mientras dura la página.
+- **Las grillas de la ventana llevan `grid-cols-1`** y no la columna
+  implícita: sin eso, la línea con los dos botones agrandaba la caja del
+  puesto por fuera de la ventana en un teléfono (la misma trampa de la
+  tarjeta del calendario).
+
 ### El botón del panel vive en `globals.css`, no en cada pantalla
 
 `.boton` —borde, **36px de alto y 13px**— y `.boton-relleno`, el dorado.

@@ -23,12 +23,15 @@ import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import FichaColaborador from './FichaColaborador';
 import Asistencia from './Asistencia';
+
+/** El rótulo encima de cada campo de la línea abierta. */
+const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
+/** Los campos de la línea abierta: 40px, para el dedo. */
+const ENTRADA_GRANDE =
+  'rounded-lg border-2 border-hueso/20 bg-tinta px-2.5 py-1.5 text-[15px] ' +
+  'focus:border-oro focus:outline-none';
 import { AvisoCierre, PieCorreccion } from './Correccion';
 import type { Cierre } from '@/lib/cierres';
-
-const ENTRADA =
-  'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
-  'focus:border-oro focus:outline-none';
 
 export default function ExtrasDialogo({
   fecha, extras, colaboradores, verSueldos = false,
@@ -76,6 +79,8 @@ export default function ExtrasDialogo({
   const [ficha, setFicha] = useState<
     null | { c?: Colaborador; nombre?: string }>(null);
   const [error, setError] = useState('');
+  /** El colaborador cuya línea está abierta, normalizado; uno a la vez. */
+  const [abierto, setAbierto] = useState('');
 
   const puestas = new Set(lista.map((e) => normalizar(e.colaborador)));
   // En orden alfabético, igual que los trabajadores: dos pantallas que
@@ -172,103 +177,132 @@ export default function ExtrasDialogo({
           Todavía no hay actividades este día.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          {/* Cada columna declara su ancho y la tabla no baja de su mínimo:
-              si no cabe, se desplaza de lado dentro de la ventana. Con
-              `table-fixed` y anchos que suman más de lo que hay, el navegador
-              los achica a todos y la última columna queda cortada — que es
-              justo lo que pasaba acá, con el motivo en una caja de dos letras
-              y el total partido al medio. */}
-          <table className="w-full min-w-[58rem] table-fixed text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
-              <tr className="border-b border-hueso/10">
-                <th className="w-40 py-2 pr-3">Quién</th>
-                <th className="w-36 py-2 pr-3">Actividad</th>
-                <th className="w-44 py-2 pr-3">Vino</th>
-                <th className="w-24 py-2 pr-3">Monto</th>
-                <th className="w-24 py-2 pr-3">Ajuste</th>
-                <th className="py-2 pr-3">Motivo</th>
-                <th className="w-24 py-2 pr-3 text-right">Total</th>
-                <th className="w-20 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((e, i) => (
-                <tr key={e.colaborador} className="border-b border-hueso/5">
-                  <td className="py-2 pr-3">
-                    <span className="block">{e.colaborador}</span>
-                    {/* **La ficha, desde acá.** Lo que no cambia de un día a
-                        otro —teléfono, correo, cuenta bancaria— vivía solo
-                        en `/extras`, abajo del calendario, y quien agenda un
-                        jinete no pasa por ahí: la ficha quedaba a medias y
-                        la planilla del pago salía sin cuentas. */}
-                    <button
-                      onClick={() => {
-                        const c = gente.find(
-                          (x) => normalizar(x.nombre) === normalizar(e.colaborador));
-                        setFicha(c ? { c } : { nombre: e.colaborador });
-                      }}
-                      className="text-[11px] text-hueso/45 hover:text-oro"
-                      title={`Teléfono, correo y datos de pago de ${e.colaborador}`}>
-                      ficha
-                    </button>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input type="text" list="actividades-conocidas"
-                      value={e.actividad} className={ENTRADA}
-                      aria-label={`Qué hace ${e.colaborador}`}
-                      placeholder="show ecuestre…"
-                      onChange={(ev) => cambiar(i, 'actividad', ev.target.value)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    {/* Los mismos dos botones que el equipo: dos pantallas
-                        que preguntan lo mismo tienen que preguntarlo igual. */}
-                    <Asistencia quien={e.colaborador} valor={e.estado}
-                      onCambio={(v) => cambiar(i, 'estado', v)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input type="number" min={0} step={1000} className={ENTRADA}
-                      value={e.monto || ''} placeholder="—"
-                      aria-label={`Cuánto cobra ${e.colaborador}`}
-                      onChange={(ev) => cambiar(i, 'monto', ev.target.value)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input type="number" step={1000} className={ENTRADA}
-                      value={e.ajuste || ''} placeholder="0"
-                      aria-label={`Ajuste para ${e.colaborador}`}
-                      onChange={(ev) => cambiar(i, 'ajuste', ev.target.value)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input type="text" className={ENTRADA} value={e.motivo}
-                      aria-label={`Motivo del ajuste de ${e.colaborador}`}
-                      placeholder={e.ajuste ? 'por qué' : ''}
-                      onChange={(ev) => cambiar(i, 'motivo', ev.target.value)} />
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {e.estado === VINO.si
-                      ? <strong>{enPesos(costoDeExtra(e))}</strong>
-                      : <span className="text-hueso/35">—</span>}
-                  </td>
-                  <td className="py-2 text-right">
-                    {/* Con palabras y preguntando, igual que en el equipo. */}
-                    <button
-                      onClick={() => {
-                        if (!confirm(`¿Sacar a ${e.colaborador} de este día?\n\n`
-                                   + 'Se va de las actividades de esta fecha. '
-                                   + 'Su ficha y sus otros días no se tocan.')) return;
-                        setLista(lista.filter((_, k) => k !== i));
-                      }}
-                      className="rounded px-3 py-2.5 text-xs text-hueso/45
-                                 hover:bg-rojo/10 hover:text-rojo-texto"
-                      title={`Sacar a ${e.colaborador} de este día`}>
-                      Sacar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        /* **Una línea por persona: quién, qué hace, y Vino / No vino**
+           (2026-11-05, lo pidió el cliente, igual que en el equipo). Era una
+           tabla de ocho columnas que en un teléfono se desplazaba de lado;
+           ahora la línea cerrada es lo que se hace en el día —marcar si
+           vino— y apretando el nombre se abre lo demás: actividad, monto,
+           ajuste con su motivo, total, ficha y sacar. Una a la vez. */
+        <ul className="mt-4 space-y-2">
+          {lista.map((e, i) => {
+            const abierta = abierto === normalizar(e.colaborador);
+            return (
+              <li key={e.colaborador}
+                className={`rounded-xl border-2 ${
+                  abierta ? 'border-oro/70'
+                  : e.estado === VINO.si ? 'border-verde/30 bg-verde/5'
+                  : e.estado === VINO.no ? 'border-rojo/30 bg-rojo/5'
+                  : 'border-hueso/15 bg-panel'}`}>
+                <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
+                  <button type="button" aria-expanded={abierta}
+                    onClick={() => setAbierto(abierta ? '' : normalizar(e.colaborador))}
+                    title={abierta ? 'Cerrar' : `Actividad, monto y ficha de ${e.colaborador}`}
+                    className="tecla flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5
+                               rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
+                    <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center
+                                                 justify-center rounded-full border-2
+                                                 text-[14px] font-bold ${abierta
+                      ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
+                      {abierta ? '−' : '+'}
+                    </span>
+                    <span className="min-w-0">
+                      <span className={`block truncate text-[15px] font-semibold ${
+                        e.estado === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
+                        {e.colaborador}
+                      </span>
+                      <span className={`block truncate text-[13px] ${
+                        !e.estado ? 'text-ambar-texto' : 'text-hueso/65'}`}>
+                        {e.actividad || 'sin actividad'}
+                        {' · '}
+                        {!e.estado ? 'sin confirmar'
+                          : e.estado === VINO.no ? 'no llegó'
+                          : enPesos(costoDeExtra(e))}
+                      </span>
+                    </span>
+                  </button>
+                  {/* Los mismos dos botones que el equipo: dos pantallas
+                      que preguntan lo mismo tienen que preguntarlo igual. */}
+                  <Asistencia quien={e.colaborador} valor={e.estado}
+                    onCambio={(v) => cambiar(i, 'estado', v)} compacto />
+                </div>
+
+                {abierta && (
+                  <div className="space-y-3 border-t-2 border-hueso/10 px-3 pb-3 pt-3">
+                    <label className="block">
+                      <span className={ROTULO}>Actividad</span>
+                      <input type="text" list="actividades-conocidas"
+                        value={e.actividad} className={`${ENTRADA_GRANDE} w-full`}
+                        aria-label={`Qué hace ${e.colaborador}`}
+                        placeholder="show ecuestre…"
+                        onChange={(ev) => cambiar(i, 'actividad', ev.target.value)} />
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="block">
+                        <span className={ROTULO}>Monto</span>
+                        <input type="number" min={0} step={1000}
+                          className={`${ENTRADA_GRANDE} w-full`}
+                          value={e.monto || ''} placeholder="—"
+                          aria-label={`Cuánto cobra ${e.colaborador}`}
+                          onChange={(ev) => cambiar(i, 'monto', ev.target.value)} />
+                      </label>
+                      <label className="block">
+                        <span className={ROTULO}>Ajuste</span>
+                        <input type="number" step={1000}
+                          className={`${ENTRADA_GRANDE} w-full`}
+                          value={e.ajuste || ''} placeholder="0"
+                          aria-label={`Ajuste para ${e.colaborador}`}
+                          onChange={(ev) => cambiar(i, 'ajuste', ev.target.value)} />
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className={ROTULO}>Motivo del ajuste</span>
+                      <input type="text" className={`${ENTRADA_GRANDE} w-full`}
+                        value={e.motivo}
+                        aria-label={`Motivo del ajuste de ${e.colaborador}`}
+                        placeholder={e.ajuste ? 'por qué' : ''}
+                        onChange={(ev) => cambiar(i, 'motivo', ev.target.value)} />
+                    </label>
+                    <div className="flex items-baseline justify-between rounded-lg
+                                    bg-hueso/[0.04] px-3 py-2 tabular-nums">
+                      <span className={ROTULO}>Total del día</span>
+                      {e.estado === VINO.si
+                        ? <strong className="text-[17px]">{enPesos(costoDeExtra(e))}</strong>
+                        : <span className="text-[14px] text-hueso/60">
+                            {e.estado === VINO.no ? 'no llegó' : 'falta confirmar'}
+                          </span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* La ficha, desde acá: teléfono, correo y cuenta. */}
+                      <button type="button"
+                        onClick={() => {
+                          const c = gente.find(
+                            (x) => normalizar(x.nombre) === normalizar(e.colaborador));
+                          setFicha(c ? { c } : { nombre: e.colaborador });
+                        }}
+                        className="boton flex-1 justify-center"
+                        title={`Teléfono, correo y datos de pago de ${e.colaborador}`}>
+                        Ficha
+                      </button>
+                      <button type="button"
+                        onClick={() => {
+                          if (!confirm(`¿Sacar a ${e.colaborador} de este día?\n\n`
+                                     + 'Se va de las actividades de esta fecha. '
+                                     + 'Su ficha y sus otros días no se tocan.')) return;
+                          setAbierto('');
+                          setLista(lista.filter((_, k) => k !== i));
+                        }}
+                        className="boton flex-1 justify-center hover:border-rojo/60
+                                   hover:text-rojo-texto"
+                        title={`Sacar a ${e.colaborador} de este día`}>
+                        Sacar del día
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       {/* Las actividades que alguien ya hace, para no escribirlas distinto
