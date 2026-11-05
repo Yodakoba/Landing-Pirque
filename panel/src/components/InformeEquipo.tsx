@@ -1162,12 +1162,18 @@ export default function InformeEquipo() {
       {sinMarcar > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
           <p className="text-sm font-semibold text-ambar-texto">
-            Hay {sinMarcar} turno{sinMarcar === 1 ? '' : 's'} sin pasar lista
+            Hay {sinMarcar} turno{sinMarcar === 1 ? '' : 's'} sin cerrar
             en este periodo.
           </p>
+          {/* **Se dice con las palabras de la pantalla** (2026-11-05, lo
+              pidió el cliente): el paso se llama *cerrar el día*, no "pasar
+              lista". Primero qué pasa, después por qué y dónde se arregla. */}
           <p className="mt-1 text-sm text-hueso/70">
-            Esos no suman nada, así que el total de abajo está incompleto
-            mientras no se cierren. Se pasan desde la página de cada día.
+            Falta que el jefe de turno marque si cada persona vino o no y
+            cierre el día en{' '}
+            <a href="/turnos" className="text-oro hover:underline">Turnos</a>.
+            Mientras tanto esos turnos no suman nada, así que el total de
+            abajo está incompleto.
           </p>
         </div>
       )}
@@ -1179,7 +1185,7 @@ export default function InformeEquipo() {
             sin confirmar en este periodo.
           </p>
           <p className="mt-1 text-sm text-hueso/70">
-            Igual que un turno sin pasar lista, no suman: mientras nadie diga
+            Igual que un turno sin cerrar, no suman: mientras nadie diga
             si el jinete o la pintacaritas llegó, el total está incompleto. Se
             confirma en{' '}
             <a href="/extras" className="text-oro hover:underline">

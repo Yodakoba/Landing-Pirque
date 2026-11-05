@@ -4898,6 +4898,21 @@ demás. Una abierta a la vez.**
   puesto por fuera de la ventana en un teléfono (la misma trampa de la
   tarjeta del calendario).
 
+### Los avisos hablan con las palabras de la pantalla (2026-11-05)
+
+Lo notó el cliente en el aviso del informe: decía *"turnos sin pasar
+lista"* cuando en el panel el paso se llama **cerrar el día**, y además
+mandaba a "la página de cada día", donde ya no se marca nada. *"Pasar
+lista"* fue el nombre de una ventana que se jubiló el 2026-10-23 y quedó
+viviendo en los textos.
+
+La regla: **un aviso usa el nombre del botón que lo resuelve**, y va en ese
+orden —primero qué pasa (*"Hay 4 turnos sin cerrar"*), después por qué y
+dónde se arregla (*"falta que el jefe de turno marque si cada persona vino
+y cierre el día en Turnos"*)—. Se corrigieron los cuatro textos visibles
+que decían "pasar lista"; en los comentarios del código sigue apareciendo
+como nombre histórico, y ahí no confunde a nadie.
+
 ### Agregar a alguien se busca escribiendo (2026-11-05)
 
 Lo pidió el cliente: *"con tantos trabajadores ya sería útil que cuando

@@ -269,7 +269,7 @@ export default function CalendarioExtras() {
 
       <p className="mt-4 max-w-2xl text-xs text-hueso/50">
         <strong>Una actividad sin confirmar no suma</strong>, igual que un
-        turno sin pasar lista: agendar no es pagar. Los colores del día son
+        turno sin cerrar: agendar no es pagar. Los colores del día son
         los del calendario —cuánta gente viene, si está cerrado o es privado—
         porque contratar un castillo para un día sin nadie es justo lo que
         conviene ver antes de hacerlo.

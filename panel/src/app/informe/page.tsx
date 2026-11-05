@@ -20,8 +20,8 @@ export default async function Pagina() {
         <p className="font-semibold text-hueso/85">Esta parte no es tuya.</p>
         <p className="mt-1 text-sm text-hueso/70">
           El informe del equipo lo ven el administrador, el encargado y quien
-          hace los pagos. Los montos de un día sí están en la página de ese
-          día, al pasar lista.
+          hace los pagos. Los montos de un día se ven al abrir ese día en
+          Turnos.
         </p>
       </div>
     );
