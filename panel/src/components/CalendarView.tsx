@@ -357,16 +357,10 @@ export default function CalendarView() {
                   esta semana
                 </span>
               )}
-              {/* **Cuánta gente y cuántas reservas, y solo lo que se sale de
-                  lo normal** (2026-11-05). Antes decía "2 públicos", que
-                  contaba días y no se entendía. Ver `lineaDeSemana()`. */}
-              <span className="text-[13px] text-hueso/60">
-                <strong className="tabular-nums text-hueso/85">{resumen.personas}</strong>
-                {resumen.personas === 1 ? ' persona' : ' personas'}
-                {' · '}
-                <strong className="tabular-nums text-hueso/85">{resumen.reservas}</strong>
-                {resumen.reservas === 1 ? ' reserva' : ' reservas'}
-              </span>
+              {/* **Solo lo que se sale de lo normal** (2026-11-05). El conteo
+                  de personas y reservas se sacó: ya se ve en las tarjetas de
+                  abajo, y la línea sirve más para avisar. Ver
+                  `lineaDeSemana()`. */}
               {resumen.avisos.map((a) => (
                 <span key={a.texto}
                   className={`inline-flex items-center rounded-full border px-2 py-0.5
