@@ -1,0 +1,157 @@
+/* ===========================================================
+   Vista diurna — segunda opción de colores (2026-11-05)
+   -----------------------------------------------------------
+   Lo pidió el cliente para presentarla: un sitio más limpio, de
+   restaurante familiar y de día, en vez del negro de siempre.
+   **El negro sigue siendo el que abre**; esto se elige con el
+   botón Diurno/Nocturno de la barra y lo recuerda
+   assets/js/tema.js.
+
+   Vale para las 8 páginas: el sitio público (site.css) y los dos
+   landings (CSS inline). Funciona porque los tres usan las mismas
+   variables —--bg, --ink, --gold, --line…—: acá solo se les
+   cambia el valor. Lo poco que estaba escrito a mano en hex se
+   corrige abajo, regla por regla.
+
+   Sobre una foto el texto sigue claro: el héroe, las franjas a
+   sangre y las tarjetas de experiencias vuelven a las variables
+   oscuras, porque blanco sobre foto es lo que se lee.
+   =========================================================== */
+
+/* ---------- el botón (se ve en los dos temas) ---------- */
+.tema-btn{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  margin-left:10px; padding:5px 11px;
+  border:1px solid var(--line); border-radius:999px;
+  background: rgba(255,255,255,0.03); color: var(--ink-dim);
+  font: 600 0.7rem/1 var(--sans, sans-serif); letter-spacing:0.06em;
+  text-transform:uppercase; cursor:pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.tema-btn[hidden]{ display:none !important; }
+.tema-btn:hover{ color: var(--ink); border-color: var(--gold); }
+.tema-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+/* Alto y ancho explícitos: un <svg> inline sin medidas cae a 300x150. */
+.tema-btn svg{ width:14px; height:14px; flex:none; display:block; }
+.tema-btn .ic-luna, .tema-btn .t-noche{ display:none; }
+html[data-tema="dia"] .tema-btn .ic-sol,
+html[data-tema="dia"] .tema-btn .t-dia{ display:none; }
+html[data-tema="dia"] .tema-btn .ic-luna{ display:block; }
+html[data-tema="dia"] .tema-btn .t-noche{ display:inline; }
+
+@media (max-width: 920px){
+  .tema-btn{ min-height:44px; padding:7px 12px; margin-left:0; margin-right:10px; }
+}
+/* En el teléfono más angosto queda el ícono; el texto se oculta a la
+   vista pero no se borra, así que el botón conserva su nombre. */
+@media (max-width: 440px){
+  .tema-btn{ padding:7px 11px; }
+  .tema-btn .t-dia, .tema-btn .t-noche{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip-path: inset(50%); white-space:nowrap;
+  }
+}
+
+/* ---------- la paleta diurna ---------- */
+html[data-tema="dia"]{
+  --bg:        #FAF7F0;   /* papel tibio */
+  --bg-panel:  #F1EADC;   /* lino, para las bandas */
+  --bg-raise:  #FFFFFF;   /* tarjetas que se levantan */
+  --ink:       #2B2219;   /* casi negro cálido */
+  --ink-dim:   rgba(43,34,25,0.82);
+  --ink-faint: rgba(43,34,25,0.66);
+  /* El dorado del sitio sobre crema da menos de 2,5:1. Este oro viejo
+     se lee como texto y sigue siendo oro. */
+  --gold:      #8A6B12;
+  --gold-soft: rgba(138,107,18,0.42);
+  --gold-wash: rgba(138,107,18,0.10);
+  --line:      rgba(43,34,25,0.14);
+  --sobre-oro: #FFFFFF;   /* texto encima de un relleno dorado */
+  --oro-hover: #705710;
+  color-scheme: light;
+}
+
+/* Sobre una foto: vuelven las variables de noche. */
+html[data-tema="dia"] :is(.hero, .hero-full, .fullbleed, .flip-front){
+  --ink:       #F4F0E6;
+  --ink-dim:   rgba(244,240,230,0.86);
+  --ink-faint: rgba(244,240,230,0.66);
+  --gold:      #D9B23A;
+  --gold-soft: rgba(217,178,58,0.5);
+  --line:      rgba(244,240,230,0.2);
+  --sobre-oro: #1A1400;
+  --oro-hover: #E6C04A;
+  color: var(--ink);
+}
+/* De día las fotos van más luminosas y el degradado más corto: lo
+   justo para que el texto se lea, sin volver al negro. */
+html[data-tema="dia"] .hero .bg img{ filter: brightness(0.86); }
+html[data-tema="dia"] .hero .bg::after{
+  background:
+    linear-gradient(to top, rgba(34,24,12,0.78) 0%, rgba(34,24,12,0.22) 55%, rgba(34,24,12,0) 100%),
+    linear-gradient(to right, rgba(34,24,12,0.45) 0%, rgba(34,24,12,0) 60%);
+}
+html[data-tema="dia"] .hero-full-bg img{ filter: brightness(0.82); }
+html[data-tema="dia"] .hero-full-bg .scrim{
+  background: linear-gradient(to top, rgba(34,24,12,0.88) 0%, rgba(34,24,12,0.45) 45%, transparent 80%);
+}
+html[data-tema="dia"] .fullbleed .bg img{ filter: brightness(0.75); }
+
+/* ---------- lo que estaba escrito a mano ---------- */
+/* Rellenos dorados: texto blanco sobre el oro viejo. */
+/* Ojo: :is() toma la especificidad de su argumento más fuerte, así que
+   los botones delineados y los de WhatsApp se excluyen acá y no con una
+   regla posterior, que perdería. */
+html[data-tema="dia"] :is(.btn:not(.btn-ghost):not(.btn-wa):not(.btn-whatsapp), .nav a.nav-reserva, .sugerencia-ir, .contact-card button, .dcto){
+  background: var(--gold); border-color: var(--gold); color: var(--sobre-oro);
+}
+html[data-tema="dia"] :is(.btn:not(.btn-ghost):not(.btn-wa):not(.btn-whatsapp), .nav a.nav-reserva, .sugerencia-ir):hover{
+  background: var(--oro-hover); border-color: var(--oro-hover); color: var(--sobre-oro);
+}
+html[data-tema="dia"] .btn-ghost{ background: transparent; color: var(--ink); border-color: var(--ink-faint); }
+html[data-tema="dia"] .btn-ghost:hover{ background: var(--gold-wash); border-color: var(--gold); }
+html[data-tema="dia"] .cal-dia.elegido{ color:#FFFFFF; }
+html[data-tema="dia"] .cal-dia.elegido.pocos::after{ background:#FFFFFF; }
+
+/* WhatsApp: el verde se queda, el texto pasa a blanco fijo. */
+html[data-tema="dia"] :is(.btn-wa, .btn-whatsapp, .wa-float){
+  background:#3E5F42; border-color:#3E5F42; color:#FFFFFF;
+}
+html[data-tema="dia"] :is(.btn-wa, .btn-whatsapp, .wa-float):hover{ background:#4A7350; border-color:#4A7350; }
+html[data-tema="dia"] .wa-float{ box-shadow: 0 6px 18px rgba(43,34,25,0.22); }
+
+/* La barra de arriba: de vidrio negro a vidrio crema. */
+html[data-tema="dia"] .topbar{ background: rgba(250,247,240,0.94); }
+html[data-tema="dia"] .brand img,
+html[data-tema="dia"] .brand-pie img{ filter: brightness(0.62); }
+html[data-tema="dia"] :is(.idiomas > summary, .tema-btn){ background: var(--bg-raise); }
+html[data-tema="dia"] .idiomas svg:not(.caret){ box-shadow: 0 0 0 1px rgba(43,34,25,0.18); }
+html[data-tema="dia"] :is(.idiomas-menu, .sugerencia-idioma){
+  background: var(--bg-raise); box-shadow: 0 14px 36px rgba(43,34,25,0.16);
+}
+html[data-tema="dia"] .idiomas a.op:hover,
+html[data-tema="dia"] .idiomas .actual,
+html[data-tema="dia"] .sugerencia-cerrar:hover,
+html[data-tema="dia"] .panel > summary:hover{ background: var(--gold-wash); }
+
+/* Las tarjetas y cajas: blancas sobre el papel, con una sombra suave
+   que las despega (de noche las despegaba el borde). */
+html[data-tema="dia"] :is(.card, .contact-card, .reserva-widget, .flip-back, .oferta-dato, .fam-card){
+  background: var(--bg-raise);
+}
+html[data-tema="dia"] :is(.card, .contact-card, .reserva-widget, .fam-card){
+  box-shadow: 0 1px 2px rgba(43,34,25,0.05), 0 8px 24px rgba(43,34,25,0.06);
+}
+html[data-tema="dia"] .tile{ background: var(--bg-raise); }
+
+/* Colores de estado que de noche eran claros. */
+html[data-tema="dia"] .badge-incluido{ color:#3F6B45; border-color: rgba(63,107,69,0.4); }
+html[data-tema="dia"] .reserva-widget .aviso.error,
+html[data-tema="dia"] .reserva-mensaje.error{ color:#A8381F; }
+
+/* El cambio entre los dos temas no salta de golpe. */
+@media (prefers-reduced-motion: no-preference){
+  html.tema-cambiando, html.tema-cambiando *{
+    transition: background-color .25s ease, color .25s ease, border-color .25s ease !important;
+  }
+}
