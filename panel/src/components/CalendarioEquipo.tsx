@@ -296,14 +296,37 @@ export default function CalendarioEquipo() {
               {res.faltan > 0 && (
                 <span className="mt-0.5 block text-ambar-texto">faltan {res.faltan}</span>
               )}
+              {/* **Cerrado o no, de un vistazo** (2026-11-05, lo pidió el
+                  cliente). Un día cerrado lleva una pastilla verde llena;
+                  uno que ya pasó y nadie cerró, una ámbar con borde y
+                  debajo qué le falta. Se distinguen por forma además de
+                  por color: relleno contra borde. Un día sin equipo no
+                  dice nada, porque no hay qué cerrar. */}
               {res.total > 0 && cerrado(f) && (
-                <span className="mt-0.5 block text-hueso/45">✓ cerrado</span>
-              )}
-              {res.total > 0 && !cerrado(f) && f < hoy() && falta(f).sinMarcar > 0 && (
-                <span className="mt-0.5 block text-ambar-texto">
-                  {falta(f).sinMarcar} sin marcar
+                <span className="mt-1 max-w-full self-start whitespace-nowrap rounded-full bg-verde-fuerte
+                                 px-1 py-0.5 text-[12px] font-black tracking-tight text-tinta sm:px-1.5 sm:tracking-normal
+                                 shadow-[0_0_8px_rgb(var(--verde-fuerte)/0.55)]">
+                  ✓ Cerrado
                 </span>
               )}
+              {res.total > 0 && !cerrado(f) && f < hoy() && (() => {
+                const x = falta(f);
+                const pendiente = x.sinMarcar > 0
+                  ? `${x.sinMarcar} por marcar`
+                  : x.extrasSinConfirmar > 0
+                    ? `${x.extrasSinConfirmar} extra${x.extrasSinConfirmar === 1 ? '' : 's'} por confirmar`
+                    : 'listo para cerrar';
+                return (
+                  <>
+                    <span className="mt-1 max-w-full self-start whitespace-nowrap rounded-full border-2
+                                     border-ambar-fuerte bg-ambar/10 px-1 py-0.5 text-[12px] tracking-tight sm:px-1.5 sm:tracking-normal
+                                     font-black text-ambar-texto">
+                      ! Sin cerrar
+                    </span>
+                    <span className="mt-0.5 block font-semibold text-ambar-texto">{pendiente}</span>
+                  </>
+                );
+              })()}
             </button>
           );
         })}

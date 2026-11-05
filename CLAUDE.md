@@ -3686,6 +3686,19 @@ falta: cuánta gente sin marcar, cuántas extras sin confirmar, si nadie anotó
 propina. **Un día que todavía no llega no aparece**: nadie puede decir quién
 vino a un sábado que no ha ocurrido.
 
+**Y cada celda del mes lo dice con una pastilla** (2026-11-05, lo pidió el
+cliente: el *"✓ cerrado"* era una palabra en gris que no se veía):
+
+| | Qué muestra la celda |
+|---|---|
+| Cerrado | **✓ Cerrado**, pastilla verde llena con un brillo |
+| Ya pasó y no está cerrado | **! Sin cerrar**, pastilla ámbar con borde, y debajo qué le falta: *N por marcar*, *N extras por confirmar*, o *listo para cerrar* |
+| Sin equipo, o todavía no llega | nada |
+
+Se distinguen por **forma además de color**: relleno contra borde. *Listo
+para cerrar* es el caso que más se olvida —ya está todo marcado y solo
+falta apretar el botón— y por eso tiene su propia frase.
+
 ### Lo que cuesta un día
 
 **Un turno sin marcar no suma nada.** Antes de que alguien diga si vino o
