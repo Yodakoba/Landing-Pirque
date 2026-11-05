@@ -3679,6 +3679,13 @@ vería completo justamente porque falta. Por eso el cierre se guarda con el
   olvidado, alguien reclama su propina: el administrador o quien paga
   aprieta *Corregir este día*, arregla y guarda con el motivo, y el día
   sigue cerrado. Ver la sección que sigue.
+- **Un día que todavía no llega no se cierra** (2026-11-05, lo pidió el
+  cliente): se cierra desde el mismo día en adelante. Cerrar es declarar
+  quién vino, y eso no se sabe de un día que no ha ocurrido. La regla es
+  `yaLlego()` en `cierres.ts`, comparando fechas en texto contra `hoy()` de
+  Chile; la comprueba el servidor (400 con el motivo) y la ventana del día
+  apaga el botón y lo dice en una línea azul. *Vino / No vino* sí se puede
+  marcar antes, porque eso no declara nada.
 - **Lo único que bloquea el cierre es la asistencia sin marcar**, y se
   comprueba en el servidor además de en la pantalla. Un turno sin marcar no
   suma, así que cerrar con turnos a medias sería cerrar con el total mal.

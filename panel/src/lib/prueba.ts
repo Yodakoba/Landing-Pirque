@@ -85,7 +85,7 @@ import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
 import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
          avisoTelefono, correoNormal, correoValido, avisoCorreo,
          FORMATO_TELEFONO } from './contacto.ts';
-import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar,
+import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar, yaLlego,
          diasPorCerrar, leerCierresDe, corregirDiaCerrado, type Cierre } from './cierres.ts';
 import { climaDe, iconoDe, climaEnPalabras, urlPronostico, horaEnChile } from './clima.ts';
 import { createHmac } from 'node:crypto';
@@ -2450,6 +2450,10 @@ ok(sePuedeCerrar(marcados, exDelSabado, '2026-11-14'),
    'una vez marcados todos, sí — aunque queden extras sin confirmar');
 ok(!sePuedeCerrar([], [], '2026-11-14'),
    'y un día sin nadie asignado no se cierra: no hay nada que cerrar');
+ok(yaLlego('2026-11-14', '2026-11-14'), 'un día se cierra desde el mismo día');
+ok(yaLlego('2026-11-14', '2026-11-20'), 'y después también');
+ok(!yaLlego('2026-11-15', '2026-11-14'), 'pero no antes: un día que no llega no se cierra');
+ok(!yaLlego('2026-12-01', '2026-11-30'), 'y se compara bien al cruzar de mes');
 
 // Lo que el calendario muestra arriba: días pasados, con equipo, sin cerrar.
 const porCerrar = diasPorCerrar(
