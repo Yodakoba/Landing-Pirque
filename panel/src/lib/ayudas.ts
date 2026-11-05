@@ -264,7 +264,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + '—reservas, turnos, asistencia— y por ahora también abre el informe, '
       + 'pero no toca precios ni configuración. Pagos hace todo lo del '
       + 'encargado y además es el único que puede anotar que a alguien ya se '
-      + 'le pagó. Un trabajador no entra acá: su acceso es su link personal.'
+      + 'le pagó. Un trabajador no entra acá: su acceso es su link personal.',
+      'Vendedor es la cuenta más acotada: ve el calendario y anota reservas. '
+      + 'Ve todas las del día, pero solo edita y borra las que anotó él.'
     ],
     ojo: 'Es mejor desactivar una cuenta que borrarla: así sus líneas de la '
        + 'bitácora siguen diciendo quién hizo qué.'

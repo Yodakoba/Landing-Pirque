@@ -52,6 +52,7 @@ import {
 } from './presupuestos.ts';
 import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
          ROL, PERMISOS, ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE,
+         puedeTocarReserva,
          type Rol, type Accion } from './auth.ts';
 import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION } from './sesion.ts';
 import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
@@ -102,7 +103,8 @@ const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA
 const r = (p: Partial<Reserva>): Reserva => ({
   id: 'x', fecha: '2026-11-14', nombre: '', email: '', telefono: '',
   menu: 'Tradiciones', personas: 1, monto: null, tipoPago: TIPO_PAGO.directo, asistencia: '',
-  estadoPago: 'paid', creada: '', notaPago: '', eventoCRM: '', fila: 2, ...p
+  estadoPago: 'paid', creada: '', notaPago: '', eventoCRM: '', anotadaPor: '',
+  fila: 2, ...p
 });
 const tu = (p: Partial<Turno>): Turno => ({
   fecha: '2026-11-14', trabajador: 'Ana Pérez', puesto: 'Garzón',
@@ -194,7 +196,7 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
-               'Asistencia','Nota de pago','ID Evento CRM'];
+               'Asistencia','Nota de pago','ID Evento CRM','Anotada por'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -1726,6 +1728,72 @@ ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
 // que sea porque alguien lo decidió y vino a cambiar esta línea.
 ok(puede(ROL.encargado, 'informe'),
    'y el encargado también, por ahora: lo liberó el cliente hasta definir la lista fina');
+
+
+/* ---------- el rol de vendedor (2026-11-05) ---------- */
+// Lo pidió el cliente: *"el vendedor solo tiene que ver el calendario para
+// poder agregar reservas, quitar reservas. Reservas que el vendedor mismo ha
+// hecho. No puede quitar otras reservas que no él mismo está gestionando.
+// Pero ver todo. Y en verdad no necesita ver nada más que esto."*
+
+ok(ROLES_DE_CUENTA.includes(ROL.vendedor), 'se le puede crear una cuenta');
+
+// **Se escribe como la lista completa de lo que puede, al revés que `pagos`.**
+// Ahí la lista corta era la de lo que NO puede; acá es la de lo que sí, y por
+// el mismo motivo: es la corta, y es la que importa. Un permiso nuevo que se
+// agregue a la tabla **no** entra en este rol sin que alguien venga a esta
+// línea a ponerlo, que es exactamente lo que se quiere de la cuenta más
+// acotada del panel.
+const deVendedor = todas.filter((a) => puede(ROL.vendedor, a)).sort();
+ok(deVendedor.join() === 'reservas,ver',
+   'dos permisos y ninguno más: ver el calendario y anotar reservas');
+ok(!puede(ROL.vendedor, 'dias'),
+   'no abre ni cierra días: eso le cambiaría el cupo al sitio público');
+ok(!puede(ROL.vendedor, 'equipo') && !puede(ROL.vendedor, 'extras'),
+   'ni el equipo ni los jinetes: ahí viven teléfonos y montos que no son suyos');
+ok(!puede(ROL.vendedor, 'presupuestos'),
+   'ni los presupuestos ni el CRM del socio, que piden ese mismo permiso');
+ok(!puede(ROL.vendedor, 'informe') && !puede(ROL.vendedor, 'pagar')
+   && !puede(ROL.vendedor, 'sueldos') && !puede(ROL.vendedor, 'links'),
+   'nada de plata, y ningún link personal de nadie');
+
+// **Las cuatro rutas que se contentaban con `ver` y no devuelven reservas.**
+// Para los tres roles de antes daba lo mismo —los tres tenían todo— y al
+// entrar el vendedor se volvió la diferencia entre "ve el calendario" y "ve
+// los teléfonos del equipo". Cada una pide ahora el permiso de su pantalla,
+// y esto lo fija: si alguna volviera a `ver`, el vendedor la abriría.
+ok(puede(ROL.vendedor, 'ver') && !puede(ROL.vendedor, 'equipo'),
+   '`ver` ya no alcanza para el equipo: son dos permisos distintos');
+
+/* --- qué reservas puede tocar --- */
+// La tabla contesta *qué acciones*; esto, *sobre qué filas*. Es una pregunta
+// distinta y por eso vive aparte, en `puedeTocarReserva()`.
+ok(puedeTocarReserva(ROL.vendedor, 'ana', 'ana'),
+   'un vendedor edita y borra la reserva que anotó él');
+ok(!puedeTocarReserva(ROL.vendedor, 'ana', 'luis'),
+   'y NO la que anotó otro: es lo que pidió el cliente');
+ok(puedeTocarReserva(ROL.vendedor, 'Ana', 'ana ')
+   && puedeTocarReserva(ROL.vendedor, 'JOSÉ', 'jose'),
+   'el nombre se compara sin mayúsculas, sin tildes y sin espacios al borde');
+
+// **Una reserva sin dueño no es de nadie, y por lo tanto tampoco suya.** Lo
+// están todas las de Shopify —las anota el webhook— y todas las que ya
+// estaban en la planilla antes de que existiera la columna. El error
+// contrario —un vendedor nuevo pudiendo borrar el historial completo— es
+// mucho más caro.
+ok(!puedeTocarReserva(ROL.vendedor, 'ana', ''),
+   'una reserva sin "Anotada por" —de Shopify, o vieja— no es suya');
+ok(!puedeTocarReserva(ROL.vendedor, '', ''),
+   'y un usuario vacío no se empareja con una fila vacía: eso las abriría todas');
+
+// Para los tres roles de siempre no cambió nada, y eso también se fija: el
+// límite es del vendedor, no una regla nueva para todos.
+for (const r of [ROL.admin, ROL.encargado, ROL.pagos]) {
+  ok(puedeTocarReserva(r, 'quien sea', 'otro') && puedeTocarReserva(r, 'x', ''),
+     `${r} sigue pudiendo tocar cualquier reserva, con dueño o sin él`);
+}
+ok(!puedeTocarReserva(ROL.trabajador, 'ana', 'ana'),
+   'y quien no tiene el permiso de reservas no toca ni la que lleve su nombre');
 
 
 /* ---------- la propina ---------- */

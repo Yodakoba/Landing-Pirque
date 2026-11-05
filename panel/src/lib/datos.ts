@@ -80,6 +80,11 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
   let enc = await asegurarColumna(
     HOJA_RESERVAS, filas[0] ?? [], COL_RESERVAS.notaPago);
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.eventoCRM);
+  // **Se asegura siempre, no solo cuando viene con valor**, por lo mismo que
+  // la de arriba: si se creara recién al anotar la primera reserva de un
+  // vendedor, esa fila sería justamente la que no encuentra la columna — y
+  // entonces la reserva nacería sin dueño y él no podría borrarla.
+  enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.anotadaPor);
   // MANUAL- para que no pueda chocar con un id de Shopify, que es numérico.
   const id = 'MANUAL-' + Date.now();
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, {

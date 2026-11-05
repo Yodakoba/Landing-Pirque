@@ -43,7 +43,27 @@ export const COL_RESERVAS = {
    * Vacío en todas las demás: una reserva de Shopify o anotada a mano no
    * viene de ningún evento del socio.
    */
-  eventoCRM: 'ID Evento CRM'
+  eventoCRM: 'ID Evento CRM',
+  /**
+   * Con qué cuenta del panel se anotó esta reserva.
+   *
+   * **Existe para una sola pregunta** (2026-11-05): ¿esta reserva es del
+   * vendedor que la está queriendo borrar? Hasta ese día nadie la hacía
+   * —los tres roles que entraban podían tocar cualquier fila— y el dato no
+   * estaba en ninguna parte: la bitácora lo registra, pero es un rastro
+   * para preguntarle a alguien, no un campo de la fila que se pueda mirar
+   * al atender un `DELETE`.
+   *
+   * **La escribe el servidor con el usuario de la sesión, y no se acepta
+   * del navegador**, igual que `Tipo Pago`. Si se aceptara, un vendedor
+   * podría adjudicarse la reserva de otro y borrarla.
+   *
+   * **Vacía quiere decir sin dueño**, y eso es correcto en los dos casos en
+   * que pasa: una reserva de Shopify la anotó el webhook y no una persona,
+   * y las que ya estaban en la planilla son de antes de que esto existiera.
+   * Ninguna es de ningún vendedor. Ver `puedeTocarReserva()`.
+   */
+  anotadaPor: 'Anotada por'
 } as const;
 
 export const COL_FECHAS = {

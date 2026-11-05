@@ -436,12 +436,15 @@ export const lineasDe = (lineas: LineaPresupuesto[], id: string) =>
 export function reservaDesdePresupuesto(
   p: Presupuesto,
   lineas: LineaPresupuesto[],
-  menus: Menu[]
+  menus: Menu[],
+  /** Con qué cuenta se convirtió. Queda como dueña de la reserva. */
+  anotadaPor = ''
 ): {
   fecha: Fecha; nombre: string; email: string; telefono: string;
   menu: string; personas: number; monto: number;
   tipoPago: ''; estadoPago: string; asistencia: string; notaPago: string;
   eventoCRM: '';
+  anotadaPor: string;
 } {
   const cuenta: Record<string, number> = {};
   for (const l of lineas) {
@@ -466,7 +469,10 @@ export function reservaDesdePresupuesto(
     asistencia: '',
     notaPago: `Del presupuesto N° ${folioDe(p)}`,
     // No sale del CRM del socio: sale de un presupuesto nuestro.
-    eventoCRM: ''
+    eventoCRM: '',
+    // Quién la convirtió. Es una reserva anotada por una persona, así que
+    // tiene dueño como cualquier otra.
+    anotadaPor
   };
 }
 

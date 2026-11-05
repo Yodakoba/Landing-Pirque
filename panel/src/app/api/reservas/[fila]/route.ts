@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
+import { puedeTocarReserva, type Rol } from '@/lib/auth';
 import { editarReserva, borrarReserva, anotar, leerReservas } from '@/lib/datos';
 import { empujarDias } from '@/lib/crm-escribir';
 import { guardaDelDia } from '@/lib/guardaCierre';
@@ -7,6 +8,41 @@ import { yaLlego } from '@/lib/cierres';
 import { hoy } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Deja pasar solo si esta cuenta puede tocar **esta** reserva.
+ *
+ * El permiso `reservas` dice que puede editar y borrar; cuáles es otra
+ * pregunta, y para un vendedor la respuesta es "las suyas". Ver
+ * `puedeTocarReserva()`.
+ *
+ * **Se comprueba acá y no en la pantalla**: esconderle el botón es la cara
+ * visible, pero una llamada directa a la API tiene que obedecer lo mismo.
+ *
+ * Una fila que no existe **no se delata**: devuelve el mismo 404 que
+ * devolvería de todas formas, en vez de "esa no es tuya", que confirmaría
+ * que existe.
+ */
+async function duenaDeLaReserva(req: Request, antes: { anotadaPor: string } | undefined) {
+  if (!antes) {
+    return NextResponse.json({ error: 'Esa reserva ya no está.' }, { status: 404 });
+  }
+  const quien = await quienEs(req);
+  if (puedeTocarReserva(quien.rol as Rol, quien.usuario, antes.anotadaPor)) return null;
+  // **Dice quién la anotó cuando lo hay**, que es lo que alguien necesita
+  // para ir a pedírselo. Una de Shopify, o una de antes de que existiera la
+  // columna, no la anotó nadie: decir "otra persona" ahí mandaría a buscar
+  // a alguien que no existe.
+  return NextResponse.json(
+    {
+      error: antes.anotadaPor
+        ? `Esa reserva la anotó ${antes.anotadaPor}, así que no es tuya para cambiarla.`
+        : 'Esa reserva no la anotaste tú, así que no es tuya para cambiarla.',
+      permiso: true
+    },
+    { status: 403 }
+  );
+}
 
 // La fila de la planilla es el identificador para editar: el ID Orden puede
 // venir vacío en pedidos viejos, la fila nunca.
@@ -24,12 +60,19 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     //
     // `correccion` tampoco es un campo de la reserva: es el motivo para
     // tocar una de un día cerrado, y se saca antes de escribir.
-    const { tipoPago, id, creada, fila: _f, correccion, ...cambios } = await req.json();
+    // `anotadaPor` sale de la lista igual que `tipoPago`: quién anotó una
+    // reserva es un hecho de cuando se anotó, no algo que se edite después.
+    const { tipoPago, id, creada, fila: _f, correccion, anotadaPor,
+            ...cambios } = await req.json();
     // **Se lee ANTES de escribir, y sirve para dos cosas**: la guarda del día
     // cerrado necesita saber en qué día está la reserva, y el empujón al CRM
     // necesita el día del que sale —una edición puede moverla de fecha, y
     // entonces el día que la pierde también cambia para el socio—.
     const antes = (await leerReservas()).find((r) => r.fila === fila);
+    // **Y sirve para una tercera cosa desde el 2026-11-05**: saber de quién
+    // es, porque un vendedor solo toca las suyas.
+    const ajena = await duenaDeLaReserva(req, antes);
+    if (ajena) return ajena;
     // **Una reserva de un día cerrado solo se corrige** (2026-11-03): mirando
     // el día donde está y, si se la mueve, el día adonde va.
     const guarda = await guardaDelDia(
@@ -74,6 +117,8 @@ export async function DELETE(req: Request, { params }: { params: { fila: string 
     // Se lee ANTES de borrarla: después no queda de dónde sacar el nombre,
     // y "se borró la fila 7" no le sirve a nadie dentro de un mes.
     const antes = (await leerReservas()).find((r) => r.fila === fila);
+    const ajena = await duenaDeLaReserva(req, antes);
+    if (ajena) return ajena;
     // El cuerpo es opcional en un DELETE: solo trae algo cuando es una
     // corrección de un día cerrado.
     const cuerpo = await req.json().catch(() => ({}));

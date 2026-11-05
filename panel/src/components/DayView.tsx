@@ -22,6 +22,7 @@ import ReservaForm from './ReservaForm';
 import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
 import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
+import { puede, puedeTocarReserva, type Rol } from '@/lib/auth';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
@@ -102,7 +103,19 @@ function Pendiente({ children }: { children: React.ReactNode }) {
  */
 type Filtro = 'todas' | 'pagadas' | 'porCobrar';
 
-export default function DayView({ fecha }: { fecha: string }) {
+export default function DayView(
+  { fecha, rol, usuario }: { fecha: string; rol: string; usuario: string }
+) {
+  /**
+   * Lo que esta cuenta puede hacer, de la misma tabla que usan el menú y
+   * las rutas. No es la protección —cada ruta vuelve a preguntar— es para
+   * no dibujar bloques que van a quedar vacíos: un vendedor recibe 403 del
+   * equipo, de las extras y de los presupuestos, y un bloque vacío con un
+   * botón apagado se lee como un panel roto y no como una puerta cerrada.
+   */
+  const conEquipo = puede(rol as Rol, 'equipo');
+  const conExtras = puede(rol as Rol, 'extras');
+  const conPresupuestos = puede(rol as Rol, 'presupuestos');
   const [todas, setTodas] = useState<Reserva[] | null>(null);
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
@@ -209,7 +222,12 @@ export default function DayView({ fecha }: { fecha: string }) {
       .catch(() => {});
 
   useEffect(() => {
-    cargar(); cargarEquipo(); cargarExtras(); cargarCotizado(); cargarCRM();
+    cargar();
+    // Pedir lo que la cuenta no puede leer devuelve 403 y deja la pantalla
+    // a medio cargar. Lo que no se pide, tampoco se dibuja.
+    if (conEquipo) cargarEquipo();
+    if (conExtras) cargarExtras();
+    if (conPresupuestos) { cargarCotizado(); cargarCRM(); }
   }, []);
 
   const delDia = useMemo(
@@ -395,7 +413,13 @@ export default function DayView({ fecha }: { fecha: string }) {
           sumados. */}
 
       {/* El equipo de este día. Va junto a lo que hay que preparar porque es
-          la otra mitad de la misma pregunta: para esta gente, con quién. */}
+          la otra mitad de la misma pregunta: para esta gente, con quién.
+
+          **Para quien no tiene el permiso del equipo, este bloque no
+          existe** (2026-11-05, con el rol de vendedor). Dibujarlo igual
+          dejaba un "Nadie asignado todavía" sobre un día que sí tiene
+          equipo, que no es que falte: es que ese dato no es suyo. */}
+      {conEquipo && (
       <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <RotuloBloque>Equipo</RotuloBloque>
@@ -485,6 +509,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Las actividades extras de este día: el jinete, la pintacaritas, el
           castillo. Bloque aparte del equipo y no una fila más adentro, por lo
@@ -494,7 +519,10 @@ export default function DayView({ fecha }: { fecha: string }) {
           de las dos cosas es.
 
           Está igual en la página del día porque es donde se cierra un día, y
-          "¿cuánto costó este sábado?" no se contesta sin ellas. */}
+          "¿cuánto costó este sábado?" no se contesta sin ellas.
+
+          Y, como el equipo, **no existe para quien no tiene su permiso**. */}
+      {conExtras && (
       <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <RotuloBloque>Actividades extras</RotuloBloque>
@@ -546,6 +574,7 @@ export default function DayView({ fecha }: { fecha: string }) {
           </p>
         )}
       </div>
+      )}
 
       {/* **Lo que el socio tiene vendido para este día** (2026-11-03). Va
           antes de lo cotizado porque acá sí hay algo que hacer: un ganado
@@ -730,6 +759,15 @@ export default function DayView({ fecha }: { fecha: string }) {
                 // alguien borre la fila de más. Quien mira el día es quien
                 // lo va a notar.
                 const repetida = (r.duplicadas ?? 1) > 1;
+                /**
+                 * Si esta cuenta puede tocar **esta** reserva.
+                 *
+                 * Para los tres roles de siempre es todas; un vendedor solo
+                 * las que anotó él. La regla vive en `auth.ts` y la
+                 * comprueba la ruta: esto es lo mismo preguntado antes, para
+                 * no ofrecer un botón que va a devolver 403.
+                 */
+                const mia = puedeTocarReserva(rol as Rol, usuario, r.anotadaPor);
                 return (
                   <tr key={r.fila} className={`border-b border-hueso/5 ${
                         ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
@@ -802,16 +840,27 @@ export default function DayView({ fecha }: { fecha: string }) {
                         que se aprieta tiene que verse que se aprieta, y
                         medir para el dedo. */}
                     <td className="py-2 text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => { setCreando(false); setEditando(r); }}
-                          disabled={diaCerrado && !puedeCorregir}
-                          className="boton">Editar</button>
-                        <button onClick={() => borrar(r)}
-                          disabled={diaCerrado && !puedeCorregir}
-                          className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
-                          Borrar
-                        </button>
-                      </div>
+                      {/* **La reserva de otro se ve y no se toca** — lo pidió
+                          el cliente al crear el vendedor. En vez de dos
+                          botones apagados va quién la anotó, que es lo que
+                          alguien necesita saber para ir a pedírselo: un botón
+                          que no responde se lee como un panel roto. */}
+                      {mia ? (
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => { setCreando(false); setEditando(r); }}
+                            disabled={diaCerrado && !puedeCorregir}
+                            className="boton">Editar</button>
+                          <button onClick={() => borrar(r)}
+                            disabled={diaCerrado && !puedeCorregir}
+                            className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                            Borrar
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[13px] text-hueso/55">
+                          {r.anotadaPor ? `La anotó ${r.anotadaPor}` : 'No la anotaste tú'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

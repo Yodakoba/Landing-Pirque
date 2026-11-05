@@ -287,6 +287,9 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
     // escribiera a mano sobre un pedido.
     notaPago: '',
     eventoCRM: '',
+    // **Nadie la anotó**: la escribe el webhook, no una persona. Por eso
+    // ningún vendedor puede borrarla — ver `puedeTocarReserva()`.
+    anotadaPor: '',
     estadoPago: estadoDe(p),
     creada: texto(p.created_at),
     asistencia: ''
@@ -303,6 +306,9 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  *
  * Tampoco se reescribe `creada`: la fecha en que entró el pedido no cambia.
  *
+ * Ni `anotadaPor`: la escribe el panel al anotarla a mano, y un pedido que
+ * se actualiza la borraría — y con eso el vendedor perdería la suya.
+ *
  * Ni `eventoCRM`: lo escribe quien anota un ganado del socio como reserva, y
  * un pedido que se actualiza lo borraría — con eso el ganado volvería a
  * aparecer como pendiente y el día contaría la misma gente dos veces.
@@ -312,7 +318,7 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  * actualiza la borraría.
  */
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
-  const { asistencia, creada, notaPago, eventoCRM, ...resto } = r;
+  const { asistencia, creada, notaPago, eventoCRM, anotadaPor, ...resto } = r;
   return resto;
 }
 
