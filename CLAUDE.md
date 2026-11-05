@@ -3619,8 +3619,14 @@ por quien hace los pagos**.
   - **Equipo**: cuántos vinieron y cuántos no llegaron.
   - **Propina del día**: el monto, o *"Sin propina anotada"* con !.
   - **Lo que se paga**: el total, o cuántos vinieron sin jornada anotada.
-    **Solo para quien ve los sueldos**: el encargado no recibe los montos
-    de la ficha, así que para él un cero no querría decir nada.
+    **Lo ve también el encargado** (2026-11-05, lo pidió el cliente: que
+    todos tengan claro cuánto costó el equipo, *"todos están en el mismo
+    barco"*). Para que ese total sea cierto, la ventana del día **rellena
+    con lo que guardó el servidor** las jornadas que tenía en cero: un
+    turno sin monto hereda el de la ficha al guardarse, y el encargado, que
+    no recibe las fichas, antes seguía viendo el campo vacío. Lo escrito a
+    mano nunca se pisa. Los sueldos habituales de la ficha siguen siendo
+    solo de quien paga.
   - **Actividades extras**, si hay: *"Todas confirmadas"* o cuántas faltan.
 - **El ! no impide cerrar**, pide mirarlo: un día sin propina existe. Lo que
   sí impide —alguien sin marcar— ni deja llegar a esta ventana. Con algún !
