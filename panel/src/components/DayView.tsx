@@ -10,7 +10,6 @@ import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
 import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
-import Asistencia from './Asistencia';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
@@ -278,17 +277,6 @@ export default function DayView({ fecha }: { fecha: string }) {
     const a = document.createElement('a');
     a.href = url; a.download = `reservas-${fecha}.csv`; a.click();
     URL.revokeObjectURL(url);
-  }
-
-  // Marcar quién vino. Es lo que se hace el mismo día, en el mesón, así que
-  // guarda al instante: sin botón de confirmar y sin abrir un formulario.
-  async function marcar(r: Reserva, asistencia: string) {
-    const res = await fetch(`/api/reservas/${r.fila}`, {
-      method: 'PATCH', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ asistencia })
-    });
-    const d = await res.json();
-    if (d.error) alert(d.error); else cargar();
   }
 
   async function borrar(r: Reserva) {
@@ -796,11 +784,18 @@ export default function DayView({ fecha }: { fecha: string }) {
                       )}
                     </td>
                     <td className="py-2 pr-3">
-                      <fieldset disabled={diaCerrado} className="m-0 min-w-0 border-0 p-0">
-                        <Asistencia valor={r.asistencia || ''}
-                          quien={r.nombre || 'esta reserva'}
-                          onCambio={(v) => marcar(r, v)} />
-                      </fieldset>
+                      {/* **Acá se lee, no se marca** (2026-11-05, lo pidió el
+                          cliente): quien mira el calendario y las reservas
+                          puede ser otro rol que quien pasa lista, así que
+                          *Vino / No vino* vive solo en `/turnos`. */}
+                      <span className={`inline-block whitespace-nowrap rounded-full border-2 px-2.5
+                                        py-0.5 text-[13px] font-semibold ${
+                        r.asistencia === VINO.si ? 'border-verde/50 text-verde-texto'
+                        : r.asistencia === VINO.no ? 'border-rojo/50 text-rojo-texto'
+                        : 'border-hueso/20 text-hueso/60'}`}>
+                        {r.asistencia === VINO.si ? '✓ vino'
+                          : r.asistencia === VINO.no ? '✕ no vino' : 'sin marcar'}
+                      </span>
                     </td>
                     {/* **Dos botones, no dos textos en gris de 20px.** Son
                         las dos acciones de la fila y una de ellas borra: lo

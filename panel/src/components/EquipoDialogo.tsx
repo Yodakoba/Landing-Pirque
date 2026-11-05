@@ -47,7 +47,7 @@ const ENTRADA_GRANDE =
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
   conCierre = false, verSueldos = false, enfocarPropina = false,
-  conReservas = false, cierre, puedeCorregir = false, onListo, onCancelar
+  conReservas = false, conAsistencia = false, cierre, puedeCorregir = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -95,6 +95,13 @@ export default function EquipoDialogo({
    * tarjeta. Ver `ReservasDelDia`.
    */
   conReservas?: boolean;
+  /**
+   * Si se marca **Vino / No vino** (2026-11-05, lo pidió el cliente). Solo
+   * en `/turnos`: desde el calendario y la página del día se planifica, y
+   * quien planifica puede ser otro rol que quien pasa lista. Ahí la línea
+   * dice el estado con palabras, sin botones.
+   */
+  conAsistencia?: boolean;
   /** Quién cerró el día y cuándo, para decirlo arriba. */
   cierre?: Cierre;
   /**
@@ -514,8 +521,10 @@ export default function EquipoDialogo({
                             </span>
                           </span>
                         </button>
-                        <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
-                          onCambio={(v) => marcar(nombre, v)} compacto />
+                        {conAsistencia && (
+                          <Asistencia quien={nombre} valor={t?.asistencia ?? VINO.sinMarcar}
+                            onCambio={(v) => marcar(nombre, v)} compacto />
+                        )}
                       </div>
 
                       {abierta && t && (
@@ -821,7 +830,10 @@ export default function EquipoDialogo({
             : <>Para cerrar el día falta marcar si{' '}
                 <strong>{falta.sinMarcar === 1 ? 'una persona vino'
                        : `${falta.sinMarcar} personas vinieron`}</strong> o no.
-                {' '}Son los botones <em>Vino</em> y <em>No vino</em> de arriba.</>}
+                {conAsistencia
+                  ? <>{' '}Son los botones <em>Vino</em> y <em>No vino</em> de arriba.</>
+                  : <>{' '}Eso se marca en{' '}
+                      <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}</>}
         </p>
       )}
 

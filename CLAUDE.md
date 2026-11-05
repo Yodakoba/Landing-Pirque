@@ -4898,6 +4898,24 @@ demás. Una abierta a la vez.**
   puesto por fuera de la ventana en un teléfono (la misma trampa de la
   tarjeta del calendario).
 
+### Vino / No vino se marca solo en `/turnos` (2026-11-05)
+
+Lo pidió el cliente: *"saca la opción vino o no vino de la parte del
+calendario donde se planifica y donde se ven las reservas… probablemente van
+a ser dos distintos roles"*. Quien planifica o mira las reservas no es
+necesariamente quien pasa lista.
+
+- **La ventana del equipo** marca asistencia solo con `conAsistencia`, que
+  pasa únicamente `/turnos`. Desde el calendario de la portada y la página
+  del día la línea de cada persona dice el estado con palabras —*sin
+  marcar*, *no llegó*, el monto— sin botones.
+- **La tabla de reservas de la página del día** muestra la asistencia como
+  una pastilla de solo lectura (*✓ vino* / *✕ no vino* / *sin marcar*). Se
+  marca en la cara *Reservas* de la ventana del día en `/turnos`.
+- **Es una decisión de pantalla, no de permiso todavía**: la API sigue
+  aceptando la asistencia de quien tenga `turnos`. Si se separa el rol de
+  verdad, el lugar es la tabla de `PERMISOS`, no esconder más botones.
+
 ### El botón del panel vive en `globals.css`, no en cada pantalla
 
 `.boton` —borde, **36px de alto y 13px**— y `.boton-relleno`, el dorado.
