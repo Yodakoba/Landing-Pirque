@@ -4964,7 +4964,7 @@ demás. Una abierta a la vez.**
 |---|---|---|
 | **Ventana del día** (`/turnos` y *Equipo* del calendario) | nombre, cuánto lleva, y **Vino / No vino** | jornada, horas extra, ajustes con su motivo, propina, total, *Ficha* y *Sacar del día* |
 | **Ventana de actividades** (`/extras`) | quién, qué hace, y **Vino / No vino** | actividad, monto, ajuste y motivo, total, *Ficha* y *Sacar del día* |
-| **Calendario de la portada** | desde la **tercera semana**, cada día es un campo chico: fecha, estado, barra y gente | apretar un día —o *+ Abrir la semana*— abre la semana entera con sus tarjetas de siempre |
+| **Calendario de la portada** | desde la **tercera semana**, cada día es un campo chico: fecha, estado, barra y gente | apretar un día —o *+ Ampliar*— abre la semana entera con sus tarjetas de siempre |
 
 - **En la ventana del día desapareció la segunda lista**, la de *"Lo que se
   paga este día"*, que repetía a la misma gente con sus montos y doblaba el
