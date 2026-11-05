@@ -49,7 +49,7 @@ export default function CalendarioEquipo() {
   const pronostico = usePronostico();
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
-    cierres: Cierre[]; extras: Extra[]; verSueldos: boolean; puedeCorregir: boolean;
+    cierres: Cierre[]; extras: Extra[]; verSueldos: boolean; puedeCorregir: boolean; puedeCerrar: boolean;
   } | null>(null);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
   const [planificando, setPlanificando] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function CalendarioEquipo() {
         setEquipo({
           puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
           turnos: d.turnos ?? [], cierres: d.cierres ?? [], extras: d.extras ?? [],
-          verSueldos: !!d.verSueldos, puedeCorregir: !!d.puedeCorregir
+          verSueldos: !!d.verSueldos, puedeCorregir: !!d.puedeCorregir, puedeCerrar: !!d.puedeCerrar
         });
       })
       .catch((e) => setError(String(e)));
@@ -152,9 +152,10 @@ export default function CalendarioEquipo() {
               : `Hay ${porCerrar.length} días por cerrar.`}
           </p>
           <p className="mt-1 text-sm text-hueso/70">
-            Un día cerrado es uno donde alguien ya confirmó quién vino, anotó
-            la propina y revisó los montos. Mientras no se cierre, el informe
-            de ese periodo está incompleto.
+            Un día cerrado es uno donde ya está marcado quién vino, la
+            propina y los montos, y <strong>quien hace los pagos</strong> lo
+            revisó y lo cerró. Mientras no se cierre, el informe de ese
+            periodo está incompleto.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {porCerrar.map((f) => {
@@ -330,6 +331,7 @@ export default function CalendarioEquipo() {
           cerrado={cerrado(planificando)}
           cierre={cierreDe(cierres, planificando)}
           puedeCorregir={equipo.puedeCorregir}
+          puedeCerrar={equipo.puedeCerrar}
           // La única pantalla que cierra un día: ver `conCierre`.
           conCierre
           // La otra cara, la de las reservas: ver `conReservas`.

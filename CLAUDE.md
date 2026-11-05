@@ -3600,6 +3600,29 @@ una **corrección**:
   se actualiza para un día cerrado entra igual, porque es un hecho de la
   tienda y no una edición de nadie.
 
+### Cierra el día quien paga, no el encargado (2026-11-05)
+
+Lo decidió el cliente al ordenar los roles: *"los encargados no deberían
+poder cerrar el día. Ellos solo guardan cambios y luego el responsable de
+pagar tiene que preguntar: ¿están todos los días listos? ¿Puedo cerrarlo?
+Y él lo cierra. Y luego se gestionan todos los pagos"*.
+
+- **Permiso nuevo, `cerrar`**: administrador y quien paga. El encargado
+  sigue marcando quién vino, los montos y la propina —todo eso se guarda
+  solo—, pero no declara el día terminado.
+- **Lo comprueba el servidor**: `PUT /api/equipo/cierre` responde 403 a un
+  encargado aunque llame la API directo. Comprobado.
+- **Al encargado la ventana se lo dice** —*"El día lo cierra quien hace los
+  pagos, cuando revisa que esté todo listo"*— en vez de dejar un botón
+  ausente que se lee como un error. El aviso de lo que falta marcar le
+  sigue apareciendo, sin el "para cerrar".
+- **Cerrar y corregir quedan en las mismas manos**: quien cierra es quien
+  después corrige con motivo. Reabrir sigue sin estar en la pantalla.
+- **Abierto todavía**: si un error de una semana ya pagada se corrige en
+  ese día —*Corregir este día*, con motivo— o se compensa con un ajuste en
+  la semana siguiente. Hoy las dos cosas se pueden; cuál es la regla lo
+  decide el cliente.
+
 ### Cerrar el día
 
 **Cerrar es una declaración, no un cálculo.** Se podría decir que un día
@@ -4190,7 +4213,8 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Ver el calendario y las reservas | sí | sí | **sí** | — |
 | Anotar reservas, abrir y cerrar días | sí | sí | **sí** | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — |
-| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | **sí** | — |
+| Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — |
+| **Cerrar el día** | sí | **—** | **sí** | — |
 | Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
 | Crear y mandar presupuestos | sí | sí | **sí** | — |
 | Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — |

@@ -48,7 +48,7 @@ const ENTRADA_GRANDE =
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
   conCierre = false, verSueldos = false, enfocarPropina = false,
-  conReservas = false, conAsistencia = false, cierre, puedeCorregir = false, onListo, onCancelar
+  conReservas = false, conAsistencia = false, cierre, puedeCorregir = false, puedeCerrar = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -111,6 +111,12 @@ export default function EquipoDialogo({
    * vuelve a comprobar en cada ruta.
    */
   puedeCorregir?: boolean;
+  /**
+   * Si quien mira puede **cerrar el día**: el administrador y quien paga
+   * (2026-11-05). Al encargado no se le ofrece el botón; la ventana le dice
+   * que lo cierra quien hace los pagos.
+   */
+  puedeCerrar?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -834,7 +840,7 @@ export default function EquipoDialogo({
                       px-3 py-2 text-sm text-ambar-texto/90">
           {falta.conEquipo === 0
             ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
-            : <>Para cerrar el día falta marcar si{' '}
+            : <>{puedeCerrar || corrigiendo ? 'Para cerrar el día falta' : 'Falta'} marcar si{' '}
                 <strong>{falta.sinMarcar === 1 ? 'una persona vino'
                        : `${falta.sinMarcar} personas vinieron`}</strong> o no.
                 {conAsistencia
@@ -851,7 +857,12 @@ export default function EquipoDialogo({
       {plan.length > 0 && !cerrado && (
         <p className="mt-2 text-xs text-hueso/45">
           Lo que escribas acá <strong>se guarda solo</strong>.
-          {!conCierre && <> <strong>El día se cierra en{' '}
+          {/* El encargado no cierra (2026-11-05): se le dice quién lo hace,
+              en vez de dejar un botón ausente que parece un error. */}
+          {!puedeCerrar
+            ? <> <strong>El día lo cierra quien hace los pagos</strong>, cuando
+                revisa que esté todo listo.</>
+            : !conCierre && <> <strong>El día se cierra en{' '}
             <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
             que es donde el panel va mostrando los días que quedaron pendientes.</>}
         </p>
@@ -911,7 +922,7 @@ export default function EquipoDialogo({
             no se puede, y arriba dice por qué.
 
             **No aparece en el calendario de la portada**: ver `conCierre`. */}
-        {conCierre && !cerrado && (
+        {conCierre && puedeCerrar && !cerrado && (
           <button onClick={() => void cambiarCierre(true)}
             disabled={cerrando || !listo}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm

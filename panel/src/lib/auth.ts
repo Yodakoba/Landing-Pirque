@@ -254,11 +254,24 @@ export const PERMISOS = {
    */
   pagar: [ROL.admin, ROL.pagos],
   /**
+   * **Cerrar el día** (2026-11-05, lo decidió el cliente).
+   *
+   * Hasta ese día cerraba el encargado, que es quien lo vive. El cliente lo
+   * dio vuelta: *"los encargados no deberían poder cerrar el día. Ellos solo
+   * guardan cambios y luego el responsable de pagar tiene que preguntar:
+   * ¿están todos los días listos? ¿Puedo cerrarlo?"*. Cerrar es el paso
+   * antes de pagar, y lo da quien paga, igual que registrar un pago.
+   *
+   * El encargado sigue marcando quién vino, los montos y la propina: eso se
+   * guarda solo. Lo que no hace es declarar el día terminado.
+   */
+  cerrar: [ROL.admin, ROL.pagos],
+  /**
    * **Corregir un día ya cerrado**: el equipo, las reservas o las
    * actividades extras de ese día (2026-11-03, lo decidió el cliente).
    *
-   * Cerrar un día es del encargado, que es quien lo vive; corregirlo
-   * después **no**. Un día cerrado es lo que se paga, y cambiarlo cuando ya
+   * Lo mismo que cerrarlo (ver `cerrar`): quien paga cierra y quien paga
+   * corrige. Un día cerrado es lo que se paga, y cambiarlo cuando ya
    * se revisó es justamente lo que tiene que pasar por alguien de arriba.
    * Si el encargado se equivocó, le pide la corrección al administrador o a
    * quien paga. Cada corrección lleva motivo: ver `corregirDiaCerrado()`.
