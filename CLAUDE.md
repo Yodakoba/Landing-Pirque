@@ -2565,17 +2565,15 @@ gris sobre una grilla corrida— justamente al revés de cómo se usa. Ahora
 precede: sigue marcado, que es la referencia para ubicarse entre 90 días,
 pero dejó de ser lo que agrupa.
 
-En la cabecera de cada semana: el rango en palabras, **cuánta gente y
-cuántas reservas** —*"17 personas · 5 reservas"*—, hasta tres avisos, y el
-botón de mandar la planilla.
+En la cabecera de cada semana: el rango en palabras, **hasta tres avisos**
+y el botón de mandar la planilla.
 
 #### La línea de la semana avisa lo que se sale de lo normal (2026-11-05)
 
 Decía *"13 personas · 2 públicos"*, y ese "2 públicos" contaba **días**
 abiertos al público: el cliente lo leyó como reservas, y además ya se ve en
 cada tarjeta. Pidió aprovechar la línea para *"subrayar ciertos casos
-especiales"*. Ahora, después del conteo, van **pastillas solo cuando
-aplican**, en orden de urgencia y **tres como máximo** (`lineaDeSemana()` en
+especiales"*. Ahora van **pastillas solo cuando aplican**, en orden de urgencia y **tres como máximo** (`lineaDeSemana()` en
 `semana.ts`, con sus pruebas):
 
 | Aviso | Ejemplo | Color |
@@ -2589,8 +2587,10 @@ aplican**, en orden de urgencia y **tres como máximo** (`lineaDeSemana()` en
 
 - **Uno por tipo, nombrando los días**: *"Sáb y dom casi llenos"*, no dos
   pastillas que dicen lo mismo.
-- **Sin avisos, la línea es solo el conteo**, y eso ya dice que es una
-  semana normal.
+- **Sin conteo de personas ni reservas** (lo sacó el cliente el mismo día:
+  *"se ve en los dos paneles… mejor usémoslo solo para los avisos
+  importantes"*). Sin avisos, la línea es solo el rango de fechas, y eso ya
+  dice que es una semana normal.
 - **"Grupo grande" es desde 30 personas** y vive en `Config`
   (`grupo_grande`, editable en `/configuracion`), porque es dato del
   negocio. En cero no se avisa nunca.
