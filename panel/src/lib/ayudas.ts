@@ -215,7 +215,7 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'Abre en la semana pasada, que es la que se paga. Puedes elegir otra '
       + 'semana, el mes, o dos fechas sueltas.',
-      'Mira arriba si quedan días sin confirmar: mientras los haya, el total '
+      'Mira arriba si quedan turnos sin cerrar: mientras los haya, el total '
       + 'está incompleto.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
       + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',

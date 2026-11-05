@@ -1137,8 +1137,8 @@ export default function InformeEquipo() {
   return (
     <section>
       {/* Sin bajada (2026-11-05, lo pidió el cliente): explicaba cómo
-          funciona el sistema por dentro y no ayudaba a hacer nada. Eso vive
-          en el `?`, que se abre cuando hace falta. */}
+          funciona el sistema por dentro —que lo pagado no se recalcula con
+          los sueldos de hoy— y no ayudaba a hacer nada. */}
       <h1 className="mb-5 text-xl font-bold uppercase tracking-wide">
         Informe del equipo<Ayuda tema="informe" />
       </h1>
