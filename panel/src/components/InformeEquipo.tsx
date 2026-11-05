@@ -52,6 +52,24 @@ import Dialogo from './Dialogo';
 import Campo from './Campo';
 import { copiarConAviso, avisar } from './AvisoFlotante';
 
+/**
+ * **Sueldo y propina se distinguen por su color** (2026-11-05, lo pidió el
+ * cliente: *"que se entienda gráficamente… sin ser muy gritón"*). Son dos
+ * pagos distintos y antes se veían iguales salvo por la palabra.
+ *
+ * - **Sueldo** (y el servicio de una actividad extra, que es lo mismo:
+ *   lo que se paga por el trabajo) en **cielo**.
+ * - **Propina** en **dorado**, el color de la plata que dejan los clientes.
+ *
+ * Son tintes suaves —un fondo al 7% y un borde—, no rellenos: el verde y el
+ * ámbar siguen diciendo si está pagado o no, y eso no se toca.
+ */
+const TINTE = {
+  sueldo: { caja: 'border-cielo/50 bg-cielo/[0.07]', texto: 'text-cielo-texto', punto: 'bg-cielo-fuerte' },
+  propina: { caja: 'border-oro/55 bg-oro/[0.08]', texto: 'text-oro', punto: 'bg-oro' }
+} as const;
+const tinteDe = (c: string) => (c === CONCEPTO.propina ? TINTE.propina : TINTE.sueldo);
+
 type Tipo = 'mes' | 'semana' | 'rango';
 
 /** Una de las partes que se pueden pagar: sueldo, propina o servicio. */
@@ -349,11 +367,11 @@ function LineaPersona({
             </span>
           ) : (
             <button key={o.concepto} type="button" onClick={() => onCopiar(o)}
-              className="tecla flex min-h-[44px] flex-1 items-center justify-center gap-2
-                         whitespace-nowrap rounded-xl border-2 border-oro/60 bg-oro/[0.07] px-3
-                         text-[14px] font-bold hover:border-oro md:flex-none">
+              className={`tecla flex min-h-[44px] flex-1 items-center justify-center gap-2
+                         whitespace-nowrap rounded-xl border-2 px-3 text-[14px] font-bold
+                         md:flex-none ${tinteDe(o.concepto).caja}`}>
               <span aria-hidden>📋</span>
-              <span>{o.concepto}</span>
+              <span className={tinteDe(o.concepto).texto}>{o.concepto}</span>
               <span className="tabular-nums text-hueso/75">{enPesos(o.parte.falta)}</span>
             </button>
           ))}
@@ -405,10 +423,11 @@ function LineaPersona({
 
           <div className="grid gap-3 md:grid-cols-2">
           {partes.filter((o) => o.parte.debe > 0).map((o) => (
-            <div key={o.concepto} className={`rounded-xl border-2 p-3 ${
-              o.parte.estado === 'pagado' ? 'border-verde/40 bg-verde/[0.04]' : 'border-hueso/15'}`}>
+            <div key={o.concepto} className={`rounded-xl border-2 p-3 ${tinteDe(o.concepto).caja}`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-bold uppercase tracking-widest text-hueso/65">
+                <span className={`flex items-center gap-2 text-[14px] font-black uppercase
+                                  tracking-widest ${tinteDe(o.concepto).texto}`}>
+                  <span aria-hidden className={`h-3 w-3 rounded-full ${tinteDe(o.concepto).punto}`} />
                   {o.concepto}
                 </span>
                 {estadoPill(o.parte.estado, o.parte.falta)}
@@ -431,7 +450,7 @@ function LineaPersona({
                   ) : (
                     <button type="button" onClick={() => onCopiar(o)}
                       className="tecla flex min-h-[48px] w-full items-center justify-center gap-2
-                                 rounded-xl border-2 border-oro/70 bg-oro/[0.07] text-[15px]
+                                 rounded-xl border-2 border-oro/70 bg-panel text-[15px]
                                  font-bold hover:border-oro">
                       <span aria-hidden>📋</span>
                       Copiar datos de transferencia
@@ -515,10 +534,15 @@ function TransferenciaMasiva({ sueldos, propinas, onDescargar, onMarcar }: {
   onMarcar: (cual: 'sueldos' | 'propinas') => void;
 }) {
   const fila = (cual: 'sueldos' | 'propinas', p: Pendientes) => (
-    <div key={cual} className="flex flex-col gap-2 rounded-xl border-2 border-hueso/15 p-3
-                               md:flex-row md:items-center">
+    <div key={cual} className={`flex flex-col gap-2 rounded-xl border-2 p-3 md:flex-row
+                               md:items-center ${tinteDe(cual === 'propinas' ? CONCEPTO.propina : CONCEPTO.sueldo).caja}`}>
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-bold first-letter:uppercase">{cual}</p>
+        <p className={`flex items-center gap-2 text-[15px] font-black uppercase tracking-wide ${
+          tinteDe(cual === 'propinas' ? CONCEPTO.propina : CONCEPTO.sueldo).texto}`}>
+          <span aria-hidden className={`h-3 w-3 rounded-full ${
+            tinteDe(cual === 'propinas' ? CONCEPTO.propina : CONCEPTO.sueldo).punto}`} />
+          {cual}
+        </p>
         <p className="text-[13px] text-hueso/70">
           {p.entran.length
             ? <>{p.entran.length} {p.entran.length === 1 ? 'persona' : 'personas'} ·{' '}
