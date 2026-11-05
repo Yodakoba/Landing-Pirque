@@ -334,6 +334,8 @@ export default function CalendarioEquipo() {
           conCierre
           // La otra cara, la de las reservas: ver `conReservas`.
           conReservas
+          // Vino / No vino se marca solo acá: ver `conAsistencia`.
+          conAsistencia
           verSueldos={equipo.verSueldos}
           onListo={() => { setPlanificando(null); cargarEquipo(); }}
           onCancelar={() => setPlanificando(null)}

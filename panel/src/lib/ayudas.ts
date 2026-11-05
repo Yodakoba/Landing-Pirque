@@ -68,7 +68,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'cupo (Cancelada, Reembolsada, Anulada).'
     ],
     pasos: [
-      'Marca Vino o No vino a medida que llega la gente.',
+      'La columna Asistencia dice quién vino; se marca en Turnos.',
       'Editar abre la reserva para corregir un teléfono, un menú o el estado '
       + 'del pago.',
       'Equipo y cuentas del día abre la ventana donde se escriben los montos '
