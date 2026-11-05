@@ -54,6 +54,12 @@ export interface Config {
    * mataría cada presupuesto al nacer, que no es lo que nadie quiso decir.
    */
   vigenciaPresupuesto: number;
+  /**
+   * Desde cuántas personas una reserva es **grupo grande**, y la línea de
+   * la semana del calendario lo avisa (2026-11-05: el cliente lo fijó en
+   * 30 y pidió que se pudiera cambiar). En cero no se avisa nunca.
+   */
+  grupoGrande: number;
 }
 
 /**
@@ -73,7 +79,8 @@ export const POR_DEFECTO: Config = {
   diasAFuturo: 90,
   cortes: { amarillo: 0.6, rojo: 0.85 },
   tokenPlanilla: '',
-  vigenciaPresupuesto: 15
+  vigenciaPresupuesto: 15,
+  grupoGrande: 30
 };
 
 /** Las claves como se escriben en la planilla, en el orden en que se muestran. */
@@ -87,7 +94,8 @@ export const CLAVES = {
   corteAmarillo: 'corte_amarillo',
   corteRojo: 'corte_rojo',
   tokenPlanilla: 'token_planilla',
-  vigenciaPresupuesto: 'vigencia_presupuesto'
+  vigenciaPresupuesto: 'vigencia_presupuesto',
+  grupoGrande: 'grupo_grande'
 } as const;
 
 /**
@@ -189,7 +197,10 @@ export function leerConfigDe(filas: string[][]): Config {
     // El mínimo es 0 —sin vencimiento— y no 1: es un valor que alguien puede
     // querer de verdad, y rechazarlo lo devolvería en silencio a 15.
     vigenciaPresupuesto: numero(v(CLAVES.vigenciaPresupuesto),
-      POR_DEFECTO.vigenciaPresupuesto, 0, 3650)
+      POR_DEFECTO.vigenciaPresupuesto, 0, 3650),
+    // En cero no se avisa: alguien que no quiere el aviso tiene que poder
+    // apagarlo sin que vuelva solo a 30.
+    grupoGrande: numero(v(CLAVES.grupoGrande), POR_DEFECTO.grupoGrande, 0, 100000)
   };
 }
 
@@ -206,6 +217,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.corteAmarillo, String(Math.round(c.cortes.amarillo * 100))],
     [CLAVES.corteRojo, String(Math.round(c.cortes.rojo * 100))],
     [CLAVES.tokenPlanilla, c.tokenPlanilla],
-    [CLAVES.vigenciaPresupuesto, String(c.vigenciaPresupuesto)]
+    [CLAVES.vigenciaPresupuesto, String(c.vigenciaPresupuesto)],
+    [CLAVES.grupoGrande, String(c.grupoGrande)]
   ];
 }

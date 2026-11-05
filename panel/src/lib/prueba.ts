@@ -41,7 +41,7 @@ import {
 } from './remuneraciones.ts';
 import { indices, faltantes, normalizar, COL_RESERVAS, TIPO_PAGO, esManual }
   from './columnas.ts';
-import type { Reserva, FechaHabil } from './tipos.ts';
+import type { Reserva, FechaHabil, Ocupacion } from './tipos.ts';
 import {
   ESTADO_PRESUPUESTO, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
@@ -91,6 +91,7 @@ import { climaDe, iconoDe, climaEnPalabras, urlPronostico, horaEnChile } from '.
 import { createHmac } from 'node:crypto';
 import { estaCerrado, esExclusiva, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
+import { lineaDeSemana, listaDeDias, MAX_AVISOS } from './semana.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
          sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
          type Banco } from './banco.ts';
@@ -3258,6 +3259,68 @@ console.log('\nEventos del CRM');
   ok(!puede(ROL.encargado, 'corregir'), 'el encargado no corrige un día cerrado');
   ok(puede(ROL.admin, 'cerrar') && puede(ROL.encargado, 'cerrar') && puede(ROL.pagos, 'cerrar'),
      'cierran el día los tres roles del panel, el encargado incluido');
+}
+
+// ---------- La línea de la semana (2026-11-05) ----------
+{
+  const dia = (fecha: string, p: Record<string, unknown> = {}) => ({
+    fecha, capacidad: 120, tomadas: 0, quedan: 120, pagadas: 0, porPagar: 0, porCobrar: 0,
+    sinMonto: 0, privada: false, exclusiva: false, presupuestos: 0, presupuestadas: 0,
+    semaforo: 'verde', bloqueada: false, notas: '', ...p
+  }) as Ocupacion;
+  const sab = '2026-11-28', dom = '2026-11-29';
+
+  ok(listaDeDias([sab]) === 'sáb' && listaDeDias([sab, dom]) === 'sáb y dom'
+     && listaDeDias(['2026-11-27', sab, dom]) === 'vie, sáb y dom',
+     'los días se nombran como los diría una persona');
+
+  const tranquila = lineaDeSemana({ dias: [dia(sab, { tomadas: 12 }), dia(dom, { tomadas: 5 })],
+    reservas: [r({ fecha: sab, personas: 12 }), r({ fecha: dom, personas: 5 })], grupoGrande: 30 });
+  ok(tranquila.personas === 17 && tranquila.reservas === 2 && tranquila.avisos.length === 0,
+     'una semana normal es solo el conteo: personas y reservas, sin avisos');
+
+  const cancelada = lineaDeSemana({ dias: [dia(sab)], grupoGrande: 30,
+    reservas: [r({ fecha: sab, personas: 40, estadoPago: 'cancelled' })] });
+  ok(cancelada.reservas === 0 && cancelada.avisos.length === 0,
+     'una reserva que liberó su lugar no cuenta, ni como reserva ni como grupo grande');
+
+  const grupo = lineaDeSemana({ dias: [dia(sab), dia(dom)], grupoGrande: 30,
+    reservas: [r({ fecha: dom, personas: 30 }), r({ fecha: sab, personas: 29 })] });
+  ok(grupo.avisos[0]?.texto === 'Dom: grupo de 30',
+     'un grupo de 30 o más se avisa con su día y su tamaño; uno de 29 no');
+  const varios = lineaDeSemana({ dias: [dia(sab), dia(dom)], grupoGrande: 30,
+    reservas: [r({ fecha: dom, personas: 30 }), r({ fecha: sab, personas: 45 }),
+               r({ fecha: dom, personas: 31 })] });
+  ok(varios.avisos[0]?.texto === '3 grupos grandes · sáb y dom', 'varios grupos se cuentan en una pastilla');
+  ok(lineaDeSemana({ dias: [dia(dom)], grupoGrande: 0,
+       reservas: [r({ fecha: dom, personas: 90 })] }).avisos.length === 0,
+     'con el umbral en cero no se avisa nunca');
+
+  const urgente = lineaDeSemana({
+    dias: [dia(sab, { bloqueada: true, tomadas: 4 }), dia(dom, { semaforo: 'rojo', quedan: 6, presupuestos: 2, presupuestadas: 43 })],
+    reservas: [r({ fecha: dom, personas: 50 })], grupoGrande: 30,
+    faltanEquipo: { [dom]: 2 }, crm: { [dom]: { confirmados: [], tentativos: [], personasConfirmadas: 150, personasTentativas: 0 } }
+  });
+  ok(urgente.avisos.length === MAX_AVISOS, 'nunca más de tres avisos');
+  ok(urgente.avisos.map((a) => a.texto).join(' | ')
+       === 'Sáb cerrado con 4 personas | Dom casi lleno | Dom: grupo de 50',
+     'van en orden de urgencia: cerrado con gente, lleno, grupo grande');
+  ok(urgente.avisos[0].tono === 'rojo' && urgente.avisos[1].tono === 'ambar',
+     'cada aviso con su color');
+
+  const resto = lineaDeSemana({ dias: [dia(sab, { presupuestos: 1, presupuestadas: 20 })],
+    reservas: [], grupoGrande: 30, faltanEquipo: { [sab]: 1 },
+    crm: { [sab]: { confirmados: [], tentativos: [], personasConfirmadas: 58, personasTentativas: 0 } } });
+  ok(resto.avisos.map((a) => a.texto).join(' | ')
+       === 'Falta equipo el sáb | 58 del CRM el sáb | 1 presupuesto · 20 posibles',
+     'falta equipo, lo ganado en el CRM y los presupuestos, en ese orden y diciendo CRM');
+  ok(lineaDeSemana({ dias: [dia(sab, { quedan: 0, semaforo: 'rojo', tomadas: 120 })],
+       reservas: [], grupoGrande: 30 }).avisos[0]?.texto === 'Sáb lleno',
+     'un día sin lugares dice lleno, no casi lleno');
+
+  ok(leerConfigDe([['Clave', 'Valor']]).grupoGrande === 30, 'grupo grande parte en 30');
+  ok(leerConfigDe([['Clave', 'Valor'], ['grupo_grande', '0']]).grupoGrande === 0,
+     'y se puede apagar con un cero sin que vuelva solo a 30');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
