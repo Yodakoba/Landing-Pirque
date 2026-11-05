@@ -3247,15 +3247,13 @@ console.log('\nEventos del CRM');
   ok(bien.ok && bien.correccion === 'faltó la propina',
      'con permiso y motivo la corrección entra, con el motivo limpio para la bitácora');
 
-  // Quién corrige: el administrador y quien paga, que son también quienes
-  // cierran (2026-11-05). El encargado guarda; no cierra ni corrige.
+  // Quién corrige: el administrador y quien paga. El encargado cierra el día
+  // —con una advertencia—, pero corregirlo después ya no es suyo.
   ok(puede(ROL.admin, 'corregir') && puede(ROL.pagos, 'corregir'),
      'corrigen el administrador y quien paga');
   ok(!puede(ROL.encargado, 'corregir'), 'el encargado no corrige un día cerrado');
-  ok(puede(ROL.admin, 'cerrar') && puede(ROL.pagos, 'cerrar'),
-     'cierran el día el administrador y quien paga');
-  ok(!puede(ROL.encargado, 'cerrar'),
-     'el encargado no cierra el día: guarda, y quien paga revisa y cierra');
+  ok(puede(ROL.admin, 'cerrar') && puede(ROL.encargado, 'cerrar') && puede(ROL.pagos, 'cerrar'),
+     'cierran el día los tres roles del panel, el encargado incluido');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

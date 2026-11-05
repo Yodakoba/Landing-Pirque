@@ -94,9 +94,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Elige a cada persona en el puesto que le toca.',
       'Marca Vino o No vino de cada una.',
       'Escribe la jornada, los ajustes y la propina del día.',
-      'Quien hace los pagos cierra el día cuando revisa que esté todo listo. '
-      + 'Queda anotado con su nombre y la hora, y desde ahí el día queda en '
-      + 'solo lectura.',
+      'Cerrar el día pregunta antes y muestra lo que estás declarando: '
+      + 'quién vino, la propina, las actividades extras. Queda anotado con tu '
+      + 'nombre y la hora, y desde ahí el día queda en solo lectura.',
       'Si un día cerrado tiene un error, el administrador o quien hace los '
       + 'pagos aprieta Corregir este día, arregla lo que haga falta y lo '
       + 'guarda con el motivo. El día sigue cerrado.'

@@ -46,8 +46,8 @@ export async function PUT(req: Request) {
       return NextResponse.json({ cerrado: false });
     }
 
-    // **Cerrar es de quien paga** (2026-11-05): el encargado guarda, el que
-    // paga revisa y cierra. Se comprueba acá, no solo escondiendo el botón.
+    // **Cerrar tiene su propio permiso** (`cerrar`, 2026-11-05). Hoy lo
+    // tienen los tres roles del panel; reabrir y corregir, solo quien paga.
     const sinCerrar = await exigir(req, 'cerrar');
     if (sinCerrar) return sinCerrar;
 
