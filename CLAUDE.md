@@ -2914,6 +2914,24 @@ El aviso flotante ganó un segundo tono para esto: **ámbar con "!"** cuando
 no pasó lo esperado —no se descargó nada, quedó alguien fuera—. Un ✓ verde
 sobre "nadie con cuenta completa" se leía como que había salido bien.
 
+#### Filtrar: *Por pagar* y buscar por nombre (2026-11-05)
+
+Lo pidió el cliente: *"un botón por pagar, justo arriba de la lista… y el
+mismo campo de búsqueda de nombre"*. Arriba de las líneas hay dos botones
+—**Todos** y **Por pagar**, cada uno con cuántas personas cuenta— y un
+buscador.
+
+- **Por pagar es quien tiene `falta` mayor que cero** en el periodo
+  elegido, o sea lo mismo que dice su pastilla: el filtro y la línea no
+  pueden contradecirse. A quien se le pagó todo, desaparece.
+- **El buscador es el mismo criterio que `BuscarPersona`**: sin tildes ni
+  mayúsculas, "perez" encuentra a José Pérez.
+- **Filtra las dos listas a la vez**, equipo y actividades extras. Los
+  totales de debajo de cada lista **siguen siendo los del periodo entero**:
+  el filtro es para encontrar a alguien, no cambia cuánto se debe.
+- Si no queda nadie, lo dice: *"✓ A nadie le falta pago en este periodo"*
+  o *"Nadie calza con…"*, en vez de una pantalla en blanco.
+
 #### El orden de los datos copiados todavía no está confirmado
 
 Hoy es **titular, RUT, banco, tipo, número, monto, correo, glosa**, y vive

@@ -25,6 +25,10 @@
  * columnas son lo que permite darse cuenta a tiempo.
  */
 import { useEffect, useMemo, useState } from 'react';
+
+/** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
+const llano = (t: string) =>
+  t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import {
@@ -644,6 +648,10 @@ export default function InformeEquipo() {
   // La línea abierta. Una a la vez, como las fichas de /equipo: se paga a
   // una persona, no se comparan dos.
   const [abierta, setAbierta] = useState<string | null>(null);
+  /** El filtro de arriba de la lista: todos, o solo a quien le falta pago. */
+  const [soloPorPagar, setSoloPorPagar] = useState(false);
+  /** Lo escrito en el buscador de nombre. */
+  const [busca, setBusca] = useState('');
   // Qué "todos pagados" se está confirmando.
   const [marcando, setMarcando] = useState<'sueldos' | 'propinas' | null>(null);
   const [error, setError] = useState('');
@@ -727,6 +735,26 @@ export default function InformeEquipo() {
       falta: d.total.falta, estado: d.total.estado
     };
   };
+
+  /**
+   * **Si una línea se muestra con el filtro de arriba** (2026-11-05, lo
+   * pidió el cliente: *"un botón por pagar… y el mismo campo de búsqueda de
+   * nombre"*). *Por pagar* deja a quien todavía tiene algo pendiente en
+   * este periodo, con lo mismo que dice su pastilla —`falta`—, así que el
+   * filtro y la línea no pueden contradecirse. El nombre se busca sin
+   * tildes ni mayúsculas, igual que en `BuscarPersona`.
+   */
+  const q = llano(busca);
+  const sePorPagar = (nombre: string, tot: number, prop: number) =>
+    pagoDeFila(nombre, tot, prop).falta > 0;
+  const seVe = (nombre: string, tot: number, prop: number) =>
+    (!q || llano(nombre).includes(q)) && (!soloPorPagar || sePorPagar(nombre, tot, prop));
+  const visiblesEquipo = lineas.filter((l) => seVe(l.trabajador, l.total, l.propina));
+  const visiblesExtras = lineasExtras.filter((l) => seVe(l.colaborador, l.total, 0));
+  const cuantosTodos = lineas.length + lineasExtras.length;
+  const cuantosPorPagar =
+    lineas.filter((l) => sePorPagar(l.trabajador, l.total, l.propina)).length
+    + lineasExtras.filter((l) => sePorPagar(l.colaborador, l.total, 0)).length;
 
   const sumaDe = (nombres: { nombre: string; tot: number; prop: number }[]) =>
     nombres.reduce((s, x) => {
@@ -1216,15 +1244,50 @@ export default function InformeEquipo() {
             </p>
           )}
 
+          {/* **El filtro, justo arriba de la lista.** Dos botones —*Todos* y
+              *Por pagar*, con cuántos hay en cada uno— y el buscador de nombre.
+              Filtran las dos listas, equipo y actividades extras; los totales
+              de abajo siguen siendo los del periodo entero. */}
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div role="group" aria-label="Qué personas mostrar" className="grid grid-cols-2 gap-2 sm:flex">
+              {([[false, 'Todos', cuantosTodos], [true, 'Por pagar', cuantosPorPagar]] as const)
+                .map(([valor, rotulo, n]) => (
+                  <button key={rotulo} type="button" aria-pressed={soloPorPagar === valor}
+                    onClick={() => setSoloPorPagar(valor)}
+                    className={`tecla flex min-h-[44px] items-center justify-center gap-2 rounded-xl
+                                border-2 px-4 text-[15px] font-bold ${soloPorPagar === valor
+                      ? 'border-oro bg-oro/15 text-hueso'
+                      : 'border-hueso/20 text-hueso/70 hover:border-oro/60'}`}>
+                    {rotulo}
+                    <span className={`rounded-full px-2 text-[13px] tabular-nums ${
+                      valor && n > 0 ? 'bg-ambar/20 text-ambar-texto' : 'bg-hueso/10'}`}>{n}</span>
+                  </button>
+                ))}
+            </div>
+            <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nombre" aria-label="Buscar por nombre"
+              className="min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
+                         text-[15px] focus:border-oro focus:outline-none sm:w-72" />
+          </div>
+          {visiblesEquipo.length === 0 && visiblesExtras.length === 0 && (
+            <p className="mb-8 rounded-xl border-2 border-hueso/15 px-4 py-3 text-[15px] text-hueso/70">
+              {soloPorPagar && !q
+                ? <>✓ A nadie le falta pago en este periodo.</>
+                : <>Nadie calza con {q ? <>“{busca.trim()}”</> : 'este filtro'}.</>}
+            </p>
+          )}
+
+          {(visiblesEquipo.length > 0 || (!q && !soloPorPagar)) && (
           <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
             Equipo del restaurante
           </h2>
+          )}
           {lineas.length === 0 ? (
             <p className="mb-8 text-sm text-hueso/60">Sin turnos anotados en este periodo.</p>
-          ) : (
+          ) : visiblesEquipo.length === 0 ? null : (
             <>
               <ul className="space-y-2">
-                {lineas.map((l) => {
+                {visiblesEquipo.map((l) => {
                   const pago = pagoDeFila(l.trabajador, l.total, l.propina);
                   const aplica = pideBoleta('equipo', esContratado(l.modalidad));
                   return (
@@ -1290,13 +1353,13 @@ export default function InformeEquipo() {
               el equipo: un jinete no cobra una jornada ni entra en el reparto
               de la propina. Juntos aparecen en el total del periodo y en el
               CSV, que es donde hacen falta juntos. */}
-          {lineasExtras.length > 0 && (
+          {visiblesExtras.length > 0 && (
             <>
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 Actividades extras
               </h2>
               <ul className="space-y-2">
-                {lineasExtras.map((l) => {
+                {visiblesExtras.map((l) => {
                   const pago = pagoDeFila(l.colaborador, l.total, 0);
                   return (
                     <LineaPersona key={'x-' + l.colaborador}
