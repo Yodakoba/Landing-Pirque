@@ -4912,6 +4912,11 @@ necesariamente quien pasa lista.
 - **La tabla de reservas de la página del día** muestra la asistencia como
   una pastilla de solo lectura (*✓ vino* / *✕ no vino* / *sin marcar*). Se
   marca en la cara *Reservas* de la ventana del día en `/turnos`.
+- **Bajo el nombre no se repite el estado** (2026-11-05, lo notó el
+  cliente: *"vino"* debajo de un botón verde que ya dice Vino). Con los
+  botones a la vista, la segunda línea dice solo lo que ellos no dicen —el
+  total del día, *contratado*, cuántos ajustes y su propina— y si no hay
+  nada, no hay línea. Sin los botones, el estado sí va en palabras.
 - **Es una decisión de pantalla, no de permiso todavía**: la API sigue
   aceptando la asistencia de quien tenga `turnos`. Si se separa el rol de
   verdad, el lugar es la tabla de `PERMISOS`, no esconder más botones.

@@ -210,13 +210,12 @@ export default function ExtrasDialogo({
                         e.estado === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                         {e.colaborador}
                       </span>
-                      <span className={`block truncate text-[13px] ${
-                        !e.estado ? 'text-ambar-texto' : 'text-hueso/65'}`}>
+                      {/* Qué hace y, si vino, cuánto: el estado ya lo dicen
+                          los botones de al lado (ver la ventana del equipo). */}
+                      <span className="block truncate text-[13px] text-hueso/65">
                         {e.actividad || 'sin actividad'}
-                        {' · '}
-                        {!e.estado ? 'sin confirmar'
-                          : e.estado === VINO.no ? 'no llegó'
-                          : enPesos(costoDeExtra(e))}
+                        {e.estado === VINO.si && <> · {enPesos(costoDeExtra(e))}</>}
+                        {!!e.ajuste && <> · 1 ajuste</>}
                       </span>
                     </span>
                   </button>

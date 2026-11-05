@@ -508,17 +508,34 @@ export default function EquipoDialogo({
                               t?.asistencia === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                               {nombre}
                             </span>
-                            {/* Mientras nadie diga si llegó, el turno no
-                                suma nada: se dice con todas sus letras. */}
-                            <span className={`block truncate text-[13px] ${
-                              !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
-                              {!t?.asistencia ? 'sin marcar'
-                                : t.asistencia === VINO.no ? 'no llegó'
-                                : total > 0 ? enPesos(total) : 'vino'}
-                              {!!t?.ajustes.length && (
-                                <> · {t.ajustes.length} {t.ajustes.length === 1 ? 'ajuste' : 'ajustes'}</>
-                              )}
-                            </span>
+                            {/* **La segunda línea dice lo que los botones no
+                                dicen** (2026-11-05, lo pidió el cliente: "vino"
+                                bajo un botón verde que dice Vino era doble).
+                                Con los botones a la vista va solo la plata:
+                                el total del día, cuántos ajustes y su parte de
+                                la propina. Sin los botones —calendario y página
+                                del día— el estado sí va con palabras, porque
+                                es la única forma de saberlo. */}
+                            {(() => {
+                              const partes: string[] = [];
+                              if (!conAsistencia && t) {
+                                partes.push(!t.asistencia ? 'sin marcar'
+                                  : t.asistencia === VINO.no ? 'no llegó' : 'vino');
+                              }
+                              if (t?.asistencia === VINO.si && total > 0) partes.push(enPesos(total));
+                              if (t && esContratado(t.modalidad)) partes.push('contratado');
+                              if (t?.ajustes.length) {
+                                partes.push(`${t.ajustes.length} ${t.ajustes.length === 1 ? 'ajuste' : 'ajustes'}`);
+                              }
+                              if (repartida[i]?.propina) partes.push(`propina ${enPesos(repartida[i].propina)}`);
+                              if (!partes.length) return null;
+                              return (
+                                <span className={`block truncate text-[13px] ${
+                                  !conAsistencia && !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
+                                  {partes.join(' · ')}
+                                </span>
+                              );
+                            })()}
                           </span>
                         </button>
                         {conAsistencia && (
