@@ -87,7 +87,6 @@ export default function ReservaForm({
     for (const { menu, cantidad } of desglosarMenu(reserva?.menu)) inicial[menu] = cantidad;
     return inicial;
   });
-  const [nuevoMenu, setNuevoMenu] = useState('');
 
   // Los que ya se vendieron, más los de esta reserva por si alguno dejó de
   // venderse y no aparecería en la lista.
@@ -150,12 +149,10 @@ export default function ReservaForm({
     setCuenta((c) => ({ ...c, [menu]: n }));
   }
 
-  function agregarMenu() {
-    const m = nuevoMenu.trim();
-    if (!m) return;
-    setCuenta((c) => ({ ...c, [m]: c[m] ?? 1 }));
-    setNuevoMenu('');
-  }
+  // **No hay "Otro menú" acá** (2026-11-05, lo pidió el cliente). Qué
+  // menús existen es una decisión del negocio —se publica en la tienda y se
+  // le pone precio en /menus—, no algo que se invente al anotar una reserva.
+  // La lista son los menús conocidos más los que ya traiga esta reserva.
 
   async function guardar() {
     setError('');
@@ -327,19 +324,6 @@ export default function ReservaForm({
             ))}
           </div>
 
-          <div className="mt-3 flex gap-2">
-            <input type="text" value={nuevoMenu} placeholder="Otro menú…"
-              onChange={(e) => setNuevoMenu(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarMenu(); } }}
-              className={ENTRADA} />
-            <button type="button" onClick={agregarMenu}
-              className="whitespace-nowrap rounded border border-hueso/20 px-3 text-sm
-                         hover:border-oro">Agregar</button>
-          </div>
-          <p className="mt-2 text-xs text-hueso/50">
-            Los nombres salen de lo que Shopify ya vendió, para que el total del
-            día cuente junto lo que es el mismo plato.
-          </p>
         </div>
 
         <div className="mt-4 border-t border-hueso/10 pt-4">
