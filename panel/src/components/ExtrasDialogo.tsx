@@ -23,6 +23,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import FichaColaborador from './FichaColaborador';
 import Asistencia from './Asistencia';
+import BuscarPersona from './BuscarPersona';
 
 /** El rótulo encima de cada campo de la línea abierta. */
 const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
@@ -210,13 +211,12 @@ export default function ExtrasDialogo({
                         e.estado === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                         {e.colaborador}
                       </span>
-                      <span className={`block truncate text-[13px] ${
-                        !e.estado ? 'text-ambar-texto' : 'text-hueso/65'}`}>
+                      {/* Qué hace y, si vino, cuánto: el estado ya lo dicen
+                          los botones de al lado (ver la ventana del equipo). */}
+                      <span className="block truncate text-[13px] text-hueso/65">
                         {e.actividad || 'sin actividad'}
-                        {' · '}
-                        {!e.estado ? 'sin confirmar'
-                          : e.estado === VINO.no ? 'no llegó'
-                          : enPesos(costoDeExtra(e))}
+                        {e.estado === VINO.si && <> · {enPesos(costoDeExtra(e))}</>}
+                        {!!e.ajuste && <> · 1 ajuste</>}
                       </span>
                     </span>
                   </button>
@@ -313,23 +313,12 @@ export default function ExtrasDialogo({
       </datalist>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <select value="" disabled={libres.length === 0}
-          aria-label="Agregar una actividad a este día"
-          onChange={(ev) => {
-            const c = gente.find((x) => x.nombre === ev.target.value);
+        <BuscarPersona etiqueta="Agregar una actividad a este día" ancho="w-full sm:w-80"
+          opciones={libres.map((c) => ({ nombre: c.nombre, detalle: c.actividad }))}
+          onElegir={(nombre) => {
+            const c = gente.find((x) => x.nombre === nombre);
             if (c) agregar(c);
-          }}
-          className="w-56 rounded border border-hueso/20 bg-tinta px-2 py-1.5
-                     text-sm focus:border-oro focus:outline-none disabled:opacity-40">
-          <option value="">
-            {libres.length === 0 ? 'No queda nadie libre' : '+ Agregar…'}
-          </option>
-          {libres.map((c) => (
-            <option key={c.nombre} value={c.nombre}>
-              {c.nombre}{c.actividad ? ` · ${c.actividad}` : ''}
-            </option>
-          ))}
-        </select>
+          }} />
         <button onClick={() => setFicha({})}
           className="rounded border border-dashed border-hueso/20 px-3 py-1.5
                      text-sm text-hueso/60 hover:border-oro hover:text-oro">

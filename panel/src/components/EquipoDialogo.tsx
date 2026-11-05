@@ -32,6 +32,7 @@ import { normalizar } from '@/lib/columnas';
 import { enPalabras } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
 import Asistencia from './Asistencia';
+import BuscarPersona from './BuscarPersona';
 import AvisoGuardado from './AvisoGuardado';
 import ReservasDelDia from './ReservasDelDia';
 import { AvisoCierre, PieCorreccion } from './Correccion';
@@ -508,17 +509,34 @@ export default function EquipoDialogo({
                               t?.asistencia === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                               {nombre}
                             </span>
-                            {/* Mientras nadie diga si llegó, el turno no
-                                suma nada: se dice con todas sus letras. */}
-                            <span className={`block truncate text-[13px] ${
-                              !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
-                              {!t?.asistencia ? 'sin marcar'
-                                : t.asistencia === VINO.no ? 'no llegó'
-                                : total > 0 ? enPesos(total) : 'vino'}
-                              {!!t?.ajustes.length && (
-                                <> · {t.ajustes.length} {t.ajustes.length === 1 ? 'ajuste' : 'ajustes'}</>
-                              )}
-                            </span>
+                            {/* **La segunda línea dice lo que los botones no
+                                dicen** (2026-11-05, lo pidió el cliente: "vino"
+                                bajo un botón verde que dice Vino era doble).
+                                Con los botones a la vista va solo la plata:
+                                el total del día, cuántos ajustes y su parte de
+                                la propina. Sin los botones —calendario y página
+                                del día— el estado sí va con palabras, porque
+                                es la única forma de saberlo. */}
+                            {(() => {
+                              const partes: string[] = [];
+                              if (!conAsistencia && t) {
+                                partes.push(!t.asistencia ? 'sin marcar'
+                                  : t.asistencia === VINO.no ? 'no llegó' : 'vino');
+                              }
+                              if (t?.asistencia === VINO.si && total > 0) partes.push(enPesos(total));
+                              if (t && esContratado(t.modalidad)) partes.push('contratado');
+                              if (t?.ajustes.length) {
+                                partes.push(`${t.ajustes.length} ${t.ajustes.length === 1 ? 'ajuste' : 'ajustes'}`);
+                              }
+                              if (repartida[i]?.propina) partes.push(`propina ${enPesos(repartida[i].propina)}`);
+                              if (!partes.length) return null;
+                              return (
+                                <span className={`block truncate text-[13px] ${
+                                  !conAsistencia && !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
+                                  {partes.join(' · ')}
+                                </span>
+                              );
+                            })()}
                           </span>
                         </button>
                         {conAsistencia && (
@@ -665,36 +683,25 @@ export default function EquipoDialogo({
               <p className="mt-2 text-[13px] text-hueso/60">Nadie asignado.</p>
             )}
 
-            {/* El selector vuelve a "" después de elegir, así se puede
-                agregar a varios seguidos sin tener que cerrarlo y abrirlo. */}
-            <select value="" disabled={libres.length === 0}
-              aria-label={`Agregar alguien a ${l.puesto}`}
-              onChange={(e) => {
-                const nombre = e.target.value;
-                if (!nombre) return;
-                const ficha = gente.find((t) => t.nombre === nombre);
-                setPlan([...plan, {
-                  fecha, trabajador: nombre, puesto: l.puesto,
-                  asistencia: VINO.sinMarcar,
-                  modalidad: ficha?.modalidad ?? MODALIDAD.porTurno,
-                  // El sueldo se propone desde la ficha y se congela al pasar
-                  // lista; acá todavía no se le ha pagado nada a nadie.
-                  pagoJornada: ficha?.pagoJornada ?? 0,
-                  horasExtra: 0, valorHora: ficha?.valorHora ?? 0,
-                  ajustes: [], propina: 0
-                }]);
-              }}
-              className="mt-2 min-h-[40px] w-full rounded-lg border-2 border-hueso/20 bg-tinta px-2
-                         text-[14px] focus:border-oro focus:outline-none disabled:opacity-40">
-              <option value="">
-                {libres.length === 0 ? 'No queda nadie libre' : '+ Agregar…'}
-              </option>
-              {libres.map((t) => (
-                <option key={t.nombre} value={t.nombre}>
-                  {t.nombre}{t.puesto ? ` · ${t.puesto}` : ''}
-                </option>
-              ))}
-            </select>
+            {/* Se busca escribiendo el nombre: con veinte personas, un
+                desplegable obliga a recorrerlas todas. Ver `BuscarPersona`. */}
+            <div className="mt-2">
+              <BuscarPersona etiqueta={`Agregar alguien a ${l.puesto}`}
+                opciones={libres.map((t) => ({ nombre: t.nombre, detalle: t.puesto }))}
+                onElegir={(nombre) => {
+                  const ficha = gente.find((t) => t.nombre === nombre);
+                  setPlan((antes) => [...antes, {
+                    fecha, trabajador: nombre, puesto: l.puesto,
+                    asistencia: VINO.sinMarcar,
+                    modalidad: ficha?.modalidad ?? MODALIDAD.porTurno,
+                    // El sueldo se propone desde la ficha y se congela al pasar
+                    // lista; acá todavía no se le ha pagado nada a nadie.
+                    pagoJornada: ficha?.pagoJornada ?? 0,
+                    horasExtra: 0, valorHora: ficha?.valorHora ?? 0,
+                    ajustes: [], propina: 0
+                  }]);
+                }} />
+            </div>
 
             {/* Crear a alguien sin salir de acá. Es lo que destraba el caso
                 en que la lista está vacía: sin esto hay que irse a /equipo,

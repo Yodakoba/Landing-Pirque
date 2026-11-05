@@ -103,6 +103,12 @@ export default function Dialogo({
     trabarElFondo(id);
     // Solo la de más arriba responde a Escape.
     const alTeclear = (e: KeyboardEvent) => {
+      // Un control de adentro que ya usó el Escape —el buscador de
+      // `BuscarPersona`, que se cierra con él— lo marca con
+      // `preventDefault`, y entonces no cierra también la ventana. No basta
+      // con `stopPropagation`: en Next la raíz de React es el propio
+      // `document`, el mismo nodo donde escucha este listener.
+      if (e.defaultPrevented) return;
       if (e.key === 'Escape' && abiertas[abiertas.length - 1] === id) {
         cerrar.current();
       }

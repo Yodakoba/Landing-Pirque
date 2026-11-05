@@ -4898,6 +4898,41 @@ demás. Una abierta a la vez.**
   puesto por fuera de la ventana en un teléfono (la misma trampa de la
   tarjeta del calendario).
 
+### Los avisos hablan con las palabras de la pantalla (2026-11-05)
+
+Lo notó el cliente en el aviso del informe: decía *"turnos sin pasar
+lista"* cuando en el panel el paso se llama **cerrar el día**, y además
+mandaba a "la página de cada día", donde ya no se marca nada. *"Pasar
+lista"* fue el nombre de una ventana que se jubiló el 2026-10-23 y quedó
+viviendo en los textos.
+
+La regla: **un aviso usa el nombre del botón que lo resuelve**, y va en ese
+orden —primero qué pasa (*"Hay 4 turnos sin cerrar"*), después por qué y
+dónde se arregla (*"falta que el jefe de turno marque si cada persona vino
+y cierre el día en Turnos"*)—. Se corrigieron los cuatro textos visibles
+que decían "pasar lista"; en los comentarios del código sigue apareciendo
+como nombre histórico, y ahí no confunde a nadie.
+
+### Agregar a alguien se busca escribiendo (2026-11-05)
+
+Lo pidió el cliente: *"con tantos trabajadores ya sería útil que cuando
+aprietas agregar… se puede buscar por nombre"*. El `<select>` de cada puesto
+—y el de las actividades extras— pasó a ser `BuscarPersona`: un botón
+*+ Agregar…* que abre un campo con el cursor puesto y la lista que calza
+debajo, un botón de 44px por nombre.
+
+- **Busca sin tildes ni mayúsculas, en el nombre y en el detalle** (el
+  puesto habitual o la actividad): "jose" encuentra a José, "garz" a los
+  garzones.
+- **Elegir deja el buscador abierto y vacío**, como el desplegable volvía a
+  "" después de elegir: se agregan varios seguidos. **Enter agrega al
+  primero** de la lista, y *Listo* o Escape lo cierran.
+- **Escape cierra el buscador y no la ventana**, y eso costó un arreglo en
+  `Dialogo`: en Next la raíz de React es el propio `document`, el mismo nodo
+  donde la ventana escucha el teclado, así que `stopPropagation` no la
+  frena. El buscador marca el Escape con `preventDefault` y `Dialogo` ignora
+  un evento ya usado (`defaultPrevented`).
+
 ### Vino / No vino se marca solo en `/turnos` (2026-11-05)
 
 Lo pidió el cliente: *"saca la opción vino o no vino de la parte del
@@ -4912,6 +4947,11 @@ necesariamente quien pasa lista.
 - **La tabla de reservas de la página del día** muestra la asistencia como
   una pastilla de solo lectura (*✓ vino* / *✕ no vino* / *sin marcar*). Se
   marca en la cara *Reservas* de la ventana del día en `/turnos`.
+- **Bajo el nombre no se repite el estado** (2026-11-05, lo notó el
+  cliente: *"vino"* debajo de un botón verde que ya dice Vino). Con los
+  botones a la vista, la segunda línea dice solo lo que ellos no dicen —el
+  total del día, *contratado*, cuántos ajustes y su propina— y si no hay
+  nada, no hay línea. Sin los botones, el estado sí va en palabras.
 - **Es una decisión de pantalla, no de permiso todavía**: la API sigue
   aceptando la asistencia de quien tenga `turnos`. Si se separa el rol de
   verdad, el lugar es la tabla de `PERMISOS`, no esconder más botones.
