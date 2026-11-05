@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { cerrarDia, reabrirDia, leerTurnos, leerExtras, anotar } from '@/lib/datos';
-import { sePuedeCerrar } from '@/lib/cierres';
-import { esFecha } from '@/lib/fechas';
+import { sePuedeCerrar, yaLlego } from '@/lib/cierres';
+import { esFecha, hoy } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +50,15 @@ export async function PUT(req: Request) {
     // tienen los tres roles del panel; reabrir y corregir, solo quien paga.
     const sinCerrar = await exigir(req, 'cerrar');
     if (sinCerrar) return sinCerrar;
+
+    // Un día que todavía no llega no se cierra: se comprueba acá además de
+    // en la pantalla, para que una llamada directa obedezca lo mismo.
+    if (!yaLlego(fecha, hoy())) {
+      return NextResponse.json(
+        { error: 'Ese día todavía no llega: se cierra desde el mismo día en adelante.' },
+        { status: 400 }
+      );
+    }
 
     const [turnos, extras] = await Promise.all([leerTurnos(), leerExtras()]);
     if (!sePuedeCerrar(turnos, extras, fecha)) {

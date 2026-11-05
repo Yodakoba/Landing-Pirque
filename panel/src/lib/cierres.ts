@@ -99,6 +99,15 @@ export function faltaParaCerrar(
   };
 }
 
+/**
+ * **Un día se cierra desde el mismo día en adelante, nunca antes**
+ * (2026-11-05, lo pidió el cliente). Cerrar es declarar quién vino, y eso
+ * no se sabe de un día que no ha ocurrido. Se compara como texto
+ * `AAAA-MM-DD`, que ordena igual que las fechas, y `hoy` lo pone quien
+ * llama con la hora de Chile.
+ */
+export const yaLlego = (fecha: Fecha, hoy: Fecha): boolean => fecha <= hoy;
+
 /** Si el día se puede cerrar: hay a quién marcar y no falta nadie por marcar. */
 export function sePuedeCerrar(turnos: Turno[], extras: Extra[], fecha: Fecha): boolean {
   const f = faltaParaCerrar(turnos, extras, fecha);

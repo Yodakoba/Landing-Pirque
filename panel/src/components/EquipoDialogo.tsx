@@ -22,7 +22,7 @@ import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
          repartirPropina, propinaDelDia, porNombre,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
-import { faltaParaCerrar, type Cierre } from '@/lib/cierres';
+import { faltaParaCerrar, type Cierre, yaLlego } from '@/lib/cierres';
 import { enPesos } from '@/lib/ocupacion';
 import type { Extra } from '@/lib/extras';
 
@@ -30,7 +30,7 @@ const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
   'focus:border-oro focus:outline-none';
 import { normalizar } from '@/lib/columnas';
-import { enPalabras } from '@/lib/fechas';
+import { enPalabras, hoy } from '@/lib/fechas';
 import FichaTrabajador from './FichaTrabajador';
 import Asistencia from './Asistencia';
 import BuscarPersona from './BuscarPersona';
@@ -318,6 +318,10 @@ export default function EquipoDialogo({
     plan.map((t) => ({ ...t, fila: -1 })), extras, fecha
   );
   const listo = falta.conEquipo > 0 && falta.sinMarcar === 0;
+  // Un día que todavía no llega no se cierra (2026-11-05): ver `yaLlego()`.
+  // `listo` sigue valiendo para corregir; esto es solo para cerrar.
+  const llego = yaLlego(fecha, hoy());
+  const listoParaCerrar = listo && llego;
 
   /**
    * **Lo que se escribe se guarda solo** (2026-10-30). Antes había que
@@ -902,7 +906,14 @@ export default function EquipoDialogo({
           `title` del botón apagado, o sea en un globito que aparece al pasar
           el mouse: en un teléfono eso no existe, y lo que queda es un botón
           muerto sin explicación. */}
-      {((conCierre && !cerrado) || corrigiendo) && !listo && (
+      {conCierre && !cerrado && !corrigiendo && !llego && (
+        <p className="mt-3 rounded border border-cielo/40 bg-cielo/5
+                      px-3 py-2 text-sm text-cielo-texto">
+          Este día <strong>todavía no llega</strong>. Se cierra desde el mismo
+          día en adelante, cuando ya se sabe quién vino.
+        </p>
+      )}
+      {((conCierre && !cerrado && llego) || corrigiendo) && !listo && (
         <p className="mt-3 rounded border border-ambar/40 bg-ambar/5
                       px-3 py-2 text-sm text-ambar-texto/90">
           {falta.conEquipo === 0
@@ -991,11 +1002,12 @@ export default function EquipoDialogo({
             **No aparece en el calendario de la portada**: ver `conCierre`. */}
         {conCierre && puedeCerrar && !cerrado && (
           <button onClick={() => setConfirmando(true)}
-            disabled={cerrando || !listo}
+            disabled={cerrando || !listoParaCerrar}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"
-            title={listo
+            title={listoParaCerrar
               ? 'Deja el día cerrado, con tu nombre y la hora'
+              : !llego ? 'Este día todavía no llega'
               : falta.conEquipo === 0
                 ? 'Primero asigna a alguien'
                 : `Falta marcar si ${falta.sinMarcar === 1 ? 'una persona vino' :
