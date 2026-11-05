@@ -254,11 +254,27 @@ export const PERMISOS = {
    */
   pagar: [ROL.admin, ROL.pagos],
   /**
+   * **Cerrar el día** (2026-11-05).
+   *
+   * Lo cierra también el encargado, que es quien lo vivió. El cliente lo
+   * pensó dos veces el mismo día: primero quiso dejárselo solo a quien
+   * paga, y lo corrigió —*"es más fácil que el encargado cierre el día, y
+   * que le alarme: hey, estás cerrando el día, ¿controlaste que todos los
+   * detalles están ingresados?"*—. Por eso cerrar pasa por
+   * `ConfirmarCierre`, una ventana con la lista de lo que se declara, y no
+   * por un `confirm()` que se acepta sin leer.
+   *
+   * Es un permiso propio y no `equipo` para que el día que cambie de
+   * manos sea tocar esta línea. Lo que viene después de cerrar —corregir
+   * con motivo— sigue siendo solo de quien paga: ver `corregir`.
+   */
+  cerrar: [ROL.admin, ROL.encargado, ROL.pagos],
+  /**
    * **Corregir un día ya cerrado**: el equipo, las reservas o las
    * actividades extras de ese día (2026-11-03, lo decidió el cliente).
    *
-   * Cerrar un día es del encargado, que es quien lo vive; corregirlo
-   * después **no**. Un día cerrado es lo que se paga, y cambiarlo cuando ya
+   * El encargado cierra el día (ver `cerrar`); corregirlo después **no**:
+   * desde ahí cualquier problema pasa por quien paga. Un día cerrado es lo que se paga, y cambiarlo cuando ya
    * se revisó es justamente lo que tiene que pasar por alguien de arriba.
    * Si el encargado se equivocó, le pide la corrección al administrador o a
    * quien paga. Cada corrección lleva motivo: ver `corregirDiaCerrado()`.

@@ -94,8 +94,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Elige a cada persona en el puesto que le toca.',
       'Marca Vino o No vino de cada una.',
       'Escribe la jornada, los ajustes y la propina del día.',
-      'Cerrar el día deja dicho que alguien lo revisó, con tu nombre y la '
-      + 'hora. Desde ahí el día queda en solo lectura.',
+      'Cerrar el día pregunta antes y muestra lo que estás declarando: '
+      + 'quién vino, la propina, las actividades extras. Queda anotado con tu '
+      + 'nombre y la hora, y desde ahí el día queda en solo lectura.',
       'Si un día cerrado tiene un error, el administrador o quien hace los '
       + 'pagos aprieta Corregir este día, arregla lo que haga falta y lo '
       + 'guarda con el motivo. El día sigue cerrado.'
@@ -214,7 +215,7 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'Abre en la semana pasada, que es la que se paga. Puedes elegir otra '
       + 'semana, el mes, o dos fechas sueltas.',
-      'Mira arriba si quedan días sin confirmar: mientras los haya, el total '
+      'Mira arriba si quedan turnos sin cerrar: mientras los haya, el total '
       + 'está incompleto.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
       + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',

@@ -46,6 +46,11 @@ export async function PUT(req: Request) {
       return NextResponse.json({ cerrado: false });
     }
 
+    // **Cerrar tiene su propio permiso** (`cerrar`, 2026-11-05). Hoy lo
+    // tienen los tres roles del panel; reabrir y corregir, solo quien paga.
+    const sinCerrar = await exigir(req, 'cerrar');
+    if (sinCerrar) return sinCerrar;
+
     const [turnos, extras] = await Promise.all([leerTurnos(), leerExtras()]);
     if (!sePuedeCerrar(turnos, extras, fecha)) {
       return NextResponse.json(

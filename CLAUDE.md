@@ -3600,6 +3600,53 @@ una **corrección**:
   se actualiza para un día cerrado entra igual, porque es un hecho de la
   tienda y no una edición de nadie.
 
+### Cerrar el día pregunta en serio (2026-11-05)
+
+El cliente lo pensó dos veces el mismo día. Primero: *"los encargados no
+deberían poder cerrar el día"*, y se le sacó el botón. Después lo corrigió:
+*"el encargado tiene que poder cerrar el día, pero tiene que advertir muy
+bien: ¿está seguro? Ahora está cerrando el día… ¿controlaste que todos los
+detalles están ingresados?"*, y **a partir de ahí, cualquier problema pasa
+por quien hace los pagos**.
+
+- **Cerrar tiene su propio permiso, `cerrar`**, que hoy tienen los tres
+  roles del panel. Está separado de `equipo` para que el día que cambie de
+  manos sea tocar una línea. **Corregir y reabrir siguen siendo solo de
+  quien paga y del administrador** (`corregir`).
+- **La pregunta es una ventana, no un `confirm()`** (`ConfirmarCierre.tsx`):
+  un `confirm()` de una línea se acepta sin leer. La ventana lista lo que
+  se está declarando, cada cosa con ✓ o con **!** en ámbar:
+  - **Equipo**: cuántos vinieron y cuántos no llegaron.
+  - **Propina del día**: el monto, o *"Sin propina anotada"* con !.
+  - **Lo que se paga**: el total, o cuántos vinieron sin jornada anotada.
+    **Solo para quien ve los sueldos**: el encargado no recibe los montos
+    de la ficha, así que para él un cero no querría decir nada.
+  - **Actividades extras**, si hay: *"Todas confirmadas"* o cuántas faltan.
+- **El ! no impide cerrar**, pide mirarlo: un día sin propina existe. Lo que
+  sí impide —alguien sin marcar— ni deja llegar a esta ventana. Con algún !
+  el botón dice *"Sí, está bien así: cerrar el día"*, y el otro botón es
+  *Volver a revisar*.
+- Debajo, en rojo: *"Después de cerrar ya no se puede cambiar nada. Si algo
+  quedó mal, solo quien hace los pagos lo puede corregir."*
+- **Cómo se arregla un error de una semana ya pagada lo decide quien
+  paga** (2026-11-05, lo cerró el cliente): *"está bien que se pueden hacer
+  las dos cosas. Solo el encargado de pago tiene la decisión de cómo se
+  gestiona. Y en muchos casos es más fácil ajustarla en la semana
+  siguiente que ir para atrás"*. Las dos salidas quedan:
+  - **Corregir ese día** (*Corregir este día*, con motivo): solo quien paga
+    y el administrador, por el permiso `corregir`.
+  - **Compensar en la semana siguiente**: un ajuste con su motivo en un día
+    abierto —*"+$5.000 propina que faltó el 1/11"*—, y la semana ya pagada
+    queda tal como se pagó. Es lo más común.
+  - **El encargado fija cuánto se paga cada día, y anota los ajustes**,
+    en los días abiertos (lo confirmó el cliente el 2026-11-05: *"muchas
+    veces el encargado es el que hace el negocio con el runner que viene, ya
+    te pago 25, luego te pago 35"*). La **jornada del día** es suya: es un
+    campo del turno y no de la ficha, así que la escribe sin ver los
+    sueldos habituales de nadie. Lo mismo un atraso o un adelanto de caja,
+    como ajuste. Lo que no puede es tocar un día cerrado; decidir cómo se
+    arregla lo ya pagado no es suyo.
+
 ### Cerrar el día
 
 **Cerrar es una declaración, no un cálculo.** Se podría decir que un día
@@ -4190,7 +4237,8 @@ Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 | Ver el calendario y las reservas | sí | sí | **sí** | — |
 | Anotar reservas, abrir y cerrar días | sí | sí | **sí** | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — |
-| Confirmar el día: asistencia, montos, propina, cerrarlo | sí | sí | **sí** | — |
+| Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — |
+| **Cerrar el día** (con la ventana de confirmación) | sí | sí | **sí** | — |
 | Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
 | Crear y mandar presupuestos | sí | sí | **sí** | — |
 | Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — |

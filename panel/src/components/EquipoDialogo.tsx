@@ -18,6 +18,7 @@
 import { useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
+import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
          repartirPropina, propinaDelDia, porNombre,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
@@ -48,7 +49,7 @@ const ENTRADA_GRANDE =
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
   conCierre = false, verSueldos = false, enfocarPropina = false,
-  conReservas = false, conAsistencia = false, cierre, puedeCorregir = false, onListo, onCancelar
+  conReservas = false, conAsistencia = false, cierre, puedeCorregir = false, puedeCerrar = false, onListo, onCancelar
 }: {
   fecha: string;
   /** Cuántos comensales tiene el día: es contra esto que se sugiere equipo. */
@@ -111,6 +112,12 @@ export default function EquipoDialogo({
    * vuelve a comprobar en cada ruta.
    */
   puedeCorregir?: boolean;
+  /**
+   * Si quien mira puede **cerrar el día**: el administrador y quien paga
+   * (2026-11-05). Al encargado no se le ofrece el botón; la ventana le dice
+   * que lo cierra quien hace los pagos.
+   */
+  puedeCerrar?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -125,6 +132,8 @@ export default function EquipoDialogo({
   const [plan, setPlan] = useState<Omit<Turno, 'fila'>[]>(() => inicial.plan);
   const [error, setError] = useState('');
   const [cerrando, setCerrando] = useState(false);
+  /** La ventana de "¿Cerrar el día?", con la lista de lo que se declara. */
+  const [confirmando, setConfirmando] = useState(false);
   /**
    * Qué cara de la ventana se ve. **Se cambia de cara, no de ventana**: lo
    * escrito en la de trabajadores vive en el estado de este componente y no
@@ -248,6 +257,47 @@ export default function EquipoDialogo({
   const vinieron = plan.filter((t) => t.asistencia === VINO.si).length;
   const faltaron = plan.filter((t) => t.asistencia === VINO.no).length;
 
+  /**
+   * Lo que se declara al cerrar, para la ventana de confirmación. Cada
+   * punto con ✓ o con !; el ! no impide cerrar, pide mirarlo. Los montos
+   * solo los lista quien los ve: el encargado no recibe los sueldos de la
+   * ficha, así que para él un cero no querría decir nada.
+   */
+  const puntosDeCierre = (): PuntoDeCierre[] => {
+    const p: PuntoDeCierre[] = [{
+      que: 'Equipo',
+      valor: `${vinieron} ${vinieron === 1 ? 'vino' : 'vinieron'}`
+        + (faltaron ? ` · ${faltaron} no ${faltaron === 1 ? 'llegó' : 'llegaron'}` : ''),
+      bien: true
+    }, {
+      que: 'Propina del día',
+      valor: propina > 0 ? enPesos(propina) : 'Sin propina anotada',
+      bien: propina > 0 || vinieron === 0
+    }];
+    if (verSueldos) {
+      const sinJornada = plan.filter((t) => t.asistencia === VINO.si
+        && !esContratado(t.modalidad) && !t.pagoJornada).length;
+      p.push({
+        que: 'Lo que se paga',
+        valor: sinJornada
+          ? `${sinJornada} ${sinJornada === 1 ? 'persona' : 'personas'} sin jornada anotada`
+          : enPesos(plan.reduce((s, t) => s + pagoDe(t), 0)),
+        bien: !sinJornada
+      });
+    }
+    const extrasDelDia = extras.filter((e) => e.fecha === fecha).length;
+    if (extrasDelDia) {
+      p.push({
+        que: 'Actividades extras',
+        valor: falta.extrasSinConfirmar
+          ? `${falta.extrasSinConfirmar} sin confirmar`
+          : 'Todas confirmadas',
+        bien: !falta.extrasSinConfirmar
+      });
+    }
+    return p;
+  };
+
   // Quién entra en el reparto. Quien todavía no tiene ficha participa: lo
   // más probable es que sea alguien recién agregado, y dejarlo fuera en
   // silencio sería peor que incluirlo de más y que alguien lo corrija.
@@ -316,12 +366,9 @@ export default function EquipoDialogo({
    * única de la ventana que declara algo.
    */
   async function cambiarCierre(cerrar: boolean) {
-    const pregunta = cerrar
-      ? `¿Cerrar el ${enPalabras(fecha)}? Queda anotado que lo cerraste tú, `
-        + 'con la hora. Después, solo el administrador o quien hace los pagos '
-        + 'podrá corregirlo, con un motivo.'
-      : `¿Reabrir el ${enPalabras(fecha)} para corregirlo?`;
-    if (!confirm(pregunta)) return;
+    // Cerrar ya preguntó en su propia ventana (`ConfirmarCierre`), con la
+    // lista de lo que se declara; reabrir sigue con la pregunta corta.
+    if (!cerrar && !confirm(`¿Reabrir el ${enPalabras(fecha)} para corregirlo?`)) return;
 
     setCerrando(true);
     setError('');
@@ -834,7 +881,7 @@ export default function EquipoDialogo({
                       px-3 py-2 text-sm text-ambar-texto/90">
           {falta.conEquipo === 0
             ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
-            : <>Para cerrar el día falta marcar si{' '}
+            : <>{puedeCerrar || corrigiendo ? 'Para cerrar el día falta' : 'Falta'} marcar si{' '}
                 <strong>{falta.sinMarcar === 1 ? 'una persona vino'
                        : `${falta.sinMarcar} personas vinieron`}</strong> o no.
                 {conAsistencia
@@ -851,7 +898,12 @@ export default function EquipoDialogo({
       {plan.length > 0 && !cerrado && (
         <p className="mt-2 text-xs text-hueso/45">
           Lo que escribas acá <strong>se guarda solo</strong>.
-          {!conCierre && <> <strong>El día se cierra en{' '}
+          {/* El encargado no cierra (2026-11-05): se le dice quién lo hace,
+              en vez de dejar un botón ausente que parece un error. */}
+          {!puedeCerrar
+            ? <> <strong>El día lo cierra quien hace los pagos</strong>, cuando
+                revisa que esté todo listo.</>
+            : !conCierre && <> <strong>El día se cierra en{' '}
             <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
             que es donde el panel va mostrando los días que quedaron pendientes.</>}
         </p>
@@ -911,8 +963,8 @@ export default function EquipoDialogo({
             no se puede, y arriba dice por qué.
 
             **No aparece en el calendario de la portada**: ver `conCierre`. */}
-        {conCierre && !cerrado && (
-          <button onClick={() => void cambiarCierre(true)}
+        {conCierre && puedeCerrar && !cerrado && (
+          <button onClick={() => setConfirmando(true)}
             disabled={cerrando || !listo}
             className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
                        font-semibold text-tinta disabled:opacity-40"
@@ -926,6 +978,13 @@ export default function EquipoDialogo({
           </button>
         )}
       </div>
+      )}
+
+      {confirmando && (
+        <ConfirmarCierre fecha={enPalabras(fecha)} puntos={puntosDeCierre()}
+          cerrando={cerrando}
+          onVolver={() => setConfirmando(false)}
+          onCerrar={() => { void cambiarCierre(true).finally(() => setConfirmando(false)); }} />
       )}
     </Dialogo>
   );

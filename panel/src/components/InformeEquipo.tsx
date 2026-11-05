@@ -1136,14 +1136,12 @@ export default function InformeEquipo() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+      {/* Sin bajada (2026-11-05, lo pidió el cliente): explicaba cómo
+          funciona el sistema por dentro —que lo pagado no se recalcula con
+          los sueldos de hoy— y no ayudaba a hacer nada. */}
+      <h1 className="mb-5 text-xl font-bold uppercase tracking-wide">
         Informe del equipo<Ayuda tema="informe" />
       </h1>
-      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
-        Lo que se le pagó a cada persona, según lo que quedó anotado al pasar
-        lista. <strong>No se recalcula desde los sueldos de hoy</strong>: un
-        cambio de sueldo no reescribe los periodos ya cerrados.
-      </p>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="flex gap-2">
