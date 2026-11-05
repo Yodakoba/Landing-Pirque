@@ -3628,9 +3628,20 @@ por quien hace los pagos**.
   *Volver a revisar*.
 - Debajo, en rojo: *"Después de cerrar ya no se puede cambiar nada. Si algo
   quedó mal, solo quien hace los pagos lo puede corregir."*
-- **Abierto todavía**: si un error de una semana ya pagada se corrige en
-  ese día —*Corregir este día*, con motivo— o se compensa con un ajuste en
-  la semana siguiente. Hoy las dos cosas se pueden.
+- **Cómo se arregla un error de una semana ya pagada lo decide quien
+  paga** (2026-11-05, lo cerró el cliente): *"está bien que se pueden hacer
+  las dos cosas. Solo el encargado de pago tiene la decisión de cómo se
+  gestiona. Y en muchos casos es más fácil ajustarla en la semana
+  siguiente que ir para atrás"*. Las dos salidas quedan:
+  - **Corregir ese día** (*Corregir este día*, con motivo): solo quien paga
+    y el administrador, por el permiso `corregir`.
+  - **Compensar en la semana siguiente**: un ajuste con su motivo en un día
+    abierto —*"+$5.000 propina que faltó el 1/11"*—, y la semana ya pagada
+    queda tal como se pagó. Es lo más común.
+  - **El encargado sigue anotando ajustes en los días abiertos** —un
+    atraso, un adelanto de caja—, porque eso es del día que vive. Lo que no
+    puede es tocar un día cerrado; decidir cómo se arregla lo ya pagado no
+    es suyo.
 
 ### Cerrar el día
 
