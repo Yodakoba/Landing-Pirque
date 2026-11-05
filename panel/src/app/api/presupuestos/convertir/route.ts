@@ -69,14 +69,18 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const idReserva = await crearReserva(reservaDesdePresupuesto(p, suyas, menus));
+    // Quién lo convirtió queda como dueña de la reserva: la anotó una
+    // persona, así que tiene dueño como cualquier otra anotada a mano.
+    const quien = await quienEs(req);
+    const idReserva = await crearReserva(
+      reservaDesdePresupuesto(p, suyas, menus, quien.usuario));
     // Y recién ahora el vínculo, que es lo que apaga el conteo de posibles.
     const { fila: _fila, ...sinFila } = p;
     await guardarPresupuesto({
       ...sinFila, estado: ESTADO_PRESUPUESTO.aceptado, idReserva
     });
 
-    await anotar({ ...(await quienEs(req)),
+    await anotar({ ...quien,
       accion: 'Convirtió un presupuesto en reserva',
       detalle: `${folioDe(p)} · ${p.cliente} · ${p.fecha} · reserva ${idReserva}` });
     return NextResponse.json({ idReserva });

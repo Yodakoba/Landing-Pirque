@@ -50,7 +50,13 @@ const recortada = (gente: Trabajador[], verLinks: boolean, verSueldos: boolean) 
   }));
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'ver');
+  // **`equipo` y no `ver`** (2026-11-05). Esto devuelve la lista entera del
+  // equipo —nombres, teléfonos, puesto— y quién trabaja cada día, que no es
+  // el calendario de reservas. Mientras los tres roles que entraban al panel
+  // tenían los dos permisos la diferencia no existía; con el vendedor sí,
+  // y es justo la que el cliente pidió: *"no necesita ver nada más que
+  // esto"*. Para el administrador, el encargado y quien paga no cambia nada.
+  const no = await exigir(req, 'equipo');
   if (no) return no;
   try {
     // Los cierres y las actividades extras viajan con el resto porque las

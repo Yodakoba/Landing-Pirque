@@ -55,9 +55,10 @@ export function credencialValida(cabecera: string, usuario: string, clave: strin
 /**
  * Quién es quien entra.
  *
- * Son tres y no más porque son tres las relaciones distintas con el negocio:
- * quien lo administra, quien hace el turno, y quien trabaja en él. Un cuarto
- * nivel sería inventar una distinción que nadie pidió.
+ * Cada uno es **una relación distinta con el negocio**, y por eso existe:
+ * quien lo administra, quien hace el turno, quien paga, quien vende y quien
+ * trabaja en él. Un nivel que no corresponda a una de esas relaciones sería
+ * inventar una distinción que nadie pidió.
  */
 export const ROL = {
   /** Todo, incluida la plata y la configuración. */
@@ -83,6 +84,28 @@ export const ROL = {
    * día cerrado. La prueba se escribe como la lista de lo que NO puede.
    */
   pagos: 'pagos',
+  /**
+   * **Vende, y solo eso** (2026-11-05, lo pidió el cliente): *"el vendedor
+   * solo tiene que ver el calendario para poder agregar reservas, quitar
+   * reservas. Reservas que el vendedor mismo ha hecho. No puede quitar
+   * otras reservas que no él mismo está gestionando. Pero ver todo. Y en
+   * verdad no necesita ver nada más que esto."*
+   *
+   * Son dos permisos y ninguno más: `ver` y `reservas`. En la barra le
+   * aparece **solo el calendario**, porque el menú se dibuja desde esta
+   * misma tabla.
+   *
+   * **Lo que lo distingue de los otros tres no es un permiso, es un
+   * límite dentro de uno**: con `reservas` cualquiera edita y borra
+   * cualquier fila, y un vendedor solo las suyas. Eso no cabe en la tabla
+   * —que contesta *qué acciones*, no *sobre qué filas*— así que vive en
+   * `puedeTocarReserva()`, al lado de `puede()`, y lo comprueba cada ruta
+   * que escribe una reserva.
+   *
+   * **Ve todas**, que es lo que el cliente pidió: el límite es sobre lo que
+   * toca, no sobre lo que mira.
+   */
+  vendedor: 'vendedor',
   /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
   trabajador: 'trabajador',
   /** No identificado. */
@@ -139,10 +162,27 @@ export function rolDe(cabecera: string, c: Credenciales): Rol {
  * el punto — no hay ninguna acción del panel que pueda ejecutar.
  */
 export const PERMISOS = {
-  /** Ver el calendario, los días y las reservas. */
-  ver: [ROL.admin, ROL.encargado, ROL.pagos],
-  /** Anotar, editar y borrar reservas. */
-  reservas: [ROL.admin, ROL.encargado, ROL.pagos],
+  /**
+   * Ver el calendario, los días y las reservas.
+   *
+   * **Esto es el calendario y las reservas, y nada más** — y desde el
+   * 2026-11-05 eso hay que decirlo, porque antes no era verdad. Cuatro
+   * rutas que no devuelven reservas se contentaban con `ver`: el equipo
+   * (`/api/equipo`), las actividades extras, los presupuestos y los eventos
+   * del socio. Para los tres roles que había daba lo mismo —los tres tenían
+   * todo— pero al entrar el vendedor se volvió la diferencia entre "ve el
+   * calendario" y "ve los teléfonos del equipo y lo que cobra cada jinete".
+   * Cada una de esas cuatro pide ahora el permiso de su propia pantalla.
+   */
+  ver: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
+  /**
+   * Anotar, editar y borrar reservas.
+   *
+   * **Un vendedor lo tiene, pero solo sobre las suyas.** Ver
+   * `puedeTocarReserva()`: el permiso dice que puede anotar y borrar
+   * reservas; sobre cuáles es otra pregunta, y se contesta aparte.
+   */
+  reservas: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
   /** Abrir, cerrar y editar días. */
   dias: [ROL.admin, ROL.encargado, ROL.pagos],
   /** Asignar turnos y administrar la lista de trabajadores. */
@@ -292,6 +332,48 @@ export function puede(rol: Rol, accion: Accion): boolean {
   return (PERMISOS[accion] as readonly Rol[]).includes(rol);
 }
 
+/** Compara nombres de usuario sin distinguir mayúsculas ni tildes. */
+const mismoUsuario = (a: string, b: string) => {
+  const limpio = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .trim().toLowerCase();
+  const x = limpio(a);
+  return !!x && x === limpio(b);
+};
+
+/**
+ * Si esta cuenta puede **editar o borrar esta reserva en concreto**.
+ *
+ * La tabla de permisos contesta *qué acciones* puede un rol; esto contesta
+ * *sobre qué filas*, que es una pregunta distinta y por eso vive aparte.
+ * Hasta el 2026-11-05 no hacía falta: los tres roles que entraban al panel
+ * podían tocar cualquier reserva.
+ *
+ * Lo pidió el cliente al crear el vendedor: *"no puede quitar otras
+ * reservas que no él mismo está gestionando"*. Un vendedor anota las suyas
+ * y las corrige; las de los demás **las ve y no las toca**.
+ *
+ * **Una reserva sin dueño no es de nadie, y por lo tanto tampoco suya.** Lo
+ * están todas las de Shopify —las anota el webhook, no una persona— y todas
+ * las que ya estaban en la planilla antes de que existiera la columna. Es
+ * el valor por defecto correcto: un vendedor no tomó ninguna de ésas, así
+ * que no le toca borrarlas. El error contrario —que un vendedor nuevo
+ * pudiera borrar el historial completo— es mucho más caro.
+ *
+ * **Vale para editar y para borrar.** El cliente nombró agregar y quitar,
+ * pero dejarlo editar la reserva de otro sin poder borrarla sería media
+ * regla: podría cambiarle el nombre y las personas a cualquiera.
+ *
+ * Lo comprueba **la ruta**, no la pantalla: una llamada directa a la API
+ * tiene que obedecer lo mismo que un clic, que es la regla de este panel.
+ */
+export function puedeTocarReserva(
+  rol: Rol, usuario: string, anotadaPor: string
+): boolean {
+  if (!puede(rol, 'reservas')) return false;
+  if (rol !== ROL.vendedor) return true;
+  return mismoUsuario(usuario, anotadaPor);
+}
+
 /**
  * Las credenciales del entorno.
  *
@@ -328,7 +410,7 @@ export function credencialesDelEntorno(env: Record<string, string | undefined>):
  * El trabajador no está: él entra por su link personal, no por acá. Una
  * cuenta con rol `trabajador` sería una puerta que no lleva a ninguna parte.
  */
-export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado, ROL.pagos];
+export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor];
 
 export function esRolDeCuenta(v: unknown): v is Rol {
   return ROLES_DE_CUENTA.includes(

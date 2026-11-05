@@ -34,7 +34,12 @@ export const dynamic = 'force-dynamic';
  * petición; lo que se reutiliza es la respuesta del CRM.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'ver');
+  // **`presupuestos` y no `ver`** (2026-11-05), por lo mismo que `/api/equipo`:
+  // esto no son nuestras reservas, son las cotizaciones y los cerrados del
+  // socio. Es la misma capa comercial que los presupuestos —de hecho la
+  // mitad son el presupuesto de otro— así que va con ese permiso, que hoy
+  // tienen exactamente los tres roles que lo veían antes.
+  const no = await exigir(req, 'presupuestos');
   if (no) return no;
 
   const clave = process.env.CRM_API_KEY;

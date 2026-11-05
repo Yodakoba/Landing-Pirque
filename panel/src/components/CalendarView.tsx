@@ -22,6 +22,7 @@ import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { lineaDeSemana, type Tono } from '@/lib/semana';
+import { puede, type Rol } from '@/lib/auth';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
 import { copiarConAviso } from './AvisoFlotante';
 
@@ -34,7 +35,19 @@ const TONO: Record<Tono, string> = {
   rosa: 'border-rosa/50 bg-rosa/10 text-rosa-texto'
 };
 
-export default function CalendarView() {
+export default function CalendarView({ rol }: { rol: string }) {
+  /**
+   * Lo que esta cuenta puede hacer, sacado de la **misma** tabla de permisos
+   * que usan el menú y las rutas.
+   *
+   * No es la protección: cada ruta vuelve a preguntar. Es para no ofrecerle
+   * a un vendedor botones que le van a devolver 403 — un botón que no
+   * funciona se lee como un panel roto, no como una puerta cerrada.
+   */
+  const conDias = puede(rol as Rol, 'dias');
+  const conEquipo = puede(rol as Rol, 'equipo');
+  const conPlanilla = puede(rol as Rol, 'planilla');
+  const conCRM = puede(rol as Rol, 'presupuestos');
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const pronostico = usePronostico();
   const [error, setError] = useState('');
@@ -148,21 +161,28 @@ export default function CalendarView() {
         if (d.menus) setMenus(d.menus);
       })
       .catch(() => {});
-    fetch('/api/crm/eventos')
-      .then((r) => r.json())
-      .then((d) => setDelSocio(d?.dias ?? {}))
-      .catch(() => {});
-    fetch('/api/equipo')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) return;
-        setEquipo({
-          puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
-          turnos: d.turnos ?? [], verSueldos: !!d.verSueldos,
-          cierres: d.cierres ?? [], puedeCorregir: !!d.puedeCorregir
-        });
-      })
-      .catch(() => {});
+    // **Las dos de abajo se piden solo si la cuenta puede leerlas.** No es
+    // por ahorrar una llamada: pedirlas igual devuelve 403, el bloque queda
+    // vacío y la pantalla se ve a medio cargar en vez de verse completa.
+    if (conCRM) {
+      fetch('/api/crm/eventos')
+        .then((r) => r.json())
+        .then((d) => setDelSocio(d?.dias ?? {}))
+        .catch(() => {});
+    }
+    if (conEquipo) {
+      fetch('/api/equipo')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.error) return;
+          setEquipo({
+            puestos: d.puestos ?? [], trabajadores: d.trabajadores ?? [],
+            turnos: d.turnos ?? [], verSueldos: !!d.verSueldos,
+            cierres: d.cierres ?? [], puedeCorregir: !!d.puedeCorregir
+          });
+        })
+        .catch(() => {});
+    }
   };
   useEffect(cargar, []);
 
@@ -216,10 +236,12 @@ export default function CalendarView() {
           className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta">
           Agregar reserva
         </button>
-        <button onClick={() => setAgregandoFecha(true)}
-          className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro">
-          Agregar fecha
-        </button>
+        {conDias && (
+          <button onClick={() => setAgregandoFecha(true)}
+            className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro">
+            Agregar fecha
+          </button>
+        )}
       </div>
 
       {avisoPlanilla && (
@@ -233,7 +255,7 @@ export default function CalendarView() {
           renueva "la de este sábado". Aparece recién cuando hay una llave
           creada —antes no hay nada que renovar— y en letra chica, porque es
           lo que casi nunca hay que apretar. */}
-      {cfg.tokenPlanilla && (
+      {conPlanilla && cfg.tokenPlanilla && (
         <p className="mb-5 text-xs text-hueso/35">
           El link de la planilla semanal ya está creado.{' '}
           <button onClick={renovarPlanilla} className="text-hueso/50 hover:text-oro"
@@ -375,10 +397,12 @@ export default function CalendarView() {
                   {chica ? '+ Ampliar' : '− Achicar'}
                 </button>
               )}
-              <button onClick={() => mandarPlanilla(semana)}
-                className="text-xs text-hueso/45 hover:text-oro">
-                Enviar planilla semanal
-              </button>
+              {conPlanilla && (
+                <button onClick={() => mandarPlanilla(semana)}
+                  className="text-xs text-hueso/45 hover:text-oro">
+                  Enviar planilla semanal
+                </button>
+              )}
             </div>
             {chica ? (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -391,6 +415,7 @@ export default function CalendarView() {
             {deLaSemana.map((d) => (
               <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
                 delSocio={delSocio[d.fecha]}
+                conEquipo={conEquipo} conDias={conDias}
                 resumen={equipo
                   ? resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas)
                   : null}

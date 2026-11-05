@@ -4327,31 +4327,32 @@ admin      verSueldos ✓  jornada 30.000  cuenta ✓  token ✗*  ve los tres
 *El token sale vacío también para el admin cuando la persona todavía no
 tiene link creado, que es el caso de la prueba.
 
-### Quién puede hacer qué (2026-10-21, cuarto rol el 2026-10-22)
+### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
-Cuatro roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
+Cinco roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
 
-| | Administrador | Encargado | Pagos | Trabajador |
-|---|---|---|---|---|
-| Ver el calendario y las reservas | sí | sí | **sí** | — |
-| Anotar reservas, abrir y cerrar días | sí | sí | **sí** | — |
-| Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — |
-| Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — |
-| **Cerrar el día** (con la ventana de confirmación) | sí | sí | **sí** | — |
-| Agendar actividades extras y confirmarlas | sí | sí | **sí** | — |
-| Crear y mandar presupuestos | sí | sí | **sí** | — |
-| Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — |
-| Puestos y su regla "uno cada N" | sí | — | **sí** | — |
-| Precios, menús y configuración | sí | — | **sí** | — |
-| **Links personales** | sí | — | **sí** | — |
-| **Corregir un día cerrado** (con motivo) | sí | — | **sí** | — |
-| Diagnóstico y Shopify a mano | sí | — | — | — |
-| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — |
-| **La bitácora** | sí | — | **sí** | — |
-| Cuentas del panel y sus contraseñas | sí | — | — | — |
-| **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — |
-| **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — |
-| Ver **sus propios** turnos | — | — | — | sí |
+| | Administrador | Encargado | Pagos | Vendedor | Trabajador |
+|---|---|---|---|---|---|
+| Ver el calendario y las reservas | sí | sí | **sí** | **sí** | — |
+| Anotar reservas | sí | sí | **sí** | **solo las suyas** | — |
+| Abrir y editar días | sí | sí | **sí** | — | — |
+| Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — | — |
+| Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — | — |
+| **Cerrar el día** (con la ventana de confirmación) | sí | sí | **sí** | — | — |
+| Agendar actividades extras y confirmarlas | sí | sí | **sí** | — | — |
+| Crear y mandar presupuestos, y ver el CRM del socio | sí | sí | **sí** | — | — |
+| Montos habituales y cuentas bancarias de la ficha | sí | — | **sí** | — | — |
+| Puestos y su regla "uno cada N" | sí | — | **sí** | — | — |
+| Precios, menús y configuración | sí | — | **sí** | — | — |
+| **Links personales** | sí | — | **sí** | — | — |
+| **Corregir un día cerrado** (con motivo) | sí | — | **sí** | — | — |
+| Diagnóstico y Shopify a mano | sí | — | — | — | — |
+| **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — | — |
+| **La bitácora** | sí | — | **sí** | — | — |
+| Cuentas del panel y sus contraseñas | sí | — | — | — | — |
+| **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — | — |
+| **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — | — |
+| Ver **sus propios** turnos | — | — | — | — | sí |
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
 Lo que no toca es la plata, la configuración y las credenciales.
@@ -4361,9 +4362,137 @@ el punto**: no hay una sola acción del panel que pueda ejecutar. Su acceso no
 pasa por ahí.
 
 **El menú se dibuja consultando esa misma tabla**, no una lista aparte de
-"esto es de administrador". Con cuatro roles, una segunda lista era una
+"esto es de administrador". Con cinco roles, una segunda lista era una
 segunda verdad: el día que alguien agregara un rol, el menú le ofrecería
-puertas cerradas o le escondería las suyas.
+puertas cerradas o le escondería las suyas. Al vendedor le aparece **una
+sola pastilla**, Calendario, sin que nadie lo haya escrito en ninguna parte.
+
+### El rol de vendedor: ve todo, toca lo suyo (2026-11-05)
+
+Lo pidió el cliente, y la frase trae ya la regla entera:
+
+> *"Necesitamos otro rol de cuenta que es vendedor. Y el vendedor solo tiene
+> que ver el calendario para poder agregar reservas, quitar reservas.
+> Reservas que el vendedor mismo ha hecho. No puede quitar otras reservas que
+> no él mismo está gestionando. Pero ver todo. Y en verdad no necesita ver
+> nada más que esto."*
+
+Es **la cuenta más acotada que entra al panel**: dos permisos, `ver` y
+`reservas`, y ninguno más. Ni días, ni equipo, ni extras, ni presupuestos, ni
+plata. En la barra le aparece una sola pastilla.
+
+#### Lo que lo distingue no es un permiso: es un límite dentro de uno
+
+Con `reservas`, cualquiera de los otros tres roles edita y borra cualquier
+fila. Un vendedor solo las suyas — y eso **no cabe en la tabla de permisos**,
+que contesta *qué acciones* y no *sobre qué filas*. Son dos preguntas
+distintas, así que la segunda vive aparte, en `puedeTocarReserva()`, al lado
+de `puede()`.
+
+- **Ve todas**, que es lo que el cliente pidió: el límite es sobre lo que
+  toca, no sobre lo que mira. En la tabla del día aparecen las tres, y las
+  que no son suyas dicen **quién las anotó** en vez de dos botones apagados —
+  un botón que no responde se lee como un panel roto, y saber a quién
+  pedírselo es justamente lo que hace falta.
+- **Vale para editar y para borrar.** El cliente nombró agregar y quitar;
+  dejarlo editar la de otro sin poder borrarla sería media regla, porque
+  podría cambiarle el nombre y las personas a cualquiera. **Marcar si alguien
+  vino también es editar**, así que la ruta lo trata igual — y como marcar
+  vive hoy solo en `/turnos`, un vendedor no marca a nadie: esa pantalla no
+  es suya.
+- **Lo comprueba la ruta**, no la pantalla: un encargado o un vendedor
+  llamando la API directo recibe el mismo 403 que recibiría apretando el
+  botón que no tiene.
+
+#### La columna `Anotada por`, que es lo que hace posible la regla
+
+Vive en `Reservas` y **se agrega sola** la primera vez (`asegurarColumna()`),
+como la `Nota de pago` y el `ID Evento CRM`. Guarda **el nombre de la cuenta**
+—el mismo con que firma la bitácora— de quien anotó esa reserva.
+
+- **La escribe el servidor desde la sesión, nunca se acepta del navegador.**
+  Ni al crear ni al editar: el `POST` la pone él y el `PATCH` la descarta. Si
+  se aceptara, un vendedor podría adjudicarse la reserva de otro y después
+  borrarla, que es exactamente lo que esto impide.
+- **Una reserva sin dueño no es de nadie, y por lo tanto tampoco suya.** Lo
+  están todas las de Shopify —las anota el webhook, no una persona— y todas
+  las que ya estaban en la planilla antes de que existiera la columna. Es el
+  valor por defecto correcto: un vendedor no tomó ninguna de ésas. El error
+  contrario —que un vendedor nuevo pudiera borrar el historial completo— es
+  mucho más caro.
+- **El sincronizador de Shopify no la pisa**, igual que la asistencia y la
+  nota de pago: un pedido que se actualiza le borraría el dueño a la fila.
+- **Se asegura siempre al crear una reserva**, no solo cuando viene con
+  valor, por lo mismo que el `ID Evento CRM`: si se creara recién al anotar
+  la primera de un vendedor, la fila que la estrena sería justamente la que
+  no encuentra la columna.
+- **El emparejamiento ignora mayúsculas, tildes y espacios al borde**, como
+  el resto del panel. La contra a asumir: **dos cuentas con el mismo nombre
+  comparten reservas.** Es el mismo supuesto que ya tenía la bitácora —*"una
+  cuenta por persona y no una compartida"*— y la pantalla de cuentas lo dice.
+
+#### De paso: `ver` estaba abriendo cuatro puertas que no eran suyas
+
+Y esto es lo que vale guardar del cambio, porque no se veía. Cuatro rutas que
+**no devuelven reservas** se contentaban con `ver`: el equipo, las
+actividades extras, los presupuestos y los eventos del socio. Para los tres
+roles que había daba exactamente lo mismo —los tres tenían todo— así que
+nadie lo notó en un año de archivo.
+
+Al entrar el vendedor se volvió la diferencia entre *"ve el calendario"* y
+*"ve los teléfonos del equipo y lo que cobra cada jinete"*. Cada una pide
+ahora **el permiso de su propia pantalla**, y para los otros tres roles no
+cambió nada. Hay una prueba que lo fija.
+
+La regla que deja: **un permiso que se llama como una pantalla tiene que
+gobernar esa pantalla y nada más.** Un `ver` que además abría el equipo era
+un permiso que no decía la verdad, y eso solo se descubre el día que aparece
+un rol que no puede todo.
+
+#### Las pantallas no dibujan lo que la cuenta no puede leer
+
+Las dos a las que llega —el calendario y la página de un día— **no piden** lo
+que va a devolver 403, y **no dibujan** el bloque correspondiente: ni el
+equipo, ni las extras, ni lo cotizado, ni lo del socio. No es la protección
+—cada ruta vuelve a preguntar— es que un bloque vacío con un botón apagado se
+lee como un panel roto y no como una puerta cerrada. La tarjeta del
+calendario, por lo mismo, **no tiene dorso** para quien no ve el equipo: un
+botón que da vuelta la tarjeta para mostrar una cara en blanco es peor que no
+tenerlo.
+
+El rol y el nombre de la cuenta bajan **desde el servidor**, en `page.tsx` y
+en `dia/[fecha]/page.tsx`, y las pantallas preguntan con `puede()` — la misma
+tabla que usan el menú y las rutas, para que no haya una segunda verdad.
+
+#### Se comprobó rompiéndolo, y de punta a punta
+
+Tres mutaciones, y cada una tumba pruebas distintas: dejar que el vendedor
+toque cualquier reserva **falla 3**; hacer que un usuario vacío calce con una
+fila vacía **falla 1** —la que dice que eso abriría todas—; y meter al
+vendedor en el permiso del equipo **falla 3**, incluida la que lista sus
+permisos completos.
+
+Y contra el panel corriendo, con dos cuentas de vendedor y una de encargada:
+
+```
+vendedor  /api/ocupacion /api/reservas /api/fechas  → 200
+          /api/equipo /api/extras /api/presupuestos /api/crm/eventos → 403
+          /api/informe /api/config /api/menus /api/usuarios → 403
+          POST /api/fechas (abrir un día)                   → 403
+
+Verónica edita la suya              → 200
+Verónica edita la de Hugo           → 403 "Esa reserva la anotó Hugo el vendedor"
+Verónica borra la de Shopify        → 403 "Esa reserva no la anotaste tú"
+Carla (encargada) edita la de Hugo  → 200
+Verónica anota una nueva            → queda con "Anotada por: Verónica la vendedora"
+                                       y la borra ella misma → 200
+```
+
+En pantalla, a 1280 y a 393 en los dos temas: el menú del vendedor es una
+pastilla, la tarjeta no trae *Equipo* ni *Editar*, la página del día no trae
+los bloques de equipo ni de extras, y de las tres reservas solo la suya
+muestra *Editar* y *Borrar* — las otras dicen *La anotó Hugo el vendedor* y
+*No la anotaste tú*. Ninguna pantalla se corre de lado.
 
 ### El middleware autentica, cada ruta autoriza
 

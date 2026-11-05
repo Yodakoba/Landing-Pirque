@@ -41,6 +41,10 @@ export async function POST(req: Request) {
     const guarda = await guardaDelDia(req, [String(b.fecha)], b.correccion);
     if ('error' in guarda) return guarda.error;
 
+    // **Quién la anota se resuelve antes de escribirla**, no después: es un
+    // campo de la fila, no solo una línea de bitácora. Ver `COL_RESERVAS`.
+    const quien = await quienEs(req);
+
     const id = await crearReserva({
       fecha: b.fecha, nombre: b.nombre, email: correoNormal(b.email),
       // Se guarda con la misma forma que las de Shopify: una reserva
@@ -68,7 +72,11 @@ export async function POST(req: Request) {
       eventoCRM: String(b.eventoCRM ?? '').trim(),
       // Sin marcar: a una reserva que se acaba de crear todavía no se le
       // puede saber si la persona apareció.
-      asistencia: ASISTENCIA.sinMarcar
+      asistencia: ASISTENCIA.sinMarcar,
+      // **El dueño sale de la sesión y NO del cuerpo**, igual que la
+      // modalidad. Si se aceptara del navegador, un vendedor podría
+      // adjudicarse la reserva de otro — y con eso, borrársela.
+      anotadaPor: quien.usuario
     });
     await abrirElDiaSiHaceFalta(b.fecha);
     // Un día abierto sin reservas no se le manda al socio; con esta pasa a
@@ -76,7 +84,6 @@ export async function POST(req: Request) {
     // decide el estado que se publica.
     await empujarDia(b.fecha);
 
-    const quien = await quienEs(req);
     await anotar({ ...quien,
       accion: guarda.motivo ? 'Anotó una reserva en un día cerrado' : 'Anotó una reserva',
       detalle: `${b.nombre} · ${b.fecha} · ${b.personas} personas · ${b.menu ?? 'sin menú'}` +

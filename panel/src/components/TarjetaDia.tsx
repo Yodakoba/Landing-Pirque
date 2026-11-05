@@ -131,9 +131,22 @@ const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3';
 const BOTON = 'tecla boton boton-angosto';
 
 export default function TarjetaDia({
-  d, resumen, clima, delSocio, onEditar, onPlanificar
+  d, resumen, clima, delSocio, conEquipo = true, conDias = true,
+  onEditar, onPlanificar
 }: {
   d: Ocupacion;
+  /**
+   * Si esta cuenta puede ver y planificar el equipo.
+   *
+   * **En falso la tarjeta no tiene dorso**, y no es un detalle de estilo:
+   * un vendedor recibe 403 de `/api/equipo`, así que el botón *Equipo*
+   * daría vuelta la tarjeta para mostrarle una cara vacía. Que no exista
+   * dice la verdad —ese dato no es suyo— y un botón que no lleva a nada
+   * dice que el panel está roto.
+   */
+  conEquipo?: boolean;
+  /** Si esta cuenta puede abrir, cerrar y editar días. */
+  conDias?: boolean;
   /** Lo que el CRM del socio tiene para este día y acá no está anotado. */
   delSocio?: EventosDelDia;
   /** El pronóstico de ese día, si cae dentro de los que hay (unos 9 o 10). */
@@ -202,9 +215,15 @@ export default function TarjetaDia({
                 </p>
                 <Clima c={clima} tamano="tarjeta" />
               </div>
+              {/* **Nombra un botón, así que solo va si el botón está.** Un
+                  vendedor no abre ni cierra días: mandarlo a apretar
+                  *Editar* sería mandarlo a buscar algo que no existe. */}
               <p className="mt-3 text-[13px] leading-snug text-hueso/70">
-                Sin cupo definido. Apreta <strong className="text-hueso">Editar</strong>{' '}
-                para abrir este día o dejarlo privado.
+                {conDias
+                  ? <>Sin cupo definido. Apreta <strong className="text-hueso">Editar</strong>{' '}
+                     para abrir este día o dejarlo privado.</>
+                  : <>Sin cupo definido: este día existe porque tiene reservas, pero
+                     nadie le puso cupo todavía.</>}
               </p>
             </>
           ) : (
@@ -335,6 +354,7 @@ export default function TarjetaDia({
               Reservas
             </a>
             <span className="flex-1" />
+            {conEquipo && (
             <button onClick={() => setVolteada(true)} {...alFrente}
               className={`${BOTON} whitespace-nowrap`}>
               Equipo
@@ -367,14 +387,18 @@ export default function TarjetaDia({
                 </span>
               )}
             </button>
-            <button onClick={onEditar} {...alFrente}
-              className={`${BOTON} whitespace-nowrap`}>
-              {sinConfigurar(d) ? 'Abrir' : 'Editar'}
-            </button>
+            )}
+            {conDias && (
+              <button onClick={onEditar} {...alFrente}
+                className={`${BOTON} whitespace-nowrap`}>
+                {sinConfigurar(d) ? 'Abrir' : 'Editar'}
+              </button>
+            )}
           </div>
         </div>
 
         {/* ---------- el dorso: el equipo ---------- */}
+        {conEquipo && (
         <div
           className={`${CARA} border-hueso/15 bg-panel [transform:rotateY(180deg)] ${
             volteada ? '' : 'pointer-events-none'}`}
@@ -473,6 +497,7 @@ export default function TarjetaDia({
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
