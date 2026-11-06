@@ -318,10 +318,20 @@ export default function CalendarioEquipo() {
                   eso la pastilla era lo más fuerte de la celda, más que la
                   fecha y que la gente. Sigue siendo la única cosa rellena
                   de la celda, que es lo que la hace encontrable. */}
+              {/* **La pastilla de cierre vive siempre en el mismo lugar**:
+                  abajo a la izquierda de la celda (2026-11-06, lo pidió el
+                  cliente). Antes iba pegada a lo último que hubiera, así que
+                  en un día con mucho quedaba abajo y en uno con poco a media
+                  altura, y el "3 por marcar" iba debajo de ella. Ahora
+                  `mt-auto` la empuja al fondo —la celda se estira al alto de
+                  su fila— y lo que le falta va arriba, con el resto de los
+                  datos. Mismo lugar en todas las celdas: se busca sin leer. */}
               {res.total > 0 && cerrado(f) && (
-                <span className="mt-1.5 max-w-full self-start whitespace-nowrap rounded-full bg-verde-fuerte
-                                 px-2 py-0.5 text-[12px] font-bold text-tinta">
-                  ✓ Cerrado
+                <span className="mt-auto block self-start pt-1.5">
+                  <span className="block max-w-full whitespace-nowrap rounded-full bg-verde-fuerte
+                                   px-2 py-0.5 text-[12px] font-bold text-tinta">
+                    ✓ Cerrado
+                  </span>
                 </span>
               )}
               {res.total > 0 && !cerrado(f) && f < hoy() && (() => {
@@ -333,12 +343,14 @@ export default function CalendarioEquipo() {
                     : 'listo para cerrar';
                 return (
                   <>
-                    <span className="mt-1.5 max-w-full self-start whitespace-nowrap rounded-full border-[1.5px]
-                                     border-ambar-fuerte bg-ambar/10 px-2 py-0.5 text-[12px]
-                                     font-bold text-ambar-texto">
-                      ! Sin cerrar
+                    <span className="mt-1 block text-[12px] font-semibold text-ambar-texto">{pendiente}</span>
+                    <span className="mt-auto block self-start pt-1.5">
+                      <span className="block max-w-full whitespace-nowrap rounded-full border-[1.5px]
+                                       border-ambar-fuerte bg-ambar/10 px-2 py-0.5 text-[12px]
+                                       font-bold text-ambar-texto">
+                        ! Sin cerrar
+                      </span>
                     </span>
-                    <span className="mt-0.5 block text-[12px] font-semibold text-ambar-texto">{pendiente}</span>
                   </>
                 );
               })()}
