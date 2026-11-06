@@ -392,14 +392,18 @@ este cambio o no"*.
   apretado se veía sin relleno mientras el puntero seguía encima.
 - **Hoy va subrayado** (clase `hoy`, la pone `reserva.js`), para ubicarse
   en el mes sin leer nada.
-- **Bajo el mes, una sola línea**: el punto y *Últimos lugares*. El primer
-  corte traía una leyenda de tres cajas —*Se puede reservar · Últimos
-  lugares · Sin reservas en línea*— y el cliente la sacó el mismo día: *"se
-  entiende solo"*. El punto es lo único que no se adivina, así que es lo
-  único que se explica. El punto de la casilla pasó de 3 a 6px; el de antes
-  no se veía. **Cuándo aparece** lo decide el umbral de la planilla
-  (`aviso_pocos_lugares`), y el cliente dejó dicho que ese sistema se va a
-  desarrollar mejor más adelante.
+- **Los días por llenarse van en dos etapas** (2026-11-06, lo pidió el
+  cliente: el punto chico *"nadie lo entiende"*, tenía que ser más
+  comercial). **Naranjo, *Pocos cupos***, desde el umbral de la planilla
+  (`aviso_pocos_lugares`, que el panel manda resuelto en `pocos`); **rojo,
+  *Últimos cupos***, con menos de 10 lugares (`ULTIMOS_CUPOS` en
+  `reserva.js`). Se distinguen por forma además de color: la tecla cambia de
+  borde y lleva una barra gruesa al pie. Bajo el mes, dos pastillas con la
+  misma barra; al elegir el día, el aviso es una pastilla de su color con
+  *quedan N*. **El rojo se calcula en el sitio con `quedan`**, que ya viaja
+  en el contrato: no se agregó ningún campo al backend. El primer corte
+  traía una leyenda de tres cajas y el cliente la sacó (*"se entiende
+  solo"*); después del punto suelto pidió estas dos etapas.
 - **En un teléfono las siete columnas mandan**: las casillas miden lo que
   deje el ancho (unos 39px a 393). Por eso se le quitó aire al marco del
   formulario bajo 480px, y **no lleva `min-height`**: con 42px fijos la
