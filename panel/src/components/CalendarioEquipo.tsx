@@ -29,7 +29,7 @@ import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
-import PuntoDia from './PuntoDia';
+import { partesDelDia } from './PuntoDia';
 import Clima, { usePronostico } from './Clima';
 import { resumenEquipo, esPreparacion,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
@@ -212,9 +212,9 @@ export default function CalendarioEquipo() {
           botones incluidos—, que es justo lo que este desplazamiento
           interno viene a evitar. Comprobado a 393px. */}
       <div className="relative overflow-x-auto pb-1">
-       <div className="min-w-[640px]">
-        <div className="grid grid-cols-7 gap-1 text-center text-[11px]
-                        uppercase tracking-wide text-hueso/40">
+       <div className="min-w-[840px]">
+        <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-semibold
+                        uppercase tracking-wide text-hueso/60">
           {DIAS.map((d) => <div key={d} className="pb-1">{d}</div>)}
         </div>
 
@@ -229,6 +229,7 @@ export default function CalendarioEquipo() {
           const res = resumenDe(f);
           const preparando = prepara(f);
           const esHoy = f === hoy();
+          const estado = partesDelDia(oc, preparando);
           // **El contenido va pegado arriba, y eso hay que pedirlo.** Las celdas
           // de una fila se estiran todas a la más alta, y el contenido de un
           // `<button>` se centra en vertical por defecto —es comportamiento propio
@@ -239,35 +240,45 @@ export default function CalendarioEquipo() {
           return (
             <button key={f} onClick={() => setPlanificando(f)} disabled={!equipo}
               title={`${enPalabras(f)} · planificar el equipo`}
-              className={`flex min-h-[92px] flex-col items-stretch justify-start
-                          overflow-hidden rounded border p-1.5
+              className={`flex min-h-[104px] flex-col items-stretch justify-start
+                          overflow-hidden rounded border p-2
                           text-left align-top
-                          text-[11px] leading-tight transition
+                          text-[13px] leading-snug transition
                           hover:border-oro disabled:opacity-40
                           ${preparando ? 'border-oro/40 bg-oro/5'
                              : oc ? COLOR_TARJETA(oc)
                                   : 'border-hueso/10 bg-panel'}
                           ${esHoy ? 'ring-1 ring-oro' : ''}`}>
-              <span className="flex items-start justify-between">
-                {/* El pronóstico bajo el número, en el aire que ya deja el
-                    punto con su palabra: no cambia el alto de la celda. */}
-                <span className="flex flex-col items-start gap-1">
-                  <span className={oc || preparando ? 'font-semibold' : 'text-hueso/45'}>
-                    {Number(f.slice(8, 10))}
-                  </span>
-                  <Clima c={pronostico.get(f)} />
+              {/* **Tres líneas fijas, ninguna que envuelve** (2026-11-06). La
+                  fecha y el punto de color arriba; el pronóstico debajo; y la
+                  palabra del estado en su propia línea, con todo el ancho de
+                  la celda. Antes la palabra iba al lado de la fecha y del
+                  pronóstico, y en un teléfono "preparación" no cabía y se
+                  cortaba: un dato que desaparece a medias es peor que uno
+                  chico. */}
+              <span className="flex items-start justify-between gap-1">
+                {/* **La fecha es lo primero que se busca** (2026-11-06, lo
+                    pidió el cliente: iba a 11px, más chica que todo lo que
+                    tenía debajo). Va a 18, en negrita si el día tiene algo,
+                    y en un día vacío sigue legible: más clara, no borrada. */}
+                <span className={`text-[18px] leading-none ${oc || preparando || res.total > 0
+                  ? 'font-bold text-hueso' : 'font-medium text-hueso/55'}`}>
+                  {Number(f.slice(8, 10))}
                 </span>
-                {/* El punto con su palabra debajo: la misma regla en los
-                    tres calendarios, para que un día se lea igual en
-                    cualquier pantalla. */}
-                <PuntoDia d={oc} preparacion={preparando} />
+                {estado && <span aria-hidden className="text-[14px] leading-none">{estado.punto}</span>}
               </span>
+              {pronostico.get(f) && <span className="mt-1 block"><Clima c={pronostico.get(f)} /></span>}
+              {estado && (
+                <span className={`mt-1 block whitespace-nowrap text-[12px] font-semibold uppercase tracking-wide ${estado.clase}`}>
+                  {estado.texto}
+                </span>
+              )}
 
               {oc && !oc.bloqueada && (
-                <span className="mt-1 block text-hueso/70">
+                <span className="mt-1.5 block text-hueso/80">
                   {oc.tomadas > 0
-                    ? <>{oc.tomadas} <span className="text-hueso/45">personas</span></>
-                    : <span className="text-hueso/35">sin reservas</span>}
+                    ? <><b className="font-bold text-hueso">{oc.tomadas}</b> <span className="text-hueso/65">personas</span></>
+                    : <span className="text-hueso/55">sin reservas</span>}
                 </span>
               )}
 
@@ -283,29 +294,33 @@ export default function CalendarioEquipo() {
               {oc && oc.presupuestos > 0 && (
                 <span className="mt-1 block text-rosa-texto">
                   {oc.presupuestadas > 0
-                    ? <>{oc.presupuestadas} posibles</>
+                    ? <><b className="font-bold">{oc.presupuestadas}</b> posibles</>
                     : <>{oc.presupuestos} presup.</>}
                 </span>
               )}
 
               {res.total > 0 && (
                 <span className="mt-1 block text-oro">
-                  {res.total} en el equipo
+                  <b className="font-bold">{res.total}</b> en el equipo
                 </span>
               )}
               {res.faltan > 0 && (
-                <span className="mt-0.5 block text-ambar-texto">faltan {res.faltan}</span>
+                <span className="mt-0.5 block font-semibold text-ambar-texto">faltan {res.faltan}</span>
               )}
               {/* **Cerrado o no, de un vistazo** (2026-11-05, lo pidió el
                   cliente). Un día cerrado lleva una pastilla verde llena;
                   uno que ya pasó y nadie cerró, una ámbar con borde y
                   debajo qué le falta. Se distinguen por forma además de
                   por color: relleno contra borde. Un día sin equipo no
-                  dice nada, porque no hay qué cerrar. */}
+                  dice nada, porque no hay qué cerrar.
+
+                  **Sin brillo ni letra extra gruesa** (2026-11-06): con
+                  eso la pastilla era lo más fuerte de la celda, más que la
+                  fecha y que la gente. Sigue siendo la única cosa rellena
+                  de la celda, que es lo que la hace encontrable. */}
               {res.total > 0 && cerrado(f) && (
-                <span className="mt-1 max-w-full self-start whitespace-nowrap rounded-full bg-verde-fuerte
-                                 px-1 py-0.5 text-[12px] font-black tracking-tight text-tinta sm:px-1.5 sm:tracking-normal
-                                 shadow-[0_0_8px_rgb(var(--verde-fuerte)/0.55)]">
+                <span className="mt-1.5 max-w-full self-start whitespace-nowrap rounded-full bg-verde-fuerte
+                                 px-2 py-0.5 text-[12px] font-bold text-tinta">
                   ✓ Cerrado
                 </span>
               )}
@@ -318,12 +333,12 @@ export default function CalendarioEquipo() {
                     : 'listo para cerrar';
                 return (
                   <>
-                    <span className="mt-1 max-w-full self-start whitespace-nowrap rounded-full border-2
-                                     border-ambar-fuerte bg-ambar/10 px-1 py-0.5 text-[12px] tracking-tight sm:px-1.5 sm:tracking-normal
-                                     font-black text-ambar-texto">
+                    <span className="mt-1.5 max-w-full self-start whitespace-nowrap rounded-full border-[1.5px]
+                                     border-ambar-fuerte bg-ambar/10 px-2 py-0.5 text-[12px]
+                                     font-bold text-ambar-texto">
                       ! Sin cerrar
                     </span>
-                    <span className="mt-0.5 block font-semibold text-ambar-texto">{pendiente}</span>
+                    <span className="mt-0.5 block text-[12px] font-semibold text-ambar-texto">{pendiente}</span>
                   </>
                 );
               })()}

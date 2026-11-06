@@ -58,6 +58,20 @@ export function estadoDia(d: Ocupacion | undefined, preparacion = false): Estado
   return 'publico';
 }
 
+/**
+ * Las dos piezas por separado —el punto y su palabra— para una celda que no
+ * tiene ancho para ponerlas lado a lado de la fecha (2026-11-06): en
+ * `/turnos` a 393px la palabra "preparación" se cortaba. Ahí el punto va en
+ * la línea de la fecha y la palabra en una línea propia, con todo el ancho.
+ * Son los mismos textos y colores que `PuntoDia`, no una segunda lista.
+ */
+export function partesDelDia(d: Ocupacion | undefined, preparacion = false) {
+  const estado = estadoDia(d, preparacion);
+  if (!estado) return null;
+  const { texto, clase, punto } = PALABRA[estado];
+  return { texto, clase, punto: punto ?? (d ? PUNTO_TARJETA(d) : '🟡') };
+}
+
 export default function PuntoDia({ d, preparacion = false }: {
   /** La ocupación del día, o `undefined` si ese día no recibe público. */
   d?: Ocupacion;
@@ -73,7 +87,7 @@ export default function PuntoDia({ d, preparacion = false }: {
   return (
     <span className="flex shrink-0 flex-col items-end leading-none">
       <span aria-hidden className="text-[15px]">{punto ?? (d ? PUNTO_TARJETA(d) : '🟡')}</span>
-      <span className={`mt-1 text-[11px] font-semibold uppercase tracking-wide ${clase}`}>
+      <span className={`mt-1 text-[12px] font-semibold uppercase tracking-wide ${clase}`}>
         {texto}
       </span>
     </span>

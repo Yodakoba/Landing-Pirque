@@ -3875,6 +3875,28 @@ Se distinguen por **forma además de color**: relleno contra borde. *Listo
 para cerrar* es el caso que más se olvida —ya está todo marcado y solo
 falta apretar el botón— y por eso tiene su propia frase.
 
+**La celda de `/turnos`, con cada dato a su peso** (2026-11-06, lo pidió el
+cliente: *"ciertos datos como cerrado aparecen súper bien visibles… otros
+como la fecha misma están muy desproporcional chico… que ningún dato se
+desaparece completo o un dato sobresalta completo"*). Medido antes: la
+fecha a **11px**, el pronóstico a 10, y la pastilla *✓ Cerrado* en letra
+extra gruesa con brillo, o sea lo más fuerte de la celda.
+
+- **La fecha va a 18px**, en negrita si el día tiene algo y más clara —no
+  borrada— si está vacío. Los días de la semana a 12px.
+- **Los datos a 13px, con el número en negrita** (*__34__ personas*,
+  *__9__ en el equipo*): el número es lo que se mira, la palabra lo que se
+  lee una vez. El pronóstico a 12.
+- **Las pastillas de cierre perdieron el brillo y la letra extra gruesa**,
+  y siguen distinguiéndose por forma: la de cerrado es lo único relleno de la
+  celda, la de sin cerrar lleva borde.
+- **Tres líneas fijas arriba**: la fecha con el punto de color, el
+  pronóstico, y la palabra del estado en su propia línea. Antes la palabra
+  iba al lado de la fecha y en un teléfono *PREPARACIÓN* se cortaba. Las
+  piezas salen de `partesDelDia()`, en `PuntoDia.tsx`: los mismos textos y
+  colores, no una segunda lista. El mes desplazable pasó de 640 a 840px de
+  ancho mínimo, para que la palabra entre entera.
+
 ### Lo que cuesta un día
 
 **Un turno sin marcar no suma nada.** Antes de que alguien diga si vino o

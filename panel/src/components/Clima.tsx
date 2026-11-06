@@ -53,7 +53,7 @@ export function usePronostico(): Map<string, DatoClima> {
 type Tamano = 'chico' | 'tarjeta' | 'grande';
 
 const CAJA: Record<Tamano, string> = {
-  chico: 'gap-1 text-[10px] leading-none',
+  chico: 'gap-1 text-[12px] leading-none',
   // Pastilla: el pronóstico deja de ser un apéndice de la fecha y pasa a ser
   // una cosa con borde, que es lo que lo hace encontrable de un vistazo.
   tarjeta: 'gap-1.5 rounded-lg border border-hueso/10 bg-hueso/[0.04] px-2 py-1',
