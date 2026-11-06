@@ -73,13 +73,13 @@
   .sugerencia-ir{
     display:inline-block; padding:8px 14px; border-radius:2px;
     background: var(--gold); color:#1A1400; text-decoration:none;
-    font-size:0.78rem; font-weight:700; letter-spacing:0.04em;
+    font-size:0.86rem; font-weight:700; letter-spacing:0.04em;
     text-transform:uppercase;
   }
   .sugerencia-ir:hover{ background:#DAB02C; }
   .sugerencia-cerrar{
     position:absolute; top:8px; right:8px;
-    width:28px; height:28px; padding:0; line-height:1;
+    width:40px; height:40px; padding:0; line-height:1;
     display:flex; align-items:center; justify-content:center;
     background:none; border:0; border-radius:4px; cursor:pointer;
     color: var(--ink-faint); font-size:1.15rem;
@@ -107,7 +107,7 @@
       gap:8px; padding:12px 36px 12px 14px;
     }
     .sugerencia-idioma p{ font-size:0.82rem; line-height:1.4; }
-    .sugerencia-ir{ padding:7px 12px; font-size:0.74rem; }
+    .sugerencia-ir{ padding:10px 14px; font-size:0.82rem; }
   }
   /* Igual que en .wa-float, el desplazamiento por la barra de gestos va
      detras de @supports: calc()+env() no parsea en todos los motores y sin
@@ -128,7 +128,7 @@
   .idiomas > summary{
     display:inline-flex; align-items:center; gap:6px;
     padding:5px 9px; border:1px solid var(--line); border-radius:999px;
-    font-size:0.7rem; font-weight:600; letter-spacing:0.06em;
+    font-size:0.78rem; font-weight:600; letter-spacing:0.06em;
     color: var(--ink-dim); cursor:pointer; user-select:none;
     background: rgba(255,255,255,0.03);
     transition: color .15s ease, border-color .15s ease;
@@ -290,7 +290,7 @@
   /* El sello, entre dos filetes, como los carteles esmaltados de antes. */
   .promo-sello{
     display:flex; align-items:center; gap:12px; margin-bottom:20px;
-    font-size:0.72rem; text-transform:uppercase; letter-spacing:0.22em;
+    font-size:0.84rem; font-weight:600; text-transform:uppercase; letter-spacing:0.2em;
     color: var(--gold);
   }
   .promo-sello::before{ content:""; height:1px; background:currentColor; opacity:0.5; flex:0 0 34px; }
@@ -310,7 +310,7 @@
     color: var(--gold); font-size: clamp(1.9rem,4.4vw,2.6rem); line-height:1;
   }
   .oferta-dato span{
-    display:block; margin-top:8px; font-size:0.78rem; color: var(--ink-dim);
+    display:block; margin-top:8px; font-size:0.88rem; font-weight:600; color: var(--ink-dim);
     text-transform:uppercase; letter-spacing:0.06em; line-height:1.4;
   }
   /* La condición de un dato, debajo de su rótulo (2026-11-03): el arriendo
@@ -425,9 +425,17 @@
 
   /* experience cards (photo tabs) */
   .tier-cards{ display:grid; grid-template-columns: repeat(4,1fr); gap: 14px; perspective: 1400px; }
-  @media (max-width: 760px){ .tier-cards{ grid-template-columns: repeat(2,1fr); } }
+  /* Regla PlayStation (2026-11-06): con la letra del reverso a tamaño de
+     leer, cuatro columnas solo caben sobre 1180px, y en un telefono va una
+     tarjeta por fila. El reverso tiene alto fijo, asi que lo que no cabe se
+     cortaria sin aviso: se comprobo tarjeta por tarjeta que no pase. */
+  @media (max-width: 1180px){ .tier-cards{ grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 560px){ .tier-cards{ grid-template-columns: 1fr; } }
 
   .flip-card{ position:relative; aspect-ratio: 3/4; display:block; cursor:pointer; }
+  /* Despues de la regla base, o la base las pisa. */
+  @media (max-width: 560px){ .flip-card{ aspect-ratio: 1/1; } }
+  @media (max-width: 380px){ .flip-card{ aspect-ratio: 3/4; } .flip-card .flip-back{ padding: 12px; } }
   .flip-input{ position:absolute; opacity:0; width:1px; height:1px; }
   .flip-inner{
     position:relative; width:100%; height:100%; transform-style: preserve-3d;
@@ -448,36 +456,36 @@
   }
   .tier-cap .name{
     font-family: var(--sans); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
-    font-size:0.82rem; line-height:1.2; color: var(--ink);
+    font-size:0.95rem; line-height:1.2; color: var(--ink);
   }
   .tier-cap .price{
     font-family: var(--serif); font-style:italic; font-size:1.35rem; line-height:1.15; color: var(--gold);
   }
   @media (max-width: 760px){
     .tier-cap{ padding: 32px 12px 11px; }
-    .tier-cap .name{ font-size:0.76rem; }
+    .tier-cap .name{ font-size:0.9rem; }
     .tier-cap .price{ font-size:1.2rem; }
   }
   .flip-hint{
-    position:absolute; top:10px; right:10px; font-size:0.62rem; text-transform:uppercase; letter-spacing:0.03em;
-    color: rgba(244,240,230,0.92); background: rgba(0,0,0,0.45); padding:4px 8px; border-radius:2px; z-index:2;
+    position:absolute; top:10px; right:10px; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;
+    color: #F4F0E6; background: rgba(0,0,0,0.6); padding:6px 10px; border-radius:4px; z-index:2;
   }
   .flip-back{
     transform: rotateY(180deg); background: var(--bg-panel); border-color: var(--gold);
     padding: 16px 14px; display:flex; flex-direction:column; justify-content:center; text-align:left;
   }
-  .flip-back .fb-name{ font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color: var(--ink-faint); }
-  .flip-back .fb-price{ font-family: var(--serif); font-style: italic; font-size: 1.25rem; color: var(--gold); margin-top:4px; }
-  .flip-back .fb-meta{ font-size:0.64rem; color: var(--ink-faint); margin-top:3px; line-height:1.3; }
+  .flip-back .fb-name{ font-size:0.88rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color: var(--ink-faint); }
+  .flip-back .fb-price{ font-family: var(--serif); font-style: italic; font-size: 1.45rem; color: var(--gold); margin-top:4px; }
+  .flip-back .fb-meta{ font-size:0.84rem; color: var(--ink-dim); margin-top:3px; line-height:1.3; }
   .flip-back .fb-note{
-    display:inline-block; background: rgba(201,162,39,0.15); color: var(--gold); font-size:0.62rem;
-    text-transform:uppercase; letter-spacing:0.03em; padding:3px 8px; border-radius:2px; margin-top:9px;
+    display:inline-block; align-self:flex-start; background: rgba(201,162,39,0.15); color: var(--gold); font-size:0.8rem; font-weight:600;
+    text-transform:uppercase; letter-spacing:0.03em; padding:5px 10px; border-radius:4px; margin-top:10px;
   }
-  .flip-back .fb-desc{ font-size:0.74rem; color: var(--ink-dim); margin-top:9px; line-height:1.4; }
+  .flip-back .fb-desc{ font-size:0.9rem; color: var(--ink-dim); margin-top:10px; line-height:1.42; }
 
   .tier-price{ font-family: var(--serif); font-style: italic; font-size: 1.5rem; color: var(--gold); margin: 8px 0 4px; }
-  .tier-price span{ font-family: var(--sans); font-style: normal; text-transform:none; font-size: 0.78rem; color: var(--ink-faint); display:block; margin-top: 4px; }
-  .tier-note{ display:inline-block; background: rgba(201,162,39,0.15); color: var(--gold); font-size: 0.76rem; text-transform: uppercase; letter-spacing:0.03em; padding: 5px 12px; border-radius: 2px; margin-top: 14px; }
+  .tier-price span{ font-family: var(--sans); font-style: normal; text-transform:none; font-size: 0.88rem; color: var(--ink-dim); display:block; margin-top: 4px; }
+  .tier-note{ display:inline-block; background: rgba(201,162,39,0.15); color: var(--gold); font-size: 0.84rem; font-weight:600; text-transform: uppercase; letter-spacing:0.03em; padding: 6px 12px; border-radius: 4px; margin-top: 14px; }
 
   details.menu-details{ margin-top: 34px; border-top: 1px solid var(--line); padding-top: 18px; }
   details.menu-details summary{ cursor:pointer; list-style: none; }
@@ -500,7 +508,7 @@
   }
   .menu-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap: 16px 30px; margin-top: 18px; }
   @media (max-width: 700px){ .menu-grid{ grid-template-columns: 1fr; } }
-  .menu-grid h4{ font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-faint); margin-bottom: 4px; }
+  .menu-grid h4{ font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold); margin-bottom: 6px; }
   .menu-grid p{ font-size: 0.88rem; color: var(--ink-dim); }
 
   /* food photo strip */
@@ -523,7 +531,7 @@
   .service-photo{ aspect-ratio: 4/3; border-radius: 3px; overflow:hidden; }
   .service-cards{ display:flex; flex-direction:column; gap: 20px; }
   .service-card{ border: 1px solid var(--line); border-radius: 3px; padding: 22px 24px; }
-  .service-card .tag{ font-size: 0.78rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.03em; }
+  .service-card .tag{ font-size: 0.86rem; font-weight:600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.03em; }
   .service-card h3{ font-size: 0.95rem; margin-top: 6px; }
   .service-card p{ font-size: 0.88rem; color: var(--ink-dim); margin-top: 8px; }
 
@@ -624,7 +632,7 @@
     border:none; cursor:pointer; font-family: var(--sans); font-weight:600; font-size:0.82rem;
     text-transform: uppercase; letter-spacing: 0.03em; background: var(--gold); color:#1A1400; padding: 12px 20px; border-radius: 2px;
    min-height:44px;}
-  .fine{ font-size: 0.78rem; color: var(--ink-faint); margin-top: 12px; }
+  .fine{ font-size: 0.88rem; color: var(--ink-dim); margin-top: 12px; }
 
   footer{ padding: 40px 0; border-top: 1px solid var(--line); }
   footer .wrap{ display:flex; flex-wrap:wrap; justify-content:space-between; gap: 16px; font-size: 0.8rem; color: var(--ink-faint); }
@@ -635,7 +643,7 @@
 <link rel="alternate" hreflang="pt" href="https://brasasdelopirque.cl/pt/promociones.html">
 <link rel="alternate" hreflang="x-default" href="https://brasasdelopirque.cl/promociones.html">
 <!--/i18n:alternate-->
-<link rel="stylesheet" href="assets/css/tema.css?v=78203e3f">
+<link rel="stylesheet" href="assets/css/tema.css?v=2f5ce5c7">
 <script src="assets/js/tema.js?v=69676a89"></script>
 <script src="assets/js/idioma.js?v=30e2a7c2" defer></script>
 </head>

@@ -371,6 +371,59 @@ unos pocos KB; las imágenes se cachean entre páginas.
   **Eso se acabó el 2026-10-13**: manda Shopify, y ahí vale $70.000, igual
   que en el landing. Los precios coinciden hoy en los dos entregables.
 
+### La regla PlayStation, también en el sitio y los landings (2026-11-06)
+
+Lo pidió el cliente: la misma regla del panel —botones que se ven
+apretables, nada de letra chica donde hay un dato, contraste de verdad—
+aplicada al sitio público y a los dos landings, *"decidir: aquí puedo hacer
+este cambio o no"*.
+
+**El calendario de reservas era lo peor**, y es lo que más se usa:
+
+- **Los tres estados se distinguen por forma, no solo por color.** El día
+  que se puede reservar es una tecla con borde dorado, relleno y número en
+  negrita; el que no, un número suelto sin caja. Antes el cerrado iba al
+  30% de opacidad y el abierto apenas teñido: los dos se leían como el mismo
+  gris.
+- Números a 16-17px (antes 12,8), días de la semana a 13px, el mes en
+  negrita y las flechas de 44px.
+- **El día elegido se rellena de dorado con un anillo**, y gana al `:hover`
+  del abierto (`.cal-dia.abierto.elegido:hover`): sin eso, el día recién
+  apretado se veía sin relleno mientras el puntero seguía encima.
+- **Hoy va subrayado** (clase `hoy`, la pone `reserva.js`), para ubicarse
+  en el mes sin leer nada.
+- **Una leyenda bajo el mes**: *Se puede reservar · Últimos lugares · Sin
+  reservas en línea*, con las mismas formas de la grilla. El punto de
+  "últimos lugares" pasó de 3 a 6px; el de antes no se veía.
+- **En un teléfono las siete columnas mandan**: las casillas miden lo que
+  deje el ancho (unos 39px a 393). Por eso se le quitó aire al marco del
+  formulario bajo 480px, y **no lleva `min-height`**: con 42px fijos la
+  última columna se salía de la caja.
+
+**Las tarjetas que giran**: el reverso iba de 10 a 12px. Ahora el texto va
+a 13-15px, y como **el reverso tiene alto fijo**, lo que no cabe se corta
+sin aviso. Por eso cambió la grilla, no solo la letra:
+
+- Sitio público: una tarjeta por fila bajo 700px (4:3), cuadrada bajo 460 y
+  4:5 bajo 380.
+- Landings: cuatro columnas solo sobre 1180px, dos hasta 560, una debajo
+  (cuadrada; 3:4 bajo 380). **Las reglas del teléfono van después de la
+  regla base de `.flip-card`**: antes de ella, la base las pisaba y nunca
+  aplicaban.
+- **Se comprobó tarjeta por tarjeta** que ningún reverso se corte, en
+  español, inglés y portugués, de 320 a 1280px.
+
+**Lo demás**, todo lo que estaba bajo 13px: el aviso *Toca para ver
+detalles*, las insignias *Incluido / Con costo*, los pies de foto, el
+*Pagar en el local* de cada tarjeta (ahora es un enlace de 35px de alto y
+no de 20), los rótulos del menú (en dorado), el pie y sus dos botones
+(44px), la tarjeta de sugerencia de idioma y su ✕ (40px), y los botones de
+idioma y Diurno/Nocturno.
+
+**Lo que no se tocó, a propósito**: los títulos, los precios grandes y el
+cuerpo de texto, que ya estaban a tamaño de leer; y el aspecto general, que
+sigue siendo el mismo.
+
 ### Trampas de layout ya resueltas (no las reintroduzcas)
 
 - `aspect-ratio` en un contenedor flex **no** fija la altura si adentro hay una
