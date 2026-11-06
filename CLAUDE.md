@@ -392,9 +392,14 @@ este cambio o no"*.
   apretado se veía sin relleno mientras el puntero seguía encima.
 - **Hoy va subrayado** (clase `hoy`, la pone `reserva.js`), para ubicarse
   en el mes sin leer nada.
-- **Una leyenda bajo el mes**: *Se puede reservar · Últimos lugares · Sin
-  reservas en línea*, con las mismas formas de la grilla. El punto de
-  "últimos lugares" pasó de 3 a 6px; el de antes no se veía.
+- **Bajo el mes, una sola línea**: el punto y *Últimos lugares*. El primer
+  corte traía una leyenda de tres cajas —*Se puede reservar · Últimos
+  lugares · Sin reservas en línea*— y el cliente la sacó el mismo día: *"se
+  entiende solo"*. El punto es lo único que no se adivina, así que es lo
+  único que se explica. El punto de la casilla pasó de 3 a 6px; el de antes
+  no se veía. **Cuándo aparece** lo decide el umbral de la planilla
+  (`aviso_pocos_lugares`), y el cliente dejó dicho que ese sistema se va a
+  desarrollar mejor más adelante.
 - **En un teléfono las siete columnas mandan**: las casillas miden lo que
   deje el ancho (unos 39px a 393). Por eso se le quitó aire al marco del
   formulario bajo 480px, y **no lleva `min-height`**: con 42px fijos la
