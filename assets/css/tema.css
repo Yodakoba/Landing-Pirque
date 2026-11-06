@@ -24,7 +24,7 @@
   margin-left:10px; padding:5px 11px;
   border:1px solid var(--line); border-radius:999px;
   background: rgba(255,255,255,0.03); color: var(--ink-dim);
-  font: 600 0.7rem/1 var(--sans, sans-serif); letter-spacing:0.06em;
+  font: 600 0.78rem/1 var(--sans, sans-serif); letter-spacing:0.06em;
   text-transform:uppercase; cursor:pointer;
   transition: color .15s ease, border-color .15s ease, background .15s ease;
 }
@@ -110,7 +110,9 @@ html[data-tema="dia"] :is(.btn:not(.btn-ghost):not(.btn-wa):not(.btn-whatsapp), 
 }
 html[data-tema="dia"] .btn-ghost{ background: transparent; color: var(--ink); border-color: var(--ink-faint); }
 html[data-tema="dia"] .btn-ghost:hover{ background: var(--gold-wash); border-color: var(--gold); }
-html[data-tema="dia"] .cal-dia.elegido{ color:#FFFFFF; }
+html[data-tema="dia"] .calendario .cal-dia.elegido{ color:#FFFFFF; }
+html[data-tema="dia"] .cal-dia.abierto:not(.elegido){ background: rgba(201,162,39,0.18); }
+html[data-tema="dia"] .cal-dia.abierto:not(.elegido):hover{ background: rgba(201,162,39,0.32); }
 html[data-tema="dia"] .cal-dia.elegido.pocos::after{ background:#FFFFFF; }
 
 /* WhatsApp: el verde se queda, el texto pasa a blanco fijo. */

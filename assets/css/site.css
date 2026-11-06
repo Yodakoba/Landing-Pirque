@@ -66,7 +66,7 @@ h1,h2,h3,h4{
 }
 .rule{ width:46px; height:2px; background: var(--gold); margin:18px 0; border:none; }
 .lede{ max-width: 62ch; font-size: 1.04rem; color: var(--ink-dim); }
-.fine{ font-size: 0.8rem; color: var(--ink-faint); }
+.fine{ font-size: 0.88rem; color: var(--ink-dim); }
 
 .section-head{ max-width: 62ch; margin-bottom: 44px; }
 .section-head h2{ font-size: clamp(1.45rem, 2.7vw, 2.05rem); }
@@ -139,15 +139,15 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
   font-size:0.88rem; line-height:1.45; color: var(--ink-dim);
 }
 .sugerencia-ir{
-  display:inline-block; padding:8px 14px; border-radius:2px;
+  display:inline-block; padding:11px 16px; border-radius:4px;
   background: var(--gold); color:#1A1400; text-decoration:none;
-  font-size:0.78rem; font-weight:700; letter-spacing:0.04em;
+  font-size:0.86rem; font-weight:700; letter-spacing:0.04em;
   text-transform:uppercase;
 }
 .sugerencia-ir:hover{ background:#DAB02C; }
 .sugerencia-cerrar{
   position:absolute; top:8px; right:8px;
-  width:28px; height:28px; padding:0; line-height:1;
+  width:40px; height:40px; padding:0; line-height:1;
   display:flex; align-items:center; justify-content:center;
   background:none; border:0; border-radius:4px; cursor:pointer;
   color: var(--ink-faint); font-size:1.15rem;
@@ -174,8 +174,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
     right:12px; left:12px; width:auto;
     gap:8px; padding:12px 36px 12px 14px;
   }
-  .sugerencia-idioma p{ font-size:0.82rem; line-height:1.4; }
-  .sugerencia-ir{ padding:7px 12px; font-size:0.74rem; }
+  .sugerencia-idioma p{ font-size:0.88rem; line-height:1.4; }
+  .sugerencia-ir{ padding:10px 14px; font-size:0.82rem; }
 }
 /* Igual que en .wa-float, el desplazamiento por la barra de gestos va
    detras de @supports: calc()+env() no parsea en todos los motores y sin
@@ -196,7 +196,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 .idiomas > summary{
   display:inline-flex; align-items:center; gap:6px;
   padding:5px 9px; border:1px solid var(--line); border-radius:999px;
-  font-size:0.7rem; font-weight:600; letter-spacing:0.06em;
+  font-size:0.78rem; font-weight:600; letter-spacing:0.06em;
   color: var(--ink-dim); cursor:pointer; user-select:none;
   background: rgba(255,255,255,0.03);
   transition: color .15s ease, border-color .15s ease;
@@ -354,7 +354,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 a.card{ text-decoration:none; transition: border-color .2s ease, transform .2s ease; }
 a.card:hover{ border-color: var(--gold-soft); transform: translateY(-3px); }
 a.card .mas{
-  margin-top:auto; padding-top:10px; font-size:0.78rem; text-transform:uppercase;
+  margin-top:auto; padding-top:12px; font-size:0.86rem; font-weight:600; text-transform:uppercase;
   letter-spacing:0.05em; color: var(--gold);
 }
 
@@ -375,8 +375,8 @@ a.card .mas{
 
 /* distintivo incluido / con costo: informa, no decora */
 .badge{
-  display:inline-block; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
-  padding:5px 10px; border-radius:2px; border:1px solid var(--line); color: var(--ink-faint);
+  display:inline-block; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;
+  padding:6px 11px; border-radius:4px; border:1px solid var(--ink-faint); color: var(--ink-dim);
   align-self:flex-start;
 }
 .badge-incluido{ color:#9FBF9F; border-color: rgba(159,191,159,0.4); }
@@ -387,7 +387,7 @@ a.card .mas{
    ~580px de ancho y, con la razon 3/4, a 777px de alto */
 .tier-cards{ display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:14px; perspective:1400px; max-width:740px; }
 @media (max-width: 900px){ .tier-cards{ grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 460px){ .tier-cards{ grid-template-columns: 1fr; } }
+
 
 .flip-card{ position:relative; aspect-ratio:3/4; display:block; cursor:pointer; }
 .flip-input{ position:absolute; opacity:0; width:1px; height:1px; }
@@ -409,40 +409,49 @@ a.card .mas{
 .flip-card:hover .flip-front img{ filter: grayscale(0) brightness(0.9); }
 .flip-hint{
   position:absolute; top:10px; right:10px; z-index:2;
-  font-size:0.62rem; text-transform:uppercase; letter-spacing:0.03em;
-  color: rgba(244,240,230,0.92); background: rgba(0,0,0,0.5); padding:4px 8px; border-radius:2px;
+  font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;
+  color: #F4F0E6; background: rgba(0,0,0,0.6); padding:6px 10px; border-radius:4px;
 }
 .tier-cap{
   position:absolute; left:0; right:0; bottom:0; z-index:2;
   display:flex; flex-direction:column; gap:1px; padding: 38px 14px 13px;
   background: linear-gradient(to top, rgba(11,11,10,0.94) 0%, rgba(11,11,10,0.74) 42%, rgba(11,11,10,0) 100%);
 }
-.tier-cap .name{ font-weight:700; text-transform:uppercase; letter-spacing:0.05em; font-size:0.82rem; line-height:1.2; }
-.tier-cap .price{ font-family: var(--serif); font-style:italic; font-size:1.35rem; line-height:1.15; color: var(--gold); }
+.tier-cap .name{ font-weight:700; text-transform:uppercase; letter-spacing:0.05em; font-size:0.95rem; line-height:1.2; }
+.tier-cap .price{ font-family: var(--serif); font-style:italic; font-size:1.6rem; line-height:1.15; color: var(--gold); }
 /* Va DENTRO del <label> que gira la tarjeta. No la gira al apretarla porque
    el spec dice que el label no activa nada cuando el clic cae en contenido
    interactivo descendiente — un <a> lo es. Comprobado en el navegador. */
 .tier-cap .pay{
-  align-self:flex-start; margin-top:5px; text-decoration:none;
-  font-size:0.72rem; color: var(--ink-dim);
-  border-bottom:1px solid var(--gold-soft); padding-bottom:1px;
+  align-self:flex-start; margin-top:6px; text-decoration:none;
+  font-size:0.88rem; font-weight:600; color: var(--ink);
+  border-bottom:2px solid var(--gold); padding:8px 0 2px;
 }
 .tier-cap .pay:hover, .tier-cap .pay:focus-visible{ color: var(--gold); border-bottom-color: var(--gold); }
 .flip-back{
   transform: rotateY(180deg); background: var(--bg-raise); border-color: var(--gold-soft);
   padding: 18px 16px; display:flex; flex-direction:column; justify-content:center; gap:2px;
 }
-.flip-back .fb-name{ font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color: var(--ink-faint); }
-.flip-back .fb-price{ font-family:var(--serif); font-style:italic; font-size:1.25rem; color: var(--gold); }
-.flip-back .fb-meta{ font-size:0.64rem; color: var(--ink-faint); line-height:1.35; margin-top:3px; }
+.flip-back .fb-name{ font-size:0.88rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color: var(--ink-faint); }
+.flip-back .fb-price{ font-family:var(--serif); font-style:italic; font-size:1.5rem; color: var(--gold); }
+.flip-back .fb-meta{ font-size:0.84rem; color: var(--ink-dim); line-height:1.35; margin-top:3px; }
 .flip-back .fb-note{
   display:inline-block; align-self:flex-start; margin-top:9px;
-  font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em;
-  color: var(--gold); border:1px solid var(--gold-soft); padding:4px 8px; border-radius:2px;
+  font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
+  color: var(--gold); border:1px solid var(--gold-soft); padding:5px 10px; border-radius:4px;
 }
-.flip-back .fb-desc{ font-size:0.74rem; color: var(--ink-dim); line-height:1.45; margin-top:10px; }
-@media (max-width: 460px){
+.flip-back .fb-desc{ font-size:0.92rem; color: var(--ink-dim); line-height:1.45; margin-top:12px; }
+/* Con la letra a tamaño de leer (2026-11-06) el reverso necesita mas alto
+   que el 4:3 de antes: en un telefono la tarjeta es cuadrada. */
+@media (max-width: 700px){
+  .tier-cards{ grid-template-columns: 1fr; max-width:520px; }
   .flip-card{ aspect-ratio: 4/3; }
+}
+@media (max-width: 460px){
+  .flip-card{ aspect-ratio: 1/1; }
+}
+@media (max-width: 380px){
+  .flip-card{ aspect-ratio: 4/5; }
 }
 
 /* ---------- menú completo desplegable ---------- */
@@ -463,8 +472,8 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .menu-sub{ display:block; margin-top:11px; font-size:0.82rem; text-transform:none; letter-spacing:0; color: var(--ink-faint); }
 .menu-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap:18px 34px; margin-top:26px; }
 @media (max-width: 700px){ .menu-grid{ grid-template-columns:1fr; } }
-.menu-grid h4{ font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color: var(--ink-faint); margin-bottom:5px; }
-.menu-grid p{ font-size:0.9rem; color: var(--ink-dim); }
+.menu-grid h4{ font-size:0.88rem; text-transform:uppercase; letter-spacing:0.04em; color: var(--gold); margin-bottom:6px; }
+.menu-grid p{ font-size:0.95rem; color: var(--ink-dim); }
 
 /* ---------- carrusel de fotos (scroll-snap, sin JS) ---------- */
 .strip{
@@ -474,7 +483,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 }
 .strip figure{ margin:0; flex:0 0 auto; width: 260px; scroll-snap-align: start; }
 .strip img{ width:100%; height:340px; object-fit:cover; border-radius:3px; }
-.strip figcaption{ font-size:0.76rem; color: var(--ink-faint); margin-top:9px; }
+.strip figcaption{ font-size:0.88rem; color: var(--ink-dim); margin-top:10px; }
 .strip::-webkit-scrollbar{ height:8px; }
 .strip::-webkit-scrollbar-thumb{ background: var(--gold-soft); border-radius:4px; }
 @media (max-width: 700px){
@@ -486,7 +495,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .precios{ display:flex; flex-wrap:wrap; gap:30px; margin-top:26px; }
 .precio{ border-left:2px solid var(--gold); padding-left:18px; }
 .precio .monto{ font-family:var(--serif); font-style:italic; font-size:1.6rem; }
-.precio .cuando{ font-size:0.78rem; text-transform:uppercase; letter-spacing:0.05em; color: var(--ink-faint); margin-top:2px; }
+.precio .cuando{ font-size:0.86rem; text-transform:uppercase; letter-spacing:0.05em; color: var(--ink-faint); margin-top:2px; }
 
 /* ---------- pasos numerados ---------- */
 .pasos{ display:grid; grid-template-columns: repeat(3,1fr); gap:30px; }
@@ -506,8 +515,8 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .incluye{ max-width:620px; margin-top:72px; }
 .incluye h3{ font-size:1.3rem; }
 .incluye .etiqueta{
-  display:block; margin-top:34px; font-size:0.72rem; text-transform:uppercase;
-  letter-spacing:0.06em; color: var(--ink-faint);
+  display:block; margin-top:34px; font-size:0.86rem; font-weight:600; text-transform:uppercase;
+  letter-spacing:0.06em; color: var(--gold);
 }
 
 .incluye-horario{
@@ -567,8 +576,8 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .reserva-widget .campo{ margin-bottom: 4px; }
 .reserva-titulo{ font-size:1.15rem; margin-bottom:22px; }
 .reserva-widget .etiqueta{
-  display:block; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em;
-  color: var(--ink-faint); margin-bottom:8px;
+  display:block; font-size:0.86rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;
+  color: var(--ink-dim); margin-bottom:10px;
 }
 .reserva-widget select,
 .reserva-widget input[type="number"]{
@@ -577,74 +586,112 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 }
 .reserva-widget input[type="number"]{ text-align:center; padding:13px 8px; }
 .reserva-widget .aviso{
-  margin: 10px 0 22px; font-size:0.8rem; color: var(--gold);
+  margin: 12px 0 22px; font-size:0.95rem; font-weight:600; color: var(--gold);
 }
 /* ---------- el calendario de reservas ----------
    Lo dibuja assets/js/reserva.js con las fechas que entrega el backend.
    Los dias abiertos son <button> y los cerrados <span>: asi recorrer el
    mes con el teclado no pasa por treinta casillas muertas. */
 .calendario{
-  border:1px solid var(--line); border-radius:3px;
-  background: var(--bg); padding:14px;
+  border:1px solid var(--line); border-radius:6px;
+  background: var(--bg); padding:16px;
 }
 .cal-cab{
   display:flex; align-items:center; justify-content:space-between;
-  gap:10px; margin-bottom:12px;
+  gap:10px; margin-bottom:14px;
 }
+/* Regla PlayStation (2026-11-06): el mes se lee de un vistazo y las
+   flechas miden para el dedo, 44px. */
 .cal-mes{
-  font-size:0.86rem; font-weight:600; letter-spacing:0.04em;
+  font-size:1.05rem; font-weight:700; letter-spacing:0.04em;
   text-transform:uppercase; color: var(--ink);
 }
 .cal-nav{
-  width:34px; height:34px; flex:none; line-height:1;
+  width:44px; height:44px; flex:none; line-height:1;
   display:flex; align-items:center; justify-content:center;
-  background:none; color: var(--ink-dim); cursor:pointer;
-  border:1px solid var(--line); border-radius:2px; font-size:1.1rem;
+  background: var(--bg-panel); color: var(--ink); cursor:pointer;
+  border:1px solid var(--gold-soft); border-radius:6px; font-size:1.4rem;
+  transition: background-color .12s ease, border-color .12s ease;
 }
-.cal-nav:hover:not(:disabled){ color: var(--ink); border-color: var(--gold-soft); }
-.cal-nav:disabled{ opacity:0.25; cursor:default; }
+.cal-nav:hover:not(:disabled){ background: var(--gold-wash); border-color: var(--gold); }
+.cal-nav:disabled{ opacity:0.3; cursor:default; border-color: var(--line); }
 
-.cal-grilla{ display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; }
+.cal-grilla{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
 .cal-wd{
-  text-align:center; padding:4px 0 8px;
-  font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
-  color: var(--ink-faint);
+  text-align:center; padding:2px 0 6px;
+  font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
+  color: var(--ink-dim);
 }
 /* La razon fija la casilla cuadrada sin depender del contenido, que es lo
-   que mantiene la grilla pareja entre meses de 28 y de 31 dias. */
+   que mantiene la grilla pareja entre meses de 28 y de 31 dias.
+
+   Los tres estados se distinguen por FORMA, no solo por color: el dia que
+   se puede reservar es una tecla con borde, relleno y numero en negrita;
+   el que no, un numero suelto, mas chico de peso y sin caja. Antes el
+   cerrado iba al 30% de opacidad y el abierto apenas teñido: los dos se
+   leian como el mismo gris. */
 .cal-dia{
-  aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
-  border:1px solid transparent; border-radius:2px;
-  font-family:var(--sans); font-size:0.86rem; padding:0;
+  aspect-ratio:1/1; min-width:0; display:flex; align-items:center; justify-content:center;
+  border:1.5px solid transparent; border-radius:8px;
+  font-family:var(--sans); font-size:1.05rem; padding:0;
 }
 .cal-dia.vacio{ border:0; }
-.cal-dia.cerrado{ color: var(--ink-faint); opacity:0.3; }
+.cal-dia.cerrado{ color: var(--ink-faint); font-weight:400; }
 .cal-dia.abierto{
-  background: rgba(201,162,39,0.10); border-color: var(--gold-soft);
-  color: var(--ink); cursor:pointer;
-  transition: background-color .12s ease, color .12s ease;
+  background: rgba(201,162,39,0.16); border-color: var(--gold);
+  color: var(--ink); font-weight:700; cursor:pointer;
+  transition: background-color .12s ease, color .12s ease, transform .08s ease;
 }
-.cal-dia.abierto:hover{ background: rgba(201,162,39,0.22); }
-.cal-dia.abierto:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
-.cal-dia.elegido{
+.cal-dia.abierto:hover{ background: rgba(201,162,39,0.30); }
+.cal-dia.abierto:active{ transform: translateY(1px); }
+.cal-dia.abierto:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+/* .abierto.elegido, y su :hover, para ganarle al :hover del abierto: si no,
+   el dia recien apretado se ve sin relleno mientras el puntero sigue encima. */
+.cal-dia.elegido, .cal-dia.abierto.elegido, .cal-dia.abierto.elegido:hover{
   background: var(--gold); border-color: var(--gold);
-  color:#1A1400; font-weight:700;
+  color:#1A1400; font-weight:800;
+  box-shadow: 0 0 0 3px var(--gold-soft);
 }
+/* Hoy lleva su numero subrayado: es lo que ubica el mes sin leer nada. */
+.cal-dia.hoy{ text-decoration: underline; text-decoration-thickness:2px; text-underline-offset:4px; }
 /* Un punto bajo el numero marca los dias que estan por llenarse, sin
-   gritar el numero exacto en cada casilla. */
+   gritar el numero exacto en cada casilla. Mide 6px: el de 3 no se veia. */
 .cal-dia.pocos{ position:relative; }
 .cal-dia.pocos::after{
-  content:""; position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
-  width:3px; height:3px; border-radius:50%; background: var(--gold);
+  content:""; position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
+  width:6px; height:6px; border-radius:50%; background: var(--gold);
 }
 .cal-dia.elegido.pocos::after{ background:#1A1400; }
-.cal-estado{ margin:0; padding:18px 4px; font-size:0.84rem; color: var(--ink-faint); }
+.cal-estado{ margin:0; padding:18px 4px; font-size:0.95rem; color: var(--ink-dim); }
+
+/* La leyenda: lo que significa cada casilla, dicho una vez debajo del mes.
+   Las muestras son las mismas formas de la grilla, en chico. */
+.cal-leyenda{
+  display:flex; flex-wrap:wrap; gap:8px 18px; margin:12px 0 0; padding:0; list-style:none;
+  font-size:0.86rem; color: var(--ink-dim);
+}
+.cal-leyenda li{ display:flex; align-items:center; gap:8px; }
+.cal-muestra{
+  width:22px; height:22px; flex:none; border-radius:5px; position:relative;
+  border:1.5px solid transparent;
+}
+.cal-muestra.abierto{ background: rgba(201,162,39,0.16); border-color: var(--gold); }
+.cal-muestra.pocos::after{
+  content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+  width:5px; height:5px; border-radius:50%; background: var(--gold);
+}
+.cal-muestra.cerrado{ border:1.5px dashed var(--line); }
 
 .reserva-widget .aviso.error{ color:#E0806F; }
 
-@media (max-width: 420px){
-  .calendario{ padding:10px; }
-  .cal-dia{ font-size:0.8rem; }
+/* En un telefono cada casilla mide lo que deje el ancho entre siete
+   columnas: el aire que se le quita al marco va a las casillas. */
+@media (max-width: 480px){
+  .reserva-widget{ padding:20px 16px; }
+  .calendario{ padding:10px 8px; }
+  .cal-grilla{ gap:4px; }
+  .cal-dia{ font-size:1rem; border-radius:6px; }
+  .cal-mes{ font-size:0.95rem; text-align:center; }
 }
 
 /* Las tres opciones van visibles a la vez, cada una con su contador, para
@@ -656,7 +703,7 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
   padding: 18px 0; border-top:1px solid var(--line);
 }
 .reserva-fila .quien{ font-size:0.95rem; }
-.reserva-fila .quien small{ display:block; color: var(--ink-faint); font-size:0.78rem; margin-top:3px; }
+.reserva-fila .quien small{ display:block; color: var(--ink-dim); font-size:0.88rem; margin-top:3px; }
 .reserva-fila .valor{ text-align:right; font-family:var(--serif); font-style:italic; font-size:1.15rem;
   color: var(--ink-faint); }
 .reserva-fila.activa .valor{ color: var(--gold); }
@@ -781,7 +828,7 @@ button.btn{ font-family: var(--sans); cursor:pointer; }
 @media (max-width: 860px){ .mapa{ aspect-ratio: 3/2; } }
 .mapa-datos .dato{ padding: 16px 0; border-top:1px solid var(--line); }
 .mapa-datos .dato:first-child{ border-top:none; padding-top:0; }
-.mapa-datos .etiqueta{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color: var(--ink-faint); }
+.mapa-datos .etiqueta{ font-size:0.84rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color: var(--ink-dim); }
 .mapa-datos .valor{ font-size:0.95rem; margin-top:5px; }
 .mapa-datos a{ text-decoration:none; }
 .mapa-datos a:hover{ color: var(--gold); }
@@ -792,7 +839,7 @@ button.btn{ font-family: var(--sans); cursor:pointer; }
 .cierre h2{ font-size: clamp(1.3rem, 2.4vw, 1.75rem); max-width: 20ch; }
 
 /* ---------- pie ---------- */
-footer{ border-top:1px solid var(--line); padding: 46px 0; font-size:0.84rem; color: var(--ink-faint); }
+footer{ border-top:1px solid var(--line); padding: 46px 0; font-size:0.92rem; color: var(--ink-dim); }
 footer .wrap{ display:flex; flex-wrap:wrap; gap:18px; justify-content:space-between; align-items:flex-start; }
 footer nav{ display:flex; flex-wrap:wrap; gap:18px; }
 /* Promociones y Socios salieron del menu de arriba y viven aca: son otros
@@ -802,8 +849,8 @@ footer nav{ display:flex; flex-wrap:wrap; gap:18px; }
 .pie-botones{ display:flex; flex-direction:column; gap:8px; align-self:stretch; }
 .pie-botones a{
   text-align:center; color: var(--gold); border:1px solid var(--gold-soft);
-  border-radius:2px; padding:9px 18px;
-  font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
+  border-radius:4px; padding:13px 18px;
+  font-size:0.88rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
 }
 /* mas especifico que el footer a:hover de abajo, que lo dejaria color ink */
 .pie-botones a:hover{ background: rgba(201,162,39,0.10); border-color: var(--gold); color: var(--gold); }

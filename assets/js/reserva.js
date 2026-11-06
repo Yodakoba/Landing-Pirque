@@ -444,14 +444,15 @@
     var info = disponibles[fecha];
     if (!info) {
       var muerto = document.createElement('span');
-      muerto.className = 'cal-dia cerrado';
+      muerto.className = 'cal-dia cerrado' + (fecha === hoyTexto() ? ' hoy' : '');
       muerto.textContent = numero;
       return muerto;
     }
 
     var b = document.createElement('button');
     b.type = 'button';
-    b.className = 'cal-dia abierto' + (info.pocos ? ' pocos' : '');
+    b.className = 'cal-dia abierto' + (info.pocos ? ' pocos' : '') +
+      (fecha === hoyTexto() ? ' hoy' : '');
     b.setAttribute('data-fecha', fecha);
     b.textContent = numero;
 
