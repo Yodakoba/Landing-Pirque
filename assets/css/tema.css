@@ -113,7 +113,8 @@ html[data-tema="dia"] .btn-ghost:hover{ background: var(--gold-wash); border-col
 html[data-tema="dia"] .calendario .cal-dia.elegido{ color:#FFFFFF; }
 html[data-tema="dia"] .cal-dia.abierto:not(.elegido){ background: rgba(201,162,39,0.18); }
 html[data-tema="dia"] .cal-dia.abierto:not(.elegido):hover{ background: rgba(201,162,39,0.32); }
-html[data-tema="dia"] .cal-dia.elegido.pocos::after{ background:#FFFFFF; }
+/* Naranjo y rojo de dia: mas oscuros, para leerse sobre papel. */
+html[data-tema="dia"] :is(.calendario, .reserva-widget){ --cupo-pocos:#B85C00; --cupo-ultimos:#B3261E; }
 
 /* WhatsApp: el verde se queda, el texto pasa a blanco fijo. */
 html[data-tema="dia"] :is(.btn-wa, .btn-whatsapp, .wa-float){

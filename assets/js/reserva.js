@@ -94,7 +94,8 @@
       sinBackend: 'El calendario se conecta cuando el sistema de reservas esté publicado.',
       sinFechas: 'No hay fechas disponibles por ahora. Escríbenos por WhatsApp y lo vemos.',
       fallaFechas: 'No pudimos cargar las fechas. Vuelve a intentarlo o escríbenos por WhatsApp.',
-      ultimos: 'Últimos lugares: quedan {n}.',
+      pocos: 'Pocos cupos: quedan {n}.',
+      ultimos: 'Últimos cupos disponibles: quedan {n}.',
       noAlcanza: 'Para esa fecha quedan {n} lugares y estás pidiendo {p}.',
       eligeFecha: 'Elige una fecha en el calendario.',
       sinNadie: 'Elige cuántas personas van con cada menú.',
@@ -117,7 +118,8 @@
       sinBackend: 'The calendar connects once the booking system is live.',
       sinFechas: 'No dates available right now. Message us on WhatsApp and we will sort it out.',
       fallaFechas: 'We could not load the dates. Please try again, or message us on WhatsApp.',
-      ultimos: 'Last places: {n} left.',
+      pocos: 'Few spots left: {n} remaining.',
+      ultimos: 'Last spots available: {n} left.',
       noAlcanza: 'That date has {n} places left and you are asking for {p}.',
       eligeFecha: 'Pick a date on the calendar.',
       sinNadie: 'Choose how many people go with each menu.',
@@ -137,7 +139,8 @@
       sinBackend: 'O calendário se conecta quando o sistema de reservas estiver no ar.',
       sinFechas: 'Não há datas disponíveis no momento. Fale com a gente no WhatsApp.',
       fallaFechas: 'Não conseguimos carregar as datas. Tente de novo ou fale com a gente no WhatsApp.',
-      ultimos: 'Últimos lugares: restam {n}.',
+      pocos: 'Poucas vagas: restam {n}.',
+      ultimos: 'Últimas vagas disponíveis: restam {n}.',
       noAlcanza: 'Nessa data restam {n} lugares e você está pedindo {p}.',
       eligeFecha: 'Escolha uma data no calendário.',
       sinNadie: 'Escolha quantas pessoas vão com cada menu.',
@@ -154,6 +157,20 @@
 
   var idioma = (document.documentElement.lang || 'es').slice(0, 2);
   var T = TEXTOS[idioma] || TEXTOS.es;
+
+  // Las dos etapas del aviso de cupo (2026-11-06, lo pidió el cliente):
+  //   pocos   — naranjo, desde el umbral de la planilla (aviso_pocos_lugares),
+  //             que el panel ya manda resuelto en el campo `pocos`;
+  //   ultimos — rojo, con menos de ULTIMOS_CUPOS lugares.
+  // El rojo se calcula acá con `quedan`, que ya viaja en el contrato: no
+  // hace falta un campo más que cualquier backend futuro tenga que imitar.
+  var ULTIMOS_CUPOS = 10;
+  function etapaDe(info) {
+    if (!info) return '';
+    if (info.quedan < ULTIMOS_CUPOS) return 'ultimos';
+    if (info.pocos) return 'pocos';
+    return '';
+  }
 
   /* ---------- utilidades ---------- */
 
@@ -451,7 +468,8 @@
 
     var b = document.createElement('button');
     b.type = 'button';
-    b.className = 'cal-dia abierto' + (info.pocos ? ' pocos' : '') +
+    var etapa = etapaDe(info);
+    b.className = 'cal-dia abierto' + (etapa ? ' ' + etapa : '') +
       (fecha === hoyTexto() ? ' hoy' : '');
     b.setAttribute('data-fecha', fecha);
     b.textContent = numero;
@@ -505,9 +523,10 @@
       avisoFecha.className = 'aviso error';
       return;
     }
-    if (info.pocos) {
-      avisoFecha.textContent = T.ultimos.replace('{n}', info.quedan);
-      avisoFecha.className = 'aviso';
+    var etapa = etapaDe(info);
+    if (etapa) {
+      avisoFecha.textContent = T[etapa].replace('{n}', info.quedan);
+      avisoFecha.className = 'aviso cupo ' + etapa;
       return;
     }
     avisoFecha.textContent = '';

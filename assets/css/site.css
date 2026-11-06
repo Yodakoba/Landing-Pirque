@@ -654,25 +654,45 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 }
 /* Hoy lleva su numero subrayado: es lo que ubica el mes sin leer nada. */
 .cal-dia.hoy{ text-decoration: underline; text-decoration-thickness:2px; text-underline-offset:4px; }
-/* Un punto bajo el numero marca los dias que estan por llenarse, sin
-   gritar el numero exacto en cada casilla. Mide 6px: el de 3 no se veia. */
-.cal-dia.pocos{ position:relative; }
-.cal-dia.pocos::after{
-  content:""; position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
-  width:6px; height:6px; border-radius:50%; background: var(--gold);
+/* Los dias por llenarse, en dos etapas (2026-11-06): naranjo desde el
+   umbral de la planilla ("pocos cupos") y rojo con menos de 10 ("ultimos
+   cupos"). Se distinguen por forma ademas de color: el borde de la tecla
+   cambia y una barra gruesa cruza el pie de la casilla. El punto de 6px de
+   antes no lo entendia nadie. */
+.calendario{ --cupo-pocos:#E8923A; --cupo-ultimos:#E5534B; }
+.cal-dia.pocos, .cal-dia.ultimos{ position:relative; }
+.cal-dia.abierto.pocos:not(.elegido){ border-color: var(--cupo-pocos); border-width:2px; background: rgba(232,146,58,0.24); }
+.cal-dia.abierto.ultimos:not(.elegido){ border-color: var(--cupo-ultimos); border-width:2px; background: rgba(229,83,75,0.18); }
+.cal-dia.pocos::after, .cal-dia.ultimos::after{
+  content:""; position:absolute; left:5px; right:5px; bottom:4px;
+  height:4px; border-radius:2px; background: var(--cupo-pocos);
 }
-.cal-dia.elegido.pocos::after{ background:#1A1400; }
+.cal-dia.ultimos::after{ background: var(--cupo-ultimos); }
+.cal-dia.elegido.pocos::after, .cal-dia.elegido.ultimos::after{ box-shadow: 0 0 0 1.5px #1A1400; }
 .cal-estado{ margin:0; padding:18px 4px; font-size:0.95rem; color: var(--ink-dim); }
 
-/* La unica explicacion bajo el mes (2026-11-06): que significa el punto.
-   Lo demas se entiende solo —una tecla dorada se aprieta, un numero suelto
-   no— y una leyenda de tres cajas era mas de lo que pedia. El punto es lo
-   unico que no se adivina. */
+/* Bajo el mes, las dos etapas del cupo, cada una con la misma barra que
+   lleva su casilla. Lo demas se entiende solo: una tecla dorada se
+   aprieta, un numero suelto no. */
 .cal-leyenda{
-  display:flex; align-items:center; gap:8px; margin:10px 0 0;
-  font-size:0.86rem; color: var(--ink-dim);
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:12px 0 0;
 }
-.cal-punto{ width:8px; height:8px; flex:none; border-radius:50%; background: var(--gold); }
+.cal-etapa{
+  display:inline-flex; align-items:center; gap:8px; padding:5px 11px;
+  border:1.5px solid currentColor; border-radius:999px;
+  font-size:0.86rem; font-weight:700; letter-spacing:0.02em;
+}
+.cal-etapa::before{ content:""; width:14px; height:4px; border-radius:2px; background: currentColor; }
+.cal-etapa.pocos{ color: var(--cupo-pocos); }
+.cal-etapa.ultimos{ color: var(--cupo-ultimos); }
+/* Al elegir un dia por llenarse, el aviso es una pastilla de su color. */
+.reserva-widget .aviso.cupo{
+  display:inline-block; padding:8px 14px; border-radius:6px;
+  border:1.5px solid currentColor; font-weight:700;
+}
+.reserva-widget .aviso.cupo.pocos{ color: var(--cupo-pocos); background: rgba(232,146,58,0.10); }
+.reserva-widget .aviso.cupo.ultimos{ color: var(--cupo-ultimos); background: rgba(229,83,75,0.12); }
+.reserva-widget{ --cupo-pocos:#E8923A; --cupo-ultimos:#E5534B; }
 
 .reserva-widget .aviso.error{ color:#E0806F; }
 
