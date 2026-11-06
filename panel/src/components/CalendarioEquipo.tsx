@@ -261,9 +261,21 @@ export default function CalendarioEquipo() {
                     pidió el cliente: iba a 11px, más chica que todo lo que
                     tenía debajo). Va a 18, en negrita si el día tiene algo,
                     y en un día vacío sigue legible: más clara, no borrada. */}
-                <span className={`text-[18px] leading-none ${oc || preparando || res.total > 0
-                  ? 'font-bold text-hueso' : 'font-medium text-hueso/55'}`}>
-                  {Number(f.slice(8, 10))}
+                {/* **El día de la semana va en la celda, al lado del número**
+                    (2026-11-06, lo pidió el cliente: *"hay suficiente espacio
+                    para que se ponga el jueves 6 en la misma tarjeta… chao,
+                    Excel"*). Con el nombre solo en la fila de arriba había
+                    que subir la vista y contar columnas para saber qué día
+                    era; ahora cada celda se lee sola. La fila de arriba se
+                    queda como guía al recorrer el mes. */}
+                <span className={`flex items-baseline gap-1.5 leading-none ${oc || preparando || res.total > 0
+                  ? 'text-hueso' : 'text-hueso/55'}`}>
+                  <span className="text-[13px] font-semibold uppercase tracking-wide opacity-75">
+                    {DIAS[columna(f)]}
+                  </span>
+                  <span className={`text-[18px] ${oc || preparando || res.total > 0 ? 'font-bold' : 'font-medium'}`}>
+                    {Number(f.slice(8, 10))}
+                  </span>
                 </span>
                 {estado && <span aria-hidden className="text-[14px] leading-none">{estado.punto}</span>}
               </span>

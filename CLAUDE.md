@@ -3902,6 +3902,12 @@ extra gruesa con brillo, o sea lo más fuerte de la celda.
   cargado quedaba abajo, en uno con poco a media altura— y el *3 por marcar*
   iba debajo de ella. Ahora la empuja `mt-auto` al fondo de la celda, que se
   estira al alto de su fila, y lo que le falta va arriba con el resto.
+- **El día de la semana va en cada celda, al lado del número** —*Jue 6*,
+  *Lun 7*— (lo pidió el cliente el mismo día: *"hay suficiente espacio…
+  chao, Excel"*). Con el día solo en la fila de arriba había que subir la
+  vista a buscar la columna, que es leer una planilla. La fila de arriba se
+  queda como guía al recorrer el mes; el nombre corto sale de la misma
+  lista `DIAS`.
 
 ### Lo que cuesta un día
 
