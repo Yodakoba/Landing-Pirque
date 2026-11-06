@@ -664,23 +664,15 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .cal-dia.elegido.pocos::after{ background:#1A1400; }
 .cal-estado{ margin:0; padding:18px 4px; font-size:0.95rem; color: var(--ink-dim); }
 
-/* La leyenda: lo que significa cada casilla, dicho una vez debajo del mes.
-   Las muestras son las mismas formas de la grilla, en chico. */
+/* La unica explicacion bajo el mes (2026-11-06): que significa el punto.
+   Lo demas se entiende solo —una tecla dorada se aprieta, un numero suelto
+   no— y una leyenda de tres cajas era mas de lo que pedia. El punto es lo
+   unico que no se adivina. */
 .cal-leyenda{
-  display:flex; flex-wrap:wrap; gap:8px 18px; margin:12px 0 0; padding:0; list-style:none;
+  display:flex; align-items:center; gap:8px; margin:10px 0 0;
   font-size:0.86rem; color: var(--ink-dim);
 }
-.cal-leyenda li{ display:flex; align-items:center; gap:8px; }
-.cal-muestra{
-  width:22px; height:22px; flex:none; border-radius:5px; position:relative;
-  border:1.5px solid transparent;
-}
-.cal-muestra.abierto{ background: rgba(201,162,39,0.16); border-color: var(--gold); }
-.cal-muestra.pocos::after{
-  content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
-  width:5px; height:5px; border-radius:50%; background: var(--gold);
-}
-.cal-muestra.cerrado{ border:1.5px dashed var(--line); }
+.cal-punto{ width:8px; height:8px; flex:none; border-radius:50%; background: var(--gold); }
 
 .reserva-widget .aviso.error{ color:#E0806F; }
 
