@@ -11,7 +11,7 @@ import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
 import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
 import { menusDe, menusConocidos } from '@/lib/shopify';
-import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
+import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
 import { cuentaComoPosible, estadoVisible, lineasDe, totalDe, personasDe,
          folioDe, type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
@@ -260,7 +260,7 @@ export default function DayView(
     // y no este en ella: un menu que Shopify empezo a vender ayer tiene que
     // poder anotarse a mano sin esperar a que alguien lo agregue.
     () => [...new Set([
-      ...catalogo.map((m) => m.nombre),
+      ...paraReservar(catalogo).map((m) => m.nombre),
       ...menusConocidos(todas ?? [], catalogo)
     ])].sort((a, b) => a.localeCompare(b)),
     [todas, catalogo]

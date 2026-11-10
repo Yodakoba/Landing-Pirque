@@ -190,6 +190,41 @@ export default function ConfigEditor() {
               'rojo')} />)}
       </div>
 
+      {/* Las cotizaciones (2026-11-10). */}
+      <h2 className="mt-10 text-sm font-bold uppercase tracking-wide">Cotizaciones</h2>
+      <div className="mt-2 border-t border-hueso/10">
+        {campo('descuentos', 'Descuentos con botón',
+          'Los descuentos que se ofrecen en una cotización con un solo toque, ' +
+          'por línea y sobre el total. Separados por coma: “5, 10, 15”. ' +
+          'El precio igual se puede escribir a mano.',
+          <input type="text" defaultValue={config.descuentos.join(', ')} className={ENTRADA}
+            onBlur={(e) => e.target.value !== config.descuentos.join(', ') &&
+              guardar({ descuentos: e.target.value } as unknown as Cambio, 'descuentos')} />)}
+      </div>
+
+      {/* Quién es esta empresa: sale en el encabezado de la cotización. */}
+      <h2 className="mt-10 text-sm font-bold uppercase tracking-wide">La empresa</h2>
+      <p className="mt-1 max-w-2xl text-sm text-hueso/60">
+        Lo que sale en el encabezado de cada cotización y, más adelante, del
+        contrato. Este panel es de una sola empresa: la otra tendrá el suyo.
+      </p>
+      <div className="mt-2 border-t border-hueso/10">
+        {([
+          ['nombre', 'Nombre comercial', 'Como la conocen los clientes.'],
+          ['razonSocial', 'Razón social', 'Como figura en el SII.'],
+          ['rut', 'RUT de la empresa', ''],
+          ['representante', 'Representante legal', 'Nombre y RUT, para el contrato.'],
+          ['domicilio', 'Domicilio', ''],
+          ['whatsapp', 'WhatsApp de ventas', 'El que va al pie de la cotización.'],
+          ['transferencia', 'Datos para transferir', 'Banco, tipo y número de cuenta, ' +
+            'para el anticipo de los clientes.']
+        ] as const).map(([k, titulo, ayuda]) => campo(`empresa-${k}`, titulo, ayuda,
+          <input type="text" defaultValue={config.empresa[k]} className={ENTRADA}
+            onBlur={(e) => e.target.value !== config.empresa[k] &&
+              guardar({ empresa: { [k]: e.target.value } } as unknown as Cambio,
+                `empresa-${k}`)} />))}
+      </div>
+
       {/* Mantenimiento: lo que se toca cuando algo parece faltar, no a diario. */}
       <section className="mt-10 border-t border-hueso/10 pt-6">
         <h2 className="text-sm font-bold uppercase tracking-wide">Mantenimiento</h2>

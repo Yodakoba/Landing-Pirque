@@ -260,6 +260,15 @@ export const PERMISOS = {
    * precio ofrecer en **esta** cotización, que es justamente la negociación.
    */
   presupuestos: [ROL.admin, ROL.encargado, ROL.pagos],
+  /**
+   * **Las fichas de clientes** (2026-11-10): verlas, crearlas y editarlas.
+   *
+   * **Va con el vendedor**, al revés que casi todo lo demás: es quien
+   * atiende al cliente y quien va a cotizar. Y no le abre nada que no sea
+   * suyo de oficio: nombres y contactos de quienes cotizan, no plata ni
+   * equipo. Borrar una ficha con cotizaciones lo impide la ruta.
+   */
+  clientes: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */

@@ -68,7 +68,15 @@ export const COL_PRESUPUESTOS = {
    */
   idReserva: 'ID Reserva',
   creadoPor: 'Creado por',
-  creado: 'Creado'
+  creado: 'Creado',
+  /**
+   * La ficha del cliente (2026-11-10). **Al final y por nombre**, así que una
+   * planilla vieja sin esta columna se sigue leyendo igual: se agrega sola la
+   * primera vez que hace falta (`asegurarColumna()`). Desde la Fase 2 es lo
+   * único que el presupuesto guarda del cliente; mientras tanto conviven con
+   * `Cliente`, `Email` y `Teléfono`, que no se borran para no perder nada.
+   */
+  idCliente: 'ID Cliente'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -137,6 +145,8 @@ export interface Presupuesto {
   idReserva: string;
   creadoPor: string;
   creado: string;
+  /** La ficha en `Clientes`. Vacío en los presupuestos de antes de las fichas. */
+  idCliente: string;
   fila: number;
 }
 
@@ -543,6 +553,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       token: en(f, i.token).trim(),
       notas: en(f, i.notas).trim(),
       idReserva: en(f, i.idReserva).trim(),
+      idCliente: en(f, i.idCliente).trim(),
       creadoPor: en(f, i.creadoPor).trim(),
       creado: en(f, i.creado).trim(),
       fila: n + 1
@@ -571,6 +582,7 @@ export function filaPresupuesto(
   poner(i.idReserva, p.idReserva);
   poner(i.creadoPor, p.creadoPor);
   poner(i.creado, p.creado);
+  poner(i.idCliente, p.idCliente);
   return fila;
 }
 

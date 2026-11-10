@@ -60,7 +60,37 @@ export interface Config {
    * 30 y pidió que se pudiera cambiar). En cero no se avisa nunca.
    */
   grupoGrande: number;
+  /**
+   * Los descuentos que se ofrecen en una cotización con un botón
+   * (2026-11-10, lo fijó el cliente en 5, 10 y 15%). Sirven por línea y
+   * sobre el total. Viven acá para cambiarlos sin redesplegar.
+   */
+  descuentos: number[];
+  /**
+   * **Quién es esta empresa**, para el encabezado de la cotización y del
+   * contrato. Cada panel lee una sola planilla (`GOOGLE_SHEET_ID`), así que
+   * cada planilla dice de qué empresa es: Brasas de Lo Pirque hoy, Calicanto
+   * mañana con la suya. Nada de esto se inventa: en blanco hasta que el
+   * cliente lo escriba en Configuración.
+   */
+  empresa: Empresa;
 }
+
+export interface Empresa {
+  nombre: string;
+  razonSocial: string;
+  rut: string;
+  representante: string;
+  domicilio: string;
+  whatsapp: string;
+  /** Banco, tipo y número de cuenta para el anticipo, como texto. */
+  transferencia: string;
+}
+
+export const EMPRESA_VACIA: Empresa = {
+  nombre: '', razonSocial: '', rut: '', representante: '', domicilio: '',
+  whatsapp: '', transferencia: ''
+};
 
 /**
  * Los valores de hoy, que son los del backend viejo.
@@ -80,7 +110,9 @@ export const POR_DEFECTO: Config = {
   cortes: { amarillo: 0.6, rojo: 0.85 },
   tokenPlanilla: '',
   vigenciaPresupuesto: 15,
-  grupoGrande: 30
+  grupoGrande: 30,
+  descuentos: [5, 10, 15],
+  empresa: EMPRESA_VACIA
 };
 
 /** Las claves como se escriben en la planilla, en el orden en que se muestran. */
@@ -95,8 +127,29 @@ export const CLAVES = {
   corteRojo: 'corte_rojo',
   tokenPlanilla: 'token_planilla',
   vigenciaPresupuesto: 'vigencia_presupuesto',
-  grupoGrande: 'grupo_grande'
+  grupoGrande: 'grupo_grande',
+  descuentos: 'descuentos',
+  empresaNombre: 'empresa_nombre',
+  empresaRazonSocial: 'empresa_razon_social',
+  empresaRut: 'empresa_rut',
+  empresaRepresentante: 'empresa_representante',
+  empresaDomicilio: 'empresa_domicilio',
+  empresaWhatsapp: 'empresa_whatsapp',
+  empresaTransferencia: 'empresa_transferencia'
 } as const;
+
+/**
+ * "5, 10, 15" -> [5, 10, 15]. Entre 1 y 99, sin repetidos y ordenados.
+ * Null si no se entiende ni uno, para que quien llame use el de siempre.
+ */
+export function aDescuentos(texto: unknown): number[] | null {
+  const salida = String(texto ?? '').split(/[,;\s%]+/)
+    .map((p) => Number(p.replace(',', '.')))
+    .filter((n) => Number.isFinite(n) && n > 0 && n < 100)
+    .map((n) => Math.round(n * 10) / 10);
+  const unicos = [...new Set(salida)].sort((a, b) => a - b);
+  return unicos.length ? unicos : null;
+}
 
 /**
  * Los días de la semana como los escribe una persona.
@@ -163,6 +216,8 @@ function fraccion(v: unknown, porDefecto: number): number {
   return f > 0 && f <= 1 ? f : porDefecto;
 }
 
+const texto = (v: unknown) => String(v ?? '').trim();
+
 /** Las filas de la pestaña `Config` como configuración. */
 export function leerConfigDe(filas: string[][]): Config {
   const mapa = new Map<string, string>();
@@ -200,7 +255,17 @@ export function leerConfigDe(filas: string[][]): Config {
       POR_DEFECTO.vigenciaPresupuesto, 0, 3650),
     // En cero no se avisa: alguien que no quiere el aviso tiene que poder
     // apagarlo sin que vuelva solo a 30.
-    grupoGrande: numero(v(CLAVES.grupoGrande), POR_DEFECTO.grupoGrande, 0, 100000)
+    grupoGrande: numero(v(CLAVES.grupoGrande), POR_DEFECTO.grupoGrande, 0, 100000),
+    descuentos: aDescuentos(v(CLAVES.descuentos)) ?? POR_DEFECTO.descuentos,
+    empresa: {
+      nombre: texto(v(CLAVES.empresaNombre)),
+      razonSocial: texto(v(CLAVES.empresaRazonSocial)),
+      rut: texto(v(CLAVES.empresaRut)),
+      representante: texto(v(CLAVES.empresaRepresentante)),
+      domicilio: texto(v(CLAVES.empresaDomicilio)),
+      whatsapp: texto(v(CLAVES.empresaWhatsapp)),
+      transferencia: texto(v(CLAVES.empresaTransferencia))
+    }
   };
 }
 
@@ -218,6 +283,14 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.corteRojo, String(Math.round(c.cortes.rojo * 100))],
     [CLAVES.tokenPlanilla, c.tokenPlanilla],
     [CLAVES.vigenciaPresupuesto, String(c.vigenciaPresupuesto)],
-    [CLAVES.grupoGrande, String(c.grupoGrande)]
+    [CLAVES.grupoGrande, String(c.grupoGrande)],
+    [CLAVES.descuentos, c.descuentos.join(', ')],
+    [CLAVES.empresaNombre, c.empresa.nombre],
+    [CLAVES.empresaRazonSocial, c.empresa.razonSocial],
+    [CLAVES.empresaRut, c.empresa.rut],
+    [CLAVES.empresaRepresentante, c.empresa.representante],
+    [CLAVES.empresaDomicilio, c.empresa.domicilio],
+    [CLAVES.empresaWhatsapp, c.empresa.whatsapp],
+    [CLAVES.empresaTransferencia, c.empresa.transferencia]
   ];
 }

@@ -27,7 +27,7 @@ import {
   porVencer, vencidoSinCerrar, diasParaVencer,
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
-import type { Menu } from '@/lib/menus';
+import { paraCotizar, precioParaCotizar, type Menu } from '@/lib/menus';
 import { copiarConAviso } from './AvisoFlotante';
 
 const ENTRADA =
@@ -222,7 +222,7 @@ export default function PresupuestosEditor() {
       ...borrador,
       lineas: [...borrador.lineas, {
         presupuesto: borrador.p.id, concepto: nombre, cantidad: 1,
-        precio: m?.precioEnLinea ?? 0, personas: 1
+        precio: precioParaCotizar(m), personas: 1
       }]
     });
   };
@@ -428,11 +428,17 @@ export default function PresupuestosEditor() {
                       <select value="" className={`${ENTRADA} w-auto`}
                         aria-label="Agregar un menú al presupuesto"
                         onChange={(e) => { agregarMenu(e.target.value); e.target.value = ''; }}>
-                        <option value="">+ Agregar menú…</option>
-                        {menus.map((m) => (
+                        <option value="">+ Agregar producto…</option>
+                        {paraCotizar(menus).length === 0 && (
+                          <option value="" disabled>
+                            Ninguno marcado “se puede cotizar” en Productos
+                          </option>
+                        )}
+                        {/* Solo lo que en Productos dice "se puede cotizar". */}
+                        {paraCotizar(menus).map((m) => (
                           <option key={m.nombre} value={m.nombre}>
                             {m.nombre}
-                            {m.precioEnLinea ? ` · ${enPesos(m.precioEnLinea)}` : ''}
+                            {precioParaCotizar(m) ? ` · ${enPesos(precioParaCotizar(m))}` : ''}
                           </option>
                         ))}
                       </select>

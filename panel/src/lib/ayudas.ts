@@ -233,15 +233,38 @@ export const AYUDAS: Record<string, Ayuda> = {
   },
 
   menus: {
-    titulo: 'Los menús y sus precios',
+    titulo: 'Los productos',
     cuerpo: [
-      'Los nombres y los precios que el panel usa para calcular el monto de '
-      + 'una reserva anotada a mano.',
+      'Todo lo que se vende: los menús del sitio y lo que se cotiza, como la '
+      + 'once, el desayuno, el show ecuestre o el arriendo. Un solo catálogo '
+      + 'para que lo cotizado y lo reservado se llamen igual.',
+      'Cada producto dice si se vende en el sitio y en las reservas, y si se '
+      + 'puede cotizar. Los precios de reserva valen para las reservas anotadas '
+      + 'a mano; el precio de cotización es el que propone una cotización, y '
+      + 'ahí se puede cambiar.',
       'En una reserva comprada por el sitio manda lo que cobró la tienda, no '
       + 'esto: el total viene con el pedido.'
     ],
     ojo: 'Si acá aparece un menú en amarillo es que alguna reserva usa un '
        + 'nombre que no está en esta lista, y conviene revisarlo.'
+  },
+
+  clientes: {
+    titulo: 'Los clientes',
+    cuerpo: [
+      'Una ficha por cliente, con su nombre, cómo contactarlo y, cuando haga '
+      + 'falta para el contrato, su RUT y domicilio.',
+      'Se escribe una vez: las cotizaciones apuntan a la ficha en vez de '
+      + 'copiar los datos. Si corriges un teléfono acá, queda corregido para '
+      + 'todas sus cotizaciones.'
+    ],
+    pasos: [
+      'Busca primero: por nombre, empresa, teléfono, correo o RUT.',
+      'Si no está, aprieta “+ Nuevo cliente”. Si ya hay uno con ese teléfono, '
+      + 'correo o RUT, el panel te pregunta si es el mismo.',
+      'Para cambiar algo, abre la ficha con “+”, corrige y aprieta “Guardar cambios”.'
+    ],
+    ojo: 'Una ficha con cotizaciones no se puede borrar.'
   },
 
   configuracion: {

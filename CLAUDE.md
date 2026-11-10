@@ -1776,6 +1776,125 @@ lo dijera.
   `enlaceWhatsApp()` ya está escrito en `contacto.ts` esperando la pantalla
   que lo use, y el teléfono del cliente ya se guarda normalizado.
 
+## Las cotizaciones (desde el 2026-11-10)
+
+**El CRM del socio se dejó de usar para cotizar**: el cliente decidió que
+las cotizaciones se gestionan en este panel, dentro de *Presupuestos*. El
+CRM tenía errores de lógica y de flujo, y trabaja sobre otra base de datos.
+Su código se revisó para aprender de él; las lecciones están abajo. **La
+conexión del panel con el CRM (leer sus eventos y publicarle nuestros días)
+sigue activa** hasta que se decida apagarla.
+
+### Lo que reportó la vendedora, y de dónde salía
+
+| Error en el CRM | La causa | Cómo se evita acá |
+|---|---|---|
+| El cliente se escribe varias veces | Copiado en el contacto, en cada cotización y en el contrato; cada cotización sin contacto creaba uno nuevo | **Una ficha por cliente** (`Clientes`); se busca antes de crear |
+| Se saca el show ecuestre y sigue apareciendo | El show estaba también en un texto libre de "incluidos" | Lo incluido sale **de las líneas** (Fase 2) |
+| No se pueden editar los ganados | Calendario de solo lectura, y guardar un ganado lo devolvía a "Cotizado" | Una cotización ganada sigue siendo editable y no retrocede sola |
+| Precios de once y desayuno malos | Escritos en el código | Viven en el **catálogo**, los escribe el cliente |
+
+También: la cotización decía 30% de reserva y saldo 3 días antes, y el
+contrato 20% y 10 días; y el contrato perdía el descuento. **Las condiciones
+de pago van en un solo lugar** (Fase 3).
+
+### Decisiones tomadas con el cliente
+
+- **Dos pestañas, cotización y reserva, sincronizadas.** Al ganar, la
+  cotización crea su reserva; si se edita después, el sistema actualiza esa
+  reserva. La reserva que nace de una cotización **no se edita a mano**
+  (salvo lo del día: asistencia y estado del pago). Se descartó una sola
+  pestaña porque `Reservas` alimenta medio panel y el sitio.
+- **El vendedor elige 5, 10 o 15% de descuento y también puede escribir el
+  precio a mano** (por ahora). El descuento va **por línea y sobre el
+  total**. Los porcentajes viven en `Config` (`descuentos`).
+- **IVA estándar de cotización**: líneas en neto, y abajo neto, descuento,
+  IVA 19% y total. El catálogo dice si cada precio trae IVA o va + IVA.
+  Que los precios del sitio y de las cotizaciones no cuadren **se arregla
+  después**, a propósito.
+- **Show ecuestre**: en un día público va siempre, incluido y sin costo; en
+  un día privado, exclusivo o cerrado es opcional y suma su precio. Un día
+  que no está en el calendario cuenta como privado.
+
+### El catálogo: la pestaña `Menús`, en pantalla *Productos* (Fase 1)
+
+**Un solo catálogo para lo que se vende y lo que se cotiza**, para que una
+cotización convertida en reserva use los mismos nombres. Las columnas nuevas
+van **al final** de la pestaña, así que una planilla vieja se lee igual:
+
+| Columna | Valores | En blanco vale |
+|---|---|---|
+| Tipo | Menú · Extra · Arriendo · Show | Menú |
+| Sitio público | sí / no | sí |
+| Cotización | sí / no | **no** |
+| Cobro | Por persona · Monto fijo | Por persona |
+| Precio cotización | número (en UF con decimales) | sin poner |
+| IVA | Incluido · + IVA | Incluido |
+| Moneda | Pesos · UF | Pesos |
+
+- **El tipo decide qué es gente**: solo las líneas de tipo Menú suman
+  invitados. Reemplaza la columna "Personas" que había que llenar a mano en
+  cada línea de presupuesto.
+- **"Sitio público" no toca Shopify**: decide qué ofrece el formulario de
+  reserva a mano (`paraReservar()`: tipo Menú y sitio público).
+- **"Cotización" en no para lo que ya existía**: Tradiciones, por ejemplo,
+  queda solo para el sitio hasta que alguien lo marque.
+- El precio que propone una cotización es el suyo, y si no tiene, el de
+  pagar en el local (`precioParaCotizar()`).
+- **Los precios del sitio público siguen en `precios.json`**, aparte de esta
+  pestaña. Son dos lugares hoy; unificarlos es parte del arreglo de precios
+  que quedó para después.
+
+### Los clientes: pestaña `Clientes`, pantalla `/clientes` (Fase 1)
+
+Una ficha por cliente: ID (`C-0001`…), nombre, empresa del cliente, RUT,
+domicilio, teléfono, correo y notas. Código en `lib/clientes.ts`.
+
+- **Para crear basta un nombre y un teléfono o correo.** El RUT y el
+  domicilio los pide el contrato: pedirlos al cotizar es lo que hace que
+  alguien invente un RUT para poder seguir.
+- **Antes de crear, el servidor busca parecidos** por RUT, teléfono o
+  correo (`parecidos()`), y la pantalla pregunta *"¿es alguno de estos?"*.
+  Solo con *"No, es otro"* se crea igual. **El nombre solo no cuenta**: dos
+  Ana Soto son dos personas.
+- **Una ficha con cotizaciones no se borra**, y lo comprueba la ruta.
+- **Permiso `clientes`**: administrador, encargado, quien paga **y el
+  vendedor**, que es quien atiende al cliente.
+- **Los presupuestos de antes pasan a fichas con un botón** (*Crear las
+  fichas*, en `/clientes`). `Presupuestos` ganó la columna `ID Cliente`, que
+  se agrega sola. Dos presupuestos del mismo cliente quedan en una ficha, y
+  correrlo de nuevo no duplica. Las columnas viejas de cliente se quedan
+  hasta la Fase 2, para no perder nada.
+
+### La empresa es la planilla
+
+Cada panel lee **una sola planilla** (`GOOGLE_SHEET_ID`), así que no hay
+columna "empresa" en productos, clientes ni cotizaciones: todo lo que hay en
+una planilla es de esa empresa. **Calicanto tendrá su propia planilla**, con
+el mismo código. Se eligió sobre una sola planilla con una columna empresa
+en todo porque el error que importa es mezclar el cupo, el equipo o las
+reservas de dos recintos, y con planillas separadas eso no puede pasar. La
+contra a asumir: un cliente que cotiza con las dos tiene dos fichas, y la
+vista del gerente general (Fase 5) las juntará por RUT.
+
+Lo que cada panel sabe de sí mismo vive en `Config`: nombre comercial,
+razón social, RUT, representante legal, domicilio, WhatsApp de ventas y los
+datos para transferir el anticipo. Se editan en *Configuración* y **nacen en
+blanco**: el CRM del socio los tenía escritos, pero no son dato confirmado
+por el cliente.
+
+### Las fases
+
+1. **Hecha**: catálogo de productos, fichas de clientes, descuentos y datos
+   de la empresa.
+2. Calendario de cotizaciones (formato del calendario de la portada, con
+   candidatos y cotizaciones por día), asistente para cotizar, estados,
+   historial por cliente, alternativas y versiones, y la reserva derivada y
+   sincronizada. El vendedor gana el permiso de cotizar.
+3. Condiciones de pago (anticipo y saldo), UF del día y pagos del cliente.
+4. Contrato generado desde la cotización, y su firma.
+5. Calicanto y el rol de gerente general.
+
 ## El CRM del socio (2026-11-02)
 
 El socio —Asados y Corderos— vende eventos para varios negocios, **Brasas de

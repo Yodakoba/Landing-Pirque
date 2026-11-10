@@ -19,7 +19,7 @@ import EquipoDialogo from './EquipoDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { POR_DEFECTO, type Config } from '@/lib/config';
 import { menusConocidos } from '@/lib/shopify';
-import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
+import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
 import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { lineaDeSemana, type Tono } from '@/lib/semana';
 import { puede, type Rol } from '@/lib/auth';
@@ -307,7 +307,10 @@ export default function CalendarView({ rol }: { rol: string }) {
         <ReservaForm
           fecha={dias[0]?.fecha ?? hoy()}
           menusConocidos={[...new Set([
-            ...menus.map((m) => m.nombre),
+            // Solo los menús que se venden en reservas: el catálogo también
+            // trae la once, el show o el arriendo, que se cotizan y no se
+            // anotan como menú de una reserva.
+            ...paraReservar(menus).map((m) => m.nombre),
             ...menusConocidos(reservas, menus)
           ])].sort((a, b) => a.localeCompare(b))}
           catalogo={menus}

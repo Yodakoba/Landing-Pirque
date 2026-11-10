@@ -1,9 +1,16 @@
 'use client';
 
 /**
- * Qué menús existen.
+ * El catálogo de productos (la pestaña `Menús`).
  *
+ * Desde el 2026-11-10 no son solo los menús del sitio: es todo lo que se
+ * vende y se cotiza —la once, el desayuno, el show ecuestre, el arriendo—,
+ * en un solo catálogo para que lo cotizado y lo reservado se llamen igual.
  * Vive en la planilla, así que agregar uno no necesita un despliegue.
+ *
+ * **Una tarjeta por producto, como las fichas de `/equipo`**: cerrada es una
+ * línea; abierta, botones grandes para lo que es una elección (tipo, cobro,
+ * IVA, moneda) e interruptores para dónde se vende.
  *
  * **El aviso amarillo es la pieza importante de esta pantalla**, no la
  * tabla. Sin alias, lo único que mantiene alineados a Shopify, al sitio y al
@@ -12,13 +19,64 @@
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
-import { desconocidos, aMonto, type Menu } from '@/lib/menus';
+import {
+  desconocidos, aMonto, aPrecio, nuevoProducto, TIPO_PRODUCTO, COBRO, IVA_PRECIO, MONEDA,
+  type Menu
+} from '@/lib/menus';
+import Campo from './Campo';
+import { enPesos } from '@/lib/ocupacion';
 import { menusConocidos } from '@/lib/shopify';
 import type { Reserva } from '@/lib/tipos';
 
 const ENTRADA =
-  'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
+  'w-full rounded border border-hueso/20 bg-tinta px-3 py-2 text-[15px] ' +
   'focus:border-oro focus:outline-none';
+
+/** Una fila de botones para elegir uno de varios valores. */
+function Elegir<T extends string>({ valores, valor, onElegir, etiqueta }: {
+  valores: readonly T[]; valor: T; onElegir: (v: T) => void; etiqueta: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={etiqueta} className="flex flex-wrap gap-2">
+      {valores.map((v) => (
+        <button key={v} type="button" role="radio" aria-checked={v === valor}
+          onClick={() => onElegir(v)}
+          className={`boton min-h-[40px] ${v === valor
+            ? 'border-oro bg-oro/15 font-semibold text-hueso' : ''}`}>
+          {v}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Un interruptor grande, con la frase completa: se lee antes de tocarlo. */
+function Interruptor({ encendido, onCambio, texto, ayuda }: {
+  encendido: boolean; onCambio: (b: boolean) => void; texto: string; ayuda: string;
+}) {
+  return (
+    <button type="button" role="switch" aria-checked={encendido}
+      onClick={() => onCambio(!encendido)}
+      className={`tecla flex min-h-[56px] w-full items-center gap-3 rounded border px-3 py-2
+                  text-left ${encendido ? 'border-verde-fuerte bg-verde/10' : 'border-hueso/20'}`}>
+      <span aria-hidden className={`relative h-6 w-11 shrink-0 rounded-full transition
+                                    ${encendido ? 'bg-verde-fuerte' : 'bg-hueso/25'}`}>
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all
+                          ${encendido ? 'left-[22px]' : 'left-0.5'}`} />
+      </span>
+      <span>
+        <span className="block text-[15px] font-semibold">{texto}</span>
+        <span className="block text-[13px] text-hueso/70">{ayuda}</span>
+      </span>
+    </button>
+  );
+}
+
+/** El precio de cotización en su moneda, para la línea cerrada. */
+function enMoneda(n: number, moneda: string): string {
+  if (!n) return 'sin precio';
+  return moneda === MONEDA.uf ? `${String(n).replace('.', ',')} UF` : enPesos(n);
+}
 
 export default function MenusEditor() {
   const [menus, setMenus] = useState<Menu[] | null>(null);
@@ -27,6 +85,8 @@ export default function MenusEditor() {
   const [sinPermiso, setSinPermiso] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [sucio, setSucio] = useState(false);
+  /** Qué tarjeta está abierta: la posición en la lista. Una a la vez. */
+  const [abierta, setAbierta] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/menus').then((r) => r.json())
@@ -65,40 +125,36 @@ export default function MenusEditor() {
   if (error) return <Aviso error={error} permiso={sinPermiso} />;
   if (!menus) return <p className="text-hueso/50">Cargando…</p>;
 
-  const cambiar = (i: number, campo: keyof Menu, valor: string) => {
-    const copia = menus.map((m) => ({ ...m }));
-    if (campo === 'nombre') copia[i].nombre = valor;
-    else copia[i][campo] = aMonto(valor);
-    setMenus(copia);
+  const cambiar = (i: number, cambio: Partial<Menu>) => {
+    setMenus(menus.map((m, k) => (k === i ? { ...m, ...cambio } : m)));
     setSucio(true);
   };
+
+  const botonGuardar = (
+    <button onClick={() => guardar(menus)} disabled={guardando || !sucio}
+      className="boton boton-relleno min-h-[44px] px-5">
+      {guardando ? 'Guardando…' : 'Guardar cambios'}
+    </button>
+  );
 
   return (
     <section>
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
-        Menús<Ayuda tema="menus" />
+        Productos<Ayuda tema="menus" />
       </h1>
-      <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
-        Qué menús existen y cuánto valen. <strong>El nombre tiene que ser
-        exactamente el mismo acá, en Shopify y en el sitio</strong>: no hay
-        equivalencias. Solo se perdonan mayúsculas, tildes y espacios de
-        sobra, que es el mismo nombre escrito con descuido y no otro menú.
-      </p>
-      <p className="text-hueso/60 text-sm mb-6 max-w-2xl">
-        <strong>Los precios solo rigen para las reservas hechas a mano.</strong>{' '}
-        Lo que entra por Shopify trae su propio total y ese manda, porque la
-        tienda es la que cobra. Son dos porque pagar por adelantado sale más
-        barato que pagar en el local. En blanco significa sin poner: el
-        formulario manual va a pedir el monto a mano.
+      <p className="mb-6 max-w-2xl text-[15px] text-hueso/70">
+        Todo lo que se vende y se cotiza. <strong>El nombre de un menú tiene que
+        ser exactamente el mismo acá y en Shopify</strong>: solo se perdonan
+        mayúsculas, tildes y espacios de sobra.
       </p>
 
       {sinRegistrar.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
+          <p className="text-[15px] font-semibold text-ambar-texto">
             Hay {sinRegistrar.length === 1 ? 'un menú vendido' : 'menús vendidos'} que
             no está{sinRegistrar.length === 1 ? '' : 'n'} en esta lista.
           </p>
-          <p className="mt-1 text-sm text-hueso/70">
+          <p className="mt-1 text-[14px] text-hueso/70">
             O Shopify está vendiendo algo que no está registrado acá, o alguien
             renombró un producto en la tienda. Agrégalo abajo con ese nombre
             exacto, o arregla el nombre en Shopify para que vuelvan a calzar.
@@ -111,65 +167,154 @@ export default function MenusEditor() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-hueso/50">
-            <tr className="border-b border-hueso/10">
-              <th className="py-2 pr-3">Menú</th>
-              <th className="py-2 pr-3 w-36">Precio en línea</th>
-              <th className="py-2 pr-3 w-36">Precio en el local</th>
-              <th className="py-2 w-24" />
-            </tr>
-          </thead>
-          <tbody>
-            {menus.map((m, i) => (
-              <tr key={i} className="border-b border-hueso/5">
-                <td className="py-2 pr-3">
+      <ul className="space-y-2">
+        {menus.map((m, i) => (
+          <li key={i} className="overflow-hidden rounded border border-hueso/15 bg-panel">
+            <div className="flex items-center gap-2 pr-2">
+              <button type="button" aria-expanded={abierta === i}
+                onClick={() => setAbierta(abierta === i ? null : i)}
+                className="flex min-h-[52px] min-w-0 flex-1 flex-wrap items-center gap-x-3
+                           gap-y-1 px-3 py-2.5 text-left hover:bg-hueso/5">
+                <span aria-hidden className="w-3 text-base leading-none text-hueso/50">
+                  {abierta === i ? '−' : '+'}
+                </span>
+                <span className="text-[16px] font-semibold">
+                  {m.nombre.trim() || <span className="text-hueso/50">Sin nombre</span>}
+                </span>
+                <span className="rounded-full border border-hueso/25 px-2 py-0.5 text-[13px]
+                                 font-semibold text-hueso/70">{m.tipo}</span>
+                {m.sitioPublico && (
+                  <span className="rounded-full border border-verde/50 px-2 py-0.5 text-[13px]
+                                   font-semibold text-verde-texto">sitio y reservas</span>
+                )}
+                {m.cotizacion && (
+                  <span className="rounded-full border border-rosa/50 px-2 py-0.5 text-[13px]
+                                   font-semibold text-rosa-texto">
+                    se cotiza · {enMoneda(m.precioCotizacion, m.moneda)}
+                  </span>
+                )}
+              </button>
+              <button onClick={() => {
+                if (m.nombre.trim() && !confirm(`¿Quitar ${m.nombre} del catálogo? Las reservas `
+                  + 'que ya lo tienen no se borran.')) return;
+                setMenus(menus.filter((_, k) => k !== i)); setSucio(true); setAbierta(null);
+              }} className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto">
+                Quitar
+              </button>
+            </div>
+
+            {abierta === i && (
+              <div className="space-y-5 border-t border-hueso/10 p-4">
+                <Campo etiqueta="Nombre" ancho="w-full sm:max-w-md">
                   <input type="text" value={m.nombre} className={ENTRADA}
-                    placeholder="Como se llama en Shopify"
-                    onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
-                </td>
-                <td className="py-2 pr-3">
-                  <input type="number" min={0} step={1000} className={ENTRADA}
-                    value={m.precioEnLinea || ''} placeholder="—"
-                    onChange={(e) => cambiar(i, 'precioEnLinea', e.target.value)} />
-                </td>
-                <td className="py-2 pr-3">
-                  <input type="number" min={0} step={1000} className={ENTRADA}
-                    value={m.precioEnLocal || ''} placeholder="—"
-                    onChange={(e) => cambiar(i, 'precioEnLocal', e.target.value)} />
-                </td>
-                <td className="py-2 text-right whitespace-nowrap">
-                  <button onClick={() => { setMenus(menus.filter((_, k) => k !== i)); setSucio(true); }}
-                    className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    placeholder="Si es un menú: como se llama en Shopify"
+                    onChange={(e) => cambiar(i, { nombre: e.target.value })} />
+                </Campo>
+
+                <div>
+                  <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                    Qué es
+                  </p>
+                  <Elegir etiqueta="Tipo de producto" valores={Object.values(TIPO_PRODUCTO)}
+                    valor={m.tipo} onElegir={(v) => cambiar(i, { tipo: v })} />
+                  <p className="mt-1 text-[13px] text-hueso/60">
+                    Solo los de tipo Menú suman invitados. La once o el show no son gente nueva.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Interruptor encendido={m.sitioPublico}
+                    onCambio={(b) => cambiar(i, { sitioPublico: b })}
+                    texto="Se vende en el sitio y en las reservas"
+                    ayuda="Aparece al anotar una reserva a mano. No cambia Shopify." />
+                  <Interruptor encendido={m.cotizacion}
+                    onCambio={(b) => cambiar(i, { cotizacion: b })}
+                    texto="Se puede cotizar"
+                    ayuda="Aparece al armar una cotización." />
+                </div>
+
+                {m.sitioPublico && (
+                  <div className="flex flex-wrap gap-3">
+                    <Campo etiqueta="Reserva: pagando en línea" ancho="w-48">
+                      <input type="number" min={0} step={1000} className={ENTRADA}
+                        value={m.precioEnLinea || ''} placeholder="sin poner"
+                        onChange={(e) => cambiar(i, { precioEnLinea: aMonto(e.target.value) })} />
+                    </Campo>
+                    <Campo etiqueta="Reserva: pagando en el local" ancho="w-48">
+                      <input type="number" min={0} step={1000} className={ENTRADA}
+                        value={m.precioEnLocal || ''} placeholder="sin poner"
+                        onChange={(e) => cambiar(i, { precioEnLocal: aMonto(e.target.value) })} />
+                    </Campo>
+                  </div>
+                )}
+
+                {m.cotizacion && (
+                  <div className="space-y-4 rounded border border-rosa/30 p-3">
+                    <p className="text-[13px] font-semibold uppercase tracking-wide text-rosa-texto">
+                      En una cotización
+                    </p>
+                    <div>
+                      <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                        Cómo se cobra
+                      </p>
+                      <Elegir etiqueta="Cómo se cobra" valores={Object.values(COBRO)}
+                        valor={m.cobro} onElegir={(v) => cambiar(i, { cobro: v })} />
+                    </div>
+                    <div className="flex flex-wrap items-end gap-4">
+                      <Campo etiqueta={`Precio que propone${m.cobro === COBRO.porPersona
+                        ? ' (por persona)' : ''}`} ancho="w-48">
+                        <input type="text" inputMode="decimal" className={ENTRADA}
+                          defaultValue={m.precioCotizacion ? String(m.precioCotizacion).replace('.', ',') : ''}
+                          placeholder={m.moneda === MONEDA.uf ? 'ej. 2,61' : 'ej. 45000'}
+                          onBlur={(e) => cambiar(i, { precioCotizacion: aPrecio(e.target.value) })} />
+                      </Campo>
+                      <div>
+                        <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          Moneda
+                        </p>
+                        <Elegir etiqueta="Moneda" valores={Object.values(MONEDA)}
+                          valor={m.moneda} onElegir={(v) => cambiar(i, { moneda: v })} />
+                      </div>
+                      <div>
+                        <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          El precio
+                        </p>
+                        <Elegir etiqueta="IVA del precio" valores={Object.values(IVA_PRECIO)}
+                          valor={m.iva} onElegir={(v) => cambiar(i, { iva: v })} />
+                      </div>
+                    </div>
+                    <p className="text-[13px] text-hueso/60">
+                      Es el precio que propone: en cada cotización se puede cambiar o
+                      aplicarle un descuento.
+                    </p>
+                  </div>
+                )}
+
+                {sucio && <div className="flex justify-end">{botonGuardar}</div>}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           onClick={() => {
-            setMenus([...menus, { nombre: '', precioEnLinea: 0, precioEnLocal: 0 }]);
+            setMenus([...menus, nuevoProducto({ nombre: '' })]);
+            setAbierta(menus.length);
             setSucio(true);
           }}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
-          Agregar menú
+          className="boton min-h-[44px]">
+          + Agregar producto
         </button>
         <span className="flex-1" />
-        {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
-        <button onClick={() => guardar(menus)} disabled={guardando || !sucio}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar'}
-        </button>
+        {sucio && <span className="text-[14px] text-hueso/70">Hay cambios sin guardar.</span>}
+        {botonGuardar}
       </div>
 
-      <p className="mt-6 max-w-2xl text-xs text-hueso/50">
-        Quitar un menú de acá no borra ninguna reserva: solo deja de ofrecerse
-        al anotar a mano, y vuelve a aparecer en el aviso de arriba si todavía
-        se está vendiendo.{' '}
+      <p className="mt-6 max-w-2xl text-[14px] text-hueso/60">
+        Quitar un producto de acá no borra ninguna reserva: solo deja de ofrecerse,
+        y vuelve a aparecer en el aviso de arriba si todavía se está vendiendo.{' '}
         <strong>Ojo al renombrar en Shopify:</strong> los pedidos ya hechos
         guardan el nombre que tenían, así que sus reservas van a contarse
         aparte hasta que se corrijan esas filas en la planilla.
