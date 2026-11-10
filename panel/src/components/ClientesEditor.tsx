@@ -39,14 +39,14 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 const VACIO: DatosCliente = {
-  nombre: '', empresa: '', rut: '', domicilio: '', telefono: '', correo: '', notas: ''
+  nombre: '', empresa: '', rut: '', domicilio: '', giro: '', telefono: '', correo: '', notas: ''
 };
 
 const CAMPOS: (keyof DatosCliente)[] =
-  ['nombre', 'empresa', 'rut', 'domicilio', 'telefono', 'correo', 'notas'];
+  ['nombre', 'empresa', 'rut', 'domicilio', 'giro', 'telefono', 'correo', 'notas'];
 
 const NOMBRE_CAMPO: Record<keyof DatosCliente, string> = {
-  nombre: 'nombre', empresa: 'empresa', rut: 'RUT', domicilio: 'domicilio',
+  nombre: 'nombre', empresa: 'empresa', rut: 'RUT', domicilio: 'domicilio', giro: 'giro',
   telefono: 'teléfono', correo: 'correo', notas: 'notas'
 };
 
@@ -194,6 +194,11 @@ export default function ClientesEditor() {
         <input type="text" value={d.domicilio} className={ENTRADA}
           placeholder="Lo pide el contrato"
           onChange={(e) => poner('domicilio', e.target.value)} />
+      </Campo>
+      <Campo etiqueta="Giro" ancho="w-full">
+        <input type="text" value={d.giro} className={ENTRADA}
+          placeholder="Lo pide la factura"
+          onChange={(e) => poner('giro', e.target.value)} />
       </Campo>
       <Campo etiqueta="Notas" ancho="w-full sm:col-span-2">
         <textarea value={d.notas} rows={2} className={ENTRADA}

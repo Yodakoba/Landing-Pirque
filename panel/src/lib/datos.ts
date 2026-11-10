@@ -806,7 +806,9 @@ export async function leerClientes(): Promise<Cliente[]> {
  */
 export async function crearCliente(c: Omit<Cliente, 'fila' | 'id'>): Promise<string> {
   const filas = await asegurarEncabezado(HOJA_CLIENTES, ENCABEZADO_CLIENTES);
-  const enc = filas[0] ?? ENCABEZADO_CLIENTES;
+  // El giro llegó después: en una planilla vieja la columna se agrega sola.
+  const enc = await asegurarColumnas(HOJA_CLIENTES, filas[0] ?? ENCABEZADO_CLIENTES,
+    ENCABEZADO_CLIENTES);
   const id = nuevoIdCliente(leerClientesDe(filas));
   await agregarFilas(HOJA_CLIENTES, [filaCliente(enc, { ...c, id })]);
   return id;
@@ -815,7 +817,8 @@ export async function crearCliente(c: Omit<Cliente, 'fila' | 'id'>): Promise<str
 /** Reescribe una ficha que ya existe. Devuelve false si no la encontró. */
 export async function editarCliente(c: Omit<Cliente, 'fila'>): Promise<boolean> {
   const filas = await asegurarEncabezado(HOJA_CLIENTES, ENCABEZADO_CLIENTES);
-  const enc = filas[0] ?? ENCABEZADO_CLIENTES;
+  const enc = await asegurarColumnas(HOJA_CLIENTES, filas[0] ?? ENCABEZADO_CLIENTES,
+    ENCABEZADO_CLIENTES);
   const previo = leerClientesDe(filas).find((x) => x.id === c.id);
   if (!previo) return false;
   await escribirFila(HOJA_CLIENTES, previo.fila, filaCliente(enc, c));

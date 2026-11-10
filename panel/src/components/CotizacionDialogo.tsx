@@ -18,21 +18,21 @@
  * - **Lo que no es de esta cuenta se ve y no se toca**: el vendedor ve las
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
-import { buscarClientes, porNombreCliente, type Cliente } from '@/lib/clientes';
+import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
@@ -115,6 +115,18 @@ export default function CotizacionDialogo({
       : ESTADO_PRESUPUESTO.borrador);
   const [motivo, setMotivo] = useState(p?.motivo ?? '');
   const [descuento, setDescuento] = useState(p?.descuento ?? 0);
+  /** `''` es por definir. Ver `DOCUMENTO`. */
+  const [documento, setDocumento] = useState<Documento>(p?.documento ?? '');
+  /**
+   * Los datos de facturación **se escriben acá pero viven en la ficha**: al
+   * guardar la cotización se guardan en el cliente, para no pedirlos de
+   * nuevo la próxima vez. Nacen con lo que la ficha ya tenga.
+   */
+  const fichaInicial = datos.clientes.find((c) => c.id === (p?.idCliente ?? clienteInicial));
+  const [facturacion, setFacturacion] = useState({
+    empresa: fichaInicial?.empresa ?? '', rut: fichaInicial?.rut ?? '',
+    giro: fichaInicial?.giro ?? '', domicilio: fichaInicial?.domicilio ?? ''
+  });
   const [lineas, setLineas] = useState<Linea[]>(lineasIniciales);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -122,6 +134,12 @@ export default function CotizacionDialogo({
   const [nuevoCliente, setNuevoCliente] = useState<null | {
     nombre: string; telefono: string; correo: string; empresa: string }>(null);
   const [parecidas, setParecidas] = useState<Cliente[]>([]);
+
+  // Cambiar de cliente trae sus datos de facturación.
+  useEffect(() => {
+    const c = clientes.find((x) => x.id === idCliente);
+    if (c) setFacturacion({ empresa: c.empresa, rut: c.rut, giro: c.giro, domicilio: c.domicilio });
+  }, [idCliente]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ganada = !!p?.idReserva;
   const puedeEditar = !p || puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor);
@@ -176,9 +194,21 @@ export default function CotizacionDialogo({
     }
     setGuardando(true);
     try {
+      // Con factura, lo escrito en los datos de facturación va a la ficha.
+      const ficha = clientes.find((c) => c.id === idCliente);
+      if (documento === DOCUMENTO.factura && ficha && (['empresa', 'rut', 'giro', 'domicilio'] as const)
+        .some((k) => facturacion[k].trim() !== ficha[k])) {
+        const rc = await fetch('/api/clientes', {
+          method: 'PATCH', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: idCliente, ...facturacion })
+        });
+        const dc = await rc.json();
+        if (dc.error) { setError(`Datos de facturación: ${dc.error}`); return ''; }
+        if (dc.clientes) setClientes(dc.clientes);
+      }
       const cuerpo = {
         id: p?.id, idCliente, fecha: fechaReal, periodo: sinFecha ? periodo : '',
-        invitados, tipoEvento, notas, descuento, motivo,
+        invitados, tipoEvento, notas, descuento, motivo, documento,
         estado: estadoForzado ?? estado,
         lineas: vistas
       };
@@ -644,6 +674,49 @@ export default function CotizacionDialogo({
                 )}
               </div>
             )}
+
+
+            {/* **El documento de la venta** (2026-11-10). Nace por definir;
+                apretar el elegido lo vuelve a dejar por definir. Por ahora
+                no cambia el precio. Con factura pide los datos de
+                facturación, que se guardan en la ficha del cliente. */}
+            <div>
+              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                Documento de la venta
+              </p>
+              <Elegir etiqueta="Documento de la venta" opciones={Object.values(DOCUMENTO)}
+                valor={documento} onElegir={(v) => setDocumento(documentoDe(v))} />
+              {!documento && <p className="mt-1.5 text-[14px] text-hueso/70">Por definir.</p>}
+              {documento === DOCUMENTO.factura && (
+                <div className="mt-3 rounded border border-hueso/15 bg-panel p-3">
+                  <p className="mb-2 text-[14px] text-hueso/75">
+                    Datos de facturación. Se guardan en la ficha del cliente.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {([
+                      ['empresa', 'Razón social', 'Como aparece en el SII'],
+                      ['rut', 'RUT', '76.123.456-7'],
+                      ['giro', 'Giro', 'Actividad de la empresa'],
+                      ['domicilio', 'Dirección', 'Calle, número, comuna']
+                    ] as const).map(([k, etiqueta, ejemplo]) => (
+                      <label key={k} className="block">
+                        <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          {etiqueta}
+                        </span>
+                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                      </label>
+                    ))}
+                  </div>
+                  {faltaParaFactura(facturacion).length > 0 && (
+                    <p className="mt-3 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                                  font-semibold text-ambar-texto">
+                      Para facturarle falta: {faltaParaFactura(facturacion).join(', ')}.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={guardando} className="boton boton-relleno min-h-[48px] px-5"

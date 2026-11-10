@@ -98,7 +98,13 @@ export const COL_PRESUPUESTOS = {
   /** Descuento sobre el total, en %. */
   descuento: 'Descuento total',
   /** Por qué se perdió. Texto, como la nota de pago. */
-  motivo: 'Motivo'
+  motivo: 'Motivo',
+  /**
+   * Con qué documento se vende (2026-11-10): sin documento, boleta o
+   * factura. **En blanco es "por definir"**, y así quedan las de antes: no
+   * se inventa un valor. Por ahora no cambia el precio.
+   */
+  documento: 'Documento'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -228,7 +234,27 @@ export interface Presupuesto {
   /** Descuento sobre el total, en %. */
   descuento: number;
   motivo: string;
+  /** `''` es por definir. Ver `DOCUMENTO`. */
+  documento: Documento;
   fila: number;
+}
+
+/** Los documentos con que se puede vender. Vacío es *por definir*. */
+export const DOCUMENTO = {
+  sin: 'Sin documento',
+  boleta: 'Boleta',
+  factura: 'Factura'
+} as const;
+export type Documento = (typeof DOCUMENTO)[keyof typeof DOCUMENTO] | '';
+
+/**
+ * Un documento escrito a mano o llegado del navegador. Lo que no es uno de
+ * los tres vuelve a *por definir*: un valor inventado llegaría hasta la
+ * planilla de la contabilidad.
+ */
+export function documentoDe(v: unknown): Documento {
+  const t = normalizar(String(v ?? ''));
+  return Object.values(DOCUMENTO).find((d) => normalizar(d) === t) ?? '';
 }
 
 /** Lo que un día tiene cotizado y todavía sin confirmar. */
@@ -704,6 +730,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       grupo: en(f, i.grupo).trim(),
       descuento: Math.min(100, Math.max(0, aEntero(en(f, i.descuento)))),
       motivo: en(f, i.motivo).trim(),
+      documento: documentoDe(en(f, i.documento)),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -748,6 +775,7 @@ export function filaPresupuesto(
   poner(i.grupo, p.grupo);
   poner(i.descuento, p.descuento ? String(p.descuento) : '');
   poner(i.motivo, p.motivo);
+  poner(i.documento, p.documento);
   return fila;
 }
 

@@ -1975,6 +1975,28 @@ en $0 y la pantalla avisa que se escriba en pesos.
   de la ficha y los datos de la empresa de Configuración, muestra el periodo
   si no hay día, y las líneas en neto con el IVA al final.
 
+### El documento de la venta (2026-11-10)
+
+Cada cotización dice con qué se vende: **Sin documento, Boleta o Factura**,
+tres botones en el paso *Enviar*. Columna `Documento` de `Presupuestos`, al
+final y por nombre (`documentoDe()`).
+
+- **En blanco es "por definir"**, y así nacen todas por ahora (lo dejó así
+  el cliente). Las de antes quedan por definir: no se inventa un valor.
+- **Por ahora no cambia el precio.** Todas se calculan igual, neto + IVA;
+  cómo se cobra según el documento —en especial sin documento, que es parte
+  de la negociación— queda para después.
+- **Con factura, la misma ventana pide los datos de facturación**: razón
+  social, RUT, giro y dirección. **Se guardan en la ficha del cliente**, no
+  en la cotización, para no pedirlos dos veces; la ficha ganó la columna
+  `Giro`. Si falta alguno, **avisa en ámbar y no bloquea**
+  (`faltaParaFactura()`): el dato puede llegar después.
+- **La hoja del cliente lo dice** —*Con factura*— y con factura muestra el
+  RUT, el giro y la dirección de la ficha.
+- **No pasa a la reserva todavía.** La reserva que nace de una cotización
+  apunta a ella por el `ID Reserva`, así que el dato está a un paso; copiarlo
+  a `Reservas` se hace cuando haga falta exportarlo (Chipax).
+
 **Lo que sigue pendiente**: la conexión con el CRM del socio sigue activa, y
 como pide el mismo permiso `presupuestos`, **el vendedor ahora también ve sus
 eventos**. Se resuelve al apagar esa conexión.

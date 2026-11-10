@@ -24,11 +24,11 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
-import { estadoNormal, cuentasDe } from './presupuestos.ts';
+import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO } from './presupuestos.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
-         type Cliente } from './clientes.ts';
+         faltaParaFactura, type Cliente } from './clientes.ts';
 import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import {
@@ -894,7 +894,7 @@ ok(leerMenusDe(aFilasMenus(conPrecio))[0].precioEnLinea === 44000,
 /* ---------- las fichas de clientes (2026-11-10) ---------- */
 {
   const cl = (x: Partial<Cliente>): Cliente => ({
-    id: 'C-0001', nombre: 'Ana Soto', empresa: '', rut: '', domicilio: '',
+    id: 'C-0001', nombre: 'Ana Soto', empresa: '', rut: '', domicilio: '', giro: '',
     telefono: '+56 9 1234 5678', correo: 'ana@correo.cl', notas: '',
     creadoPor: '', creado: '', fila: 2, ...x
   });
@@ -2328,7 +2328,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '',
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3553,7 +3553,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '',
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '',
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3702,6 +3702,32 @@ console.log('\nCotizaciones, fase 2');
      'quitar uno que nunca se usó se deja');
   ok(quitadosUsados(cat, [{ ...cat[0], nombre: 'Tradiciones 2' }, ...cat.slice(1)], ['Tradiciones'])
      .join() === 'Tradiciones', 'renombrar uno usado también cuenta como quitarlo');
+}
+
+/* ---------- el documento de la venta (2026-11-10) ---------- */
+{
+  ok(documentoDe('factura') === DOCUMENTO.factura && documentoDe(' BOLETA ') === DOCUMENTO.boleta
+     && documentoDe('sin documento') === DOCUMENTO.sin, 'el documento se entiende con otras mayúsculas');
+  ok(documentoDe('') === '' && documentoDe('cheque') === '',
+     'en blanco o inventado queda por definir, no se inventa');
+  const encP = ENCABEZADO_PRESUPUESTOS;
+  const base = leerPresupuestosDe([encP, ['PRE-9', '2026-12-05']])[0];
+  ok(base.documento === '', 'una cotización de antes queda por definir');
+  const vuelta = leerPresupuestosDe([encP, filaPresupuesto(encP, { ...base, documento: DOCUMENTO.factura })]);
+  ok(vuelta[0].documento === DOCUMENTO.factura, 'el documento va y vuelve de la planilla');
+  ok(leerPresupuestosDe([encP.filter((c) => c !== 'Documento'), ['PRE-9', '2026-12-05']])[0].documento === '',
+     'una planilla sin la columna se sigue leyendo');
+
+  const c = leerClientesDe([ENCABEZADO_CLIENTES, filaCliente(ENCABEZADO_CLIENTES, {
+    id: 'C-0001', nombre: 'Ana', empresa: 'Eventos SpA', rut: '76123456-7', domicilio: '',
+    giro: 'Turismo', telefono: '', correo: '', notas: '', creadoPor: '', creado: '' })])[0];
+  ok(c.giro === 'Turismo', 'el giro va y vuelve de la ficha');
+  ok(leerClientesDe([ENCABEZADO_CLIENTES.filter((x) => x !== 'Giro'), ['C-1', 'Ana']])[0].giro === '',
+     'una ficha de antes del giro se lee con el giro vacío');
+  ok(faltaParaFactura(c).join() === 'dirección', 'para facturar falta solo lo que falta');
+  ok(faltaParaFactura({ empresa: '', rut: '', giro: '', domicilio: '' }).length === 4,
+     'y una ficha sin nada pide los cuatro');
+  ok(limpiarCliente({ nombre: 'X', giro: '  Turismo ' }).giro === 'Turismo', 'el giro se limpia');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

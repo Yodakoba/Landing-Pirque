@@ -7,7 +7,7 @@ import {
 } from '@/lib/datos';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, aEntero, folioDe, estadoNormal, lineasDe,
-  type Presupuesto, type LineaEntrante
+  documentoDe, type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe
@@ -172,6 +172,7 @@ export async function POST(req: Request) {
       grupo: '',
       descuento: pct(cuerpo.descuento),
       motivo: '',
+      documento: documentoDe(cuerpo.documento),
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
@@ -273,6 +274,7 @@ export async function PATCH(req: Request) {
       tipoEvento: texto('tipoEvento', previo.tipoEvento),
       descuento: cuerpo.descuento === undefined ? previo.descuento : pct(cuerpo.descuento),
       motivo: texto('motivo', previo.motivo),
+      documento: cuerpo.documento === undefined ? previo.documento : documentoDe(cuerpo.documento),
       notas: texto('notas', previo.notas),
       // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
       // línea no puede correrle el plazo al cliente.

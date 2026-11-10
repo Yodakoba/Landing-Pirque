@@ -18,7 +18,7 @@
  */
 import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
 import { porToken, lineasDe, gentePosible, netoDeLinea, cuentasDe,
-         estadoVisible, folioDe, IVA } from '@/lib/presupuestos';
+         estadoVisible, folioDe, IVA, DOCUMENTO } from '@/lib/presupuestos';
 import { clienteDe } from '@/lib/cotizar';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
@@ -81,6 +81,9 @@ export default async function Pagina({ params }: { params: { token: string } }) 
   const tasaIVA = Math.round(IVA * 100);
   const personas = gentePosible(p, lineas);
   const cliente = clienteDe(p, clientes);
+  // Con factura, los datos de facturación de la ficha van en la hoja.
+  const ficha = p.documento === DOCUMENTO.factura
+    ? clientes.find((c) => c.id === p.idCliente) : undefined;
   const estado = estadoVisible(p, hoy());
   const vencido = estado === 'Vencida';
   const precioNeto = (precio: number, ivaIncluido: boolean) =>
@@ -130,6 +133,19 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           {cliente.empresa && <p className="text-sm text-hueso/70">{cliente.empresa}</p>}
           {cliente.telefono && <p className="text-sm text-hueso/70">{cliente.telefono}</p>}
           {cliente.email && <p className="text-sm text-hueso/70">{cliente.email}</p>}
+          {p.documento && (
+            <p className="mt-2 text-sm">
+              <span className="font-semibold">{p.documento === DOCUMENTO.sin
+                ? 'Sin documento' : `Con ${p.documento.toLowerCase()}`}</span>
+            </p>
+          )}
+          {ficha && (ficha.rut || ficha.giro || ficha.domicilio) && (
+            <div className="mt-1 text-sm text-hueso/70">
+              {ficha.rut && <p>RUT {ficha.rut}</p>}
+              {ficha.giro && <p>Giro: {ficha.giro}</p>}
+              {ficha.domicilio && <p>{ficha.domicilio}</p>}
+            </div>
+          )}
         </div>
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
