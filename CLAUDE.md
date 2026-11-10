@@ -2264,7 +2264,12 @@ la carpeta de la cotización junto a sus comprobantes, por
 3. **Hecha**: documento de la venta, condiciones de pago, cobros con
    comprobante y revisión, UF del día, avisos y CRM apagado.
 4. **Hecha**: el contrato desde la cotización, firmado en papel y subido.
-5. Calicanto y el rol de gerente general.
+5. **En espera, pero viene sí o sí** (decidido el 2026-11-10): Calicanto,
+   el rol de gerente general y la versión de matrimonio del contrato (Novia
+   y Novio, dos firmas). **Antes se prueba lo hecho hasta la Fase 4** y se
+   hacen las últimas adaptaciones hasta que el sistema funcione con uso
+   real; recién ahí se amplía. No arrancar la Fase 5 sin que el cliente lo
+   pida.
 
 ## El CRM del socio (2026-11-02)
 
