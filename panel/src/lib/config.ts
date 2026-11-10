@@ -76,6 +76,13 @@ export interface Config {
   anticipoPct: number;
   saldoDias: number;
   /**
+   * La unidad compartida de Google Drive donde se guardan los comprobantes
+   * de pago (2026-11-10). Es el ID que va después de `folders/`; vive acá y
+   * no en el código porque Calicanto tendrá la suya. En blanco, no se puede
+   * subir comprobantes y la pantalla lo dice.
+   */
+  driveComprobantes: string;
+  /**
    * **Quién es esta empresa**, para el encabezado de la cotización y del
    * contrato. Cada panel lee una sola planilla (`GOOGLE_SHEET_ID`), así que
    * cada planilla dice de qué empresa es: Brasas de Lo Pirque hoy, Calicanto
@@ -124,6 +131,7 @@ export const POR_DEFECTO: Config = {
   // Los de la cotización del CRM, que es lo que los clientes ya recibían.
   anticipoPct: 30,
   saldoDias: 3,
+  driveComprobantes: '',
   empresa: EMPRESA_VACIA
 };
 
@@ -143,6 +151,7 @@ export const CLAVES = {
   descuentos: 'descuentos',
   anticipoPct: 'anticipo_porcentaje',
   saldoDias: 'saldo_dias_antes',
+  driveComprobantes: 'drive_comprobantes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
   empresaRut: 'empresa_rut',
@@ -274,6 +283,7 @@ export function leerConfigDe(filas: string[][]): Config {
     // En cero no hay anticipo: es un valor que alguien puede querer.
     anticipoPct: numero(v(CLAVES.anticipoPct), POR_DEFECTO.anticipoPct, 0, 100),
     saldoDias: numero(v(CLAVES.saldoDias), POR_DEFECTO.saldoDias, 0, 365),
+    driveComprobantes: idDeDrive(v(CLAVES.driveComprobantes)),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
       razonSocial: texto(v(CLAVES.empresaRazonSocial)),
@@ -304,6 +314,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.descuentos, c.descuentos.join(', ')],
     [CLAVES.anticipoPct, String(c.anticipoPct)],
     [CLAVES.saldoDias, String(c.saldoDias)],
+    [CLAVES.driveComprobantes, c.driveComprobantes],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],
     [CLAVES.empresaRut, c.empresa.rut],
@@ -312,4 +323,15 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.empresaWhatsapp, c.empresa.whatsapp],
     [CLAVES.empresaTransferencia, c.empresa.transferencia]
   ];
+}
+
+/**
+ * El ID de una carpeta o unidad de Drive, escrito como ID o pegado como el
+ * link entero (`https://drive.google.com/drive/folders/0AEF…`). Lo que no
+ * parece un ID queda en blanco: un valor inventado haría fallar cada subida.
+ */
+export function idDeDrive(v: unknown): string {
+  const t = String(v ?? '').trim();
+  const m = t.match(/folders\/([A-Za-z0-9_-]{10,})/) ?? t.match(/^([A-Za-z0-9_-]{10,})$/);
+  return m ? m[1] : '';
 }

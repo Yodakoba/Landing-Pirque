@@ -936,7 +936,25 @@ export async function leerCobros(): Promise<Cobro[]> {
 
 export async function anotarCobro(c: Omit<Cobro, 'fila'>): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_COBROS, ENCABEZADO_COBROS);
-  await agregarFilas(HOJA_COBROS, [filaCobro(filas[0] ?? ENCABEZADO_COBROS, c)]);
+  const enc = await asegurarColumnas(HOJA_COBROS, filas[0] ?? ENCABEZADO_COBROS, ENCABEZADO_COBROS);
+  await agregarFilas(HOJA_COBROS, [filaCobro(enc, c)]);
+}
+
+/**
+ * Cambia un cobro que ya existe: el comprobante o la revisión. Devuelve el
+ * cobro como quedó, o undefined si ya no estaba.
+ */
+export async function editarCobro(
+  id: string, cambios: Partial<Pick<Cobro, 'comprobante' | 'revisadoPor' | 'revisado'>>
+): Promise<Cobro | undefined> {
+  const filas = await asegurarEncabezado(HOJA_COBROS, ENCABEZADO_COBROS);
+  const enc = await asegurarColumnas(HOJA_COBROS, filas[0] ?? ENCABEZADO_COBROS, ENCABEZADO_COBROS);
+  const c = leerCobrosDe(filas).find((x) => x.id === id);
+  if (!c) return undefined;
+  const nuevo = { ...c, ...cambios };
+  const { fila: _f, ...sinFila } = nuevo;
+  await escribirFila(HOJA_COBROS, c.fila, filaCobro(enc, sinFila));
+  return nuevo;
 }
 
 /** Borra un cobro anotado por error. Devuelve el borrado, o undefined. */

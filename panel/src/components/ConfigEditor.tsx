@@ -12,7 +12,7 @@
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
-import { deDiasSemana, type Config } from '@/lib/config';
+import { deDiasSemana, idDeDrive, type Config } from '@/lib/config';
 
 /**
  * Lo que se le manda a /api/config. `diasAbiertos` va como TEXTO, tal como
@@ -208,6 +208,14 @@ export default function ConfigEditor() {
             className={ENTRADA}
             onBlur={(e) => Number(e.target.value) !== config.anticipoPct &&
               guardar({ anticipoPct: Number(e.target.value) }, 'anticipoPct')} />)}
+        {campo('driveComprobantes', 'Carpeta de comprobantes',
+          'La unidad compartida de Google Drive donde se guardan los comprobantes de pago. ' +
+          'Pega el link de la unidad (o lo que va después de “folders/”). La cuenta del panel ' +
+          'tiene que ser miembro con rol Gestor de contenido.',
+          <input type="text" defaultValue={config.driveComprobantes} className={ENTRADA}
+            placeholder="https://drive.google.com/drive/folders/…"
+            onBlur={(e) => e.target.value.trim() !== config.driveComprobantes &&
+              guardar({ driveComprobantes: idDeDrive(e.target.value) }, 'driveComprobantes')} />)}
         {campo('saldoDias', 'Saldo, días antes del evento',
           'Hasta cuántos días antes del evento se paga el resto. ' +
           'Cada cotización lo puede cambiar.',

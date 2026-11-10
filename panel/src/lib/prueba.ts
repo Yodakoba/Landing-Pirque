@@ -26,7 +26,9 @@ import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProd
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
-         montoCobro, cobrosDe, CONCEPTO_COBRO, avisosDeCobro, diasEntre } from './cobros.ts';
+         montoCobro, cobrosDe, CONCEPTO_COBRO, avisosDeCobro, diasEntre, porRevisar,
+         problemaConArchivo } from './cobros.ts';
+import { idDeDrive } from './config.ts';
 import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
@@ -3791,7 +3793,8 @@ console.log('\nCotizaciones, fase 2');
      && l.cobro.monto === 50000, 'un concepto inventado es Otro, y sin fecha es hoy');
   ok('error' in limpiarCobro({ monto: '' }, '2026-11-10'), 'sin monto no es un cobro');
   const cob = { id: 'COB-1', presupuesto: 'PRE-1', fecha: '2026-11-10', concepto: CONCEPTO_COBRO.anticipo,
-    monto: -5000, medio: 'transferencia', nota: '', registradoPor: 'vero', cuando: '' };
+    monto: -5000, medio: 'transferencia', nota: '', registradoPor: 'vero', cuando: '',
+    comprobante: 'archivo1', revisadoPor: 'Felipe', revisado: '2026-11-10 12:00' };
   const vuelta = leerCobrosDe([ENCABEZADO_COBROS, filaCobro(ENCABEZADO_COBROS, cob),
     filaCobro(ENCABEZADO_COBROS, { ...cob, id: 'COB-2', presupuesto: 'PRE-2' })]);
   ok(vuelta.length === 2 && vuelta[0].monto === -5000 && vuelta[0].medio === 'transferencia',
@@ -3842,6 +3845,27 @@ console.log('\nCotizaciones, fase 2');
      'una línea en UF toma su precio en pesos de la UF de la cotización');
   ok(prepararLineas([{ presupuesto: 'P', concepto: 'X', cantidad: 1, precio: 5000, personas: 0 }],
     [], 0, false, 41302.33)[0].precio === 5000, 'una línea en pesos no se toca');
+}
+
+/* ---------- comprobantes y revisión (2026-11-10) ---------- */
+{
+  ok(idDeDrive('https://drive.google.com/drive/folders/0AEFMvctNNn8PUk9PVA') === '0AEFMvctNNn8PUk9PVA'
+     && idDeDrive('0AEFMvctNNn8PUk9PVA') === '0AEFMvctNNn8PUk9PVA',
+     'la carpeta de comprobantes se entiende pegando el link o solo el ID');
+  ok(idDeDrive('mi carpeta') === '' && idDeDrive('') === '', 'lo que no parece un ID queda en blanco');
+  ok(leerConfigDe(aFilasConfig({ ...POR_DEFECTO, driveComprobantes: '0AEFMvctNNn8PUk9PVA' }))
+       .driveComprobantes === '0AEFMvctNNn8PUk9PVA', 'la carpeta va y vuelve de la configuración');
+  ok(problemaConArchivo('image/jpeg', 300000) === '' && problemaConArchivo('application/pdf', 1000) === '',
+     'una foto o un PDF se aceptan');
+  ok(problemaConArchivo('application/zip', 1000) !== '' && problemaConArchivo('image/png', 5 * 1024 * 1024) !== '',
+     'otro tipo, o más de 4 MB (lo que Vercel no recibe), no');
+  ok(porRevisar([{ revisadoPor: '' }, { revisadoPor: 'Felipe' }]).length === 1,
+     'por revisar son los que nadie revisó');
+  const enc = ENCABEZADO_COBROS;
+  const vieja = enc.slice(0, 9);
+  const leido = leerCobrosDe([vieja, ['COB-1', 'PRE-1', '2026-11-10', 'Anticipo', '30000']])[0];
+  ok(leido.comprobante === '' && leido.revisadoPor === '',
+     'un cobro de antes de los comprobantes se lee sin comprobante y sin revisar');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

@@ -36,7 +36,8 @@ import {
   condicionesDe, estadoCobros, montoCobro, type Cobro
 } from '@/lib/cobros';
 import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
-import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
+import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
+import { achicarFoto } from '@/lib/achicarFoto';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
@@ -150,6 +151,8 @@ export default function CotizacionDialogo({
   /** Los cobros al cliente. Solo existen para una cotización ya guardada. */
   const [cobros, setCobros] = useState<Cobro[]>([]);
   const [medio, setMedio] = useState('');
+  /** El id del cobro cuyo comprobante se está subiendo. */
+  const [subiendo, setSubiendo] = useState('');
   const [otroMonto, setOtroMonto] = useState<null | { monto: string; concepto: string }>(null);
   useEffect(() => {
     if (!p) return;
@@ -176,6 +179,8 @@ export default function CotizacionDialogo({
 
   const ganada = !!p?.idReserva;
   const puedeEditar = !p || puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor);
+  /** Revisar cobros es de quien hace los pagos, no de quien los anota. */
+  const puedePagar = puede(datos.rol as Rol, 'pagar');
   const cliente = clientes.find((c) => c.id === idCliente);
   const fechaReal = sinFecha ? '' : fecha;
   const publico = esFecha(fechaReal) && esDiaPublico(fechaReal, datos.fechas);
@@ -313,6 +318,35 @@ export default function CotizacionDialogo({
       avisar(`${concepto} anotado: ${enPesos(monto)}`);
       onCambio();
     } finally { setGuardando(false); }
+  }
+
+  /** Sube el comprobante de un cobro; las fotos se achican antes. */
+  async function subirComprobante(c: Cobro, archivo: File) {
+    setSubiendo(c.id); setError('');
+    try {
+      const f = await achicarFoto(archivo);
+      const datosForm = new FormData();
+      datosForm.set('id', c.id);
+      datosForm.set('archivo', f);
+      const r = await fetch('/api/presupuestos/cobros/comprobante', { method: 'POST', body: datosForm });
+      const d = await r.json().catch(() => ({ error: 'No se pudo subir el comprobante.' }));
+      if (d.error) return setError(d.error);
+      const lista = await fetch(`/api/presupuestos/cobros?id=${encodeURIComponent(c.presupuesto)}`)
+        .then((x) => x.json()).catch(() => ({}));
+      if (lista.cobros) setCobros(lista.cobros);
+      avisar('Comprobante guardado');
+    } finally { setSubiendo(''); }
+  }
+
+  /** Marca o desmarca la revisión: solo quien hace los pagos. */
+  async function revisar(c: Cobro, revisado: boolean) {
+    const r = await fetch('/api/presupuestos/cobros', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: c.id, revisado })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    setCobros(d.cobros); avisar(revisado ? 'Cobro revisado' : 'Revisión quitada'); onCambio();
   }
 
   async function deshacerCobro(c: Cobro) {
@@ -909,18 +943,56 @@ export default function CotizacionDialogo({
                   {cobros.length > 0 && (
                     <ul className="mt-2 divide-y divide-hueso/10 border-y border-hueso/10">
                       {cobros.map((c) => (
-                        <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[14px]">
-                          <span className="font-semibold">{c.concepto}</span>
-                          <span className={c.monto < 0 ? 'text-rojo-texto' : ''}>
-                            {c.monto < 0 ? `−${enPesos(-c.monto)}` : enPesos(c.monto)}
-                          </span>
-                          <span className="text-hueso/70">{c.fecha}{c.medio && ` · ${c.medio}`}
-                            {c.registradoPor && ` · ${c.registradoPor}`}</span>
-                          <span className="flex-1" />
-                          {puedeEditar && (
-                            <button type="button" onClick={() => void deshacerCobro(c)}
-                              className="boton hover:border-rojo-fuerte hover:text-rojo-texto">Deshacer</button>
-                          )}
+                        <li key={c.id} className="py-2.5 text-[14px]">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="font-semibold">{c.concepto}</span>
+                            <span className={c.monto < 0 ? 'text-rojo-texto' : ''}>
+                              {c.monto < 0 ? `−${enPesos(-c.monto)}` : enPesos(c.monto)}
+                            </span>
+                            <span className="text-hueso/70">{c.fecha}{c.medio && ` · ${c.medio}`}
+                              {c.registradoPor && ` · ${c.registradoPor}`}</span>
+                            {/* **La revisión**, por forma además de color:
+                                verde relleno revisado, ámbar con borde sin revisar. */}
+                            {c.revisadoPor ? (
+                              <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2 py-0.5
+                                               text-[13px] font-semibold text-verde-texto">
+                                ✓ Revisado por {c.revisadoPor}
+                              </span>
+                            ) : (
+                              <span className="rounded-full border border-ambar/60 px-2 py-0.5 text-[13px]
+                                               font-semibold text-ambar-texto">sin revisar</span>
+                            )}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {/* El comprobante: se ve a través del panel, nunca por un link público. */}
+                            {c.comprobante ? (
+                              <a href={`/api/presupuestos/cobros/comprobante?id=${encodeURIComponent(c.id)}`}
+                                target="_blank" rel="noopener" className="boton tecla">📎 Ver comprobante</a>
+                            ) : null}
+                            {puedeEditar && (
+                              <label className={`boton tecla cursor-pointer ${subiendo === c.id ? 'opacity-60' : ''}`}>
+                                {subiendo === c.id ? 'Subiendo…'
+                                  : c.comprobante ? 'Cambiar comprobante' : '📎 Subir comprobante'}
+                                <input type="file" accept="image/*,application/pdf" className="sr-only"
+                                  disabled={subiendo !== ''}
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    e.target.value = '';
+                                    if (f) void subirComprobante(c, f);
+                                  }} />
+                              </label>
+                            )}
+                            {puedePagar && (
+                              <button type="button" onClick={() => void revisar(c, !c.revisadoPor)}
+                                className={`boton ${c.revisadoPor ? '' : '!border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
+                                {c.revisadoPor ? 'Quitar revisión' : '✓ Marcar revisado'}
+                              </button>
+                            )}
+                            {puedeEditar && (!c.revisadoPor || puedePagar) && (
+                              <button type="button" onClick={() => void deshacerCobro(c)}
+                                className="boton hover:border-rojo-fuerte hover:text-rojo-texto">Deshacer</button>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>

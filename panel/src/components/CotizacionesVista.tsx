@@ -28,11 +28,12 @@ import {
 import { normalizar, estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { semanaDe, sumarDias, diaSemana, rangoEnPalabras, enPalabras, esFecha } from '@/lib/fechas';
 import { enPesos } from '@/lib/ocupacion';
-import { avisosDeCobro } from '@/lib/cobros';
+import { avisosDeCobro, porRevisar } from '@/lib/cobros';
+import { puede, type Rol } from '@/lib/auth';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
-  cobros?: { presupuesto: string; monto: number }[];
+  cobros?: { presupuesto: string; monto: number; revisadoPor?: string }[];
 };
 
 /** El color de cada estado: se distingue por la pastilla con borde. */
@@ -140,6 +141,16 @@ export default function CotizacionesVista() {
     datos.cobros ?? [], datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 }, hoy,
     [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida]);
   const porId = new Map(datos.presupuestos.map((p) => [p.id, p]));
+  // **Cobros por revisar** (2026-11-10): solo para quien hace los pagos,
+  // que es quien los revisa. Uno por cotización, con cuántos y cuánto.
+  const sinRevisar = new Map<string, { n: number; monto: number }>();
+  if (puede(datos.rol as Rol, 'pagar')) {
+    for (const c of porRevisar((datos.cobros ?? []).map((c) => ({ ...c, revisadoPor: c.revisadoPor ?? '' })))) {
+      if (!porId.has(c.presupuesto)) continue;
+      const a = sinRevisar.get(c.presupuesto) ?? { n: 0, monto: 0 };
+      sinRevisar.set(c.presupuesto, { n: a.n + 1, monto: a.monto + c.monto });
+    }
+  }
 
   /** Una cotización como línea, para las listas. */
   const fila = (p: Presupuesto, conFecha = true) => (
@@ -258,8 +269,27 @@ export default function CotizacionesVista() {
       </div>
 
       {(pronto.length > 0 || vencidas.length > 0 || avisos.anticipoSinGanar.length > 0
-        || avisos.saldo.length > 0) && (
+        || avisos.saldo.length > 0 || sinRevisar.size > 0) && (
         <div className="mb-4 space-y-2">
+          {sinRevisar.size > 0 && (
+            <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
+              <p className="text-[15px] font-semibold text-ambar-texto">
+                {sinRevisar.size === 1 ? '1 cotización con cobros por revisar'
+                  : `${sinRevisar.size} cotizaciones con cobros por revisar`}
+              </p>
+              <p className="text-[14px] text-hueso/70">Comprueba que la plata llegó y márcalos revisados.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {[...sinRevisar].map(([id, r]) => {
+                  const p = porId.get(id)!;
+                  return (
+                    <button key={id} type="button" onClick={() => setAbierta({ p })} className="boton">
+                      {p.cliente} · {r.n === 1 ? '1 cobro' : `${r.n} cobros`} · {enPesos(r.monto)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {avisos.anticipoSinGanar.length > 0 && (
             <div className="rounded border border-verde-fuerte/60 bg-verde/5 p-3">
               <p className="text-[15px] font-semibold text-verde-texto">
