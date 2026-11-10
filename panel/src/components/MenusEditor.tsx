@@ -24,6 +24,8 @@ import {
   type Menu
 } from '@/lib/menus';
 import Campo from './Campo';
+import MostrarDesactivados from './MostrarDesactivados';
+import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { menusConocidos } from '@/lib/shopify';
 import type { Reserva } from '@/lib/tipos';
@@ -87,12 +89,20 @@ export default function MenusEditor() {
   const [sucio, setSucio] = useState(false);
   /** Qué tarjeta está abierta: la posición en la lista. Una a la vez. */
   const [abierta, setAbierta] = useState<number | null>(null);
+  /**
+   * Los productos que ya se vendieron o se cotizaron, normalizados. A esos
+   * no se les ofrece *Quitar* sino *Desactivar* (2026-11-10). Lo decide el
+   * servidor, que además rechaza quitarlos.
+   */
+  const [usados, setUsados] = useState<Set<string>>(new Set());
+  const [verInactivos, setVerInactivos] = useState(false);
 
   useEffect(() => {
     fetch('/api/menus').then((r) => r.json())
       .then((d) => {
         if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
         setMenus(d.menus);
+        setUsados(new Set((d.usados ?? []).map((n: string) => normalizar(n))));
       })
       .catch((e) => setError(String(e)));
     fetch('/api/reservas').then((r) => r.json())
@@ -118,7 +128,10 @@ export default function MenusEditor() {
       });
       const d = await r.json();
       if (d.error) { setError(d.error); setSinPermiso(!!d.permiso); }
-      else { setMenus(d.menus); setError(''); setSucio(false); }
+      else {
+        setMenus(d.menus); setError(''); setSucio(false);
+        setUsados(new Set((d.usados ?? []).map((n: string) => normalizar(n))));
+      }
     } finally { setGuardando(false); }
   }
 
@@ -167,14 +180,17 @@ export default function MenusEditor() {
         </div>
       )}
 
+      <MostrarDesactivados cuantos={menus.filter((m) => !m.activo).length}
+        visible={verInactivos} onCambio={(v) => { setVerInactivos(v); setAbierta(null); }} />
       <ul className="space-y-2">
-        {menus.map((m, i) => (
-          <li key={i} className="overflow-hidden rounded border border-hueso/15 bg-panel">
+        {menus.map((m, i) => (!m.activo && !verInactivos) ? null : (
+          <li key={i} className={`overflow-hidden rounded border ${m.activo
+            ? 'border-hueso/15 bg-panel' : 'border-hueso/10 bg-transparent'}`}>
             <div className="flex items-center gap-2 pr-2">
               <button type="button" aria-expanded={abierta === i}
                 onClick={() => setAbierta(abierta === i ? null : i)}
-                className="flex min-h-[52px] min-w-0 flex-1 flex-wrap items-center gap-x-3
-                           gap-y-1 px-3 py-2.5 text-left hover:bg-hueso/5">
+                className={`flex min-h-[52px] min-w-0 flex-1 flex-wrap items-center gap-x-3
+                           gap-y-1 px-3 py-2.5 text-left hover:bg-hueso/5 ${m.activo ? '' : 'opacity-60'}`}>
                 <span aria-hidden className="w-3 text-base leading-none text-hueso/50">
                   {abierta === i ? '−' : '+'}
                 </span>
@@ -183,6 +199,10 @@ export default function MenusEditor() {
                 </span>
                 <span className="rounded-full border border-hueso/25 px-2 py-0.5 text-[13px]
                                  font-semibold text-hueso/70">{m.tipo}</span>
+                {!m.activo && (
+                  <span className="rounded-full border border-hueso/40 px-2 py-0.5 text-[13px]
+                                   font-semibold text-hueso/80">desactivado</span>
+                )}
                 {m.sitioPublico && (
                   <span className="rounded-full border border-verde/50 px-2 py-0.5 text-[13px]
                                    font-semibold text-verde-texto">sitio y reservas</span>
@@ -194,13 +214,41 @@ export default function MenusEditor() {
                   </span>
                 )}
               </button>
-              <button onClick={() => {
-                if (m.nombre.trim() && !confirm(`¿Quitar ${m.nombre} del catálogo? Las reservas `
-                  + 'que ya lo tienen no se borran.')) return;
-                setMenus(menus.filter((_, k) => k !== i)); setSucio(true); setAbierta(null);
-              }} className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto">
-                Quitar
-              </button>
+              {/* **Un producto que ya se vendió o se cotizó no se quita: se
+                  desactiva** (2026-11-10, lo pidió el cliente). Quitarlo
+                  dejaría sus cotizaciones sin tipo —sus personas pasarían a
+                  cero al editarlas— y sus reservas en el aviso amarillo.
+                  Desactivar y activar **se guardan en el acto**, como en
+                  `/equipo`: al desactivar, la línea desaparece de la lista
+                  y con ella el botón de guardarla. */}
+              {!usados.has(normalizar(m.nombre)) ? (
+                <button onClick={() => {
+                  if (m.nombre.trim() && !confirm(`¿Quitar ${m.nombre} del catálogo? `
+                    + 'Nunca se vendió ni se cotizó, así que se borra.')) return;
+                  setMenus(menus.filter((_, k) => k !== i)); setSucio(true); setAbierta(null);
+                }} className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto">
+                  Quitar
+                </button>
+              ) : m.activo ? (
+                <button disabled={guardando} onClick={() => {
+                  if (!confirm(`¿Desactivar ${m.nombre}? Deja de ofrecerse en las reservas y `
+                    + 'en las cotizaciones. Lo que ya se vendió o se cotizó no cambia.'
+                    + (sucio ? ' Se guardan también los otros cambios de esta pantalla.' : '')))
+                    return;
+                  setAbierta(null);
+                  guardar(menus.map((x, k) => (k === i ? { ...x, activo: false } : x)));
+                }} className="boton shrink-0">
+                  Desactivar
+                </button>
+              ) : (
+                <button disabled={guardando} onClick={() => {
+                  if (sucio && !confirm('Se guardan también los otros cambios de esta pantalla.'))
+                    return;
+                  guardar(menus.map((x, k) => (k === i ? { ...x, activo: true } : x)));
+                }} className="boton shrink-0">
+                  Activar
+                </button>
+              )}
             </div>
 
             {abierta === i && (
@@ -208,8 +256,17 @@ export default function MenusEditor() {
                 <Campo etiqueta="Nombre" ancho="w-full sm:max-w-md">
                   <input type="text" value={m.nombre} className={ENTRADA}
                     placeholder="Si es un menú: como se llama en Shopify"
+                    readOnly={usados.has(normalizar(m.nombre))}
                     onChange={(e) => cambiar(i, { nombre: e.target.value })} />
                 </Campo>
+                {/* Renombrar uno usado sería quitarlo: lo vendido y lo
+                    cotizado guardan el nombre que tenía. */}
+                {usados.has(normalizar(m.nombre)) && (
+                  <p className="-mt-3 text-[13px] text-hueso/70">
+                    Ya se vendió o se cotizó, así que el nombre no se cambia. Si
+                    cambió de nombre, agrega uno nuevo y desactiva éste.
+                  </p>
+                )}
 
                 <div>
                   <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
@@ -313,8 +370,9 @@ export default function MenusEditor() {
       </div>
 
       <p className="mt-6 max-w-2xl text-[14px] text-hueso/60">
-        Quitar un producto de acá no borra ninguna reserva: solo deja de ofrecerse,
-        y vuelve a aparecer en el aviso de arriba si todavía se está vendiendo.{' '}
+        <strong>Un producto que ya se vendió o se cotizó no se quita, se
+        desactiva</strong>: deja de ofrecerse y todo lo anterior lo sigue
+        encontrando. Solo se quita lo que nunca se usó.{' '}
         <strong>Ojo al renombrar en Shopify:</strong> los pedidos ya hechos
         guardan el nombre que tenían, así que sus reservas van a contarse
         aparte hasta que se corrijan esas filas en la planilla.

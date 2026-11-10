@@ -38,7 +38,8 @@ export function esDiaPublico(fecha: string, fechas: Pick<FechaHabil, 'fecha' | '
 
 /** El show ecuestre del catálogo: el primer producto de tipo Show. */
 export function showDe(catalogo: Menu[]): Menu | undefined {
-  return catalogo.find((m) => m.tipo === TIPO_PRODUCTO.show);
+  // Uno desactivado ya no se agrega solo a un día público.
+  return catalogo.find((m) => m.activo && m.tipo === TIPO_PRODUCTO.show);
 }
 
 /**

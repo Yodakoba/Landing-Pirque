@@ -41,7 +41,9 @@ export const COL_MENUS = {
   cobro: 'Cobro',
   precioCotizacion: 'Precio cotización',
   iva: 'IVA',
-  moneda: 'Moneda'
+  moneda: 'Moneda',
+  // 2026-11-10. En blanco es sí: los productos de antes siguen activos.
+  activo: 'Activo'
 } as const;
 
 /**
@@ -104,6 +106,16 @@ export interface Menu {
   precioCotizacion: number;
   iva: IvaPrecio;
   moneda: Moneda;
+  /**
+   * Si se sigue ofreciendo (2026-11-10). **Un producto que ya se vendió o
+   * se cotizó no se quita: se desactiva**, igual que la ficha de un
+   * trabajador con turnos. Desactivado sigue en el catálogo —las reservas y
+   * las cotizaciones viejas lo siguen encontrando, con su tipo, su IVA y su
+   * precio— y solo deja de ofrecerse (`paraReservar()`, `paraCotizar()`).
+   * Si se quitara, una cotización que lo tiene perdería su tipo: sus
+   * personas pasarían a cero al editarla.
+   */
+  activo: boolean;
 }
 
 /**
@@ -120,7 +132,7 @@ export function nuevoProducto(p: Partial<Menu> & { nombre: string }): Menu {
     nombre, precioEnLinea: 0, precioEnLocal: 0,
     tipo: TIPO_PRODUCTO.menu, sitioPublico: true, cotizacion: false,
     cobro: COBRO.porPersona, precioCotizacion: 0,
-    iva: IVA_PRECIO.incluido, moneda: MONEDA.pesos,
+    iva: IVA_PRECIO.incluido, moneda: MONEDA.pesos, activo: true,
     ...resto
   };
 }
@@ -212,7 +224,8 @@ export function leerMenusDe(filas: string[][]): Menu[] {
       cobro: unoDe(f[6], Object.values(COBRO), base.cobro),
       precioCotizacion: aPrecio(f[7]),
       iva: unoDe(f[8], Object.values(IVA_PRECIO), base.iva),
-      moneda: unoDe(f[9], Object.values(MONEDA), base.moneda)
+      moneda: unoDe(f[9], Object.values(MONEDA), base.moneda),
+      activo: blanco(10) ? base.activo : esSiCelda(f[10])
     });
   }
   return salida;
@@ -229,7 +242,7 @@ export function aFilasMenus(menus: Menu[]): string[][] {
     ...menus.map((m) => [
       m.nombre, monto(m.precioEnLinea), monto(m.precioEnLocal),
       m.tipo, siNo(m.sitioPublico), siNo(m.cotizacion), m.cobro,
-      monto(m.precioCotizacion), m.iva, m.moneda
+      monto(m.precioCotizacion), m.iva, m.moneda, siNo(m.activo)
     ])
   ];
 }
@@ -240,12 +253,36 @@ export function aFilasMenus(menus: Menu[]): string[][] {
  * una reserva del día, así que no aparecen ahí.
  */
 export function paraReservar(menus: Menu[]): Menu[] {
-  return menus.filter((m) => m.tipo === TIPO_PRODUCTO.menu && m.sitioPublico);
+  return menus.filter((m) => m.activo && m.tipo === TIPO_PRODUCTO.menu && m.sitioPublico);
 }
 
-/** Lo que se puede cotizar. */
+/** Lo que se puede cotizar. Un producto desactivado ya no se ofrece. */
 export function paraCotizar(menus: Menu[]): Menu[] {
-  return menus.filter((m) => m.cotizacion);
+  return menus.filter((m) => m.activo && m.cotizacion);
+}
+
+/**
+ * Los productos del catálogo que **ya se usaron**: aparecen en alguna
+ * reserva o en alguna línea de cotización. Esos no se quitan, se
+ * desactivan. Se compara normalizado, como todo nombre de menú.
+ */
+export function usados(catalogo: Menu[], nombresVistos: string[]): string[] {
+  const vistos = new Set(nombresVistos.map((n) => normalizar(String(n))).filter(Boolean));
+  return catalogo.filter((m) => vistos.has(normalizar(m.nombre))).map((m) => m.nombre);
+}
+
+/**
+ * Los productos usados que faltan en la lista nueva: lo que un guardado
+ * estaría borrando sin poder. **Lo comprueba el servidor**, porque la
+ * pantalla manda la lista entera y una llamada directa tiene que obedecer
+ * la misma regla que el botón.
+ */
+export function quitadosUsados(antes: Menu[], despues: Menu[], nombresUsados: string[]): string[] {
+  const quedan = new Set(despues.map((m) => normalizar(m.nombre)));
+  const usadosN = new Set(nombresUsados.map((n) => normalizar(n)));
+  return antes
+    .filter((m) => usadosN.has(normalizar(m.nombre)) && !quedan.has(normalizar(m.nombre)))
+    .map((m) => m.nombre);
 }
 
 /**
@@ -336,6 +373,7 @@ export function limpiarProducto(m: Partial<Record<keyof Menu, unknown>>): Menu {
     cobro: unoDe(m?.cobro, Object.values(COBRO), base.cobro),
     precioCotizacion: aPrecio(m?.precioCotizacion),
     iva: unoDe(m?.iva, Object.values(IVA_PRECIO), base.iva),
-    moneda: unoDe(m?.moneda, Object.values(MONEDA), base.moneda)
+    moneda: unoDe(m?.moneda, Object.values(MONEDA), base.moneda),
+    activo: typeof m?.activo === 'boolean' ? m.activo : base.activo
   };
 }
