@@ -20,6 +20,7 @@ Archivos de esta carpeta:
 | `entorno-claude.md` | Cómo recrear el entorno de Claude Code en la cuenta Team (hosts permitidos y demás) |
 | `primer-mensaje.md` | El mensaje para pegar en la primera sesión de la cuenta Team |
 | `verificar.sh` | Comprueba de una vez que todo quedó conectado |
+| `independencia.md` | **Cómo dejar todo a nombre de la empresa** (cuentas de GitHub y Vercel con el correo de la empresa), para que el proyecto no dependa de nadie |
 
 ---
 
@@ -38,7 +39,8 @@ Archivos de esta carpeta:
 | 8 | Claude personal | Apagar lo viejo | Al final | 5 min |
 
 **Los pasos 0 a 3 y el 7 bastan para trabajar desde la cuenta Team.** Los
-pasos 4 y 5 ordenan la propiedad de las cuentas y se pueden hacer otro día.
+pasos 4 y 5 ordenan la propiedad de las cuentas: **para hacerlos a nombre de
+la empresa, sigue `independencia.md`**, que los reemplaza con más detalle.
 
 ---
 
