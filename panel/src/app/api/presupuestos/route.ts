@@ -41,8 +41,10 @@ export async function GET(req: Request) {
     return NextResponse.json({
       presupuestos: presupuestos.map((p) => conCliente(p, clientes)),
       lineas, menus, clientes,
-      // Solo presupuesto y monto: para los avisos de pago de la lista.
-      cobros: cobros.map((c) => ({ presupuesto: c.presupuesto, monto: c.monto })),
+      // Lo justo para los avisos de la lista: de qué cotización, cuánto y si
+      // ya se revisó.
+      cobros: cobros.map((c) => ({ presupuesto: c.presupuesto, monto: c.monto,
+        revisadoPor: c.revisadoPor })),
       // Solo lo que hace falta para saber si un día es público, privado o
       // cerrado: de eso dependen la tarjeta y la regla del show ecuestre.
       fechas: fechas.map((f) => ({ fecha: f.fecha, estado: f.estado, capacidad: f.capacidad })),

@@ -2087,8 +2087,45 @@ cotización decía 30% y 3 días y el contrato 20% y 10.
   pagar* mientras falte. Una que liberó su lugar no se toca.
 - **La hoja del cliente muestra las condiciones** y, si están en
   Configuración, los datos para transferir.
-- **Falta**: subir el comprobante de pago (necesita dónde guardar
-  archivos).
+- **El comprobante y la revisión**: ver la sección que sigue.
+
+### Comprobantes de pago en Google Drive, y la revisión (2026-11-10)
+
+Cada cobro puede llevar **una foto o un PDF del comprobante**, y quien hace
+los pagos **marca que lo revisó**. Decidido con el cliente: **Google Drive y
+no Vercel Blob**, porque el dominio `lopirque.cl` es Google Workspace.
+
+- **Dónde**: una **unidad compartida** del Workspace ("Comprobantes
+  panel"), con la cuenta del panel —`brasas-panel@brasas-panel.iam.
+  gserviceaccount.com`— como miembro con rol **Gestor de contenido** (sube
+  y ordena, no administra miembros). Tiene que ser unidad compartida: una
+  cuenta de servicio no tiene espacio propio en Drive. Su ID va en
+  **Configuración → Carpeta de comprobantes** (`drive_comprobantes`; se
+  puede pegar el link entero, `idDeDrive()` saca el ID). En blanco no se
+  puede subir y la pantalla lo dice. La **Google Drive API** tiene que estar
+  activada en el proyecto `brasas-panel` de Google Cloud.
+- **Privado**: el archivo **nunca se sirve por un link público**. *Ver
+  comprobante* pasa por `/api/presupuestos/cobros/comprobante`, que
+  comprueba el permiso. El alcance es `drive.file`: el panel solo ve lo que
+  él mismo creó, no el resto de la unidad.
+- **Ordenado**: una carpeta por cotización, *Cotización 1002 – Eventos del
+  Maipo*, y el archivo con fecha, concepto, monto e id del cobro.
+- **Tope de 4 MB**, porque **Vercel no recibe más de 4,5 MB** en una
+  petición. Las fotos las achica el navegador antes de subirlas
+  (`achicarFoto()`: 1600 px, JPEG al 82%), así que una foto de celular de
+  5 MB llega en unos cientos de KB. Un PDF va tal cual.
+- **Lo sube quien anota el cobro** (el vendedor, en sus cotizaciones).
+  **Cambiar el comprobante deja el cobro sin revisar**: lo revisado era el
+  archivo anterior. Deshacer un cobro no borra su archivo de Drive.
+- **La revisión** (columnas `Revisado por` y `Revisado` de `Cobros`) es del
+  permiso **`pagar`** —administrador y quien paga—, no del vendedor: la
+  gracia es que lo compruebe alguien distinto de quien lo anotó. Se ve por
+  forma: *✓ Revisado por Felipe* relleno en verde, *sin revisar* con borde
+  ámbar. **Un cobro revisado solo lo deshace quien revisa.**
+- **Aviso en `/presupuestos`**, solo para quien paga: *N cotizaciones con
+  cobros por revisar*, con cuántos y cuánto.
+- Los errores de configuración se dicen con palabras (`errorDeDrive()`):
+  la API sin activar, o la cuenta sin acceso a la unidad.
 
 **La conexión con el CRM del socio está apagada** desde el 2026-11-10: ver
 "El CRM del socio" más abajo. Con eso se cerró también que el vendedor
@@ -2099,8 +2136,8 @@ viera sus eventos.
 1. **Hecha**: catálogo de productos, fichas de clientes, descuentos y datos
    de la empresa.
 2. **Hecha**: ver la sección de arriba.
-3. **Hecha** (salvo el comprobante de pago): documento de la venta,
-   condiciones de pago, cobros, UF del día, avisos y CRM apagado.
+3. **Hecha**: documento de la venta, condiciones de pago, cobros con
+   comprobante y revisión, UF del día, avisos y CRM apagado.
 4. Contrato generado desde la cotización, y su firma.
 5. Calicanto y el rol de gerente general.
 

@@ -28,7 +28,16 @@ export const COL_COBROS = {
   medio: 'Medio',
   nota: 'Nota',
   registradoPor: 'Registrado por',
-  cuando: 'Cuándo'
+  cuando: 'Cuándo',
+  // 2026-11-10, al final y por nombre: se agregan solas.
+  /** El id del archivo en Google Drive. Vacío si no se subió. */
+  comprobante: 'Comprobante',
+  /**
+   * **Quién revisó que la plata llegó**, y cuándo. Separa "el vendedor dice
+   * que pagó" de "quien hace los pagos lo comprobó". Vacío es sin revisar.
+   */
+  revisadoPor: 'Revisado por',
+  revisado: 'Revisado'
 } as const;
 export const ENCABEZADO_COBROS: string[] = Object.values(COL_COBROS);
 
@@ -50,6 +59,9 @@ export interface Cobro {
   nota: string;
   registradoPor: string;
   cuando: string;
+  comprobante: string;
+  revisadoPor: string;
+  revisado: string;
   fila: number;
 }
 
@@ -163,6 +175,8 @@ export function leerCobrosDe(filas: string[][]): Cobro[] {
       concepto: conceptoDe(en(f, i.concepto)),
       medio: en(f, i.medio), nota: en(f, i.nota),
       registradoPor: en(f, i.registradoPor), cuando: en(f, i.cuando),
+      comprobante: en(f, i.comprobante),
+      revisadoPor: en(f, i.revisadoPor), revisado: en(f, i.revisado),
       fila: n + 1
     });
   }
@@ -182,6 +196,9 @@ export function filaCobro(encabezado: string[], c: Omit<Cobro, 'fila'>): string[
   poner(i.nota, c.nota);
   poner(i.registradoPor, c.registradoPor);
   poner(i.cuando, c.cuando);
+  poner(i.comprobante, c.comprobante);
+  poner(i.revisadoPor, c.revisadoPor);
+  poner(i.revisado, c.revisado);
   return fila;
 }
 
@@ -209,6 +226,33 @@ export function limpiarCobro(e: Record<string, unknown>, hoy: Fecha):
 /** Un id que no choca aunque se anoten dos en el mismo milisegundo. */
 export function nuevoIdCobro(): string {
   return `COB-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/**
+ * Los cobros que **falta revisar**: quien hace los pagos todavía no
+ * comprobó que esa plata llegó. Una devolución (monto negativo) también se
+ * revisa: es plata que salió.
+ */
+export function porRevisar<C extends Pick<Cobro, 'revisadoPor'>>(cobros: C[]): C[] {
+  return cobros.filter((c) => !c.revisadoPor);
+}
+
+/**
+ * Los archivos que se aceptan como comprobante, y hasta qué tamaño. **4 MB
+ * porque Vercel no recibe más de 4,5 MB** en una petición; las fotos las
+ * achica la pantalla antes de subirlas (`achicarFoto()`), así que una foto
+ * de celular llega muy por debajo.
+ */
+export const TIPOS_COMPROBANTE = ['image/jpeg', 'image/png', 'image/webp', 'image/heic',
+  'image/heif', 'application/pdf'];
+export const MAX_COMPROBANTE = 4 * 1024 * 1024;
+
+/** Por qué no se acepta un archivo, o vacío si se acepta. */
+export function problemaConArchivo(tipo: string, tamano: number): string {
+  if (!TIPOS_COMPROBANTE.includes(tipo)) return 'El comprobante tiene que ser una foto o un PDF.';
+  if (tamano <= 0) return 'El archivo está vacío.';
+  if (tamano > MAX_COMPROBANTE) return 'El archivo pasa de 4 MB. Si es un PDF, prueba con una foto o una captura.';
+  return '';
 }
 
 /* ---------- los avisos (2026-11-10) ---------- */

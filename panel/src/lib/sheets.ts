@@ -14,7 +14,11 @@ import { celdas } from './celdas.ts';
 // crear, borrar ni listar calendarios de la cuenta.
 const ALCANCE = [
   'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/calendar.events'
+  'https://www.googleapis.com/auth/calendar.events',
+  // Los comprobantes de pago (2026-11-10). `drive.file` y no `drive`: el
+  // panel solo ve los archivos y carpetas que él mismo creó, no el resto de
+  // la unidad compartida.
+  'https://www.googleapis.com/auth/drive.file'
 ];
 
 let cliente: sheets_v4.Sheets | null = null;

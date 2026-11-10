@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
-  leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar
+  leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar,
+  editarCobro
 } from '@/lib/datos';
 import { cobrosDe, limpiarCobro, nuevoIdCobro } from '@/lib/cobros';
 import { folioDe } from '@/lib/presupuestos';
-import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
+import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { hoy } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
 import { enPesos } from '@/lib/ocupacion';
@@ -58,7 +59,8 @@ export async function POST(req: Request) {
     if ('error' in limpio) return NextResponse.json({ error: limpio.error }, { status: 400 });
     await anotarCobro({
       ...limpio.cobro, id: nuevoIdCobro(), presupuesto: r.p.id,
-      registradoPor: r.quien.usuario, cuando: ahoraEnChile()
+      registradoPor: r.quien.usuario, cuando: ahoraEnChile(),
+      comprobante: '', revisadoPor: '', revisado: ''
     });
     await actualizarPagoDeReserva(r.p.id);
     await anotar({ ...r.quien, accion: 'Anotó un cobro',
@@ -80,11 +82,47 @@ export async function DELETE(req: Request) {
     if (!cobro) return NextResponse.json({ error: 'Ese cobro ya no está.' }, { status: 404 });
     const r = await cotizacionTocable(req, cobro.presupuesto);
     if ('error' in r) return r.error;
+    // **Uno ya revisado solo lo deshace quien revisa**: lo comprobó alguien
+    // de arriba, y que el vendedor lo pueda borrar después dejaría la
+    // revisión sin valor.
+    if (cobro.revisadoPor && !puede(r.quien.rol as Rol, 'pagar')) {
+      return NextResponse.json({
+        error: `Ese cobro ya lo revisó ${cobro.revisadoPor}. Para deshacerlo, pídeselo a quien hace los pagos.`,
+        permiso: true
+      }, { status: 403 });
+    }
     await borrarCobro(cobro.id);
     await actualizarPagoDeReserva(r.p.id);
     await anotar({ ...r.quien, accion: 'Borró un cobro',
       detalle: `${folioDe(r.p)} · ${cobro.concepto} · ${enPesos(cobro.monto)}` });
     return NextResponse.json({ cobros: cobrosDe(await leerCobros(), r.p.id) });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
+}
+
+/**
+ * **Marca un cobro como revisado**, o lo desmarca (2026-11-10): quien hace
+ * los pagos comprobó que esa plata llegó. Queda su nombre y la hora.
+ *
+ * Es del permiso `pagar` —administrador y quien paga—, no del vendedor:
+ * la gracia es que lo revise alguien distinto de quien lo anotó.
+ */
+export async function PATCH(req: Request) {
+  const no = await exigir(req, 'pagar');
+  if (no) return no;
+  try {
+    const quien = await quienEs(req);
+    const cuerpo = (await req.json()) ?? {};
+    const revisado = cuerpo.revisado === true;
+    const c = await editarCobro(String(cuerpo.id ?? ''), revisado
+      ? { revisadoPor: quien.usuario, revisado: ahoraEnChile() }
+      : { revisadoPor: '', revisado: '' });
+    if (!c) return NextResponse.json({ error: 'Ese cobro ya no está.' }, { status: 404 });
+    const p = (await leerPresupuestos()).find((x) => x.id === c.presupuesto);
+    await anotar({ ...quien, accion: revisado ? 'Revisó un cobro' : 'Quitó la revisión de un cobro',
+      detalle: `${p ? folioDe(p) : c.presupuesto} · ${c.concepto} · ${enPesos(c.monto)}` });
+    return NextResponse.json({ cobros: cobrosDe(await leerCobros(), c.presupuesto) });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
