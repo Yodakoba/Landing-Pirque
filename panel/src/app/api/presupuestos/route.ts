@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { horarioDe, faltaDeEmpresa } from '@/lib/contrato';
 import { UF_MINIMA, UF_MAXIMA } from '@/lib/uf';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
@@ -51,6 +52,12 @@ export async function GET(req: Request) {
       vigencia: cfg.vigenciaPresupuesto,
       descuentos: cfg.descuentos,
       condiciones: { anticipoPct: cfg.anticipoPct, saldoDias: cfg.saldoDias },
+      // Para el contrato: el horario de siempre, y qué le falta a la empresa
+      // en Configuración para que el contrato salga completo.
+      contrato: {
+        horario: horarioDe({ horario: '' }, cfg),
+        faltaEmpresa: faltaDeEmpresa(cfg.empresa)
+      },
       hoy: hoy(),
       usuario: quien.usuario,
       rol: quien.rol
@@ -145,6 +152,9 @@ export async function POST(req: Request) {
       const nueva: Omit<Presupuesto, 'fila'> = {
         ...base, id, grupo: grupoDe(base), token: nuevoToken(), idReserva: '',
         estado: ESTADO_PRESUPUESTO.borrador, motivo: '',
+        // El contrato firmado es de la cotización que se firmó, no de una
+        // alternativa: la copia nace sin firmar.
+        contrato: '', contratoSubidoPor: '', contratoSubido: '',
         validoHasta: validoHastaDe(hoy(), cfg.vigenciaPresupuesto),
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
         // una cotización ajena la puede seguir editando.
@@ -197,6 +207,12 @@ export async function POST(req: Request) {
       anticipo: numeroONulo(cuerpo.anticipo, 100),
       saldoDias: numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, { uf: 0, fechaUF: '' }),
+      horario: String(cuerpo.horario ?? '').trim(),
+      ley20393: cuerpo.ley20393 === true,
+      acuerdos: String(cuerpo.acuerdos ?? '').trim(),
+      // El contrato firmado no se acepta del navegador: lo escribe la ruta
+      // que lo sube (`/api/presupuestos/contrato`).
+      contrato: '', contratoSubidoPor: '', contratoSubido: '',
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
@@ -305,6 +321,9 @@ export async function PATCH(req: Request) {
         ? previo.saldoDias : numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, previo),
       notas: texto('notas', previo.notas),
+      horario: texto('horario', previo.horario),
+      ley20393: cuerpo.ley20393 === undefined ? previo.ley20393 : cuerpo.ley20393 === true,
+      acuerdos: texto('acuerdos', previo.acuerdos),
       // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
       // línea no puede correrle el plazo al cliente.
       validoHasta: cuerpo.renovarVigencia

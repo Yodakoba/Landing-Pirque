@@ -67,6 +67,7 @@ export default function Recorrido() {
   // el cliente.
   const fuera = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
              || ruta.startsWith('/presupuesto/')
+             || ruta.startsWith('/contrato/')
              || ruta === '/login';
   if (fuera) return null;
 

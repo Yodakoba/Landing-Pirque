@@ -97,15 +97,19 @@ export interface Empresa {
   razonSocial: string;
   rut: string;
   representante: string;
+  /** La cédula del representante legal, para el contrato. */
+  ciRepresentante: string;
   domicilio: string;
+  /** Dónde se firman los contratos: "En Pirque, a …". */
+  ciudadFirma: string;
   whatsapp: string;
   /** Banco, tipo y número de cuenta para el anticipo, como texto. */
   transferencia: string;
 }
 
 export const EMPRESA_VACIA: Empresa = {
-  nombre: '', razonSocial: '', rut: '', representante: '', domicilio: '',
-  whatsapp: '', transferencia: ''
+  nombre: '', razonSocial: '', rut: '', representante: '', ciRepresentante: '',
+  domicilio: '', ciudadFirma: '', whatsapp: '', transferencia: ''
 };
 
 /**
@@ -156,7 +160,9 @@ export const CLAVES = {
   empresaRazonSocial: 'empresa_razon_social',
   empresaRut: 'empresa_rut',
   empresaRepresentante: 'empresa_representante',
+  empresaCiRepresentante: 'empresa_ci_representante',
   empresaDomicilio: 'empresa_domicilio',
+  empresaCiudadFirma: 'contrato_ciudad',
   empresaWhatsapp: 'empresa_whatsapp',
   empresaTransferencia: 'empresa_transferencia'
 } as const;
@@ -289,7 +295,9 @@ export function leerConfigDe(filas: string[][]): Config {
       razonSocial: texto(v(CLAVES.empresaRazonSocial)),
       rut: texto(v(CLAVES.empresaRut)),
       representante: texto(v(CLAVES.empresaRepresentante)),
+      ciRepresentante: texto(v(CLAVES.empresaCiRepresentante)),
       domicilio: texto(v(CLAVES.empresaDomicilio)),
+      ciudadFirma: texto(v(CLAVES.empresaCiudadFirma)),
       whatsapp: texto(v(CLAVES.empresaWhatsapp)),
       transferencia: texto(v(CLAVES.empresaTransferencia))
     }
@@ -319,7 +327,9 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],
     [CLAVES.empresaRut, c.empresa.rut],
     [CLAVES.empresaRepresentante, c.empresa.representante],
+    [CLAVES.empresaCiRepresentante, c.empresa.ciRepresentante],
     [CLAVES.empresaDomicilio, c.empresa.domicilio],
+    [CLAVES.empresaCiudadFirma, c.empresa.ciudadFirma],
     [CLAVES.empresaWhatsapp, c.empresa.whatsapp],
     [CLAVES.empresaTransferencia, c.empresa.transferencia]
   ];

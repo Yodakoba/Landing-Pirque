@@ -2178,6 +2178,60 @@ no Vercel Blob**, porque el dominio `lopirque.cl` es Google Workspace.
 "El CRM del socio" más abajo. Con eso se cerró también que el vendedor
 viera sus eventos.
 
+### El contrato (Fase 4, 2026-11-10)
+
+**Sale de la cotización y no se escribe nada dos veces.** Es una página,
+`/contrato/<token>` —el mismo token del link de la cotización—, que se
+imprime a PDF desde el navegador como la hoja de la cotización. Código en
+`lib/contrato.ts` (puro, con pruebas) y `components/HojaContrato.tsx`.
+
+| Del contrato | De dónde sale |
+|---|---|
+| Prestador: razón social, RUT, representante y su cédula, ciudad de firma | Configuración (`empresa_ci_representante` y `contrato_ciudad` son nuevas) |
+| Cliente: nombre, RUT, domicilio, teléfono | Su ficha. Una empresa firma por su razón social, representada por la persona de la ficha |
+| Lugar, fecha, invitados | La cotización; el lugar es el del negocio |
+| Horario | La columna `Horario` de la cotización; en blanco, el de Configuración |
+| Precio | **La misma tabla de la cotización** (`TablaCotizacion`), con sus descuentos y el IVA |
+| Anticipo y saldo | `condicionesDe()`, la misma de la cotización |
+
+- **El texto es el del contrato del CRM del socio**, que es el que los
+  clientes ya firmaban: no se redactó ninguna cláusula. Se arreglaron tres
+  cosas, decididas con el cliente: el precio va línea por línea (el CRM lo
+  partía en adulto/niño/"después de la comida" y perdía el descuento); la
+  cláusula sexta dice el prestador, no *"Asados y Corderos"* escrito fijo; y
+  **el anticipo se paga al firmar**, no "en N días": el panel ya exige el
+  anticipo pagado para ganar, y otro plazo sería una cosa más que
+  configurar.
+- **La Ley 20.393 es una casilla** y **los acuerdos adicionales son texto
+  libre**, por cotización (columnas `Ley 20.393` y `Acuerdos adicionales`).
+  La numeración se corre sola: con las dos, la última es la DÉCIMA.
+- **Lo que falta sale con una raya** para completarlo a mano, y la ventana
+  lo avisa en ámbar sin bloquear: el RUT y el domicilio del cliente, los
+  datos de la empresa en Configuración, el día. **La fecha de firma va
+  siempre en raya**: se escribe a mano al firmar.
+- **El RUT y el domicilio se escriben en el bloque Contrato y van a la
+  ficha** del cliente, igual que los datos de la factura. Con factura no se
+  repiten: son los mismos campos.
+
+**Se firma en papel, en dos ejemplares, y se sube el firmado** (lo decidió
+el cliente; era lo que se hacía con el CRM). La foto o el PDF va a Drive, a
+la carpeta de la cotización junto a sus comprobantes, por
+`/api/presupuestos/contrato` —que nunca lo sirve por un link público—.
+
+- **Que esté subido es lo que dice "Contrato firmado"**: columnas
+  `Contrato firmado` (el id en Drive), `Contrato subido por` y `Contrato
+  subido`. No hay una casilla que pueda decir "firmado" sin el papel.
+- Lo sube quien puede tocar la cotización (el vendedor, las suyas).
+  Cambiarlo reemplaza al anterior; *Quitar* lo desvincula y el archivo
+  queda en Drive. No se acepta del navegador por la ruta de las
+  cotizaciones, y **una alternativa nace sin contrato**.
+- **El link sigue vivo después de firmar.** Si se cambia la cotización, el
+  contrato del link deja de coincidir con el papel, y la ventana lo dice:
+  el que vale es el firmado.
+- **No es requisito para marcar ganada**: eso sigue siendo el anticipo.
+- **Sin la versión de matrimonio** (Novia y Novio, dos firmas) que tenía el
+  CRM: queda para la Fase 5, con Calicanto.
+
 ### Las fases
 
 1. **Hecha**: catálogo de productos, fichas de clientes, descuentos y datos
@@ -2185,7 +2239,7 @@ viera sus eventos.
 2. **Hecha**: ver la sección de arriba.
 3. **Hecha**: documento de la venta, condiciones de pago, cobros con
    comprobante y revisión, UF del día, avisos y CRM apagado.
-4. Contrato generado desde la cotización, y su firma.
+4. **Hecha**: el contrato desde la cotización, firmado en papel y subido.
 5. Calicanto y el rol de gerente general.
 
 ## El CRM del socio (2026-11-02)

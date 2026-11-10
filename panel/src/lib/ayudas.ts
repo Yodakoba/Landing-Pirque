@@ -194,7 +194,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Productos: agrégalos con los botones. Cada línea tiene su precio y su '
       + 'descuento; abajo va el descuento sobre el total y el IVA.',
       'Enviar: guarda, copia el link o mándalo por WhatsApp. Si el cliente '
-      + 'acepta, “Marcar ganada”.'
+      + 'acepta, “Ver el contrato”, imprímelo y fírmenlo en dos ejemplares.',
+      'Sube la foto o el PDF del contrato firmado, anota el anticipo y '
+      + '“Marcar ganada”.'
     ],
     ojo: 'En un día público el show ecuestre va incluido y no se puede '
        + 'quitar. Para ofrecer otra opción al mismo cliente usa “Hacer una '

@@ -228,16 +228,18 @@ export default function ConfigEditor() {
       {/* Quién es esta empresa: sale en el encabezado de la cotización. */}
       <h2 className="mt-10 text-sm font-bold uppercase tracking-wide">La empresa</h2>
       <p className="mt-1 max-w-2xl text-sm text-hueso/60">
-        Lo que sale en el encabezado de cada cotización y, más adelante, del
-        contrato. Este panel es de una sola empresa: la otra tendrá el suyo.
+        Lo que sale en el encabezado de cada cotización y en el contrato. Este
+        panel es de una sola empresa: la otra tendrá el suyo.
       </p>
       <div className="mt-2 border-t border-hueso/10">
         {([
           ['nombre', 'Nombre comercial', 'Como la conocen los clientes.'],
           ['razonSocial', 'Razón social', 'Como figura en el SII.'],
           ['rut', 'RUT de la empresa', ''],
-          ['representante', 'Representante legal', 'Nombre y RUT, para el contrato.'],
+          ['representante', 'Representante legal', 'Su nombre completo, como firma el contrato.'],
+          ['ciRepresentante', 'Cédula del representante', 'Su RUT, para el contrato.'],
           ['domicilio', 'Domicilio', ''],
+          ['ciudadFirma', 'Ciudad de firma', 'La del contrato: "En …, a".'],
           ['whatsapp', 'WhatsApp de ventas', 'El que va al pie de la cotización.'],
           ['transferencia', 'Datos para transferir', 'Banco, tipo y número de cuenta, ' +
             'para el anticipo de los clientes.']

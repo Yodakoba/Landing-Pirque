@@ -41,6 +41,7 @@ import {
 import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { achicarFoto } from '@/lib/achicarFoto';
+import { faltaDelCliente } from '@/lib/contrato';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
@@ -61,6 +62,8 @@ export interface DatosCotizar {
   lineas?: LineaPresupuesto[];
   /** Las condiciones de pago por defecto, de Configuración. */
   condiciones?: { anticipoPct: number; saldoDias: number };
+  /** Para el contrato: el horario de siempre y qué le falta a la empresa. */
+  contrato?: { horario: string; faltaEmpresa: string[] };
   hoy: string;
   usuario: string;
   rol: string;
@@ -156,6 +159,14 @@ export default function CotizacionDialogo({
    */
   const [uf, setUf] = useState(p?.uf ?? 0);
   const [fechaUF, setFechaUF] = useState(p?.fechaUF ?? '');
+  /** Lo del contrato (Fase 4): el horario, la Ley 20.393 y lo acordado aparte. */
+  const [horario, setHorario] = useState(p?.horario ?? '');
+  const [ley20393, setLey20393] = useState(p?.ley20393 ?? false);
+  const [acuerdos, setAcuerdos] = useState(p?.acuerdos ?? '');
+  /** El contrato firmado subido: quién y cuándo. Que esté es lo que dice "firmado". */
+  const [firmado, setFirmado] = useState<null | { por: string; cuando: string }>(
+    p?.contrato ? { por: p.contratoSubidoPor, cuando: p.contratoSubido } : null);
+  const [subiendoContrato, setSubiendoContrato] = useState(false);
   /** Pide la UF de hoy y la fija. Devuelve el valor, o 0 si no se pudo. */
   async function traerUF(): Promise<number> {
     const d = await fetch('/api/uf').then((r) => r.json()).catch(() => ({}));
@@ -220,7 +231,7 @@ export default function CotizacionDialogo({
   const firma = JSON.stringify({
     idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
     descuento, motivo, documento, anticipoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
-    fact: documento === DOCUMENTO.factura ? facturacion : null
+    horario, ley20393, acuerdos, fact: facturacion
   });
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -289,9 +300,10 @@ export default function CotizacionDialogo({
     }
     setGuardando(true);
     try {
-      // Con factura, lo escrito en los datos de facturación va a la ficha.
+      // Lo escrito en los datos de facturación —o en el RUT y el domicilio
+      // que pide el contrato— va a la ficha, para no pedirlo dos veces.
       const ficha = clientes.find((c) => c.id === idCliente);
-      if (documento === DOCUMENTO.factura && ficha && (['empresa', 'rut', 'giro', 'domicilio'] as const)
+      if (ficha && (['empresa', 'rut', 'giro', 'domicilio'] as const)
         .some((k) => facturacion[k].trim() !== ficha[k])) {
         const rc = await fetch('/api/clientes', {
           method: 'PATCH', headers: { 'content-type': 'application/json' },
@@ -305,6 +317,7 @@ export default function CotizacionDialogo({
         id: p?.id, idCliente, fecha: fechaReal, periodo: sinFecha ? periodo : '',
         invitados, tipoEvento, notas, descuento, motivo, documento,
         anticipo: anticipoTxt, saldoDias: saldoTxt,
+        horario, ley20393, acuerdos,
         ...(uf ? { uf, fechaUF } : {}),
         estado: estadoForzado ?? estado,
         lineas: vistas
@@ -420,6 +433,38 @@ export default function CotizacionDialogo({
     } finally { setSubiendo(''); }
   }
 
+  /**
+   * Sube el contrato firmado (Fase 4). Se firma en papel; esto es la foto o
+   * el PDF, que va a Drive junto a los comprobantes.
+   */
+  async function subirContrato(archivo: File) {
+    if (!p) return;
+    setSubiendoContrato(true); setError('');
+    try {
+      const datosForm = new FormData();
+      datosForm.set('id', p.id);
+      datosForm.set('archivo', await achicarFoto(archivo));
+      const r = await fetch('/api/presupuestos/contrato', { method: 'POST', body: datosForm });
+      const d = await r.json().catch(() => ({ error: 'No se pudo subir el contrato.' }));
+      if (d.error) return setError(d.error);
+      setFirmado({ por: d.contratoSubidoPor, cuando: d.contratoSubido });
+      avisar('Contrato firmado guardado');
+      onCambio();
+    } finally { setSubiendoContrato(false); }
+  }
+
+  async function quitarContrato() {
+    if (!p || !confirm('¿Quitar el contrato firmado de esta cotización? Es para cuando se subió '
+      + 'otro archivo. El archivo queda en Drive.')) return;
+    const r = await fetch('/api/presupuestos/contrato', {
+      method: 'DELETE', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: p.id })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    setFirmado(null); avisar('Contrato firmado quitado'); onCambio();
+  }
+
   /** Marca o desmarca la revisión: solo quien hace los pagos. */
   async function revisar(c: Cobro, revisado: boolean) {
     const r = await fetch('/api/presupuestos/cobros', {
@@ -457,6 +502,8 @@ export default function CotizacionDialogo({
 
   const link = p?.token && typeof window !== 'undefined'
     ? `${window.location.origin}/presupuesto/${p.token}` : '';
+  const linkContrato = p?.token && typeof window !== 'undefined'
+    ? `${window.location.origin}/contrato/${p.token}` : '';
   const whatsapp = link && cliente
     ? enlaceWhatsApp(cliente.telefono,
         `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`)
@@ -1037,6 +1084,135 @@ export default function CotizacionDialogo({
                   ? <> hasta el {enPalabras(cond.saldoHasta)}.</>
                   : <>, {cond.dias} días antes del evento.</>}
               </p>
+            </div>
+
+            {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:
+                el precio, las condiciones de pago y el cliente de su ficha.
+                Se firma en papel y se sube el firmado, que va a Drive. Lo
+                único que se escribe acá es lo que la cotización no sabe. */}
+            <div className="rounded border border-hueso/15 bg-panel p-3">
+              <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">Contrato</p>
+              {!p ? (
+                <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para armar su contrato.</p>
+              ) : (
+                <div className="mt-2 space-y-3">
+                  {firmado ? (
+                    <p className="text-[15px]">
+                      <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2.5 py-1
+                                       font-semibold text-verde-texto">✓ Contrato firmado</span>
+                      <span className="ml-2 text-[14px] text-hueso/70">
+                        subido{firmado.por && ` por ${firmado.por}`}{firmado.cuando && ` el ${firmado.cuando.slice(0, 10)}`}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-[15px]">
+                      <span className="rounded-full border border-ambar/60 px-2.5 py-1 font-semibold
+                                       text-ambar-texto">Sin firmar</span>
+                      <span className="ml-2 text-[14px] text-hueso/70">
+                        Se imprime, se firma en dos ejemplares y se sube el firmado.
+                      </span>
+                    </p>
+                  )}
+                  {firmado && (
+                    <p className="text-[14px] text-hueso/75">
+                      Si cambias la cotización, el contrato del link deja de coincidir con el
+                      firmado: el que vale es el papel.
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {/* Con factura, el RUT y la dirección ya se piden arriba:
+                        son los mismos de la ficha, no se piden dos veces. */}
+                    {documento !== DOCUMENTO.factura && ([
+                      ['rut', 'RUT del cliente', '12.345.678-9'],
+                      ['domicilio', 'Domicilio del cliente', 'Calle, número, comuna']
+                    ] as const).map(([k, etiqueta, ejemplo]) => (
+                      <label key={k} className="block">
+                        <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          {etiqueta}
+                        </span>
+                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                      </label>
+                    ))}
+                    <label className="block">
+                      <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                        Horario del evento
+                      </span>
+                      <input value={horario} className={ENTRADA}
+                        placeholder={datos.contrato?.horario ?? '13:00 a 18:00'}
+                        onChange={(e) => setHorario(e.target.value)} />
+                    </label>
+                  </div>
+                  <p className="text-[13px] text-hueso/60">
+                    {documento === DOCUMENTO.factura
+                      ? 'El RUT y el domicilio son los de los datos de facturación.'
+                      : 'El RUT y el domicilio se guardan en la ficha del cliente.'}
+                  </p>
+
+                  <button type="button" aria-pressed={ley20393} onClick={() => setLey20393(!ley20393)}
+                    className={`boton min-h-[44px] h-auto max-w-full !whitespace-normal py-2 text-left
+                      ${ley20393 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
+                    <span>
+                      {ley20393 ? '✓ ' : ''}Cláusula de la Ley 20.393{' '}
+                      <span className="font-normal text-hueso/70">(la piden las empresas grandes)</span>
+                    </span>
+                  </button>
+
+                  <label className="block">
+                    <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                      Acuerdos adicionales
+                    </span>
+                    <textarea value={acuerdos} rows={2} className={ENTRADA}
+                      placeholder="Lo acordado aparte con el cliente. Va como la última cláusula."
+                      onChange={(e) => setAcuerdos(e.target.value)} />
+                  </label>
+
+                  {(faltaDelCliente(facturacion).length > 0
+                    || (datos.contrato?.faltaEmpresa.length ?? 0) > 0 || !esFecha(fechaReal)) && (
+                    <div className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                                    font-semibold text-ambar-texto">
+                      {!esFecha(fechaReal) && <p>Al contrato le falta el día del evento.</p>}
+                      {faltaDelCliente(facturacion).length > 0 && (
+                        <p>Al cliente le falta: {faltaDelCliente(facturacion).join(' y ')}.</p>
+                      )}
+                      {(datos.contrato?.faltaEmpresa.length ?? 0) > 0 && (
+                        <p>En Configuración falta: {datos.contrato?.faltaEmpresa.join(', ')}.</p>
+                      )}
+                      <p className="font-normal">Se puede imprimir igual: lo que falta sale con una raya para completar a mano.</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {linkContrato && (
+                      <a href={linkContrato} target="_blank" rel="noreferrer"
+                        onClick={() => { if (sucio && !ganada) void guardar(undefined, true); }}
+                        className="tecla boton min-h-[44px]">📄 Ver el contrato</a>
+                    )}
+                    {firmado && (
+                      <a href={`/api/presupuestos/contrato?id=${encodeURIComponent(p.id)}`}
+                        target="_blank" rel="noopener" className="tecla boton min-h-[44px]">📎 Ver el firmado</a>
+                    )}
+                    {puedeEditar && (
+                      <label className={`boton tecla min-h-[44px] cursor-pointer ${subiendoContrato ? 'opacity-60' : ''}
+                        ${firmado ? '' : '!border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
+                        {subiendoContrato ? 'Subiendo…' : firmado ? 'Cambiar el firmado' : '📎 Subir contrato firmado'}
+                        <input type="file" accept="image/*,application/pdf" className="sr-only"
+                          disabled={subiendoContrato}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = '';
+                            if (f) void subirContrato(f);
+                          }} />
+                      </label>
+                    )}
+                    {firmado && puedeEditar && (
+                      <button type="button" onClick={() => void quitarContrato()}
+                        className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto">Quitar</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* **Los cobros al cliente**: se anotan los pagos, no una

@@ -37,6 +37,8 @@ import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          faltaParaFactura, type Cliente } from './clientes.ts';
 import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
+import { clausulasDe, comparecencia, faltaDelCliente, faltaDeEmpresa, horarioDe, fechaLarga,
+         RAYA, LEY_20393, type DatosContrato } from './contrato.ts';
 import {
   leerEventos, esNuestro, tieneDia, eventosPorFecha, periodosNuestros,
   haySobreventa, NUESTRO_LUGAR, yaEstaAnotado, anotadosDe,
@@ -2334,7 +2336,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '',
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3559,7 +3561,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '',
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '',
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3886,6 +3888,80 @@ console.log('\nCotizaciones, fase 2');
   const pos = posiblesPorDia(lista, [], '2026-11-10');
   ok(pos.get('2026-12-05')?.presupuestos === 2 && pos.get('2026-12-05')?.personas === 60,
      'dos alternativas del mismo cliente cuentan como una cotización y su gente no se suma (50 + 10, no 100)');
+}
+
+/* ---------- el contrato (Fase 4, 2026-11-10) ---------- */
+{
+  const lineas = [
+    { concepto: 'Menú Lo Pirque', cantidad: 40, precio: 55000, descuento: 10, ivaIncluido: true },
+    { concepto: 'Arriendo', cantidad: 1, precio: 1000000, descuento: 0, ivaIncluido: false }
+  ];
+  const cuentas = cuentasDe(lineas as never, 5);
+  const datos: DatosContrato = {
+    empresa: { nombre: 'Brasas de Lo Pirque', razonSocial: 'Inversiones Brasas SpA', rut: '76.000.000-0',
+               representante: 'Ana Pérez', ciRepresentante: '11.111.111-1' },
+    cliente: { nombre: 'Juan Soto', empresa: '', rut: '12.345.678-9', domicilio: 'Calle 1, Pirque', telefono: '' },
+    folio: '1002', tipoEvento: 'Cumpleaños', lugar: 'Brasas de Lo Pirque, Pirque',
+    fecha: '2026-12-05', horario: '13:00 a 18:00', invitados: 40, total: cuentas.total,
+    condiciones: condicionesDe({ anticipo: null, saldoDias: null, fecha: '2026-12-05' }, cuentas.total,
+      { anticipoPct: 30, saldoDias: 3 }),
+    ley20393: false, acuerdos: ''
+  };
+  const cl = clausulasDe(datos);
+  const texto = (c: typeof cl) => c.map((x) => [x.titulo, ...x.parrafos, ...(x.puntos ?? []),
+    ...(x.despues ?? [])].join(' ')).join(' ');
+  ok(cl.length === 8 && cl[0].titulo === 'PRIMERO: Antecedentes' && cl[7].titulo === 'OCTAVO: Medidas de tranquilidad',
+     'el contrato trae las ocho cláusulas del CRM, numeradas');
+  ok(texto(cl).includes(enPesos(cuentas.total)) && cl.find((c) => c.tabla)?.titulo === 'TERCERO: Precio',
+     'el precio del contrato es el total de la cotización, con sus descuentos: la tabla va en la tercera');
+  ok(texto(cl).includes(enPesos(datos.condiciones.anticipo)) && texto(cl).includes(enPesos(datos.condiciones.saldo))
+     && datos.condiciones.anticipo + datos.condiciones.saldo === cuentas.total,
+     'anticipo y saldo del contrato salen de las mismas condiciones de la cotización y suman el total');
+  ok(texto(cl).includes('al firmar el presente contrato'), 'el anticipo se paga al firmar');
+  ok(texto(cl).includes('miércoles 2 de diciembre de 2026'), 'el saldo dice hasta qué día, 3 días antes del evento');
+  ok(!/Asados y Corderos/.test(texto(cl)) && texto(cl).includes('Brasas de Lo Pirque no responderá'),
+     'la cláusula sexta dice el prestador, no "Asados y Corderos" escrito fijo');
+  const sinAnt = clausulasDe({ ...datos, condiciones: { ...datos.condiciones, pct: 0, anticipo: 0, saldo: cuentas.total } });
+  ok(!texto(sinAnt).includes('al firmar') && texto(sinAnt).includes('El Precio Total, equivalente'),
+     'sin anticipo, el contrato no pide pagar nada al firmar');
+  const todo = clausulasDe({ ...datos, ley20393: true, acuerdos: 'Torta de regalo.\nGarzón extra.' });
+  ok(todo.length === 10 && todo[8].titulo === 'NOVENO: Responsabilidad Penal Ley 20.393'
+     && todo[8].parrafos[0] === LEY_20393 && todo[9].titulo === 'DÉCIMO: Acuerdos adicionales'
+     && todo[9].parrafos.length === 2,
+     'la Ley 20.393 y los acuerdos van solo si corresponde, y la numeración se corre sola');
+  ok(clausulasDe({ ...datos, acuerdos: 'Torta.' })[8].titulo === 'NOVENO: Acuerdos adicionales',
+     'sin la Ley 20.393, los acuerdos son la novena');
+  ok(comparecencia(datos, 'Pirque').includes('**Juan Soto**, RUT 12.345.678-9')
+     && comparecencia(datos, 'Pirque').startsWith(`En Pirque, a ${RAYA}`),
+     'una persona firma por sí misma; la fecha de firma queda para escribirla a mano');
+  const conEmpresa = comparecencia({ ...datos, cliente: { ...datos.cliente, empresa: 'Eventos del Maipo SpA' } }, '');
+  ok(conEmpresa.includes('**Eventos del Maipo SpA**, RUT 12.345.678-9, representada por Juan Soto')
+     && conEmpresa.startsWith(`En ${RAYA}`),
+     'una empresa firma por su razón social, representada por la persona de la ficha');
+  ok(comparecencia({ ...datos, cliente: { ...datos.cliente, rut: '', domicilio: '' } }, 'Pirque').split(RAYA).length === 4,
+     'lo que falta sale con una raya para completarlo a mano');
+  ok(faltaDelCliente({ rut: '', domicilio: ' ' }).join() === 'RUT,domicilio'
+     && faltaDelCliente({ rut: '1-9', domicilio: 'x' }).length === 0, 'al cliente le faltan el RUT y el domicilio');
+  ok(faltaDeEmpresa({ razonSocial: 'x', rut: 'x', representante: 'x', ciRepresentante: '' }).join() === 'cédula del representante',
+     'a la empresa le falta la cédula del representante');
+  ok(horarioDe({ horario: '' }, { horaApertura: '13:00', horaCierre: '18:00' }) === '13:00 a 18:00'
+     && horarioDe({ horario: '20:00 a 02:00' }, { horaApertura: '13:00', horaCierre: '18:00' }) === '20:00 a 02:00',
+     'el horario es el de la cotización, o el de Configuración');
+  ok(texto(cl).includes('la celebración de un cumpleaños')
+     && texto(clausulasDe({ ...datos, tipoEvento: 'Empresa' })).includes('la celebración de un evento de empresa'),
+     'el tipo de evento se lee como frase: "un evento de empresa", no "de empresa"');
+  ok(fechaLarga('') === RAYA && clausulasDe({ ...datos, fecha: '' })[0].puntos?.[1] === `Fecha: ${RAYA}`,
+     'sin día, la fecha del contrato queda con raya');
+
+  const encP = ENCABEZADO_PRESUPUESTOS;
+  const base = leerPresupuestosDe([encP, ['PRE-9', '2026-12-05']])[0];
+  ok(base.ley20393 === false && base.contrato === '' && base.horario === '',
+     'una cotización de antes del contrato se lee sin contrato');
+  const vuelta = leerPresupuestosDe([encP, filaPresupuesto(encP, { ...base, ley20393: true, acuerdos: 'Torta',
+    horario: '20:00 a 02:00', contrato: 'abc', contratoSubidoPor: 'Ana', contratoSubido: '2026-11-10 12:00' })])[0];
+  ok(vuelta.ley20393 && vuelta.acuerdos === 'Torta' && vuelta.horario === '20:00 a 02:00'
+     && vuelta.contrato === 'abc' && vuelta.contratoSubidoPor === 'Ana',
+     'lo del contrato va y vuelve de la planilla');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
