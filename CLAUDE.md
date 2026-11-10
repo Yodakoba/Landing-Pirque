@@ -6169,6 +6169,15 @@ distancias y capacidades salen del cliente o de material que él entregó. Si
 falta un dato, pídelo: es preferible dejar un placeholder visible antes que
 publicar algo plausible pero falso.
 
+## Migración a la cuenta Team (2026-11-10)
+
+El proyecto pasa de la cuenta personal de Claude a una cuenta **Team**. El
+plan paso a paso, la lista de variables de Vercel, el entorno de Claude Code
+a recrear y un script que comprueba que todo quedó conectado viven en
+**`migracion-team/`**. Lo corto: el código, la planilla, la cuenta de
+servicio y Shopify **no se mueven**; lo que cambia es desde dónde trabaja
+Claude, y opcionalmente de quién son el proyecto de Vercel y el repo.
+
 ## Git
 
 Trabajar en la rama `claude/migrate-project-claude-code-hfqsyc`. Rama por
