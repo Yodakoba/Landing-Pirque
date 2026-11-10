@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { leerConfig, guardarConfig , anotar } from '@/lib/datos';
-import { leerConfigDe, aFilasConfig, aDiasSemana } from '@/lib/config';
+import { leerConfigDe, aFilasConfig, aDiasSemana, aDescuentos } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +37,16 @@ export async function PATCH(req: Request) {
     // semana sin ninguno.
     if (typeof pedido.diasAbiertos === 'string') {
       pedido.diasAbiertos = aDiasSemana(pedido.diasAbiertos) ?? actual.diasAbiertos;
+    }
+
+    // Los descuentos llegan escritos ("5, 10, 15"); mismo criterio que los
+    // días. Y la empresa llega de a un campo: se mezcla con la que había en
+    // vez de reemplazarla entera, o guardar el RUT borraría la razón social.
+    if (typeof pedido.descuentos === 'string') {
+      pedido.descuentos = aDescuentos(pedido.descuentos) ?? actual.descuentos;
+    }
+    if (pedido.empresa && typeof pedido.empresa === 'object') {
+      pedido.empresa = { ...actual.empresa, ...pedido.empresa };
     }
 
     const limpia = leerConfigDe(aFilasConfig({ ...actual, ...pedido }));

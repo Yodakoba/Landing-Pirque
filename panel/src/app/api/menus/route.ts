@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { leerMenus, guardarMenus , anotar } from '@/lib/datos';
-import { aMonto, type Menu } from '@/lib/menus';
+import { limpiarProducto, type Menu } from '@/lib/menus';
 import { normalizar } from '@/lib/columnas';
 
 export const dynamic = 'force-dynamic';
@@ -36,17 +36,13 @@ export async function PUT(req: Request) {
     const limpia: Menu[] = [];
     const vistos = new Set<string>();
     for (const m of menus) {
-      const nombre = String(m?.nombre ?? '').trim();
-      if (!nombre || vistos.has(normalizar(nombre))) continue;
-      vistos.add(normalizar(nombre));
-      limpia.push({
-        nombre,
-        precioEnLinea: aMonto(m?.precioEnLinea),
-        precioEnLocal: aMonto(m?.precioEnLocal)
-      });
+      const p = limpiarProducto(m ?? {});
+      if (!p.nombre || vistos.has(normalizar(p.nombre))) continue;
+      vistos.add(normalizar(p.nombre));
+      limpia.push(p);
     }
     await guardarMenus(limpia);
-    await anotar({ ...(await quienEs(req)), accion: 'Cambió los menús',
+    await anotar({ ...(await quienEs(req)), accion: 'Cambió los productos',
       detalle: limpia.map((m) => `${m.nombre} ${m.precioEnLinea || '—'}/${m.precioEnLocal || '—'}`)
                      .join(' · ') });
     return NextResponse.json({ menus: limpia });

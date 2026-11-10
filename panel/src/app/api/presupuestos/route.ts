@@ -96,6 +96,7 @@ export async function POST(req: Request) {
       // Nace sin reserva: es lo que lo mantiene contando como posible hasta
       // que de verdad se convierta. Ver `cuentaComoPosible()`.
       idReserva: '',
+      idCliente: String(cuerpo?.idCliente ?? '').trim(),
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
@@ -164,6 +165,7 @@ export async function PATCH(req: Request) {
       token: previo.token,
       notas: texto('notas', previo.notas),
       idReserva: previo.idReserva,
+      idCliente: previo.idCliente,
       creadoPor: previo.creadoPor,
       creado: previo.creado
     };

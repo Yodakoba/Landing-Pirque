@@ -20,8 +20,11 @@ import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
          camposDeShopify,
          type PedidoShopify } from './shopify.ts';
 import { ESTADO_PAGO, esPrivada } from './columnas.ts';
-import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana,
+import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
+import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
+         nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
+         type Cliente } from './clientes.ts';
 import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import {
@@ -65,6 +68,8 @@ import { filaReserva, buscarFilaPorId, leerReservasDe, idsRepetidos }
 import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
 import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
+         nuevoProducto, aPrecio, paraReservar, paraCotizar, precioParaCotizar,
+         limpiarProducto, TIPO_PRODUCTO, COBRO, MONEDA,
          POR_DEFECTO_MENUS, type Menu } from './menus.ts';
 import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          leerTurnosDe, filaTurno, normalizarPlan, planDelDia, resumenEquipo,
@@ -771,8 +776,11 @@ ok(desconocidos(['Nuevo', 'nuevo', 'NUEVO'], POR_DEFECTO_MENUS).length === 1,
 
 /* ---------- ida y vuelta a la planilla ---------- */
 const filasMenus = aFilasMenus(POR_DEFECTO_MENUS);
-ok(filasMenus[0].join('|') === 'Menú|Precio en línea|Precio en el local',
-   'tres columnas: el nombre y los dos precios');
+ok(filasMenus[0].slice(0, 3).join('|') === 'Menú|Precio en línea|Precio en el local',
+   'las tres columnas de siempre van primero y en el mismo orden: una planilla vieja se sigue leyendo');
+ok(filasMenus[0].slice(3).join('|')
+     === 'Tipo|Sitio público|Cotización|Cobro|Precio cotización|IVA|Moneda',
+   'y las del catálogo van al final');
 ok(filasMenus.length === POR_DEFECTO_MENUS.length + 1, 'una fila por menu, mas el encabezado');
 ok(JSON.stringify(leerMenusDe(filasMenus)) === JSON.stringify(POR_DEFECTO_MENUS),
    'escribir y volver a leer devuelve exactamente la misma lista');
@@ -795,23 +803,167 @@ ok(aMonto('-5000') === 0, 'un negativo no es un precio');
 ok(aMonto('abc') === 0, 'ni una palabra');
 
 const conPrecio: Menu[] = [
-  { nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
-  { nombre: 'Ni\u00f1os', precioEnLinea: 19000, precioEnLocal: 24000 }
+  nuevoProducto({ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 }),
+  nuevoProducto({ nombre: 'Ni\u00f1os', precioEnLinea: 19000, precioEnLocal: 24000 })
 ];
 ok(precioDe(conPrecio[0], false) === 44000, 'pagando por adelantado rige el precio en linea');
 ok(precioDe(conPrecio[0], true) === 49000, 'y pagando en el local, el otro');
 ok(precioDe(undefined, false) === 0, 'un menu que no esta en la lista no tiene precio');
-ok(precioDe({ nombre: 'X', precioEnLinea: 0, precioEnLocal: 0 }, false) === 0,
+ok(precioDe(nuevoProducto({ nombre: 'X', precioEnLinea: 0, precioEnLocal: 0 }), false) === 0,
    'y uno sin precio puesto devuelve cero, no un numero inventado');
 
 // Un cero no se escribe como "0" en la planilla: un cero se lee como
 // "vale cero" y lo que queremos decir es "sin poner".
-ok(aFilasMenus([{ nombre: 'X', precioEnLinea: 0, precioEnLocal: 5000 }])[1].join('|') ===
-   'X||5000',
+ok(aFilasMenus([nuevoProducto({ nombre: 'X', precioEnLinea: 0, precioEnLocal: 5000 })])[1]
+     .slice(0, 3).join('|') === 'X||5000',
    'un precio en cero se guarda en blanco, no como cero');
 ok(leerMenusDe(aFilasMenus(conPrecio))[0].precioEnLinea === 44000,
    'escribir y volver a leer conserva los precios');
 
+
+/* ---------- el catálogo de productos (2026-11-10) ---------- */
+{
+  // Una planilla de antes del catálogo: solo nombre y dos precios.
+  const vieja = leerMenusDe([['Menú', 'Precio en línea', 'Precio en el local'],
+                             ['Tradiciones', '44000', '49000']]);
+  ok(vieja[0].tipo === TIPO_PRODUCTO.menu && vieja[0].sitioPublico && !vieja[0].cotizacion,
+     'una fila vieja sigue siendo un menú del sitio que NO se cotiza: nada cambia hasta que alguien lo decida');
+  ok(vieja[0].precioEnLinea === 44000, 'y conserva sus precios');
+
+  const cat = leerMenusDe([
+    ['Menú', 'Precio en línea', 'Precio en el local', 'Tipo', 'Sitio público', 'Cotización',
+     'Cobro', 'Precio cotización', 'IVA', 'Moneda'],
+    ['Tradiciones', '44000', '49000', 'Menú', 'sí', 'no', '', '', '', ''],
+    ['Once campestre', '', '', 'extra', 'no', 'SI', 'por persona', '8.000', '+ iva', 'pesos'],
+    ['Show ecuestre', '', '', 'Show', 'no', 'sí', 'Monto fijo', '500000', 'Incluido', 'Pesos'],
+    ['Matrimonio', '', '', 'Menú', 'no', 'sí', 'Por persona', '2,61', '+ IVA', 'UF'],
+    ['Raro', '', '', 'Cualquiera', 'quizás', 'x', 'otro', 'abc', '??', 'dólares']
+  ]);
+  ok(cat[1].tipo === TIPO_PRODUCTO.extra && cat[1].iva === '+ IVA' && cat[1].precioCotizacion === 8000,
+     'los valores escritos con otras mayúsculas se entienden, y $8.000 es ocho mil');
+  ok(cat[3].moneda === MONEDA.uf && cat[3].precioCotizacion === 2.61,
+     'un precio en UF conserva sus decimales: 2,61 UF no es 261');
+  ok(cat[4].tipo === TIPO_PRODUCTO.menu && cat[4].cobro === COBRO.porPersona
+     && cat[4].moneda === MONEDA.pesos && !cat[4].sitioPublico && cat[4].cotizacion,
+     'lo que no se entiende vuelve a su valor de siempre en vez de quedar inventado');
+  ok(JSON.stringify(leerMenusDe(aFilasMenus(cat))) === JSON.stringify(cat),
+     'escribir y volver a leer el catálogo devuelve exactamente lo mismo');
+
+  ok(paraReservar(cat).map((m) => m.nombre).join() === 'Tradiciones',
+     'al anotar una reserva solo aparecen los menús del sitio: ni la once ni el show ni lo que es solo de cotización');
+  ok(paraCotizar(cat).map((m) => m.nombre).join() === 'Once campestre,Show ecuestre,Matrimonio,Raro',
+     'al cotizar, solo lo marcado “se puede cotizar”: Tradiciones no');
+  ok(precioParaCotizar(cat[1]) === 8000, 'la cotización propone su propio precio');
+  ok(precioParaCotizar(cat[0]) === 49000,
+     'y uno sin precio de cotización propone el de pagar en el local, que es el del landing');
+
+  ok(aPrecio('2,61') === 2.61 && aPrecio('2.61') === 2.61, 'la UF se escribe con coma o con punto');
+  ok(aPrecio('$1.500.000') === 1500000, 'y un monto en pesos con sus puntos de miles');
+  ok(aPrecio('-3') === 0 && aPrecio('') === 0, 'un negativo o un vacío es sin precio');
+
+  const limpio = limpiarProducto({ nombre: ' Vino ', tipo: 'inventado', sitioPublico: 'sí',
+    cotizacion: true, cobro: 'Monto fijo', precioCotizacion: '12.000', moneda: 'UF' });
+  ok(limpio.nombre === 'Vino' && limpio.tipo === TIPO_PRODUCTO.menu,
+     'del navegador: un tipo inventado vuelve a Menú');
+  ok(limpio.sitioPublico === true && limpio.cotizacion === true,
+     'un interruptor que no llega como sí/no de verdad conserva su valor de siempre');
+  ok(limpio.cobro === COBRO.fijo && limpio.moneda === MONEDA.uf && limpio.precioCotizacion === 12000,
+     'y lo válido se guarda tal cual');
+}
+
+/* ---------- descuentos y la empresa en la configuración (2026-11-10) ---------- */
+{
+  ok(POR_DEFECTO.descuentos.join() === '5,10,15', 'los descuentos parten en 5, 10 y 15');
+  ok(aDescuentos('15, 5,10 %')?.join() === '5,10,15', 'se escriben como sea y quedan ordenados');
+  ok(aDescuentos('0, 100, abc') === null, 'ni cero, ni cien, ni una palabra son un descuento');
+  const c = leerConfigDe([['Clave', 'Valor'], ['descuentos', '7'],
+                          ['empresa_nombre', ' Brasas de Lo Pirque ']]);
+  ok(c.descuentos.join() === '7' && c.empresa.nombre === 'Brasas de Lo Pirque',
+     'se leen de la planilla');
+  ok(c.empresa.razonSocial === '', 'lo que nadie escribió queda en blanco: no se inventa');
+  const ida = leerConfigDe(aFilasConfig({ ...POR_DEFECTO,
+    empresa: { ...POR_DEFECTO.empresa, rut: '76.123.456-7', transferencia: 'Banco X, cta cte 123' } }));
+  ok(ida.empresa.rut === '76.123.456-7' && ida.empresa.transferencia === 'Banco X, cta cte 123',
+     'la empresa va y vuelve de la planilla');
+}
+
+/* ---------- las fichas de clientes (2026-11-10) ---------- */
+{
+  const cl = (x: Partial<Cliente>): Cliente => ({
+    id: 'C-0001', nombre: 'Ana Soto', empresa: '', rut: '', domicilio: '',
+    telefono: '+56 9 1234 5678', correo: 'ana@correo.cl', notas: '',
+    creadoPor: '', creado: '', fila: 2, ...x
+  });
+  const lista = [
+    cl({}),
+    cl({ id: 'C-0002', nombre: 'Juan Pérez', telefono: '+56 9 8765 4321', correo: '',
+         rut: '12345678-5', empresa: 'Eventos SpA', fila: 3 })
+  ];
+
+  const limpio = limpiarCliente({ nombre: ' Ana ', telefono: '9 1234 5678',
+    correo: ' ANA@Correo.CL ', rut: '12.345.678-5' });
+  ok(limpio.telefono === '+56 9 1234 5678' && limpio.correo === 'ana@correo.cl'
+     && limpio.rut === '12345678-5' && limpio.nombre === 'Ana',
+     'la ficha se guarda con el mismo formato que el resto del panel');
+
+  ok(faltaEnCliente(limpiarCliente({ telefono: '912345678' })) === 'Falta el nombre.',
+     'sin nombre no hay ficha');
+  ok(faltaEnCliente(limpiarCliente({ nombre: 'Ana' })) === 'Falta un teléfono o un correo.',
+     'y sin una forma de contactarlo tampoco');
+  ok(faltaEnCliente(limpiarCliente({ nombre: 'Ana', correo: 'a@b.cl' })) === '',
+     'el RUT y el domicilio no se piden para cotizar: los pide el contrato');
+
+  ok(parecidos(limpiarCliente({ nombre: 'Otra', telefono: '912345678' }), lista)[0]?.id === 'C-0001',
+     'el mismo teléfono escrito distinto es el mismo cliente: se pregunta antes de crear otro');
+  ok(parecidos(limpiarCliente({ nombre: 'X', correo: 'ANA@correo.cl' }), lista).length === 1,
+     'el mismo correo también');
+  ok(parecidos(limpiarCliente({ nombre: 'X', correo: 'x@y.cl', rut: '12.345.678-5' }), lista)[0]?.id
+       === 'C-0002', 'y el mismo RUT');
+  ok(parecidos(limpiarCliente({ nombre: 'Ana Soto', correo: 'otra@y.cl' }), lista).length === 0,
+     'el nombre solo NO: dos Ana Soto son dos personas hasta que algo más diga lo contrario');
+  ok(parecidos(limpiarCliente({ nombre: 'Z', telefono: '' , correo: 'z@z.cl' }),
+       [cl({ telefono: '', correo: '' })]).length === 0,
+     'dos fichas sin teléfono no se parecen por eso');
+  ok(parecidos(limpiarCliente({ nombre: 'Ana', telefono: '912345678' }), lista, 'C-0001').length === 0,
+     'al editar una ficha no se parece a sí misma');
+
+  ok(nuevoIdCliente([]) === 'C-0001', 'el primer cliente es el C-0001');
+  ok(nuevoIdCliente(lista) === 'C-0003', 'y el siguiente sigue la cuenta');
+  ok(nuevoIdCliente([{ id: 'C-0009' }, { id: 'raro' }]) === 'C-0010',
+     'un id que no tiene la forma no rompe la cuenta');
+
+  ok(buscarClientes(lista, 'perez').map((c) => c.id).join() === 'C-0002',
+     'se busca sin tildes');
+  ok(buscarClientes(lista, 'eventos').length === 1, 'y por la empresa');
+  ok(buscarClientes(lista, '8765').map((c) => c.id).join() === 'C-0002',
+     'y por un pedazo del teléfono');
+  ok(buscarClientes(lista, '').length === 2, 'sin búsqueda, todos');
+
+  const filas = [ENCABEZADO_CLIENTES, ...lista.map((c) => filaCliente(ENCABEZADO_CLIENTES, c))];
+  ok(JSON.stringify(leerClientesDe(filas)) === JSON.stringify(lista),
+     'una ficha va y vuelve de la planilla igual');
+  ok(leerClientesDe([ENCABEZADO_CLIENTES, ['', 'Sin id']]).length === 0,
+     'una fila sin id no es una ficha');
+
+  // La migración de los presupuestos de antes de las fichas.
+  const pres = [
+    { id: 'P1', cliente: 'Ana Soto', email: '', telefono: '912345678', idCliente: '' },
+    { id: 'P2', cliente: 'Empresa Nueva', email: 'compras@nueva.cl', telefono: '', idCliente: '' },
+    { id: 'P3', cliente: 'Empresa nueva', email: '', telefono: '', idCliente: '' },
+    { id: 'P4', cliente: 'Ya vinculado', email: '', telefono: '', idCliente: 'C-0002' },
+    { id: 'P5', cliente: '', email: '', telefono: '', idCliente: '' }
+  ];
+  const m = migrarAClientes(pres, lista, 'jefe', 'hoy');
+  ok(m.vinculos.P1 === 'C-0001', 'un presupuesto de un cliente que ya tiene ficha apunta a esa ficha');
+  ok(m.nuevos.length === 1 && m.nuevos[0].id === 'C-0003' && m.nuevos[0].nombre === 'Empresa Nueva',
+     'uno nuevo crea UNA ficha');
+  ok(m.vinculos.P2 === 'C-0003' && m.vinculos.P3 === 'C-0003',
+     'y dos presupuestos del mismo cliente quedan en esa misma ficha');
+  ok(!('P4' in m.vinculos) && !('P5' in m.vinculos),
+     'lo ya vinculado no se toca, y sin nombre no se inventa una ficha');
+  ok(migrarAClientes(pres.map((p) => ({ ...p, idCliente: p.idCliente || 'C-0001' })), lista, 'j', 'h')
+       .nuevos.length === 0, 'correrla dos veces no duplica');
+}
 
 /* ---------- agrupar el calendario por semana ---------- */
 // La semana parte en LUNES, que es la convencion chilena y la que ya usa el
@@ -1745,8 +1897,8 @@ ok(ROLES_DE_CUENTA.includes(ROL.vendedor), 'se le puede crear una cuenta');
 // línea a ponerlo, que es exactamente lo que se quiere de la cuenta más
 // acotada del panel.
 const deVendedor = todas.filter((a) => puede(ROL.vendedor, a)).sort();
-ok(deVendedor.join() === 'reservas,ver',
-   'dos permisos y ninguno más: ver el calendario y anotar reservas');
+ok(deVendedor.join() === 'clientes,reservas,ver',
+   'tres permisos y ninguno más: ver el calendario, anotar reservas y las fichas de clientes');
 ok(!puede(ROL.vendedor, 'dias'),
    'no abre ni cierra días: eso le cambiaría el cupo al sitio público');
 ok(!puede(ROL.vendedor, 'equipo') && !puede(ROL.vendedor, 'extras'),
@@ -2174,7 +2326,8 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
     id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
-    token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', fila: 2, ...x
+    token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
+    fila: 2, ...x
   });
   const li = (x: Partial<LineaPresupuesto>): LineaPresupuesto => ({
     presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 20,
@@ -2347,7 +2500,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
     pre({ id: 'PRE-IVA', fecha: '2026-11-14', cliente: 'Agencia Austral' }),
     [{ presupuesto: 'PRE-IVA', concepto: 'Tradiciones', cantidad: 1,
        precio: 44000, personas: 1, fila: 2 }],
-    [{ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 }]
+    [nuevoProducto({ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 })]
   );
   ok(conIVA.monto === 44000,
      'la reserva guarda el total CON IVA: es lo que se le cobra, no el neto');
@@ -2367,8 +2520,8 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   // --- Convertirlo en reserva ---
   {
     const catalogo = [
-      { nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
-      { nombre: 'Niños', precioEnLinea: 19000, precioEnLocal: 24000 }
+      nuevoProducto({ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 }),
+      nuevoProducto({ nombre: 'Niños', precioEnLinea: 19000, precioEnLocal: 24000 })
     ];
     const r2 = reservaDesdePresupuesto(pre({ cliente: 'Agencia Sur' }), lineas, catalogo);
 

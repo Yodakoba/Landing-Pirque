@@ -38,7 +38,11 @@ const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/turnos', texto: 'Turnos', accion: 'equipo' },
   { href: '/extras', texto: 'Extras', accion: 'extras' },
   { href: '/presupuestos', texto: 'Presupuestos', accion: 'presupuestos' },
-  { href: '/menus', texto: 'Menús', accion: 'configurar' },
+  { href: '/clientes', texto: 'Clientes', accion: 'clientes' },
+  // Desde el 2026-11-10 es el catálogo de todo lo que se vende y se cotiza,
+  // no solo los menús del sitio. La ruta sigue siendo /menus para no romper
+  // enlaces, y la pestaña de la planilla sigue llamándose `Menús`.
+  { href: '/menus', texto: 'Productos', accion: 'configurar' },
   { href: '/config', texto: 'Configuración', accion: 'configurar' },
   { href: '/informe', texto: 'Informe', accion: 'informe' },
   { href: '/usuarios', texto: 'Cuentas', accion: 'usuarios' },

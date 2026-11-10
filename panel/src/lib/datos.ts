@@ -44,7 +44,7 @@ import {
 } from './equipo.ts';
 import {
   HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
-  leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
+  COL_PRESUPUESTOS, leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
   normalizarLineas, posiblesPorDia,
   type Presupuesto, type LineaPresupuesto, type Posibles
 } from './presupuestos.ts';
@@ -53,6 +53,10 @@ import {
   leerColaboradoresDe, aFilasColaboradores, leerExtrasDe, filaExtra,
   normalizarExtras, type Colaborador, type Extra
 } from './extras.ts';
+import {
+  HOJA_CLIENTES, ENCABEZADO_CLIENTES, leerClientesDe, filaCliente, nuevoIdCliente,
+  migrarAClientes, type Cliente
+} from './clientes.ts';
 
 const num = (v: unknown): number => {
   const n = Number(String(v ?? '').replace(/[^\d.-]/g, ''));
@@ -736,7 +740,10 @@ export async function posiblesDeLosDias(hoy: Fecha): Promise<Map<string, Posible
 /** Escribe un presupuesto: lo agrega si es nuevo, lo pisa si ya está. */
 export async function guardarPresupuesto(p: Omit<Presupuesto, 'fila'>): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_PRESUPUESTOS, ENCABEZADO_PRESUPUESTOS);
-  const enc = filas[0] ?? ENCABEZADO_PRESUPUESTOS;
+  // La columna de la ficha se agrega sola en una planilla de antes de las
+  // fichas: sin esto el vínculo se escribiría en ninguna parte.
+  const enc = await asegurarColumna(HOJA_PRESUPUESTOS,
+    filas[0] ?? ENCABEZADO_PRESUPUESTOS, COL_PRESUPUESTOS.idCliente);
   const fila = filaPresupuesto(enc, p);
   const previo = leerPresupuestosDe(filas).find((x) => x.id === p.id);
   if (previo) await escribirFila(HOJA_PRESUPUESTOS, previo.fila, fila);
@@ -771,4 +778,80 @@ export async function borrarPresupuesto(id: string): Promise<void> {
   // un presupuesto que ya no existe y que nadie va a ir a buscar.
   await guardarLineas(id, []);
   if (suya) await borrarFilas(HOJA_PRESUPUESTOS, [suya.fila]);
+}
+
+/* ---------- Clientes ---------- */
+
+/**
+ * Las fichas de clientes. Lista vacía si la pestaña no existe: el panel
+ * funciona antes de que nadie anote un cliente.
+ */
+export async function leerClientes(): Promise<Cliente[]> {
+  try {
+    return leerClientesDe(await leerHoja(HOJA_CLIENTES));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Crea una ficha y devuelve su id.
+ *
+ * **Vuelve a leer justo antes de escribir** para sacar el id: si otra
+ * persona creó un cliente entre que se abrió la pantalla y ahora, el número
+ * correlativo ya está tomado.
+ */
+export async function crearCliente(c: Omit<Cliente, 'fila' | 'id'>): Promise<string> {
+  const filas = await asegurarEncabezado(HOJA_CLIENTES, ENCABEZADO_CLIENTES);
+  const enc = filas[0] ?? ENCABEZADO_CLIENTES;
+  const id = nuevoIdCliente(leerClientesDe(filas));
+  await agregarFilas(HOJA_CLIENTES, [filaCliente(enc, { ...c, id })]);
+  return id;
+}
+
+/** Reescribe una ficha que ya existe. Devuelve false si no la encontró. */
+export async function editarCliente(c: Omit<Cliente, 'fila'>): Promise<boolean> {
+  const filas = await asegurarEncabezado(HOJA_CLIENTES, ENCABEZADO_CLIENTES);
+  const enc = filas[0] ?? ENCABEZADO_CLIENTES;
+  const previo = leerClientesDe(filas).find((x) => x.id === c.id);
+  if (!previo) return false;
+  await escribirFila(HOJA_CLIENTES, previo.fila, filaCliente(enc, c));
+  return true;
+}
+
+export async function borrarCliente(id: string): Promise<boolean> {
+  const filas = await asegurarEncabezado(HOJA_CLIENTES, ENCABEZADO_CLIENTES);
+  const previo = leerClientesDe(filas).find((x) => x.id === id);
+  if (!previo) return false;
+  await borrarFilas(HOJA_CLIENTES, [previo.fila]);
+  return true;
+}
+
+/**
+ * Pasa los presupuestos de antes de las fichas a fichas, y los vincula.
+ *
+ * **Las fichas primero, el vínculo después**, por lo mismo que convertir un
+ * presupuesto en reserva: si falla entremedio quedan fichas sin vincular
+ * —que se ven y se arreglan corriendo esto de nuevo, que no duplica porque
+ * busca parecidos—, y nunca presupuestos apuntando a fichas que no existen.
+ */
+export async function migrarPresupuestosAClientes(
+  quien: string, ahora: string
+): Promise<{ creadas: number; vinculados: number }> {
+  const [presupuestos, clientes] = await Promise.all([leerPresupuestos(), leerClientes()]);
+  const { nuevos, vinculos } = migrarAClientes(presupuestos, clientes, quien, ahora);
+  if (nuevos.length) {
+    const filas = await asegurarEncabezado(HOJA_CLIENTES, ENCABEZADO_CLIENTES);
+    const enc = filas[0] ?? ENCABEZADO_CLIENTES;
+    await agregarFilas(HOJA_CLIENTES, nuevos.map((c) => filaCliente(enc, c)));
+  }
+  let vinculados = 0;
+  for (const p of presupuestos) {
+    const idCliente = vinculos[p.id];
+    if (!idCliente) continue;
+    await guardarPresupuesto({ ...p, idCliente });
+    vinculados++;
+  }
+  return { creadas: nuevos.length, vinculados };
 }
