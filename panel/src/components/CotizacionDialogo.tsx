@@ -28,7 +28,7 @@ import {
   DOCUMENTO, documentoDe, numeroONulo, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
-  prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe,
+  prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
@@ -171,6 +171,8 @@ export default function CotizacionDialogo({
     () => prepararLineas(lineas, datos.menus, invitados, publico),
     [lineas, datos.menus, invitados, publico]);
   const cuentas = cuentasDe(vistas, descuento);
+  /** Cuánta gente suman los menús: tiene que calzar con los invitados. */
+  const enMenus = vistas.reduce((n, l) => n + l.personas, 0);
   const cond = condicionesDe(
     { anticipo: numeroONulo(anticipoTxt, 100), saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
     cuentas.total, datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
@@ -186,7 +188,7 @@ export default function CotizacionDialogo({
 
   const agregar = (m: Menu) => {
     const precio = m.moneda === MONEDA.uf ? 0 : Math.round(precioParaCotizar(m));
-    setLineas([...vistas, lineaDeProducto(m, p?.id ?? '', invitados, precio)]);
+    setLineas([...vistas, lineaDeProducto(m, p?.id ?? '', invitados, precio, enMenus)]);
     if (m.moneda === MONEDA.uf) {
       avisar(`${m.nombre} tiene su precio en UF: escríbelo en pesos por ahora`, 'atencion');
     }
@@ -498,7 +500,7 @@ export default function CotizacionDialogo({
 
             <div>
               <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                Invitados
+                Invitados, niños incluidos
               </p>
               <div className="flex items-center gap-2">
                 <button type="button" className="boton h-12 w-12 text-xl"
@@ -506,12 +508,13 @@ export default function CotizacionDialogo({
                 <input type="number" min={0} value={invitados || ''} placeholder="0"
                   onChange={(e) => setInvitados(Math.max(0, Number(e.target.value) || 0))}
                   className={`${ENTRADA} h-12 w-28 text-center text-[20px] font-bold`}
-                  aria-label="Invitados" />
+                  aria-label="Invitados, niños incluidos" />
                 <button type="button" className="boton h-12 w-12 text-xl"
                   onClick={() => setInvitados(invitados + 1)} aria-label="Uno más">+</button>
               </div>
               <p className="mt-1 text-[13px] text-hueso/60">
-                La once, el desayuno y lo que toman todos siguen este número solos.
+                La cantidad de personas completa, adultos y niños. Los menús se reparten
+                este número; la once, el desayuno y lo que toman todos lo siguen solos.
               </p>
             </div>
 
@@ -616,10 +619,24 @@ export default function CotizacionDialogo({
                       </div>
                       {!esShowIncluido && (
                         <div className="mt-2 flex flex-wrap items-end gap-3">
-                          <Campo etiqueta={l.sigue ? 'Cantidad (= invitados)' : 'Cantidad'} ancho="w-32">
-                            <input type="number" min={0} value={l.cantidad} disabled={l.sigue}
-                              onChange={(e) => cambiarLinea(i, { cantidad: Number(e.target.value) || 0 })}
-                              className={ENTRADA} />
+                          <Campo etiqueta={l.sigue ? 'Cantidad (= invitados)' : 'Cantidad'} ancho="w-auto">
+                            {/* − y + grandes, y el número se puede escribir. En un
+                                menú, lo que sube se le resta al primero
+                                (`cambiarCantidad()`). */}
+                            <div className="flex items-center gap-2">
+                              {!l.sigue && (
+                                <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno menos"
+                                  onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad - 1, datos.menus, invitados))}>−</button>
+                              )}
+                              <input type="number" min={0} value={l.cantidad} disabled={l.sigue}
+                                onChange={(e) => setLineas(cambiarCantidad(vistas, i,
+                                  Number(e.target.value) || 0, datos.menus, invitados))}
+                                className={`${ENTRADA} h-11 !w-20 text-center text-[17px] font-bold`} />
+                              {!l.sigue && (
+                                <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno más"
+                                  onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad + 1, datos.menus, invitados))}>+</button>
+                              )}
+                            </div>
                           </Campo>
                           <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-40">
                             <input type="number" min={0} step={500} value={l.precio || ''} placeholder="0"
@@ -640,10 +657,12 @@ export default function CotizacionDialogo({
                               ))}
                             </div>
                           </div>
+                          {prod?.tipo !== TIPO_PRODUCTO.menu && (
                           <button type="button" onClick={() => cambiarLinea(i, { sigue: !l.sigue })}
                             className={`boton min-h-[40px] ${l.sigue ? 'border-oro bg-oro/15' : ''}`}>
                             {l.sigue ? '✓ Sigue a los invitados' : 'Seguir a los invitados'}
                           </button>
+                          )}
                           <span className="ml-auto text-[16px] font-bold tabular-nums">
                             {enPesos(totalDeLinea(l))}
                             <span className="ml-1 text-[13px] font-normal text-hueso/60">
@@ -656,6 +675,23 @@ export default function CotizacionDialogo({
                   );
                 })}
               </ul>
+            )}
+
+            {/* **Los menús tienen que sumar los invitados** (2026-11-10). Cada
+                menú nuevo toma solo los que faltan; si igual no calzan, se
+                dice en ámbar, sin bloquear: puede que cambien los invitados. */}
+            {invitados > 0 && enMenus > 0 && enMenus !== invitados && (
+              <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                            font-semibold text-ambar-texto">
+                Los menús suman {enMenus} {enMenus === 1 ? 'persona' : 'personas'} y los
+                invitados son {invitados}.{' '}
+                {enMenus > invitados ? 'Baja la cantidad de algún menú.' : `Faltan ${invitados - enMenus} en los menús.`}
+              </p>
+            )}
+            {invitados > 0 && enMenus === invitados && (
+              <p className="text-[14px] font-semibold text-verde-texto">
+                ✓ Los menús suman los {invitados} invitados.
+              </p>
             )}
 
             {/* Las cuentas, como en una cotización: neto, descuento, IVA y total. */}

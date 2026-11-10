@@ -22,7 +22,7 @@ import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
 import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
-import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto,
+import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto, cambiarCantidad,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
@@ -3626,6 +3626,32 @@ console.log('\nCotizaciones, fase 2');
   ok(once.sigue && once.cantidad === 25 && !once.ivaIncluido,
      'agregar la once la deja siguiendo a los invitados y "+ IVA", como dice el catálogo');
   const menu = lineaDeProducto(catalogo[0], 'PRE-1', 25, 44000);
+  ok(lineaDeProducto(catalogo[0], 'PRE-1', 40, 44000, 0).cantidad === 40
+     && lineaDeProducto(catalogo[0], 'PRE-1', 40, 19000, 40).cantidad === 0
+     && lineaDeProducto(catalogo[0], 'PRE-1', 40, 19000, 30).cantidad === 10,
+     'un menú nuevo toma solo los invitados que faltan: dos menús no suman 80 de 40');
+  ok(lineaDeProducto(catalogo[0], 'PRE-1', 0, 44000, 0).cantidad === 1, 'sin invitados, el menú nace en 1');
+  const dosMenus = prepararLineas([
+    { ...lineaDeProducto(catalogo[0], 'PRE-1', 40, 44000), cantidad: 30, sigue: true },
+    { ...lineaDeProducto(catalogo[0], 'PRE-1', 40, 44000), concepto: catalogo[0].nombre, cantidad: 10, sigue: true }
+  ], catalogo, 40, false);
+  ok(dosMenus.reduce((n, l) => n + l.personas, 0) === 40 && dosMenus.every((l) => !l.sigue),
+     'un menú marcado "sigue a los invitados" no se infla a 40: la marca se ignora en los menús');
+  {
+    const cat2 = [...catalogo, nuevoProducto({ nombre: 'Niños', cotizacion: true })];
+    const ls = [{ concepto: catalogo[0].nombre, cantidad: 40 }, { concepto: 'Niños', cantidad: 0 },
+      { concepto: catalogo[1].nombre, cantidad: 40 }];
+    const a = cambiarCantidad(ls, 1, 10, cat2, 40);
+    ok(a[0].cantidad === 30 && a[1].cantidad === 10 && a[2].cantidad === 40,
+       'subir los niños a 10 deja el primer menú en 30, y la once no se toca');
+    ok(cambiarCantidad(a, 1, 4, cat2, 40)[0].cantidad === 36, 'bajarlos se los devuelve al primero');
+    const b = cambiarCantidad(ls, 1, 55, cat2, 40);
+    ok(b[0].cantidad === 0 && b[1].cantidad === 40, 'el primero nunca baja de cero');
+    ok(cambiarCantidad(ls, 0, 35, cat2, 40)[1].cantidad === 0, 'cambiar el primero no mueve a los demás');
+    ok(cambiarCantidad(ls, 1, 10, cat2, 0)[0].cantidad === 40, 'sin invitados no se reparte nada');
+  }
+  ok(lineaDeProducto(catalogo[1], 'PRE-1', 40, 8000, 40).cantidad === 40,
+     'la once sigue siendo de todos los invitados');
   ok(!menu.sigue && menu.personas === 25,
      'un menú NO sigue a los invitados: 40 pueden ser 30 adultos y 10 niños');
 

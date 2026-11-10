@@ -1997,6 +1997,24 @@ final y por nombre (`documentoDe()`).
   apunta a ella por el `ID Reserva`, así que el dato está a un paso; copiarlo
   a `Reservas` se hace cuando haga falta exportarlo (Chipax).
 
+### Los menús se reparten los invitados (2026-11-10)
+
+Lo reclamó el cliente: con 40 invitados, agregar Lo Pirque y después Niños
+ponía 40 en cada uno —80 personas—. Ahora:
+
+- **Los invitados son la gente completa, niños incluidos**, y el paso 2 lo
+  dice así.
+- **Un menú nuevo toma solo los invitados que faltan** (`lineaDeProducto()`):
+  el primero nace con 40, el segundo con 0.
+- **Subir un menú se lo descuenta al primero** (`cambiarCantidad()`), con −
+  y + grandes: Niños a 10 deja Lo Pirque en 30. El primero nunca baja de
+  cero. Cambiar el primero no mueve los demás.
+- **Un menú no puede "seguir a los invitados"**: se fuerza en
+  `prepararLineas()`, no solo escondiendo el botón. La once y el desayuno sí
+  siguen, porque los toman todos.
+- Si igual no calzan, una línea ámbar dice cuántos sobran o faltan; si
+  calzan, una verde lo confirma. No bloquea.
+
 ### Condiciones de pago y cobros al cliente (2026-11-10)
 
 **Un solo lugar dice cuánto es el anticipo y cuándo vence el saldo**:
