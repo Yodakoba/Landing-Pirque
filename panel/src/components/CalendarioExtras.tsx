@@ -17,6 +17,7 @@
  * para un día sin reservas es justo el error que esto tiene que hacer
  * evidente.
  */
+import BotonGuardar from './BotonGuardar';
 import MostrarDesactivados from './MostrarDesactivados';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
@@ -117,12 +118,7 @@ export default function CalendarioExtras() {
 
   /** El guardado dentro de la ficha, igual que en Equipo y por lo mismo. */
   const guardarEnTarjeta = sucio ? (
-    <button onClick={guardarFichas} disabled={guardando}
-      className="rounded bg-oro px-3 py-1 text-xs font-semibold text-tinta
-                 disabled:opacity-40"
-      title="Guarda los cambios de esta pantalla">
-      {guardando ? 'Guardando…' : 'Guardar cambios'}
-    </button>
+    <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardarFichas} texto="Guardar cambios" />
   ) : null;
 
   const cambiarBanco = (i: number, banco: Banco) => {
@@ -446,11 +442,7 @@ export default function CalendarioExtras() {
         </button>
         <span className="flex-1" />
         {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
-        <button onClick={guardarFichas} disabled={guardando || !sucio}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar'}
-        </button>
+        <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardarFichas} />
       </div>
 
       {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}

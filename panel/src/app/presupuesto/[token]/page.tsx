@@ -19,7 +19,7 @@
 import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
 import { porToken, lineasDe, gentePosible, netoDeLinea, cuentasDe,
          estadoVisible, folioDe, IVA, DOCUMENTO } from '@/lib/presupuestos';
-import { clienteDe } from '@/lib/cotizar';
+import { clienteDe, grupoDe, letraDe } from '@/lib/cotizar';
 import { condicionesDe } from '@/lib/cobros';
 import { enUF } from '@/lib/uf';
 import { enPesos } from '@/lib/ocupacion';
@@ -122,7 +122,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           </p>
         )}
         <p className="mt-1 text-[13px] text-hueso/60">
-          N° {folioDe(p)}
+          N° {folioDe({ id: grupoDe(p) })}{letraDe(p, lista) && <> · Alternativa {letraDe(p, lista)}</>}
           {p.creado && <> · emitido el {p.creado.slice(0, 10)}</>}
         </p>
       </header>

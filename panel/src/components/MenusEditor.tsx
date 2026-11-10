@@ -16,6 +16,7 @@
  * tabla. Sin alias, lo único que mantiene alineados a Shopify, al sitio y al
  * panel es enterarse cuando dejan de estarlo. Ver src/lib/menus.ts.
  */
+import BotonGuardar from './BotonGuardar';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
@@ -144,10 +145,8 @@ export default function MenusEditor() {
   };
 
   const botonGuardar = (
-    <button onClick={() => guardar(menus)} disabled={guardando || !sucio}
-      className="boton boton-relleno min-h-[44px] px-5">
-      {guardando ? 'Guardando…' : 'Guardar cambios'}
-    </button>
+    <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => guardar(menus)}
+      texto="Guardar cambios" />
   );
 
   return (

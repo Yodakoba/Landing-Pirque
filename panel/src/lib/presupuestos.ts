@@ -604,17 +604,28 @@ export function posiblesPorDia(
     porPresupuesto.get(k)!.push(l);
   }
 
-  const salida = new Map<Fecha, Posibles>();
+  // **Las alternativas de un mismo cliente no se suman** (2026-11-10): A y
+  // B son dos versiones de la misma gente, así que de cada grupo cuenta
+  // una sola, la de más personas, como un solo presupuesto. Sumarlas
+  // mostraba 80 posibles donde hay 40.
+  const porGrupo = new Map<string, { fecha: Fecha; personas: number; total: number }>();
   for (const p of presupuestos) {
     if (!cuentaComoPosible(p, hoy)) continue;
     // Sin día exacto no ocupa ninguna fecha: va en su lista aparte.
     if (!esFecha(p.fecha)) continue;
     const suyas = porPresupuesto.get(p.id) ?? [];
-    const antes = salida.get(p.fecha) ?? { ...SIN_POSIBLES };
-    salida.set(p.fecha, {
+    const clave = `${p.fecha}|${p.grupo || p.id}`;
+    const esta = { fecha: p.fecha, personas: gentePosible(p, suyas), total: totalDe(suyas, p.descuento) };
+    const antes = porGrupo.get(clave);
+    if (!antes || esta.personas > antes.personas) porGrupo.set(clave, esta);
+  }
+  const salida = new Map<Fecha, Posibles>();
+  for (const g of porGrupo.values()) {
+    const antes = salida.get(g.fecha) ?? { ...SIN_POSIBLES };
+    salida.set(g.fecha, {
       presupuestos: antes.presupuestos + 1,
-      personas: antes.personas + gentePosible(p, suyas),
-      total: antes.total + totalDe(suyas, p.descuento)
+      personas: antes.personas + g.personas,
+      total: antes.total + g.total
     });
   }
   return salida;

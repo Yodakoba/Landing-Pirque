@@ -19,19 +19,21 @@
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
 import { useEffect, useMemo, useState } from 'react';
+import BotonGuardar from './BotonGuardar';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  DOCUMENTO, documentoDe, numeroONulo, type Documento, type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, numeroONulo, totalDe, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
+  alternativasDe, letraDe, grupoDe,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
-import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
+import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, COBRO, type Menu } from '@/lib/menus';
 import {
   condicionesDe, estadoCobros, montoCobro, type Cobro
 } from '@/lib/cobros';
@@ -54,6 +56,8 @@ export interface DatosCotizar {
   clientes: Cliente[];
   fechas: { fecha: string; estado: string; capacidad: number }[];
   descuentos: number[];
+  /** Las líneas de todas las cotizaciones, para el total de cada alternativa. */
+  lineas?: LineaPresupuesto[];
   /** Las condiciones de pago por defecto, de Configuración. */
   condiciones?: { anticipoPct: number; saldoDias: number };
   hoy: string;
@@ -92,8 +96,18 @@ function Elegir({ opciones, valor, onElegir, etiqueta }: {
 }
 
 export default function CotizacionDialogo({
-  presupuesto, lineasIniciales, fechaInicial, clienteInicial, datos, onCambio, onCerrar
+  presupuesto, lineasIniciales, fechaInicial, clienteInicial, datos, onCambio, onCerrar,
+  pasoInicial, onAbrir, alternativas = []
 }: {
+  /** En qué paso abrir. Por defecto, Productos si ya existe. */
+  pasoInicial?: number;
+  /**
+   * Abrir otra cotización en esta misma ventana: una alternativa, o la que
+   * se acaba de crear. La pantalla recarga y la abre ya guardada.
+   */
+  onAbrir?: (id: string, paso?: number) => void;
+  /** Las alternativas del grupo de esta cotización, ella incluida. */
+  alternativas?: Presupuesto[];
   /** Para una nueva desde la ficha de un cliente. */
   clienteInicial?: string;
   /** null es una cotización nueva. */
@@ -108,7 +122,7 @@ export default function CotizacionDialogo({
 }) {
   const p = presupuesto;
   const [clientes, setClientes] = useState<Cliente[]>(datos.clientes);
-  const [paso, setPaso] = useState(p ? 3 : clienteInicial ? 2 : 1);
+  const [paso, setPaso] = useState(pasoInicial ?? (p ? 3 : clienteInicial ? 2 : 1));
   const [idCliente, setIdCliente] = useState(p?.idCliente ?? clienteInicial ?? '');
   const [fecha, setFecha] = useState(p ? p.fecha : (fechaInicial ?? ''));
   const [sinFecha, setSinFecha] = useState(p ? !p.fecha && !!p.periodo : false);
@@ -195,6 +209,21 @@ export default function CotizacionDialogo({
     { anticipo: numeroONulo(anticipoTxt, 100), saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
     cuentas.total, datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
   const cobrado = estadoCobros({ anticipo: cond.anticipo, total: cuentas.total }, cobros);
+
+  /**
+   * **Si hay algo sin guardar** (2026-11-10): una firma de todo lo que se
+   * manda al guardar, comparada contra la de la última vez que se guardó.
+   * Con eso el botón dice *Guardar* en dorado o *✓ Guardado* en gris
+   * (`BotonGuardar`). Una cotización nueva siempre tiene algo sin guardar.
+   */
+  const firma = JSON.stringify({
+    idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
+    descuento, motivo, documento, anticipoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
+    fact: documento === DOCUMENTO.factura ? facturacion : null
+  });
+  const [guardada, setGuardada] = useState<string | null>(null);
+  useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const sucio = !p || (guardada !== null && firma !== guardada);
   const cotizables = paraCotizar(datos.menus);
   const show = showDe(datos.menus);
   const encontrados = useMemo(
@@ -267,6 +296,8 @@ export default function CotizacionDialogo({
       if (d.error) { setError(d.error); return ''; }
       avisar(p ? 'Cotización guardada' : (cuerpo.estado === ESTADO_PRESUPUESTO.candidato
         ? 'Candidato anotado' : 'Cotización creada'));
+      if (estadoForzado) setEstado(estadoForzado);
+      setGuardada(JSON.stringify({ ...JSON.parse(firma), estado: estadoForzado ?? estado }));
       onCambio();
       return p?.id ?? d.presupuesto?.id ?? '';
     } finally { setGuardando(false); }
@@ -291,16 +322,43 @@ export default function CotizacionDialogo({
     } finally { setGuardando(false); }
   }
 
+  /**
+   * **Pasar de Evento a Productos guarda solo** (2026-11-10, lo pidió el
+   * cliente). Con cliente y fecha (o periodo) ya hay una cotización: un
+   * candidato pasa a **Borrador** y queda guardado, y una nueva se crea —
+   * desde ahí ya se le pueden anotar pagos y subir comprobantes. La ventana
+   * se reabre sobre la cotización guardada, en el paso pedido.
+   */
+  async function irA(n: number) {
+    if (n <= 2 || paso >= 3) return setPaso(n);
+    const nuevoEstado = estado === ESTADO_PRESUPUESTO.candidato ? ESTADO_PRESUPUESTO.borrador : undefined;
+    if (!p || sucio || nuevoEstado) {
+      const id = await guardar(nuevoEstado);
+      if (!id) return;
+      if (!p) { onAbrir?.(id, n); return; }
+    }
+    setPaso(n);
+  }
+
+  /** Abre otra alternativa del grupo; avisa si queda algo sin guardar. */
+  function abrirAlternativa(id: string) {
+    if (sucio && !confirm('Hay cambios sin guardar en esta alternativa. ¿Salir igual?')) return;
+    onAbrir?.(id, paso);
+  }
+
   async function duplicar() {
     if (!p) return;
+    // Lo escrito va también en la copia: primero se guarda.
+    if (sucio && !(await guardar())) return;
     const r = await fetch('/api/presupuestos', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ duplicarDe: p.id })
     });
     const d = await r.json();
     if (d.error) return setError(d.error);
-    avisar(`Alternativa creada: N° ${folioDe(d.presupuesto)}`);
-    onCambio(); onCerrar();
+    avisar('Alternativa creada: ajústala acá mismo');
+    onCambio();
+    if (onAbrir) onAbrir(d.presupuesto.id, 3); else onCerrar();
   }
 
   /** Anota un cobro. Lo comprueba el servidor: el vendedor, solo los suyos. */
@@ -380,8 +438,12 @@ export default function CotizacionDialogo({
         `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`)
     : '';
 
+  // Un número por cotización —el del grupo— y una letra por alternativa.
+  const alts = p ? alternativasDe(p, alternativas) : [];
+  const letra = p ? letraDe(p, alternativas) : '';
   const titulo = p
-    ? `${estadoVisible(p, datos.hoy) === ESTADO_PRESUPUESTO.candidato ? 'Candidato' : 'Cotización'} N° ${folioDe(p)}`
+    ? `${estadoVisible(p, datos.hoy) === ESTADO_PRESUPUESTO.candidato ? 'Candidato' : 'Cotización'}`
+      + ` N° ${folioDe({ id: grupoDe(p) })}${letra ? ` · Alternativa ${letra}` : ''}`
     : 'Nueva cotización';
 
   return (
@@ -389,7 +451,7 @@ export default function CotizacionDialogo({
       {/* Los cuatro pasos, como botones: se ve dónde se está y se puede saltar. */}
       <nav aria-label="Pasos" className="mb-4 grid grid-cols-4 gap-1.5">
         {PASOS.map((nombre, i) => (
-          <button key={nombre} type="button" onClick={() => setPaso(i + 1)}
+          <button key={nombre} type="button" onClick={() => void irA(i + 1)}
             aria-current={paso === i + 1 ? 'step' : undefined}
             className={`tecla flex min-h-[48px] flex-col items-center justify-center rounded
                         border px-1 text-[13px] font-semibold ${paso === i + 1
@@ -399,6 +461,31 @@ export default function CotizacionDialogo({
           </button>
         ))}
       </nav>
+
+      {/* **Las alternativas, dentro de la cotización** (2026-11-10): una
+          pestaña por alternativa y *+ Otra alternativa*, en vez de dos
+          cotizaciones sueltas con dos números. */}
+      {p && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {alts.length > 1 && (
+            <span className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">Alternativas</span>
+          )}
+          {alts.length > 1 && alts.map((a, i) => (
+            <button key={a.id} type="button" aria-pressed={a.id === p.id}
+              onClick={() => a.id !== p.id && abrirAlternativa(a.id)}
+              className={`boton min-h-[44px] min-w-[44px] ${a.id === p.id ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
+              {String.fromCharCode(65 + i)}
+              <span className="text-[13px] font-normal text-hueso/70">
+                {enPesos(totalDe(lineasDe(datos.lineas ?? [], a.id), a.descuento))}
+              </span>
+            </button>
+          ))}
+          {puedeEditar && !ganada && (
+            <button type="button" disabled={guardando} onClick={() => void duplicar()}
+              className="boton min-h-[44px]">+ Otra alternativa</button>
+          )}
+        </div>
+      )}
 
       {/* Para quién es, a la vista en los cuatro pasos. */}
       {cliente && paso !== 1 && (
@@ -588,7 +675,7 @@ export default function CotizacionDialogo({
                 </button>
               )}
               <button type="button" className="boton boton-relleno min-h-[44px]"
-                onClick={() => setPaso(3)}>Seguir: productos →</button>
+                onClick={() => void irA(3)}>Seguir: productos →</button>
             </div>
           </div>
         )}
@@ -718,7 +805,10 @@ export default function CotizacionDialogo({
                               ))}
                             </div>
                           </div>
-                          {prod?.tipo !== TIPO_PRODUCTO.menu && (
+                          {/* Solo lo que se cobra por persona y no es un menú —la
+                              once, el desayuno— puede seguir a los invitados. El
+                              show o el arriendo son uno, no uno por invitado. */}
+                          {prod && prod.tipo !== TIPO_PRODUCTO.menu && prod.cobro === COBRO.porPersona && (
                           <button type="button" onClick={() => cambiarLinea(i, { sigue: !l.sigue })}
                             className={`boton min-h-[40px] ${l.sigue ? 'border-oro bg-oro/15' : ''}`}>
                             {l.sigue ? '✓ Sigue a los invitados' : 'Seguir a los invitados'}
@@ -801,8 +891,11 @@ export default function CotizacionDialogo({
               </dl>
             </div>
 
-            <div className="flex justify-end">
-              <button type="button" className="boton boton-relleno min-h-[44px]"
+            <div className="flex flex-wrap justify-end gap-2">
+              {p && puedeEditar && (
+                <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
+              )}
+              <button type="button" className="boton min-h-[44px]"
                 onClick={() => setPaso(4)}>Seguir: enviar →</button>
             </div>
           </div>
@@ -1043,10 +1136,7 @@ export default function CotizacionDialogo({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button type="button" disabled={guardando} className="boton boton-relleno min-h-[48px] px-5"
-                onClick={() => void guardar()}>
-                {guardando ? 'Guardando…' : 'Guardar'}
-              </button>
+              <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
               {p && !ganada && esFecha(fechaReal) && (
                 <button type="button" disabled={guardando || !cobrado.anticipoListo}
                   title={cobrado.anticipoListo ? '' : 'Falta el anticipo'}
@@ -1082,9 +1172,6 @@ export default function CotizacionDialogo({
                     Ver el documento
                   </a>
                 )}
-                <button type="button" className="boton min-h-[44px]" onClick={() => void duplicar()}>
-                  Hacer una alternativa
-                </button>
                 {!ganada && (
                   <button type="button" onClick={() => void borrar()}
                     className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto">

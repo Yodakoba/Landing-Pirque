@@ -181,6 +181,38 @@ export function conCliente<T extends Presupuesto>(p: T, clientes: Cliente[]): T 
 export const grupoDe = (p: Pick<Presupuesto, 'id' | 'grupo'>) => p.grupo || p.id;
 
 /**
+ * **Las alternativas de una cotización viven dentro de ella** (2026-11-10,
+ * lo pidió el cliente: *"hay que quedarse en el mundo interno de esta
+ * cotización, y ahí dentro veo las dos alternativas"*). Por dentro siguen
+ * siendo filas aparte de `Presupuestos` con el mismo `Grupo`; lo que cambia
+ * es cómo se muestran: **un número de cotización y una letra por
+ * alternativa**, no dos números sueltos.
+ */
+export function alternativasDe<T extends Pick<Presupuesto, 'id' | 'grupo'>>(p: T, lista: T[]): T[] {
+  const g = grupoDe(p);
+  const del = lista.filter((x) => grupoDe(x) === g);
+  if (!del.some((x) => x.id === p.id)) del.push(p);
+  // En el orden en que se crearon: el id lleva la hora.
+  return del.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** La letra de una alternativa (A, B, C…), o vacío si es la única. */
+export function letraDe<T extends Pick<Presupuesto, 'id' | 'grupo'>>(p: T, lista: T[]): string {
+  const alts = alternativasDe(p, lista);
+  if (alts.length < 2) return '';
+  return String.fromCharCode(65 + alts.findIndex((x) => x.id === p.id));
+}
+
+/**
+ * La que representa al grupo en las listas y el calendario: la ganada si
+ * hay, si no la primera que sigue abierta, si no la primera. Así una
+ * cotización con dos alternativas es **una** tarjeta, no dos.
+ */
+export function principalDe<T extends Presupuesto>(alts: T[], abierta: (p: T) => boolean): T {
+  return alts.find((x) => !!x.idReserva) ?? alts.find(abierta) ?? alts[0];
+}
+
+/**
  * Las otras alternativas del mismo grupo que hay que marcar *No elegida*
  * cuando una gana. Las que ya están cerradas —perdidas, o con su propia
  * reserva— no se tocan.
