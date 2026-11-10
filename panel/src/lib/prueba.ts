@@ -23,6 +23,7 @@ import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto, cambiarCantidad,
+         alternativasDe, letraDe, principalDe,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
@@ -3866,6 +3867,25 @@ console.log('\nCotizaciones, fase 2');
   const leido = leerCobrosDe([vieja, ['COB-1', 'PRE-1', '2026-11-10', 'Anticipo', '30000']])[0];
   ok(leido.comprobante === '' && leido.revisadoPor === '',
      'un cobro de antes de los comprobantes se lee sin comprobante y sin revisar');
+}
+
+/* ---------- alternativas dentro de la cotización (2026-11-10) ---------- */
+{
+  const encP = ENCABEZADO_PRESUPUESTOS;
+  const base = leerPresupuestosDe([encP, ['PRE-100', '2026-12-05']])[0];
+  const a = { ...base, id: 'PRE-100', grupo: 'PRE-100', invitados: 40 };
+  const b = { ...base, id: 'PRE-200', grupo: 'PRE-100', invitados: 50 };
+  const sola = { ...base, id: 'PRE-300', grupo: '', invitados: 10 };
+  const lista = [b, sola, a];
+  ok(alternativasDe(b, lista).map((x) => x.id).join() === 'PRE-100,PRE-200',
+     'las alternativas de un grupo, en el orden en que se crearon');
+  ok(letraDe(a, lista) === 'A' && letraDe(b, lista) === 'B' && letraDe(sola, lista) === '',
+     'cada alternativa tiene su letra; una cotización sola no lleva');
+  ok(principalDe([a, { ...b, idReserva: 'R1' }], () => true).id === 'PRE-200',
+     'la ganada representa al grupo en las listas');
+  const pos = posiblesPorDia(lista, [], '2026-11-10');
+  ok(pos.get('2026-12-05')?.presupuestos === 2 && pos.get('2026-12-05')?.personas === 60,
+     'dos alternativas del mismo cliente cuentan como una cotización y su gente no se suma (50 + 10, no 100)');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

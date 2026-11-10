@@ -2052,6 +2052,53 @@ cotizan en pesos al valor del día. `lib/uf.ts` lee las respuestas y
 No hay aviso de "anticipo vencido": el anticipo no tiene plazo propio,
 porque es lo que permite ganar.
 
+### Alternativas, guardado y paso a borrador (2026-11-10)
+
+Lo pidió el cliente probando la ventana de cotizar.
+
+- **Las alternativas viven dentro de la cotización.** Por dentro siguen
+  siendo filas de `Presupuestos` con el mismo `Grupo`; lo que cambió es cómo
+  se ven: **un número por cotización —el del grupo— y una letra por
+  alternativa** (*Cotización N° 1002 · Alternativa B*, `letraDe()`). En la
+  ventana hay una pestaña por alternativa, con su total, y *+ Otra
+  alternativa*, que guarda lo escrito, crea la copia y la abre ahí mismo.
+  En el calendario y las listas un grupo es **una** tarjeta, con la pastilla
+  *N alternativas* (`alternativasDe()`, `principalDe()`). La hoja del
+  cliente dice la letra.
+- **Las alternativas no suman gente dos veces**: `posiblesPorDia()` cuenta
+  de cada grupo una sola, la de más personas. Antes 40 invitados con dos
+  alternativas eran 80 posibles.
+- **Pasar de Evento a Productos guarda solo** (`irA()`): un candidato pasa
+  a *Borrador*, y una cotización nueva se crea. La ventana se reabre sobre
+  la cotización ya guardada, así que desde ahí se pueden anotar pagos y
+  subir comprobantes. Antes, una cotización recién creada seguía tratándose
+  como nueva en la misma ventana y no ofrecía pagos.
+- **"Seguir a los invitados" solo aparece en lo que se cobra por persona y
+  no es menú** (la once, el desayuno). El show o el arriendo, no.
+
+### El botón de guardar es uno para todo el panel (2026-11-10)
+
+Regla del cliente: *"cuando un botón ya se guardó, que me indique… y cuando
+no hay nada para guardar, que esté en gris"*. `BotonGuardar.tsx`: dorado
+*Guardar* con cambios, *Guardando…* mientras guarda, **gris *✓ Guardado***
+sin nada pendiente. Lo usan la ventana de cotizar (que compara una firma
+de lo escrito contra lo último guardado), Productos, Equipo, Extras,
+Cuentas y Clientes. **Todo botón de guardar nuevo va con este
+componente.** Lo que se guarda solo sigue con `AvisoGuardado`.
+
+**Una cotización ya creada se guarda sola** (2026-11-10, lo pidió el
+cliente: ahorrar el *Guardar* donde se pueda). Es la regla de siempre —se
+guarda solo lo que es un valor sobre algo que ya existe— y una cotización
+creada lo es: cantidades, precios, descuentos, documento, condiciones.
+`usarAutoguardado` con 1,2 s de espera; al cerrar la ventana o cambiar de
+alternativa manda lo pendiente. El botón queda igual, en gris *✓ Guardado*
+casi siempre. **Siguen con botón, a propósito**: una cotización **ganada**
+(guardarla reescribe su reserva, y en un día cerrado es una corrección con
+motivo), y las fichas de Productos, Equipo, Extras, Clientes y Cuentas (el
+nombre es la identidad de la fila, y en las fichas el cliente pidió ver
+*"Cambiaste teléfono"* antes de guardar). Comprobado: apretar **+** en una
+cantidad manda un solo guardado y el botón vuelve a *✓ Guardado*.
+
 ### Condiciones de pago y cobros al cliente (2026-11-10)
 
 **Un solo lugar dice cuánto es el anticipo y cuándo vence el saldo**:

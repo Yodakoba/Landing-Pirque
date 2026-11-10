@@ -14,6 +14,7 @@
  * se edita es la identidad de alguien (ver "Lo que es un valor se guarda
  * solo" en CLAUDE.md).
  */
+import BotonGuardar from './BotonGuardar';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
@@ -377,16 +378,12 @@ export default function ClientesEditor() {
                     {aviso && <p className="mt-3 text-[15px] text-rojo-texto">{aviso}</p>}
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       {cambios.length > 0 && (
-                        <>
-                          <span className="text-[14px] text-hueso/70">
-                            Cambiaste {cambios.map((k) => NOMBRE_CAMPO[k]).join(', ')}.
-                          </span>
-                          <button onClick={() => void guardar(c)} disabled={guardando}
-                            className="boton boton-relleno min-h-[44px] px-5">
-                            {guardando ? 'Guardando…' : 'Guardar cambios'}
-                          </button>
-                        </>
+                        <span className="text-[14px] text-hueso/70">
+                          Cambiaste {cambios.map((k) => NOMBRE_CAMPO[k]).join(', ')}.
+                        </span>
                       )}
+                      <BotonGuardar sucio={cambios.length > 0} guardando={guardando}
+                        onClick={() => void guardar(c)} texto="Guardar cambios" />
                       <span className="flex-1" />
                       <span className="text-[13px] text-hueso/60">
                         {c.id}{c.creadoPor && <> · creada por {c.creadoPor}</>}

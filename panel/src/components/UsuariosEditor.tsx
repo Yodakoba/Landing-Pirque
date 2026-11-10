@@ -11,6 +11,7 @@
  * un capricho de la interfaz: separadas, guardar un cambio de nombre no
  * puede dejar a alguien sin poder entrar.
  */
+import BotonGuardar from './BotonGuardar';
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
@@ -194,10 +195,7 @@ export default function UsuariosEditor() {
         </button>
         <span className="flex-1" />
         {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
-        <button onClick={guardar} disabled={guardando || !sucio}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta disabled:opacity-40">
-          {guardando ? 'Guardando…' : 'Guardar'}
-        </button>
+        <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} />
       </div>
 
       <p className="mt-6 max-w-2xl text-xs text-hueso/50">

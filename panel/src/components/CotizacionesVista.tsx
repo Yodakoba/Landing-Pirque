@@ -28,6 +28,7 @@ import {
 import { normalizar, estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { semanaDe, sumarDias, diaSemana, rangoEnPalabras, enPalabras, esFecha } from '@/lib/fechas';
 import { enPesos } from '@/lib/ocupacion';
+import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
 import { avisosDeCobro, porRevisar } from '@/lib/cobros';
 import { puede, type Rol } from '@/lib/auth';
 
@@ -80,7 +81,13 @@ export default function CotizacionesVista() {
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   /** La ventana: una cotización existente, o una nueva (con fecha opcional). */
   const [abierta, setAbierta] = useState<
-    { p: Presupuesto | null; fecha?: string; cliente?: string } | null>(null);
+    { p: Presupuesto | null; fecha?: string; cliente?: string; paso?: number } | null>(null);
+  /**
+   * Una cotización que hay que abrir apenas llegue la lista recargada: la
+   * recién creada, o la alternativa elegida. Se abre ya guardada, así que
+   * tiene pagos, comprobantes y su link.
+   */
+  const [pendiente, setPendiente] = useState<{ id: string; paso?: number } | null>(null);
 
   const cargar = () => fetch('/api/presupuestos').then((r) => r.json()).then((d) => {
     if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
@@ -102,6 +109,12 @@ export default function CotizacionesVista() {
     if (p || cliente) window.history.replaceState(null, '', '/presupuestos');
   }, [datos]);
 
+  useEffect(() => {
+    if (!datos || !pendiente) return;
+    const p = datos.presupuestos.find((x) => x.id === pendiente.id);
+    if (p) { setAbierta({ p, paso: pendiente.paso }); setPendiente(null); }
+  }, [datos, pendiente]);
+
   const porDia = useMemo(() => {
     const m = new Map<string, Presupuesto[]>();
     for (const p of datos?.presupuestos ?? []) {
@@ -121,6 +134,22 @@ export default function CotizacionesVista() {
   const estadoDelDia = new Map(datos.fechas.map((f) => [f.fecha, f.estado]));
   const total = (p: Presupuesto) => totalDe(lineasDe(datos.lineas, p.id), p.descuento);
   const gente = (p: Presupuesto) => gentePosible(p, lineasDe(datos.lineas, p.id));
+  /**
+   * **Una cotización con alternativas es una sola en las listas**
+   * (2026-11-10): se muestra la que la representa (la ganada, o la primera
+   * abierta), y adentro se ven todas.
+   */
+  const agrupar = (lista: Presupuesto[]) => {
+    const vistos = new Set<string>();
+    const salida: Presupuesto[] = [];
+    for (const p of lista) {
+      const g = grupoDe(p);
+      if (vistos.has(g)) continue;
+      vistos.add(g);
+      salida.push(principalDe(alternativasDe(p, lista), (x) => cuentaComoPosible(x, hoy)));
+    }
+    return salida;
+  };
 
   const pasaFiltro = (p: Presupuesto) => {
     const e = estadoDe(p);
@@ -171,7 +200,12 @@ export default function CotizacionesVista() {
           {gente(p) > 0 && <>{gente(p)} pers. · </>}
           <strong className="text-hueso">{enPesos(total(p))}</strong>
         </span>
-        <span className="text-[13px] text-hueso/55">N° {folioDe(p)}</span>
+        {alternativasDe(p, datos.presupuestos).length > 1 && (
+          <span className="rounded-full border border-hueso/30 px-2 py-0.5 text-[13px] font-semibold text-hueso/80">
+            {alternativasDe(p, datos.presupuestos).length} alternativas
+          </span>
+        )}
+        <span className="text-[13px] text-hueso/55">N° {folioDe({ id: grupoDe(p) })}</span>
       </button>
     </li>
   );
@@ -186,7 +220,7 @@ export default function CotizacionesVista() {
   }).filter((c) => c.dias.length > 0);
 
   const tarjeta = (f: string) => {
-    const delDia = porDia.get(f) ?? [];
+    const delDia = agrupar(porDia.get(f) ?? []);
     const vivas = delDia.filter((p) => cuentaComoPosible(p, hoy));
     const candidatos = vivas.filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.candidato).length;
     const activas = vivas.length - candidatos;
@@ -258,7 +292,7 @@ export default function CotizacionesVista() {
         <span className="flex-1" />
         {([
           ['calendario', 'Calendario'],
-          ['sinFecha', `Sin fecha (${sinFecha.filter((p) => cuentaComoPosible(p, hoy)).length})`],
+          ['sinFecha', `Sin fecha (${agrupar(sinFecha).filter((p) => cuentaComoPosible(p, hoy)).length})`],
           ['todas', 'Todas']
         ] as const).map(([k, texto]) => (
           <button key={k} type="button" onClick={() => setVista(k)} aria-pressed={vista === k}
@@ -399,12 +433,12 @@ export default function CotizacionesVista() {
             <p className="rounded border border-dashed border-hueso/20 p-5 text-[15px] text-hueso/60">
               Ninguna sin fecha.
             </p>
-          ) : <ul className="space-y-2">{sinFecha.map((p) => fila(p))}</ul>}
+          ) : <ul className="space-y-2">{agrupar(sinFecha).map((p) => fila(p))}</ul>}
         </div>
       )}
 
       {vista === 'todas' && (() => {
-        const lista = datos.presupuestos.filter(pasaFiltro)
+        const lista = agrupar(datos.presupuestos).filter(pasaFiltro)
           .sort((a, b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
         return (
           <div>
@@ -442,6 +476,9 @@ export default function CotizacionesVista() {
           datos={datos}
           onCambio={() => void cargar()}
           onCerrar={() => setAbierta(null)}
+          pasoInicial={abierta.paso}
+          alternativas={abierta.p ? alternativasDe(abierta.p, datos.presupuestos) : []}
+          onAbrir={(id, paso) => { setAbierta(null); setPendiente({ id, paso }); void cargar(); }}
         />
       )}
     </section>

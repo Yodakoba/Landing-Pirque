@@ -14,6 +14,7 @@
  * comensal se atiende bien es dato del negocio, y un número inventado haría
  * que el panel diera consejos que nadie dio.
  */
+import BotonGuardar from './BotonGuardar';
 import MostrarDesactivados from './MostrarDesactivados';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
@@ -216,11 +217,7 @@ export default function EquipoEditor() {
   const botonGuardar = (
     <>
       {sucio && <span className="text-[13px] text-hueso/70">Hay cambios sin guardar.</span>}
-      <button onClick={guardar} disabled={guardando || !sucio}
-        className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                   disabled:opacity-40">
-        {guardando ? 'Guardando…' : 'Guardar'}
-      </button>
+      <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} />
     </>
   );
 
@@ -287,12 +284,7 @@ export default function EquipoEditor() {
             Cambiaste {dif.join(', ')}.
           </span>
         )}
-        <button onClick={guardar} disabled={guardando}
-          className="boton boton-relleno
-                     disabled:opacity-40"
-          title="Guarda los cambios de esta pantalla">
-          {guardando ? 'Guardando…' : 'Guardar cambios'}
-        </button>
+        <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} texto="Guardar cambios" />
       </>
     );
   };
@@ -949,11 +941,7 @@ export default function EquipoEditor() {
             {/* Guarda las dos listas, como siempre: es una sola petición y
                 un solo botón de guardar en toda la pantalla. */}
             {editarPuestos && (
-              <button onClick={guardar} disabled={guardando || !sucio}
-                className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                           disabled:opacity-40">
-                {guardando ? 'Guardando…' : 'Guardar'}
-              </button>
+              <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} />
             )}
           </div>
         </Dialogo>
