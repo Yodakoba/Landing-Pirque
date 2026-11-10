@@ -20,6 +20,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import BotonGuardar from './BotonGuardar';
+import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
@@ -224,6 +225,23 @@ export default function CotizacionDialogo({
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const sucio = !p || (guardada !== null && firma !== guardada);
+
+  /**
+   * **Una cotización ya creada se guarda sola** (2026-11-10, lo pidió el
+   * cliente: ahorrarle el *Guardar* donde se pueda). Es la regla del panel:
+   * lo que se edita acá son valores de algo que ya existe —cantidades,
+   * precios, descuentos, el documento, las condiciones—, igual que la
+   * ventana del día. Espera a que dejen de escribir, y al cerrar la ventana
+   * manda lo que quede.
+   *
+   * **Una ganada no**: guardarla reescribe su reserva, y en un día cerrado
+   * eso es una corrección con motivo. Ahí sigue el botón. El botón queda
+   * también en las demás, para quien quiera mandar ya: con todo guardado
+   * dice *✓ Guardado* en gris.
+   */
+  const auto = usarAutoguardado(firma, async () => {
+    if (!(await guardar(undefined, true))) return 'No se pudo guardar';
+  }, 1200, !!p && puedeEditar && !ganada);
   const cotizables = paraCotizar(datos.menus);
   const show = showDe(datos.menus);
   const encontrados = useMemo(
@@ -260,11 +278,14 @@ export default function CotizacionDialogo({
   }
 
   /** Guarda. Devuelve el id, o '' si falló. */
-  async function guardar(estadoForzado?: string): Promise<string> {
+  async function guardar(estadoForzado?: string, solo = false): Promise<string> {
     setError('');
-    if (!idCliente) { setPaso(1); setError('Elige o crea el cliente primero.'); return ''; }
+    // Guardando solo no se salta de paso: quien está escribiendo se queda
+    // donde está, y el error se lee abajo.
+    if (!idCliente) { if (!solo) setPaso(1); setError('Elige o crea el cliente primero.'); return ''; }
     if (!esFecha(fechaReal) && !periodo.trim()) {
-      setPaso(2); setError('Pon la fecha, o el periodo si todavía no hay día.'); return '';
+      if (!solo) setPaso(2);
+      setError('Pon la fecha, o el periodo si todavía no hay día.'); return '';
     }
     setGuardando(true);
     try {
@@ -294,8 +315,10 @@ export default function CotizacionDialogo({
       });
       const d = await r.json();
       if (d.error) { setError(d.error); return ''; }
-      avisar(p ? 'Cotización guardada' : (cuerpo.estado === ESTADO_PRESUPUESTO.candidato
-        ? 'Candidato anotado' : 'Cotización creada'));
+      if (!solo) {
+        avisar(p ? 'Cotización guardada' : (cuerpo.estado === ESTADO_PRESUPUESTO.candidato
+          ? 'Candidato anotado' : 'Cotización creada'));
+      }
       if (estadoForzado) setEstado(estadoForzado);
       setGuardada(JSON.stringify({ ...JSON.parse(firma), estado: estadoForzado ?? estado }));
       onCambio();
@@ -340,9 +363,10 @@ export default function CotizacionDialogo({
     setPaso(n);
   }
 
-  /** Abre otra alternativa del grupo; avisa si queda algo sin guardar. */
-  function abrirAlternativa(id: string) {
-    if (sucio && !confirm('Hay cambios sin guardar en esta alternativa. ¿Salir igual?')) return;
+  /** Abre otra alternativa del grupo; lo escrito en esta se guarda antes. */
+  async function abrirAlternativa(id: string) {
+    if (sucio && !ganada && !(await guardar())) return;
+    if (sucio && ganada && !confirm('Hay cambios sin guardar en esta alternativa. ¿Salir igual?')) return;
     onAbrir?.(id, paso);
   }
 
@@ -472,7 +496,7 @@ export default function CotizacionDialogo({
           )}
           {alts.length > 1 && alts.map((a, i) => (
             <button key={a.id} type="button" aria-pressed={a.id === p.id}
-              onClick={() => a.id !== p.id && abrirAlternativa(a.id)}
+              onClick={() => { if (a.id !== p.id) void abrirAlternativa(a.id); }}
               className={`boton min-h-[44px] min-w-[44px] ${a.id === p.id ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
               {String.fromCharCode(65 + i)}
               <span className="text-[13px] font-normal text-hueso/70">

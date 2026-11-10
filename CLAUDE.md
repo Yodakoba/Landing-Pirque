@@ -2086,6 +2086,19 @@ de lo escrito contra lo último guardado), Productos, Equipo, Extras,
 Cuentas y Clientes. **Todo botón de guardar nuevo va con este
 componente.** Lo que se guarda solo sigue con `AvisoGuardado`.
 
+**Una cotización ya creada se guarda sola** (2026-11-10, lo pidió el
+cliente: ahorrar el *Guardar* donde se pueda). Es la regla de siempre —se
+guarda solo lo que es un valor sobre algo que ya existe— y una cotización
+creada lo es: cantidades, precios, descuentos, documento, condiciones.
+`usarAutoguardado` con 1,2 s de espera; al cerrar la ventana o cambiar de
+alternativa manda lo pendiente. El botón queda igual, en gris *✓ Guardado*
+casi siempre. **Siguen con botón, a propósito**: una cotización **ganada**
+(guardarla reescribe su reserva, y en un día cerrado es una corrección con
+motivo), y las fichas de Productos, Equipo, Extras, Clientes y Cuentas (el
+nombre es la identidad de la fila, y en las fichas el cliente pidió ver
+*"Cambiaste teléfono"* antes de guardar). Comprobado: apretar **+** en una
+cantidad manda un solo guardado y el botón vuelve a *✓ Guardado*.
+
 ### Condiciones de pago y cobros al cliente (2026-11-10)
 
 **Un solo lugar dice cuánto es el anticipo y cuándo vence el saldo**:
