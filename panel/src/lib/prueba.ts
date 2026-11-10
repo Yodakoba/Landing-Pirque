@@ -24,7 +24,9 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
-import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO } from './presupuestos.ts';
+import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
+import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
+         montoCobro, cobrosDe, CONCEPTO_COBRO } from './cobros.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
@@ -2328,7 +2330,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '',
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null,
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3553,7 +3555,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '',
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null,
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3728,6 +3730,46 @@ console.log('\nCotizaciones, fase 2');
   ok(faltaParaFactura({ empresa: '', rut: '', giro: '', domicilio: '' }).length === 4,
      'y una ficha sin nada pide los cuatro');
   ok(limpiarCliente({ nombre: 'X', giro: '  Turismo ' }).giro === 'Turismo', 'el giro se limpia');
+}
+
+/* ---------- condiciones de pago y cobros (2026-11-10) ---------- */
+{
+  const cfg = { anticipoPct: 30, saldoDias: 3 };
+  const c = condicionesDe({ anticipo: null, saldoDias: null, fecha: '2026-12-05' }, 1000001, cfg);
+  ok(c.pct === 30 && c.anticipo === 300000 && c.anticipo + c.saldo === 1000001,
+     'en blanco rige Configuración, y anticipo + saldo suman el total al peso');
+  ok(c.saldoHasta === '2026-12-02', 'el saldo vence 3 días antes del evento');
+  const neg = condicionesDe({ anticipo: 20, saldoDias: 10, fecha: '2026-12-05' }, 100000, cfg);
+  ok(neg.anticipo === 20000 && neg.saldoHasta === '2026-11-25', 'lo negociado en la cotización manda');
+  const sin = condicionesDe({ anticipo: 0, saldoDias: null, fecha: '' }, 100000, cfg);
+  ok(sin.pct === 0 && sin.anticipo === 0 && sin.saldoHasta === '',
+     'un 0 es sin anticipo —no "en blanco"—, y sin día no hay fecha de saldo');
+  ok(numeroONulo('', 100) === null && numeroONulo('0', 100) === 0 && numeroONulo('150', 100) === 100
+     && numeroONulo('25%', 100) === 25, 'en blanco es nulo, un cero es cero y se acota');
+
+  const e0 = estadoCobros({ anticipo: 30000, total: 100000 }, []);
+  ok(!e0.anticipoListo && e0.faltaAnticipo === 30000 && e0.falta === 100000, 'sin cobros falta todo');
+  const e1 = estadoCobros({ anticipo: 30000, total: 100000 }, [{ monto: 10000 }, { monto: 20000 }]);
+  ok(e1.anticipoListo && !e1.completo && e1.falta === 70000, 'dos pagos parciales cubren el anticipo');
+  ok(estadoCobros({ anticipo: 30000, total: 100000 }, [{ monto: 100000 }]).completo,
+     'pagar todo de una también paga el anticipo');
+  ok(estadoCobros({ anticipo: 0, total: 100000 }, []).anticipoListo, 'sin anticipo se puede ganar sin cobros');
+  ok(!estadoCobros({ anticipo: 0, total: 0 }, []).completo, 'sin total no se da nada por pagado');
+  ok(!estadoCobros({ anticipo: 30000, total: 100000 }, [{ monto: 30000 }, { monto: -30000 }]).anticipoListo,
+     'una devolución en negativo descuenta');
+
+  ok(montoCobro('$30.000') === 30000 && montoCobro('−20.000') === -20000, 'el monto se entiende con puntos y signo');
+  const l = limpiarCobro({ monto: '50.000', concepto: 'inventado', fecha: 'ayer' }, '2026-11-10');
+  ok('cobro' in l && l.cobro.concepto === CONCEPTO_COBRO.otro && l.cobro.fecha === '2026-11-10'
+     && l.cobro.monto === 50000, 'un concepto inventado es Otro, y sin fecha es hoy');
+  ok('error' in limpiarCobro({ monto: '' }, '2026-11-10'), 'sin monto no es un cobro');
+  const cob = { id: 'COB-1', presupuesto: 'PRE-1', fecha: '2026-11-10', concepto: CONCEPTO_COBRO.anticipo,
+    monto: -5000, medio: 'transferencia', nota: '', registradoPor: 'vero', cuando: '' };
+  const vuelta = leerCobrosDe([ENCABEZADO_COBROS, filaCobro(ENCABEZADO_COBROS, cob),
+    filaCobro(ENCABEZADO_COBROS, { ...cob, id: 'COB-2', presupuesto: 'PRE-2' })]);
+  ok(vuelta.length === 2 && vuelta[0].monto === -5000 && vuelta[0].medio === 'transferencia',
+     'el cobro va y vuelve de la planilla, también en negativo');
+  ok(cobrosDe(vuelta, 'PRE-1').length === 1, 'cada cotización ve solo sus cobros');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

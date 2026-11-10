@@ -104,7 +104,14 @@ export const COL_PRESUPUESTOS = {
    * factura. **En blanco es "por definir"**, y así quedan las de antes: no
    * se inventa un valor. Por ahora no cambia el precio.
    */
-  documento: 'Documento'
+  documento: 'Documento',
+  /**
+   * Las condiciones de pago de esta cotización, si se negociaron otras
+   * (2026-11-10). **En blanco rige Configuración**; un 0 en el anticipo es
+   * *sin anticipo*, que es distinto de en blanco. Ver `condicionesDe()`.
+   */
+  anticipo: 'Anticipo %',
+  saldoDias: 'Saldo días antes'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -236,7 +243,24 @@ export interface Presupuesto {
   motivo: string;
   /** `''` es por definir. Ver `DOCUMENTO`. */
   documento: Documento;
+  /** El anticipo en %, o `null` si rige Configuración. 0 es sin anticipo. */
+  anticipo: number | null;
+  /** Días antes del evento para el saldo, o `null` si rige Configuración. */
+  saldoDias: number | null;
   fila: number;
+}
+
+/**
+ * Un número que puede faltar: en blanco o ilegible es `null` —rige
+ * Configuración—, y un número se acota entre 0 y `max`. **Un 0 escrito es
+ * 0**, no "en blanco": es *sin anticipo*.
+ */
+export function numeroONulo(v: unknown, max: number): number | null {
+  const t = String(v ?? '').trim().replace(',', '.').replace('%', '');
+  if (!t) return null;
+  const n = Number(t);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(max, Math.max(0, Math.round(n)));
 }
 
 /** Los documentos con que se puede vender. Vacío es *por definir*. */
@@ -731,6 +755,8 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       descuento: Math.min(100, Math.max(0, aEntero(en(f, i.descuento)))),
       motivo: en(f, i.motivo).trim(),
       documento: documentoDe(en(f, i.documento)),
+      anticipo: numeroONulo(en(f, i.anticipo), 100),
+      saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -776,6 +802,8 @@ export function filaPresupuesto(
   poner(i.descuento, p.descuento ? String(p.descuento) : '');
   poner(i.motivo, p.motivo);
   poner(i.documento, p.documento);
+  poner(i.anticipo, p.anticipo === null ? '' : String(p.anticipo));
+  poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   return fila;
 }
 

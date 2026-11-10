@@ -7,7 +7,7 @@ import {
 } from '@/lib/datos';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, aEntero, folioDe, estadoNormal, lineasDe,
-  documentoDe, type Presupuesto, type LineaEntrante
+  documentoDe, numeroONulo, type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe
@@ -45,6 +45,7 @@ export async function GET(req: Request) {
       fechas: fechas.map((f) => ({ fecha: f.fecha, estado: f.estado, capacidad: f.capacidad })),
       vigencia: cfg.vigenciaPresupuesto,
       descuentos: cfg.descuentos,
+      condiciones: { anticipoPct: cfg.anticipoPct, saldoDias: cfg.saldoDias },
       hoy: hoy(),
       usuario: quien.usuario,
       rol: quien.rol
@@ -173,6 +174,8 @@ export async function POST(req: Request) {
       descuento: pct(cuerpo.descuento),
       motivo: '',
       documento: documentoDe(cuerpo.documento),
+      anticipo: numeroONulo(cuerpo.anticipo, 100),
+      saldoDias: numeroONulo(cuerpo.saldoDias, 365),
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
@@ -275,6 +278,10 @@ export async function PATCH(req: Request) {
       descuento: cuerpo.descuento === undefined ? previo.descuento : pct(cuerpo.descuento),
       motivo: texto('motivo', previo.motivo),
       documento: cuerpo.documento === undefined ? previo.documento : documentoDe(cuerpo.documento),
+      anticipo: cuerpo.anticipo === undefined
+        ? previo.anticipo : numeroONulo(cuerpo.anticipo, 100),
+      saldoDias: cuerpo.saldoDias === undefined
+        ? previo.saldoDias : numeroONulo(cuerpo.saldoDias, 365),
       notas: texto('notas', previo.notas),
       // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
       // línea no puede correrle el plazo al cliente.

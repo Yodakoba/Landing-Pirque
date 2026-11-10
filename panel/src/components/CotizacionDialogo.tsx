@@ -25,13 +25,16 @@ import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  DOCUMENTO, documentoDe, type Documento, type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, numeroONulo, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
+import {
+  condicionesDe, estadoCobros, montoCobro, type Cobro
+} from '@/lib/cobros';
 import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { enPesos } from '@/lib/ocupacion';
@@ -50,6 +53,8 @@ export interface DatosCotizar {
   clientes: Cliente[];
   fechas: { fecha: string; estado: string; capacidad: number }[];
   descuentos: number[];
+  /** Las condiciones de pago por defecto, de Configuración. */
+  condiciones?: { anticipoPct: number; saldoDias: number };
   hoy: string;
   usuario: string;
   rol: string;
@@ -123,6 +128,21 @@ export default function CotizacionDialogo({
    * nuevo la próxima vez. Nacen con lo que la ficha ya tenga.
    */
   const fichaInicial = datos.clientes.find((c) => c.id === (p?.idCliente ?? clienteInicial));
+  /**
+   * Las condiciones de pago de esta cotización, como se escriben: **en
+   * blanco rige Configuración**, y "0" en el anticipo es sin anticipo.
+   */
+  const [anticipoTxt, setAnticipoTxt] = useState(p?.anticipo == null ? '' : String(p.anticipo));
+  const [saldoTxt, setSaldoTxt] = useState(p?.saldoDias == null ? '' : String(p.saldoDias));
+  /** Los cobros al cliente. Solo existen para una cotización ya guardada. */
+  const [cobros, setCobros] = useState<Cobro[]>([]);
+  const [medio, setMedio] = useState('');
+  const [otroMonto, setOtroMonto] = useState<null | { monto: string; concepto: string }>(null);
+  useEffect(() => {
+    if (!p) return;
+    fetch(`/api/presupuestos/cobros?id=${encodeURIComponent(p.id)}`).then((r) => r.json())
+      .then((d) => d.cobros && setCobros(d.cobros)).catch(() => {});
+  }, [p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [facturacion, setFacturacion] = useState({
     empresa: fichaInicial?.empresa ?? '', rut: fichaInicial?.rut ?? '',
     giro: fichaInicial?.giro ?? '', domicilio: fichaInicial?.domicilio ?? ''
@@ -151,6 +171,10 @@ export default function CotizacionDialogo({
     () => prepararLineas(lineas, datos.menus, invitados, publico),
     [lineas, datos.menus, invitados, publico]);
   const cuentas = cuentasDe(vistas, descuento);
+  const cond = condicionesDe(
+    { anticipo: numeroONulo(anticipoTxt, 100), saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
+    cuentas.total, datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
+  const cobrado = estadoCobros({ anticipo: cond.anticipo, total: cuentas.total }, cobros);
   const cotizables = paraCotizar(datos.menus);
   const show = showDe(datos.menus);
   const encontrados = useMemo(
@@ -209,6 +233,7 @@ export default function CotizacionDialogo({
       const cuerpo = {
         id: p?.id, idCliente, fecha: fechaReal, periodo: sinFecha ? periodo : '',
         invitados, tipoEvento, notas, descuento, motivo, documento,
+        anticipo: anticipoTxt, saldoDias: saldoTxt,
         estado: estadoForzado ?? estado,
         lineas: vistas
       };
@@ -254,6 +279,35 @@ export default function CotizacionDialogo({
     if (d.error) return setError(d.error);
     avisar(`Alternativa creada: N° ${folioDe(d.presupuesto)}`);
     onCambio(); onCerrar();
+  }
+
+  /** Anota un cobro. Lo comprueba el servidor: el vendedor, solo los suyos. */
+  async function cobrar(monto: number, concepto: string) {
+    if (!p || !monto) return;
+    setGuardando(true); setError('');
+    try {
+      const r = await fetch('/api/presupuestos/cobros', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ presupuesto: p.id, monto, concepto, medio })
+      });
+      const d = await r.json();
+      if (d.error) return setError(d.error);
+      setCobros(d.cobros); setOtroMonto(null);
+      avisar(`${concepto} anotado: ${enPesos(monto)}`);
+      onCambio();
+    } finally { setGuardando(false); }
+  }
+
+  async function deshacerCobro(c: Cobro) {
+    if (!confirm(`¿Deshacer el cobro de ${enPesos(c.monto)}? Es para uno anotado por error: `
+      + 'se borra. Si de verdad se devolvió plata, anota un cobro en negativo.')) return;
+    const r = await fetch('/api/presupuestos/cobros', {
+      method: 'DELETE', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: c.id })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    setCobros(d.cobros); avisar('Cobro deshecho'); onCambio();
   }
 
   async function borrar() {
@@ -718,18 +772,146 @@ export default function CotizacionDialogo({
               )}
             </div>
 
+
+            {/* **Las condiciones de pago** (2026-11-10). En blanco rige
+                Configuración; cada cotización las puede negociar. Las
+                calcula `condicionesDe()`, la misma que usa el documento. */}
+            <div>
+              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                Condiciones de pago
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="block">
+                  <span className="mb-1 block text-[13px] text-hueso/70">Anticipo %</span>
+                  <input type="number" min={0} max={100} value={anticipoTxt} className={`${ENTRADA} w-24`}
+                    placeholder={String(datos.condiciones?.anticipoPct ?? 30)}
+                    onChange={(e) => setAnticipoTxt(e.target.value)} />
+                </label>
+                <button type="button" aria-pressed={cond.pct === 0}
+                  onClick={() => setAnticipoTxt(cond.pct === 0 ? '' : '0')}
+                  className={`boton min-h-[44px] ${cond.pct === 0 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
+                  Sin anticipo
+                </button>
+                <label className="block">
+                  <span className="mb-1 block text-[13px] text-hueso/70">Saldo, días antes</span>
+                  <input type="number" min={0} max={365} value={saldoTxt} className={`${ENTRADA} w-24`}
+                    placeholder={String(datos.condiciones?.saldoDias ?? 3)}
+                    onChange={(e) => setSaldoTxt(e.target.value)} />
+                </label>
+              </div>
+              <p className="mt-2 text-[15px]">
+                {cond.pct > 0
+                  ? <>Anticipo {cond.pct}%: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha · Saldo <strong>{enPesos(cond.saldo)}</strong></>
+                  : <>Sin anticipo · Todo <strong>{enPesos(cond.saldo)}</strong></>}
+                {cond.saldoHasta
+                  ? <> hasta el {enPalabras(cond.saldoHasta)}.</>
+                  : <>, {cond.dias} días antes del evento.</>}
+              </p>
+            </div>
+
+            {/* **Los cobros al cliente**: se anotan los pagos, no una
+                casilla. Lo normal es un toque —anticipo recibido, o todo—;
+                otro monto abre un campo. Un cobro anotado por error se
+                deshace. */}
+            <div className="rounded border border-hueso/15 bg-panel p-3">
+              <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                Pagos del cliente
+              </p>
+              {!p ? (
+                <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para anotar sus pagos.</p>
+              ) : (
+                <>
+                  <p className="mt-1 text-[15px]">
+                    Pagado <strong>{enPesos(cobrado.pagado)}</strong>
+                    {cobrado.falta > 0 && <> · Falta <strong>{enPesos(cobrado.falta)}</strong></>}
+                    {cobrado.completo && <span className="ml-2 rounded-full border border-verde/50 px-2 py-0.5
+                      text-[13px] font-semibold text-verde-texto">✓ Pagado completo</span>}
+                  </p>
+                  {cobros.length > 0 && (
+                    <ul className="mt-2 divide-y divide-hueso/10 border-y border-hueso/10">
+                      {cobros.map((c) => (
+                        <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[14px]">
+                          <span className="font-semibold">{c.concepto}</span>
+                          <span className={c.monto < 0 ? 'text-rojo-texto' : ''}>
+                            {c.monto < 0 ? `−${enPesos(-c.monto)}` : enPesos(c.monto)}
+                          </span>
+                          <span className="text-hueso/70">{c.fecha}{c.medio && ` · ${c.medio}`}
+                            {c.registradoPor && ` · ${c.registradoPor}`}</span>
+                          <span className="flex-1" />
+                          {puedeEditar && (
+                            <button type="button" onClick={() => void deshacerCobro(c)}
+                              className="boton hover:border-rojo-fuerte hover:text-rojo-texto">Deshacer</button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {puedeEditar && cobrado.falta > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <input value={medio} onChange={(e) => setMedio(e.target.value)}
+                        placeholder="Cómo pagó: transferencia, efectivo… (opcional)"
+                        className={`${ENTRADA} sm:w-96`} />
+                      <div className="flex flex-wrap gap-2">
+                        {cobrado.faltaAnticipo > 0 && (
+                          <button type="button" disabled={guardando}
+                            onClick={() => void cobrar(cobrado.faltaAnticipo, 'Anticipo')}
+                            className="boton min-h-[44px] !border-verde-fuerte text-verde-texto hover:bg-verde/10">
+                            ✓ Anticipo recibido · {enPesos(cobrado.faltaAnticipo)}
+                          </button>
+                        )}
+                        <button type="button" disabled={guardando}
+                          onClick={async () => {
+                            // Pagar todo de una son dos cobros: el anticipo y el saldo.
+                            if (cobrado.faltaAnticipo > 0) await cobrar(cobrado.faltaAnticipo, 'Anticipo');
+                            const resto = cobrado.falta - cobrado.faltaAnticipo;
+                            if (resto > 0) await cobrar(resto, 'Saldo');
+                          }}
+                          className="boton min-h-[44px] !border-verde-fuerte text-verde-texto hover:bg-verde/10">
+                          ✓ Pagó todo · {enPesos(cobrado.falta)}
+                        </button>
+                        <button type="button" onClick={() => setOtroMonto({ monto: '', concepto: 'Otro' })}
+                          className="boton min-h-[44px]">Otro monto</button>
+                      </div>
+                      {otroMonto && (
+                        <div className="flex flex-wrap items-end gap-2">
+                          <input type="text" inputMode="numeric" value={otroMonto.monto} autoFocus
+                            placeholder="Monto" className={`${ENTRADA} w-36`}
+                            onChange={(e) => setOtroMonto({ ...otroMonto, monto: e.target.value })} />
+                          <Elegir etiqueta="Concepto" opciones={['Anticipo', 'Saldo', 'Otro']}
+                            valor={otroMonto.concepto}
+                            onElegir={(v) => setOtroMonto({ ...otroMonto, concepto: v || 'Otro' })} />
+                          <button type="button" disabled={guardando || !montoCobro(otroMonto.monto)}
+                            onClick={() => void cobrar(montoCobro(otroMonto.monto), otroMonto.concepto)}
+                            className="boton min-h-[44px]">Anotar</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={guardando} className="boton boton-relleno min-h-[48px] px-5"
                 onClick={() => void guardar()}>
                 {guardando ? 'Guardando…' : 'Guardar'}
               </button>
               {p && !ganada && esFecha(fechaReal) && (
-                <button type="button" disabled={guardando} onClick={() => void ganar()}
-                  className="boton min-h-[48px] border-verde-fuerte text-verde-texto hover:bg-verde/10">
+                <button type="button" disabled={guardando || !cobrado.anticipoListo}
+                  title={cobrado.anticipoListo ? '' : 'Falta el anticipo'}
+                  onClick={() => void ganar()}
+                  className="boton min-h-[48px] !border-verde-fuerte text-verde-texto hover:bg-verde/10 disabled:opacity-50">
                   ✓ Marcar ganada
                 </button>
               )}
             </div>
+            {/* El motivo del botón apagado, en pantalla y no en un globito:
+                en un teléfono no hay mouse que lo muestre. */}
+            {p && !ganada && esFecha(fechaReal) && !cobrado.anticipoListo && (
+              <p className="text-[14px] font-semibold text-ambar-texto">
+                Para marcarla ganada falta el anticipo: {enPesos(cobrado.faltaAnticipo)}.
+              </p>
+            )}
 
             {p && (
               <div className="flex flex-wrap gap-2 border-t border-hueso/10 pt-3">

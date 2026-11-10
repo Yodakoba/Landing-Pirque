@@ -45,10 +45,14 @@ import {
 import {
   HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   COL_PRESUPUESTOS, leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
-  normalizarLineas, posiblesPorDia, lineasDe, reservaDesdePresupuesto,
+  normalizarLineas, posiblesPorDia, lineasDe, reservaDesdePresupuesto, totalDe,
   type Presupuesto, type LineaPresupuesto, type Posibles, type LineaEntrante
 } from './presupuestos.ts';
 import { conCliente } from './cotizar.ts';
+import { HOJA_COBROS, ENCABEZADO_COBROS, leerCobrosDe, filaCobro, cobrosDe, estadoCobros,
+         type Cobro } from './cobros.ts';
+import { liberaCupo } from './pagos.ts';
+import { ESTADO_PAGO } from './columnas.ts';
 import {
   HOJA_COLABORADORES, HOJA_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
   leerColaboradoresDe, aFilasColaboradores, leerExtrasDe, filaExtra,
@@ -913,4 +917,56 @@ export async function reservasDeCotizaciones(): Promise<Map<string, string>> {
   const salida = new Map<string, string>();
   for (const p of presupuestos) if (p.idReserva) salida.set(p.idReserva, p.id);
   return salida;
+}
+
+/* ---------- Cobros al cliente (2026-11-10) ---------- */
+
+/**
+ * Los cobros de las cotizaciones. **Sin la pestaña, lista vacía**: el panel
+ * tiene que funcionar antes de que nadie cobre nada.
+ */
+export async function leerCobros(): Promise<Cobro[]> {
+  try {
+    return leerCobrosDe(await leerHoja(HOJA_COBROS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+export async function anotarCobro(c: Omit<Cobro, 'fila'>): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_COBROS, ENCABEZADO_COBROS);
+  await agregarFilas(HOJA_COBROS, [filaCobro(filas[0] ?? ENCABEZADO_COBROS, c)]);
+}
+
+/** Borra un cobro anotado por error. Devuelve el borrado, o undefined. */
+export async function borrarCobro(id: string): Promise<Cobro | undefined> {
+  const filas = await asegurarEncabezado(HOJA_COBROS, ENCABEZADO_COBROS);
+  const c = leerCobrosDe(filas).find((x) => x.id === id);
+  if (c) await borrarFilas(HOJA_COBROS, [c.fila]);
+  return c;
+}
+
+/**
+ * **El estado del pago de la reserva de una cotización ganada sale de sus
+ * cobros**: *Pagada* cuando cubren el total, *Por pagar* mientras falte.
+ *
+ * Una reserva que liberó su lugar —cancelada, reembolsada, anulada— no se
+ * toca: eso lo decidió una persona en el día, y un cobro no la revive.
+ */
+export async function actualizarPagoDeReserva(idPresupuesto: string): Promise<void> {
+  const [presupuestos, lineas, cobros] = await Promise.all([
+    leerPresupuestos(), leerLineasPresupuesto(), leerCobros()
+  ]);
+  const p = presupuestos.find((x) => x.id === idPresupuesto);
+  if (!p?.idReserva) return;
+  const filas = await leerHoja(HOJA_RESERVAS);
+  const fila = buscarFilaPorId(filas, filas[0] ?? [], p.idReserva);
+  if (fila < 2) return;
+  const r = leerReservasDe(filas).find((x) => x.fila === fila);
+  if (!r || liberaCupo(r.estadoPago)) return;
+  const total = totalDe(lineasDe(lineas, p.id), p.descuento);
+  const e = estadoCobros({ anticipo: 0, total }, cobrosDe(cobros, p.id));
+  const estado = e.completo ? ESTADO_PAGO.pagado : ESTADO_PAGO.pendiente;
+  if (r.estadoPago !== estado) await editarReserva(fila, { estadoPago: estado });
 }

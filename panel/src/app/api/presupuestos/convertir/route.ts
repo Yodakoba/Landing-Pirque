@@ -2,13 +2,16 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
-  crearReserva, leerMenus, leerClientes, anotar
+  crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
+  actualizarPagoDeReserva
 } from '@/lib/datos';
+import { condicionesDe, estadoCobros, cobrosDe } from '@/lib/cobros';
+import { enPesos } from '@/lib/ocupacion';
 import { conCliente, otrasAlternativas } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { esFecha } from '@/lib/fechas';
 import {
-  lineasDe, reservaDesdePresupuesto, folioDe, estadoVisible,
+  lineasDe, reservaDesdePresupuesto, folioDe, estadoVisible, totalDe,
   ESTADO_PRESUPUESTO
 } from '@/lib/presupuestos';
 import { hoy } from '@/lib/fechas';
@@ -90,6 +93,20 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // **Si hay anticipo, tiene que estar pagado** (2026-11-10, lo decidió el
+    // cliente): ganar le toma la fecha a otro, y eso se hace con la plata
+    // del anticipo adentro. Una cotización con anticipo 0 se gana sin él.
+    const [cfg, cobros] = await Promise.all([leerConfig(), leerCobros()]);
+    const total = totalDe(suyas, p.descuento);
+    const cond = condicionesDe(p, total, cfg);
+    const cobrado = estadoCobros({ anticipo: cond.anticipo, total }, cobrosDe(cobros, p.id));
+    if (!cobrado.anticipoListo) {
+      return NextResponse.json({
+        error: `Falta el anticipo: ${enPesos(cobrado.faltaAnticipo)}. Anota el cobro, `
+          + 'o déjala sin anticipo si así se acordó.'
+      }, { status: 409 });
+    }
+
     // Quién lo convirtió queda como dueña de la reserva: la anotó una
     // persona, así que tiene dueño como cualquier otra anotada a mano.
     const idReserva = await crearReserva(
@@ -107,6 +124,9 @@ export async function POST(req: Request) {
       const { fila: _f, ...resto } = otra;
       await guardarPresupuesto({ ...resto, estado: ESTADO_PRESUPUESTO.noElegida });
     }
+
+    // Si ya pagó todo, la reserva nace pagada.
+    await actualizarPagoDeReserva(p.id);
 
     await anotar({ ...quien,
       accion: 'Marcó ganada una cotización',
