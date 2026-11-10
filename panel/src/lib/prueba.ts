@@ -23,7 +23,7 @@ import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto,
-         ESTADOS_A_MANO } from './cotizar.ts';
+         ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe } from './presupuestos.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
@@ -72,8 +72,8 @@ import { filaReserva, buscarFilaPorId, leerReservasDe, idsRepetidos }
 import { firmaValida } from './firma.ts';
 import { eventoDe, idDeEvento } from './calendario.ts';
 import { canonizar, desconocidos, leerMenusDe, aFilasMenus, aMonto, precioDe,
-         nuevoProducto, aPrecio, paraReservar, paraCotizar, precioParaCotizar,
-         limpiarProducto, TIPO_PRODUCTO, COBRO, MONEDA,
+         nuevoProducto, aPrecio, paraReservar, paraCotizar, precioParaCotizar, usados, quitadosUsados,
+         limpiarProducto, TIPO_PRODUCTO, COBRO, MONEDA, COL_MENUS,
          POR_DEFECTO_MENUS, type Menu } from './menus.ts';
 import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          leerTurnosDe, filaTurno, normalizarPlan, planDelDia, resumenEquipo,
@@ -783,7 +783,7 @@ const filasMenus = aFilasMenus(POR_DEFECTO_MENUS);
 ok(filasMenus[0].slice(0, 3).join('|') === 'Menú|Precio en línea|Precio en el local',
    'las tres columnas de siempre van primero y en el mismo orden: una planilla vieja se sigue leyendo');
 ok(filasMenus[0].slice(3).join('|')
-     === 'Tipo|Sitio público|Cotización|Cobro|Precio cotización|IVA|Moneda',
+     === 'Tipo|Sitio público|Cotización|Cobro|Precio cotización|IVA|Moneda|Activo',
    'y las del catálogo van al final');
 ok(filasMenus.length === POR_DEFECTO_MENUS.length + 1, 'una fila por menu, mas el encabezado');
 ok(JSON.stringify(leerMenusDe(filasMenus)) === JSON.stringify(POR_DEFECTO_MENUS),
@@ -3674,6 +3674,34 @@ console.log('\nCotizaciones, fase 2');
   ok(puedeTocarPresupuesto(ROL.vendedor, 'Vero', 'vero') && !puedeTocarPresupuesto(ROL.vendedor, 'vero', 'hugo'),
      'el vendedor edita las suyas y no las de otro');
   ok(puedeTocarPresupuesto(ROL.encargado, 'carla', 'hugo'), 'los demás roles editan todas');
+}
+
+/* ---------- productos desactivados (2026-11-10) ---------- */
+{
+  const cat = [
+    nuevoProducto({ nombre: 'Tradiciones' }),
+    nuevoProducto({ nombre: 'Viejo', activo: false, cotizacion: true }),
+    nuevoProducto({ nombre: 'Once', tipo: TIPO_PRODUCTO.extra, cotizacion: true }),
+    nuevoProducto({ nombre: 'Show', tipo: TIPO_PRODUCTO.show, cotizacion: true, activo: false })
+  ];
+  ok(leerMenusDe([Object.values(COL_MENUS), ['Antiguo', '1', '2']])[0].activo,
+     'un producto escrito antes de la columna Activo sigue activo');
+  ok(JSON.stringify(leerMenusDe(aFilasMenus(cat))) === JSON.stringify(cat),
+     'el desactivado se escribe y se vuelve a leer igual');
+  ok(!paraReservar(cat).some((m) => m.nombre === 'Viejo')
+     && paraCotizar(cat).map((m) => m.nombre).join() === 'Once',
+     'un desactivado no se ofrece ni para reservar ni para cotizar');
+  ok(productoDe('viejo', cat)?.nombre === 'Viejo',
+     'pero lo viejo lo sigue encontrando, con su tipo y su precio');
+  ok(showDe(cat) === undefined, 'un show desactivado no se agrega solo a un día público');
+  ok(usados(cat, ['TRADICIONES', 'Otra cosa']).join() === 'Tradiciones',
+     'usado es lo que aparece en reservas o cotizaciones, sin importar mayúsculas');
+  ok(quitadosUsados(cat, cat.slice(1), ['Tradiciones']).join() === 'Tradiciones',
+     'quitar uno usado se detecta');
+  ok(quitadosUsados(cat, [cat[0], cat[1], cat[3]], ['Tradiciones']).length === 0,
+     'quitar uno que nunca se usó se deja');
+  ok(quitadosUsados(cat, [{ ...cat[0], nombre: 'Tradiciones 2' }, ...cat.slice(1)], ['Tradiciones'])
+     .join() === 'Tradiciones', 'renombrar uno usado también cuenta como quitarlo');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

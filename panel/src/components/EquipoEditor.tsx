@@ -14,6 +14,7 @@
  * comensal se atiende bien es dato del negocio, y un número inventado haría
  * que el panel diera consejos que nadie dio.
  */
+import MostrarDesactivados from './MostrarDesactivados';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
@@ -453,16 +454,11 @@ export default function EquipoEditor() {
       {/* **Los desactivados se esconden** (2026-10-30, lo pidió el cliente).
           Una ficha dada de baja no se borra —sus turnos son el registro de
           quién trabajó qué día— así que esta lista solo crece, y el equipo
-          de hoy termina mezclado con el de hace dos años. La casilla los
-          trae de vuelta, y dice cuántos son para que nadie los dé por
+          de hoy termina mezclado con el de hace dos años. El botón los
+          trae de vuelta —desde el 2026-11-10 es un botón grande, `MostrarDesactivados`, y no una casilla—, y dice cuántos son para que nadie los dé por
           perdidos. */}
-      {inactivos > 0 && (
-        <label className="mb-3 flex items-center gap-2 text-[13px] text-hueso/70">
-          <input type="checkbox" checked={verInactivos} className="h-4 w-4 accent-oro"
-            onChange={(e) => { setVerInactivos(e.target.checked); setAbierta(null); }} />
-          Ver desactivados ({inactivos})
-        </label>
-      )}
+      <MostrarDesactivados cuantos={inactivos} visible={verInactivos}
+        onCambio={(v) => { setVerInactivos(v); setAbierta(null); }} />
       {/* **La lista se muestra alfabética** (2026-11-01, lo pidió el
           cliente). Venía en el orden de la planilla, o sea en el que se
           grabó cada ficha: para encontrar a alguien entre quince había que

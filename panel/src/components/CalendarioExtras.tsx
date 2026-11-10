@@ -17,6 +17,7 @@
  * para un día sin reservas es justo el error que esto tiene que hacer
  * evidente.
  */
+import MostrarDesactivados from './MostrarDesactivados';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
@@ -51,6 +52,8 @@ export default function CalendarioExtras() {
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [verSueldos, setVerSueldos] = useState(false);
+  /** Si se muestran los colaboradores desactivados (`MostrarDesactivados`). */
+  const [verInactivos, setVerInactivos] = useState(false);
   // Los días cerrados se abren en solo lectura también acá: ver `corregirDiaCerrado()`.
   const [cierres, setCierres] = useState<Cierre[]>([]);
   const [puedeCorregir, setPuedeCorregir] = useState(false);
@@ -320,6 +323,8 @@ export default function CalendarioExtras() {
           guarda: `i` sigue siendo la fila real, y todo lo que edita una
           ficha la usa. Las sin nombre van al final, junto al botón de
           agregar. */}
+      <MostrarDesactivados visible={verInactivos} onCambio={setVerInactivos}
+        cuantos={(colaboradores ?? []).filter((c) => !c.activo).length} />
       <ul className="space-y-3">
         {(colaboradores ?? [])
           .map((c, i) => ({ c, i }))
@@ -329,6 +334,9 @@ export default function CalendarioExtras() {
             return porNombre(a.c, b.c);
           })
           .map(({ c, i }) => {
+          // Escondidos dentro del map y no con un `filter` previo: `i` es la
+          // fila real que se guarda (igual que en `/equipo`).
+          if (!c.activo && !verInactivos) return null;
           const tieneDias = extras.some(
             (e) => normalizar(e.colaborador) === normalizar(c.nombre));
           return (
@@ -363,22 +371,13 @@ export default function CalendarioExtras() {
                       onChange={(e) => cambiar(i, 'monto', e.target.value)} />
                   </Campo>
                 )}
-                <label className="flex items-center gap-2 self-center pt-4">
-                  <input type="checkbox" checked={c.activo}
-                    aria-label={`${c.nombre || 'Sin nombre'} se sigue contratando`}
-                    className="h-4 w-4 accent-oro"
-                    onChange={(e) => cambiar(i, 'activo', e.target.checked)} />
-                  <span className="text-[10px] uppercase tracking-wide text-hueso/35">
-                    Activo
-                  </span>
-                </label>
 
                 <span className="flex-1" />
 
                 {/* Quitar solo a quien no tiene días contratados, igual que
                     en Equipo: borrar la ficha de alguien que ya vino dejaría
                     sus días con un nombre que no está en ninguna parte. */}
-                <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-xs">
+                <div className="flex flex-wrap items-center gap-3 self-center pt-4">
                   {guardarEnTarjeta}
                   {!tieneDias ? (
                     <button
@@ -386,20 +385,19 @@ export default function CalendarioExtras() {
                         setColaboradores((colaboradores ?? []).filter((_, k) => k !== i));
                         setSucio(true);
                       }}
-                      className="text-hueso/60 hover:text-rojo-texto"
+                      className="boton hover:border-rojo-fuerte hover:text-rojo-texto"
                       title="Todavía no tiene ningún día contratado">Quitar</button>
                   ) : c.activo ? (
                     <button
                       onClick={() => cambiar(i, 'activo', false)}
-                      className="text-hueso/60 hover:text-oro"
+                      className="boton"
                       title="Tiene días guardados, así que su ficha no se quita: se desactiva">
                       Desactivar
                     </button>
                   ) : (
-                    <span className="text-hueso/30"
-                      title="Su ficha se conserva porque tiene días guardados">
-                      Desactivado
-                    </span>
+                    <button onClick={() => cambiar(i, 'activo', true)} className="boton">
+                      Activar
+                    </button>
                   )}
                 </div>
               </div>

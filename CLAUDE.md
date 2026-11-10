@@ -1841,6 +1841,19 @@ van **al final** de la pestaña, así que una planilla vieja se lee igual:
   queda solo para el sitio hasta que alguien lo marque.
 - El precio que propone una cotización es el suyo, y si no tiene, el de
   pagar en el local (`precioParaCotizar()`).
+- **Un producto que ya se vendió o se cotizó no se quita: se desactiva**
+  (2026-11-10, lo pidió el cliente). Columna `Activo` al final; en blanco es
+  sí. Desactivado deja de ofrecerse (`paraReservar()`, `paraCotizar()`, y un
+  show desactivado no se agrega solo a un día público), pero sigue en el
+  catálogo: las reservas y cotizaciones viejas lo encuentran con su tipo y
+  su IVA. Quitarlo dejaba a esas cotizaciones sin tipo, y sus personas en
+  cero al editarlas. *Quitar* queda solo para lo que nunca se usó; el
+  servidor rechaza con 409 quitar —o renombrar— uno usado
+  (`quitadosUsados()`), así que en pantalla su nombre no se edita.
+- **Los desactivados se esconden tras un botón grande, *Mostrar
+  desactivados (N)*** (`MostrarDesactivados.tsx`), el mismo en Productos,
+  `/equipo` —donde era una casilla chica— y `/extras`. Apretado dice
+  *Ocultar desactivados* y los muestra apagados en la misma lista.
 - **Los precios del sitio público siguen en `precios.json`**, aparte de esta
   pestaña. Son dos lugares hoy; unificarlos es parte del arreglo de precios
   que quedó para después.
