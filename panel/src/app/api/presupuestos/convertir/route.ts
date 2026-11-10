@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
-  crearReserva, leerMenus, anotar
+  crearReserva, leerMenus, leerClientes, anotar
 } from '@/lib/datos';
+import { conCliente, otrasAlternativas } from '@/lib/cotizar';
+import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
+import { esFecha } from '@/lib/fechas';
 import {
   lineasDe, reservaDesdePresupuesto, folioDe, estadoVisible,
   ESTADO_PRESUPUESTO
@@ -38,10 +41,25 @@ export async function POST(req: Request) {
   if (no) return no;
   try {
     const { id } = await req.json();
-    const lista = await leerPresupuestos();
-    const p = lista.find((x) => x.id === String(id ?? '').trim());
-    if (!p) {
-      return NextResponse.json({ error: 'Ese presupuesto ya no está.' }, { status: 404 });
+    const [lista, clientes] = await Promise.all([leerPresupuestos(), leerClientes()]);
+    const original = lista.find((x) => x.id === String(id ?? '').trim());
+    if (!original) {
+      return NextResponse.json({ error: 'Esa cotización ya no está.' }, { status: 404 });
+    }
+    const p = conCliente(original, clientes);
+    const quien = await quienEs(req);
+    // El vendedor gana solo las suyas, igual que solo edita las suyas.
+    if (!puedeTocarPresupuesto(quien.rol as Rol, quien.usuario, p.creadoPor)) {
+      return NextResponse.json({
+        error: `Esa cotización la creó ${p.creadoPor || 'otra persona'}, así que no es tuya para ganarla.`,
+        permiso: true
+      }, { status: 403 });
+    }
+    // Una reserva vive en un día: sin fecha exacta no hay dónde ponerla.
+    if (!esFecha(p.fecha)) {
+      return NextResponse.json({
+        error: 'Ponle el día exacto antes de marcarla ganada: la reserva vive en un día.'
+      }, { status: 400 });
     }
     // Convertir dos veces crearía dos reservas para la misma gente, y la
     // segunda sí ocuparía cupo de más. Se comprueba acá y no solo en la
@@ -52,7 +70,8 @@ export async function POST(req: Request) {
       }, { status: 409 });
     }
     const visible = estadoVisible(p, hoy());
-    if (visible === 'Vencido' || visible === ESTADO_PRESUPUESTO.rechazado) {
+    if (visible === 'Vencida' || visible === ESTADO_PRESUPUESTO.rechazado
+        || visible === ESTADO_PRESUPUESTO.noElegida) {
       return NextResponse.json({
         error: `Este presupuesto está ${visible.toLowerCase()}. `
              + 'Renueva su vigencia o vuelve a marcarlo antes de convertirlo.'
@@ -63,25 +82,34 @@ export async function POST(req: Request) {
       leerLineasPresupuesto(), leerMenus()
     ]);
     const suyas = lineasDe(lineas, p.id);
-    if (suyas.length === 0) {
+    // Un candidato sin líneas se puede ganar si dijo cuánta gente viene: la
+    // reserva ocupa esos lugares. Sin líneas ni invitados no hay qué reservar.
+    if (suyas.length === 0 && !(p.invitados > 0)) {
       return NextResponse.json({
-        error: 'Este presupuesto no tiene nada cotizado todavía.'
+        error: 'Esta cotización no tiene nada cotizado ni invitados todavía.'
       }, { status: 400 });
     }
 
     // Quién lo convirtió queda como dueña de la reserva: la anotó una
     // persona, así que tiene dueño como cualquier otra anotada a mano.
-    const quien = await quienEs(req);
     const idReserva = await crearReserva(
       reservaDesdePresupuesto(p, suyas, menus, quien.usuario));
     // Y recién ahora el vínculo, que es lo que apaga el conteo de posibles.
-    const { fila: _fila, ...sinFila } = p;
+    // Se guarda la cotización ORIGINAL, no la que tiene el cliente resuelto:
+    // las columnas viejas de cliente siguen en blanco si tenía ficha.
+    const { fila: _fila, ...sinFila } = original;
     await guardarPresupuesto({
       ...sinFila, estado: ESTADO_PRESUPUESTO.aceptado, idReserva
     });
+    // **Las otras alternativas del grupo pasan a "No elegida"** (lo decidió
+    // el cliente): ya no son gente posible, porque el cliente eligió otra.
+    for (const otra of otrasAlternativas(original, lista)) {
+      const { fila: _f, ...resto } = otra;
+      await guardarPresupuesto({ ...resto, estado: ESTADO_PRESUPUESTO.noElegida });
+    }
 
     await anotar({ ...quien,
-      accion: 'Convirtió un presupuesto en reserva',
+      accion: 'Marcó ganada una cotización',
       detalle: `${folioDe(p)} · ${p.cliente} · ${p.fecha} · reserva ${idReserva}` });
     return NextResponse.json({ idReserva });
   } catch (e) {

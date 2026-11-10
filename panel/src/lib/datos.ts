@@ -45,9 +45,10 @@ import {
 import {
   HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   COL_PRESUPUESTOS, leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
-  normalizarLineas, posiblesPorDia,
-  type Presupuesto, type LineaPresupuesto, type Posibles
+  normalizarLineas, posiblesPorDia, lineasDe, reservaDesdePresupuesto,
+  type Presupuesto, type LineaPresupuesto, type Posibles, type LineaEntrante
 } from './presupuestos.ts';
+import { conCliente } from './cotizar.ts';
 import {
   HOJA_COLABORADORES, HOJA_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
   leerColaboradoresDe, aFilasColaboradores, leerExtrasDe, filaExtra,
@@ -740,10 +741,10 @@ export async function posiblesDeLosDias(hoy: Fecha): Promise<Map<string, Posible
 /** Escribe un presupuesto: lo agrega si es nuevo, lo pisa si ya está. */
 export async function guardarPresupuesto(p: Omit<Presupuesto, 'fila'>): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_PRESUPUESTOS, ENCABEZADO_PRESUPUESTOS);
-  // La columna de la ficha se agrega sola en una planilla de antes de las
-  // fichas: sin esto el vínculo se escribiría en ninguna parte.
-  const enc = await asegurarColumna(HOJA_PRESUPUESTOS,
-    filas[0] ?? ENCABEZADO_PRESUPUESTOS, COL_PRESUPUESTOS.idCliente);
+  // Las columnas nuevas —la ficha, los invitados, el periodo…— se agregan
+  // solas en una planilla de antes: sin esto se escribirían en ninguna parte.
+  const enc = await asegurarColumnas(HOJA_PRESUPUESTOS,
+    filas[0] ?? ENCABEZADO_PRESUPUESTOS, ENCABEZADO_PRESUPUESTOS);
   const fila = filaPresupuesto(enc, p);
   const previo = leerPresupuestosDe(filas).find((x) => x.id === p.id);
   if (previo) await escribirFila(HOJA_PRESUPUESTOS, previo.fila, fila);
@@ -759,10 +760,11 @@ export async function guardarPresupuesto(p: Omit<Presupuesto, 'fila'>): Promise<
  * una no puede llevarse por delante las otras.
  */
 export async function guardarLineas(
-  id: string, lineas: Omit<LineaPresupuesto, 'fila'>[]
+  id: string, lineas: LineaEntrante[]
 ): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_LINEAS, ENCABEZADO_LINEAS);
-  const enc = filas[0] ?? ENCABEZADO_LINEAS;
+  const enc = await asegurarColumnas(HOJA_LINEAS, filas[0] ?? ENCABEZADO_LINEAS,
+    ENCABEZADO_LINEAS);
   const previas = leerLineasDe(filas).filter((l) => l.presupuesto === id).map((l) => l.fila);
   const nuevas = normalizarLineas(lineas.map((l) => ({ ...l, presupuesto: id })));
   await borrarFilas(HOJA_LINEAS, previas);
@@ -854,4 +856,58 @@ export async function migrarPresupuestosAClientes(
     vinculados++;
   }
   return { creadas: nuevos.length, vinculados };
+}
+
+/**
+ * Deja las columnas que faltan al final del encabezado, de a una. Si ya
+ * están todas no escribe nada.
+ */
+async function asegurarColumnas(hoja: string, encabezado: string[], columnas: string[]) {
+  let enc = encabezado;
+  for (const c of columnas) enc = await asegurarColumna(hoja, enc, c);
+  return enc;
+}
+
+/* ---------- La reserva que nace de una cotización (Fase 2) ---------- */
+
+/**
+ * **Reescribe la reserva de una cotización ganada** con lo que la cotización
+ * dice hoy: la fecha, el cliente, los menús, las personas y el monto.
+ *
+ * Es la mitad de la decisión "dos pestañas sincronizadas": la reserva es
+ * una copia que escribe el sistema y **se edita solo desde la cotización**.
+ * Lo que es del día —si vino, cómo va el pago, la nota de pago— no se toca:
+ * eso no es de la cotización.
+ *
+ * Devuelve la fecha que tenía la reserva antes, para que quien llame pueda
+ * avisar a los dos días si se movió. Vacío si no había reserva que tocar.
+ */
+export async function sincronizarReserva(idPresupuesto: string): Promise<string> {
+  const [presupuestos, lineas, menus, clientes] = await Promise.all([
+    leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerClientes()
+  ]);
+  const p = presupuestos.find((x) => x.id === idPresupuesto);
+  if (!p?.idReserva) return '';
+  const filas = await leerHoja(HOJA_RESERVAS);
+  const fila = buscarFilaPorId(filas, filas[0] ?? [], p.idReserva);
+  if (fila < 2) return '';
+  const antes = leerReservasDe(filas).find((r) => r.fila === fila);
+  const r = reservaDesdePresupuesto(conCliente(p, clientes), lineasDe(lineas, p.id), menus);
+  await editarReserva(fila, {
+    fecha: r.fecha, nombre: r.nombre, email: r.email, telefono: r.telefono,
+    menu: r.menu, personas: r.personas, monto: r.monto
+  });
+  return antes?.fecha ?? '';
+}
+
+/**
+ * Los ids de las reservas que nacieron de una cotización. Una reserva de
+ * esta lista **no se edita a mano** (salvo lo del día): se edita su
+ * cotización y el sistema la reescribe.
+ */
+export async function reservasDeCotizaciones(): Promise<Map<string, string>> {
+  const presupuestos = await leerPresupuestos();
+  const salida = new Map<string, string>();
+  for (const p of presupuestos) if (p.idReserva) salida.set(p.idReserva, p.id);
+  return salida;
 }

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { puedeTocarReserva, type Rol } from '@/lib/auth';
-import { editarReserva, borrarReserva, anotar, leerReservas } from '@/lib/datos';
+import { editarReserva, borrarReserva, anotar, leerReservas,
+         reservasDeCotizaciones } from '@/lib/datos';
+import { folioDe } from '@/lib/presupuestos';
 import { empujarDias } from '@/lib/crm-escribir';
 import { guardaDelDia } from '@/lib/guardaCierre';
 import { yaLlego } from '@/lib/cierres';
@@ -73,6 +75,21 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // es, porque un vendedor solo toca las suyas.
     const ajena = await duenaDeLaReserva(req, antes);
     if (ajena) return ajena;
+    // **Una reserva que nació de una cotización se edita desde la
+    // cotización** (2026-11-10): la escribe el sistema, y una edición acá
+    // se perdería la próxima vez que alguien toque la cotización. Lo que sí
+    // se cambia acá es lo del día: si vino, cómo va el pago y su nota.
+    const deCotizacion = antes ? (await reservasDeCotizaciones()).get(antes.id) : undefined;
+    if (deCotizacion) {
+      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago']);
+      const ajenos = Object.keys(cambios).filter((k) => !DEL_DIA.has(k));
+      if (ajenos.length) {
+        return NextResponse.json({
+          error: `Esta reserva viene de la cotización N° ${folioDe({ id: deCotizacion })}: `
+               + 'la fecha, los menús, las personas y el monto se cambian ahí.'
+        }, { status: 409 });
+      }
+    }
     // **Una reserva de un día cerrado solo se corrige** (2026-11-03): mirando
     // el día donde está y, si se la mueve, el día adonde va.
     const guarda = await guardaDelDia(
@@ -119,6 +136,16 @@ export async function DELETE(req: Request, { params }: { params: { fila: string 
     const antes = (await leerReservas()).find((r) => r.fila === fila);
     const ajena = await duenaDeLaReserva(req, antes);
     if (ajena) return ajena;
+    // Una reserva de una cotización no se borra: su cotización la volvería
+    // a escribir, y quedaría ganada sin reserva. Si el cliente cancela, se
+    // marca cancelada, que libera el cupo y deja el rastro.
+    const deCotizacion = antes ? (await reservasDeCotizaciones()).get(antes.id) : undefined;
+    if (deCotizacion) {
+      return NextResponse.json({
+        error: `Esta reserva viene de la cotización N° ${folioDe({ id: deCotizacion })}, `
+             + 'así que no se borra. Si el cliente cancela, márcala como cancelada: libera el cupo.'
+      }, { status: 409 });
+    }
     // El cuerpo es opcional en un DELETE: solo trae algo cuando es una
     // corrección de un día cerrado.
     const cuerpo = await req.json().catch(() => ({}));

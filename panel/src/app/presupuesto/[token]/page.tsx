@@ -16,9 +16,10 @@
  * de escritura sin contraseña sobre un dato que mueve el cupo de un día. El
  * cliente responde por WhatsApp y el encargado lo marca en el panel.
  */
-import { leerPresupuestos, leerLineasPresupuesto } from '@/lib/datos';
-import { porToken, lineasDe, totalDe, personasDe, totalDeLinea,
-         estadoVisible, folioDe, desglosarIVA, IVA } from '@/lib/presupuestos';
+import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
+import { porToken, lineasDe, gentePosible, netoDeLinea, cuentasDe,
+         estadoVisible, folioDe, IVA } from '@/lib/presupuestos';
+import { clienteDe } from '@/lib/cotizar';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
 import BotonImprimir from '@/components/BotonImprimir';
@@ -41,9 +42,20 @@ const NEGOCIO = {
 };
 
 export default async function Pagina({ params }: { params: { token: string } }) {
-  const [lista, todas] = await Promise.all([
-    leerPresupuestos(), leerLineasPresupuesto()
+  const [lista, todas, clientes, cfg] = await Promise.all([
+    leerPresupuestos(), leerLineasPresupuesto(),
+    leerClientes().catch(() => []), leerConfig()
   ]);
+  // **Quién es el negocio sale de Configuración** cuando está escrito (Fase
+  // 1); si no, los datos de siempre de este archivo.
+  const negocio = {
+    nombre: cfg.empresa.nombre || NEGOCIO.nombre,
+    direccion: cfg.empresa.domicilio || NEGOCIO.direccion,
+    email: NEGOCIO.email,
+    whatsapp: cfg.empresa.whatsapp || NEGOCIO.whatsapp,
+    razonSocial: cfg.empresa.razonSocial,
+    rut: cfg.empresa.rut
+  };
   const p = porToken(lista, decodeURIComponent(params.token ?? ''));
 
   // **El mismo mensaje para un link inventado y para uno que ya no está**,
@@ -63,14 +75,16 @@ export default async function Pagina({ params }: { params: { token: string } }) 
   }
 
   const lineas = lineasDe(todas, p.id);
-  const total = totalDe(lineas);
-  // **Los precios de las líneas ya traen el IVA**, así que el total es lo que
-  // se cobra y el neto se calcula hacia atrás. Ver `desglosarIVA()`.
-  const desglose = desglosarIVA(total);
+  // **Las cuentas como en una cotización** (Fase 2): cada línea en neto, el
+  // descuento sobre el total, y el IVA encima. Ver `cuentasDe()`.
+  const cuentas = cuentasDe(lineas, p.descuento);
   const tasaIVA = Math.round(IVA * 100);
-  const personas = personasDe(lineas);
+  const personas = gentePosible(p, lineas);
+  const cliente = clienteDe(p, clientes);
   const estado = estadoVisible(p, hoy());
-  const vencido = estado === 'Vencido';
+  const vencido = estado === 'Vencida';
+  const precioNeto = (precio: number, ivaIncluido: boolean) =>
+    Math.round(ivaIncluido ? precio / (1 + IVA) : precio);
 
   return (
     <section className="documento mx-auto max-w-2xl">
@@ -85,7 +99,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
       {vencido && (
         <p className="mb-6 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-sm
                       text-ambar-texto">
-          <strong>Este presupuesto venció</strong> el{' '}
+          <strong>Esta cotización venció</strong> el{' '}
           <span className="first-letter:uppercase">{enPalabras(p.validoHasta)}</span>. Escríbenos
           y te lo actualizamos con los precios de hoy.
         </p>
@@ -93,9 +107,14 @@ export default async function Pagina({ params }: { params: { token: string } }) 
 
       <header className="border-b border-hueso/20 pb-5">
         <p className="text-sm font-bold uppercase tracking-widest text-oro">
-          {NEGOCIO.nombre}
+          {negocio.nombre}
         </p>
-        <h1 className="mt-3 text-2xl font-bold uppercase tracking-wide">Presupuesto</h1>
+        <h1 className="mt-3 text-2xl font-bold uppercase tracking-wide">Cotización</h1>
+        {(negocio.razonSocial || negocio.rut) && (
+          <p className="text-[13px] text-hueso/60">
+            {[negocio.razonSocial, negocio.rut && `RUT ${negocio.rut}`].filter(Boolean).join(' · ')}
+          </p>
+        )}
         <p className="mt-1 text-[13px] text-hueso/60">
           N° {folioDe(p)}
           {p.creado && <> · emitido el {p.creado.slice(0, 10)}</>}
@@ -107,15 +126,19 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
             Para
           </p>
-          <p className="mt-1 text-base font-semibold">{p.cliente}</p>
-          {p.telefono && <p className="text-sm text-hueso/70">{p.telefono}</p>}
-          {p.email && <p className="text-sm text-hueso/70">{p.email}</p>}
+          <p className="mt-1 text-base font-semibold">{cliente.nombre}</p>
+          {cliente.empresa && <p className="text-sm text-hueso/70">{cliente.empresa}</p>}
+          {cliente.telefono && <p className="text-sm text-hueso/70">{cliente.telefono}</p>}
+          {cliente.email && <p className="text-sm text-hueso/70">{cliente.email}</p>}
         </div>
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
             Fecha del evento
           </p>
-          <p className="mt-1 text-base font-semibold first-letter:uppercase">{enPalabras(p.fecha)}</p>
+          <p className="mt-1 text-base font-semibold first-letter:uppercase">
+            {p.fecha ? enPalabras(p.fecha) : `Por definir: ${p.periodo}`}
+          </p>
+          {p.tipoEvento && <p className="text-sm text-hueso/70">{p.tipoEvento}</p>}
           {personas > 0 && (
             <p className="text-sm text-hueso/70">
               {personas} {personas === 1 ? 'persona' : 'personas'}
@@ -136,17 +159,21 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           <tr className="border-b border-hueso/20">
             <th className="py-2 pr-3">Concepto</th>
             <th className="py-2 pr-3 text-right">Cantidad</th>
-            <th className="py-2 pr-3 text-right">Precio</th>
-            <th className="py-2 text-right">Subtotal</th>
+            <th className="py-2 pr-3 text-right">Precio neto</th>
+            <th className="py-2 text-right">Subtotal neto</th>
           </tr>
         </thead>
         <tbody>
           {lineas.map((l, i) => (
             <tr key={i} className="border-b border-hueso/10">
-              <td className="py-2.5 pr-3">{l.concepto}</td>
+              <td className="py-2.5 pr-3">
+                {l.concepto}
+                {l.precio === 0 && <span className="text-hueso/60"> · incluido</span>}
+                {l.descuento > 0 && <span className="text-hueso/60"> · {l.descuento}% de descuento</span>}
+              </td>
               <td className="py-2.5 pr-3 text-right tabular-nums">{l.cantidad}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">{enPesos(l.precio)}</td>
-              <td className="py-2.5 text-right tabular-nums">{enPesos(totalDeLinea(l))}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{enPesos(precioNeto(l.precio, l.ivaIncluido))}</td>
+              <td className="py-2.5 text-right tabular-nums">{enPesos(Math.round(netoDeLinea(l)))}</td>
             </tr>
           ))}
           {lineas.length === 0 && (
@@ -167,15 +194,35 @@ export default async function Pagina({ params }: { params: { token: string } }) 
               Neto
             </td>
             <td className="pt-4 text-right text-sm tabular-nums text-hueso/70">
-              {enPesos(desglose.neto)}
+              {enPesos(cuentas.subtotal)}
             </td>
           </tr>
+          {cuentas.descuento > 0 && (
+            <>
+              <tr>
+                <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
+                  Descuento {p.descuento}%
+                </td>
+                <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
+                  −{enPesos(cuentas.descuento)}
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
+                  Neto con descuento
+                </td>
+                <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
+                  {enPesos(cuentas.neto)}
+                </td>
+              </tr>
+            </>
+          )}
           <tr>
             <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
               IVA {tasaIVA}%
             </td>
             <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
-              {enPesos(desglose.iva)}
+              {enPesos(cuentas.iva)}
             </td>
           </tr>
           <tr>
@@ -185,7 +232,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             </td>
             <td className="border-t border-hueso/20 pt-2 text-right text-xl
                            font-bold tabular-nums text-oro">
-              {enPesos(desglose.total)}
+              {enPesos(cuentas.total)}
             </td>
           </tr>
         </tfoot>
@@ -197,7 +244,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           si no está dicho, le suma 19% encima por costumbre — y nos deja
           fuera de presupuesto por un impuesto que ya estaba cobrado. */}
       <p className="mt-3 text-[13px] font-semibold text-hueso/70">
-        Los precios de este presupuesto incluyen IVA.
+        Los precios de cada línea son netos: el IVA se suma al final.
       </p>
 
       {p.notas && (
@@ -211,22 +258,22 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           <p>
             <strong>Válido hasta el{' '}
               <span className="first-letter:uppercase">{enPalabras(p.validoHasta)}</span>.</strong>{' '}
-            La fecha del evento se confirma al aceptar este presupuesto; mientras
+            La fecha del evento se confirma al aceptar esta cotización; mientras
             tanto no está reservada.
           </p>
         )}
         {!p.validoHasta && (
           <p>
-            La fecha del evento se confirma al aceptar este presupuesto; mientras
+            La fecha del evento se confirma al aceptar esta cotización; mientras
             tanto no está reservada.
           </p>
         )}
         <p className="mt-3">
           ¿Lo tomamos? Escríbenos por WhatsApp al{' '}
-          <strong>{NEGOCIO.whatsapp}</strong> o a {NEGOCIO.email}.
+          <strong>{negocio.whatsapp}</strong> o a {negocio.email}.
         </p>
         <p className="mt-3 text-hueso/55">
-          {NEGOCIO.nombre} · {NEGOCIO.direccion}
+          {negocio.nombre} · {negocio.direccion}
         </p>
       </div>
     </section>

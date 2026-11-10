@@ -22,6 +22,10 @@ import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
 import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
+import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto,
+         ESTADOS_A_MANO } from './cotizar.ts';
+import { estadoNormal, cuentasDe } from './presupuestos.ts';
+import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          type Cliente } from './clientes.ts';
@@ -1897,14 +1901,14 @@ ok(ROLES_DE_CUENTA.includes(ROL.vendedor), 'se le puede crear una cuenta');
 // línea a ponerlo, que es exactamente lo que se quiere de la cuenta más
 // acotada del panel.
 const deVendedor = todas.filter((a) => puede(ROL.vendedor, a)).sort();
-ok(deVendedor.join() === 'clientes,reservas,ver',
-   'tres permisos y ninguno más: ver el calendario, anotar reservas y las fichas de clientes');
+ok(deVendedor.join() === 'clientes,presupuestos,reservas,ver',
+   'cuatro permisos y ninguno más: el calendario, sus reservas, las fichas de clientes y cotizar');
 ok(!puede(ROL.vendedor, 'dias'),
    'no abre ni cierra días: eso le cambiaría el cupo al sitio público');
 ok(!puede(ROL.vendedor, 'equipo') && !puede(ROL.vendedor, 'extras'),
    'ni el equipo ni los jinetes: ahí viven teléfonos y montos que no son suyos');
-ok(!puede(ROL.vendedor, 'presupuestos'),
-   'ni los presupuestos ni el CRM del socio, que piden ese mismo permiso');
+ok(puede(ROL.vendedor, 'presupuestos'),
+   'cotiza desde el 2026-11-10: es su trabajo (ve todas, edita solo las suyas)');
 ok(!puede(ROL.vendedor, 'informe') && !puede(ROL.vendedor, 'pagar')
    && !puede(ROL.vendedor, 'sueldos') && !puede(ROL.vendedor, 'links'),
    'nada de plata, y ningún link personal de nadie');
@@ -2327,11 +2331,13 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
     id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
+    invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
     fila: 2, ...x
   });
   const li = (x: Partial<LineaPresupuesto>): LineaPresupuesto => ({
     presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 20,
-    precio: 40000, personas: 20, fila: 2, ...x
+    precio: 40000, personas: 20, descuento: 0, ivaIncluido: true, sigue: false,
+    fila: 2, ...x
   });
 
   // --- Lo que se cotiza: menus que son gente, y cosas que no lo son. ---
@@ -2498,8 +2504,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   // plata que hay que cobrar.
   const conIVA = reservaDesdePresupuesto(
     pre({ id: 'PRE-IVA', fecha: '2026-11-14', cliente: 'Agencia Austral' }),
-    [{ presupuesto: 'PRE-IVA', concepto: 'Tradiciones', cantidad: 1,
-       precio: 44000, personas: 1, fila: 2 }],
+    [li({ presupuesto: 'PRE-IVA', cantidad: 1, precio: 44000, personas: 1 })],
     [nuevoProducto({ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 })]
   );
   ok(conIVA.monto === 44000,
@@ -2550,10 +2555,10 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   }
 
   // --- El estado que se muestra resuelve el vencimiento solo ---
-  ok(estadoVisible(pre({ validoHasta: '2026-10-31' }), HOY) === 'Vencido',
+  ok(estadoVisible(pre({ validoHasta: '2026-10-31' }), HOY) === 'Vencida',
      'vencido se deduce de la fecha, no se guarda');
-  ok(estadoVisible(pre({ idReserva: '123' }), HOY) === 'Confirmado',
-     'con reserva, el presupuesto se lee como confirmado');
+  ok(estadoVisible(pre({ idReserva: '123' }), HOY) === 'Ganada',
+     'con reserva, la cotización se lee como ganada');
 }
 
 console.log('\nOrden alfabético de la gente');
@@ -3542,6 +3547,133 @@ console.log('\nEventos del CRM');
   ok(leerConfigDe([['Clave', 'Valor']]).grupoGrande === 30, 'grupo grande parte en 30');
   ok(leerConfigDe([['Clave', 'Valor'], ['grupo_grande', '0']]).grupoGrande === 0,
      'y se puede apagar con un cero sin que vuelva solo a 30');
+}
+
+console.log('\nCotizaciones, fase 2');
+{
+  const HOY = '2026-11-10';
+  const pre = (x: Partial<Presupuesto>): Presupuesto => ({
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '',
+    estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
+    idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
+    invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
+    fila: 2, ...x
+  });
+  const li = (x: Partial<LineaPresupuesto>): LineaPresupuesto => ({
+    presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 10, precio: 44000,
+    personas: 10, descuento: 0, ivaIncluido: true, sigue: false, fila: 2, ...x
+  });
+  const catalogo = [
+    nuevoProducto({ nombre: 'Tradiciones', tipo: TIPO_PRODUCTO.menu, cotizacion: true }),
+    nuevoProducto({ nombre: 'Once campestre', tipo: TIPO_PRODUCTO.extra, cotizacion: true,
+                    iva: '+ IVA', precioCotizacion: 8000 }),
+    nuevoProducto({ nombre: 'Show ecuestre', tipo: TIPO_PRODUCTO.show, cotizacion: true,
+                    cobro: COBRO.fijo, precioCotizacion: 500000 })
+  ];
+
+  // --- Los estados de antes se leen con los nombres de hoy ---
+  ok(estadoNormal('Aceptado') === 'Ganada' && estadoNormal('rechazado') === 'Perdida'
+     && estadoNormal('Enviado') === 'Enviada',
+     'los presupuestos viejos se leen con los estados nuevos, sin reescribir la planilla');
+  ok(estadoNormal('negociacion') === 'Negociación', 'y los nuevos se entienden sin tilde');
+  ok(!ESTADOS_A_MANO.includes('Ganada') && !ESTADOS_A_MANO.includes('No elegida'),
+     'Ganada y No elegida no se ponen a mano: una la pone "Marcar ganada", la otra el sistema');
+
+  // --- Las cuentas, como en una cotización ---
+  const c1 = cuentasDe([li({ cantidad: 44, precio: 64000 })]);
+  ok(c1.total === 2816000 && c1.neto + c1.iva === c1.total,
+     'con IVA incluido el total es exactamente lo escrito, y neto + IVA cuadra');
+  const c2 = cuentasDe([li({ cantidad: 10, precio: 8000, ivaIncluido: false })]);
+  ok(c2.neto === 80000 && c2.iva === 15200 && c2.total === 95200,
+     'una línea "+ IVA" es neta: se le suma el 19%');
+  const c3 = cuentasDe([li({ cantidad: 10, precio: 10000, ivaIncluido: false, descuento: 10 })], 5);
+  ok(c3.subtotal === 90000 && c3.neto === 85500 && c3.descuento === 4500 && c3.total === 101745,
+     'el descuento de la línea y el del total se aplican los dos');
+  for (const n of [1, 7, 33, 44, 120]) {
+    const c = cuentasDe([li({ cantidad: n, precio: 44000 }), li({ cantidad: n, precio: 8000, ivaIncluido: false })], 15);
+    ok(c.neto + c.iva === c.total && c.subtotal - c.descuento === c.neto,
+       `las cuentas cuadran al peso con ${n} personas`);
+  }
+
+  // --- Las líneas que se guardan ---
+  const listas = prepararLineas([
+    li({ cantidad: 30, personas: 0 }),
+    li({ concepto: 'once campestre', cantidad: 3, precio: 8000, sigue: true, personas: 9 }),
+    li({ concepto: 'Arriendo especial', cantidad: 1, precio: 100000, personas: 50 })
+  ], catalogo, 40, false);
+  ok(listas[0].personas === 30, 'un menú son tantas personas como su cantidad');
+  ok(listas[1].concepto === 'Once campestre' && listas[1].cantidad === 40 && listas[1].personas === 0,
+     'la once sigue a los invitados (40) y no suma gente: son los mismos invitados');
+  ok(listas[2].personas === 0, 'una línea libre no inventa gente, aunque venga con un número');
+  ok(!listas.some((l) => l.concepto === 'Show ecuestre'),
+     'en un día privado el show no aparece solo: es opcional');
+
+  const publico = prepararLineas([li({})], catalogo, 40, true);
+  const show = publico.find((l) => l.concepto === 'Show ecuestre');
+  ok(!!show && show.precio === 0, 'en un día público el show va siempre, incluido y a cero');
+  const conPrecio = prepararLineas(
+    [li({ concepto: 'Show ecuestre', precio: 500000, descuento: 10, personas: 0, cantidad: 1 })],
+    catalogo, 40, true);
+  ok(conPrecio.length === 1 && conPrecio[0].precio === 0 && conPrecio[0].descuento === 0,
+     'y si alguien le pone precio en un día público, se le quita: no se cobra dos veces');
+  const privado = prepararLineas(
+    [li({ concepto: 'Show ecuestre', precio: 500000, cantidad: 1, personas: 0 })], catalogo, 40, false);
+  ok(privado[0].precio === 500000, 'en un día privado el show cobra su precio');
+
+  const once = lineaDeProducto(catalogo[1], 'PRE-1', 25, 8000);
+  ok(once.sigue && once.cantidad === 25 && !once.ivaIncluido,
+     'agregar la once la deja siguiendo a los invitados y "+ IVA", como dice el catálogo');
+  const menu = lineaDeProducto(catalogo[0], 'PRE-1', 25, 44000);
+  ok(!menu.sigue && menu.personas === 25,
+     'un menú NO sigue a los invitados: 40 pueden ser 30 adultos y 10 niños');
+
+  // --- Qué día es público ---
+  const fechas = [{ fecha: '2026-11-21', estado: 'Abierta' }, { fecha: '2026-11-22', estado: 'Privada' }];
+  ok(esDiaPublico('2026-11-21', fechas) && !esDiaPublico('2026-11-22', fechas),
+     'abierto es público; privado no');
+  ok(!esDiaPublico('2026-11-25', fechas), 'un día que no está en el calendario cuenta como privado');
+
+  // --- El cliente sale de la ficha ---
+  const fichas = [{ id: 'C-0001', nombre: 'Ana Soto', correo: 'ana@x.cl',
+                    telefono: '+56 9 1234 5678', empresa: '' }];
+  ok(clienteDe(pre({ cliente: '' }), fichas).nombre === 'Ana Soto',
+     'una cotización nueva no copia el nombre: lo lee de la ficha');
+  ok(clienteDe(pre({ idCliente: '', cliente: 'Viejo SA', telefono: '+56 9 1' }), fichas).nombre === 'Viejo SA',
+     'una de antes de las fichas sigue mostrando lo que tenía escrito');
+
+  // --- Alternativas ---
+  const lista = [
+    pre({ id: 'A', grupo: 'A' }), pre({ id: 'B', grupo: 'A' }),
+    pre({ id: 'C', grupo: 'A', estado: ESTADO_PRESUPUESTO.rechazado }),
+    pre({ id: 'D', grupo: 'D' })
+  ];
+  ok(otrasAlternativas(lista[0], lista).map((p) => p.id).join() === 'B',
+     'al ganar A, solo B pasa a No elegida: la perdida y las de otro grupo no se tocan');
+  ok(otrasAlternativas(pre({ id: 'X' }), [pre({ id: 'X' }), pre({ id: 'Y', grupo: 'X' })])
+       .map((p) => p.id).join() === 'Y',
+     'la original sin grupo es la cabeza de su grupo');
+  ok(!cuentaComoPosible(pre({ estado: ESTADO_PRESUPUESTO.noElegida }), HOY),
+     'una no elegida ya no es gente posible');
+
+  // --- Sin fecha y candidatos ---
+  const encP = ENCABEZADO_PRESUPUESTOS;
+  const sinDia = leerPresupuestosDe([encP, filaPresupuesto(encP,
+    pre({ fecha: '', periodo: 'marzo o abril', invitados: 120 }))]);
+  ok(sinDia.length === 1 && sinDia[0].fecha === '' && sinDia[0].periodo === 'marzo o abril'
+     && sinDia[0].invitados === 120, 'una cotización sin día exacto se guarda con su periodo');
+  ok(leerPresupuestosDe([encP, filaPresupuesto(encP, pre({ fecha: '', periodo: '' }))]).length === 0,
+     'sin día ni periodo no se lee: no se sabe de cuándo es');
+  const pos = posiblesPorDia([
+    pre({ id: 'P1', fecha: '', periodo: 'marzo', invitados: 100 }),
+    pre({ id: 'P2', estado: ESTADO_PRESUPUESTO.candidato, invitados: 30 })
+  ], [], HOY);
+  ok(pos.size === 1 && pos.get('2026-11-21')?.personas === 30,
+     'la sin fecha no ocupa ningún día; el candidato sin menús suma sus invitados como posibles');
+
+  // --- El vendedor ---
+  ok(puedeTocarPresupuesto(ROL.vendedor, 'Vero', 'vero') && !puedeTocarPresupuesto(ROL.vendedor, 'vero', 'hugo'),
+     'el vendedor edita las suyas y no las de otro');
+  ok(puedeTocarPresupuesto(ROL.encargado, 'carla', 'hugo'), 'los demás roles editan todas');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

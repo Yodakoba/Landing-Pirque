@@ -1883,14 +1883,94 @@ datos para transferir el anticipo. Se editan en *Configuración* y **nacen en
 blanco**: el CRM del socio los tenía escritos, pero no son dato confirmado
 por el cliente.
 
+### Fase 2: el calendario, el asistente y la reserva sincronizada (2026-11-10)
+
+Decidido con el cliente: **candidato es el primer estado** de una
+cotización (no algo aparte); **al ganar una alternativa, las otras del grupo
+pasan solas a *No elegida***; **el vendedor ve todas y edita solo las
+suyas**; y **se puede cotizar sin fecha exacta**, con una vista para
+filtrarlas.
+
+**Estados**: Candidato → Borrador → Enviada → Negociación → Ganada /
+Perdida (con motivo) / No elegida. *Vencida* se deduce de la fecha, como
+siempre. Los nombres viejos (`Enviado`, `Aceptado`, `Rechazado`) se leen
+como los nuevos (`estadoNormal()`), sin reescribir la planilla.
+- **Ganada no se pone a mano**: se llega por *Marcar ganada*
+  (`/api/presupuestos/convertir`), que crea la reserva. **No elegida** la pone
+  el sistema. Una ganada **no cambia de estado**: si el cliente cancela, se
+  cancela la reserva en el día, que libera el cupo.
+
+**Columnas nuevas** (al final, por nombre, se agregan solas):
+`Presupuestos` gana *Invitados, Periodo, Tipo de evento, Grupo, Descuento
+total, Motivo*; `Presupuesto Líneas` gana *Descuento, IVA, Sigue invitados*.
+**Del cliente, una cotización nueva guarda solo el `ID Cliente`**: las
+columnas *Cliente, Email, Teléfono* quedan en blanco y el nombre se resuelve
+al leer (`conCliente()`). Las de antes de las fichas siguen mostrando lo que
+tenían.
+
+**Las reglas al guardar viven en `lib/cotizar.ts`** (`prepararLineas()`), y la
+pantalla usa la misma función para mostrar, así que lo que se ve es lo que se
+guarda:
+- **La gente sale del tipo del producto**: Menú = su cantidad; lo demás, cero.
+- **Una línea que sigue a los invitados toma su número** (la once, el
+  desayuno). Un menú no sigue: 40 invitados pueden ser 30 adultos y 10 niños.
+- **El show ecuestre en un día público va siempre, incluido y a cero**, y no
+  se puede quitar ni cobrar. En un día privado, exclusivo, cerrado o fuera
+  del calendario es una línea opcional con su precio.
+
+**Las cuentas son las de una cotización** (`cuentasDe()`): líneas en neto,
+descuento por línea y sobre el total (5, 10 y 15 con un botón), IVA encima.
+**Se suma en bruto y se baja a neto una sola vez**: llevar cada línea a neto,
+redondear y volver a subir el IVA descuadraba por un peso (44 menús a $64.000
+daban $2.816.001). Una línea sin marca de IVA —las de antes— cuenta como
+"Incluido", así que su total no cambia.
+
+**Precios en UF**: el catálogo ya los guarda, pero la conversión al valor
+del día llega en la Fase 3. Hoy, al agregar un producto en UF, la línea nace
+en $0 y la pantalla avisa que se escriba en pesos.
+
+**La reserva derivada**:
+- Se crea al marcar ganada, con el total de la cotización (descuentos e
+  IVA) y la gente de sus menús o, si no tiene, sus invitados.
+- **Editar una cotización ganada reescribe su reserva** (`sincronizarReserva()`):
+  fecha, cliente, menús, personas y monto. Lo del día —asistencia, estado y
+  nota del pago— no se toca. Si el día está cerrado, es una corrección con
+  motivo (`guardaDelDia()`).
+- **Editar la ficha del cliente reescribe las reservas** de sus ganadas.
+- **La reserva no se edita a mano** salvo lo del día, ni se borra: la ruta
+  responde 409 y la página del día muestra *Cotización N° …* en vez de
+  *Editar / Borrar*. **No hizo falta una columna nueva en `Reservas`**: el
+  vínculo es el `ID Reserva` que la cotización ya guardaba.
+
+**Las pantallas**:
+- **`/presupuestos`** (en el menú, *Cotizaciones*): un calendario por semanas
+  con una tarjeta por día —estado del día, candidatos, cotizaciones, ganadas
+  y personas posibles, y *+ Cotizar este día*—, la vista **Sin fecha** y la
+  vista **Todas** con filtro por estado y buscador. Los avisos de por vencer y
+  vencidas siguen arriba.
+- **La ventana de cotizar** (`CotizacionDialogo`) son cuatro pasos con
+  botones: Cliente (buscar o crear, con la misma pregunta de parecidos),
+  Evento (fecha o *todavía no hay día exacto*, invitados con − y +, tipo y
+  notas; *Guardar como candidato*), Productos (botones por producto, precio y
+  descuento por línea, descuento total y las cuentas) y Enviar (estado, motivo
+  de pérdida, Guardar, *Marcar ganada*, copiar link, WhatsApp, documento,
+  *Hacer una alternativa*, borrar). Lo de otro vendedor se ve en solo
+  lectura.
+- **`/clientes`**: cada ficha muestra su historial de cotizaciones, la ganada
+  en verde y las alternativas marcadas, y *+ Cotizarle*.
+- **El documento** (`/presupuesto/<token>`) dice *Cotización*, toma el cliente
+  de la ficha y los datos de la empresa de Configuración, muestra el periodo
+  si no hay día, y las líneas en neto con el IVA al final.
+
+**Lo que sigue pendiente**: la conexión con el CRM del socio sigue activa, y
+como pide el mismo permiso `presupuestos`, **el vendedor ahora también ve sus
+eventos**. Se resuelve al apagar esa conexión.
+
 ### Las fases
 
 1. **Hecha**: catálogo de productos, fichas de clientes, descuentos y datos
    de la empresa.
-2. Calendario de cotizaciones (formato del calendario de la portada, con
-   candidatos y cotizaciones por día), asistente para cotizar, estados,
-   historial por cliente, alternativas y versiones, y la reserva derivada y
-   sincronizada. El vendedor gana el permiso de cotizar.
+2. **Hecha**: ver la sección de arriba.
 3. Condiciones de pago (anticipo y saldo), UF del día y pagos del cliente.
 4. Contrato generado desde la cotización, y su firma.
 5. Calicanto y el rol de gerente general.

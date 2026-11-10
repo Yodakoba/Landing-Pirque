@@ -14,7 +14,7 @@ import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
 import { cuentaComoPosible, estadoVisible, lineasDe, totalDe, personasDe,
-         folioDe, type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
+         folioDe, gentePosible, type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
@@ -597,7 +597,7 @@ export default function DayView(
           (p) => p.fecha === fecha && cuentaComoPosible(p, cotizado.hoy));
         if (vivos.length === 0) return null;
         const gente = vivos.reduce(
-          (n, p) => n + personasDe(lineasDe(cotizado.lineas, p.id)), 0);
+          (n, p) => n + gentePosible(p, lineasDe(cotizado.lineas, p.id)), 0);
         return (
           <div className="mt-3 rounded border border-rosa/40 bg-rosa/[0.06] px-3 py-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -605,17 +605,20 @@ export default function DayView(
               <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 {vivos.map((p) => (
                   <li key={p.id}>
-                    <span className="text-hueso/85">{p.cliente}</span>
+                    <a href={`/presupuestos?abrir=${encodeURIComponent(p.id)}`}
+                       className="font-semibold text-hueso/85 underline-offset-2 hover:underline">
+                      {p.cliente}
+                    </a>
                     <span className="text-hueso/60">
-                      {' · '}{personasDe(lineasDe(cotizado.lineas, p.id))} pers.
-                      {' · '}{enPesos(totalDe(lineasDe(cotizado.lineas, p.id)))}
+                      {' · '}{gentePosible(p, lineasDe(cotizado.lineas, p.id))} pers.
+                      {' · '}{enPesos(totalDe(lineasDe(cotizado.lineas, p.id), p.descuento))}
                       {' · '}{estadoVisible(p, cotizado.hoy).toLowerCase()}
                     </span>
                   </li>
                 ))}
               </ul>
               <span className="flex-1" />
-              <a href="/presupuestos" className="tecla boton">Ver presupuestos</a>
+              <a href="/presupuestos" className="tecla boton">Ver cotizaciones</a>
             </div>
             {/* La frase que explica por qué este bloque no suma a los números
                 de arriba. Va siempre, porque es justo lo que alguien podría
@@ -768,6 +771,10 @@ export default function DayView(
                  * no ofrecer un botón que va a devolver 403.
                  */
                 const mia = puedeTocarReserva(rol as Rol, usuario, r.anotadaPor);
+                // **Una reserva que nació de una cotización se edita en la
+                // cotización** (2026-11-10): la escribe el sistema. Acá se
+                // dice de cuál viene y se lleva a ella.
+                const deCotizacion = cotizado?.presupuestos.find((p) => p.idReserva === r.id);
                 return (
                   <tr key={r.fila} className={`border-b border-hueso/5 ${
                         ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
@@ -845,7 +852,12 @@ export default function DayView(
                           botones apagados va quién la anotó, que es lo que
                           alguien necesita saber para ir a pedírselo: un botón
                           que no responde se lee como un panel roto. */}
-                      {mia ? (
+                      {deCotizacion ? (
+                        <a href={`/presupuestos?abrir=${encodeURIComponent(deCotizacion.id)}`}
+                          className="tecla boton whitespace-nowrap">
+                          Cotización N° {folioDe(deCotizacion)}
+                        </a>
+                      ) : mia ? (
                         <div className="flex justify-end gap-2">
                           <button onClick={() => { setCreando(false); setEditando(r); }}
                             disabled={diaCerrado && !puedeCorregir}
