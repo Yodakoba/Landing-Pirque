@@ -83,12 +83,20 @@ const PREFIJO_PLANILLA = '/semana/';
  */
 const PREFIJO_PRESUPUESTO = '/presupuesto/';
 
+/**
+ * El contrato de una cotización (Fase 4), con el mismo token y el mismo
+ * criterio: lo abre el cliente para revisarlo e imprimirlo, y lo protege el
+ * token. `/contrato/` a secas no abre nada, por lo mismo que arriba.
+ */
+const PREFIJO_CONTRATO = '/contrato/';
+
 export async function middleware(req: NextRequest) {
   const ruta = req.nextUrl.pathname;
   if (PUBLICAS.includes(ruta)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_TRABAJADOR)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_PLANILLA)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_PRESUPUESTO)) return NextResponse.next();
+  if (ruta.startsWith(PREFIJO_CONTRATO)) return NextResponse.next();
 
   const secreto = secretoDeSesion(process.env);
 

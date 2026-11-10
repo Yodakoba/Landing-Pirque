@@ -118,7 +118,23 @@ export const COL_PRESUPUESTOS = {
    * puede moverse sola. Se cambia a mano con *Usar la UF de hoy*.
    */
   uf: 'UF',
-  fechaUF: 'Fecha UF'
+  fechaUF: 'Fecha UF',
+  // ---- El contrato (Fase 4, 2026-11-10). Al final y por nombre, como las
+  // demás: se agregan solas la primera vez que se guarda.
+  /** El horario del evento, "13:00 a 18:00". En blanco rige Configuración. */
+  horario: 'Horario',
+  /** Si el contrato lleva la cláusula de la Ley 20.393 ("sí" o en blanco). */
+  ley20393: 'Ley 20.393',
+  /** Lo acordado aparte, que va al contrato como su última cláusula. */
+  acuerdos: 'Acuerdos adicionales',
+  /**
+   * **El contrato firmado**: el id del archivo en Drive. Se firma en papel
+   * y se sube la foto o el PDF; que esté es lo que dice "firmado". Ver
+   * `lib/contrato.ts`.
+   */
+  contrato: 'Contrato firmado',
+  contratoSubidoPor: 'Contrato subido por',
+  contratoSubido: 'Contrato subido'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -265,6 +281,14 @@ export interface Presupuesto {
   /** El valor de la UF fijado en esta cotización, o 0 si no tiene. */
   uf: number;
   fechaUF: string;
+  /** El horario del evento para el contrato; vacío rige Configuración. */
+  horario: string;
+  ley20393: boolean;
+  acuerdos: string;
+  /** El id en Drive del contrato firmado, o vacío si todavía no se sube. */
+  contrato: string;
+  contratoSubidoPor: string;
+  contratoSubido: string;
   fila: number;
 }
 
@@ -788,6 +812,12 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       uf: aPrecio(en(f, i.uf)),
       fechaUF: en(f, i.fechaUF).slice(0, 10),
+      horario: en(f, i.horario).trim(),
+      ley20393: /^(s[ií]|x|1|true)$/i.test(en(f, i.ley20393).trim()),
+      acuerdos: en(f, i.acuerdos).trim(),
+      contrato: en(f, i.contrato).trim(),
+      contratoSubidoPor: en(f, i.contratoSubidoPor).trim(),
+      contratoSubido: en(f, i.contratoSubido).trim(),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -837,6 +867,12 @@ export function filaPresupuesto(
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   poner(i.uf, p.uf ? String(p.uf) : '');
   poner(i.fechaUF, p.uf ? p.fechaUF : '');
+  poner(i.horario, p.horario);
+  poner(i.ley20393, p.ley20393 ? 'sí' : '');
+  poner(i.acuerdos, p.acuerdos);
+  poner(i.contrato, p.contrato);
+  poner(i.contratoSubidoPor, p.contratoSubidoPor);
+  poner(i.contratoSubido, p.contratoSubido);
   return fila;
 }
 

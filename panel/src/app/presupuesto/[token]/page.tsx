@@ -17,47 +17,24 @@
  * cliente responde por WhatsApp y el encargado lo marca en el panel.
  */
 import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
-import { porToken, lineasDe, gentePosible, netoDeLinea, cuentasDe,
-         estadoVisible, folioDe, IVA, DOCUMENTO } from '@/lib/presupuestos';
+import { porToken, lineasDe, gentePosible, cuentasDe,
+         estadoVisible, folioDe, DOCUMENTO } from '@/lib/presupuestos';
 import { clienteDe, grupoDe, letraDe } from '@/lib/cotizar';
 import { condicionesDe } from '@/lib/cobros';
-import { enUF } from '@/lib/uf';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
 import BotonImprimir from '@/components/BotonImprimir';
+import TablaCotizacion from '@/components/TablaCotizacion';
+import { negocioDe } from '@/lib/negocio';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Los datos del negocio, que son los confirmados del proyecto.
- *
- * **El WhatsApp es el de Eventos**, no el de Reservas, y eso es deliberado:
- * un presupuesto se cotiza conversando —agencias, empresas, matrimonios— y
- * ese es justamente el canal de ese público. Los dos números son distintos
- * a propósito; ver CLAUDE.md.
- */
-const NEGOCIO = {
-  nombre: 'Brasas de Lo Pirque',
-  direccion: 'Casas de San Vicente, lote 4, Pirque, Región Metropolitana',
-  email: 'contacto@lopirque.cl',
-  whatsapp: '+56 9 3385 8575'
-};
 
 export default async function Pagina({ params }: { params: { token: string } }) {
   const [lista, todas, clientes, cfg] = await Promise.all([
     leerPresupuestos(), leerLineasPresupuesto(),
     leerClientes().catch(() => []), leerConfig()
   ]);
-  // **Quién es el negocio sale de Configuración** cuando está escrito (Fase
-  // 1); si no, los datos de siempre de este archivo.
-  const negocio = {
-    nombre: cfg.empresa.nombre || NEGOCIO.nombre,
-    direccion: cfg.empresa.domicilio || NEGOCIO.direccion,
-    email: NEGOCIO.email,
-    whatsapp: cfg.empresa.whatsapp || NEGOCIO.whatsapp,
-    razonSocial: cfg.empresa.razonSocial,
-    rut: cfg.empresa.rut
-  };
+  const negocio = negocioDe(cfg.empresa);
   const p = porToken(lista, decodeURIComponent(params.token ?? ''));
 
   // **El mismo mensaje para un link inventado y para uno que ya no está**,
@@ -80,7 +57,6 @@ export default async function Pagina({ params }: { params: { token: string } }) 
   // **Las cuentas como en una cotización** (Fase 2): cada línea en neto, el
   // descuento sobre el total, y el IVA encima. Ver `cuentasDe()`.
   const cuentas = cuentasDe(lineas, p.descuento);
-  const tasaIVA = Math.round(IVA * 100);
   const personas = gentePosible(p, lineas);
   const cliente = clienteDe(p, clientes);
   const cond = condicionesDe(p, cuentas.total, cfg);
@@ -89,8 +65,6 @@ export default async function Pagina({ params }: { params: { token: string } }) 
     ? clientes.find((c) => c.id === p.idCliente) : undefined;
   const estado = estadoVisible(p, hoy());
   const vencido = estado === 'Vencida';
-  const precioNeto = (precio: number, ivaIncluido: boolean) =>
-    Math.round(ivaIncluido ? precio / (1 + IVA) : precio);
 
   return (
     <section className="documento mx-auto max-w-2xl">
@@ -166,113 +140,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
         </div>
       </div>
 
-      {/* **La tabla se desplaza de lado dentro de su caja**, como las del
-          panel, y lleva `relative` por lo mismo: sin eso la página entera se
-          corría 11px a 393px —venía así de antes— y un documento que se
-          abre en un teléfono no puede empezar movido. Al imprimir la caja
-          deja de recortar: la hoja es mucho más ancha y la tabla entra. */}
-      <div className="relative mt-7 overflow-x-auto caja-tabla">
-      <table className="w-full text-sm">
-        <thead className="text-left text-[13px] font-semibold uppercase
-                          tracking-wide text-hueso/60">
-          <tr className="border-b border-hueso/20">
-            <th className="py-2 pr-3">Concepto</th>
-            <th className="py-2 pr-3 text-right">Cantidad</th>
-            <th className="py-2 pr-3 text-right">Precio neto</th>
-            <th className="py-2 text-right">Subtotal neto</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lineas.map((l, i) => (
-            <tr key={i} className="border-b border-hueso/10">
-              <td className="py-2.5 pr-3">
-                {l.concepto}
-                {l.precioUF > 0 && (
-                  <span className="ml-1 text-hueso/60">({enUF(l.precioUF)} c/u)</span>
-                )}
-                {l.precio === 0 && <span className="text-hueso/60"> · incluido</span>}
-                {l.descuento > 0 && <span className="text-hueso/60"> · {l.descuento}% de descuento</span>}
-              </td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">{l.cantidad}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">{enPesos(precioNeto(l.precio, l.ivaIncluido))}</td>
-              <td className="py-2.5 text-right tabular-nums">{enPesos(Math.round(netoDeLinea(l)))}</td>
-            </tr>
-          ))}
-          {lineas.length === 0 && (
-            <tr><td colSpan={4} className="py-4 text-hueso/60">
-              Todavía no hay nada cotizado.
-            </td></tr>
-          )}
-        </tbody>
-        {/* **El desglose va sobre el total y no línea por línea**: la suma
-            de los netos de cada línea no da el neto del total, y dos netos
-            distintos en una misma hoja es justo lo que no puede pasar en un
-            documento que va a la contabilidad de una empresa. El total es el
-            que manda —es lo que se cobra— y por eso sigue siendo el número
-            grande y en dorado. */}
-        <tfoot>
-          <tr>
-            <td colSpan={3} className="pt-4 pr-3 text-right text-sm text-hueso/70">
-              Neto
-            </td>
-            <td className="pt-4 text-right text-sm tabular-nums text-hueso/70">
-              {enPesos(cuentas.subtotal)}
-            </td>
-          </tr>
-          {cuentas.descuento > 0 && (
-            <>
-              <tr>
-                <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
-                  Descuento {p.descuento}%
-                </td>
-                <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
-                  −{enPesos(cuentas.descuento)}
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
-                  Neto con descuento
-                </td>
-                <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
-                  {enPesos(cuentas.neto)}
-                </td>
-              </tr>
-            </>
-          )}
-          <tr>
-            <td colSpan={3} className="pr-3 pt-1 text-right text-sm text-hueso/70">
-              IVA {tasaIVA}%
-            </td>
-            <td className="pt-1 text-right text-sm tabular-nums text-hueso/70">
-              {enPesos(cuentas.iva)}
-            </td>
-          </tr>
-          <tr>
-            <td colSpan={3} className="border-t border-hueso/20 pr-3 pt-2 text-right
-                                       text-sm font-semibold">
-              Total
-            </td>
-            <td className="border-t border-hueso/20 pt-2 text-right text-xl
-                           font-bold tabular-nums text-oro">
-              {enPesos(cuentas.total)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+      <div className="mt-7">
+        <TablaCotizacion lineas={lineas} cuentas={cuentas} descuento={p.descuento}
+          uf={p.uf} fechaUF={p.fechaUF} />
       </div>
-
-      {/* **Que los precios incluyen IVA se dice con palabras, no solo con el
-          desglose.** Un presupuesto que va a una empresa lo lee alguien que,
-          si no está dicho, le suma 19% encima por costumbre — y nos deja
-          fuera de presupuesto por un impuesto que ya estaba cobrado. */}
-      <p className="mt-3 text-[13px] font-semibold text-hueso/70">
-        Los precios de cada línea son netos: el IVA se suma al final.
-      </p>
-      {p.uf > 0 && lineas.some((l) => l.precioUF > 0) && (
-        <p className="mt-1 text-[13px] text-hueso/70">
-          Los valores en UF se convirtieron con la UF del {p.fechaUF}: {enPesos(p.uf)}.
-        </p>
-      )}
 
       {/* **Las condiciones de pago**, de la misma función que usa la
           pantalla (y el contrato después): no pueden decir cosas distintas. */}

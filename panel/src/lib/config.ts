@@ -76,6 +76,16 @@ export interface Config {
   anticipoPct: number;
   saldoDias: number;
   /**
+   * **Las medidas de tranquilidad del contrato** (2026-11-10, el cliente las
+   * pidió configurables): cuántas veces se puede cambiar la fecha, hasta
+   * cuántos días antes se puede cancelar, y qué % de la reserva se devuelve
+   * al cancelar. Los de partida son los del contrato del CRM. Un 0 en los
+   * cambios o en los días saca esa frase del contrato.
+   */
+  cambiosFecha: number;
+  cancelacionDias: number;
+  reembolsoPct: number;
+  /**
    * La unidad compartida de Google Drive donde se guardan los comprobantes
    * de pago (2026-11-10). Es el ID que va después de `folders/`; vive acá y
    * no en el código porque Calicanto tendrá la suya. En blanco, no se puede
@@ -97,15 +107,19 @@ export interface Empresa {
   razonSocial: string;
   rut: string;
   representante: string;
+  /** La cédula del representante legal, para el contrato. */
+  ciRepresentante: string;
   domicilio: string;
+  /** Dónde se firman los contratos: "En Pirque, a …". */
+  ciudadFirma: string;
   whatsapp: string;
   /** Banco, tipo y número de cuenta para el anticipo, como texto. */
   transferencia: string;
 }
 
 export const EMPRESA_VACIA: Empresa = {
-  nombre: '', razonSocial: '', rut: '', representante: '', domicilio: '',
-  whatsapp: '', transferencia: ''
+  nombre: '', razonSocial: '', rut: '', representante: '', ciRepresentante: '',
+  domicilio: '', ciudadFirma: '', whatsapp: '', transferencia: ''
 };
 
 /**
@@ -131,6 +145,10 @@ export const POR_DEFECTO: Config = {
   // Los de la cotización del CRM, que es lo que los clientes ya recibían.
   anticipoPct: 30,
   saldoDias: 3,
+  // Los del contrato del CRM, que es lo que los clientes ya firmaban.
+  cambiosFecha: 2,
+  cancelacionDias: 60,
+  reembolsoPct: 20,
   driveComprobantes: '',
   empresa: EMPRESA_VACIA
 };
@@ -151,12 +169,17 @@ export const CLAVES = {
   descuentos: 'descuentos',
   anticipoPct: 'anticipo_porcentaje',
   saldoDias: 'saldo_dias_antes',
+  cambiosFecha: 'contrato_cambios_fecha',
+  cancelacionDias: 'contrato_cancelacion_dias',
+  reembolsoPct: 'contrato_reembolso',
   driveComprobantes: 'drive_comprobantes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
   empresaRut: 'empresa_rut',
   empresaRepresentante: 'empresa_representante',
+  empresaCiRepresentante: 'empresa_ci_representante',
   empresaDomicilio: 'empresa_domicilio',
+  empresaCiudadFirma: 'contrato_ciudad',
   empresaWhatsapp: 'empresa_whatsapp',
   empresaTransferencia: 'empresa_transferencia'
 } as const;
@@ -283,13 +306,18 @@ export function leerConfigDe(filas: string[][]): Config {
     // En cero no hay anticipo: es un valor que alguien puede querer.
     anticipoPct: numero(v(CLAVES.anticipoPct), POR_DEFECTO.anticipoPct, 0, 100),
     saldoDias: numero(v(CLAVES.saldoDias), POR_DEFECTO.saldoDias, 0, 365),
+    cambiosFecha: numero(v(CLAVES.cambiosFecha), POR_DEFECTO.cambiosFecha, 0, 10),
+    cancelacionDias: numero(v(CLAVES.cancelacionDias), POR_DEFECTO.cancelacionDias, 0, 365),
+    reembolsoPct: numero(v(CLAVES.reembolsoPct), POR_DEFECTO.reembolsoPct, 0, 100),
     driveComprobantes: idDeDrive(v(CLAVES.driveComprobantes)),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
       razonSocial: texto(v(CLAVES.empresaRazonSocial)),
       rut: texto(v(CLAVES.empresaRut)),
       representante: texto(v(CLAVES.empresaRepresentante)),
+      ciRepresentante: texto(v(CLAVES.empresaCiRepresentante)),
       domicilio: texto(v(CLAVES.empresaDomicilio)),
+      ciudadFirma: texto(v(CLAVES.empresaCiudadFirma)),
       whatsapp: texto(v(CLAVES.empresaWhatsapp)),
       transferencia: texto(v(CLAVES.empresaTransferencia))
     }
@@ -314,12 +342,17 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.descuentos, c.descuentos.join(', ')],
     [CLAVES.anticipoPct, String(c.anticipoPct)],
     [CLAVES.saldoDias, String(c.saldoDias)],
+    [CLAVES.cambiosFecha, String(c.cambiosFecha)],
+    [CLAVES.cancelacionDias, String(c.cancelacionDias)],
+    [CLAVES.reembolsoPct, String(c.reembolsoPct)],
     [CLAVES.driveComprobantes, c.driveComprobantes],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],
     [CLAVES.empresaRut, c.empresa.rut],
     [CLAVES.empresaRepresentante, c.empresa.representante],
+    [CLAVES.empresaCiRepresentante, c.empresa.ciRepresentante],
     [CLAVES.empresaDomicilio, c.empresa.domicilio],
+    [CLAVES.empresaCiudadFirma, c.empresa.ciudadFirma],
     [CLAVES.empresaWhatsapp, c.empresa.whatsapp],
     [CLAVES.empresaTransferencia, c.empresa.transferencia]
   ];

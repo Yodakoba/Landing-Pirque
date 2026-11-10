@@ -289,6 +289,11 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   /* Una cotización de muchas líneas no puede partir una fila en dos hojas. */
   tr, li { break-inside: avoid; }
 
+  /* En el contrato, un título no queda solo al pie de una hoja, y las dos
+     firmas van juntas en la misma. */
+  .documento h2 { break-after: avoid; }
+  .firmas { break-inside: avoid; }
+
   /* La caja que desplaza la tabla en un teléfono no puede recortarla en el
      papel: en la hoja hay ancho de sobra y lo que sobresaliera se perdería
      sin que nada lo diga. */

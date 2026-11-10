@@ -34,7 +34,8 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
   // cliente, no alguien del equipo. Una barra con "Turnos" y "Bitácora"
   // sobre una cotización diría que hay un panel detrás al que asomarse.
   const esDeTrabajador = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
-                      || ruta.startsWith('/presupuesto/');
+                      || ruta.startsWith('/presupuesto/')
+                      || ruta.startsWith('/contrato/');
   const esEntrada = ruta === '/login';
 
   async function salir() {

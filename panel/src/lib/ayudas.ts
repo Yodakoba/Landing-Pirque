@@ -194,7 +194,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Productos: agrégalos con los botones. Cada línea tiene su precio y su '
       + 'descuento; abajo va el descuento sobre el total y el IVA.',
       'Enviar: guarda, copia el link o mándalo por WhatsApp. Si el cliente '
-      + 'acepta, “Marcar ganada”.'
+      + 'acepta, “Ver el contrato”, imprímelo y fírmenlo en dos ejemplares.',
+      'Sube la foto o el PDF del contrato firmado, anota el anticipo y '
+      + '“Marcar ganada”.'
     ],
     ojo: 'En un día público el show ecuestre va incluido y no se puede '
        + 'quitar. Para ofrecer otra opción al mismo cliente usa “Hacer una '
@@ -269,10 +271,13 @@ export const AYUDAS: Record<string, Ayuda> = {
   configuracion: {
     titulo: 'La configuración',
     cuerpo: [
-      'Qué días de la semana se abre, cuánta gente cabe, hasta cuántos días '
-      + 'adelante se puede reservar y a partir de cuántos lugares libres el '
-      + 'sitio avisa que quedan pocos.',
-      'De acá sale el calendario que ven los clientes en el sitio.'
+      'Está ordenada por secciones, con un botón arriba para saltar a cada '
+      + 'una: las reservas del sitio, el calendario del panel, las '
+      + 'cotizaciones, el contrato, los datos de la empresa y la mantención.',
+      'Reservas del sitio es lo que ven los clientes: qué días se abre, '
+      + 'cuánta gente cabe y hasta cuándo se puede reservar. Cotizaciones y '
+      + 'Contrato son lo que propone cada cotización nueva y lo que dice el '
+      + 'contrato que se imprime.'
     ],
     ojo: 'Esto cambia lo que ve el público. Un día suelto se abre o se cierra '
        + 'desde el calendario, sin tocar esta pantalla.'
