@@ -18,21 +18,24 @@
  * - **Lo que no es de esta cuenta se ve y no se toca**: el vendedor ve las
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, numeroONulo, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
-  prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe,
+  prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
-import { buscarClientes, porNombreCliente, type Cliente } from '@/lib/clientes';
+import {
+  condicionesDe, estadoCobros, montoCobro, type Cobro
+} from '@/lib/cobros';
+import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
@@ -50,6 +53,8 @@ export interface DatosCotizar {
   clientes: Cliente[];
   fechas: { fecha: string; estado: string; capacidad: number }[];
   descuentos: number[];
+  /** Las condiciones de pago por defecto, de Configuración. */
+  condiciones?: { anticipoPct: number; saldoDias: number };
   hoy: string;
   usuario: string;
   rol: string;
@@ -115,6 +120,33 @@ export default function CotizacionDialogo({
       : ESTADO_PRESUPUESTO.borrador);
   const [motivo, setMotivo] = useState(p?.motivo ?? '');
   const [descuento, setDescuento] = useState(p?.descuento ?? 0);
+  /** `''` es por definir. Ver `DOCUMENTO`. */
+  const [documento, setDocumento] = useState<Documento>(p?.documento ?? '');
+  /**
+   * Los datos de facturación **se escriben acá pero viven en la ficha**: al
+   * guardar la cotización se guardan en el cliente, para no pedirlos de
+   * nuevo la próxima vez. Nacen con lo que la ficha ya tenga.
+   */
+  const fichaInicial = datos.clientes.find((c) => c.id === (p?.idCliente ?? clienteInicial));
+  /**
+   * Las condiciones de pago de esta cotización, como se escriben: **en
+   * blanco rige Configuración**, y "0" en el anticipo es sin anticipo.
+   */
+  const [anticipoTxt, setAnticipoTxt] = useState(p?.anticipo == null ? '' : String(p.anticipo));
+  const [saldoTxt, setSaldoTxt] = useState(p?.saldoDias == null ? '' : String(p.saldoDias));
+  /** Los cobros al cliente. Solo existen para una cotización ya guardada. */
+  const [cobros, setCobros] = useState<Cobro[]>([]);
+  const [medio, setMedio] = useState('');
+  const [otroMonto, setOtroMonto] = useState<null | { monto: string; concepto: string }>(null);
+  useEffect(() => {
+    if (!p) return;
+    fetch(`/api/presupuestos/cobros?id=${encodeURIComponent(p.id)}`).then((r) => r.json())
+      .then((d) => d.cobros && setCobros(d.cobros)).catch(() => {});
+  }, [p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [facturacion, setFacturacion] = useState({
+    empresa: fichaInicial?.empresa ?? '', rut: fichaInicial?.rut ?? '',
+    giro: fichaInicial?.giro ?? '', domicilio: fichaInicial?.domicilio ?? ''
+  });
   const [lineas, setLineas] = useState<Linea[]>(lineasIniciales);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -122,6 +154,12 @@ export default function CotizacionDialogo({
   const [nuevoCliente, setNuevoCliente] = useState<null | {
     nombre: string; telefono: string; correo: string; empresa: string }>(null);
   const [parecidas, setParecidas] = useState<Cliente[]>([]);
+
+  // Cambiar de cliente trae sus datos de facturación.
+  useEffect(() => {
+    const c = clientes.find((x) => x.id === idCliente);
+    if (c) setFacturacion({ empresa: c.empresa, rut: c.rut, giro: c.giro, domicilio: c.domicilio });
+  }, [idCliente]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ganada = !!p?.idReserva;
   const puedeEditar = !p || puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor);
@@ -133,6 +171,12 @@ export default function CotizacionDialogo({
     () => prepararLineas(lineas, datos.menus, invitados, publico),
     [lineas, datos.menus, invitados, publico]);
   const cuentas = cuentasDe(vistas, descuento);
+  /** Cuánta gente suman los menús: tiene que calzar con los invitados. */
+  const enMenus = vistas.reduce((n, l) => n + l.personas, 0);
+  const cond = condicionesDe(
+    { anticipo: numeroONulo(anticipoTxt, 100), saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
+    cuentas.total, datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
+  const cobrado = estadoCobros({ anticipo: cond.anticipo, total: cuentas.total }, cobros);
   const cotizables = paraCotizar(datos.menus);
   const show = showDe(datos.menus);
   const encontrados = useMemo(
@@ -144,7 +188,7 @@ export default function CotizacionDialogo({
 
   const agregar = (m: Menu) => {
     const precio = m.moneda === MONEDA.uf ? 0 : Math.round(precioParaCotizar(m));
-    setLineas([...vistas, lineaDeProducto(m, p?.id ?? '', invitados, precio)]);
+    setLineas([...vistas, lineaDeProducto(m, p?.id ?? '', invitados, precio, enMenus)]);
     if (m.moneda === MONEDA.uf) {
       avisar(`${m.nombre} tiene su precio en UF: escríbelo en pesos por ahora`, 'atencion');
     }
@@ -176,9 +220,22 @@ export default function CotizacionDialogo({
     }
     setGuardando(true);
     try {
+      // Con factura, lo escrito en los datos de facturación va a la ficha.
+      const ficha = clientes.find((c) => c.id === idCliente);
+      if (documento === DOCUMENTO.factura && ficha && (['empresa', 'rut', 'giro', 'domicilio'] as const)
+        .some((k) => facturacion[k].trim() !== ficha[k])) {
+        const rc = await fetch('/api/clientes', {
+          method: 'PATCH', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: idCliente, ...facturacion })
+        });
+        const dc = await rc.json();
+        if (dc.error) { setError(`Datos de facturación: ${dc.error}`); return ''; }
+        if (dc.clientes) setClientes(dc.clientes);
+      }
       const cuerpo = {
         id: p?.id, idCliente, fecha: fechaReal, periodo: sinFecha ? periodo : '',
-        invitados, tipoEvento, notas, descuento, motivo,
+        invitados, tipoEvento, notas, descuento, motivo, documento,
+        anticipo: anticipoTxt, saldoDias: saldoTxt,
         estado: estadoForzado ?? estado,
         lineas: vistas
       };
@@ -224,6 +281,35 @@ export default function CotizacionDialogo({
     if (d.error) return setError(d.error);
     avisar(`Alternativa creada: N° ${folioDe(d.presupuesto)}`);
     onCambio(); onCerrar();
+  }
+
+  /** Anota un cobro. Lo comprueba el servidor: el vendedor, solo los suyos. */
+  async function cobrar(monto: number, concepto: string) {
+    if (!p || !monto) return;
+    setGuardando(true); setError('');
+    try {
+      const r = await fetch('/api/presupuestos/cobros', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ presupuesto: p.id, monto, concepto, medio })
+      });
+      const d = await r.json();
+      if (d.error) return setError(d.error);
+      setCobros(d.cobros); setOtroMonto(null);
+      avisar(`${concepto} anotado: ${enPesos(monto)}`);
+      onCambio();
+    } finally { setGuardando(false); }
+  }
+
+  async function deshacerCobro(c: Cobro) {
+    if (!confirm(`¿Deshacer el cobro de ${enPesos(c.monto)}? Es para uno anotado por error: `
+      + 'se borra. Si de verdad se devolvió plata, anota un cobro en negativo.')) return;
+    const r = await fetch('/api/presupuestos/cobros', {
+      method: 'DELETE', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: c.id })
+    });
+    const d = await r.json();
+    if (d.error) return setError(d.error);
+    setCobros(d.cobros); avisar('Cobro deshecho'); onCambio();
   }
 
   async function borrar() {
@@ -414,7 +500,7 @@ export default function CotizacionDialogo({
 
             <div>
               <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                Invitados
+                Invitados, niños incluidos
               </p>
               <div className="flex items-center gap-2">
                 <button type="button" className="boton h-12 w-12 text-xl"
@@ -422,12 +508,13 @@ export default function CotizacionDialogo({
                 <input type="number" min={0} value={invitados || ''} placeholder="0"
                   onChange={(e) => setInvitados(Math.max(0, Number(e.target.value) || 0))}
                   className={`${ENTRADA} h-12 w-28 text-center text-[20px] font-bold`}
-                  aria-label="Invitados" />
+                  aria-label="Invitados, niños incluidos" />
                 <button type="button" className="boton h-12 w-12 text-xl"
                   onClick={() => setInvitados(invitados + 1)} aria-label="Uno más">+</button>
               </div>
               <p className="mt-1 text-[13px] text-hueso/60">
-                La once, el desayuno y lo que toman todos siguen este número solos.
+                La cantidad de personas completa, adultos y niños. Los menús se reparten
+                este número; la once, el desayuno y lo que toman todos lo siguen solos.
               </p>
             </div>
 
@@ -532,10 +619,24 @@ export default function CotizacionDialogo({
                       </div>
                       {!esShowIncluido && (
                         <div className="mt-2 flex flex-wrap items-end gap-3">
-                          <Campo etiqueta={l.sigue ? 'Cantidad (= invitados)' : 'Cantidad'} ancho="w-32">
-                            <input type="number" min={0} value={l.cantidad} disabled={l.sigue}
-                              onChange={(e) => cambiarLinea(i, { cantidad: Number(e.target.value) || 0 })}
-                              className={ENTRADA} />
+                          <Campo etiqueta={l.sigue ? 'Cantidad (= invitados)' : 'Cantidad'} ancho="w-auto">
+                            {/* − y + grandes, y el número se puede escribir. En un
+                                menú, lo que sube se le resta al primero
+                                (`cambiarCantidad()`). */}
+                            <div className="flex items-center gap-2">
+                              {!l.sigue && (
+                                <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno menos"
+                                  onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad - 1, datos.menus, invitados))}>−</button>
+                              )}
+                              <input type="number" min={0} value={l.cantidad} disabled={l.sigue}
+                                onChange={(e) => setLineas(cambiarCantidad(vistas, i,
+                                  Number(e.target.value) || 0, datos.menus, invitados))}
+                                className={`${ENTRADA} h-11 !w-20 text-center text-[17px] font-bold`} />
+                              {!l.sigue && (
+                                <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno más"
+                                  onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad + 1, datos.menus, invitados))}>+</button>
+                              )}
+                            </div>
                           </Campo>
                           <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-40">
                             <input type="number" min={0} step={500} value={l.precio || ''} placeholder="0"
@@ -556,10 +657,12 @@ export default function CotizacionDialogo({
                               ))}
                             </div>
                           </div>
+                          {prod?.tipo !== TIPO_PRODUCTO.menu && (
                           <button type="button" onClick={() => cambiarLinea(i, { sigue: !l.sigue })}
                             className={`boton min-h-[40px] ${l.sigue ? 'border-oro bg-oro/15' : ''}`}>
                             {l.sigue ? '✓ Sigue a los invitados' : 'Seguir a los invitados'}
                           </button>
+                          )}
                           <span className="ml-auto text-[16px] font-bold tabular-nums">
                             {enPesos(totalDeLinea(l))}
                             <span className="ml-1 text-[13px] font-normal text-hueso/60">
@@ -572,6 +675,23 @@ export default function CotizacionDialogo({
                   );
                 })}
               </ul>
+            )}
+
+            {/* **Los menús tienen que sumar los invitados** (2026-11-10). Cada
+                menú nuevo toma solo los que faltan; si igual no calzan, se
+                dice en ámbar, sin bloquear: puede que cambien los invitados. */}
+            {invitados > 0 && enMenus > 0 && enMenus !== invitados && (
+              <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                            font-semibold text-ambar-texto">
+                Los menús suman {enMenus} {enMenus === 1 ? 'persona' : 'personas'} y los
+                invitados son {invitados}.{' '}
+                {enMenus > invitados ? 'Baja la cantidad de algún menú.' : `Faltan ${invitados - enMenus} en los menús.`}
+              </p>
+            )}
+            {invitados > 0 && enMenus === invitados && (
+              <p className="text-[14px] font-semibold text-verde-texto">
+                ✓ Los menús suman los {invitados} invitados.
+              </p>
             )}
 
             {/* Las cuentas, como en una cotización: neto, descuento, IVA y total. */}
@@ -645,18 +765,189 @@ export default function CotizacionDialogo({
               </div>
             )}
 
+
+            {/* **El documento de la venta** (2026-11-10). Nace por definir;
+                apretar el elegido lo vuelve a dejar por definir. Por ahora
+                no cambia el precio. Con factura pide los datos de
+                facturación, que se guardan en la ficha del cliente. */}
+            <div>
+              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                Documento de la venta
+              </p>
+              <Elegir etiqueta="Documento de la venta" opciones={Object.values(DOCUMENTO)}
+                valor={documento} onElegir={(v) => setDocumento(documentoDe(v))} />
+              {!documento && <p className="mt-1.5 text-[14px] text-hueso/70">Por definir.</p>}
+              {documento === DOCUMENTO.factura && (
+                <div className="mt-3 rounded border border-hueso/15 bg-panel p-3">
+                  <p className="mb-2 text-[14px] text-hueso/75">
+                    Datos de facturación. Se guardan en la ficha del cliente.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {([
+                      ['empresa', 'Razón social', 'Como aparece en el SII'],
+                      ['rut', 'RUT', '76.123.456-7'],
+                      ['giro', 'Giro', 'Actividad de la empresa'],
+                      ['domicilio', 'Dirección', 'Calle, número, comuna']
+                    ] as const).map(([k, etiqueta, ejemplo]) => (
+                      <label key={k} className="block">
+                        <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          {etiqueta}
+                        </span>
+                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                      </label>
+                    ))}
+                  </div>
+                  {faltaParaFactura(facturacion).length > 0 && (
+                    <p className="mt-3 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                                  font-semibold text-ambar-texto">
+                      Para facturarle falta: {faltaParaFactura(facturacion).join(', ')}.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+
+            {/* **Las condiciones de pago** (2026-11-10). En blanco rige
+                Configuración; cada cotización las puede negociar. Las
+                calcula `condicionesDe()`, la misma que usa el documento. */}
+            <div>
+              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                Condiciones de pago
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="block">
+                  <span className="mb-1 block text-[13px] text-hueso/70">Anticipo %</span>
+                  <input type="number" min={0} max={100} value={anticipoTxt} className={`${ENTRADA} w-24`}
+                    placeholder={String(datos.condiciones?.anticipoPct ?? 30)}
+                    onChange={(e) => setAnticipoTxt(e.target.value)} />
+                </label>
+                <button type="button" aria-pressed={cond.pct === 0}
+                  onClick={() => setAnticipoTxt(cond.pct === 0 ? '' : '0')}
+                  className={`boton min-h-[44px] ${cond.pct === 0 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
+                  Sin anticipo
+                </button>
+                <label className="block">
+                  <span className="mb-1 block text-[13px] text-hueso/70">Saldo, días antes</span>
+                  <input type="number" min={0} max={365} value={saldoTxt} className={`${ENTRADA} w-24`}
+                    placeholder={String(datos.condiciones?.saldoDias ?? 3)}
+                    onChange={(e) => setSaldoTxt(e.target.value)} />
+                </label>
+              </div>
+              <p className="mt-2 text-[15px]">
+                {cond.pct > 0
+                  ? <>Anticipo {cond.pct}%: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha · Saldo <strong>{enPesos(cond.saldo)}</strong></>
+                  : <>Sin anticipo · Todo <strong>{enPesos(cond.saldo)}</strong></>}
+                {cond.saldoHasta
+                  ? <> hasta el {enPalabras(cond.saldoHasta)}.</>
+                  : <>, {cond.dias} días antes del evento.</>}
+              </p>
+            </div>
+
+            {/* **Los cobros al cliente**: se anotan los pagos, no una
+                casilla. Lo normal es un toque —anticipo recibido, o todo—;
+                otro monto abre un campo. Un cobro anotado por error se
+                deshace. */}
+            <div className="rounded border border-hueso/15 bg-panel p-3">
+              <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                Pagos del cliente
+              </p>
+              {!p ? (
+                <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para anotar sus pagos.</p>
+              ) : (
+                <>
+                  <p className="mt-1 text-[15px]">
+                    Pagado <strong>{enPesos(cobrado.pagado)}</strong>
+                    {cobrado.falta > 0 && <> · Falta <strong>{enPesos(cobrado.falta)}</strong></>}
+                    {cobrado.completo && <span className="ml-2 rounded-full border border-verde/50 px-2 py-0.5
+                      text-[13px] font-semibold text-verde-texto">✓ Pagado completo</span>}
+                  </p>
+                  {cobros.length > 0 && (
+                    <ul className="mt-2 divide-y divide-hueso/10 border-y border-hueso/10">
+                      {cobros.map((c) => (
+                        <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[14px]">
+                          <span className="font-semibold">{c.concepto}</span>
+                          <span className={c.monto < 0 ? 'text-rojo-texto' : ''}>
+                            {c.monto < 0 ? `−${enPesos(-c.monto)}` : enPesos(c.monto)}
+                          </span>
+                          <span className="text-hueso/70">{c.fecha}{c.medio && ` · ${c.medio}`}
+                            {c.registradoPor && ` · ${c.registradoPor}`}</span>
+                          <span className="flex-1" />
+                          {puedeEditar && (
+                            <button type="button" onClick={() => void deshacerCobro(c)}
+                              className="boton hover:border-rojo-fuerte hover:text-rojo-texto">Deshacer</button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {puedeEditar && cobrado.falta > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <input value={medio} onChange={(e) => setMedio(e.target.value)}
+                        placeholder="Cómo pagó: transferencia, efectivo… (opcional)"
+                        className={`${ENTRADA} sm:w-96`} />
+                      <div className="flex flex-wrap gap-2">
+                        {cobrado.faltaAnticipo > 0 && (
+                          <button type="button" disabled={guardando}
+                            onClick={() => void cobrar(cobrado.faltaAnticipo, 'Anticipo')}
+                            className="boton min-h-[44px] !border-verde-fuerte text-verde-texto hover:bg-verde/10">
+                            ✓ Anticipo recibido · {enPesos(cobrado.faltaAnticipo)}
+                          </button>
+                        )}
+                        <button type="button" disabled={guardando}
+                          onClick={async () => {
+                            // Pagar todo de una son dos cobros: el anticipo y el saldo.
+                            if (cobrado.faltaAnticipo > 0) await cobrar(cobrado.faltaAnticipo, 'Anticipo');
+                            const resto = cobrado.falta - cobrado.faltaAnticipo;
+                            if (resto > 0) await cobrar(resto, 'Saldo');
+                          }}
+                          className="boton min-h-[44px] !border-verde-fuerte text-verde-texto hover:bg-verde/10">
+                          ✓ Pagó todo · {enPesos(cobrado.falta)}
+                        </button>
+                        <button type="button" onClick={() => setOtroMonto({ monto: '', concepto: 'Otro' })}
+                          className="boton min-h-[44px]">Otro monto</button>
+                      </div>
+                      {otroMonto && (
+                        <div className="flex flex-wrap items-end gap-2">
+                          <input type="text" inputMode="numeric" value={otroMonto.monto} autoFocus
+                            placeholder="Monto" className={`${ENTRADA} w-36`}
+                            onChange={(e) => setOtroMonto({ ...otroMonto, monto: e.target.value })} />
+                          <Elegir etiqueta="Concepto" opciones={['Anticipo', 'Saldo', 'Otro']}
+                            valor={otroMonto.concepto}
+                            onElegir={(v) => setOtroMonto({ ...otroMonto, concepto: v || 'Otro' })} />
+                          <button type="button" disabled={guardando || !montoCobro(otroMonto.monto)}
+                            onClick={() => void cobrar(montoCobro(otroMonto.monto), otroMonto.concepto)}
+                            className="boton min-h-[44px]">Anotar</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={guardando} className="boton boton-relleno min-h-[48px] px-5"
                 onClick={() => void guardar()}>
                 {guardando ? 'Guardando…' : 'Guardar'}
               </button>
               {p && !ganada && esFecha(fechaReal) && (
-                <button type="button" disabled={guardando} onClick={() => void ganar()}
-                  className="boton min-h-[48px] border-verde-fuerte text-verde-texto hover:bg-verde/10">
+                <button type="button" disabled={guardando || !cobrado.anticipoListo}
+                  title={cobrado.anticipoListo ? '' : 'Falta el anticipo'}
+                  onClick={() => void ganar()}
+                  className="boton min-h-[48px] !border-verde-fuerte text-verde-texto hover:bg-verde/10 disabled:opacity-50">
                   ✓ Marcar ganada
                 </button>
               )}
             </div>
+            {/* El motivo del botón apagado, en pantalla y no en un globito:
+                en un teléfono no hay mouse que lo muestre. */}
+            {p && !ganada && esFecha(fechaReal) && !cobrado.anticipoListo && (
+              <p className="text-[14px] font-semibold text-ambar-texto">
+                Para marcarla ganada falta el anticipo: {enPesos(cobrado.faltaAnticipo)}.
+              </p>
+            )}
 
             {p && (
               <div className="flex flex-wrap gap-2 border-t border-hueso/10 pt-3">

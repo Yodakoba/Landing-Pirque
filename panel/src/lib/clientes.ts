@@ -36,7 +36,12 @@ export const COL_CLIENTES = {
   correo: 'Correo',
   notas: 'Notas',
   creadoPor: 'Creado por',
-  creado: 'Creado'
+  creado: 'Creado',
+  /**
+   * El giro, para la factura (2026-11-10). **Al final y por nombre**: se
+   * agrega sola la primera vez que se guarda una ficha.
+   */
+  giro: 'Giro'
 } as const;
 
 export const ENCABEZADO_CLIENTES: string[] = Object.values(COL_CLIENTES);
@@ -48,6 +53,8 @@ export interface Cliente {
   empresa: string;
   rut: string;
   domicilio: string;
+  /** El giro del cliente, para facturarle. */
+  giro: string;
   telefono: string;
   correo: string;
   notas: string;
@@ -58,7 +65,7 @@ export interface Cliente {
 }
 
 export type DatosCliente = Pick<Cliente,
-  'nombre' | 'empresa' | 'rut' | 'domicilio' | 'telefono' | 'correo' | 'notas'>;
+  'nombre' | 'empresa' | 'rut' | 'domicilio' | 'giro' | 'telefono' | 'correo' | 'notas'>;
 
 export function leerClientesDe(filas: string[][]): Cliente[] {
   if (filas.length < 2) return [];
@@ -75,6 +82,7 @@ export function leerClientesDe(filas: string[][]): Cliente[] {
     salida.push({
       id, nombre,
       empresa: en(f, i.empresa), rut: en(f, i.rut), domicilio: en(f, i.domicilio),
+      giro: en(f, i.giro),
       telefono: en(f, i.telefono), correo: en(f, i.correo), notas: en(f, i.notas),
       creadoPor: en(f, i.creadoPor), creado: en(f, i.creado),
       fila: n + 1
@@ -97,6 +105,7 @@ export function filaCliente(encabezado: string[], c: Omit<Cliente, 'fila'>): str
   poner(i.notas, c.notas);
   poner(i.creadoPor, c.creadoPor);
   poner(i.creado, c.creado);
+  poner(i.giro, c.giro);
   return fila;
 }
 
@@ -111,6 +120,7 @@ export function limpiarCliente(e: Partial<Record<keyof DatosCliente, unknown>>):
     empresa: t(e.empresa),
     rut: t(e.rut) ? rutLimpio(t(e.rut)) : '',
     domicilio: t(e.domicilio),
+    giro: t(e.giro),
     telefono: t(e.telefono) ? telefonoNormal(e.telefono) : '',
     correo: correoNormal(e.correo),
     notas: t(e.notas)
@@ -128,6 +138,22 @@ export function faltaEnCliente(c: DatosCliente): string {
   if (!c.nombre) return 'Falta el nombre.';
   if (!c.telefono && !c.correo) return 'Falta un teléfono o un correo.';
   return '';
+}
+
+/**
+ * Lo que le falta a una ficha **para facturarle**: razón social, RUT, giro
+ * y dirección (2026-11-10). Vacío si está todo.
+ *
+ * Solo se pregunta cuando la cotización es con factura, y **avisa, no
+ * bloquea**: el dato puede llegar después, igual que la boleta del equipo.
+ */
+export function faltaParaFactura(c: Pick<Cliente, 'empresa' | 'rut' | 'giro' | 'domicilio'>): string[] {
+  const falta: string[] = [];
+  if (!c.empresa.trim()) falta.push('razón social');
+  if (!c.rut.trim()) falta.push('RUT');
+  if (!c.giro.trim()) falta.push('giro');
+  if (!c.domicilio.trim()) falta.push('dirección');
+  return falta;
 }
 
 /** Solo los dígitos, para comparar dos teléfonos escritos distinto. */

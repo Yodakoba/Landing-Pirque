@@ -18,8 +18,9 @@
  */
 import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
 import { porToken, lineasDe, gentePosible, netoDeLinea, cuentasDe,
-         estadoVisible, folioDe, IVA } from '@/lib/presupuestos';
+         estadoVisible, folioDe, IVA, DOCUMENTO } from '@/lib/presupuestos';
 import { clienteDe } from '@/lib/cotizar';
+import { condicionesDe } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
 import BotonImprimir from '@/components/BotonImprimir';
@@ -81,6 +82,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
   const tasaIVA = Math.round(IVA * 100);
   const personas = gentePosible(p, lineas);
   const cliente = clienteDe(p, clientes);
+  const cond = condicionesDe(p, cuentas.total, cfg);
+  // Con factura, los datos de facturación de la ficha van en la hoja.
+  const ficha = p.documento === DOCUMENTO.factura
+    ? clientes.find((c) => c.id === p.idCliente) : undefined;
   const estado = estadoVisible(p, hoy());
   const vencido = estado === 'Vencida';
   const precioNeto = (precio: number, ivaIncluido: boolean) =>
@@ -130,6 +135,19 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           {cliente.empresa && <p className="text-sm text-hueso/70">{cliente.empresa}</p>}
           {cliente.telefono && <p className="text-sm text-hueso/70">{cliente.telefono}</p>}
           {cliente.email && <p className="text-sm text-hueso/70">{cliente.email}</p>}
+          {p.documento && (
+            <p className="mt-2 text-sm">
+              <span className="font-semibold">{p.documento === DOCUMENTO.sin
+                ? 'Sin documento' : `Con ${p.documento.toLowerCase()}`}</span>
+            </p>
+          )}
+          {ficha && (ficha.rut || ficha.giro || ficha.domicilio) && (
+            <div className="mt-1 text-sm text-hueso/70">
+              {ficha.rut && <p>RUT {ficha.rut}</p>}
+              {ficha.giro && <p>Giro: {ficha.giro}</p>}
+              {ficha.domicilio && <p>{ficha.domicilio}</p>}
+            </div>
+          )}
         </div>
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
@@ -246,6 +264,35 @@ export default async function Pagina({ params }: { params: { token: string } }) 
       <p className="mt-3 text-[13px] font-semibold text-hueso/70">
         Los precios de cada línea son netos: el IVA se suma al final.
       </p>
+
+      {/* **Las condiciones de pago**, de la misma función que usa la
+          pantalla (y el contrato después): no pueden decir cosas distintas. */}
+      {cuentas.total > 0 && (
+        <div className="mt-5 rounded border border-hueso/15 p-3 text-sm">
+          <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+            Condiciones de pago
+          </p>
+          {cond.pct > 0 ? (
+            <p className="mt-1">
+              Anticipo {cond.pct}%: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha.
+              Saldo: <strong>{enPesos(cond.saldo)}</strong>
+              {cond.saldoHasta
+                ? <> hasta el <span>{enPalabras(cond.saldoHasta)}</span>.</>
+                : <>, {cond.dias} días antes del evento.</>}
+            </p>
+          ) : (
+            <p className="mt-1">
+              Sin anticipo. Total <strong>{enPesos(cond.saldo)}</strong>
+              {cond.saldoHasta
+                ? <> hasta el <span>{enPalabras(cond.saldoHasta)}</span>.</>
+                : <>, {cond.dias} días antes del evento.</>}
+            </p>
+          )}
+          {cfg.empresa.transferencia && (
+            <p className="mt-1 text-hueso/70">Datos para transferir: {cfg.empresa.transferencia}</p>
+          )}
+        </div>
+      )}
 
       {p.notas && (
         <p className="mt-6 rounded border border-hueso/15 bg-panel p-3 text-sm">

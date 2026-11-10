@@ -200,6 +200,21 @@ export default function ConfigEditor() {
           <input type="text" defaultValue={config.descuentos.join(', ')} className={ENTRADA}
             onBlur={(e) => e.target.value !== config.descuentos.join(', ') &&
               guardar({ descuentos: e.target.value } as unknown as Cambio, 'descuentos')} />)}
+        {campo('anticipoPct', 'Anticipo',
+          'El porcentaje del total que se paga para reservar la fecha. Una cotización ' +
+          'no pasa a ganada hasta que su anticipo esté pagado. En 0 no hay anticipo. ' +
+          'Cada cotización lo puede cambiar.',
+          <input type="number" min={0} max={100} defaultValue={config.anticipoPct}
+            className={ENTRADA}
+            onBlur={(e) => Number(e.target.value) !== config.anticipoPct &&
+              guardar({ anticipoPct: Number(e.target.value) }, 'anticipoPct')} />)}
+        {campo('saldoDias', 'Saldo, días antes del evento',
+          'Hasta cuántos días antes del evento se paga el resto. ' +
+          'Cada cotización lo puede cambiar.',
+          <input type="number" min={0} max={365} defaultValue={config.saldoDias}
+            className={ENTRADA}
+            onBlur={(e) => Number(e.target.value) !== config.saldoDias &&
+              guardar({ saldoDias: Number(e.target.value) }, 'saldoDias')} />)}
       </div>
 
       {/* Quién es esta empresa: sale en el encabezado de la cotización. */}

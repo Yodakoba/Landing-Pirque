@@ -123,7 +123,7 @@ export async function PATCH(req: Request) {
     if (!previo) return NextResponse.json({ error: 'Ese cliente no existe.' }, { status: 404 });
 
     const mezcla: Record<string, unknown> = { ...previo };
-    for (const k of ['nombre', 'empresa', 'rut', 'domicilio', 'telefono', 'correo', 'notas']) {
+    for (const k of ['nombre', 'empresa', 'rut', 'domicilio', 'giro', 'telefono', 'correo', 'notas']) {
       if (cuerpo?.[k] !== undefined) mezcla[k] = cuerpo[k];
     }
     const datos = limpiarCliente(mezcla);

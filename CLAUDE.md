@@ -1975,6 +1975,85 @@ en $0 y la pantalla avisa que se escriba en pesos.
   de la ficha y los datos de la empresa de Configuración, muestra el periodo
   si no hay día, y las líneas en neto con el IVA al final.
 
+### El documento de la venta (2026-11-10)
+
+Cada cotización dice con qué se vende: **Sin documento, Boleta o Factura**,
+tres botones en el paso *Enviar*. Columna `Documento` de `Presupuestos`, al
+final y por nombre (`documentoDe()`).
+
+- **En blanco es "por definir"**, y así nacen todas por ahora (lo dejó así
+  el cliente). Las de antes quedan por definir: no se inventa un valor.
+- **Por ahora no cambia el precio.** Todas se calculan igual, neto + IVA;
+  cómo se cobra según el documento —en especial sin documento, que es parte
+  de la negociación— queda para después.
+- **Con factura, la misma ventana pide los datos de facturación**: razón
+  social, RUT, giro y dirección. **Se guardan en la ficha del cliente**, no
+  en la cotización, para no pedirlos dos veces; la ficha ganó la columna
+  `Giro`. Si falta alguno, **avisa en ámbar y no bloquea**
+  (`faltaParaFactura()`): el dato puede llegar después.
+- **La hoja del cliente lo dice** —*Con factura*— y con factura muestra el
+  RUT, el giro y la dirección de la ficha.
+- **No pasa a la reserva todavía.** La reserva que nace de una cotización
+  apunta a ella por el `ID Reserva`, así que el dato está a un paso; copiarlo
+  a `Reservas` se hace cuando haga falta exportarlo (Chipax).
+
+### Los menús se reparten los invitados (2026-11-10)
+
+Lo reclamó el cliente: con 40 invitados, agregar Lo Pirque y después Niños
+ponía 40 en cada uno —80 personas—. Ahora:
+
+- **Los invitados son la gente completa, niños incluidos**, y el paso 2 lo
+  dice así.
+- **Un menú nuevo toma solo los invitados que faltan** (`lineaDeProducto()`):
+  el primero nace con 40, el segundo con 0.
+- **Subir un menú se lo descuenta al primero** (`cambiarCantidad()`), con −
+  y + grandes: Niños a 10 deja Lo Pirque en 30. El primero nunca baja de
+  cero. Cambiar el primero no mueve los demás.
+- **Un menú no puede "seguir a los invitados"**: se fuerza en
+  `prepararLineas()`, no solo escondiendo el botón. La once y el desayuno sí
+  siguen, porque los toman todos.
+- Si igual no calzan, una línea ámbar dice cuántos sobran o faltan; si
+  calzan, una verde lo confirma. No bloquea.
+
+### Condiciones de pago y cobros al cliente (2026-11-10)
+
+**Un solo lugar dice cuánto es el anticipo y cuándo vence el saldo**:
+`condicionesDe()` en `lib/cobros.ts`. La usan la ventana de cotizar, la
+hoja del cliente y, en la Fase 4, el contrato. En el CRM del socio la
+cotización decía 30% y 3 días y el contrato 20% y 10.
+
+- **Configuración trae el valor por defecto**: anticipo 30% y saldo 3 días
+  antes del evento (`anticipo_porcentaje`, `saldo_dias_antes`; se partió
+  con los de la cotización del CRM). **Cada cotización los puede cambiar**
+  —columnas `Anticipo %` y `Saldo días antes`—, porque se negocian. **En
+  blanco rige Configuración; un 0 en el anticipo es *sin anticipo***, que
+  es distinto (`numeroONulo()`). Se probó rompiéndolo: tratar el 0 como
+  blanco hace fallar una prueba.
+- **El anticipo se redondea al peso y el saldo es la resta**: los dos suman
+  el total siempre.
+- **Se guardan los cobros, no una casilla**: pestaña `Cobros` (ID · ID
+  Presupuesto · Fecha de pago · Concepto · Monto · Medio · Nota ·
+  Registrado por · Cuándo). Concepto *Anticipo*, *Saldo* u *Otro*; el
+  medio es texto libre. **Todo lo cobrado cuenta primero para el
+  anticipo**, se haya anotado con el concepto que sea. Un error se
+  **deshace** (borra la fila, queda en la bitácora); una devolución de
+  verdad es un cobro en negativo.
+- **Los anota también el vendedor**, de sus cotizaciones
+  (`puedeTocarPresupuesto()`), por `/api/presupuestos/cobros`. Lo comprueba
+  la ruta.
+- **Si hay anticipo, una cotización no pasa a ganada hasta que esté
+  pagado** (lo decidió el cliente). Lo comprueba `/convertir` con 409; en
+  pantalla el botón se apaga y una línea ámbar dice cuánto falta. Con
+  *Sin anticipo* se gana sin cobros.
+- **La reserva de una ganada toma su estado de pago de los cobros**
+  (`actualizarPagoDeReserva()`): *Pagada* cuando cubren el total, *Por
+  pagar* mientras falte. Una que liberó su lugar no se toca.
+- **La hoja del cliente muestra las condiciones** y, si están en
+  Configuración, los datos para transferir.
+- **Falta**: subir el comprobante de pago (necesita dónde guardar
+  archivos), los avisos de anticipo vencido y saldo por vencer en
+  `/presupuestos`, y la UF.
+
 **Lo que sigue pendiente**: la conexión con el CRM del socio sigue activa, y
 como pide el mismo permiso `presupuestos`, **el vendedor ahora también ve sus
 eventos**. Se resuelve al apagar esa conexión.

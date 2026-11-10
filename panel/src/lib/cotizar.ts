@@ -64,12 +64,16 @@ export function prepararLineas(
   const show = showDe(catalogo);
   const lineas = normalizarLineas(entrantes).map((l) => {
     const prod = productoDe(l.concepto, catalogo);
-    const cantidad = l.sigue && invitados > 0 ? invitados : l.cantidad;
     const esMenu = prod?.tipo === TIPO_PRODUCTO.menu;
+    // **Un menú no sigue a los invitados**: con dos menús que los siguieran,
+    // 40 invitados serían 80 personas. Se fuerza acá, no solo en la pantalla.
+    const sigue = l.sigue && !esMenu;
+    const cantidad = sigue && invitados > 0 ? invitados : l.cantidad;
     const esShow = !!prod && prod.tipo === TIPO_PRODUCTO.show;
     return {
       ...l,
       concepto: prod?.nombre ?? l.concepto,
+      sigue,
       cantidad,
       personas: esMenu ? cantidad : 0,
       // En un día público el show va incluido: ni precio ni descuento.
@@ -88,19 +92,56 @@ export function prepararLineas(
 
 /** Una línea nueva para un producto del catálogo, como la propone la pantalla. */
 export function lineaDeProducto(
-  m: Menu, presupuesto: string, invitados: number, precio: number
+  m: Menu, presupuesto: string, invitados: number, precio: number,
+  /** Cuánta gente ya está en los menús de la cotización. */
+  yaEnMenus = 0
 ): Omit<LineaPresupuesto, 'fila'> {
   const porPersona = normalizar(m.cobro) === normalizar('Por persona');
   // Un menú por persona NO sigue a los invitados: 40 invitados pueden ser
   // 30 Tradiciones y 10 de niños. Lo que sigue es lo que toman todos, como
   // la once o el desayuno.
   const sigue = porPersona && m.tipo !== TIPO_PRODUCTO.menu;
-  const cantidad = porPersona ? Math.max(1, invitados) : 1;
+  // **Un menú nuevo toma los invitados que faltan, no todos** (2026-11-10,
+  // lo reclamó el cliente: 40 invitados, Lo Pirque con 40 y el de niños con
+  // otros 40 eran 80). El primero toma los 40; el segundo nace en 0 y se le
+  // escribe cuántos, bajándole al primero. Sin invitados, nace en 1.
+  const cantidad = !porPersona ? 1
+    : m.tipo === TIPO_PRODUCTO.menu
+      ? (invitados > 0 ? Math.max(0, invitados - yaEnMenus) : 1)
+      : Math.max(1, invitados);
   return {
     presupuesto, concepto: m.nombre, cantidad, precio,
     personas: m.tipo === TIPO_PRODUCTO.menu ? cantidad : 0,
     descuento: 0, ivaIncluido: m.iva !== IVA_PRECIO.mas, sigue
   };
+}
+
+/**
+ * **Cambia la cantidad de un menú y se la descuenta al primero** (2026-11-10,
+ * lo pidió el cliente). Con 40 invitados, Lo Pirque nace con 40 y Niños con
+ * 0; subir Niños a 10 deja Lo Pirque en 30, y bajarlo se los devuelve. Así
+ * los menús siguen sumando los invitados sin hacer la resta a mano.
+ *
+ * - El primero en la lista es el que absorbe la diferencia, y **nunca baja
+ *   de cero**: si no le queda, el otro no sube más de lo que había.
+ * - Cambiar el primero, o cualquier línea que no sea un menú, no mueve nada
+ *   más: ahí el aviso de que no calzan dice lo que pasa.
+ * - Sin invitados tampoco: no hay un total que conservar.
+ */
+export function cambiarCantidad<L extends { concepto: string; cantidad: number }>(
+  lineas: L[], i: number, nueva: number, catalogo: Menu[], invitados: number
+): L[] {
+  const esMenu = (l: L) => productoDe(l.concepto, catalogo)?.tipo === TIPO_PRODUCTO.menu;
+  const salida = lineas.map((l) => ({ ...l }));
+  let cantidad = Math.max(0, Math.round(nueva) || 0);
+  const primero = salida.findIndex(esMenu);
+  if (invitados > 0 && esMenu(salida[i]) && primero !== -1 && primero !== i) {
+    const antes = salida[i].cantidad;
+    cantidad = Math.min(cantidad, antes + salida[primero].cantidad);
+    salida[primero].cantidad -= cantidad - antes;
+  }
+  salida[i].cantidad = cantidad;
+  return salida;
 }
 
 /**

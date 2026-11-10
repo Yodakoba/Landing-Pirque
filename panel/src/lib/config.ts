@@ -67,6 +67,15 @@ export interface Config {
    */
   descuentos: number[];
   /**
+   * **Las condiciones de pago de una cotización** (2026-11-10). El anticipo
+   * en % del total y cuántos días antes del evento se paga el saldo. Son el
+   * valor por defecto: cada cotización los puede cambiar, porque se
+   * negocian. Un solo lugar para la cotización y el contrato, que en el CRM
+   * del socio decían cosas distintas (30% y 3 días contra 20% y 10).
+   */
+  anticipoPct: number;
+  saldoDias: number;
+  /**
    * **Quién es esta empresa**, para el encabezado de la cotización y del
    * contrato. Cada panel lee una sola planilla (`GOOGLE_SHEET_ID`), así que
    * cada planilla dice de qué empresa es: Brasas de Lo Pirque hoy, Calicanto
@@ -112,6 +121,9 @@ export const POR_DEFECTO: Config = {
   vigenciaPresupuesto: 15,
   grupoGrande: 30,
   descuentos: [5, 10, 15],
+  // Los de la cotización del CRM, que es lo que los clientes ya recibían.
+  anticipoPct: 30,
+  saldoDias: 3,
   empresa: EMPRESA_VACIA
 };
 
@@ -129,6 +141,8 @@ export const CLAVES = {
   vigenciaPresupuesto: 'vigencia_presupuesto',
   grupoGrande: 'grupo_grande',
   descuentos: 'descuentos',
+  anticipoPct: 'anticipo_porcentaje',
+  saldoDias: 'saldo_dias_antes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
   empresaRut: 'empresa_rut',
@@ -257,6 +271,9 @@ export function leerConfigDe(filas: string[][]): Config {
     // apagarlo sin que vuelva solo a 30.
     grupoGrande: numero(v(CLAVES.grupoGrande), POR_DEFECTO.grupoGrande, 0, 100000),
     descuentos: aDescuentos(v(CLAVES.descuentos)) ?? POR_DEFECTO.descuentos,
+    // En cero no hay anticipo: es un valor que alguien puede querer.
+    anticipoPct: numero(v(CLAVES.anticipoPct), POR_DEFECTO.anticipoPct, 0, 100),
+    saldoDias: numero(v(CLAVES.saldoDias), POR_DEFECTO.saldoDias, 0, 365),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
       razonSocial: texto(v(CLAVES.empresaRazonSocial)),
@@ -285,6 +302,8 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.vigenciaPresupuesto, String(c.vigenciaPresupuesto)],
     [CLAVES.grupoGrande, String(c.grupoGrande)],
     [CLAVES.descuentos, c.descuentos.join(', ')],
+    [CLAVES.anticipoPct, String(c.anticipoPct)],
+    [CLAVES.saldoDias, String(c.saldoDias)],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],
     [CLAVES.empresaRut, c.empresa.rut],
