@@ -21,6 +21,7 @@ import { porToken, lineasDe, gentePosible, netoDeLinea, cuentasDe,
          estadoVisible, folioDe, IVA, DOCUMENTO } from '@/lib/presupuestos';
 import { clienteDe } from '@/lib/cotizar';
 import { condicionesDe } from '@/lib/cobros';
+import { enUF } from '@/lib/uf';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
 import BotonImprimir from '@/components/BotonImprimir';
@@ -186,6 +187,9 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             <tr key={i} className="border-b border-hueso/10">
               <td className="py-2.5 pr-3">
                 {l.concepto}
+                {l.precioUF > 0 && (
+                  <span className="ml-1 text-hueso/60">({enUF(l.precioUF)} c/u)</span>
+                )}
                 {l.precio === 0 && <span className="text-hueso/60"> · incluido</span>}
                 {l.descuento > 0 && <span className="text-hueso/60"> · {l.descuento}% de descuento</span>}
               </td>
@@ -264,6 +268,11 @@ export default async function Pagina({ params }: { params: { token: string } }) 
       <p className="mt-3 text-[13px] font-semibold text-hueso/70">
         Los precios de cada línea son netos: el IVA se suma al final.
       </p>
+      {p.uf > 0 && lineas.some((l) => l.precioUF > 0) && (
+        <p className="mt-1 text-[13px] text-hueso/70">
+          Los valores en UF se convirtieron con la UF del {p.fechaUF}: {enPesos(p.uf)}.
+        </p>
+      )}
 
       {/* **Las condiciones de pago**, de la misma función que usa la
           pantalla (y el contrato después): no pueden decir cosas distintas. */}

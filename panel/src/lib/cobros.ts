@@ -210,3 +210,71 @@ export function limpiarCobro(e: Record<string, unknown>, hoy: Fecha):
 export function nuevoIdCobro(): string {
   return `COB-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
+
+/* ---------- los avisos (2026-11-10) ---------- */
+
+/** Cuántos días antes de que venza el saldo se empieza a avisar. */
+export const DIAS_AVISO_SALDO = 7;
+
+export interface AvisoCobro {
+  id: string;
+  /** El saldo que falta, o lo que falta para ganar. */
+  monto: number;
+  /** Días para que venza el saldo: negativo es vencido. */
+  dias: number;
+}
+
+/**
+ * Los avisos de plata de `/presupuestos`. Son dos, y piden cosas distintas:
+ *
+ * - **Pagaron el anticipo y no está ganada**: el cliente ya cumplió y nadie
+ *   le tomó la fecha. Es el que más cuesta olvidar, porque otro puede
+ *   reservar ese día mientras tanto.
+ * - **El saldo de una ganada vence pronto, o ya venció**: dentro de
+ *   `DIAS_AVISO_SALDO`, con lo que falta.
+ *
+ * Una cerrada (perdida, no elegida) no avisa nada. Puro: recibe los totales
+ * ya calculados.
+ */
+export function avisosDeCobro(
+  cotizaciones: {
+    id: string; fecha: string; estado: string; idReserva: string;
+    anticipo: number | null; saldoDias: number | null; total: number;
+  }[],
+  cobros: Pick<Cobro, 'presupuesto' | 'monto'>[],
+  cfg: { anticipoPct: number; saldoDias: number },
+  hoy: Fecha,
+  cerrados: string[]
+): { anticipoSinGanar: AvisoCobro[]; saldo: AvisoCobro[] } {
+  const anticipoSinGanar: AvisoCobro[] = [];
+  const saldo: AvisoCobro[] = [];
+  for (const p of cotizaciones) {
+    if (cerrados.includes(p.estado) && !p.idReserva) continue;
+    const cond = condicionesDe(p, p.total, cfg);
+    const e = estadoCobros({ anticipo: cond.anticipo, total: p.total },
+      cobros.filter((c) => c.presupuesto === p.id));
+    if (!p.idReserva) {
+      // Solo si de verdad hubo anticipo y se pagó: una sin anticipo no
+      // tiene nada que avisar acá.
+      if (cond.pct > 0 && e.pagado > 0 && e.anticipoListo) {
+        anticipoSinGanar.push({ id: p.id, monto: e.pagado, dias: 0 });
+      }
+      continue;
+    }
+    if (e.falta <= 0 || !cond.saldoHasta) continue;
+    const dias = diasEntre(hoy, cond.saldoHasta);
+    if (dias <= DIAS_AVISO_SALDO) saldo.push({ id: p.id, monto: e.falta, dias });
+  }
+  saldo.sort((a, b) => a.dias - b.dias);
+  return { anticipoSinGanar, saldo };
+}
+
+/** Días de `a` a `b`, contando con fechas de texto (sin `Date` y sus husos). */
+export function diasEntre(a: Fecha, b: Fecha): number {
+  if (a === b) return 0;
+  const paso = a < b ? 1 : -1;
+  let n = 0;
+  let f = a;
+  while (f !== b && Math.abs(n) < 4000) { f = sumarDias(f, paso); n += paso; }
+  return n;
+}

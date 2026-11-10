@@ -26,7 +26,8 @@ import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProd
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
-         montoCobro, cobrosDe, CONCEPTO_COBRO } from './cobros.ts';
+         montoCobro, cobrosDe, CONCEPTO_COBRO, avisosDeCobro, diasEntre } from './cobros.ts';
+import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
@@ -2330,7 +2331,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null,
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -2338,7 +2339,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
   });
   const li = (x: Partial<LineaPresupuesto>): LineaPresupuesto => ({
     presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 20,
-    precio: 40000, personas: 20, descuento: 0, ivaIncluido: true, sigue: false,
+    precio: 40000, personas: 20, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0,
     fila: 2, ...x
   });
 
@@ -3555,7 +3556,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null,
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '',
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3563,7 +3564,7 @@ console.log('\nCotizaciones, fase 2');
   });
   const li = (x: Partial<LineaPresupuesto>): LineaPresupuesto => ({
     presupuesto: 'PRE-1', concepto: 'Tradiciones', cantidad: 10, precio: 44000,
-    personas: 10, descuento: 0, ivaIncluido: true, sigue: false, fila: 2, ...x
+    personas: 10, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0, fila: 2, ...x
   });
   const catalogo = [
     nuevoProducto({ nombre: 'Tradiciones', tipo: TIPO_PRODUCTO.menu, cotizacion: true }),
@@ -3796,6 +3797,51 @@ console.log('\nCotizaciones, fase 2');
   ok(vuelta.length === 2 && vuelta[0].monto === -5000 && vuelta[0].medio === 'transferencia',
      'el cobro va y vuelve de la planilla, también en negativo');
   ok(cobrosDe(vuelta, 'PRE-1').length === 1, 'cada cotización ve solo sus cobros');
+}
+
+/* ---------- avisos de cobro (2026-11-10) ---------- */
+{
+  const cfg = { anticipoPct: 30, saldoDias: 3 };
+  const base = { fecha: '2026-11-20', estado: 'Enviada', idReserva: '', anticipo: null, saldoDias: null, total: 100000 };
+  const cot = [
+    { ...base, id: 'A' },                                           // pagó anticipo, no ganada
+    { ...base, id: 'B' },                                           // no pagó nada
+    { ...base, id: 'C', estado: 'Ganada', idReserva: 'R1' },        // saldo vence el 17
+    { ...base, id: 'D', estado: 'Ganada', idReserva: 'R2' },        // pagada completa
+    { ...base, id: 'E', estado: 'Ganada', idReserva: 'R3', fecha: '2026-12-30' }, // saldo lejano
+    { ...base, id: 'F', estado: 'Perdida' }                          // cerrada
+  ];
+  const cobros = [{ presupuesto: 'A', monto: 30000 }, { presupuesto: 'C', monto: 30000 },
+    { presupuesto: 'D', monto: 100000 }, { presupuesto: 'F', monto: 30000 }];
+  const a = avisosDeCobro(cot, cobros, cfg, '2026-11-10', ['Perdida', 'No elegida']);
+  ok(a.anticipoSinGanar.map((x) => x.id).join() === 'A',
+     'avisa la que pagó el anticipo y nadie marcó ganada; no la que no pagó ni la perdida');
+  ok(a.saldo.length === 1 && a.saldo[0].id === 'C' && a.saldo[0].dias === 7 && a.saldo[0].monto === 70000,
+     'el saldo avisa una semana antes, con lo que falta; ni la pagada ni la lejana');
+  ok(avisosDeCobro(cot, cobros, cfg, '2026-11-19', ['Perdida'])
+       .saldo.find((x) => x.id === 'C')?.dias === -2, 'un saldo vencido sale con días negativos');
+  ok(diasEntre('2026-12-30', '2027-01-02') === 3 && diasEntre('2026-11-10', '2026-11-08') === -2,
+     'los días se cuentan con fechas de texto, también cruzando el año');
+}
+
+/* ---------- la UF (2026-11-10) ---------- */
+{
+  ok(ufDeBoostr({ status: 'success', data: { date: '2026-11-10', value: 41302.33 } })?.valor === 41302.33,
+     'la respuesta real de boostr se lee');
+  ok(ufDeBoostr({ status: 'error', data: '', code: 'I-01' }) === null,
+     'el error de boostr —que llega con HTTP 200— no se toma por una UF');
+  ok(ufDeMindicador({ serie: [{ fecha: '2026-11-10T03:00:00.000Z', valor: 41302.33 }] })?.fecha === '2026-11-10',
+     'mindicador se lee con la fecha de Chile');
+  ok(ufDeBoostr({ status: 'success', data: { date: '2026-11-10', value: 413.02 } }) === null,
+     'una UF fuera de rango es una respuesta rota, no se usa');
+  ok(aPesos(2.61, 41302.33) === 107799 && enUF(2.61) === 'UF 2,61', 'UF 2,61 son $107.799');
+  const conUF = prepararLineas([{ presupuesto: 'P', concepto: 'Matrimonio', cantidad: 10, precio: 0,
+    personas: 10, precioUF: 2.61 }], [nuevoProducto({ nombre: 'Matrimonio', moneda: MONEDA.uf,
+    precioCotizacion: 2.61, cotizacion: true })], 10, false, 41302.33);
+  ok(conUF[0].precio === 107799 && conUF[0].precioUF === 2.61,
+     'una línea en UF toma su precio en pesos de la UF de la cotización');
+  ok(prepararLineas([{ presupuesto: 'P', concepto: 'X', cantidad: 1, precio: 5000, personas: 0 }],
+    [], 0, false, 41302.33)[0].precio === 5000, 'una línea en pesos no se toca');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

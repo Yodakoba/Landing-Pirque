@@ -6,6 +6,7 @@
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { CRM_APAGADO } from '@/lib/crm';
 import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
@@ -215,7 +216,7 @@ export default function DayView(
    * un tercero y no puede meterse en el camino de la pantalla que contesta
    * cuánta gente viene. Misma asimetría que lo cotizado.
    */
-  const cargarCRM = () =>
+  const cargarCRM = () => CRM_APAGADO ? Promise.resolve() :
     fetch(`/api/crm/eventos?desde=${fecha}&hasta=${fecha}`)
       .then((r) => r.json())
       .then((d) => setDelSocio(d?.dias?.[fecha] ?? SIN_EVENTOS))

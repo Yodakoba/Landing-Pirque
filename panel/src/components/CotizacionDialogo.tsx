@@ -31,7 +31,7 @@ import {
   prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
-import { paraCotizar, precioParaCotizar, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
+import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, type Menu } from '@/lib/menus';
 import {
   condicionesDe, estadoCobros, montoCobro, type Cobro
 } from '@/lib/cobros';
@@ -134,6 +134,19 @@ export default function CotizacionDialogo({
    */
   const [anticipoTxt, setAnticipoTxt] = useState(p?.anticipo == null ? '' : String(p.anticipo));
   const [saldoTxt, setSaldoTxt] = useState(p?.saldoDias == null ? '' : String(p.saldoDias));
+  /**
+   * **La UF de esta cotización**, fija: se pide la primera vez que se agrega
+   * un producto en UF, y se cambia solo con *Usar la UF de hoy*. 0 es sin UF.
+   */
+  const [uf, setUf] = useState(p?.uf ?? 0);
+  const [fechaUF, setFechaUF] = useState(p?.fechaUF ?? '');
+  /** Pide la UF de hoy y la fija. Devuelve el valor, o 0 si no se pudo. */
+  async function traerUF(): Promise<number> {
+    const d = await fetch('/api/uf').then((r) => r.json()).catch(() => ({}));
+    if (!d?.valor) { avisar(d?.error ?? 'No se pudo leer la UF de hoy', 'atencion'); return 0; }
+    setUf(d.valor); setFechaUF(d.fecha);
+    return d.valor;
+  }
   /** Los cobros al cliente. Solo existen para una cotización ya guardada. */
   const [cobros, setCobros] = useState<Cobro[]>([]);
   const [medio, setMedio] = useState('');
@@ -168,8 +181,8 @@ export default function CotizacionDialogo({
   const publico = esFecha(fechaReal) && esDiaPublico(fechaReal, datos.fechas);
   // **Lo que se ve es lo que se guarda**: la misma función del servidor.
   const vistas = useMemo(
-    () => prepararLineas(lineas, datos.menus, invitados, publico),
-    [lineas, datos.menus, invitados, publico]);
+    () => prepararLineas(lineas, datos.menus, invitados, publico, uf),
+    [lineas, datos.menus, invitados, publico, uf]);
   const cuentas = cuentasDe(vistas, descuento);
   /** Cuánta gente suman los menús: tiene que calzar con los invitados. */
   const enMenus = vistas.reduce((n, l) => n + l.personas, 0);
@@ -187,12 +200,13 @@ export default function CotizacionDialogo({
     setLineas(vistas.map((l, k) => (k === i ? { ...l, ...cambio } : l)));
 
   const agregar = (m: Menu) => {
+    // En UF, el precio en pesos lo pone `prepararLineas()` con la UF de la
+    // cotización; si todavía no tiene, se pide la de hoy.
     const precio = m.moneda === MONEDA.uf ? 0 : Math.round(precioParaCotizar(m));
     setLineas([...vistas, lineaDeProducto(m, p?.id ?? '', invitados, precio, enMenus)]);
-    if (m.moneda === MONEDA.uf) {
-      avisar(`${m.nombre} tiene su precio en UF: escríbelo en pesos por ahora`, 'atencion');
-    }
+    if (m.moneda === MONEDA.uf && !uf) void traerUF();
   };
+  const hayUF = vistas.some((l) => l.precioUF > 0);
 
   async function crearCliente(forzar = false) {
     if (!nuevoCliente) return;
@@ -236,6 +250,7 @@ export default function CotizacionDialogo({
         id: p?.id, idCliente, fecha: fechaReal, periodo: sinFecha ? periodo : '',
         invitados, tipoEvento, notas, descuento, motivo, documento,
         anticipo: anticipoTxt, saldoDias: saldoTxt,
+        ...(uf ? { uf, fechaUF } : {}),
         estado: estadoForzado ?? estado,
         lineas: vistas
       };
@@ -571,7 +586,7 @@ export default function CotizacionDialogo({
                   <button type="button" className="boton min-h-[48px] text-[14px]"
                     onClick={() => setLineas([...vistas, {
                       presupuesto: p?.id ?? '', concepto: 'Otro', cantidad: 1, precio: 0,
-                      personas: 0, descuento: 0, ivaIncluido: true, sigue: false }])}>
+                      personas: 0, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0 }])}>
                     + Otra línea
                   </button>
                 </div>
@@ -638,11 +653,23 @@ export default function CotizacionDialogo({
                               )}
                             </div>
                           </Campo>
+                          {l.precioUF > 0 ? (
+                            <Campo etiqueta={`Precio en UF${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-auto">
+                              <input type="text" inputMode="decimal" defaultValue={String(l.precioUF).replace('.', ',')}
+                                onBlur={(e) => cambiarLinea(i, { precioUF: aPrecio(e.target.value) || l.precioUF })}
+                                className={`${ENTRADA} !w-28`} />
+                              <p className="mt-1 text-[13px] text-hueso/70">
+                                {uf ? <>= {enPesos(l.precio)} con la UF del {fechaUF}</>
+                                  : <span className="font-semibold text-ambar-texto">Sin UF todavía</span>}
+                              </p>
+                            </Campo>
+                          ) : (
                           <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-40">
                             <input type="number" min={0} step={500} value={l.precio || ''} placeholder="0"
                               onChange={(e) => cambiarLinea(i, { precio: Number(e.target.value) || 0 })}
                               className={ENTRADA} />
                           </Campo>
+                          )}
                           <div>
                             <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                               Descuento
@@ -675,6 +702,22 @@ export default function CotizacionDialogo({
                   );
                 })}
               </ul>
+            )}
+
+            {/* **La UF de la cotización** (2026-11-10): fija, para que la cifra
+                que recibió el cliente no se mueva sola. Se cambia a mano. */}
+            {hayUF && (
+              <div className="flex flex-wrap items-center gap-3 rounded border border-hueso/15 bg-panel
+                              px-3 py-2 text-[14px]">
+                {uf ? <span>UF del {fechaUF}: <strong>{enPesos(uf)}</strong></span>
+                  : <span className="font-semibold text-ambar-texto">
+                      No se pudo leer la UF: las líneas en UF quedan en $0.</span>}
+                {fechaUF !== datos.hoy && (
+                  <button type="button" className="boton" onClick={() => void traerUF()}>
+                    Usar la UF de hoy
+                  </button>
+                )}
+              </div>
             )}
 
             {/* **Los menús tienen que sumar los invitados** (2026-11-10). Cada

@@ -22,7 +22,8 @@
 import { NextResponse } from 'next/server';
 import { exigir } from '@/lib/permisos';
 import { iguales } from '@/lib/auth';
-import { configurado, reconciliarTodo } from '@/lib/crm-escribir';
+import { configurado, reconciliarTodo, retirarTodo } from '@/lib/crm-escribir';
+import { CRM_APAGADO } from '@/lib/crm';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -43,6 +44,19 @@ export async function GET(req: Request) {
     // 200 y no un error: que el CRM no esté configurado es un estado
     // legítimo del panel, no una falla. Igual que `/api/crm/eventos`.
     return NextResponse.json({ configurado: false, guardados: 0, eliminados: 0 });
+  }
+
+  // **Apagada la conexión, la tarea diaria retira lo nuestro** en vez de
+  // publicarlo. Ver `CRM_APAGADO`.
+  if (CRM_APAGADO) {
+    try {
+      const r = await retirarTodo();
+      return NextResponse.json({ configurado: true, apagado: true, ...r });
+    } catch (e) {
+      console.error('[crm:retirar]', e);
+      return NextResponse.json(
+        { configurado: true, apagado: true, error: (e as Error).message }, { status: 502 });
+    }
   }
 
   try {
