@@ -36,7 +36,7 @@
  * porque mañana cambie una tarifa.
  */
 import { normalizar, indices, ESTADO_PAGO } from './columnas.ts';
-import { canonizar, type Menu } from './menus.ts';
+import { canonizar, aPrecio, type Menu } from './menus.ts';
 import { componerMenu } from './shopify.ts';
 import { esFecha, sumarDias, type Fecha } from './fechas.ts';
 
@@ -111,7 +111,14 @@ export const COL_PRESUPUESTOS = {
    * *sin anticipo*, que es distinto de en blanco. Ver `condicionesDe()`.
    */
   anticipo: 'Anticipo %',
-  saldoDias: 'Saldo días antes'
+  saldoDias: 'Saldo días antes',
+  /**
+   * **La UF con que se convirtieron sus líneas en UF**, y de qué día
+   * (2026-11-10). Queda fija: el cliente ya recibió una cifra en pesos, y no
+   * puede moverse sola. Se cambia a mano con *Usar la UF de hoy*.
+   */
+  uf: 'UF',
+  fechaUF: 'Fecha UF'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -140,7 +147,13 @@ export const COL_LINEAS = {
    */
   iva: 'IVA',
   /** Si la cantidad sigue al número de invitados: "sí" o en blanco. */
-  sigue: 'Sigue invitados'
+  sigue: 'Sigue invitados',
+  /**
+   * El precio en UF, si el producto se cobra en UF (2026-11-10). El
+   * `Precio unitario` es su conversión a pesos con la UF de la cotización;
+   * en blanco, la línea es en pesos como siempre.
+   */
+  precioUF: 'Precio UF'
 } as const;
 
 export const ENCABEZADO_PRESUPUESTOS: string[] = Object.values(COL_PRESUPUESTOS);
@@ -213,6 +226,8 @@ export interface LineaPresupuesto {
   ivaIncluido: boolean;
   /** Si la cantidad sigue a los invitados. */
   sigue: boolean;
+  /** El precio en UF, o 0 si la línea es en pesos. */
+  precioUF: number;
   fila: number;
 }
 
@@ -247,6 +262,9 @@ export interface Presupuesto {
   anticipo: number | null;
   /** Días antes del evento para el saldo, o `null` si rige Configuración. */
   saldoDias: number | null;
+  /** El valor de la UF fijado en esta cotización, o 0 si no tiene. */
+  uf: number;
+  fechaUF: string;
   fila: number;
 }
 
@@ -757,6 +775,8 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       documento: documentoDe(en(f, i.documento)),
       anticipo: numeroONulo(en(f, i.anticipo), 100),
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
+      uf: aPrecio(en(f, i.uf)),
+      fechaUF: en(f, i.fechaUF).slice(0, 10),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -804,6 +824,8 @@ export function filaPresupuesto(
   poner(i.documento, p.documento);
   poner(i.anticipo, p.anticipo === null ? '' : String(p.anticipo));
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
+  poner(i.uf, p.uf ? String(p.uf) : '');
+  poner(i.fechaUF, p.uf ? p.fechaUF : '');
   return fila;
 }
 
@@ -832,6 +854,7 @@ export function leerLineasDe(filas: string[][]): LineaPresupuesto[] {
       // mismo total que daba.
       ivaIncluido: !/\+\s*iva/i.test(en(f, i.iva)),
       sigue: /^s[ií]$/i.test(en(f, i.sigue).trim()),
+      precioUF: aPrecio(en(f, i.precioUF)),
       fila: n + 1
     });
   }
@@ -855,6 +878,7 @@ export function filaLinea(
   poner(i.descuento, num(l.descuento));
   poner(i.iva, l.ivaIncluido ? 'Incluido' : '+ IVA');
   poner(i.sigue, l.sigue ? 'sí' : '');
+  poner(i.precioUF, l.precioUF ? String(l.precioUF) : '');
   return fila;
 }
 
@@ -871,8 +895,8 @@ export function filaLinea(
  * Lo que sí hace es descartar las vacías y no dejar pasar cantidades
  * negativas, que solo podrían restar de un total que una persona va a leer.
  */
-export type LineaEntrante = Omit<LineaPresupuesto, 'fila' | 'descuento' | 'ivaIncluido' | 'sigue'>
-  & Partial<Pick<LineaPresupuesto, 'descuento' | 'ivaIncluido' | 'sigue'>>;
+export type LineaEntrante = Omit<LineaPresupuesto, 'fila' | 'descuento' | 'ivaIncluido' | 'sigue' | 'precioUF'>
+  & Partial<Pick<LineaPresupuesto, 'descuento' | 'ivaIncluido' | 'sigue' | 'precioUF'>>;
 
 export function normalizarLineas(
   lineas: LineaEntrante[]
@@ -889,7 +913,8 @@ export function normalizarLineas(
       personas: Math.max(0, aEntero(l.personas)),
       descuento: Math.min(100, Math.max(0, aEntero(l.descuento))),
       ivaIncluido: l.ivaIncluido !== false,
-      sigue: !!l.sigue
+      sigue: !!l.sigue,
+      precioUF: aPrecio(l.precioUF)
     });
   }
   return salida;

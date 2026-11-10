@@ -6,6 +6,7 @@
  * cobrada y cuánta hay que cobrar el mismo día.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { CRM_APAGADO } from '@/lib/crm';
 import type { EventosDelDia } from '@/lib/crm';
 import Ayuda from './Ayuda';
 import { verRecorrido } from './Recorrido';
@@ -47,7 +48,8 @@ export default function CalendarView({ rol }: { rol: string }) {
   const conDias = puede(rol as Rol, 'dias');
   const conEquipo = puede(rol as Rol, 'equipo');
   const conPlanilla = puede(rol as Rol, 'planilla');
-  const conCRM = puede(rol as Rol, 'presupuestos');
+  // Apagada la conexión (`CRM_APAGADO`), ni se pide.
+  const conCRM = !CRM_APAGADO && puede(rol as Rol, 'presupuestos');
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const pronostico = usePronostico();
   const [error, setError] = useState('');

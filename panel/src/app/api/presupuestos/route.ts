@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { UF_MINIMA, UF_MAXIMA } from '@/lib/uf';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto, guardarLineas,
-  borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar,
+  borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar, leerCobros,
   sincronizarReserva
 } from '@/lib/datos';
 import {
@@ -33,13 +34,15 @@ export async function GET(req: Request) {
   if (no) return no;
   try {
     const quien = await quienEs(req);
-    const [presupuestos, lineas, menus, cfg, clientes, fechas] = await Promise.all([
+    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros] = await Promise.all([
       leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerConfig(),
-      leerClientes(), leerFechas()
+      leerClientes(), leerFechas(), leerCobros().catch(() => [])
     ]);
     return NextResponse.json({
       presupuestos: presupuestos.map((p) => conCliente(p, clientes)),
       lineas, menus, clientes,
+      // Solo presupuesto y monto: para los avisos de pago de la lista.
+      cobros: cobros.map((c) => ({ presupuesto: c.presupuesto, monto: c.monto })),
       // Solo lo que hace falta para saber si un día es público, privado o
       // cerrado: de eso dependen la tarjeta y la regla del show ecuestre.
       fechas: fechas.map((f) => ({ fecha: f.fecha, estado: f.estado, capacidad: f.capacidad })),
@@ -89,10 +92,25 @@ function cuandoDelCuerpo(cuerpo: Record<string, unknown>, antes?: Presupuesto) {
 
 const pct = (v: unknown) => Math.min(100, Math.max(0, aEntero(v)));
 
-async function lineasListas(crudo: unknown, id: string, invitados: number, fecha: string) {
+async function lineasListas(crudo: unknown, id: string, invitados: number, fecha: string,
+  uf = 0) {
   const [menus, fechas] = await Promise.all([leerMenus(), leerFechas()]);
   return prepararLineas(lineasDelCuerpo(crudo, id), menus, invitados,
-    esFecha(fecha) && esDiaPublico(fecha, fechas));
+    esFecha(fecha) && esDiaPublico(fecha, fechas), uf);
+}
+
+/**
+ * La UF que fija la cotización (2026-11-10). La manda la pantalla, que la
+ * pidió a `/api/uf`; se acepta solo si es un valor creíble y con fecha. Sin
+ * eso queda la que tenía: **la UF de una cotización no cambia sola**.
+ */
+function ufDelCuerpo(cuerpo: Record<string, unknown>, antes: { uf: number; fechaUF: string }) {
+  const uf = Number(cuerpo.uf);
+  const fecha = String(cuerpo.fechaUF ?? '').slice(0, 10);
+  if (cuerpo.uf === undefined || !(uf > UF_MINIMA && uf < UF_MAXIMA) || !esFecha(fecha)) {
+    return { uf: antes.uf, fechaUF: antes.fechaUF };
+  }
+  return { uf: Math.round(uf * 100) / 100, fechaUF: fecha };
 }
 
 /**
@@ -176,11 +194,12 @@ export async function POST(req: Request) {
       documento: documentoDe(cuerpo.documento),
       anticipo: numeroONulo(cuerpo.anticipo, 100),
       saldoDias: numeroONulo(cuerpo.saldoDias, 365),
+      ...ufDelCuerpo(cuerpo, { uf: 0, fechaUF: '' }),
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
     await guardarPresupuesto(p);
-    await guardarLineas(id, await lineasListas(cuerpo.lineas, id, invitados, p.fecha));
+    await guardarLineas(id, await lineasListas(cuerpo.lineas, id, invitados, p.fecha, p.uf));
     await anotar({ ...quien,
       accion: estado === ESTADO_PRESUPUESTO.candidato ? 'Anotó un candidato' : 'Creó una cotización',
       detalle: `${folioDe(p)} · ${cliente.nombre} · ${p.fecha || p.periodo}` });
@@ -282,6 +301,7 @@ export async function PATCH(req: Request) {
         ? previo.anticipo : numeroONulo(cuerpo.anticipo, 100),
       saldoDias: cuerpo.saldoDias === undefined
         ? previo.saldoDias : numeroONulo(cuerpo.saldoDias, 365),
+      ...ufDelCuerpo(cuerpo, previo),
       notas: texto('notas', previo.notas),
       // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
       // línea no puede correrle el plazo al cliente.
@@ -294,10 +314,10 @@ export async function PATCH(req: Request) {
     // invitados o la fecha: las que siguen a los invitados toman el número
     // nuevo, y la regla del show depende del día.
     if (cuerpo.lineas !== undefined || cuerpo.invitados !== undefined
-        || cuerpo.fecha !== undefined) {
+        || cuerpo.fecha !== undefined || cuerpo.uf !== undefined) {
       const crudo = cuerpo.lineas !== undefined
         ? cuerpo.lineas : lineasDe(await leerLineasPresupuesto(), id);
-      await guardarLineas(id, await lineasListas(crudo, id, invitados, p.fecha));
+      await guardarLineas(id, await lineasListas(crudo, id, invitados, p.fecha, p.uf));
     }
     if (p.idReserva) await sincronizarReserva(id);
 

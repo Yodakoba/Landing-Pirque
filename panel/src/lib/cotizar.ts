@@ -9,7 +9,7 @@
  * reglas que un clic.
  */
 import { normalizar, estaCerrado, esPrivada } from './columnas.ts';
-import { canonizar, TIPO_PRODUCTO, IVA_PRECIO, type Menu } from './menus.ts';
+import { canonizar, TIPO_PRODUCTO, IVA_PRECIO, MONEDA, type Menu } from './menus.ts';
 import {
   normalizarLineas, ESTADO_PRESUPUESTO, estadoNormal,
   type LineaEntrante, type LineaPresupuesto, type Presupuesto
@@ -59,7 +59,13 @@ export function prepararLineas(
   entrantes: LineaEntrante[],
   catalogo: Menu[],
   invitados: number,
-  diaPublico: boolean
+  diaPublico: boolean,
+  /**
+   * El valor de la UF de la cotización. **Una línea en UF toma su precio en
+   * pesos de acá**, siempre: así lo que se ve y lo que se guarda salen de la
+   * misma cuenta. Sin UF, la línea conserva el precio que traía.
+   */
+  uf = 0
 ): Omit<LineaPresupuesto, 'fila'>[] {
   const show = showDe(catalogo);
   const lineas = normalizarLineas(entrantes).map((l) => {
@@ -77,14 +83,16 @@ export function prepararLineas(
       cantidad,
       personas: esMenu ? cantidad : 0,
       // En un día público el show va incluido: ni precio ni descuento.
-      precio: esShow && diaPublico ? 0 : l.precio,
+      precio: esShow && diaPublico ? 0
+        : l.precioUF && uf > 0 ? Math.round(l.precioUF * uf) : l.precio,
       descuento: esShow && diaPublico ? 0 : l.descuento
     };
   });
   if (diaPublico && show && !lineas.some((l) => l.concepto === show.nombre)) {
     lineas.push({
       presupuesto: lineas[0]?.presupuesto ?? '', concepto: show.nombre,
-      cantidad: 1, precio: 0, personas: 0, descuento: 0, ivaIncluido: true, sigue: false
+      cantidad: 1, precio: 0, personas: 0, descuento: 0, ivaIncluido: true, sigue: false,
+      precioUF: 0
     });
   }
   return lineas;
@@ -112,7 +120,9 @@ export function lineaDeProducto(
   return {
     presupuesto, concepto: m.nombre, cantidad, precio,
     personas: m.tipo === TIPO_PRODUCTO.menu ? cantidad : 0,
-    descuento: 0, ivaIncluido: m.iva !== IVA_PRECIO.mas, sigue
+    descuento: 0, ivaIncluido: m.iva !== IVA_PRECIO.mas, sigue,
+    // En UF, la línea guarda su precio en UF y lo convierte `prepararLineas()`.
+    precioUF: m.moneda === MONEDA.uf ? m.precioCotizacion : 0
   };
 }
 

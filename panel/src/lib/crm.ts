@@ -303,6 +303,24 @@ export const haySobreventa = (dia: EventosDelDia, quedan: number) =>
 export const PREFIJO = 'brasas-';
 
 /**
+ * **La conexión con el CRM del socio está apagada** (2026-11-10, lo decidió
+ * el cliente: las cotizaciones se gestionan en este panel y el CRM se dejó
+ * de usar). Con esto:
+ *
+ * - el panel **no lee** sus eventos (`/api/crm/eventos` responde vacío y las
+ *   pantallas ni lo piden), así que el vendedor tampoco los ve;
+ * - **no publica** nuestros días en su calendario (`empujarDias()` no hace
+ *   nada);
+ * - y la tarea diaria **retira lo que ya habíamos publicado** allá
+ *   (`retirarTodo()`): dejarlo sería dejarle al vendedor días rojos y
+ *   naranjos que nadie actualiza. Es idempotente: después de la primera
+ *   corrida no queda nada que sacar.
+ *
+ * El código queda entero: volver a encenderla es cambiar esto a `false`.
+ */
+export const CRM_APAGADO = true;
+
+/**
  * El id de un día. **Sale de la fecha y de nada más**, así que es estable:
  * publicar el mismo día dos veces es un `upsert`, no dos filas. Es lo que
  * permite que la reconciliación sea idempotente y que un empujón perdido se

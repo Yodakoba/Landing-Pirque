@@ -17,7 +17,7 @@
  */
 import {
   CRM_API, NUESTRO_LUGAR, type DiaPublicado, diaParaElCRM, leerPublicados,
-  reconciliar, cuerpoDe, tandas, idExterno, type AccionesCRM
+  reconciliar, cuerpoDe, tandas, idExterno, fechaDelId, CRM_APAGADO, type AccionesCRM
 } from './crm.ts';
 import { leerReservas, leerFechas, leerConfig } from './datos.ts';
 import { ocupacionDe } from './ocupacion.ts';
@@ -190,7 +190,7 @@ export async function reconciliarTodo(): Promise<Resultado> {
  * contestar lo mismo.
  */
 export async function empujarDias(fechas: Fecha[]): Promise<void> {
-  if (!configurado()) return;
+  if (CRM_APAGADO || !configurado()) return;
   const dias = [...new Set(fechas.filter(esFecha))];
   if (!dias.length) return;
   try {
@@ -219,3 +219,16 @@ export async function empujarDias(fechas: Fecha[]): Promise<void> {
 export const empujarDia = (fecha: Fecha) => empujarDias([fecha]);
 
 export { NUESTRO_LUGAR };
+
+/**
+ * **Saca del calendario del socio todo lo que publicamos** (2026-11-10), para
+ * cuando la conexión está apagada (`CRM_APAGADO`). Solo toca ids nuestros
+ * —los que `fechaDelId()` sabe leer—, de cualquier fecha: al irnos no queda
+ * ventana que respetar. Lo ajeno no se toca nunca.
+ */
+export async function retirarTodo(): Promise<{ eliminados: number; fallaron: string[] }> {
+  const nuestros = (await leerDelCRM())
+    .map((d) => d.external_id)
+    .filter((id) => !!fechaDelId(id));
+  return sacar(nuestros);
+}

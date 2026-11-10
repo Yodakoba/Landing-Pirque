@@ -2015,6 +2015,43 @@ ponía 40 en cada uno —80 personas—. Ahora:
 - Si igual no calzan, una línea ámbar dice cuántos sobran o faltan; si
   calzan, una verde lo confirma. No bloquea.
 
+### La UF del día (2026-11-10)
+
+Los productos con precio en UF (columna `Moneda` del catálogo) ya se
+cotizan en pesos al valor del día. `lib/uf.ts` lee las respuestas y
+`lib/ufRed.ts` las pide; la ruta es `/api/uf`.
+
+- **Fuentes: api.boostr.cl primero, mindicador.cl de respaldo**, las dos
+  abiertas en Network access. **Las dos fallan a ratos** (comprobado ese
+  día): boostr alterna entre el valor y un `{"status":"error"}` **con HTTP
+  200**, y mindicador a veces no contesta. Por eso cada una se intenta dos
+  veces, un valor fuera de $10.000–$200.000 se descarta, y **se guarda solo
+  un valor bueno** seis horas con `unstable_cache`: la caché de `fetch`
+  guardaría también el error, que es un 200.
+- **La UF de la cotización queda fija** (columnas `UF` y `Fecha UF`). Se
+  pide la primera vez que se agrega un producto en UF, y se cambia solo con
+  *Usar la UF de hoy*: el cliente ya recibió una cifra en pesos.
+- **La línea guarda su precio en UF** (`Precio UF` en `Presupuesto
+  Líneas`) y el precio en pesos lo calcula `prepararLineas()` con la UF de
+  la cotización, en la pantalla y en el servidor por igual.
+- **La hoja del cliente** muestra *(UF 60,5 c/u)* en la línea y con qué UF
+  se convirtió.
+- **En local `/api/uf` falla con `ENOTFOUND`**, como el pronóstico: `next
+  dev` no pasa por el proxy. Para probar, se baja la respuesta con `curl` y
+  se le pasa a `ufDeBoostr()`.
+
+### Avisos de plata en `/presupuestos` (2026-11-10)
+
+`avisosDeCobro()` en `lib/cobros.ts`, con sus pruebas. Dos avisos:
+
+- **Ya pagó el anticipo y falta marcarla ganada** (verde): el cliente
+  cumplió y nadie le tomó la fecha; mientras tanto otro puede reservarla.
+- **Saldos por cobrar** (ámbar) de las ganadas, desde 7 días antes de que
+  venza (`DIAS_AVISO_SALDO`); vencido, el botón va en rojo.
+
+No hay aviso de "anticipo vencido": el anticipo no tiene plazo propio,
+porque es lo que permite ganar.
+
 ### Condiciones de pago y cobros al cliente (2026-11-10)
 
 **Un solo lugar dice cuánto es el anticipo y cuándo vence el saldo**:
@@ -2051,23 +2088,30 @@ cotización decía 30% y 3 días y el contrato 20% y 10.
 - **La hoja del cliente muestra las condiciones** y, si están en
   Configuración, los datos para transferir.
 - **Falta**: subir el comprobante de pago (necesita dónde guardar
-  archivos), los avisos de anticipo vencido y saldo por vencer en
-  `/presupuestos`, y la UF.
+  archivos).
 
-**Lo que sigue pendiente**: la conexión con el CRM del socio sigue activa, y
-como pide el mismo permiso `presupuestos`, **el vendedor ahora también ve sus
-eventos**. Se resuelve al apagar esa conexión.
+**La conexión con el CRM del socio está apagada** desde el 2026-11-10: ver
+"El CRM del socio" más abajo. Con eso se cerró también que el vendedor
+viera sus eventos.
 
 ### Las fases
 
 1. **Hecha**: catálogo de productos, fichas de clientes, descuentos y datos
    de la empresa.
 2. **Hecha**: ver la sección de arriba.
-3. Condiciones de pago (anticipo y saldo), UF del día y pagos del cliente.
+3. **Hecha** (salvo el comprobante de pago): documento de la venta,
+   condiciones de pago, cobros, UF del día, avisos y CRM apagado.
 4. Contrato generado desde la cotización, y su firma.
 5. Calicanto y el rol de gerente general.
 
 ## El CRM del socio (2026-11-02)
+
+> **Apagada desde el 2026-11-10** (lo decidió el cliente: las cotizaciones
+> viven en este panel). `CRM_APAGADO` en `lib/crm.ts`: el panel no lee sus
+> eventos, no publica nuestros días, y la tarea diaria de `/api/crm/publicar`
+> **retira lo que habíamos publicado** allá (`retirarTodo()`, solo ids
+> nuestros, idempotente). El código queda: encenderla es cambiar esa
+> constante. Lo de abajo describe cómo funcionaba.
 
 El socio —Asados y Corderos— vende eventos para varios negocios, **Brasas de
 Lo Pirque entre ellos**, desde su propio CRM. Hasta el 2026-11-02 eso no

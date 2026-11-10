@@ -28,8 +28,12 @@ import {
 import { normalizar, estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { semanaDe, sumarDias, diaSemana, rangoEnPalabras, enPalabras, esFecha } from '@/lib/fechas';
 import { enPesos } from '@/lib/ocupacion';
+import { avisosDeCobro } from '@/lib/cobros';
 
-type Datos = DatosCotizar & { presupuestos: Presupuesto[]; lineas: LineaPresupuesto[] };
+type Datos = DatosCotizar & {
+  presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
+  cobros?: { presupuesto: string; monto: number }[];
+};
 
 /** El color de cada estado: se distingue por la pastilla con borde. */
 const COLOR: Record<string, string> = {
@@ -129,6 +133,13 @@ export default function CotizacionesVista() {
 
   const pronto = datos.presupuestos.filter((p) => porVencer(p, hoy));
   const vencidas = datos.presupuestos.filter((p) => vencidoSinCerrar(p, hoy));
+  // **Los avisos de plata** (2026-11-10): anticipo pagado sin ganar, y el
+  // saldo de una ganada que vence pronto o ya venció. Ver `avisosDeCobro()`.
+  const avisos = avisosDeCobro(
+    datos.presupuestos.map((p) => ({ ...p, total: totalDe(lineasDe(datos.lineas, p.id), p.descuento) })),
+    datos.cobros ?? [], datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 }, hoy,
+    [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida]);
+  const porId = new Map(datos.presupuestos.map((p) => [p.id, p]));
 
   /** Una cotización como línea, para las listas. */
   const fila = (p: Presupuesto, conFecha = true) => (
@@ -246,8 +257,49 @@ export default function CotizacionesVista() {
         ))}
       </div>
 
-      {(pronto.length > 0 || vencidas.length > 0) && (
+      {(pronto.length > 0 || vencidas.length > 0 || avisos.anticipoSinGanar.length > 0
+        || avisos.saldo.length > 0) && (
         <div className="mb-4 space-y-2">
+          {avisos.anticipoSinGanar.length > 0 && (
+            <div className="rounded border border-verde-fuerte/60 bg-verde/5 p-3">
+              <p className="text-[15px] font-semibold text-verde-texto">
+                {avisos.anticipoSinGanar.length === 1
+                  ? '1 cotización ya pagó el anticipo y falta marcarla ganada'
+                  : `${avisos.anticipoSinGanar.length} cotizaciones ya pagaron el anticipo y falta marcarlas ganadas`}
+              </p>
+              <p className="text-[14px] text-hueso/70">Mientras no esté ganada, otro puede tomar ese día.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {avisos.anticipoSinGanar.map((a) => {
+                  const p = porId.get(a.id)!;
+                  return (
+                    <button key={a.id} type="button" onClick={() => setAbierta({ p })} className="boton">
+                      {p.cliente} · pagó {enPesos(a.monto)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {avisos.saldo.length > 0 && (
+            <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
+              <p className="text-[15px] font-semibold text-ambar-texto">
+                {avisos.saldo.length === 1 ? '1 saldo por cobrar' : `${avisos.saldo.length} saldos por cobrar`}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {avisos.saldo.map((a) => {
+                  const p = porId.get(a.id)!;
+                  return (
+                    <button key={a.id} type="button" onClick={() => setAbierta({ p })}
+                      className={`boton ${a.dias < 0 ? '!border-rojo-fuerte text-rojo-texto' : ''}`}>
+                      {p.cliente} · {enPesos(a.monto)} · {a.dias < 0
+                        ? `venció hace ${-a.dias} ${a.dias === -1 ? 'día' : 'días'}`
+                        : a.dias === 0 ? 'vence hoy' : a.dias === 1 ? 'vence mañana' : `vence en ${a.dias} días`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {pronto.length > 0 && (
             <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
               <p className="text-[15px] font-semibold text-ambar-texto">

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { CRM_APAGADO } from '@/lib/crm';
 import { exigir } from '@/lib/permisos';
 import {
   CRM_API, NUESTRO_LUGAR, leerEventos, eventosPorFecha, periodosNuestros,
@@ -43,7 +44,8 @@ export async function GET(req: Request) {
   if (no) return no;
 
   const clave = process.env.CRM_API_KEY;
-  if (!clave) {
+  // Apagada (ver `CRM_APAGADO`): igual que sin clave, vacío y sin error.
+  if (CRM_APAGADO || !clave) {
     return NextResponse.json({ dias: {}, periodos: [], configurado: false });
   }
 
