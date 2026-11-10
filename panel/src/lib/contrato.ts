@@ -136,6 +136,38 @@ export interface DatosContrato {
   condiciones: Condiciones;
   ley20393: boolean;
   acuerdos: string;
+  /** Las medidas de tranquilidad, de Configuración. */
+  tranquilidad: Tranquilidad;
+}
+
+/** Cuántos cambios de fecha, hasta cuántos días antes se cancela, y qué % se devuelve. */
+export interface Tranquilidad {
+  cambiosFecha: number;
+  cancelacionDias: number;
+  reembolsoPct: number;
+}
+
+const VECES = ['', 'una vez', 'dos veces', 'tres veces', 'cuatro veces', 'cinco veces'];
+
+/**
+ * Los párrafos de las medidas de tranquilidad. **Un 0 saca la frase**: sin
+ * cambios de fecha no se promete ninguno, y sin días de cancelación no se
+ * promete poder cancelar. Sin ninguna de las dos, no hay cláusula.
+ */
+export function tranquilidadDe(t: Tranquilidad): Parrafo[] {
+  const salida: Parrafo[] = [];
+  if (t.cambiosFecha > 0) {
+    salida.push(`El Cliente tendrá la opción de cambiar ${VECES[t.cambiosFecha] ?? `${t.cambiosFecha} veces`} `
+      + 'la fecha del Evento, siempre que la nueva fecha no choque con fechas ya reservadas y solo '
+      + 'por motivos de fuerza mayor.');
+  }
+  if (t.cancelacionDias > 0) {
+    salida.push(`El Cliente tendrá la opción de cancelar el Evento hasta con ${t.cancelacionDias} días `
+      + 'de anticipación' + (t.reembolsoPct > 0
+        ? ` y con un reembolso del ${t.reembolsoPct}% de la reserva.`
+        : ', sin reembolso de la reserva.'));
+  }
+  return salida;
 }
 
 /**
@@ -282,14 +314,8 @@ export function clausulasDe(d: DatosContrato): Clausula[] {
     parrafos: ['El cliente podrá llevarse lo que quede en postres y alcohol comprado por él para la casa.']
   });
 
-  agregar('Medidas de tranquilidad', {
-    parrafos: [
-      'El Cliente tendrá la opción de cambiar dos veces la fecha del Evento, siempre que la nueva '
-      + 'fecha no choque con fechas ya reservadas y solo por motivos de fuerza mayor.',
-      'El Cliente tendrá la opción de cancelar el Evento hasta con 60 días de anticipación y con '
-      + 'un reembolso del 20% de la reserva.'
-    ]
-  });
+  const tranquilidad = tranquilidadDe(d.tranquilidad);
+  if (tranquilidad.length) agregar('Medidas de tranquilidad', { parrafos: tranquilidad });
 
   if (d.ley20393) {
     agregar('Responsabilidad Penal Ley 20.393', { parrafos: [LEY_20393] });

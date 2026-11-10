@@ -2178,6 +2178,22 @@ no Vercel Blob**, porque el dominio `lopirque.cl` es Google Workspace.
 "El CRM del socio" más abajo. Con eso se cerró también que el vendedor
 viera sus eventos.
 
+### La página de Configuración, por secciones (2026-11-10)
+
+Lo pidió el cliente porque *"ya estamos ampliando mucho esa parte"*. Son
+seis tarjetas, cada una con su título en dorado y una línea que dice para
+qué sirve, y arriba **un botón por sección** para saltar a ella:
+**Reservas del sitio** (días, horario, cupo, días hacia adelante, últimos
+lugares) · **Calendario del panel** (semáforo, grupo grande) ·
+**Cotizaciones** (vigencia, descuentos, anticipo, saldo, carpeta de Drive) ·
+**Contrato** (ciudad de firma y las medidas de tranquilidad) · **La
+empresa** · **Mantención**. Van ordenadas por a quién afectan: primero lo
+que ve el cliente del sitio, después el equipo, después la venta de
+eventos. De paso pasaron a la regla PlayStation —títulos a 15px, ayudas a
+13, cajas de 44px con su unidad al lado— y aparecieron dos campos que
+existían en `Config` sin pantalla: la hora de cierre y la vigencia de una
+cotización.
+
 ### El contrato (Fase 4, 2026-11-10)
 
 **Sale de la cotización y no se escribe nada dos veces.** Es una página,
@@ -2229,6 +2245,14 @@ la carpeta de la cotización junto a sus comprobantes, por
   contrato del link deja de coincidir con el papel, y la ventana lo dice:
   el que vale es el firmado.
 - **No es requisito para marcar ganada**: eso sigue siendo el anticipo.
+- **Las medidas de tranquilidad son configurables** (lo pidió el cliente
+  el mismo día): cuántos cambios de fecha, hasta cuántos días antes se
+  cancela y qué % de la reserva se devuelve, en Configuración → Contrato
+  (`contrato_cambios_fecha`, `contrato_cancelacion_dias`,
+  `contrato_reembolso`). Parten en 2, 60 y 20, los del CRM. **Un 0 saca la
+  frase** del contrato —no se promete lo que no se ofrece— y sin ninguna de
+  las dos no hay cláusula; la numeración se corre sola. Valen para los
+  contratos que se impriman desde ahí: el papel ya firmado no cambia.
 - **Sin la versión de matrimonio** (Novia y Novio, dos firmas) que tenía el
   CRM: queda para la Fase 5, con Calicanto.
 

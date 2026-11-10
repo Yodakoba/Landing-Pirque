@@ -3905,7 +3905,8 @@ console.log('\nCotizaciones, fase 2');
     fecha: '2026-12-05', horario: '13:00 a 18:00', invitados: 40, total: cuentas.total,
     condiciones: condicionesDe({ anticipo: null, saldoDias: null, fecha: '2026-12-05' }, cuentas.total,
       { anticipoPct: 30, saldoDias: 3 }),
-    ley20393: false, acuerdos: ''
+    ley20393: false, acuerdos: '',
+    tranquilidad: { cambiosFecha: 2, cancelacionDias: 60, reembolsoPct: 20 }
   };
   const cl = clausulasDe(datos);
   const texto = (c: typeof cl) => c.map((x) => [x.titulo, ...x.parrafos, ...(x.puntos ?? []),
@@ -3950,6 +3951,22 @@ console.log('\nCotizaciones, fase 2');
   ok(texto(cl).includes('la celebración de un cumpleaños')
      && texto(clausulasDe({ ...datos, tipoEvento: 'Empresa' })).includes('la celebración de un evento de empresa'),
      'el tipo de evento se lee como frase: "un evento de empresa", no "de empresa"');
+  ok(texto(cl).includes('cambiar dos veces la fecha')
+     && texto(cl).includes('hasta con 60 días de anticipación y con un reembolso del 20% de la reserva'),
+     'las medidas de tranquilidad dicen lo de Configuración (por defecto, las del CRM)');
+  const otra = clausulasDe({ ...datos, tranquilidad: { cambiosFecha: 1, cancelacionDias: 30, reembolsoPct: 0 } });
+  ok(texto(otra).includes('cambiar una vez la fecha') && texto(otra).includes('30 días de anticipación, sin reembolso'),
+     'otros plazos cambian el texto; sin reembolso lo dice');
+  const sinNada = clausulasDe({ ...datos, ley20393: true, tranquilidad: { cambiosFecha: 0, cancelacionDias: 0, reembolsoPct: 20 } });
+  ok(!texto(sinNada).includes('tranquilidad') && sinNada[7].titulo === 'OCTAVO: Responsabilidad Penal Ley 20.393',
+     'sin cambios de fecha ni cancelación no hay cláusula, y la numeración se corre');
+  ok(texto(clausulasDe({ ...datos, tranquilidad: { cambiosFecha: 0, cancelacionDias: 60, reembolsoPct: 20 } })).includes('cancelar')
+     && !texto(clausulasDe({ ...datos, tranquilidad: { cambiosFecha: 0, cancelacionDias: 60, reembolsoPct: 20 } })).includes('cambiar'),
+     'un 0 en los cambios de fecha saca solo esa frase');
+  const cfgLeida = leerConfigDe(aFilasConfig({ ...POR_DEFECTO, cambiosFecha: 3, cancelacionDias: 45, reembolsoPct: 50 }));
+  ok(cfgLeida.cambiosFecha === 3 && cfgLeida.cancelacionDias === 45 && cfgLeida.reembolsoPct === 50
+     && leerConfigDe([['Clave', 'Valor']]).cancelacionDias === 60,
+     'los plazos del contrato van y vuelven de Config; sin la fila rigen los del CRM');
   ok(fechaLarga('') === RAYA && clausulasDe({ ...datos, fecha: '' })[0].puntos?.[1] === `Fecha: ${RAYA}`,
      'sin día, la fecha del contrato queda con raya');
 

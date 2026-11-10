@@ -53,7 +53,8 @@ export default function HojaContrato({ p, lista, lineas, clientes, cfg }: {
     total: cuentas.total,
     condiciones: condicionesDe(p, cuentas.total, cfg),
     ley20393: p.ley20393,
-    acuerdos: p.acuerdos
+    acuerdos: p.acuerdos,
+    tranquilidad: cfg
   };
   const clausulas = clausulasDe(datos);
 

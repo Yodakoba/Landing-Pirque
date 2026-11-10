@@ -76,6 +76,16 @@ export interface Config {
   anticipoPct: number;
   saldoDias: number;
   /**
+   * **Las medidas de tranquilidad del contrato** (2026-11-10, el cliente las
+   * pidió configurables): cuántas veces se puede cambiar la fecha, hasta
+   * cuántos días antes se puede cancelar, y qué % de la reserva se devuelve
+   * al cancelar. Los de partida son los del contrato del CRM. Un 0 en los
+   * cambios o en los días saca esa frase del contrato.
+   */
+  cambiosFecha: number;
+  cancelacionDias: number;
+  reembolsoPct: number;
+  /**
    * La unidad compartida de Google Drive donde se guardan los comprobantes
    * de pago (2026-11-10). Es el ID que va después de `folders/`; vive acá y
    * no en el código porque Calicanto tendrá la suya. En blanco, no se puede
@@ -135,6 +145,10 @@ export const POR_DEFECTO: Config = {
   // Los de la cotización del CRM, que es lo que los clientes ya recibían.
   anticipoPct: 30,
   saldoDias: 3,
+  // Los del contrato del CRM, que es lo que los clientes ya firmaban.
+  cambiosFecha: 2,
+  cancelacionDias: 60,
+  reembolsoPct: 20,
   driveComprobantes: '',
   empresa: EMPRESA_VACIA
 };
@@ -155,6 +169,9 @@ export const CLAVES = {
   descuentos: 'descuentos',
   anticipoPct: 'anticipo_porcentaje',
   saldoDias: 'saldo_dias_antes',
+  cambiosFecha: 'contrato_cambios_fecha',
+  cancelacionDias: 'contrato_cancelacion_dias',
+  reembolsoPct: 'contrato_reembolso',
   driveComprobantes: 'drive_comprobantes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
@@ -289,6 +306,9 @@ export function leerConfigDe(filas: string[][]): Config {
     // En cero no hay anticipo: es un valor que alguien puede querer.
     anticipoPct: numero(v(CLAVES.anticipoPct), POR_DEFECTO.anticipoPct, 0, 100),
     saldoDias: numero(v(CLAVES.saldoDias), POR_DEFECTO.saldoDias, 0, 365),
+    cambiosFecha: numero(v(CLAVES.cambiosFecha), POR_DEFECTO.cambiosFecha, 0, 10),
+    cancelacionDias: numero(v(CLAVES.cancelacionDias), POR_DEFECTO.cancelacionDias, 0, 365),
+    reembolsoPct: numero(v(CLAVES.reembolsoPct), POR_DEFECTO.reembolsoPct, 0, 100),
     driveComprobantes: idDeDrive(v(CLAVES.driveComprobantes)),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
@@ -322,6 +342,9 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.descuentos, c.descuentos.join(', ')],
     [CLAVES.anticipoPct, String(c.anticipoPct)],
     [CLAVES.saldoDias, String(c.saldoDias)],
+    [CLAVES.cambiosFecha, String(c.cambiosFecha)],
+    [CLAVES.cancelacionDias, String(c.cancelacionDias)],
+    [CLAVES.reembolsoPct, String(c.reembolsoPct)],
     [CLAVES.driveComprobantes, c.driveComprobantes],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],
