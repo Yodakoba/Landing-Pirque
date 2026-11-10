@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerClientes, crearCliente, editarCliente, borrarCliente, leerPresupuestos,
-  migrarPresupuestosAClientes, anotar
+  migrarPresupuestosAClientes, anotar, sincronizarReserva, leerLineasPresupuesto
 } from '@/lib/datos';
 import { limpiarCliente, faltaEnCliente, parecidos } from '@/lib/clientes';
+import { folioDe, estadoVisible, totalDe, lineasDe } from '@/lib/presupuestos';
+import { grupoDe } from '@/lib/cotizar';
+import { hoy } from '@/lib/fechas';
 import { puede } from '@/lib/auth';
 import { ahoraEnChile } from '@/lib/bitacora';
 
@@ -30,9 +33,32 @@ export async function GET(req: Request) {
       if (p.idCliente) cotizaciones[p.idCliente] = (cotizaciones[p.idCliente] ?? 0) + 1;
     }
     const verPresupuestos = puede(quien.rol, 'presupuestos');
+    // **El historial de cada cliente** (Fase 2): todas sus cotizaciones, con
+    // la ganada marcada. Un cliente que pide varias, o dos alternativas,
+    // las ve juntas acá.
+    const historial: Record<string, {
+      id: string; folio: string; fecha: string; periodo: string; estado: string;
+      total: number; grupo: string;
+    }[]> = {};
+    if (verPresupuestos) {
+      const lineas = await leerLineasPresupuesto().catch(() => []);
+      const h = hoy();
+      for (const p of presupuestos) {
+        if (!p.idCliente) continue;
+        (historial[p.idCliente] ??= []).push({
+          id: p.id, folio: folioDe(p), fecha: p.fecha, periodo: p.periodo,
+          estado: estadoVisible(p, h), total: totalDe(lineasDe(lineas, p.id), p.descuento),
+          grupo: grupoDe(p)
+        });
+      }
+      for (const k of Object.keys(historial)) {
+        historial[k].sort((a, b) => (b.fecha || '9').localeCompare(a.fecha || '9'));
+      }
+    }
     return NextResponse.json({
       clientes,
       cotizaciones,
+      historial,
       sinFicha: verPresupuestos ? presupuestos.filter((p) => !p.idCliente).length : 0
     });
   } catch (e) {
@@ -105,6 +131,12 @@ export async function PATCH(req: Request) {
     if (falta) return NextResponse.json({ error: falta }, { status: 400 });
 
     await editarCliente({ ...previo, ...datos });
+    // **Las reservas de sus cotizaciones ganadas se corrigen solas**: llevan
+    // el nombre y el contacto copiados para que la planilla se lea a mano, y
+    // esa copia la escribe el sistema, no una persona.
+    for (const p of await leerPresupuestos()) {
+      if (p.idCliente === id && p.idReserva) await sincronizarReserva(p.id);
+    }
     await anotar({ ...quien, accion: 'Editó un cliente', detalle: `${id} · ${datos.nombre}` });
     return NextResponse.json({
       clientes: await leerClientes(),

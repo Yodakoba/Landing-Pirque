@@ -37,7 +37,7 @@ const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/equipo', texto: 'Equipo', accion: 'equipo' },
   { href: '/turnos', texto: 'Turnos', accion: 'equipo' },
   { href: '/extras', texto: 'Extras', accion: 'extras' },
-  { href: '/presupuestos', texto: 'Presupuestos', accion: 'presupuestos' },
+  { href: '/presupuestos', texto: 'Cotizaciones', accion: 'presupuestos' },
   { href: '/clientes', texto: 'Clientes', accion: 'clientes' },
   // Desde el 2026-11-10 es el catálogo de todo lo que se vende y se cotiza,
   // no solo los menús del sitio. La ruta sigue siendo /menus para no romper

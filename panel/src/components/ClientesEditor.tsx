@@ -24,6 +24,15 @@ import {
   buscarClientes, porNombreCliente, type Cliente, type DatosCliente
 } from '@/lib/clientes';
 import { avisoCorreo } from '@/lib/contacto';
+import { PastillaEstado } from './CotizacionesVista';
+import { enPesos } from '@/lib/ocupacion';
+import { enPalabras } from '@/lib/fechas';
+
+/** Una cotización en el historial de un cliente. */
+interface EnHistorial {
+  id: string; folio: string; fecha: string; periodo: string; estado: string;
+  total: number; grupo: string;
+}
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-3 py-2 text-[15px] ' +
@@ -47,6 +56,7 @@ const datosDe = (c: Cliente): DatosCliente =>
 export default function ClientesEditor() {
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [cotizaciones, setCotizaciones] = useState<Record<string, number>>({});
+  const [historial, setHistorial] = useState<Record<string, EnHistorial[]>>({});
   const [sinFicha, setSinFicha] = useState(0);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
@@ -66,6 +76,7 @@ export default function ClientesEditor() {
     if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
     setClientes(d.clientes);
     setCotizaciones(d.cotizaciones ?? {});
+    setHistorial(d.historial ?? {});
     setSinFicha(d.sinFicha ?? 0);
   }).catch((e) => setError(String(e)));
 
@@ -315,6 +326,48 @@ export default function ClientesEditor() {
 
                 {abiertaEsta && (
                   <div className="border-t border-hueso/10 p-4">
+                    {/* **Su historial de cotizaciones** (Fase 2): todas, con la
+                        ganada en verde y las alternativas marcadas. Un cliente
+                        que pide varias, o dos opciones, las ve juntas acá. */}
+                    <div className="mb-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <p className="text-[13px] font-semibold uppercase tracking-wide text-hueso/60">
+                          Cotizaciones
+                        </p>
+                        <span className="flex-1" />
+                        <a href={`/presupuestos?cliente=${encodeURIComponent(c.id)}`}
+                          className="tecla boton">+ Cotizarle</a>
+                      </div>
+                      {(historial[c.id] ?? []).length === 0 ? (
+                        <p className="text-[14px] text-hueso/60">Todavía ninguna.</p>
+                      ) : (
+                        <ul className="space-y-1.5">
+                          {(historial[c.id] ?? []).map((h) => {
+                            const alternativas = (historial[c.id] ?? []).filter((x) => x.grupo === h.grupo).length;
+                            return (
+                              <li key={h.id}>
+                                <a href={`/presupuestos?abrir=${encodeURIComponent(h.id)}`}
+                                  className={`tecla flex flex-wrap items-center gap-x-3 gap-y-1 rounded border
+                                              px-3 py-2 min-h-[48px] ${h.estado === 'Ganada'
+                                    ? 'border-verde-fuerte bg-verde/10' : 'border-hueso/15'}`}>
+                                  <span className="text-[14px] font-semibold">N° {h.folio}</span>
+                                  <PastillaEstado estado={h.estado} />
+                                  {alternativas > 1 && (
+                                    <span className="text-[13px] text-hueso/60">alternativa</span>
+                                  )}
+                                  <span className="text-[14px] text-hueso/70">
+                                    {h.fecha ? <span className="first-letter:uppercase inline-block">{enPalabras(h.fecha)}</span>
+                                      : h.periodo}
+                                  </span>
+                                  <span className="flex-1" />
+                                  <strong className="text-[15px]">{enPesos(h.total)}</strong>
+                                </a>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
                     {formulario(edicion!, (k, v) => setEdicion({ ...edicion!, [k]: v }), c.nombre)}
                     {aviso && <p className="mt-3 text-[15px] text-rojo-texto">{aviso}</p>}
                     <div className="mt-4 flex flex-wrap items-center gap-3">

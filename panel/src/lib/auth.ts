@@ -259,7 +259,11 @@ export const PERMISOS = {
    * pestaña `Menús`, que él no puede cambiar. Lo único que decide acá es qué
    * precio ofrecer en **esta** cotización, que es justamente la negociación.
    */
-  presupuestos: [ROL.admin, ROL.encargado, ROL.pagos],
+  //
+  // **El vendedor cotiza desde el 2026-11-10** (Fase 2 de las cotizaciones):
+  // es su trabajo. **Ve todas, edita solo las suyas** —lo decidió el
+  // cliente—, igual que con las reservas: ver `puedeTocarPresupuesto()`.
+  presupuestos: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
   /**
    * **Las fichas de clientes** (2026-11-10): verlas, crearlas y editarlas.
    *
@@ -381,6 +385,20 @@ export function puedeTocarReserva(
   if (!puede(rol, 'reservas')) return false;
   if (rol !== ROL.vendedor) return true;
   return mismoUsuario(usuario, anotadaPor);
+}
+
+/**
+ * Si esta cuenta puede **cambiar** una cotización (2026-11-10): el vendedor
+ * solo las que creó él; los demás roles con `presupuestos`, todas. Mismo
+ * criterio y misma regla que `puedeTocarReserva()`, y por lo mismo: ver todo
+ * es útil para no cotizar dos veces al mismo cliente; tocar lo de otro no.
+ */
+export function puedeTocarPresupuesto(
+  rol: Rol, usuario: string, creadoPor: string
+): boolean {
+  if (!puede(rol, 'presupuestos')) return false;
+  if (rol !== ROL.vendedor) return true;
+  return mismoUsuario(usuario, creadoPor);
 }
 
 /**

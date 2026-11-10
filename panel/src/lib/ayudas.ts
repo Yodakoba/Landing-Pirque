@@ -176,30 +176,29 @@ export const AYUDAS: Record<string, Ayuda> = {
   },
 
   presupuestos: {
-    titulo: 'Los presupuestos',
+    titulo: 'Las cotizaciones',
     cuerpo: [
-      'Acá armas una cotización para un cliente —una agencia, un matrimonio, '
-      + 'una empresa— y se la mandas por un link. Lleva lo que haga falta: '
-      + 'menús, el arriendo del recinto, el show ecuestre.',
-      'Mientras no se confirme NO ocupa cupo. El día lo muestra aparte, en '
-      + 'rosado, como gente posible: así se ve que hay una conversación '
-      + 'abierta sin quitarle el lugar a quien sí reservó.',
-      'El precio de cada menú se propone desde la pestaña Menús y se puede '
-      + 'cambiar: lo que escribas acá es lo que se le cotiza a esta persona, '
-      + 'y es lo que se usa después si acepta.'
+      'Acá se cotiza para un cliente —una agencia, un matrimonio, una '
+      + 'empresa— y se le manda por un link. El calendario muestra cuántos '
+      + 'candidatos y cotizaciones tiene cada día.',
+      'Lo cotizado NO ocupa cupo. Recién al marcarla ganada se vuelve una '
+      + 'reserva, y desde ahí la reserva se actualiza sola si cambias la '
+      + 'cotización.',
+      'Un candidato es alguien que preguntó: se anota con cliente, fecha e '
+      + 'invitados, y se cotiza después.'
     ],
     pasos: [
-      'Nuevo presupuesto, y le pones el nombre del cliente y la fecha.',
-      'Agregas los menús y las líneas que correspondan, con su cantidad y '
-      + 'su precio.',
-      'Copiar link y se lo mandas. Al abrirlo puede guardarlo como PDF.',
-      'Cuando conteste, le cambias "En qué va" a Aceptado o Rechazado.'
+      '“+ Cotizar” (o “Cotizar este día” en una tarjeta).',
+      'Cliente: búscalo o créalo. Evento: fecha —o “todavía no hay día”—, '
+      + 'invitados y tipo.',
+      'Productos: agrégalos con los botones. Cada línea tiene su precio y su '
+      + 'descuento; abajo va el descuento sobre el total y el IVA.',
+      'Enviar: guarda, copia el link o mándalo por WhatsApp. Si el cliente '
+      + 'acepta, “Marcar ganada”.'
     ],
-    ojo: 'La columna Personas es aparte de la cantidad a propósito: un '
-       + 'arriendo del recinto es cantidad 1 y cero personas. De ahí sale la '
-       + 'gente que el día muestra como posible. Y si a un presupuesto le '
-       + 'quedan pocos días, el panel lo avisa arriba: renuévalo o márcalo '
-       + 'rechazado.'
+    ojo: 'En un día público el show ecuestre va incluido y no se puede '
+       + 'quitar. Para ofrecer otra opción al mismo cliente usa “Hacer una '
+       + 'alternativa”: cuando una gana, las otras pasan solas a “No elegida”.'
   },
 
   informe: {

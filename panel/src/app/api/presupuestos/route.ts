@@ -2,38 +2,52 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto, guardarLineas,
-  borrarPresupuesto, leerMenus, leerConfig, anotar
+  borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar,
+  sincronizarReserva
 } from '@/lib/datos';
 import {
-  nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, aEntero, folioDe,
-  type Presupuesto, type LineaPresupuesto
+  nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, aEntero, folioDe, estadoNormal, lineasDe,
+  type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
+import {
+  prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe
+} from '@/lib/cotizar';
+import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { nuevoToken } from '@/lib/equipo';
-import { telefonoNormal, correoNormal } from '@/lib/contacto';
 import { hoy, esFecha } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
+import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Los presupuestos, sus líneas y lo que hace falta para armar uno nuevo.
+ * Las cotizaciones, sus líneas y todo lo que hace falta para armar una.
  *
- * Van juntos en una sola respuesta a propósito: la pantalla no sirve sin
- * los tres —la lista, los menús para proponer precios, y la vigencia para
- * calcular hasta cuándo vale— y pedirlos por separado sería dibujar tres
- * veces mientras llegan.
+ * **El cliente se resuelve acá, desde su ficha** (`conCliente()`): una
+ * cotización nueva guarda solo el `ID Cliente`, y la pantalla recibe el
+ * nombre y el contacto ya puestos. Las de antes de las fichas siguen
+ * mostrando lo que tenían escrito.
  */
 export async function GET(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
-    const [presupuestos, lineas, menus, cfg] = await Promise.all([
-      leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerConfig()
+    const quien = await quienEs(req);
+    const [presupuestos, lineas, menus, cfg, clientes, fechas] = await Promise.all([
+      leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerConfig(),
+      leerClientes(), leerFechas()
     ]);
     return NextResponse.json({
-      presupuestos, lineas, menus,
+      presupuestos: presupuestos.map((p) => conCliente(p, clientes)),
+      lineas, menus, clientes,
+      // Solo lo que hace falta para saber si un día es público, privado o
+      // cerrado: de eso dependen la tarjeta y la regla del show ecuestre.
+      fechas: fechas.map((f) => ({ fecha: f.fecha, estado: f.estado, capacidad: f.capacidad })),
       vigencia: cfg.vigenciaPresupuesto,
-      hoy: hoy()
+      descuentos: cfg.descuentos,
+      hoy: hoy(),
+      usuario: quien.usuario,
+      rol: quien.rol
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
@@ -41,69 +55,131 @@ export async function GET(req: Request) {
 }
 
 /** Lo que llega del navegador, limpiado. El servidor no confía en el cliente. */
-function lineasDelCuerpo(crudo: unknown, id: string): Omit<LineaPresupuesto, 'fila'>[] {
+function lineasDelCuerpo(crudo: unknown, id: string): LineaEntrante[] {
   if (!Array.isArray(crudo)) return [];
-  return crudo.map((l) => ({
-    presupuesto: id,
-    concepto: String((l as Record<string, unknown>)?.concepto ?? '').trim(),
-    cantidad: aEntero((l as Record<string, unknown>)?.cantidad),
-    precio: aEntero((l as Record<string, unknown>)?.precio),
-    personas: aEntero((l as Record<string, unknown>)?.personas)
-  }));
+  return crudo.map((x) => {
+    const l = (x ?? {}) as Record<string, unknown>;
+    return {
+      presupuesto: id,
+      concepto: String(l.concepto ?? '').trim(),
+      cantidad: aEntero(l.cantidad),
+      precio: aEntero(l.precio),
+      personas: aEntero(l.personas),
+      descuento: aEntero(l.descuento),
+      ivaIncluido: l.ivaIncluido !== false,
+      sigue: l.sigue === true
+    };
+  });
+}
+
+/** La fecha o el periodo que llegan, comprobados. */
+function cuandoDelCuerpo(cuerpo: Record<string, unknown>, antes?: Presupuesto) {
+  const fecha = cuerpo.fecha === undefined
+    ? antes?.fecha ?? ''
+    : String(cuerpo.fecha ?? '').slice(0, 10);
+  const periodo = cuerpo.periodo === undefined
+    ? antes?.periodo ?? ''
+    : String(cuerpo.periodo ?? '').trim();
+  // Con día exacto, el periodo sobra; sin día, el periodo es obligatorio.
+  if (esFecha(fecha)) return { fecha, periodo: '' };
+  if (periodo) return { fecha: '', periodo };
+  return null;
+}
+
+const pct = (v: unknown) => Math.min(100, Math.max(0, aEntero(v)));
+
+async function lineasListas(crudo: unknown, id: string, invitados: number, fecha: string) {
+  const [menus, fechas] = await Promise.all([leerMenus(), leerFechas()]);
+  return prepararLineas(lineasDelCuerpo(crudo, id), menus, invitados,
+    esFecha(fecha) && esDiaPublico(fecha, fechas));
 }
 
 /**
- * Crea un presupuesto.
+ * Crea una cotización (o un candidato).
  *
- * **El token se crea acá y no cuando se manda**, y esa es la diferencia con
- * la planilla semanal: ahí el link abre datos del equipo y por eso existir
- * tiene que ser una decisión. Un presupuesto, en cambio, **es** un
- * documento para mandar — nace para eso, y su link solo muestra lo que se
- * le va a cotizar a esa persona. Hacerlo en dos pasos sería pedir un clic
- * para habilitar lo único que esta pantalla hace.
+ * **Pide una ficha de cliente**, no un nombre suelto: es la regla que
+ * evita escribir al cliente dos veces. **El token se crea acá**, porque una
+ * cotización es un documento para mandar. **La vigencia la calcula el
+ * servidor**, desde la planilla.
  *
- * **La fecha de vencimiento se calcula en el servidor**, desde la vigencia
- * de la planilla. Aceptarla del navegador dejaría mandar un presupuesto que
- * dice valer un año porque alguien editó la petición.
+ * Con `duplicarDe` es una **alternativa**: copia el cliente, la fecha, los
+ * invitados y las líneas de otra, y queda en su mismo grupo.
  */
 export async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
-    const cuerpo = await req.json();
-    const fecha = String(cuerpo?.fecha ?? '').slice(0, 10);
-    if (!esFecha(fecha)) {
-      return NextResponse.json({ error: 'Falta la fecha del evento.' }, { status: 400 });
-    }
-    const cliente = String(cuerpo?.cliente ?? '').trim();
-    if (!cliente) {
-      return NextResponse.json({ error: 'Falta el nombre del cliente.' }, { status: 400 });
+    const cuerpo = (await req.json()) ?? {};
+    const quien = await quienEs(req);
+    const [cfg, clientes, lista] = await Promise.all([
+      leerConfig(), leerClientes(), leerPresupuestos()
+    ]);
+    const id = nuevoId();
+
+    // Una alternativa: la misma conversación, otras líneas.
+    if (cuerpo.duplicarDe) {
+      const base = lista.find((p) => p.id === String(cuerpo.duplicarDe));
+      if (!base) return NextResponse.json({ error: 'Esa cotización ya no está.' }, { status: 404 });
+      const todas = await leerLineasPresupuesto();
+      const nueva: Omit<Presupuesto, 'fila'> = {
+        ...base, id, grupo: grupoDe(base), token: nuevoToken(), idReserva: '',
+        estado: ESTADO_PRESUPUESTO.borrador, motivo: '',
+        validoHasta: validoHastaDe(hoy(), cfg.vigenciaPresupuesto),
+        // Quien la duplica es su dueño: un vendedor que arma la opción B de
+        // una cotización ajena la puede seguir editando.
+        creadoPor: quien.usuario, creado: ahoraEnChile()
+      };
+      delete (nueva as Partial<Presupuesto>).fila;
+      // La original pasa a ser parte del grupo si todavía no lo era.
+      if (!base.grupo) {
+        const { fila: _f, ...sinFila } = base;
+        await guardarPresupuesto({ ...sinFila, grupo: base.id });
+      }
+      await guardarPresupuesto(nueva);
+      await guardarLineas(id, lineasDe(todas, base.id).map((l) => ({ ...l, presupuesto: id })));
+      await anotar({ ...quien, accion: 'Creó una alternativa de cotización',
+        detalle: `${folioDe(nueva)} · alternativa de ${folioDe(base)}` });
+      return NextResponse.json({ presupuesto: { ...nueva, fila: -1 } });
     }
 
-    const cfg = await leerConfig();
-    const quien = await quienEs(req);
-    const id = nuevoId();
+    const idCliente = String(cuerpo.idCliente ?? '').trim();
+    const cliente = clientes.find((c) => c.id === idCliente);
+    if (!cliente) {
+      return NextResponse.json({ error: 'Elige o crea el cliente primero.' }, { status: 400 });
+    }
+    const cuando = cuandoDelCuerpo(cuerpo);
+    if (!cuando) {
+      return NextResponse.json(
+        { error: 'Falta la fecha del evento, o el periodo si todavía no hay día.' },
+        { status: 400 });
+    }
+    const invitados = Math.max(0, aEntero(cuerpo.invitados));
+    const estado = estadoNormal(cuerpo.estado) === ESTADO_PRESUPUESTO.candidato
+      ? ESTADO_PRESUPUESTO.candidato : ESTADO_PRESUPUESTO.borrador;
+
     const p: Omit<Presupuesto, 'fila'> = {
-      id,
-      fecha,
-      cliente,
-      email: correoNormal(cuerpo?.email),
-      telefono: telefonoNormal(cuerpo?.telefono),
-      estado: ESTADO_PRESUPUESTO.borrador,
+      id, ...cuando,
+      // **Del cliente se guarda solo la ficha.** Las columnas viejas quedan
+      // en blanco: el nombre y el contacto se leen de `Clientes`.
+      cliente: '', email: '', telefono: '', idCliente,
+      estado,
       validoHasta: validoHastaDe(hoy(), cfg.vigenciaPresupuesto),
       token: nuevoToken(),
-      notas: String(cuerpo?.notas ?? '').trim(),
-      // Nace sin reserva: es lo que lo mantiene contando como posible hasta
-      // que de verdad se convierta. Ver `cuentaComoPosible()`.
+      notas: String(cuerpo.notas ?? '').trim(),
       idReserva: '',
-      idCliente: String(cuerpo?.idCliente ?? '').trim(),
+      invitados,
+      tipoEvento: String(cuerpo.tipoEvento ?? '').trim(),
+      grupo: '',
+      descuento: pct(cuerpo.descuento),
+      motivo: '',
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
     await guardarPresupuesto(p);
-    await guardarLineas(id, lineasDelCuerpo(cuerpo?.lineas, id));
-    await anotar({ ...quien, accion: 'Creó un presupuesto',
-      detalle: `${folioDe(p)} · ${cliente} · ${fecha}` });
+    await guardarLineas(id, await lineasListas(cuerpo.lineas, id, invitados, p.fecha));
+    await anotar({ ...quien,
+      accion: estado === ESTADO_PRESUPUESTO.candidato ? 'Anotó un candidato' : 'Creó una cotización',
+      detalle: `${folioDe(p)} · ${cliente.nombre} · ${p.fecha || p.periodo}` });
     return NextResponse.json({ presupuesto: { ...p, fila: -1 } });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
@@ -111,83 +187,125 @@ export async function POST(req: Request) {
 }
 
 /**
- * Edita un presupuesto que ya existe.
+ * Edita una cotización. **Es parcial**: lo que no viene se conserva.
  *
- * **Es parcial de verdad**: lo que no venga en el cuerpo se conserva. Sin
- * eso, una llamada que solo quisiera marcarlo enviado le borraría el
- * teléfono y las notas.
- *
- * **Dos campos no se aceptan nunca del navegador**, y es la misma regla que
- * la modalidad de una reserva:
- *
- * - **`token`**, porque cambiarlo es invalidar el link que el cliente ya
- *   tiene, y eso tiene su propia acción.
- * - **`idReserva`**, porque es lo que decide si este presupuesto todavía
- *   cuenta como gente posible. Dejarlo escribir desde afuera permitiría
- *   apagar o encender el conteo de un día sin que exista ninguna reserva.
+ * - **El vendedor solo edita las suyas** (`puedeTocarPresupuesto()`).
+ * - **No se acepta del navegador**: el token, el `ID Reserva`, quién la
+ *   creó, ni el estado *Ganada* o *No elegida* —el primero se pone con
+ *   "Marcar ganada", el segundo lo pone el sistema—.
+ * - **Una ganada no cambia de estado**: tiene una reserva ocupando cupo. Sí
+ *   se edita —más invitados, otro menú, otro precio— y **su reserva se
+ *   reescribe sola** (`sincronizarReserva()`). Si el día de la reserva ya
+ *   está cerrado, eso es corregirlo, con motivo.
  */
 export async function PATCH(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
-    const cuerpo = await req.json();
-    const id = String(cuerpo?.id ?? '').trim();
+    const cuerpo = (await req.json()) ?? {};
+    const id = String(cuerpo.id ?? '').trim();
     const lista = await leerPresupuestos();
     const previo = lista.find((x) => x.id === id);
     if (!previo) {
-      return NextResponse.json({ error: 'Ese presupuesto ya no está.' }, { status: 404 });
+      return NextResponse.json({ error: 'Esa cotización ya no está.' }, { status: 404 });
+    }
+    const quien = await quienEs(req);
+    if (!puedeTocarPresupuesto(quien.rol as Rol, quien.usuario, previo.creadoPor)) {
+      return NextResponse.json({
+        error: `Esa cotización la creó ${previo.creadoPor || 'otra persona'}, así que no es tuya para cambiarla.`,
+        permiso: true
+      }, { status: 403 });
+    }
+
+    const cuando = cuandoDelCuerpo(cuerpo, previo);
+    if (!cuando) {
+      return NextResponse.json(
+        { error: 'Falta la fecha del evento, o el periodo si todavía no hay día.' },
+        { status: 400 });
+    }
+
+    let estado = previo.estado;
+    if (cuerpo.estado !== undefined) {
+      const pedido = estadoNormal(cuerpo.estado);
+      if (previo.idReserva && pedido !== ESTADO_PRESUPUESTO.aceptado) {
+        return NextResponse.json({
+          error: 'Esta cotización ya es una reserva. Si el cliente cancela, marca la '
+               + 'reserva como cancelada en el día: así libera su cupo.'
+        }, { status: 409 });
+      }
+      if (!previo.idReserva) {
+        if (!ESTADOS_A_MANO.includes(pedido)) {
+          return NextResponse.json({
+            error: 'Para ganarla usa "Marcar ganada": es lo que toma el cupo.'
+          }, { status: 400 });
+        }
+        estado = pedido;
+      }
+    }
+
+    // Una ganada que cambia de día: si el día de antes o el de después ya
+    // se cerraron, es una corrección, con motivo.
+    let motivoCorreccion = '';
+    if (previo.idReserva) {
+      const guarda = await guardaDelDia(req, [previo.fecha, cuando.fecha], cuerpo.correccion);
+      if ('error' in guarda) return guarda.error;
+      motivoCorreccion = guarda.motivo;
+      if (!cuando.fecha) {
+        return NextResponse.json(
+          { error: 'Una cotización ganada tiene su reserva en un día: no puede quedar sin fecha.' },
+          { status: 400 });
+      }
     }
 
     const texto = (k: string, antes: string) =>
-      cuerpo?.[k] === undefined ? antes : String(cuerpo[k] ?? '').trim();
+      cuerpo[k] === undefined ? antes : String(cuerpo[k] ?? '').trim();
+    const invitados = cuerpo.invitados === undefined
+      ? previo.invitados : Math.max(0, aEntero(cuerpo.invitados));
 
-    const fecha = cuerpo?.fecha === undefined
-      ? previo.fecha
-      : String(cuerpo.fecha ?? '').slice(0, 10);
-    if (!esFecha(fecha)) {
-      return NextResponse.json({ error: 'Esa fecha no se entiende.' }, { status: 400 });
-    }
-
+    const { fila: _f, ...sinFila } = previo;
     const p: Omit<Presupuesto, 'fila'> = {
-      id: previo.id,
-      fecha,
-      cliente: texto('cliente', previo.cliente) || previo.cliente,
-      email: cuerpo?.email === undefined
-        ? previo.email : correoNormal(cuerpo.email),
-      telefono: cuerpo?.telefono === undefined
-        ? previo.telefono : telefonoNormal(cuerpo.telefono),
-      estado: texto('estado', previo.estado),
-      // La vigencia se recalcula solo si lo piden explícitamente: al
-      // mandarlo. Editar una línea no puede correrle el plazo al cliente.
-      validoHasta: cuerpo?.renovarVigencia
-        ? validoHastaDe(hoy(), (await leerConfig()).vigenciaPresupuesto)
-        : previo.validoHasta,
-      token: previo.token,
+      ...sinFila,
+      ...cuando,
+      idCliente: cuerpo.idCliente === undefined ? previo.idCliente
+        : String(cuerpo.idCliente ?? '').trim() || previo.idCliente,
+      estado,
+      invitados,
+      tipoEvento: texto('tipoEvento', previo.tipoEvento),
+      descuento: cuerpo.descuento === undefined ? previo.descuento : pct(cuerpo.descuento),
+      motivo: texto('motivo', previo.motivo),
       notas: texto('notas', previo.notas),
-      idReserva: previo.idReserva,
-      idCliente: previo.idCliente,
-      creadoPor: previo.creadoPor,
-      creado: previo.creado
+      // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
+      // línea no puede correrle el plazo al cliente.
+      validoHasta: cuerpo.renovarVigencia
+        ? validoHastaDe(hoy(), (await leerConfig()).vigenciaPresupuesto)
+        : previo.validoHasta
     };
     await guardarPresupuesto(p);
-    if (cuerpo?.lineas !== undefined) {
-      await guardarLineas(id, lineasDelCuerpo(cuerpo.lineas, id));
+    // Las líneas se vuelven a preparar también cuando solo cambian los
+    // invitados o la fecha: las que siguen a los invitados toman el número
+    // nuevo, y la regla del show depende del día.
+    if (cuerpo.lineas !== undefined || cuerpo.invitados !== undefined
+        || cuerpo.fecha !== undefined) {
+      const crudo = cuerpo.lineas !== undefined
+        ? cuerpo.lineas : lineasDe(await leerLineasPresupuesto(), id);
+      await guardarLineas(id, await lineasListas(crudo, id, invitados, p.fecha));
     }
-    await anotar({ ...(await quienEs(req)), accion: 'Editó un presupuesto',
-      detalle: `${folioDe(p)} · ${p.cliente} · ${p.estado || 'Borrador'}` });
-    return NextResponse.json({ presupuesto: { ...p, fila: previo.fila } });
+    if (p.idReserva) await sincronizarReserva(id);
+
+    await anotar({ ...quien,
+      accion: motivoCorreccion ? 'Corrigió una cotización ganada de un día cerrado'
+                               : 'Editó una cotización',
+      detalle: `${folioDe(p)} · ${p.estado || 'Borrador'}`
+             + (motivoCorreccion ? ` · motivo: ${motivoCorreccion}` : '') });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
 
 /**
- * Borra un presupuesto y sus líneas.
- *
- * **Uno ya convertido en reserva no se borra**, y se comprueba acá y no
- * solo en la pantalla: su `ID Reserva` es el rastro de dónde salió esa
- * reserva, y borrarlo dejaría a la reserva sin explicación. Es la misma
- * regla que "a quien ya trabajó se le desactiva, no se le quita".
+ * Borra una cotización y sus líneas. **Una ganada no se borra**: su
+ * `ID Reserva` es el rastro de dónde salió esa reserva.
  */
 export async function DELETE(req: Request) {
   const no = await exigir(req, 'presupuestos');
@@ -196,15 +314,20 @@ export async function DELETE(req: Request) {
     const { id } = await req.json();
     const previo = (await leerPresupuestos()).find((x) => x.id === String(id ?? '').trim());
     if (!previo) return NextResponse.json({ ok: true });
+    const quien = await quienEs(req);
+    if (!puedeTocarPresupuesto(quien.rol as Rol, quien.usuario, previo.creadoPor)) {
+      return NextResponse.json({
+        error: `Esa cotización la creó ${previo.creadoPor || 'otra persona'}, así que no es tuya para borrarla.`,
+        permiso: true
+      }, { status: 403 });
+    }
     if (previo.idReserva) {
       return NextResponse.json({
-        error: 'Este presupuesto ya se convirtió en reserva, así que no se borra. '
-             + 'Si de verdad hay que sacarlo, borra antes la reserva.'
+        error: 'Esta cotización ya es una reserva, así que no se borra.'
       }, { status: 409 });
     }
     await borrarPresupuesto(previo.id);
-    await anotar({ ...(await quienEs(req)), accion: 'Borró un presupuesto',
-      detalle: `${folioDe(previo)} · ${previo.cliente}` });
+    await anotar({ ...quien, accion: 'Borró una cotización', detalle: folioDe(previo) });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

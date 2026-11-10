@@ -76,7 +76,29 @@ export const COL_PRESUPUESTOS = {
    * único que el presupuesto guarda del cliente; mientras tanto conviven con
    * `Cliente`, `Email` y `Teléfono`, que no se borran para no perder nada.
    */
-  idCliente: 'ID Cliente'
+  idCliente: 'ID Cliente',
+  // ---- Fase 2 de las cotizaciones (2026-11-10). Todas al final y por
+  // nombre: una planilla vieja se sigue leyendo, y las columnas se agregan
+  // solas la primera vez que se guarda.
+  /** Cuánta gente dice el cliente que viene. Lo que siguen las líneas por persona. */
+  invitados: 'Invitados',
+  /**
+   * Cuando todavía no hay día: "marzo o abril", "fin de año". Con esto la
+   * `Fecha` puede ir vacía. Una cotización sin día **no ocupa ninguna
+   * fecha** ni suma posibles en el calendario: aparece en su lista aparte.
+   */
+  periodo: 'Periodo',
+  tipoEvento: 'Tipo de evento',
+  /**
+   * El id de la primera cotización de un grupo de alternativas. Dos
+   * cotizaciones con el mismo grupo son opciones A y B para el mismo
+   * cliente; cuando una gana, las otras pasan solas a *No elegida*.
+   */
+  grupo: 'Grupo',
+  /** Descuento sobre el total, en %. */
+  descuento: 'Descuento total',
+  /** Por qué se perdió. Texto, como la nota de pago. */
+  motivo: 'Motivo'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -94,7 +116,18 @@ export const COL_LINEAS = {
    * publicar un número de personas que nadie dio. Al agregar un menú se
    * propone igual a la cantidad; en una línea libre nace en cero.
    */
-  personas: 'Personas'
+  personas: 'Personas',
+  /** Descuento de esta línea, en %. */
+  descuento: 'Descuento',
+  /**
+   * Si el precio escrito ya trae el IVA (`Incluido`) o se le suma (`+ IVA`).
+   * Se copia del catálogo al agregar la línea y queda con ella. **En blanco
+   * es `Incluido`**: así las líneas de antes de la Fase 2 dan el mismo
+   * total que daban.
+   */
+  iva: 'IVA',
+  /** Si la cantidad sigue al número de invitados: "sí" o en blanco. */
+  sigue: 'Sigue invitados'
 } as const;
 
 export const ENCABEZADO_PRESUPUESTOS: string[] = Object.values(COL_PRESUPUESTOS);
@@ -111,11 +144,45 @@ export const ENCABEZADO_LINEAS: string[] = Object.values(COL_LINEAS);
  * `estaVencido()`.
  */
 export const ESTADO_PRESUPUESTO = {
+  /**
+   * El primer estado (2026-11-10): alguien preguntó y todavía no se le
+   * cotiza nada. Tiene cliente, fecha (o periodo) e invitados, y nada más.
+   */
+  candidato: 'Candidato',
   borrador: 'Borrador',
-  enviado: 'Enviado',
-  aceptado: 'Aceptado',
-  rechazado: 'Rechazado'
+  enviado: 'Enviada',
+  negociacion: 'Negociación',
+  /** Ganada: tiene su reserva. Se llega solo por "Marcar ganada". */
+  aceptado: 'Ganada',
+  /** Perdida, con su motivo. */
+  rechazado: 'Perdida',
+  /** Otra alternativa del mismo grupo ganó. La pone el sistema. */
+  noElegida: 'No elegida'
 } as const;
+
+/**
+ * El estado guardado, con los nombres de hoy.
+ *
+ * Hasta el 2026-11-10 se guardaban `Enviado`, `Aceptado` y `Rechazado`; se
+ * leen como `Enviada`, `Ganada` y `Perdida` sin reescribir la planilla.
+ */
+export function estadoNormal(texto: unknown): string {
+  const t = normalizar(String(texto ?? ''));
+  if (!t) return '';
+  const viejos: Record<string, string> = {
+    enviado: ESTADO_PRESUPUESTO.enviado,
+    aceptado: ESTADO_PRESUPUESTO.aceptado,
+    rechazado: ESTADO_PRESUPUESTO.rechazado
+  };
+  if (viejos[t]) return viejos[t];
+  return Object.values(ESTADO_PRESUPUESTO).find((e) => normalizar(e) === t)
+    ?? String(texto).trim();
+}
+
+/** Los estados que ya no van a cambiar solos: la conversación terminó. */
+export const ESTADOS_CERRADOS: string[] = [
+  ESTADO_PRESUPUESTO.aceptado, ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida
+];
 
 export type EstadoPresupuesto =
   (typeof ESTADO_PRESUPUESTO)[keyof typeof ESTADO_PRESUPUESTO];
@@ -127,6 +194,12 @@ export interface LineaPresupuesto {
   /** El precio acordado para ESTA cotización, no el de la pestaña `Menús`. */
   precio: number;
   personas: number;
+  /** Descuento de la línea, en %. 0 es sin descuento. */
+  descuento: number;
+  /** Si el precio trae el IVA. Ver `COL_LINEAS.iva`. */
+  ivaIncluido: boolean;
+  /** Si la cantidad sigue a los invitados. */
+  sigue: boolean;
   fila: number;
 }
 
@@ -147,6 +220,14 @@ export interface Presupuesto {
   creado: string;
   /** La ficha en `Clientes`. Vacío en los presupuestos de antes de las fichas. */
   idCliente: string;
+  invitados: number;
+  /** Cuando no hay día exacto. Con periodo, `fecha` puede ser `''`. */
+  periodo: string;
+  tipoEvento: string;
+  grupo: string;
+  /** Descuento sobre el total, en %. */
+  descuento: number;
+  motivo: string;
   fila: number;
 }
 
@@ -176,13 +257,68 @@ export function aEntero(v: unknown): number {
   return Number.isFinite(n) ? Math.round(n) : 0;
 }
 
-/** Lo que cuesta una línea. */
-export const totalDeLinea = (l: Pick<LineaPresupuesto, 'cantidad' | 'precio'>) =>
-  Math.max(0, l.cantidad) * l.precio;
+const pctValido = (n: unknown) => Math.min(100, Math.max(0, Number(n) || 0));
 
-/** Lo que cuesta el presupuesto completo. */
-export const totalDe = (lineas: LineaPresupuesto[]) =>
-  lineas.reduce((n, l) => n + totalDeLinea(l), 0);
+/** Lo que vale una línea tal como se escribió, con su descuento. */
+export const totalDeLinea = (
+  l: Pick<LineaPresupuesto, 'cantidad' | 'precio'> & { descuento?: number }
+) => Math.round(Math.max(0, l.cantidad) * l.precio * (1 - pctValido(l.descuento) / 100));
+
+/** El neto de una línea: sin IVA, ya con su descuento. Sin redondear. */
+export function netoDeLinea(
+  l: Pick<LineaPresupuesto, 'cantidad' | 'precio'> & { descuento?: number; ivaIncluido?: boolean },
+  tasa = IVA
+): number {
+  const bruto = Math.max(0, l.cantidad) * l.precio * (1 - pctValido(l.descuento) / 100);
+  return l.ivaIncluido === false ? bruto : bruto / (1 + tasa);
+}
+
+/**
+ * **Las cuentas de una cotización, como se hacen en una cotización**
+ * (2026-11-10): las líneas en neto, el descuento sobre el total, y el IVA
+ * encima. Un precio del catálogo marcado "Incluido" se lleva a neto antes
+ * de sumar; uno marcado "+ IVA" ya lo es. Una línea de antes de la Fase 2
+ * no tiene la marca y cuenta como "Incluido", que es lo que siempre fue.
+ *
+ * **El total sale de sumar**: `neto + iva === total` siempre, por lo mismo
+ * que `desglosarIVA()` —un documento que va a la contabilidad de una
+ * empresa no puede tener un peso que no cuadra—.
+ */
+export interface Cuentas {
+  /** La suma de las líneas en neto, antes del descuento total. */
+  subtotal: number;
+  /** Lo que resta el descuento sobre el total. */
+  descuento: number;
+  neto: number;
+  iva: number;
+  total: number;
+}
+
+export function cuentasDe(
+  lineas: (Pick<LineaPresupuesto, 'cantidad' | 'precio'> &
+           { descuento?: number; ivaIncluido?: boolean })[],
+  descuentoTotal = 0,
+  tasa = IVA
+): Cuentas {
+  // **Se suma en bruto y se baja a neto una sola vez.** Llevar cada línea a
+  // neto, redondear y después volver a subir el IVA descuadra por un peso:
+  // 44 menús a $64.000 con IVA son $2.816.000 y así salían $2.816.001. Una
+  // línea "+ IVA" se sube a bruto multiplicando, que con precios en pesos
+  // enteros da exacto.
+  const bruto = lineas.reduce(
+    (n, l) => n + netoDeLinea(l, tasa) * (1 + tasa), 0);
+  const total = Math.round(bruto * (1 - pctValido(descuentoTotal) / 100));
+  const subtotal = Math.round(bruto / (1 + tasa));
+  const neto = Math.round(total / (1 + tasa));
+  return { subtotal, descuento: subtotal - neto, neto, iva: total - neto, total };
+}
+
+/** El total con IVA de una cotización: lo que se cobra. */
+export const totalDe = (
+  lineas: (Pick<LineaPresupuesto, 'cantidad' | 'precio'> &
+           { descuento?: number; ivaIncluido?: boolean })[],
+  descuentoTotal = 0
+) => cuentasDe(lineas, descuentoTotal).total;
 
 /** Cuánta gente cotiza el presupuesto completo. */
 export const personasDe = (lineas: LineaPresupuesto[]) =>
@@ -332,7 +468,7 @@ export function porVencer(
  */
 export function vencidoSinCerrar(p: Presupuesto, hoy: Fecha): boolean {
   if (String(p.idReserva ?? '').trim()) return false;
-  if (normalizar(p.estado) === normalizar(ESTADO_PRESUPUESTO.rechazado)) return false;
+  if (ESTADOS_CERRADOS.includes(estadoNormal(p.estado))) return false;
   return estaVencido(p, hoy);
 }
 
@@ -359,18 +495,27 @@ export function vencidoSinCerrar(p: Presupuesto, hoy: Fecha): boolean {
  */
 export function cuentaComoPosible(p: Presupuesto, hoy: Fecha): boolean {
   if (String(p.idReserva ?? '').trim()) return false;
-  if (normalizar(p.estado) === normalizar(ESTADO_PRESUPUESTO.rechazado)) return false;
+  const e = estadoNormal(p.estado);
+  if (e === ESTADO_PRESUPUESTO.rechazado || e === ESTADO_PRESUPUESTO.noElegida) return false;
   return !estaVencido(p, hoy);
+}
+
+/**
+ * Cuánta gente suma una cotización como posible: la de sus menús, y si
+ * todavía no tiene menús —un candidato—, los invitados que dijo.
+ */
+export function gentePosible(p: Pick<Presupuesto, 'invitados'>, lineas: LineaPresupuesto[]): number {
+  const deLineas = personasDe(lineas);
+  return deLineas > 0 ? deLineas : Math.max(0, p.invitados || 0);
 }
 
 /** En qué va, con el vencimiento ya resuelto, para mostrarlo. */
 export function estadoVisible(p: Presupuesto, hoy: Fecha): string {
-  if (String(p.idReserva ?? '').trim()) return 'Confirmado';
-  if (normalizar(p.estado) === normalizar(ESTADO_PRESUPUESTO.rechazado)) {
-    return ESTADO_PRESUPUESTO.rechazado;
-  }
-  if (estaVencido(p, hoy)) return 'Vencido';
-  return String(p.estado ?? '').trim() || ESTADO_PRESUPUESTO.borrador;
+  if (String(p.idReserva ?? '').trim()) return ESTADO_PRESUPUESTO.aceptado;
+  const e = estadoNormal(p.estado);
+  if (e === ESTADO_PRESUPUESTO.rechazado || e === ESTADO_PRESUPUESTO.noElegida) return e;
+  if (estaVencido(p, hoy)) return 'Vencida';
+  return e || ESTADO_PRESUPUESTO.borrador;
 }
 
 /**
@@ -394,12 +539,14 @@ export function posiblesPorDia(
   const salida = new Map<Fecha, Posibles>();
   for (const p of presupuestos) {
     if (!cuentaComoPosible(p, hoy)) continue;
+    // Sin día exacto no ocupa ninguna fecha: va en su lista aparte.
+    if (!esFecha(p.fecha)) continue;
     const suyas = porPresupuesto.get(p.id) ?? [];
     const antes = salida.get(p.fecha) ?? { ...SIN_POSIBLES };
     salida.set(p.fecha, {
       presupuestos: antes.presupuestos + 1,
-      personas: antes.personas + personasDe(suyas),
-      total: antes.total + totalDe(suyas)
+      personas: antes.personas + gentePosible(p, suyas),
+      total: antes.total + totalDe(suyas, p.descuento)
     });
   }
   return salida;
@@ -470,14 +617,18 @@ export function reservaDesdePresupuesto(
     email: p.email,
     telefono: p.telefono,
     menu: componerMenu(cuenta),
-    personas: personasDe(lineas),
-    monto: totalDe(lineas),
+    // Sin menús —un candidato que se ganó tal cual— la gente son los
+    // invitados que dijo: tiene que ocupar su cupo igual.
+    personas: gentePosible(p, lineas),
+    // El total de la cotización, con sus descuentos y el IVA: es lo que se
+    // le va a cobrar.
+    monto: totalDe(lineas, p.descuento),
     // **Solo lo escribe Shopify**, igual que en una reserva anotada a mano:
     // acá no se compró ninguna variante.
     tipoPago: '',
     estadoPago: ESTADO_PAGO.pendiente,
     asistencia: '',
-    notaPago: `Del presupuesto N° ${folioDe(p)}`,
+    notaPago: `De la cotización N° ${folioDe(p)}`,
     // No sale del CRM del socio: sale de un presupuesto nuestro.
     eventoCRM: '',
     // Quién la convirtió. Es una reserva anotada por una persona, así que
@@ -541,14 +692,22 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
     const f = filas[n];
     const id = en(f, i.id).trim();
     const fecha = en(f, i.fecha).slice(0, 10);
-    if (!id || !esFecha(fecha)) continue;
+    const periodo = en(f, i.periodo).trim();
+    // Sin día ni periodo no sabemos de cuándo es: una fila a medio escribir.
+    if (!id || (!esFecha(fecha) && !periodo)) continue;
     salida.push({
       id,
-      fecha,
+      fecha: esFecha(fecha) ? fecha : '',
+      periodo,
+      invitados: Math.max(0, aEntero(en(f, i.invitados))),
+      tipoEvento: en(f, i.tipoEvento).trim(),
+      grupo: en(f, i.grupo).trim(),
+      descuento: Math.min(100, Math.max(0, aEntero(en(f, i.descuento)))),
+      motivo: en(f, i.motivo).trim(),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
-      estado: en(f, i.estado).trim(),
+      estado: estadoNormal(en(f, i.estado)),
       validoHasta: en(f, i.validoHasta).slice(0, 10),
       token: en(f, i.token).trim(),
       notas: en(f, i.notas).trim(),
@@ -583,6 +742,12 @@ export function filaPresupuesto(
   poner(i.creadoPor, p.creadoPor);
   poner(i.creado, p.creado);
   poner(i.idCliente, p.idCliente);
+  poner(i.invitados, p.invitados ? String(p.invitados) : '');
+  poner(i.periodo, p.periodo);
+  poner(i.tipoEvento, p.tipoEvento);
+  poner(i.grupo, p.grupo);
+  poner(i.descuento, p.descuento ? String(p.descuento) : '');
+  poner(i.motivo, p.motivo);
   return fila;
 }
 
@@ -606,6 +771,11 @@ export function leerLineasDe(filas: string[][]): LineaPresupuesto[] {
       cantidad: aEntero(en(f, i.cantidad)),
       precio: aEntero(en(f, i.precio)),
       personas: aEntero(en(f, i.personas)),
+      descuento: Math.min(100, Math.max(0, aEntero(en(f, i.descuento)))),
+      // En blanco es "Incluido": así una línea de antes de la Fase 2 da el
+      // mismo total que daba.
+      ivaIncluido: !/\+\s*iva/i.test(en(f, i.iva)),
+      sigue: /^s[ií]$/i.test(en(f, i.sigue).trim()),
       fila: n + 1
     });
   }
@@ -626,6 +796,9 @@ export function filaLinea(
   poner(i.cantidad, num(l.cantidad));
   poner(i.precio, num(l.precio));
   poner(i.personas, num(l.personas));
+  poner(i.descuento, num(l.descuento));
+  poner(i.iva, l.ivaIncluido ? 'Incluido' : '+ IVA');
+  poner(i.sigue, l.sigue ? 'sí' : '');
   return fila;
 }
 
@@ -642,8 +815,11 @@ export function filaLinea(
  * Lo que sí hace es descartar las vacías y no dejar pasar cantidades
  * negativas, que solo podrían restar de un total que una persona va a leer.
  */
+export type LineaEntrante = Omit<LineaPresupuesto, 'fila' | 'descuento' | 'ivaIncluido' | 'sigue'>
+  & Partial<Pick<LineaPresupuesto, 'descuento' | 'ivaIncluido' | 'sigue'>>;
+
 export function normalizarLineas(
-  lineas: Omit<LineaPresupuesto, 'fila'>[]
+  lineas: LineaEntrante[]
 ): Omit<LineaPresupuesto, 'fila'>[] {
   const salida: Omit<LineaPresupuesto, 'fila'>[] = [];
   for (const l of lineas) {
@@ -654,7 +830,10 @@ export function normalizarLineas(
       concepto,
       cantidad: Math.max(0, aEntero(l.cantidad)),
       precio: Math.max(0, aEntero(l.precio)),
-      personas: Math.max(0, aEntero(l.personas))
+      personas: Math.max(0, aEntero(l.personas)),
+      descuento: Math.min(100, Math.max(0, aEntero(l.descuento))),
+      ivaIncluido: l.ivaIncluido !== false,
+      sigue: !!l.sigue
     });
   }
   return salida;
