@@ -472,6 +472,14 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Sale en la hoja del cliente, en el contrato y en el monto de la reserva al ganarla.'
     ]
   },
+  vistaGerencia: {
+    titulo: 'Vista gerencia',
+    texto: [
+      'Se suma a cualquier rol: la persona ve todo el panel —calendario, reservas, informe, bitácora, cotizaciones, equipo con sus sueldos, configuración—.',
+      'Edita solo lo de su rol. En las pantallas que solo mira, arriba le aparece "acá solo miras".',
+      'No ve las cuentas, las contraseñas ni los links personales. Vale desde la próxima vez que entre.'
+    ]
+  },
   estadoCotizacion: {
     titulo: 'En qué va',
     texto: [

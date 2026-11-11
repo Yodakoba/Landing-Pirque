@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir } from '@/lib/permisos';
+import { exigir, exigirVer } from '@/lib/permisos';
 import { ufDelDia } from '@/lib/ufRed';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
  * servicios contesta, lo dice: la pantalla deja escribir el precio en pesos.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   const uf = await ufDelDia();
   if (!uf) {

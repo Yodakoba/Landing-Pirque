@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerCobros, leerPresupuestos, leerConfig, leerClientes, editarCobro, anotar } from '@/lib/datos';
 import { problemaConArchivo } from '@/lib/cobros';
 import { folioDe } from '@/lib/presupuestos';
@@ -17,7 +17,7 @@ export const maxDuration = 60;
  * de esta ruta, que comprueba el permiso de quien lo pide.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   const id = new URL(req.url).searchParams.get('id') ?? '';
   const cobro = (await leerCobros()).find((c) => c.id === id);

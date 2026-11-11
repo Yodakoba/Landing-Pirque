@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir } from '@/lib/permisos';
+import { exigir, exigirVer } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasAbiertosEntre, hoy, sumarDias, esFecha } from '@/lib/fechas';
@@ -41,7 +41,7 @@ export const dynamic = 'force-dynamic';
  * personas. Lo notó el cliente mirando octubre.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'ver');
+  const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
     // El parámetro sigue existiendo para poder pedir otra ventana a mano,

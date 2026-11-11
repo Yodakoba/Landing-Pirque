@@ -13,7 +13,7 @@
  * haya puesto el middleware — una cabecera la puede mandar cualquiera.
  */
 import { NextResponse } from 'next/server';
-import { puede, ROL, type Rol, type Accion } from './auth.ts';
+import { puede, puedeVer, ROL, type Rol, type Accion } from './auth.ts';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from './sesion.ts';
 // Se vuelve a exportar porque media app la importa desde acá; vive en
 // sesion.ts para que las pruebas puedan cargarla sin arrastrar next/server.
@@ -23,6 +23,8 @@ export interface Quien {
   /** El nombre con el que se anota en la bitácora. */
   usuario: string;
   rol: Rol;
+  /** Vista gerencia: ve todo, edita lo de su rol. Ver `puedeVer()`. */
+  gerencia?: boolean;
 }
 
 export const NADIE: Quien = { usuario: '', rol: ROL.ninguno };
@@ -41,7 +43,7 @@ export async function quienEs(req: Request): Promise<Quien> {
   const token = cookieDe(req.headers.get('cookie'), COOKIE_SESION);
   const sesion = await leerSesion(token, secretoDeSesion(process.env));
   if (!sesion) return NADIE;
-  return { usuario: sesion.usuario, rol: sesion.rol as Rol };
+  return { usuario: sesion.usuario, rol: sesion.rol as Rol, gerencia: sesion.gerencia === true };
 }
 
 /**
@@ -53,13 +55,15 @@ export async function quienEs(req: Request): Promise<Quien> {
  *     if (no) return no;
  */
 export async function exigir(req: Request, accion: Accion): Promise<NextResponse | null> {
-  const { rol } = await quienEs(req);
+  const { rol, gerencia } = await quienEs(req);
   if (puede(rol, accion)) return null;
   return NextResponse.json(
     {
       error: rol === ROL.ninguno
         ? 'Tu sesión caducó o no estás identificado. Vuelve a entrar.'
-        : `Tu cuenta (${rol}) no puede hacer esto. Pídeselo al administrador.`,
+        : gerencia
+          ? `Con vista gerencia ves esto, pero tu rol (${rol}) no lo puede cambiar.`
+          : `Tu cuenta (${rol}) no puede hacer esto. Pídeselo al administrador.`,
       // Para que la pantalla pueda decir "no tienes permiso" en vez de "no
       // se pudo leer la planilla", que manda a buscar el problema donde no
       // está.
@@ -67,4 +71,15 @@ export async function exigir(req: Request, accion: Accion): Promise<NextResponse
     },
     { status: 403 }
   );
+}
+
+/**
+ * **Para LEER** (2026-11-11): como `exigir()`, pero deja pasar también a una
+ * cuenta con vista gerencia (`puedeVer()`). Lo usan solo los `GET`: escribir
+ * sigue pidiendo `exigir()`, o sea el rol.
+ */
+export async function exigirVer(req: Request, accion: Accion): Promise<NextResponse | null> {
+  const { rol, gerencia } = await quienEs(req);
+  if (puedeVer(rol, accion, gerencia)) return null;
+  return exigir(req, accion);
 }

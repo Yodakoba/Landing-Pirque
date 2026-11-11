@@ -16,5 +16,6 @@ export default async function Pagina({ params }: { params: { fecha: string } }) 
     cookieDe(headers().get('cookie'), COOKIE_SESION), secretoDeSesion(process.env)
   );
   return <DayView fecha={params.fecha}
-                  rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} />;
+                  rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''}
+                  gerencia={sesion?.gerencia === true} />;
 }

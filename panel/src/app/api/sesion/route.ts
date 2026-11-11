@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
 
 async function identificar(
   usuario: string, clave: string
-): Promise<{ usuario: string; rol: Rol } | null> {
+): Promise<{ usuario: string; rol: Rol; gerencia?: boolean } | null> {
   const env = process.env;
 
   if (env.PANEL_USUARIO && env.PANEL_CLAVE &&
@@ -45,7 +45,9 @@ async function identificar(
   if (cuenta && claveCalza(clave, cuenta.huella)) {
     // Se anota el NOMBRE de la persona, no su nombre de usuario: la bitácora
     // la va a leer alguien, y "Ana Pérez" se entiende mejor que "aperez".
-    return { usuario: cuenta.nombre, rol: cuenta.rol };
+    // La vista gerencia viaja firmada en la sesión, como el rol: cambiarla
+    // en /usuarios vale desde la próxima vez que esa persona entre.
+    return { usuario: cuenta.nombre, rol: cuenta.rol, gerencia: cuenta.gerencia };
   }
   return null;
 }
@@ -82,7 +84,8 @@ export async function POST(req: Request) {
       maxAge: DURACION_SESION
     });
 
-    await anotar({ ...quien, accion: 'Entró al panel' });
+    await anotar({ usuario: quien.usuario, rol: quien.rol,
+      accion: quien.gerencia ? 'Entró al panel (con vista gerencia)' : 'Entró al panel' });
     return res;
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

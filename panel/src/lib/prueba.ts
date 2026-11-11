@@ -31,7 +31,7 @@ import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS
          problemaConArchivo, puedeGanar } from './cobros.ts';
 import { idDeDrive } from './config.ts';
 import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
-import { puedeTocarPresupuesto } from './auth.ts';
+import { puedeTocarPresupuesto, puedeVer, NO_SE_LEE_CON_GERENCIA } from './auth.ts';
 import { comoIngresar } from './fudo.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
@@ -4286,6 +4286,29 @@ console.log('\nCómo se ingresa en Fudo');
      'una fila vieja con "Menú Tradiciones" encuentra igual su precio');
   ok(comoIngresar({ ...base, tipoPago: 'Solo reserva', estadoPago: 'cancelled' }, carta) === null,
      'una cancelada no se ingresa');
+}
+
+console.log('\nVista gerencia');
+{
+  ok(puedeVer(ROL.vendedor, 'informe', true) && !puede(ROL.vendedor, 'informe'),
+     'un vendedor con vista gerencia VE el informe, pero su rol no lo cambia');
+  ok(puedeVer(ROL.encargado, 'sueldos', true) && !puede(ROL.encargado, 'sueldos'),
+     'el encargado con vista gerencia ve los sueldos de las fichas; guardarlos sigue pidiendo el rol');
+  ok(!puedeVer(ROL.vendedor, 'informe', false), 'sin la vista gerencia, el vendedor no ve el informe');
+  ok(NO_SE_LEE_CON_GERENCIA.every((a) => !puedeVer(ROL.encargado, a, true)),
+     'ni con vista gerencia se ven las cuentas, la mantención ni los links personales');
+  ok(!puedeVer(ROL.ninguno, 'ver', true), 'sin sesión, la gerencia no abre nada');
+  const conG = await firmarSesion({ usuario: 'Felipe', rol: ROL.pagos, gerencia: true }, SECRETO_SESION, AHORA);
+  ok((await leerSesion(conG, SECRETO_SESION, AHORA))?.gerencia === true,
+     'la vista gerencia viaja firmada en la sesión');
+  const sinG = await firmarSesion({ usuario: 'Ana', rol: ROL.encargado }, SECRETO_SESION, AHORA);
+  ok((await leerSesion(sinG, SECRETO_SESION, AHORA))?.gerencia === false, 'y sin ella, es falso');
+  const cuentasG = leerUsuariosDe([['Nombre','Usuario','Rol','Activo','Clave (huella)','Vista gerencia'],
+    ['Felipe', 'felipe', 'pagos', 'Sí', 'x', 'Sí'], ['Ana', 'ana', 'encargado', 'Sí', 'x']]);
+  ok(cuentasG[0].gerencia && !cuentasG[1].gerencia,
+     'la columna Vista gerencia se lee; en blanco, o en una planilla vieja, es no');
+  ok(aFilasUsuarios(cuentasG)[0][5] === 'Vista gerencia' && aFilasUsuarios(cuentasG)[1][5] === 'Sí',
+     'y se escribe al final, sin mover las columnas de antes');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

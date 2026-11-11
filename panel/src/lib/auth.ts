@@ -361,6 +361,25 @@ export function puede(rol: Rol, accion: Accion): boolean {
   return (PERMISOS[accion] as readonly Rol[]).includes(rol);
 }
 
+/**
+ * **Lo que la vista gerencia NO abre** (2026-11-11): las cuentas y sus
+ * contraseñas, la mantención técnica y los links personales. No es
+ * información: es acceso. Todo lo demás se puede **mirar** con ella.
+ */
+export const NO_SE_LEE_CON_GERENCIA: readonly Accion[] = ['usuarios', 'mantencion', 'links'];
+
+/**
+ * **Si una cuenta puede VER algo** (2026-11-11, idea del cliente). Con su rol,
+ * o con la **vista gerencia**, que es un agregado de la cuenta y no un rol:
+ * ve todo menos `NO_SE_LEE_CON_GERENCIA`, y **edita solo lo de su rol** —para
+ * escribir sigue mandando `puede()`—. Es la regla "rol para lo que se hace,
+ * alcance para dónde": el rol dice qué hace; la gerencia amplía qué ve.
+ */
+export function puedeVer(rol: Rol, accion: Accion, gerencia = false): boolean {
+  if (puede(rol, accion)) return true;
+  return gerencia && rol !== ROL.ninguno && !NO_SE_LEE_CON_GERENCIA.includes(accion);
+}
+
 /** Compara nombres de usuario sin distinguir mayúsculas ni tildes. */
 const mismoUsuario = (a: string, b: string) => {
   const limpio = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '')

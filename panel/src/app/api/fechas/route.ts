@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerFechas, guardarFecha , anotar } from '@/lib/datos';
 import { empujarDia } from '@/lib/crm-escribir';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'ver');
+  const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
     return NextResponse.json({ fechas: await leerFechas() });

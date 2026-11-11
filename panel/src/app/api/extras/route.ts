@@ -4,8 +4,8 @@ import {
 } from '@/lib/datos';
 import { aEntero, esSi } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
-import { exigir, quienEs } from '@/lib/permisos';
-import { puede, type Rol } from '@/lib/auth';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
+import { puede, puedeVer, type Rol } from '@/lib/auth';
 import type { Colaborador } from '@/lib/extras';
 import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
@@ -31,7 +31,7 @@ const sinPlata = (gente: Colaborador[]) => gente.map((c) => ({
 }));
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'extras');
+  const no = await exigirVer(req, 'extras');
   if (no) return no;
   try {
     // Los cierres viajan porque un día cerrado se dibuja en solo lectura
@@ -39,8 +39,8 @@ export async function GET(req: Request) {
     const [colaboradores, extras, cierres] = await Promise.all([
       leerColaboradores(), leerExtras(), leerCierres()
     ]);
-    const rol = (await quienEs(req)).rol as Rol;
-    const verSueldos = puede(rol, 'sueldos');
+    const { rol, gerencia } = await quienEs(req);
+    const verSueldos = puedeVer(rol, 'sueldos', gerencia);
     return NextResponse.json({
       colaboradores: verSueldos ? colaboradores : sinPlata(colaboradores),
       extras, cierres,

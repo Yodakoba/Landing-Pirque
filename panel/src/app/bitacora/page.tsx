@@ -15,7 +15,7 @@ import { headers } from 'next/headers';
 import Ayuda from '@/components/Ayuda';
 import { leerBitacora } from '@/lib/datos';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from '@/lib/sesion';
-import { puede, type Rol } from '@/lib/auth';
+import { puedeVer, type Rol } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export default async function Pagina() {
   const sesion = await leerSesion(
     cookieDe(headers().get('cookie'), COOKIE_SESION), secretoDeSesion(process.env)
   );
-  if (!puede((sesion?.rol ?? '') as Rol, 'bitacora')) {
+  if (!puedeVer((sesion?.rol ?? '') as Rol, 'bitacora', sesion?.gerencia === true)) {
     return (
       <div className="rounded border border-hueso/20 bg-panel p-4">
         <p className="font-semibold text-hueso/85">Esta parte no es tuya.</p>

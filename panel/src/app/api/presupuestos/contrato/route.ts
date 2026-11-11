@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerPresupuestos, leerConfig, leerClientes, guardarPresupuesto, anotar } from '@/lib/datos';
 import { problemaConArchivo } from '@/lib/cobros';
 import { folioDe, type Presupuesto } from '@/lib/presupuestos';
@@ -37,7 +37,7 @@ const sinFila = ({ fila: _f, ...resto }: Presupuesto) => resto;
 
 /** Muestra el contrato firmado. Lo ve quien ve las cotizaciones. */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   const r = await cotizacionDe(req, new URL(req.url).searchParams.get('id') ?? '');
   if ('error' in r) return r.error;

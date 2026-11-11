@@ -5255,6 +5255,33 @@ verdad o un rol que ya existe con otro alcance.
   explicación de los roles (`roles.ts`) dejaría de decir la verdad. Lo que
   se hace lo dice el rol; el alcance solo acota dónde.
 
+### La vista gerencia: ve todo, edita lo de su rol (2026-11-11)
+
+Idea del cliente, y es la regla de arriba aplicada: **no es un rol, es un
+agregado de la cuenta**. Se marca en *Cuentas* con el botón **+ Vista
+gerencia** (columna `Vista gerencia` de `Usuarios`, al final; en blanco es
+**no**, al revés que `Activo`).
+
+- **Ve todo el panel** —calendario, reservas, recepción, equipo con sus
+  sueldos, extras, cotizaciones, clientes, productos, configuración, informe
+  y bitácora— y **edita solo lo de su rol**.
+- **No ve** las cuentas y contraseñas, la mantención ni los links personales
+  (`NO_SE_LEE_CON_GERENCIA`): no es información, es acceso.
+- **Cómo funciona**: `puedeVer(rol, accion, gerencia)` en `auth.ts`. Los
+  `GET` de las rutas piden `exigirVer()`; todo lo que escribe sigue con
+  `exigir()`, o sea con el rol, y su 403 dice *"Con vista gerencia ves esto,
+  pero tu rol (X) no lo puede cambiar"*. El `PUT` del equipo y de las extras
+  ya descartaba los sueldos que el rol no puede pisar, así que verlos no
+  abre escribirlos.
+- **Viaja firmada en la sesión**, como el rol: vale desde la próxima vez que
+  esa persona entre. La barra lo dice con la pastilla *👁 Vista gerencia*, y
+  una pantalla que solo se mira por ella lleva arriba *"acá solo miras"*.
+- **Lo que falta, a propósito**: las pantallas no se apagan solas en modo
+  lectura —los botones siguen a la vista y el servidor rechaza con el
+  mensaje de arriba—. Si molesta, el paso siguiente es apagar los controles
+  de cada pantalla que se mira por la gerencia.
+- Al administrador no le suma nada: ya ve todo, y no se guarda.
+
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
 Seis roles —el sexto, **anfitrión**, el 2026-11-11: ver "El rol de

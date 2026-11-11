@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CRM_APAGADO } from '@/lib/crm';
-import { exigir } from '@/lib/permisos';
+import { exigir, exigirVer } from '@/lib/permisos';
 import {
   CRM_API, NUESTRO_LUGAR, leerEventos, eventosPorFecha, periodosNuestros,
   anotadosDe
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
   // socio. Es la misma capa comercial que los presupuestos —de hecho la
   // mitad son el presupuesto de otro— así que va con ese permiso, que hoy
   // tienen exactamente los tres roles que lo veían antes.
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
 
   const clave = process.env.CRM_API_KEY;

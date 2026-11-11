@@ -23,7 +23,7 @@ import { menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
 import { resumenEquipo, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { lineaDeSemana, type Tono } from '@/lib/semana';
-import { puede, type Rol } from '@/lib/auth';
+import { puede, puedeVer, type Rol } from '@/lib/auth';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
 import { copiarConAviso } from './AvisoFlotante';
 
@@ -36,7 +36,7 @@ const TONO: Record<Tono, string> = {
   rosa: 'border-rosa/50 bg-rosa/10 text-rosa-texto'
 };
 
-export default function CalendarView({ rol }: { rol: string }) {
+export default function CalendarView({ rol, gerencia = false }: { rol: string; gerencia?: boolean }) {
   /**
    * Lo que esta cuenta puede hacer, sacado de la **misma** tabla de permisos
    * que usan el menú y las rutas.
@@ -46,10 +46,11 @@ export default function CalendarView({ rol }: { rol: string }) {
    * funciona se lee como un panel roto, no como una puerta cerrada.
    */
   const conDias = puede(rol as Rol, 'dias');
-  const conEquipo = puede(rol as Rol, 'equipo');
+  // Con vista gerencia el equipo se ve; cambiarlo sigue pidiendo el rol.
+  const conEquipo = puedeVer(rol as Rol, 'equipo', gerencia);
   const conPlanilla = puede(rol as Rol, 'planilla');
   // Apagada la conexión (`CRM_APAGADO`), ni se pide.
-  const conCRM = !CRM_APAGADO && puede(rol as Rol, 'presupuestos');
+  const conCRM = !CRM_APAGADO && puedeVer(rol as Rol, 'presupuestos', gerencia);
   const [dias, setDias] = useState<Ocupacion[] | null>(null);
   const pronostico = usePronostico();
   const [error, setError] = useState('');

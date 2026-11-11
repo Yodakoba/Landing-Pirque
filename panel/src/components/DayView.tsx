@@ -25,7 +25,7 @@ import IngresoFudo from './IngresoFudo';
 import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
 import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
-import { puede, puedeTocarReserva, type Rol } from '@/lib/auth';
+import { puede, puedeVer, puedeTocarReserva, type Rol } from '@/lib/auth';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
@@ -107,7 +107,7 @@ function Pendiente({ children }: { children: React.ReactNode }) {
 type Filtro = 'todas' | 'pagadas' | 'porCobrar';
 
 export default function DayView(
-  { fecha, rol, usuario }: { fecha: string; rol: string; usuario: string }
+  { fecha, rol, usuario, gerencia = false }: { fecha: string; rol: string; usuario: string; gerencia?: boolean }
 ) {
   /**
    * Lo que esta cuenta puede hacer, de la misma tabla que usan el menú y
@@ -116,9 +116,11 @@ export default function DayView(
    * equipo, de las extras y de los presupuestos, y un bloque vacío con un
    * botón apagado se lee como un panel roto y no como una puerta cerrada.
    */
-  const conEquipo = puede(rol as Rol, 'equipo');
-  const conExtras = puede(rol as Rol, 'extras');
-  const conPresupuestos = puede(rol as Rol, 'presupuestos');
+  // Con vista gerencia los bloques se ven igual; cambiarlos sigue pidiendo
+  // el rol, y la ruta lo comprueba (2026-11-11).
+  const conEquipo = puedeVer(rol as Rol, 'equipo', gerencia);
+  const conExtras = puedeVer(rol as Rol, 'extras', gerencia);
+  const conPresupuestos = puedeVer(rol as Rol, 'presupuestos', gerencia);
   const [todas, setTodas] = useState<Reserva[] | null>(null);
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');

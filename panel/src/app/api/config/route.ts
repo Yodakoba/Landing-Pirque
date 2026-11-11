@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerConfig, guardarConfig , anotar } from '@/lib/datos';
 import { leerConfigDe, aFilasConfig, aDiasSemana, aDescuentos } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'configurar');
+  const no = await exigirVer(req, 'configurar');
   if (no) return no;
   try {
     return NextResponse.json({ config: await leerConfig() });
