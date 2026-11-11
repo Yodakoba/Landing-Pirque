@@ -31,7 +31,7 @@ import {
   DOCUMENTO, documentoDe, numeroONulo, estaMandada, totalDe, estadoNormal, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
-  prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
+  prepararLineas, esDiaPublico, lineaDeProducto, yaEstaEnLaCotizacion, productoDe, showDe, cambiarCantidad,
   alternativasDe, letraDe, grupoDe, vivasDelGrupo, sigueViva, paraElLink,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
@@ -303,6 +303,8 @@ export default function CotizacionDialogo({
     setLineas(vistas.map((l, k) => (k === i ? { ...l, ...cambio } : l)));
 
   const agregar = (m: Menu) => {
+    // Una sola vez por cotización: ver `yaEstaEnLaCotizacion()`.
+    if (yaEstaEnLaCotizacion(vistas, m.nombre)) return;
     // En UF, el precio en pesos lo pone `prepararLineas()` con la UF de la
     // cotización; si todavía no tiene, se pide la de hoy.
     const precio = m.moneda === MONEDA.uf ? 0 : Math.round(precioParaCotizar(m));
@@ -1197,16 +1199,23 @@ export default function CotizacionDialogo({
                   Agregar <AyudaCorta tema="agregarProducto" />
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {cotizables.map((m) => (
-                    <button key={m.nombre} type="button" onClick={() => agregar(m)}
-                      className="boton min-h-[48px] text-[14px]">
-                      + {m.nombre}
-                      <span className="ml-1 text-hueso/60">
-                        {m.moneda === MONEDA.uf ? `${String(m.precioCotizacion).replace('.', ',')} UF`
-                          : precioParaCotizar(m) ? enPesos(precioParaCotizar(m)) : ''}
-                      </span>
-                    </button>
-                  ))}
+                  {cotizables.map((m) => {
+                    // **Ya agregado, el botón se apaga y lo dice** (2026-11-12):
+                    // un producto va una sola vez; la cantidad se cambia en su línea.
+                    const ya = yaEstaEnLaCotizacion(vistas, m.nombre);
+                    return (
+                      <button key={m.nombre} type="button" onClick={() => agregar(m)} disabled={ya}
+                        title={ya ? 'Ya está en la cotización: cambia la cantidad en su línea' : undefined}
+                        className={`boton min-h-[48px] text-[14px] ${ya ? 'border-verde-fuerte/50 text-verde-texto' : ''}`}>
+                        {ya ? '✓' : '+'} {m.nombre}
+                        <span className="ml-1 text-hueso/60">
+                          {ya ? '· ya está'
+                            : m.moneda === MONEDA.uf ? `${String(m.precioCotizacion).replace('.', ',')} UF`
+                            : precioParaCotizar(m) ? enPesos(precioParaCotizar(m)) : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
                   <button type="button" className="boton min-h-[48px] text-[14px]"
                     onClick={() => setLineas([...vistas, {
                       presupuesto: p?.id ?? '', concepto: 'Otro', cantidad: 1, precio: 0,

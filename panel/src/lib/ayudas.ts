@@ -441,6 +441,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Agregar productos',
     texto: [
       'Aparecen los productos marcados "Se puede cotizar" en Productos, con el precio que proponen.',
+      'Cada producto va una sola vez: ya agregado, su botón dice "ya está" y la cantidad se cambia en su línea.',
       'El precio se cambia en la línea: es parte de la negociación. "Otra línea" es para algo que no está en el catálogo.'
     ]
   },

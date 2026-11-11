@@ -1495,6 +1495,14 @@ plazo de cero días mataría cada presupuesto al nacer.
 
 ### Dos líneas del mismo concepto NO se juntan
 
+> **Cambió el 2026-11-12** (lo pidió el cliente: *"no quiero que se puedan
+> poner dos veces el mismo ítem"*): **un producto del catálogo va una sola
+> vez por cotización**. Ya agregado, su botón queda apagado y dice *ya está*;
+> la cantidad se cambia en su línea (`yaEstaEnLaCotizacion()` en
+> `cotizar.ts`). Una cortesía va como descuento de la línea. Lo que ya tenga
+> dos líneas de antes no se junta solo, por lo que dice abajo. *Otra línea*
+> sigue libre.
+
 Al revés que `normalizarPlan()` y `normalizarExtras()`, y la diferencia es
 real: dos turnos de la misma persona el mismo día son un error —no puede
 estar en dos puestos—, pero *20 × Tradiciones* a precio de lista y
