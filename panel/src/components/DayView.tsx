@@ -156,6 +156,16 @@ export default function DayView(
     { presupuestos: Presupuesto[]; lineas: LineaPresupuesto[]; hoy: string } | null>(null);
   const pronostico = usePronostico();
 
+  /** Quita el aviso de la recepción: el jefe de turno ya lo vio y lo atendió. */
+  async function resolverAviso(r: Reserva) {
+    const res = await fetch(`/api/reservas/${r.fila}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ avisoRecepcion: '' })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (d.error) setError(d.error); else cargar();
+  }
+
   const cargar = () =>
     fetch('/api/reservas')
       .then((r) => r.json())
@@ -790,7 +800,13 @@ export default function DayView(
                       {!r.telefono && !r.email && <span className="text-hueso/50">—</span>}
                     </td>
                     <td className="py-2 pr-3">{r.menu}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">{r.personas}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">
+                      {r.personas}
+                      {/* Lo que anotó la anfitriona, si es distinto (2026-11-11). */}
+                      {r.llegaron != null && r.llegaron !== r.personas && (
+                        <span className="block text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</span>
+                      )}
+                    </td>
                     <td className="py-2 pr-3">
                       {r.tipoPago ? (
                         /* **Con borde, no solo con fondo de color.** Una
@@ -826,6 +842,25 @@ export default function DayView(
                                + 'planilla. El panel lo cuenta una sola vez; conviene '
                                + 'borrar la de más.'}>
                           ⚠ {r.duplicadas} filas con este pedido
+                        </div>
+                      )}
+                      {/* **El aviso de la recepción** (2026-11-11): lo que la
+                          anfitriona le dejó al jefe de turno. Se ve acá, donde
+                          se edita la reserva, hasta que alguien lo resuelve. */}
+                      {r.avisoRecepcion && (
+                        <div className="mt-2 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-2 text-[13px]">
+                          <p className="font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {mia && !deCotizacion && (
+                              <button type="button" className="boton" onClick={() => setEditando(r)}>
+                                Editar la reserva
+                              </button>
+                            )}
+                            {puede(rol as Rol, 'asistencia') && (
+                              <button type="button" className="boton !border-verde-fuerte text-verde-texto"
+                                onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </td>

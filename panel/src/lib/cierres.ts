@@ -108,6 +108,26 @@ export function faltaParaCerrar(
  */
 export const yaLlego = (fecha: Fecha, hoy: Fecha): boolean => fecha <= hoy;
 
+/**
+ * **Si el día ya abrió** (2026-11-11, lo pidió el cliente): lo que se anota
+ * en la entrada —si vino, cuántos llegaron, el aviso al jefe de turno— se
+ * anota **desde la hora de apertura de ese día**, no antes. *"No puede ser
+ * ningún riesgo que influyan en algo que está aún en el futuro"*.
+ *
+ * `ahora` es `AAAA-MM-DD HH:MM` en hora de Chile (`ahoraEnChile()`), y todo
+ * se compara como texto, como el resto de las fechas del proyecto. Un día
+ * pasado ya abrió; uno futuro no; hoy, desde la hora de apertura. Sin una
+ * hora que se entienda, vale todo el día.
+ */
+export function yaAbrio(fecha: Fecha, apertura: string, ahora: string): boolean {
+  const [dia, hora = ''] = ahora.trim().split(' ');
+  if (fecha < dia) return true;
+  if (fecha > dia) return false;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(apertura ?? '').trim());
+  if (!m) return true;
+  return hora >= `${m[1].padStart(2, '0')}:${m[2]}`;
+}
+
 /** Si el día se puede cerrar: hay a quién marcar y no falta nadie por marcar. */
 export function sePuedeCerrar(turnos: Turno[], extras: Extra[], fecha: Fecha): boolean {
   const f = faltaParaCerrar(turnos, extras, fecha);

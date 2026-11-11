@@ -107,7 +107,7 @@ import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
 import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
          avisoTelefono, correoNormal, correoValido, avisoCorreo,
          FORMATO_TELEFONO } from './contacto.ts';
-import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar, yaLlego,
+import { estaCerrado as diaCerrado, cierreDe, faltaParaCerrar, sePuedeCerrar, yaLlego, yaAbrio,
          diasPorCerrar, leerCierresDe, corregirDiaCerrado, type Cierre } from './cierres.ts';
 import { climaDe, iconoDe, climaEnPalabras, urlPronostico, horaEnChile } from './clima.ts';
 import { createHmac } from 'node:crypto';
@@ -217,7 +217,8 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
-               'Asistencia','Nota de pago','ID Evento CRM','Anotada por'];
+               'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
+               'Llegaron','Aviso recepción'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -4183,6 +4184,22 @@ console.log('\nEl cupo al ganar una cotización');
   const excl = cupoParaGanar({ estado: 'Privada exclusiva', capacidad: 300 }, '2026-11-21', cfg, 50, 10);
   ok(!excl.cabe && excl.exclusivo, 'un día exclusivo con alguien adentro no recibe otro evento');
 }
+
+console.log('\nEl rol de anfitrión');
+ok((Object.keys(PERMISOS) as Accion[]).filter((x) => puede(ROL.anfitrion, x)).join() === 'asistencia',
+   'la anfitriona tiene un solo permiso: marcar la asistencia');
+ok(!puede(ROL.anfitrion, 'ver') && !puede(ROL.anfitrion, 'reservas'),
+   'no ve el calendario ni edita reservas');
+ok(!puede(ROL.vendedor, 'asistencia'), 'el vendedor no marca asistencia: marcar no es vender');
+ok(esRolDeCuenta('anfitrion') && esRolDeCuenta('Anfitrión'), 'es un rol de cuenta, con o sin tilde');
+
+console.log('\nLa entrada se marca desde la hora de apertura');
+ok(!yaAbrio('2026-11-14', '13:00', '2026-11-13 20:00'), 'el día anterior, no');
+ok(!yaAbrio('2026-11-14', '13:00', '2026-11-14 12:59'), 'el mismo día antes de abrir, no');
+ok(yaAbrio('2026-11-14', '13:00', '2026-11-14 13:00'), 'desde la hora de apertura, sí');
+ok(yaAbrio('2026-11-14', '9:30', '2026-11-14 10:00'), 'una hora de un dígito se entiende');
+ok(yaAbrio('2026-11-14', '13:00', '2026-11-15 09:00'), 'un día pasado ya abrió');
+ok(yaAbrio('2026-11-14', '', '2026-11-14 08:00'), 'sin hora de apertura, vale todo el día');
 
 console.log('\nCuándo se puede marcar ganada');
 ok(puedeGanar(true, false), 'con el anticipo pagado se gana');

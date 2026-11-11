@@ -5188,7 +5188,9 @@ verdad o un rol que ya existe con otro alcance.
 
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
-Cinco roles, y la tabla vive en `PERMISOS`, en `panel/src/lib/auth.ts`:
+Seis roles —el sexto, **anfitrión**, el 2026-11-11: ver "El rol de
+anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
+`panel/src/lib/auth.ts`:
 
 | | Administrador | Encargado | Pagos | Vendedor | Trabajador |
 |---|---|---|---|---|---|
@@ -5352,6 +5354,46 @@ pastilla, la tarjeta no trae *Equipo* ni *Editar*, la página del día no trae
 los bloques de equipo ni de extras, y de las tres reservas solo la suya
 muestra *Editar* y *Borrar* — las otras dicen *La anotó Hugo el vendedor* y
 *No la anotaste tú*. Ninguna pantalla se corre de lado.
+
+### El rol de anfitrión y la pantalla de Recepción (2026-11-11)
+
+Lo pidió el cliente: la persona que recibe a la gente en la entrada, *"con
+un tablet en la mano"*, que *"solo tiene que poder ver las reservas y decir
+vino o no vino. Por ahora"*. El rol se usa **solo el día de apertura**.
+
+- **Un solo permiso, `asistencia`**, y una sola pantalla, **`/recepcion`**.
+  No tiene `ver`: no ve el calendario, otros días, montos ni contactos. Al
+  entrar, el middleware la manda a `/recepcion`. *Recepción* aparece también
+  en el menú de quien tiene `asistencia` (administrador, encargado, pagos).
+- **`/api/recepcion`** devuelve solo las reservas de **hoy** que ocupan
+  lugar, con nombre, personas, menús, si vino, cuántos llegaron y el aviso.
+- **La pantalla**: tres números grandes (*llegaron N/M personas · reservas
+  por llegar · no vinieron*), un buscador, y una tarjeta grande por reserva
+  —las que faltan arriba— con **✓ Llegó** y **✕ No vino**. *Llegó*
+  pregunta **¿Llegaron las N?**: *Sí* de un toque, o − / + si llegaron más
+  o menos. **Avisar al jefe de turno** deja un texto corto.
+- **"Llegaron 4 de 6" no cambia la reserva**: queda en la columna nueva
+  `Llegaron` y deja solo un `Aviso recepción` (*"13:40 · Llegaron 4 de
+  6"*). El jefe de turno decide si la ajusta, editándola como siempre; así
+  el panel cuadra con **Fudo**, donde se cobra la mesa.
+- **Lo que la anfitriona no toca** —personas, menús, pago, anotar o borrar—
+  no tiene botón. En la ruta (`/api/reservas/[fila]`), con `asistencia`
+  solo pasa un cambio que sea únicamente `asistencia`, `llegaron` y
+  `avisoRecepcion`; cualquier otro responde *"Eso no lo puedes cambiar tú:
+  avísale al jefe de turno"*. Y solo de hoy.
+- **Todo lo de la entrada se anota desde la hora de apertura de ese día**
+  (`yaAbrio()` en `cierres.ts`, con pruebas), para la anfitriona **y para
+  el jefe de turno**: *"no puede ser ningún riesgo que influyan en algo que
+  está aún en el futuro"*. La hora es la del día en `Fechas Hábiles` o la de
+  Configuración. Antes, la pantalla lo dice y no muestra los botones; un día
+  cerrado, igual.
+- **Dónde lo ve el jefe de turno**: en la página del día, una franja ámbar
+  *📣 Recepción: …* sobre la reserva, con **Editar la reserva** y
+  **✓ Resuelto** (que vacía el aviso), y *llegaron N* bajo las personas; lo
+  mismo en la cara *Reservas* de la ventana del día en `/turnos`; y arriba
+  del calendario de la portada, *📣 La recepción dejó N avisos hoy*.
+- **Pendiente, a propósito**: *"Llegó alguien sin reserva"*. El cliente lo
+  dejó para después.
 
 ### El middleware autentica, cada ruta autoriza
 

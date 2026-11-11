@@ -126,6 +126,18 @@ export default function ReservasDelDia({
     } catch (e) { setError(String(e)); cargar(); }
   }
 
+  async function resolverAviso(r: Reserva) {
+    setTodas((xs) => (xs ?? []).map((x) => (x.fila === r.fila ? { ...x, avisoRecepcion: '' } : x)));
+    try {
+      const res = await fetch(`/api/reservas/${r.fila}`, {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ avisoRecepcion: '' })
+      });
+      const d = await res.json();
+      if (d.error) { setError(d.error); cargar(); }
+    } catch (e) { setError(String(e)); cargar(); }
+  }
+
   if (!todas && !error) return <p className="mt-5 text-sm text-hueso/60">Cargando reservas…</p>;
 
   const porCobrar = cuentan.filter(faltaCobrar);
@@ -227,6 +239,25 @@ export default function ReservasDelDia({
                     </span>
                     {r.telefono && <span className="text-hueso/60">{r.telefono}</span>}
                   </div>
+                  {/* Lo que anotó la anfitriona (2026-11-11): cuántos llegaron
+                      si fue distinto, y su aviso hasta que alguien lo resuelve. */}
+                  {r.llegaron != null && r.llegaron !== r.personas && (
+                    <p className="mt-1.5 text-[14px] font-semibold text-ambar-texto">
+                      Llegaron {r.llegaron} de {r.personas}
+                    </p>
+                  )}
+                  {r.avisoRecepcion && (
+                    <div className="mt-2 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-2 text-[14px]">
+                      <p className="font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <a href={`/dia/${fecha}`} className="tecla boton">Editar en la página del día</a>
+                        {modo === 'libre' && (
+                          <button type="button" className="boton !border-verde-fuerte text-verde-texto"
+                            onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {/* Una reserva que liberó su lugar no viene: no hay nada
                       que marcar, y ofrecer los botones invitaría a hacerlo. */}
                   {!libero && (

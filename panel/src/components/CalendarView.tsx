@@ -189,6 +189,20 @@ export default function CalendarView({ rol }: { rol: string }) {
   useEffect(cargar, []);
 
   /**
+   * **Los avisos de la recepción de hoy** (2026-11-11): lo que la anfitriona
+   * le dejó al jefe de turno. Se pide aparte —si falla, el calendario sale
+   * igual— y solo a quien puede resolverlos.
+   */
+  const [avisosHoy, setAvisosHoy] = useState<{ fecha: string; n: number } | null>(null);
+  useEffect(() => {
+    if (!puede(rol as Rol, 'asistencia')) return;
+    fetch('/api/recepcion').then((r) => r.json()).then((d) => {
+      const n = (d.reservas ?? []).filter((x: { avisoRecepcion?: string }) => x.avisoRecepcion).length;
+      if (n > 0) setAvisosHoy({ fecha: d.fecha, n });
+    }).catch(() => {});
+  }, [rol]);
+
+  /**
    * Agrupado **por semana**, conservando el orden.
    *
    * Hasta el 2026-10-30 el corte de mes mandaba y una semana que cruzaba de
@@ -220,6 +234,14 @@ export default function CalendarView({ rol }: { rol: string }) {
             o sea donde vuelve quien se perdió. */}
         <Ayuda tema="calendario" onRecorrido={verRecorrido} />
       </h1>
+      {avisosHoy && (
+        <a href={`/dia/${avisosHoy.fecha}`}
+          className="tecla mb-4 flex flex-wrap items-center gap-3 rounded-xl border-2 border-ambar/60
+                     bg-ambar/10 p-3 text-[16px] font-semibold text-ambar-texto hover:bg-ambar/15">
+          📣 La recepción dejó {avisosHoy.n === 1 ? '1 aviso' : `${avisosHoy.n} avisos`} hoy
+          <span className="boton ml-auto">Ver el día →</span>
+        </a>
+      )}
       <p className="text-hueso/60 text-sm mb-6">
         Toca un día para ver quiénes vienen.{' '}
         {dias.length > 0 && (

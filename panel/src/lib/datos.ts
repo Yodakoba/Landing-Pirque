@@ -97,6 +97,9 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
   // vendedor, esa fila sería justamente la que no encuentra la columna — y
   // entonces la reserva nacería sin dueño y él no podría borrarla.
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.anotadaPor);
+  // Las de la recepción (2026-11-11), por lo mismo.
+  enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.llegaron);
+  enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.avisoRecepcion);
   // MANUAL- para que no pueda chocar con un id de Shopify, que es numérico.
   const id = 'MANUAL-' + Date.now();
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, {
@@ -107,9 +110,12 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
 
 export async function editarReserva(fila: number, cambios: Partial<Reserva>): Promise<void> {
   const filas = await leerHoja(HOJA_RESERVAS);
-  const enc = cambios.notaPago === undefined
+  let enc = cambios.notaPago === undefined
     ? (filas[0] ?? [])
     : await asegurarColumna(HOJA_RESERVAS, filas[0] ?? [], COL_RESERVAS.notaPago);
+  // Las de la anfitriona se agregan solas la primera vez que se escriben.
+  if (cambios.llegaron !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.llegaron);
+  if (cambios.avisoRecepcion !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.avisoRecepcion);
   const previa = filas[fila - 1];
   if (!previa) throw new Error(`La fila ${fila} ya no existe en la planilla.`);
   await escribirFila(HOJA_RESERVAS, fila, filaReserva(enc, cambios, previa));

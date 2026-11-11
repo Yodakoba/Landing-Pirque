@@ -106,6 +106,14 @@ export const ROL = {
    * toca, no sobre lo que mira.
    */
   vendedor: 'vendedor',
+  /**
+   * **Recibe a los clientes en la entrada** (2026-11-11, lo pidió el
+   * cliente: *"solo tiene que poder ver las reservas y decir vino o no vino.
+   * Por ahora"*). Un solo permiso, `asistencia`, y una sola
+   * pantalla, `/recepcion`: las reservas de hoy, en grande para una tablet.
+   * No ve el calendario ni otros días: el rol se usa solo el día de apertura.
+   */
+  anfitrion: 'anfitrion',
   /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
   trabajador: 'trabajador',
   /** No identificado. */
@@ -175,6 +183,14 @@ export const PERMISOS = {
    * Cada una de esas cuatro pide ahora el permiso de su propia pantalla.
    */
   ver: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
+  /**
+   * **Marcar si una reserva vino o no** (2026-11-11), y nada más de la
+   * reserva. Existe aparte de `reservas` por la anfitriona: ella marca a los
+   * clientes en la entrada pero no anota, edita ni borra reservas. La ruta
+   * deja pasar con este permiso solo un cambio que sea únicamente la
+   * asistencia. El vendedor no lo tiene: marcar no es vender.
+   */
+  asistencia: [ROL.admin, ROL.encargado, ROL.pagos, ROL.anfitrion],
   /**
    * Anotar, editar y borrar reservas.
    *
@@ -437,7 +453,7 @@ export function credencialesDelEntorno(env: Record<string, string | undefined>):
  * El trabajador no está: él entra por su link personal, no por acá. Una
  * cuenta con rol `trabajador` sería una puerta que no lleva a ninguna parte.
  */
-export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor];
+export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor, ROL.anfitrion];
 
 export function esRolDeCuenta(v: unknown): v is Rol {
   return ROLES_DE_CUENTA.includes(
