@@ -16,6 +16,7 @@
  * servidor; esto es solo cómo se ve.
  */
 import type { Cierre } from '@/lib/cierres';
+import AyudaCorta from './AyudaCorta';
 
 export function AvisoCierre({ cierre, puedeCorregir, corrigiendo, onCorregir }: {
   cierre?: Cierre;
@@ -44,6 +45,7 @@ export function AvisoCierre({ cierre, puedeCorregir, corrigiendo, onCorregir }: 
           : <>Está en solo lectura. Si hay que cambiar algo, pídeselo al
               administrador o a quien hace los pagos.</>}
       </p>
+      <AyudaCorta tema="diaCerrado" />
       {puedeCorregir && (
         <button onClick={onCorregir}
           className="boton border-ambar-fuerte font-semibold text-ambar-texto">

@@ -19,6 +19,7 @@
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
 import { useEffect, useMemo, useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import BotonGuardar from './BotonGuardar';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
@@ -597,6 +598,7 @@ export default function CotizacionDialogo({
             <button type="button" disabled={guardando} onClick={() => void duplicar()}
               className="boton min-h-[44px]">+ Otra alternativa</button>
           )}
+          <AyudaCorta tema="alternativas" />
         </div>
       )}
 
@@ -747,6 +749,7 @@ export default function CotizacionDialogo({
                   {sinFecha ? '✓ Todavía sin día exacto' : 'Todavía no hay día exacto'}
                 </button>
               )}
+              {!ganada && <span className="self-center"><AyudaCorta tema="sinFecha" /></span>}
             </div>
             {!sinFecha && fecha && (
               <p className="text-[14px] text-hueso/75">
@@ -812,7 +815,7 @@ export default function CotizacionDialogo({
             ) : (
               <div>
                 <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                  Agregar
+                  Agregar <AyudaCorta tema="agregarProducto" />
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {cotizables.map((m) => (
@@ -896,7 +899,7 @@ export default function CotizacionDialogo({
                             </div>
                           </Campo>
                           {l.precioUF > 0 ? (
-                            <Campo etiqueta={`Precio en UF${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-auto">
+                            <Campo etiqueta={`Precio en UF${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-auto" ayuda="precioLinea">
                               <input type="text" inputMode="decimal" defaultValue={String(l.precioUF).replace('.', ',')}
                                 onBlur={(e) => cambiarLinea(i, { precioUF: aPrecio(e.target.value) || l.precioUF })}
                                 className={`${ENTRADA} !w-28`} />
@@ -906,7 +909,7 @@ export default function CotizacionDialogo({
                               </p>
                             </Campo>
                           ) : (
-                          <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-40">
+                          <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-48" ayuda="precioLinea">
                             <input type="number" min={0} step={500} value={l.precio || ''} placeholder="0"
                               onChange={(e) => cambiarLinea(i, { precio: Number(e.target.value) || 0 })}
                               className={ENTRADA} />
@@ -914,7 +917,7 @@ export default function CotizacionDialogo({
                           )}
                           <div>
                             <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                              Descuento
+                              Descuento <AyudaCorta tema="descuentoLinea" />
                             </p>
                             <div className="flex gap-1.5">
                               {[0, ...datos.descuentos].map((d) => (
@@ -934,6 +937,9 @@ export default function CotizacionDialogo({
                             className={`boton min-h-[40px] ${l.sigue ? 'border-oro bg-oro/15' : ''}`}>
                             {l.sigue ? '✓ Sigue a los invitados' : 'Seguir a los invitados'}
                           </button>
+                          )}
+                          {prod && prod.tipo !== TIPO_PRODUCTO.menu && prod.cobro === COBRO.porPersona && (
+                            <span className="-ml-2 self-center"><AyudaCorta tema="sigueInvitados" /></span>
                           )}
                           <span className="ml-auto text-[16px] font-bold tabular-nums">
                             {enPesos(totalDeLinea(l))}
@@ -962,6 +968,7 @@ export default function CotizacionDialogo({
                     Usar la UF de hoy
                   </button>
                 )}
+                <AyudaCorta tema="ufCotizacion" />
               </div>
             )}
 
@@ -988,6 +995,7 @@ export default function CotizacionDialogo({
                 <span className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                   Descuento sobre el total
                 </span>
+                <AyudaCorta tema="descuentoTotal" />
                 {[0, ...datos.descuentos].map((d) => (
                   <button key={d} type="button" onClick={() => setDescuento(d)}
                     className={`boton boton-angosto min-h-[40px] ${descuento === d
@@ -1039,7 +1047,7 @@ export default function CotizacionDialogo({
             {!ganada && (
               <div>
                 <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                  En qué va
+                  En qué va <AyudaCorta tema="estadoCotizacion" />
                 </p>
                 <Elegir etiqueta="Estado" opciones={ESTADOS_A_MANO} valor={estado}
                   onElegir={(v) => setEstado(v || ESTADO_PRESUPUESTO.borrador)} />
@@ -1069,7 +1077,7 @@ export default function CotizacionDialogo({
                 facturación, que se guardan en la ficha del cliente. */}
             <div>
               <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                Documento de la venta
+                Documento de la venta <AyudaCorta tema="documento" />
               </p>
               <Elegir etiqueta="Documento de la venta" opciones={Object.values(DOCUMENTO)}
                 valor={documento} onElegir={(v) => setDocumento(documentoDe(v))} />
@@ -1111,7 +1119,7 @@ export default function CotizacionDialogo({
                 calcula `condicionesDe()`, la misma que usa el documento. */}
             <div>
               <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                Condiciones de pago
+                Condiciones de pago <AyudaCorta tema="condicionesPago" />
               </p>
               <div className="flex flex-wrap items-end gap-3">
                 <label className="block">
@@ -1147,7 +1155,7 @@ export default function CotizacionDialogo({
                 Se firma en papel y se sube el firmado, que va a Drive. Lo
                 único que se escribe acá es lo que la cotización no sabe. */}
             <div className="rounded border border-hueso/15 bg-panel p-3">
-              <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">Contrato</p>
+              <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">Contrato <AyudaCorta tema="contrato" /></p>
               {!p ? (
                 <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para armar su contrato.</p>
               ) : (
@@ -1214,10 +1222,11 @@ export default function CotizacionDialogo({
                       <span className="font-normal text-hueso/70">(la piden las empresas grandes)</span>
                     </span>
                   </button>
+                  <AyudaCorta tema="ley20393" />
 
                   <label className="block">
                     <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                      Acuerdos adicionales
+                      Acuerdos adicionales <AyudaCorta tema="acuerdos" />
                     </span>
                     <textarea value={acuerdos} rows={2} className={ENTRADA}
                       placeholder="Lo acordado aparte con el cliente. Va como la última cláusula."
@@ -1233,12 +1242,12 @@ export default function CotizacionDialogo({
                     </p>
                     <div className="flex flex-wrap items-end gap-3">
                       {([
-                        ['Cambios de fecha', cambiosTxt, setCambiosTxt, 10, datos.contrato?.tranquilidad?.cambiosFecha ?? 2],
-                        ['Cancela hasta, días antes', cancelTxt, setCancelTxt, 365, datos.contrato?.tranquilidad?.cancelacionDias ?? 60],
-                        ['Devuelve, % de lo pagado', reembolsoTxt, setReembolsoTxt, 100, datos.contrato?.tranquilidad?.reembolsoPct ?? 20]
-                      ] as const).map(([etiqueta, valor, poner, max, defecto]) => (
+                        ['Cambios de fecha', cambiosTxt, setCambiosTxt, 10, datos.contrato?.tranquilidad?.cambiosFecha ?? 2, 'cambiosFecha'],
+                        ['Cancela hasta, días antes', cancelTxt, setCancelTxt, 365, datos.contrato?.tranquilidad?.cancelacionDias ?? 60, 'cancelacionDias'],
+                        ['Devuelve, % de lo pagado', reembolsoTxt, setReembolsoTxt, 100, datos.contrato?.tranquilidad?.reembolsoPct ?? 20, 'reembolso']
+                      ] as const).map(([etiqueta, valor, poner, max, defecto, ayuda]) => (
                         <label key={etiqueta} className="block">
-                          <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}</span>
+                          <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}<AyudaCorta tema={ayuda} /></span>
                           <input type="number" min={0} max={max} value={valor} className={`${ENTRADA} w-24`}
                             placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
                         </label>
@@ -1309,7 +1318,7 @@ export default function CotizacionDialogo({
                 deshace. */}
             <div className="rounded border border-hueso/15 bg-panel p-3">
               <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                Pagos del cliente
+                Pagos del cliente <AyudaCorta tema="pagosCliente" />
               </p>
               {!p ? (
                 <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para anotar sus pagos.</p>
@@ -1443,6 +1452,7 @@ export default function CotizacionDialogo({
                   Cancelar evento
                 </button>
               )}
+              {ganada && !cancelada && puedeEditar && <span className="self-center"><AyudaCorta tema="cancelarEvento" /></span>}
               {p && !ganada && esFecha(fechaReal) && (
                 <button type="button" disabled={guardando || !cobrado.anticipoListo}
                   title={cobrado.anticipoListo ? '' : 'Falta el anticipo'}
@@ -1451,6 +1461,7 @@ export default function CotizacionDialogo({
                   ✓ Marcar ganada
                 </button>
               )}
+              {p && !ganada && esFecha(fechaReal) && <span className="self-center"><AyudaCorta tema="marcarGanada" /></span>}
             </div>
             {/* El motivo del botón apagado, en pantalla y no en un globito:
                 en un teléfono no hay mouse que lo muestre. */}

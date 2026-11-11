@@ -1,4 +1,5 @@
 'use client';
+import AyudaCorta from './AyudaCorta';
 
 /**
  * Un campo con su rótulo encima.
@@ -15,8 +16,10 @@
  * se iba al vacío. Así se rompió `/equipo` el día que pasó a tarjetas, y el
  * síntoma no se parece en nada a su causa.
  */
-export default function Campo({ etiqueta, ancho, children }: {
+export default function Campo({ etiqueta, ancho, ayuda, children }: {
   etiqueta: string;
+  /** Una llave de `AYUDAS_CORTAS`: pone el `?` chico al lado del rótulo. */
+  ayuda?: string;
   /** Clases de ancho; en una ventana angosta suele ser `w-full`. */
   ancho: string;
   children: React.ReactNode;
@@ -35,6 +38,7 @@ export default function Campo({ etiqueta, ancho, children }: {
       <span className="mb-1 block text-[13px] font-medium uppercase
                        tracking-wide text-hueso/60">
         {etiqueta}
+        {ayuda && <AyudaCorta tema={ayuda} />}
       </span>
       {children}
     </label>

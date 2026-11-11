@@ -25,6 +25,7 @@
  * columnas son lo que permite darse cuenta a tiempo.
  */
 import { useEffect, useMemo, useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 
 /** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
 const llano = (t: string) =>
@@ -402,6 +403,7 @@ function LineaPersona({
 
           {boleta !== null && (
             puedePagar ? (
+              <div className="flex items-center gap-1">
               <button type="button" aria-pressed={boleta} onClick={() => onBoleta(!boleta)}
                 className={`tecla flex min-h-[48px] w-full items-center gap-3 rounded-xl border-2
                             px-4 text-[15px] font-bold md:w-auto ${boleta
@@ -414,6 +416,8 @@ function LineaPersona({
                 </span>
                 {boleta ? 'Boleta recibida' : 'Falta la boleta'}
               </button>
+              <AyudaCorta tema="boleta" />
+              </div>
             ) : (
               <p className={`text-[14px] font-semibold ${boleta ? 'text-verde-texto' : 'text-ambar-texto'}`}>
                 {boleta ? '✓ Boleta recibida' : 'Falta la boleta'}
@@ -505,6 +509,7 @@ function LineaPersona({
               {anotados === 1 ? 'Ver el pago anotado' : `Ver los ${anotados} pagos anotados`}
             </button>
           )}
+          {anotados > 0 && <AyudaCorta tema="deshacerPago" />}
         </div>
       )}
     </li>
@@ -572,7 +577,7 @@ function TransferenciaMasiva({ sueldos, propinas, onDescargar, onMarcar }: {
   return (
     <div className="mb-6 rounded-2xl border-2 border-oro/40 bg-panel p-4">
       <p className="text-[13px] font-bold uppercase tracking-widest text-hueso/65">
-        Transferencia masiva
+        Transferencia masiva <AyudaCorta tema="transferenciaMasiva" />
       </p>
       <p className="mb-3 mt-1 text-[14px] text-hueso/70">
         Baja la planilla, súbela al banco, y cuando esté pagada marca todos

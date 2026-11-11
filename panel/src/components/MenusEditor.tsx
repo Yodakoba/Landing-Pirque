@@ -17,6 +17,7 @@
  * panel es enterarse cuando dejan de estarlo. Ver src/lib/menus.ts.
  */
 import BotonGuardar from './BotonGuardar';
+import AyudaCorta from './AyudaCorta';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
@@ -290,7 +291,7 @@ export default function MenusEditor() {
                 </div>
 
                 {m.sitioPublico && (
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap items-end gap-3">
                     <Campo etiqueta="Reserva: pagando en línea" ancho="w-48">
                       <input type="number" min={0} step={1000} className={ENTRADA}
                         value={m.precioEnLinea || ''} placeholder="sin poner"
@@ -301,6 +302,7 @@ export default function MenusEditor() {
                         value={m.precioEnLocal || ''} placeholder="sin poner"
                         onChange={(e) => cambiar(i, { precioEnLocal: aMonto(e.target.value) })} />
                     </Campo>
+                    <span className="pb-2"><AyudaCorta tema="preciosReserva" /></span>
                   </div>
                 )}
 
@@ -311,7 +313,7 @@ export default function MenusEditor() {
                     </p>
                     <div>
                       <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                        Cómo se cobra
+                        Cómo se cobra <AyudaCorta tema="cobro" />
                       </p>
                       <Elegir etiqueta="Cómo se cobra" valores={Object.values(COBRO)}
                         valor={m.cobro} onElegir={(v) => cambiar(i, { cobro: v })} />
@@ -326,14 +328,14 @@ export default function MenusEditor() {
                       </Campo>
                       <div>
                         <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                          Moneda
+                          Moneda <AyudaCorta tema="moneda" />
                         </p>
                         <Elegir etiqueta="Moneda" valores={Object.values(MONEDA)}
                           valor={m.moneda} onElegir={(v) => cambiar(i, { moneda: v })} />
                       </div>
                       <div>
                         <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                          El precio
+                          El precio <AyudaCorta tema="ivaProducto" />
                         </p>
                         <Elegir etiqueta="IVA del precio" valores={Object.values(IVA_PRECIO)}
                           valor={m.iva} onElegir={(v) => cambiar(i, { iva: v })} />

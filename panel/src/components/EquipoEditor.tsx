@@ -15,6 +15,7 @@
  * que el panel diera consejos que nadie dio.
  */
 import BotonGuardar from './BotonGuardar';
+import AyudaCorta from './AyudaCorta';
 import MostrarDesactivados from './MostrarDesactivados';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
@@ -715,7 +716,7 @@ export default function EquipoEditor() {
                     <div className="flex flex-wrap items-start gap-3">
                       <span className="w-36 pt-4 text-[13px] font-semibold uppercase
                                        tracking-widest text-hueso/60">Pago</span>
-                      <Campo etiqueta="Modalidad" ancho="w-40">
+                      <Campo etiqueta="Modalidad" ancho="w-48" ayuda="modalidad">
                         <select value={t.modalidad} className={ENTRADA}
                           aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
                           onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
@@ -749,6 +750,7 @@ export default function EquipoEditor() {
                           Entra en la propina
                         </span>
                       </label>
+                      <span className="self-center pt-4"><AyudaCorta tema="propinaFicha" /></span>
                     </div>
                   </div>
                 )}

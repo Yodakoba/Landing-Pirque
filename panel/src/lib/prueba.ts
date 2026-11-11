@@ -72,6 +72,7 @@ import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
          ROL, PERMISOS, ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE,
          puedeTocarReserva,
          type Rol, type Accion } from './auth.ts';
+import { resumenRol, NOMBRE_ROL, RESUMEN_ROL } from './roles.ts';
 import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION } from './sesion.ts';
 import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
          buscarUsuario, type Usuario } from './usuarios.ts';
@@ -4100,6 +4101,20 @@ console.log('\nCancelar devuelve el día a como estaba');
      'un día reabierto vuelve a cerrado, con su cupo y sus notas');
   ok(deshacerDia(dia('Abierta'), '', 0) === null, 'un día que no abrió la cotización no se toca');
   ok(deshacerDia(undefined, 'creado', 0) === null, 'si el día ya no está, no hay nada que deshacer');
+}
+
+console.log('\nLos roles se explican desde la tabla de permisos');
+{
+  for (const r of ROLES_DE_CUENTA) {
+    const { puede: si, noPuede: no } = resumenRol(r);
+    ok(si.length + no.length === Object.keys(PERMISOS).length,
+       `${r}: cada permiso aparece una vez, en "puede" o en "no puede"`);
+    ok(!!NOMBRE_ROL[r] && !!RESUMEN_ROL[r], `${r}: tiene nombre y línea corta`);
+  }
+  ok(resumenRol(ROL.admin).noPuede.length === 0, 'el administrador puede todo');
+  ok(resumenRol(ROL.pagos).noPuede.length === 2, 'pagos no puede dos cosas: cuentas y mantención');
+  ok(resumenRol(ROL.vendedor).puede.some((f) => f.includes('solo las suyas')),
+     'al vendedor se le dice que toca solo lo suyo');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

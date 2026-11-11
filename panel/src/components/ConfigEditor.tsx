@@ -222,8 +222,9 @@ export default function ConfigEditor() {
     },
     {
       id: 'contrato', titulo: 'Contrato',
-      para: 'Lo que dice el contrato que se imprime desde cada cotización. Cambiarlo vale para ' +
-            'los contratos que se impriman desde ahora; los ya firmados no cambian.',
+      para: 'Lo que propone el contrato de cada cotización nueva. Cada cotización lo puede ' +
+            'cambiar en su bloque Contrato, y eso es lo que se imprime y lo que se aplica al ' +
+            'cancelar. Los contratos ya firmados no cambian.',
       cuerpo: <>
         {empresa('ciudadFirma', 'Ciudad de firma', 'El contrato empieza “En …, a”.', 'Pirque')}
         {campo('cambiosFecha', 'Cambios de fecha',
@@ -235,8 +236,8 @@ export default function ConfigEditor() {
           'no ofrece cancelar.',
           numerico('cancelacionDias', config.cancelacionDias, (n) => ({ cancelacionDias: n }), { min: 0, max: 365, unidad: 'días antes' }))}
         {campo('reembolsoPct', 'Reembolso al cancelar',
-          'Qué % de la reserva se le devuelve si cancela a tiempo. En 0, sin reembolso.',
-          numerico('reembolsoPct', config.reembolsoPct, (n) => ({ reembolsoPct: n }), { min: 0, max: 100, unidad: '% de la reserva' }))}
+          'Qué % de lo que el cliente ya pagó se le devuelve si cancela a tiempo. En 0, sin reembolso.',
+          numerico('reembolsoPct', config.reembolsoPct, (n) => ({ reembolsoPct: n }), { min: 0, max: 100, unidad: '% de lo pagado' }))}
       </>
     },
     {
