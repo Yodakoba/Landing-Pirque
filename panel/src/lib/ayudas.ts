@@ -193,8 +193,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'invitados y tipo.',
       'Productos: agrégalos con los botones. Cada línea tiene su precio y su '
       + 'descuento; abajo va el descuento sobre el total y el IVA.',
-      'Condiciones: documento, pago y contrato; desde ahí se copia el link o se '
-      + 'manda por WhatsApp. Si el cliente '
+      'Envío: en qué va, documento, condiciones de pago y los pagos; desde ahí '
+      + 'se manda por WhatsApp o correo. Contrato: sus datos y condiciones, y '
+      + 'se manda igual. Si el cliente '
       + 'acepta, “Ver el contrato”, imprímelo y fírmenlo en dos ejemplares.',
       'Sube la foto o el PDF del contrato firmado, anota el anticipo y '
       + '“Marcar ganada”.'
@@ -488,7 +489,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Condiciones de pago',
     texto: [
       'En blanco vale lo de Configuración; lo que escribas acá vale solo para esta cotización. Un 0 en el anticipo es "sin anticipo".',
-      'Si hay anticipo, la cotización no se puede marcar ganada hasta que esté pagado. Son las mismas condiciones que imprime el contrato.'
+      'Se marca ganada con el anticipo pagado, o con el contrato firmado subido. Son las mismas condiciones que imprime el contrato.'
     ]
   },
   contrato: {
@@ -550,6 +551,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Marcar ganada',
     texto: [
       'Crea la reserva en el calendario y le toma el cupo al día. Si el día no estaba abierto, lo abre como privado.',
+      'Se puede con el anticipo pagado (paso Envío) o con el contrato firmado subido (paso Contrato). Sin ninguno de los dos, avisa antes.',
       'Las otras alternativas pasan a "No elegida". La cotización se sigue pudiendo editar, y su reserva se actualiza sola.'
     ]
   },

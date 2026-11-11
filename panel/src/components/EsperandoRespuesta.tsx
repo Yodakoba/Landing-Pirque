@@ -29,7 +29,7 @@ export interface PorSeguir {
 export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
   lista: PorSeguir[];
   onCambio: () => void;
-  onAbrir: (p: Presupuesto) => void;
+  onAbrir: (p: Presupuesto, paso?: number) => void;
 }) {
   const [perdiendo, setPerdiendo] = useState('');
   const [enviando, setEnviando] = useState('');
@@ -74,7 +74,7 @@ export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
             </button>
             {puedeTocar && motivo === 'contratoSinFirmar' && (
               <div className="mt-2 flex flex-wrap gap-2">
-                <button type="button" onClick={() => onAbrir(p)}
+                <button type="button" onClick={() => onAbrir(p, 5)}
                   className="boton min-h-[44px] !border-verde-fuerte font-semibold text-verde-texto">
                   📎 Sí: subir el firmado
                 </button>

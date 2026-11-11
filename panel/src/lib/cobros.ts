@@ -330,3 +330,15 @@ export function diasEntre(a: Fecha, b: Fecha): number {
   while (f !== b && Math.abs(n) < 4000) { f = sumarDias(f, paso); n += paso; }
   return n;
 }
+
+/**
+ * **Cuándo se puede marcar ganada** (2026-11-11, lo decidió el cliente:
+ * *"en contratos obviamente solo puede marcar ganado si está el contrato"*).
+ * Con el anticipo pagado —o sin anticipo acordado— **o** con el contrato
+ * firmado subido. Una de las dos basta: el contrato firmado es el
+ * compromiso del cliente aunque la plata llegue después. La usan la ruta
+ * `/convertir` y la ventana de cotizar, para que digan lo mismo.
+ */
+export function puedeGanar(anticipoListo: boolean, contratoFirmado: boolean): boolean {
+  return anticipoListo || contratoFirmado;
+}

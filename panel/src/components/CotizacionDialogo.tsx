@@ -80,7 +80,7 @@ export interface DatosCotizar {
 
 /** El 4 se llamaba *Enviar* y ahí no se manda nada solo: tiene el documento,
  *  el pago, el contrato y el cierre (2026-11-11). Mandarla es un botón más. */
-const PASOS = ['Cliente', 'Evento', 'Productos', 'Condiciones'] as const;
+const PASOS = ['Cliente', 'Evento', 'Productos', 'Envío', 'Contrato'] as const;
 const TIPOS_EVENTO = ['Cumpleaños', 'Matrimonio', 'Empresa', 'Paseo', 'Otro'];
 
 /** Qué es ese día, en palabras, para el paso 2. */
@@ -186,6 +186,8 @@ export default function CotizacionDialogo({
   const [avisoTxt, setAvisoTxt] = useState(p?.avisoEvento == null ? '' : String(p.avisoEvento));
   /** Por qué vía se acaba de mandar, mientras se pregunta "¿la mandaste?". */
   const [preguntaEnvio, setPreguntaEnvio] = useState<'' | 'cotizacion' | 'contrato'>('');
+  /** La ventana *¿Marcarla ganada?*, abierta. */
+  const [confirmandoGanar, setConfirmandoGanar] = useState(false);
   /** El día en que se le mandó el contrato (lo pone el servidor). */
   const [contratoEnviado, setContratoEnviado] = useState(p?.contratoEnviado ?? '');
   const [cancelando, setCancelando] = useState(false);
@@ -372,8 +374,8 @@ export default function CotizacionDialogo({
 
   async function ganar() {
     if (!p) return;
-    if (!confirm('¿Marcarla ganada? Se crea la reserva y toma el cupo de ese día. '
-      + 'Las otras alternativas de este cliente pasan a "No elegida".')) return;
+    // La pregunta la hizo antes la ventana *¿Marcarla ganada?* (`confirmandoGanar`).
+    setConfirmandoGanar(false);
     // Primero se guarda lo que esté escrito, para que la reserva salga con eso.
     if (!(await guardar())) return;
     setGuardando(true);
@@ -673,38 +675,64 @@ export default function CotizacionDialogo({
     { nombre: 'Pagada', listo: cobrado.completo }
   ];
   const personasDelEvento = enMenus || invitados;
+  /** El botón grande de ganar, el mismo en los dos pasos. */
+  const botonGanar = esFecha(fechaReal) && puedeEditar ? (
+    <span className="flex items-center gap-1">
+      <button type="button" disabled={guardando} onClick={() => setConfirmandoGanar(true)}
+        className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
+                   px-6 text-[20px] font-extrabold uppercase tracking-wide text-tinta
+                   shadow-md hover:brightness-110 disabled:opacity-50">
+        ✓ Marcar ganada
+      </button>
+      <AyudaCorta tema="marcarGanada" />
+    </span>
+  ) : !esFecha(fechaReal) ? (
+    <button type="button" className="boton min-h-[48px]" onClick={() => setPaso(2)}>Ir al paso 2: Evento</button>
+  ) : null;
+  const bajadaGanar = esFecha(fechaReal)
+    ? `Crea la reserva de ${personasDelEvento} personas y le toma el cupo al ${enPalabras(fechaReal)}.`
+    : 'Para ganarla, ponle la fecha en el paso 2.';
+  const saldo = cobrado.falta > 0 ? (
+    <Hito tono="ambar" titulo={`Saldo por cobrar: ${enPesos(cobrado.falta)}`}
+      bajada={cond.saldoHasta ? `Hasta el ${enPalabras(cond.saldoHasta)}.` : `${cond.dias} días antes del evento.`}>
+      {puedeEditar && (
+        <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
+          className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
+                     font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50">
+          ✓ Pagó el saldo · {enPesos(cobrado.falta)}
+        </button>
+      )}
+    </Hito>
+  ) : null;
+
   /**
-   * **El próximo hito: uno solo, grande** (2026-11-11). Es lo que toca
-   * hacer ahora con esta cotización; lo demás sigue abajo, en sus secciones.
+   * **El próximo paso del paso 4, Envío** (2026-11-11). Mandarla, esperar el
+   * anticipo y ganarla con él. Con *Sin anticipo* también se ofrece ganar, y
+   * la confirmación avisa si tampoco hay contrato firmado.
    */
-  const hito: React.ReactNode = !p || cancelada ? null
-    : !ganada && (anticipoPagado || (mandada && cond.pct === 0)) ? (
-      <Hito tono="verde" titulo={esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
-        bajada={esFecha(fechaReal)
-          ? `Crea la reserva de ${personasDelEvento} personas y le toma el cupo al ${enPalabras(fechaReal)}.`
-          : 'Para ganarla, ponle la fecha en el paso 2.'}>
-        {esFecha(fechaReal) && puedeEditar ? (
-          <span className="flex items-center gap-1">
-            <button type="button" disabled={guardando} onClick={() => void ganar()}
-              className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
-                         px-6 text-[20px] font-extrabold uppercase tracking-wide text-tinta
-                         shadow-md hover:brightness-110 disabled:opacity-50">
-              ✓ Marcar ganada
-            </button>
-            <AyudaCorta tema="marcarGanada" />
-          </span>
-        ) : !esFecha(fechaReal) ? (
-          <button type="button" className="boton min-h-[48px]" onClick={() => setPaso(2)}>Ir al paso 2: Evento</button>
-        ) : null}
+  const hitoEnvio: React.ReactNode = !p || cancelada ? null
+    : ganada ? (
+      saldo && firmado ? saldo : (
+        <Hito tono="verde" titulo="✓ Ganada · sigue el contrato"
+          bajada="La reserva ya está en el calendario. Lo que sigue es mandarle el contrato y que vuelva firmado.">
+          <button type="button" className="boton boton-relleno min-h-[52px] px-6 text-[16px]"
+            onClick={() => setPaso(5)}>Ir al paso 5: Contrato →</button>
+        </Hito>
+      )
+    ) : anticipoPagado || (mandada && cond.pct === 0) ? (
+      <Hito tono="verde" titulo={esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'} bajada={bajadaGanar}>
+        {botonGanar}
       </Hito>
-    ) : !ganada && !mandada ? (
+    ) : !mandada ? (
       <Hito tono="rosa" titulo="Mándasela al cliente"
         bajada="WhatsApp y Correo abren el mensaje con el link. Al volver te pregunto si la mandaste: desde ahí corre su vigencia y aparece en el calendario de reservas.">
         <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} grande />
       </Hito>
-    ) : !ganada ? (
+    ) : (
       <Hito tono="ambar" titulo={`Esperando el anticipo: ${enPesos(cobrado.faltaAnticipo)}`}
-        bajada="Con el anticipo pagado se puede marcar ganada. Si pagó otro monto, anótalo abajo en El pago.">
+        bajada={firmado
+          ? 'Ya tiene el contrato firmado: también se puede marcar ganada en el paso 5, Contrato.'
+          : 'Con el anticipo pagado se puede marcar ganada. Si pagó otro monto, anótalo arriba en El pago.'}>
         {puedeEditar && (
           <button type="button" disabled={guardando}
             onClick={() => void cobrar(cobrado.faltaAnticipo, 'Anticipo')}
@@ -714,32 +742,36 @@ export default function CotizacionDialogo({
           </button>
         )}
       </Hito>
-    ) : !firmado ? (
+    );
+
+  /**
+   * **El próximo paso del paso 5, Contrato** (2026-11-11). Mandar el
+   * contrato, esperar el firmado y, con el firmado subido, ganarla aunque
+   * falte el anticipo (`puedeGanar()`): *"en contratos obviamente solo puede
+   * marcar ganado si está el contrato"*.
+   */
+  const hitoContrato: React.ReactNode = !p || cancelada ? null
+    : !firmado ? (
       contratoEnviado ? (
-        <Hito tono="verde" titulo="✓ Ganada · esperando el contrato firmado"
+        <Hito tono="cielo" titulo="Esperando el contrato firmado"
           bajada={`Se lo mandaste el ${enPalabras(contratoEnviado)}. Cuando te lo devuelva firmado, súbelo.`}>
           {puedeEditar && <SubirFirmado subiendo={subiendoContrato} onArchivo={(f) => void subirContrato(f)} />}
         </Hito>
       ) : (
-        <Hito tono="verde" titulo="✓ Ganada · mándale el contrato"
-          bajada="La reserva ya está en el calendario. Mándale el contrato para firmar: al volver te pregunto si lo mandaste.">
+        <Hito tono="cielo" titulo="Mándale el contrato"
+          bajada="WhatsApp y Correo abren el mensaje con el link del contrato. Al volver te pregunto si lo mandaste.">
           <BotonesMandar link={linkContrato} whatsapp={whatsappContrato} correo={correoContrato}
             onMandar={(v) => mandar(v, 'contrato')} ver="Ver el contrato" grande />
           {puedeEditar && <SubirFirmado subiendo={subiendoContrato} onArchivo={(f) => void subirContrato(f)} />}
         </Hito>
       )
-    ) : cobrado.falta > 0 ? (
-      <Hito tono="ambar" titulo={`Saldo por cobrar: ${enPesos(cobrado.falta)}`}
-        bajada={cond.saldoHasta ? `Hasta el ${enPalabras(cond.saldoHasta)}.` : `${cond.dias} días antes del evento.`}>
-        {puedeEditar && (
-          <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
-            className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
-                       font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50">
-            ✓ Pagó el saldo · {enPesos(cobrado.falta)}
-          </button>
-        )}
+    ) : !ganada ? (
+      <Hito tono="verde" titulo={esFecha(fechaReal) ? '✓ Contrato firmado · lista para ganar' : 'Falta el día del evento'}
+        bajada={bajadaGanar + (cobrado.faltaAnticipo > 0
+          ? ` El anticipo (${enPesos(cobrado.faltaAnticipo)}) queda por cobrar.` : '')}>
+        {botonGanar}
       </Hito>
-    ) : (
+    ) : saldo ?? (
       <Hito tono="verde" titulo="✓ Cerrada: ganada, firmada y pagada" bajada="No queda nada por hacer con esta cotización." />
     );
 
@@ -753,8 +785,10 @@ export default function CotizacionDialogo({
 
   return (
     <Dialogo titulo={titulo} onCerrar={onCerrar} ancho="max-w-3xl">
-      {/* Los cuatro pasos, como botones: se ve dónde se está y se puede saltar. */}
-      <nav aria-label="Pasos" className="mb-4 grid grid-cols-4 gap-1.5">
+      {/* Los cinco pasos, como botones: se ve dónde se está y se puede saltar.
+          Desde el 2026-11-11 son cinco: el envío y el contrato son dos
+          conversaciones con el cliente, cada una con su hito al final. */}
+      <nav aria-label="Pasos" className="mb-4 grid grid-cols-5 gap-1">
         {PASOS.map((nombre, i) => (
           <button key={nombre} type="button" onClick={() => void irA(i + 1)}
             aria-current={paso === i + 1 ? 'step' : undefined}
@@ -1279,10 +1313,13 @@ export default function CotizacionDialogo({
                   Todavía no se manda: no vence y no aparece en el calendario de reservas.
                 </p>
               )}
-              {p && (
+              {/* Antes de mandarla, los botones están en el próximo paso, grandes;
+                  acá aparecen después, para volver a mandarla. Dos veces en la
+                  misma pantalla era no saber cuál apretar. */}
+              {p && (mandada || ganada) && (
                 <div>
                   <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                    Mandarla al cliente
+                    Mandarla de nuevo
                   </p>
                   <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} />
                 </div>
@@ -1529,6 +1566,47 @@ export default function CotizacionDialogo({
 
             </Seccion>
 
+            {/* **El próximo paso va al final** (2026-11-11, lo pidió el
+                cliente: *"primero hacemos el seguimiento, los datos… y de ahí
+                te ofrezco marcar como ganado"*). Cada uno de los dos pasos
+                del final —Envío y Contrato— cierra con el suyo. */}
+            {p && !cancelada && hitoEnvio}
+
+            {/* **Lo secundario va abajo, chico y separado**: guardar ya es
+                solo y borrar es peligroso. Nunca al lado del hito. */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
+              {!cancelada && (
+                <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
+              )}
+              <span className="flex-1" />
+              {p && !ganada && puedeEditar && (
+                <button type="button" onClick={() => void borrar()}
+                  className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                  Borrar
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ---------- 5. Contrato (2026-11-11) ----------
+            Lo pidió el cliente: separar la cotización del contrato, que son
+            dos conversaciones con el cliente. Termina en su propio hito. */}
+        {paso === 5 && (
+          <div className="space-y-4">
+            <div className="rounded border border-hueso/15 bg-panel p-3 text-[15px]">
+              <p className="font-semibold">{cliente?.nombre ?? 'Sin cliente'}</p>
+              <p className="text-hueso/75">
+                {fechaReal ? <span className="first-letter:uppercase inline-block">{enPalabras(fechaReal)}</span>
+                  : periodo || 'Sin fecha'}
+                {invitados > 0 && <> · {invitados} invitados</>}
+                {tipoEvento && <> · {tipoEvento}</>}
+              </p>
+              <p className="mt-1 text-[20px] font-bold text-oro">{enPesos(cuentas.total)}</p>
+            </div>
+
+            {p && !cancelada && <Camino pasos={camino} />}
+
             <fieldset disabled={cancelada} className="min-w-0 space-y-4">
             {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:
                 el precio, las condiciones de pago y el cliente de su ficha.
@@ -1659,19 +1737,25 @@ export default function CotizacionDialogo({
                     </div>
                   )}
 
-                  <div>
-                    <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                      Mandar el contrato <AyudaCorta tema="mandarContrato" />
-                    </p>
-                    <BotonesMandar link={linkContrato} whatsapp={whatsappContrato} correo={correoContrato}
-                      onMandar={(v) => mandar(v, 'contrato')} ver="📄 Ver el contrato" />
-                  </div>
+                  {(contratoEnviado || firmado) ? (
+                    <div>
+                      <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                        Mandar el contrato de nuevo <AyudaCorta tema="mandarContrato" />
+                      </p>
+                      <BotonesMandar link={linkContrato} whatsapp={whatsappContrato} correo={correoContrato}
+                        onMandar={(v) => mandar(v, 'contrato')} ver="📄 Ver el contrato" />
+                    </div>
+                  ) : linkContrato && (
+                    <a href={linkContrato} target="_blank" rel="noreferrer" className="tecla boton min-h-[44px]">
+                      📄 Ver el contrato
+                    </a>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {firmado && (
                       <a href={`/api/presupuestos/contrato?id=${encodeURIComponent(p.id)}`}
                         target="_blank" rel="noopener" className="tecla boton min-h-[44px]">📎 Ver el firmado</a>
                     )}
-                    {puedeEditar && (
+                    {puedeEditar && firmado && (
                       <label className={`boton tecla min-h-[44px] cursor-pointer ${subiendoContrato ? 'opacity-60' : ''}
                         ${firmado ? '' : '!border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
                         {subiendoContrato ? 'Subiendo…' : firmado ? 'Cambiar el firmado' : '📎 Subir contrato firmado'}
@@ -1695,27 +1779,13 @@ export default function CotizacionDialogo({
 
             </fieldset>
 
-            {/* **El próximo paso va al final** (2026-11-11, lo pidió el
-                cliente: *"primero hacemos el seguimiento, los datos, el
-                contrato… y de ahí te ofrezco marcar como ganado"*). Arriba
-                queda el camino, que dice por dónde va; el botón grande cierra
-                la pantalla, después de todo lo que hay que revisar. */}
-            {p && !cancelada && hito}
+            {p && !cancelada && hitoContrato}
 
-            {/* **Lo secundario va abajo, chico y separado** (2026-11-11):
-                guardar ya es solo, borrar y cancelar son peligrosos. Nunca
-                al lado del hito. */}
             <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
               {!cancelada && (
                 <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
               )}
               <span className="flex-1" />
-              {p && !ganada && puedeEditar && (
-                <button type="button" onClick={() => void borrar()}
-                  className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
-                  Borrar
-                </button>
-              )}
               {ganada && !cancelada && puedeEditar && (
                 <span className="inline-flex items-center">
                   <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
@@ -1730,7 +1800,7 @@ export default function CotizacionDialogo({
         )}
       </fieldset>
 
-      {paso < 4 && (
+      {paso < 5 && (
         <PieDePaso paso={paso} guardando={guardando}
           puede={paso !== 1 || !!idCliente}
           porQueNo="Elige o crea el cliente para seguir."
@@ -1740,10 +1810,10 @@ export default function CotizacionDialogo({
             : ''}
           onVolver={() => void irA(paso - 1)} onSeguir={() => void irA(paso + 1)} />
       )}
-      {paso === 4 && (
+      {paso === 5 && (
         <div className="mt-4 flex border-t border-hueso/10 pt-3">
-          <button type="button" className="boton min-h-[48px]" onClick={() => void irA(3)}>
-            ← 3 · {PASOS[2]}
+          <button type="button" className="boton min-h-[48px]" onClick={() => void irA(4)}>
+            ← 4 · {PASOS[3]}
           </button>
         </div>
       )}
@@ -1768,6 +1838,43 @@ export default function CotizacionDialogo({
             <button type="button" autoFocus disabled={guardando} onClick={() => void confirmarEnvio()}
               className="boton boton-relleno min-h-[52px] px-6 text-[16px]">
               {preguntaEnvio === 'contrato' ? '✓ Sí, lo mandé' : '✓ Sí, la mandé'}</button>
+          </div>
+        </Dialogo>
+      )}
+      {/* **¿Marcarla ganada?** (2026-11-11). Sin anticipo pagado ni contrato
+          firmado —una cotización con *Sin anticipo*— se puede igual, pero
+          lo dice y ofrece ir a subir el contrato: *"¿tienes un contrato
+          firmado? si es el caso, por favor, súbelo"*. */}
+      {confirmandoGanar && p && (
+        <Dialogo titulo="¿Marcarla ganada?" onCerrar={() => setConfirmandoGanar(false)}>
+          <p className="mt-3 text-[16px]">
+            Se crea la reserva de <strong>{personasDelEvento} personas</strong> y le toma el cupo
+            al {esFecha(fechaReal) ? enPalabras(fechaReal) : 'día del evento'}. Las otras
+            alternativas de este cliente pasan a <strong>No elegida</strong>.
+          </p>
+          {!anticipoPagado && !firmado && (
+            <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-3 text-[15px]">
+              <p className="font-bold text-ambar-texto">No tienes ningún anticipo ni contrato firmado.</p>
+              <p className="mt-1 text-hueso/85">
+                ¿Tienes un contrato firmado? Si es así, súbelo al sistema antes de marcarla ganada.
+              </p>
+            </div>
+          )}
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <button type="button" className="boton min-h-[48px]" onClick={() => setConfirmandoGanar(false)}>
+              Volver
+            </button>
+            {!anticipoPagado && !firmado && (
+              <button type="button" className="boton min-h-[48px]"
+                onClick={() => { setConfirmandoGanar(false); setPaso(5); }}>
+                📎 Ir a subir el contrato
+              </button>
+            )}
+            <button type="button" autoFocus disabled={guardando} onClick={() => void ganar()}
+              className="tecla min-h-[52px] rounded-xl border-2 border-verde-fuerte bg-verde-fuerte px-6
+                         text-[16px] font-bold text-tinta disabled:opacity-50">
+              {!anticipoPagado && !firmado ? 'Sí, marcarla ganada igual' : '✓ Sí, marcarla ganada'}
+            </button>
           </div>
         </Dialogo>
       )}
@@ -1850,7 +1957,7 @@ function Seccion({ tono, icono, titulo, ayuda, children }: {
 
 /** El bloque del próximo hito: grande, con su color y lo que pasa al apretarlo. */
 function Hito({ tono, titulo, bajada, children }: {
-  tono: 'verde' | 'rosa' | 'ambar'; titulo: string; bajada: string; children?: React.ReactNode;
+  tono: 'verde' | 'rosa' | 'ambar' | 'cielo'; titulo: string; bajada: string; children?: React.ReactNode;
 }) {
   const [borde, fondo, texto] = TONOS[tono].split(' ');
   return (

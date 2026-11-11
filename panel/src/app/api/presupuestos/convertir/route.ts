@@ -5,7 +5,7 @@ import {
   crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
   actualizarPagoDeReserva, abrirElDiaSiHaceFalta
 } from '@/lib/datos';
-import { condicionesDe, estadoCobros, cobrosDe } from '@/lib/cobros';
+import { condicionesDe, estadoCobros, cobrosDe, puedeGanar } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
 import { conCliente, otrasAlternativas } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
@@ -100,10 +100,11 @@ export async function POST(req: Request) {
     const total = totalDe(suyas, p.descuento);
     const cond = condicionesDe(p, total, cfg);
     const cobrado = estadoCobros({ anticipo: cond.anticipo, total }, cobrosDe(cobros, p.id));
-    if (!cobrado.anticipoListo) {
+    // Desde el 2026-11-11 también basta el contrato firmado (`puedeGanar()`).
+    if (!puedeGanar(cobrado.anticipoListo, !!String(p.contrato ?? '').trim())) {
       return NextResponse.json({
         error: `Falta el anticipo: ${enPesos(cobrado.faltaAnticipo)}. Anota el cobro, `
-          + 'o déjala sin anticipo si así se acordó.'
+          + 'sube el contrato firmado, o déjala sin anticipo si así se acordó.'
       }, { status: 409 });
     }
 

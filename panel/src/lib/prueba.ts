@@ -28,7 +28,7 @@ import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProd
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
          montoCobro, cobrosDe, CONCEPTO_COBRO, avisosDeCobro, diasEntre, porRevisar,
-         problemaConArchivo } from './cobros.ts';
+         problemaConArchivo, puedeGanar } from './cobros.ts';
 import { idDeDrive } from './config.ts';
 import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
@@ -4167,6 +4167,11 @@ console.log('\nEl seguimiento de lo mandado');
   ok(seguimientoDe(pre({ idReserva: 'R1', contratoEnviado: '2026-11-09' }), HOY, cfg) === null,
      'mandado hace 2 días: todavía no');
 }
+
+console.log('\nCuándo se puede marcar ganada');
+ok(puedeGanar(true, false), 'con el anticipo pagado se gana');
+ok(puedeGanar(false, true), 'con el contrato firmado se gana aunque falte el anticipo');
+ok(!puedeGanar(false, false), 'sin anticipo pagado ni contrato firmado, no');
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);
