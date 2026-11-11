@@ -259,8 +259,14 @@ export default function CotizacionesVista() {
   const inicio = semanaDe(hoy);
   const cajas = Array.from({ length: semanas }, (_, s) => {
     const lunes = sumarDias(inicio, s * 7);
+    // Un día cerrado sin cotizaciones vivas no se muestra (2026-11-11, lo
+    // pidió el cliente): no hay nada que cotizar ahí. Con alguna viva sí,
+    // porque es una conversación abierta con un cliente.
     const dias = Array.from({ length: 7 }, (_, d) => sumarDias(lunes, d))
-      .filter((f) => f >= hoy && (porDia.has(f) || estadoDelDia.has(f)));
+      .filter((f) => f >= hoy && (
+        (porDia.get(f) ?? []).some((p) => cuentaComoPosible(p, hoy) || p.idReserva)
+        || (estadoDelDia.has(f) && !estaCerrado(estadoDelDia.get(f) ?? ''))
+        || (porDia.has(f) && !estadoDelDia.has(f))));
     return { lunes, dias };
   }).filter((c) => c.dias.length > 0);
 

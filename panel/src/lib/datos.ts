@@ -964,10 +964,17 @@ export async function sincronizarReserva(idPresupuesto: string): Promise<string>
   // El día de la reserva tiene que poder recibirla, también si se movió de
   // fecha. De paso arregla las ganadas de antes que quedaron sin día.
   const hizo = await abrirElDiaSiHaceFalta(r.fecha);
-  // Si cambió de día, lo que importa recordar es qué se le hizo al nuevo.
-  if (antes && antes.fecha !== r.fecha && hizo !== p.diaAbierto) {
-    const { fila: _f, ...resto } = p;
-    await guardarPresupuesto({ ...resto, diaAbierto: hizo });
+  if (antes && antes.fecha !== r.fecha) {
+    // **El día que deja vuelve a como estaba** (2026-11-11): si se abrió
+    // solo para esta cotización y no le queda otra reserva, se borra o
+    // vuelve a cerrado, igual que al cancelar. Sin esto, mover una ganada
+    // del 11 al 18 dejaba el 11 privado y vacío en el calendario.
+    await devolverElDia(antes.fecha, p.diaAbierto, p.idReserva);
+    // Y lo que queda anotado es qué se le hizo al día nuevo.
+    if (hizo !== p.diaAbierto) {
+      const { fila: _f, ...resto } = p;
+      await guardarPresupuesto({ ...resto, diaAbierto: hizo });
+    }
   }
   return antes?.fecha ?? '';
 }

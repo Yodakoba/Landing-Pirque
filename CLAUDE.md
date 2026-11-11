@@ -2317,6 +2317,15 @@ estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
   cerrar el reabierto — **solo si no le queda otra reserva que ocupe
   lugar**. Un día que ya existía abierto no se toca. Las ganadas de antes de
   esta columna no la tienen: su día se borra a mano.
+- **Lo mismo cuando una ganada cambia de fecha** (2026-11-11): el día que
+  deja se devuelve con la misma regla (`devolverElDia()` dentro de
+  `sincronizarReserva()`), y `Día abierto` pasa a decir qué se le hizo al
+  día nuevo. Sin esto, mover una ganada del 11 al 18 dejaba el 11 privado y
+  vacío. **No hay botón de "quitar el día"**, a propósito: el día se
+  devuelve solo; uno abierto a mano se cierra desde la portada.
+- **Un día cerrado sin cotizaciones vivas no aparece en Cotizaciones**: no
+  hay nada que cotizar ahí. Con alguna viva o una ganada sí, porque es una
+  conversación abierta con un cliente.
 - **Una cancelada no aparece en el calendario de Cotizaciones**: sigue en
   *Todas* (filtro *Perdidas y vencidas*), con su devolución.
 
