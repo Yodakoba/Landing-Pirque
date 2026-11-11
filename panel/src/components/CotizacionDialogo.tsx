@@ -691,11 +691,24 @@ export default function CotizacionDialogo({
   }
   /**
    * **¿Están negociando?** (2026-11-11): una cotización ya mandada a la que
-   * se le cambian líneas o precios. Se compara contra cómo se abrió.
+   * se le cambian líneas o precios.
+   *
+   * **Se compara contra cómo estaba al mandarla, no al abrir la ventana**
+   * (arreglado el mismo día, lo reclamó el cliente). Antes la base era la de
+   * la primera vez que se dibujó la ventana, así que armar las líneas en el
+   * paso 3 y después apretar *Sí, la mandé* mostraba la franja en el acto,
+   * como si se hubiera cambiado algo ya enviado. Ahora la base se toma
+   * cuando la cotización queda Enviada —al abrirla ya enviada, o al
+   * mandarla en esta misma ventana— y se suelta si deja de estarlo.
    */
   const firmaPrecio = JSON.stringify({ l: vistas.map((l) => [l.concepto, l.cantidad, l.precio, l.descuento]), descuento });
-  const [precioInicial] = useState(firmaPrecio);
-  const renegociando = !!p && estado === ESTADO_PRESUPUESTO.enviado && firmaPrecio !== precioInicial;
+  const enviadaAhora = !!p && estado === ESTADO_PRESUPUESTO.enviado;
+  const [precioAlMandar, setPrecioAlMandar] = useState<string | null>(enviadaAhora ? firmaPrecio : null);
+  useEffect(() => {
+    if (!enviadaAhora) setPrecioAlMandar(null);
+    else if (precioAlMandar === null) setPrecioAlMandar(firmaPrecio);
+  }, [enviadaAhora]); // eslint-disable-line react-hooks/exhaustive-deps
+  const renegociando = enviadaAhora && precioAlMandar !== null && firmaPrecio !== precioAlMandar;
 
   /**
    * **El camino** (2026-11-11): los hitos de una cotización, como trofeos.
