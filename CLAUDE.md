@@ -6883,11 +6883,11 @@ paso extra. El PR lleva **qué cambió y por qué**, no un listado de archivos:
 es el lugar donde queda escrito el motivo de una decisión, y buena parte de
 este CLAUDE.md salió de ahí.
 
-**Mergear es caso a caso** (decidido el 2026-11-03). La herramienta de
-GitHub permite mergear desde acá, y la cuenta tiene permiso, pero solo se
-usa cuando el cliente lo pide para ese PR ("mergéalo"). Si no lo pide, el PR
-queda abierto y lo mergea él: su merge es el último filtro antes de
-producción, y el panel en Vercel se despliega solo desde `main`.
+**Se mergea solo, en cuanto Vercel da `success`** (decidido el 2026-11-11;
+antes era caso a caso). Se abre el PR, se espera a que la construcción de
+Vercel diga `success` y se mergea, salvo que el cliente diga lo contrario
+para ese PR. "Propone antes de aplicar" no cambia: la revisión ocurre al
+proponer el cambio. Si el merge se bloquea, se avisa y el PR queda abierto.
 
 **Antes de mergear se espera a Vercel** (2026-11-11). Cada rama que se
 empuja dispara una construcción de prueba en Vercel, que GitHub muestra como
