@@ -19,6 +19,8 @@
  * Se vuelve a pedir cada minuto, por si el jefe de turno resolvió un aviso o
  * alguien marcó desde otro lado.
  */
+import IngresoFudo from './IngresoFudo';
+import type { Ingreso } from '@/lib/fudo';
 import { useEffect, useMemo, useState } from 'react';
 import { avisar } from './AvisoFlotante';
 import { enPalabras } from '@/lib/fechas';
@@ -27,6 +29,8 @@ import { ASISTENCIA } from '@/lib/columnas';
 interface R {
   fila: number; nombre: string; personas: number; menu: string;
   asistencia: string; llegaron: number | null; avisoRecepcion: string;
+  /** Cómo se ingresa en Fudo, armado por el servidor. */
+  ingreso?: Ingreso | null;
 }
 interface Datos {
   fecha: string; apertura: string; abierta: boolean; cerrado: boolean; reservas: R[];
@@ -200,6 +204,9 @@ export default function RecepcionVista() {
                 </p>
               </div>
               {r.menu && <p className="mt-0.5 text-[15px] text-hueso/70">{r.menu}</p>}
+              {/* **Cómo se ingresa en Fudo** (2026-11-11, lo pidió el
+                  cliente): lo primero que mira quien abre la mesa. */}
+              {!noVino && <div className="mt-2"><IngresoFudo ingreso={r.ingreso} /></div>}
 
               {vino && (
                 <p className="mt-2 text-[17px] font-semibold text-verde-texto">

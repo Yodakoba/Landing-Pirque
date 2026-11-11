@@ -2,8 +2,11 @@
  * **La recepción de hoy** (2026-11-11): lo justo para recibir a la gente en
  * la entrada, y nada más. Las reservas de **hoy** —nunca otro día—, con
  * quién, cuántos, qué menús, si vino, cuántos llegaron y el aviso al jefe
- * de turno. Sin montos, sin pagos, sin contacto: la anfitriona no los
- * necesita para recibir a nadie.
+ * de turno. Sin contacto: la anfitriona no lo necesita para recibir a nadie.
+ *
+ * **Y cómo ingresarla en Fudo** (2026-11-11, lo pidió el cliente): ya pagó y
+ * va como pago directo, o es solo reserva y se cobra sin descuento. Llega
+ * armado (`comoIngresar()`), no los datos del pago con que se arma.
  *
  * Con el permiso `asistencia`. Dice además si la recepción ya abrió
  * (`yaAbrio()`) y si el día está cerrado, para que la pantalla lo diga en
@@ -11,7 +14,8 @@
  */
 import { NextResponse } from 'next/server';
 import { exigir } from '@/lib/permisos';
-import { leerReservas, leerFechas, leerConfig, leerCierres } from '@/lib/datos';
+import { leerReservas, leerFechas, leerConfig, leerCierres, leerMenus, reservasDeCotizaciones } from '@/lib/datos';
+import { comoIngresar } from '@/lib/fudo';
 import { hoy } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
 import { yaAbrio, estaCerrado as diaCerrado } from '@/lib/cierres';
@@ -24,8 +28,9 @@ export async function GET(req: Request) {
   if (no) return no;
   try {
     const fecha = hoy();
-    const [reservas, fechas, cfg, cierres] = await Promise.all([
-      leerReservas(), leerFechas(), leerConfig(), leerCierres().catch(() => [])
+    const [reservas, fechas, cfg, cierres, menus, deCot] = await Promise.all([
+      leerReservas(), leerFechas(), leerConfig(), leerCierres().catch(() => []),
+      leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>())
     ]);
     const apertura = fechas.find((f) => f.fecha === fecha)?.apertura || cfg.horaApertura;
     return NextResponse.json({
@@ -35,7 +40,8 @@ export async function GET(req: Request) {
       reservas: reservas.filter((r) => r.fecha === fecha && ocupaLugar(r)).map((r) => ({
         fila: r.fila, nombre: r.nombre, personas: r.personas, menu: r.menu,
         asistencia: r.asistencia, llegaron: r.llegaron ?? null,
-        avisoRecepcion: r.avisoRecepcion ?? ''
+        avisoRecepcion: r.avisoRecepcion ?? '',
+        ingreso: comoIngresar(r, menus, deCot.has(r.id))
       }))
     });
   } catch (e) {

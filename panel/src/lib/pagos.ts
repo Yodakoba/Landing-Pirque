@@ -23,6 +23,7 @@ import { ESTADO_PAGO } from './columnas.ts';
 /** La palabra que se muestra, una sola por estado. */
 export const PAGO_PALABRA: Record<string, string> = {
   [ESTADO_PAGO.pagado]: 'Pagada',
+  [ESTADO_PAGO.abonado]: 'Abonada',
   [ESTADO_PAGO.pendiente]: 'Por pagar',
   [ESTADO_PAGO.reembolsado]: 'Reembolsada',
   [ESTADO_PAGO.anulado]: 'Anulada',
@@ -31,7 +32,8 @@ export const PAGO_PALABRA: Record<string, string> = {
 
 /** Qué significa cada una, para el desplegable del formulario. */
 export const PAGO_GLOSA: Record<string, string> = {
-  [ESTADO_PAGO.pagado]: 'ya pagó',
+  [ESTADO_PAGO.pagado]: 'ya pagó todo',
+  [ESTADO_PAGO.abonado]: 'pagó una parte',
   [ESTADO_PAGO.pendiente]: 'paga cuando llegue',
   [ESTADO_PAGO.cancelado]: 'avisó que no viene',
   [ESTADO_PAGO.reembolsado]: 'se le devolvió la plata',
@@ -56,8 +58,35 @@ export const ESTADOS_QUE_LIBERAN: string[] = [
 /** Los dos en que la reserva sigue en pie, y la persona viene. */
 export const ESTADOS_QUE_VIENEN: string[] = [
   ESTADO_PAGO.pagado,
+  ESTADO_PAGO.abonado,
   ESTADO_PAGO.pendiente
 ];
+
+/**
+ * **El pago de una reserva, dicho igual venga de donde venga** (2026-11-11,
+ * lo pidió el cliente: un solo vocabulario para Shopify, las cotizaciones y
+ * las reservas a mano). Lo que se guarda es el código de Shopify; lo que se
+ * lee, una de estas palabras.
+ */
+export const COMO_VIENE = [
+  { estado: ESTADO_PAGO.pagado, icono: '✓', palabra: 'Pagada', glosa: 'ya pagó todo', tono: 'verde' },
+  { estado: ESTADO_PAGO.abonado, icono: '½', palabra: 'Abonada', glosa: 'pagó una parte', tono: 'cielo' },
+  { estado: ESTADO_PAGO.pendiente, icono: '○', palabra: 'Por pagar', glosa: 'paga cuando llegue', tono: 'ambar' }
+] as const;
+
+/**
+ * El estado del pago que dicen los cobros de una cotización: todo cubierto
+ * es *Pagada*, algo es *Abonada* —con lo que entró—, nada es *Por pagar*.
+ * Sin total no hay qué dar por pagado.
+ */
+export function pagoPorCobros(total: number, pagado: number): { estado: string; abonado: number | null } {
+  if (total > 0 && pagado >= total) return { estado: ESTADO_PAGO.pagado, abonado: null };
+  if (pagado > 0) return { estado: ESTADO_PAGO.abonado, abonado: pagado };
+  return { estado: ESTADO_PAGO.pendiente, abonado: null };
+}
+
+/** Los medios de pago que se ofrecen con un botón; el texto sigue libre. */
+export const MEDIOS_RAPIDOS = ['Transferencia', 'Efectivo', 'Tarjeta'];
 
 /** Si este estado deja libre la silla. */
 export function liberaCupo(estado: string | null | undefined): boolean {

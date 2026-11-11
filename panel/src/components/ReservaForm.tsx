@@ -30,8 +30,10 @@
 import { useMemo, useState } from 'react';
 import type { Reserva } from '@/lib/tipos';
 import { ESTADO_PAGO } from '@/lib/columnas';
-import { ESTADOS_QUE_VIENEN, ESTADOS_QUE_LIBERAN, pagoConGlosa, liberaCupo }
+import { ESTADOS_QUE_LIBERAN, pagoConGlosa, liberaCupo, COMO_VIENE, MEDIOS_RAPIDOS }
   from '@/lib/pagos';
+import { esManual } from '@/lib/columnas';
+import { origenDe } from './PastillaPago';
 import { desglosarMenu, componerMenu, personasDeCuenta } from '@/lib/shopify';
 import { precioDe, aMonto, type Menu } from '@/lib/menus';
 import Dialogo from './Dialogo';
@@ -75,9 +77,16 @@ export default function ReservaForm({
     // conservarla al editar una reserva comprada; una anotada a mano nace en
     // blanco, porque no compró ninguna variante.
     tipoPago: reserva?.tipoPago ?? '',
-    estadoPago: reserva?.estadoPago ?? ESTADO_PAGO.pendiente,
-    notaPago: reserva?.notaPago ?? ''
+    estadoPago: reserva?.estadoPago || ESTADO_PAGO.pendiente,
+    notaPago: reserva?.notaPago ?? '',
+    abonado: reserva?.abonado != null ? String(reserva.abonado) : ''
   });
+  /** "La reserva se cayó…": los tres rojos, escondidos hasta pedirlos. */
+  const [seCayo, setSeCayo] = useState(() => liberaCupo(reserva?.estadoPago ?? ''));
+  // **De Shopify, el pago lo pone la tienda** (2026-11-11): acá solo se
+  // marca si la reserva se cayó. A mano, se elige con los tres botones.
+  const deShopify = !!reserva && !esManual(reserva.id);
+  const estadoOriginal = reserva?.estadoPago || ESTADO_PAGO.pendiente;
 
   // El conteo por menú. Al editar se reconstruye desde el texto guardado,
   // así que una reserva que vino de Shopify se puede corregir acá sin
@@ -165,6 +174,7 @@ export default function ReservaForm({
     setGuardando(true);
     const cuerpo = {
       ...f, personas, menu: componerMenu(cuenta),
+      abonado: f.estadoPago === ESTADO_PAGO.abonado ? aMonto(f.abonado) || null : null,
       // Sin precios puestos el sugerido da 0; eso se guarda en blanco, que
       // es lo mismo que hacia antes de pedir el monto.
       monto: monto > 0 ? monto : null,
@@ -230,43 +240,115 @@ export default function ReservaForm({
               </p>
             )}
           </Campo>
-          {/* Las opciones van en dos grupos y no en una lista de cinco: la
-              pregunta de verdad es si esta persona viene o no, y recién
-              después cómo quedó la plata. Cinco opciones parejas obligan a
-              leerlas todas para elegir la primera. */}
-          <Campo etiqueta="Cómo va el pago" ancho>
-            <select {...campo('estadoPago')} className={ENTRADA}>
-              <optgroup label="Viene">
-                {ESTADOS_QUE_VIENEN.map((e) => (
-                  <option key={e} value={e}>{pagoConGlosa(e)}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Ya no viene — libera el cupo">
-                {ESTADOS_QUE_LIBERAN.map((e) => (
-                  <option key={e} value={e}>{pagoConGlosa(e)}</option>
-                ))}
-              </optgroup>
-            </select>
-            <p className="mt-1 text-xs text-hueso/50">
-              {liberaCupo(f.estadoPago)
-                ? 'Su lugar queda libre para otra persona.'
-                : f.estadoPago === ESTADO_PAGO.pagado
-                  ? 'Ya pagó. Su lugar está tomado.'
-                  : 'Ocupa su lugar igual: la persona viene y paga cuando llegue.'}
-            </p>
-          </Campo>
+          {/* **El pago, con botones y no con un desplegable** (2026-11-11,
+              lo pidió el cliente, estilo PlayStation). Tres que se ven a la
+              vez —Pagada · Abonada · Por pagar— con el mismo vocabulario de
+              Shopify y de las cotizaciones. "La reserva se cayó" va aparte:
+              es lo raro, y es lo que libera el cupo. */}
+          <div className="sm:col-span-2">
+            <p className="mb-1 text-xs uppercase tracking-wide text-hueso/60">¿Cómo viene el pago?</p>
+            {reserva && (
+              <p className="mb-2 text-[13px] text-hueso/70">
+                {origenDe(reserva)}
+                {deShopify && ' — el pago lo pone la tienda: acá solo se marca si la reserva se cayó.'}
+              </p>
+            )}
+            {!liberaCupo(f.estadoPago) && !deShopify && (
+              <div className="grid grid-cols-3 gap-2">
+                {COMO_VIENE.map((o) => {
+                  const elegido = f.estadoPago === o.estado;
+                  const tono = o.tono === 'verde' ? ['border-verde-fuerte', 'bg-verde-fuerte text-tinta', 'text-verde-texto']
+                    : o.tono === 'cielo' ? ['border-cielo-fuerte', 'bg-cielo-fuerte text-tinta', 'text-cielo-texto']
+                    : ['border-ambar-fuerte', 'bg-ambar-fuerte text-tinta', 'text-ambar-texto'];
+                  return (
+                    <button key={o.estado} type="button" aria-pressed={elegido}
+                      onClick={() => setF({ ...f, estadoPago: o.estado })}
+                      className={`tecla flex min-h-[72px] flex-col items-center justify-center rounded-xl border-2
+                                  px-1 py-2 text-center ${tono[0]} ${elegido ? tono[1] : `${tono[2]} hover:bg-hueso/5`}`}>
+                      <span aria-hidden className="text-[22px] font-extrabold leading-none">{o.icono}</span>
+                      <span className="mt-1 text-[15px] font-bold leading-tight">{o.palabra}</span>
+                      <span className={`text-[12px] leading-tight ${elegido ? '' : 'text-hueso/70'}`}>{o.glosa}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!liberaCupo(f.estadoPago) && deShopify && (
+              <p className="inline-block rounded-full border-2 border-hueso/25 px-3 py-1 text-[15px] font-bold">
+                {pagoConGlosa(f.estadoPago)}
+              </p>
+            )}
 
-          {/* Cómo se pagó, en texto libre. **Libre a propósito**: cuáles son
-              los medios de pago del negocio es dato del cliente, y una lista
-              cerrada inventada acá terminaría en la planilla como si lo
-              fuera. Una reserva pagada sin decir cómo es justo la que nadie
-              puede cuadrar un mes después. */}
-          {f.estadoPago === ESTADO_PAGO.pagado && (
-            <Campo etiqueta="Cómo pagó" ancho>
-              <input type="text" {...campo('notaPago')} className={ENTRADA}
-                placeholder="Transferencia 28/10, efectivo en el mesón…" />
-            </Campo>
-          )}
+            {f.estadoPago === ESTADO_PAGO.abonado && !deShopify && (
+              <label className="mt-3 block">
+                <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">¿Cuánto abonó?</span>
+                <input type="text" inputMode="numeric" value={f.abonado} placeholder="$"
+                  onChange={(e) => setF({ ...f, abonado: e.target.value })}
+                  className={`${ENTRADA} sm:w-48`} />
+                {aMonto(f.abonado) > 0 && monto > 0 && (
+                  <span className="mt-1 block text-[13px] text-hueso/70">
+                    Falta por cobrar: <strong>{'$' + Math.max(0, monto - aMonto(f.abonado)).toLocaleString('es-CL')}</strong>
+                  </span>
+                )}
+              </label>
+            )}
+
+            {/* Cómo pagó: botones rápidos que escriben el medio, y el texto
+                sigue libre para el detalle. Los medios los confirmó el
+                cliente; uno distinto se escribe. */}
+            {(f.estadoPago === ESTADO_PAGO.pagado || f.estadoPago === ESTADO_PAGO.abonado) && !deShopify && (
+              <div className="mt-3">
+                <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">¿Cómo pagó?</span>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {MEDIOS_RAPIDOS.map((m) => {
+                    const ya = f.notaPago.toLowerCase().startsWith(m.toLowerCase());
+                    return (
+                      <button key={m} type="button" aria-pressed={ya}
+                        onClick={() => {
+                          const resto = MEDIOS_RAPIDOS.reduce((t, x) =>
+                            t.toLowerCase().startsWith(x.toLowerCase()) ? t.slice(x.length).trimStart() : t, f.notaPago);
+                          setF({ ...f, notaPago: resto ? `${m} ${resto}` : m });
+                        }}
+                        className={`boton min-h-[44px] ${ya ? '!border-oro bg-oro/15 font-semibold' : ''}`}>{m}</button>
+                    );
+                  })}
+                </div>
+                <input type="text" {...campo('notaPago')} className={ENTRADA}
+                  placeholder="Transferencia 28/10, efectivo en el mesón…" />
+              </div>
+            )}
+
+            {/* Ya no viene: los tres rojos, aparte. */}
+            {liberaCupo(f.estadoPago) || seCayo ? (
+              <div className="mt-3 rounded-xl border-2 border-rojo-fuerte/50 bg-rojo/5 p-3">
+                <p className="text-[14px] font-semibold text-rojo-texto">
+                  Ya no viene: su lugar queda libre para otra persona.
+                </p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {ESTADOS_QUE_LIBERAN.map((e) => (
+                    <button key={e} type="button" aria-pressed={f.estadoPago === e}
+                      onClick={() => setF({ ...f, estadoPago: e })}
+                      className={`tecla min-h-[48px] rounded-xl border-2 border-rojo-fuerte/70 px-2 text-[14px] font-bold ${
+                        f.estadoPago === e ? 'bg-rojo-fuerte text-white' : 'text-rojo-texto hover:bg-rojo/10'}`}>
+                      {pagoConGlosa(e)}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="boton mt-2 min-h-[44px]"
+                  onClick={() => {
+                    setSeCayo(false);
+                    setF({ ...f, estadoPago: liberaCupo(estadoOriginal) ? ESTADO_PAGO.pendiente : estadoOriginal });
+                  }}>
+                  No, sí viene
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setSeCayo(true)}
+                className="boton mt-3 min-h-[44px] !border-rojo-fuerte/60 text-rojo-texto">
+                La reserva se cayó…
+              </button>
+            )}
+          </div>
 
           {/* La modalidad, cuando la hay: es un HECHO del pedido de Shopify,
               así que se muestra y no se edita. En una reserva anotada a mano
