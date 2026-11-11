@@ -1536,125 +1536,6 @@ export default function CotizacionDialogo({
             )}
 
 
-            {/* **Mandarla va antes del seguimiento** (2026-11-12, lo pidió el
-                cliente): mientras no se mande, es lo primero que hay que
-                hacer, y los recordatorios de abajo recién corren después. */}
-            {mandarPrimero && hitoEnvio}
-
-            {/* ---------- Seguimiento ---------- */}
-            {!cancelada && (
-            <Seccion tono="rosa" icono="📨" titulo="Seguimiento y envío" ayuda="seguimiento">
-            {/* **Sin botones de estado** (2026-11-12, lo pidió el cliente:
-                *"se dobla información"*). El camino de arriba ya dice en qué
-                va, y los botones *Candidato · Borrador · Enviada…* lo
-                repetían; peor, apretar el marcado lo devolvía a Borrador sin
-                avisar y con eso desaparecía *Marcar ganada*. Ahora el estado
-                avanza solo con acciones: *Sí, la mandé* (Enviada), *Están
-                negociando*, *Se perdió…* y *Marcar ganada*. */}
-            {!ganada && estado === ESTADO_PRESUPUESTO.rechazado ? (
-              <div className="rounded-lg border-2 border-hueso/25 p-3">
-                <p className="text-[16px] font-bold">Se perdió</p>
-                <p className="mb-1 mt-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                  Por qué
-                </p>
-                <Elegir etiqueta="Motivo" opciones={MOTIVOS_PERDIDA} valor={motivo} onElegir={setMotivo} />
-                <input value={motivo} onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="u otro motivo" className={`${ENTRADA} mt-2 sm:w-80`} />
-                {puedeEditar && (
-                  <button type="button" className="boton mt-3 min-h-[44px]"
-                    onClick={() => { setEstado(p?.enviada ? ESTADO_PRESUPUESTO.enviado : ESTADO_PRESUPUESTO.borrador); setMotivo(''); }}>
-                    No se perdió: volver a abrirla
-                  </button>
-                )}
-              </div>
-            ) : !ganada && puedeEditar && p && (
-              <div className="flex flex-wrap items-center gap-2">
-                {estado === ESTADO_PRESUPUESTO.negociacion && (
-                  <span className="rounded-full border-2 border-ambar/60 bg-ambar/10 px-3 py-1 text-[14px]
-                                   font-semibold text-ambar-texto">En negociación</span>
-                )}
-                {estado === ESTADO_PRESUPUESTO.enviado && (
-                  <button type="button" className="boton min-h-[44px]"
-                    onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Están negociando</button>
-                )}
-                {/* **Deshacer un "Sí, la mandé" apretado por error** (2026-11-12,
-                    lo pidió el cliente). Vuelve a Borrador, junto con las
-                    alternativas del grupo, y el servidor borra la fecha de
-                    envío y la vigencia: corren de nuevo cuando de verdad se
-                    mande. */}
-                {estado === ESTADO_PRESUPUESTO.enviado && (
-                  <button type="button" className="boton min-h-[44px]"
-                    onClick={() => {
-                      if (confirm('¿Todavía no se mandó? Vuelve a Borrador: deja de contar en el calendario y su vigencia corre de nuevo cuando la mandes.')) {
-                        setEstado(ESTADO_PRESUPUESTO.borrador);
-                      }
-                    }}>Todavía no se mandó</button>
-                )}
-                <button type="button" className="boton min-h-[44px] hover:!border-rojo-fuerte hover:text-rojo-texto"
-                  onClick={() => setEstado(ESTADO_PRESUPUESTO.rechazado)}>Se perdió…</button>
-                <AyudaCorta tema="estadoCotizacion" />
-              </div>
-            )}
-
-
-
-              {renegociando && (
-                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ambar/50
-                                bg-ambar/10 px-3 py-2 text-[15px]">
-                  <span className="flex-1 font-semibold text-ambar-texto">
-                    Cambiaste una cotización ya enviada. ¿Están negociando?
-                    <span className="block text-[14px] font-normal text-hueso/75">
-                      El cliente ve lo nuevo en el mismo link.
-                    </span>
-                  </span>
-                  <button type="button" className="boton min-h-[44px]"
-                    onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Pasar a Negociación</button>
-                </div>
-              )}
-              {p && (p.enviada || p.validoHasta) && (
-                <p className="text-[14px] text-hueso/75">
-                  {p.enviada ? <>Enviada el {enPalabras(p.enviada)}. </> : null}
-                  {p.validoHasta ? <>Vigente hasta el {enPalabras(p.validoHasta)}.</> : null}
-                </p>
-              )}
-              {p && !mandada && !ganada && (
-                <p className="text-[14px] text-hueso/75">
-                  Todavía no se manda: no vence y no aparece en el calendario de reservas.
-                </p>
-              )}
-              {/* Antes de mandarla, los botones están en el próximo paso, grandes;
-                  acá aparecen después, para volver a mandarla. Dos veces en la
-                  misma pantalla era no saber cuál apretar. */}
-              {p && (mandada || ganada) && (
-                <div>
-                  <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                    Mandarla de nuevo
-                  </p>
-                  <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} />
-                </div>
-              )}
-              {!ganada && !cancelada && (
-                <div>
-                  <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                    Recordarme
-                  </p>
-                  <div className="flex flex-wrap items-end gap-3">
-                    {([
-                      ['Sin respuesta, a los días', segTxt, setSegTxt, datos.seguimiento?.dias ?? 5, 'seguimientoDias'],
-                      ['Días antes del evento', avisoTxt, setAvisoTxt, datos.seguimiento?.antesEvento ?? 14, 'avisoEvento']
-                    ] as const).map(([etiqueta, valor, poner, defecto, ayuda]) => (
-                      <label key={etiqueta} className="block">
-                        <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}<AyudaCorta tema={ayuda} /></span>
-                        <input type="number" min={0} max={365} value={valor} className={`${ENTRADA} w-24`}
-                          placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
-                      </label>
-                    ))}
-                  </div>
-                  <p className="mt-1 text-[13px] text-hueso/65">En blanco rige Configuración. En 0 no pregunta.</p>
-                </div>
-              )}
-            </Seccion>
-            )}
 
             <fieldset disabled={cancelada} className="min-w-0 space-y-4">
             {/* ---------- Documento ---------- */}
@@ -1879,6 +1760,126 @@ export default function CotizacionDialogo({
             </div>
 
             </Seccion>
+
+            {/* **Primero el documento y el pago; al final, mandarla y el seguimiento**
+                (2026-11-12, lo pidió el cliente). Mientras no se mande, el cuadro
+                de mandarla va antes del seguimiento, que recién corre después. */}
+            {mandarPrimero && hitoEnvio}
+
+            {/* ---------- Seguimiento ---------- */}
+            {!cancelada && (
+            <Seccion tono="rosa" icono="📨" titulo="Seguimiento y envío" ayuda="seguimiento">
+            {/* **Sin botones de estado** (2026-11-12, lo pidió el cliente:
+                *"se dobla información"*). El camino de arriba ya dice en qué
+                va, y los botones *Candidato · Borrador · Enviada…* lo
+                repetían; peor, apretar el marcado lo devolvía a Borrador sin
+                avisar y con eso desaparecía *Marcar ganada*. Ahora el estado
+                avanza solo con acciones: *Sí, la mandé* (Enviada), *Están
+                negociando*, *Se perdió…* y *Marcar ganada*. */}
+            {!ganada && estado === ESTADO_PRESUPUESTO.rechazado ? (
+              <div className="rounded-lg border-2 border-hueso/25 p-3">
+                <p className="text-[16px] font-bold">Se perdió</p>
+                <p className="mb-1 mt-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                  Por qué
+                </p>
+                <Elegir etiqueta="Motivo" opciones={MOTIVOS_PERDIDA} valor={motivo} onElegir={setMotivo} />
+                <input value={motivo} onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="u otro motivo" className={`${ENTRADA} mt-2 sm:w-80`} />
+                {puedeEditar && (
+                  <button type="button" className="boton mt-3 min-h-[44px]"
+                    onClick={() => { setEstado(p?.enviada ? ESTADO_PRESUPUESTO.enviado : ESTADO_PRESUPUESTO.borrador); setMotivo(''); }}>
+                    No se perdió: volver a abrirla
+                  </button>
+                )}
+              </div>
+            ) : !ganada && puedeEditar && p && (
+              <div className="flex flex-wrap items-center gap-2">
+                {estado === ESTADO_PRESUPUESTO.negociacion && (
+                  <span className="rounded-full border-2 border-ambar/60 bg-ambar/10 px-3 py-1 text-[14px]
+                                   font-semibold text-ambar-texto">En negociación</span>
+                )}
+                {estado === ESTADO_PRESUPUESTO.enviado && (
+                  <button type="button" className="boton min-h-[44px]"
+                    onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Están negociando</button>
+                )}
+                {/* **Deshacer un "Sí, la mandé" apretado por error** (2026-11-12,
+                    lo pidió el cliente). Vuelve a Borrador, junto con las
+                    alternativas del grupo, y el servidor borra la fecha de
+                    envío y la vigencia: corren de nuevo cuando de verdad se
+                    mande. */}
+                {estado === ESTADO_PRESUPUESTO.enviado && (
+                  <button type="button" className="boton min-h-[44px]"
+                    onClick={() => {
+                      if (confirm('¿Todavía no se mandó? Vuelve a Borrador: deja de contar en el calendario y su vigencia corre de nuevo cuando la mandes.')) {
+                        setEstado(ESTADO_PRESUPUESTO.borrador);
+                      }
+                    }}>Todavía no se mandó</button>
+                )}
+                <button type="button" className="boton min-h-[44px] hover:!border-rojo-fuerte hover:text-rojo-texto"
+                  onClick={() => setEstado(ESTADO_PRESUPUESTO.rechazado)}>Se perdió…</button>
+                <AyudaCorta tema="estadoCotizacion" />
+              </div>
+            )}
+
+
+
+              {renegociando && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ambar/50
+                                bg-ambar/10 px-3 py-2 text-[15px]">
+                  <span className="flex-1 font-semibold text-ambar-texto">
+                    Cambiaste una cotización ya enviada. ¿Están negociando?
+                    <span className="block text-[14px] font-normal text-hueso/75">
+                      El cliente ve lo nuevo en el mismo link.
+                    </span>
+                  </span>
+                  <button type="button" className="boton min-h-[44px]"
+                    onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Pasar a Negociación</button>
+                </div>
+              )}
+              {p && (p.enviada || p.validoHasta) && (
+                <p className="text-[14px] text-hueso/75">
+                  {p.enviada ? <>Enviada el {enPalabras(p.enviada)}. </> : null}
+                  {p.validoHasta ? <>Vigente hasta el {enPalabras(p.validoHasta)}.</> : null}
+                </p>
+              )}
+              {p && !mandada && !ganada && (
+                <p className="text-[14px] text-hueso/75">
+                  Todavía no se manda: no vence y no aparece en el calendario de reservas.
+                </p>
+              )}
+              {/* Antes de mandarla, los botones están en el próximo paso, grandes;
+                  acá aparecen después, para volver a mandarla. Dos veces en la
+                  misma pantalla era no saber cuál apretar. */}
+              {p && (mandada || ganada) && (
+                <div>
+                  <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                    Mandarla de nuevo
+                  </p>
+                  <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} />
+                </div>
+              )}
+              {!ganada && !cancelada && (
+                <div>
+                  <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                    Recordarme
+                  </p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    {([
+                      ['Sin respuesta, a los días', segTxt, setSegTxt, datos.seguimiento?.dias ?? 5, 'seguimientoDias'],
+                      ['Días antes del evento', avisoTxt, setAvisoTxt, datos.seguimiento?.antesEvento ?? 14, 'avisoEvento']
+                    ] as const).map(([etiqueta, valor, poner, defecto, ayuda]) => (
+                      <label key={etiqueta} className="block">
+                        <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}<AyudaCorta tema={ayuda} /></span>
+                        <input type="number" min={0} max={365} value={valor} className={`${ENTRADA} w-24`}
+                          placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[13px] text-hueso/65">En blanco rige Configuración. En 0 no pregunta.</p>
+                </div>
+              )}
+            </Seccion>
+            )}
 
             {/* **El próximo paso va al final** (2026-11-11, lo pidió el
                 cliente: *"primero hacemos el seguimiento, los datos… y de ahí

@@ -2377,9 +2377,11 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   respaldo, después con el enlace pelado—: un bloqueo de pestaña nueva no
   avisa, `window.open` sí (devuelve `null`). Y la pregunta trae *¿No se
   abrió WhatsApp?* con *Abrir de nuevo* y *Copiar el mensaje*.
-- **El cuadro de mandarla va arriba de *Seguimiento y envío*** mientras no
-  se haya mandado (2026-11-12, lo pidió el cliente). Los demás próximos
-  pasos —el anticipo, *Marcar ganada*, el saldo— siguen al final.
+- **El orden del paso 4** (2026-11-12, lo pidió el cliente): arriba
+  *Documento* y *El pago*; al final, mandarla y *Seguimiento y envío*.
+  Mientras no se haya mandado, el cuadro de mandarla va **antes** del
+  seguimiento. Ya mandada, el próximo paso —el anticipo, *Marcar ganada*,
+  el saldo— vuelve a ir al final, debajo del seguimiento.
 - **La vigencia corre desde el envío**, no desde la creación: una nueva nace
   sin `Válido hasta`, y la primera vez que queda Enviada o en Negociación
   —con el botón o eligiendo la etapa a mano— el servidor anota `Enviada` y
@@ -2445,7 +2447,7 @@ Contrato**, y cada uno de los dos últimos termina en su propio próximo paso.
 
 | Paso | Qué tiene | Su próximo paso |
 |---|---|---|
-| **4 · Envío** | En qué va, mandarla, recordatorios, documento, condiciones de pago y los pagos del cliente | Mándasela → esperando el anticipo → **Marcar ganada** |
+| **4 · Envío** | En qué va, documento, condiciones de pago y los pagos del cliente, y al final mandarla y los recordatorios | Mándasela → esperando el anticipo → **Marcar ganada** |
 | **5 · Contrato** | Datos, horario, Ley 20.393, acuerdos, cambios de fecha y cancelación, mandar el contrato, el firmado | Mándale el contrato → esperando el firmado → **Marcar ganada** → el saldo |
 
 - **Marcar ganada aparece en los dos** (`puedeGanar()` en `cobros.ts`, la
