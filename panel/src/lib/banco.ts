@@ -154,6 +154,34 @@ export const titularDe = (b: Banco | undefined, nombre: string) =>
  * que la planilla salga pareja — y un formato pareja es lo que las cargas
  * masivas de los bancos aceptan.
  */
+/**
+ * **Si el RUT tiene su dígito verificador bien** (2026-11-12, lo pidió el
+ * cliente: *"un control de formato en el RUT"*). Es el módulo 11 del SII:
+ * atrapa un dígito mal tecleado, que en un contrato o una factura es un
+ * documento a nombre de nadie. Vacío no es inválido: no se ha escrito.
+ */
+export function rutValido(rut: string): boolean {
+  const m = rutLimpio(rut).match(/^(\d{7,8})-([\dK])$/);
+  if (!m) return false;
+  let suma = 0, factor = 2;
+  for (let i = m[1].length - 1; i >= 0; i--) {
+    suma += Number(m[1][i]) * factor;
+    factor = factor === 7 ? 2 : factor + 1;
+  }
+  const resto = 11 - (suma % 11);
+  const dv = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+  return dv === m[2];
+}
+
+/** Qué decir bajo el campo: nada si está bien o vacío. Avisa, no bloquea. */
+export function avisoRut(rut: string): string {
+  const t = String(rut ?? '').trim();
+  if (!t) return '';
+  if (!/^(\d{7,8})-([\dK])$/.test(rutLimpio(t))) return 'No parece un RUT: se escribe como 12.345.678-9.';
+  if (!rutValido(t)) return 'El dígito verificador no calza: revisa el RUT.';
+  return '';
+}
+
 export function rutLimpio(rut: string): string {
   const crudo = String(rut ?? '').replace(/[.\s]/g, '').toUpperCase();
   const m = crudo.match(/^(\d{7,8})-?([\dK])$/);

@@ -174,29 +174,25 @@ async function amable<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * **Lo leído se recuerda tres segundos** (2026-11-12). Una sola petición
- * del panel suele leer la misma pestaña varias veces —guardar una
- * cotización lee las cotizaciones, después las líneas, después otra vez—, y
- * cada lectura cuenta contra el límite de 60 por minuto. Dos lecturas
- * simultáneas de la misma pestaña, además, comparten la misma llamada.
+ * **Dos lecturas simultáneas de la misma pestaña comparten la llamada**
+ * (2026-11-12), y nada más: apenas contesta, se olvida.
  *
- * **Cualquier escritura en esa pestaña la olvida en el acto** (`olvidar()`),
- * así que una instancia nunca lee lo que ella misma acaba de cambiar como
- * si no hubiera pasado. Lo que puede ver es lo escrito por **otra**
- * instancia de Vercel hasta tres segundos tarde, que es lo mismo que ya
- * pasaba con dos pestañas del navegador abiertas.
+ * **Se probó recordar lo leído tres segundos, y se sacó el mismo día.** En
+ * Vercel cada ruta corre aparte, así que una escritura en una ruta no le
+ * borraba el recuerdo a otra: *Marcar ganada* escribía por `/convertir`, la
+ * lista que se recargaba al cerrar salía de `/api/presupuestos` con la
+ * cotización todavía sin ganar, y al volver a abrirla ofrecía ganarla otra
+ * vez. Un dato viejo que parece nuevo es peor que una lectura de más.
  */
-const RECUERDO_MS = 3000;
-const lecturas = new Map<string, { hasta: number; filas: Promise<string[][]> }>();
+const lecturas = new Map<string, Promise<string[][]>>();
 
 function olvidar(hoja: string) { lecturas.delete(clave(hoja)); }
 
 /** Lee una hoja entera. Devuelve [] si está vacía. */
 export async function leerHoja(hoja: string): Promise<string[][]> {
   const k = clave(hoja);
-  const ahora = Date.now();
   const hay = lecturas.get(k);
-  if (hay && hay.hasta > ahora) return (await hay.filas).map((f) => [...f]);
+  if (hay) return (await hay).map((f) => [...f]);
   const filas = amable(async () => {
     const res = await sheets().spreadsheets.values.get({
       spreadsheetId: idPlanilla(),
@@ -206,9 +202,10 @@ export async function leerHoja(hoja: string): Promise<string[][]> {
     });
     return (res.data.values ?? []).map((f) => f.map((c) => (c == null ? '' : String(c))));
   });
-  lecturas.set(k, { hasta: ahora + RECUERDO_MS, filas });
-  // Una lectura que falla no se recuerda: la siguiente vuelve a preguntar.
-  filas.catch(() => { if (lecturas.get(k)?.filas === filas) lecturas.delete(k); });
+  lecturas.set(k, filas);
+  // Contestó (bien o mal): la siguiente lectura vuelve a preguntar.
+  const soltar = () => { if (lecturas.get(k) === filas) lecturas.delete(k); };
+  filas.then(soltar, soltar);
   // Copias, para que quien la modifique no le cambie la fila a otro.
   return (await filas).map((f) => [...f]);
 }

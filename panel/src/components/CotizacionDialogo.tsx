@@ -43,7 +43,8 @@ import {
 import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { achicarFoto } from '@/lib/achicarFoto';
-import { faltaDelCliente } from '@/lib/contrato';
+import { faltaDelCliente, partirHorario, textoHorario, moverHora, PASO_HORARIO } from '@/lib/contrato';
+import CampoRut from './CampoRut';
 import { frasesCancelacion } from '@/lib/cancelacion';
 import CancelarEvento from './CancelarEvento';
 import BloqueCancelada from './BloqueCancelada';
@@ -98,6 +99,52 @@ function estadoDelDia(fecha: string, fechas: DatosCotizar['fechas']): string {
   if (esExclusiva(d.estado)) return 'Ese día está arrendado en exclusiva.';
   if (esPrivada(d.estado)) return 'Ese día es privado.';
   return 'Ese día es público: el show ecuestre va incluido.';
+}
+
+/**
+ * **El horario se elige, no se escribe** (2026-11-12, lo pidió el cliente:
+ * *"elegible de forma fácil, estilo PlayStation… siempre el mismo
+ * formato"*). Desde y hasta con − y + de media hora; se guarda como
+ * `13:00 a 18:00`. En blanco rige el de Configuración, y lo dice.
+ */
+function ElegirHorario({ valor, deSiempre, onCambio }: {
+  valor: string; deSiempre: string; onCambio: (v: string) => void;
+}) {
+  const propio = partirHorario(valor);
+  const base = propio ?? partirHorario(deSiempre) ?? { desde: '13:00', hasta: '18:00' };
+  const poner = (desde: string, hasta: string) => onCambio(textoHorario(desde, hasta));
+  const fila = (rotulo: string, hora: string, cambiar: (h: string) => void) => (
+    <div className="flex items-center gap-2">
+      <span className="w-14 text-[14px] font-semibold text-hueso/75">{rotulo}</span>
+      <button type="button" aria-label={`${rotulo}: media hora antes`}
+        className="boton h-12 w-12 !text-[22px] !font-bold"
+        onClick={() => cambiar(moverHora(hora, -PASO_HORARIO))}>−</button>
+      <span className="w-20 text-center text-[22px] font-bold tabular-nums">{hora}</span>
+      <button type="button" aria-label={`${rotulo}: media hora después`}
+        className="boton h-12 w-12 !text-[22px] !font-bold"
+        onClick={() => cambiar(moverHora(hora, PASO_HORARIO))}>+</button>
+    </div>
+  );
+  return (
+    <div className="space-y-2">
+      {fila('Desde', base.desde, (h) => poner(h, base.hasta))}
+      {fila('Hasta', base.hasta, (h) => poner(base.desde, h))}
+      {base.hasta <= base.desde && (
+        <p className="text-[13px] text-hueso/70">Termina después de medianoche.</p>
+      )}
+      {!valor.trim() ? (
+        <p className="text-[13px] text-hueso/70">El de siempre, de Configuración. Con − y + lo cambias para este evento.</p>
+      ) : !propio ? (
+        <p className="text-[13px] font-semibold text-ambar-texto">
+          Estaba escrito a mano: “{valor}”. Con − y + queda en el formato de siempre.
+        </p>
+      ) : valor !== deSiempre && (
+        <button type="button" className="boton min-h-[40px]" onClick={() => onCambio('')}>
+          Volver al de siempre ({deSiempre})
+        </button>
+      )}
+    </div>
+  );
 }
 
 function Elegir({ opciones, valor, onElegir, etiqueta }: {
@@ -860,8 +907,12 @@ export default function CotizacionDialogo({
     ? `Crea la reserva de ${personasDelEvento} personas y le toma el cupo al ${enPalabras(fechaReal)}.`
     : 'Para ganarla, ponle la fecha en el paso 2.';
   const saldo = cobrado.falta > 0 ? (
-    <Hito tono="ambar" titulo={`Saldo por cobrar: ${enPesos(cobrado.falta)}`}
-      bajada={cond.saldoHasta ? `Hasta el ${enPalabras(cond.saldoHasta)}.` : `${cond.dias} días antes del evento.`}>
+    // Solo se muestra con la cotización ganada (2026-11-12, lo pidió el
+    // cliente: que el paso diga qué falta para completar la reserva y no
+    // vuelva a ofrecer ganarla).
+    <Hito tono="ambar" titulo={`✓ Ganada${firmado ? ' y firmada' : ''} · falta el saldo: ${enPesos(cobrado.falta)}`}
+      bajada={`Lo que falta para completar la reserva. Se paga ${cond.saldoHasta
+        ? `hasta el ${enPalabras(cond.saldoHasta)}` : `${cond.dias} días antes del evento`}; cuando pague, márcalo acá y la reserva queda Pagada.`}>
       {puedeEditar && (
         <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
           className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
@@ -1628,8 +1679,13 @@ export default function CotizacionDialogo({
                         <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                           {etiqueta}
                         </span>
-                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
-                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                        {k === 'rut' ? (
+                          <CampoRut valor={facturacion.rut} placeholder={ejemplo} className={ENTRADA}
+                            onCambio={(v) => setFacturacion({ ...facturacion, rut: v })} />
+                        ) : (
+                          <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+                            onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                        )}
                       </label>
                     ))}
                   </div>
@@ -1909,18 +1965,22 @@ export default function CotizacionDialogo({
                         <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                           {etiqueta}
                         </span>
-                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
-                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                        {k === 'rut' ? (
+                          <CampoRut valor={facturacion.rut} placeholder={ejemplo} className={ENTRADA}
+                            onCambio={(v) => setFacturacion({ ...facturacion, rut: v })} />
+                        ) : (
+                          <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+                            onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                        )}
                       </label>
                     ))}
-                    <label className="block">
+                    <div className="sm:col-span-2">
                       <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                         Horario del evento
                       </span>
-                      <input value={horario} className={ENTRADA}
-                        placeholder={datos.contrato?.horario ?? '13:00 a 18:00'}
-                        onChange={(e) => setHorario(e.target.value)} />
-                    </label>
+                      <ElegirHorario valor={horario} onCambio={setHorario}
+                        deSiempre={datos.contrato?.horario ?? '13:00 a 18:00'} />
+                    </div>
                   </div>
                   <p className="text-[13px] text-hueso/60">
                     {documento === DOCUMENTO.factura

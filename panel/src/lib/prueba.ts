@@ -40,7 +40,7 @@ import { diaParaReservaManual, queLeHizo, deshacerDia, cupoParaGanar } from './d
 import { valorSeguro } from './celdas.ts';
 import { tranquilidadDeCotizacion, devolucionSugerida, faltaDevolver, frasesCancelacion,
          CONCEPTO_DEVOLUCION } from './cancelacion.ts';
-import { tranquilidadDe } from './contrato.ts';
+import { tranquilidadDe, partirHorario, normalizarHorario, moverHora } from './contrato.ts';
 import { clausulasDe, comparecencia, faltaDelCliente, faltaDeEmpresa, horarioDe, fechaLarga,
          RAYA, LEY_20393, type DatosContrato } from './contrato.ts';
 import {
@@ -117,7 +117,7 @@ import { ASISTENCIA } from './columnas.ts';
 import { lineaDeSemana, listaDeDias, MAX_AVISOS } from './semana.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
          sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
-         type Banco } from './banco.ts';
+         type Banco, rutValido, avisoRut } from './banco.ts';
 
 let fallos = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fallos++; console.log('  FALLA: ' + m); } };
@@ -4313,6 +4313,24 @@ console.log('\nVista gerencia');
      'la columna Vista gerencia se lee; en blanco, o en una planilla vieja, es no');
   ok(aFilasUsuarios(cuentasG)[0][5] === 'Vista gerencia' && aFilasUsuarios(cuentasG)[1][5] === 'Sí',
      'y se escribe al final, sin mover las columnas de antes');
+}
+
+{
+  console.log('\nEl RUT y el horario del contrato');
+  ok(rutValido('12.345.678-5') && rutValido('12345678-5') && avisoRut('12345678-5') === '',
+     'un RUT con su dígito verificador bien es válido, con o sin puntos');
+  ok(!rutValido('12.345.678-9') && /dígito verificador/.test(avisoRut('12.345.678-9')),
+     'un dígito verificador que no calza se avisa');
+  ok(rutValido('11.111.111-1') && avisoRut('') === '' && /No parece/.test(avisoRut('hola')),
+     'vacío no avisa, y lo que no tiene forma de RUT dice cómo se escribe');
+  ok(normalizarHorario('13.00-18.00') === '13:00 a 18:00'
+     && normalizarHorario('13 hasta 18') === '13:00 a 18:00'
+     && normalizarHorario('9:30 a 23:00') === '09:30 a 23:00',
+     'el horario escrito a mano queda en el formato de siempre');
+  ok(normalizarHorario('todo el día') === 'todo el día' && partirHorario('') === null,
+     'lo que no se entiende se deja tal cual, sin inventar horas');
+  ok(moverHora('23:30', 30) === '00:00' && moverHora('00:00', -30) === '23:30' && moverHora('13:00', 30) === '13:30',
+     'las horas se corren de a media hora y dan la vuelta a medianoche');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

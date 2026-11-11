@@ -21,6 +21,7 @@ import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
+import CampoRut from './CampoRut';
 import { avisar } from './AvisoFlotante';
 import {
   buscarClientes, porNombreCliente, type Cliente, type DatosCliente
@@ -192,9 +193,9 @@ export default function ClientesEditor() {
         )}
       </Campo>
       <Campo etiqueta="RUT" ancho="w-full">
-        <input type="text" value={d.rut} className={ENTRADA}
+        <CampoRut valor={d.rut} className={ENTRADA} etiqueta="RUT"
           placeholder="Lo pide el contrato, no la cotización"
-          onChange={(e) => poner('rut', e.target.value)} />
+          onCambio={(v) => poner('rut', v)} />
       </Campo>
       <Campo etiqueta="Domicilio" ancho="w-full">
         <input type="text" value={d.domicilio} className={ENTRADA}
