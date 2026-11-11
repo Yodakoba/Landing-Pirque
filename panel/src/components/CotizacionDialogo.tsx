@@ -465,15 +465,42 @@ export default function CotizacionDialogo({
     setFirmado(null); avisar('Contrato firmado quitado'); onCambio();
   }
 
-  /** Marca o desmarca la revisión: solo quien hace los pagos. */
+  /**
+   * Marca o desmarca la revisión: solo quien hace los pagos.
+   *
+   * **Un error se dice al lado del cobro, no al pie de la ventana**
+   * (2026-11-11): el aviso de error vive al final de una ventana larga, y
+   * quien apretó *Marcar revisado* veía el botón quedarse igual sin saber
+   * por qué. Una respuesta que no es JSON —un tiempo agotado— tampoco puede
+   * perderse en silencio.
+   */
+  const [revisando, setRevisando] = useState('');
+  const [errorPagos, setErrorPagos] = useState('');
   async function revisar(c: Cobro, revisado: boolean) {
-    const r = await fetch('/api/presupuestos/cobros', {
-      method: 'PATCH', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: c.id, revisado })
-    });
-    const d = await r.json();
-    if (d.error) return setError(d.error);
-    setCobros(d.cobros); avisar(revisado ? 'Cobro revisado' : 'Revisión quitada'); onCambio();
+    setRevisando(c.id); setErrorPagos('');
+    try {
+      const r = await fetch('/api/presupuestos/cobros', {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: c.id, revisado })
+      });
+      const d = await r.json().catch(() => ({ error: `No se pudo guardar (error ${r.status}). Prueba de nuevo.` }));
+      if (d.error || !Array.isArray(d.cobros)) {
+        const msg = d.error || 'No se pudo guardar. Prueba de nuevo.';
+        setErrorPagos(msg); avisar(msg, 'atencion'); return;
+      }
+      setCobros(d.cobros);
+      const quedo = (d.cobros as Cobro[]).find((x) => x.id === c.id);
+      if (quedo && !!quedo.revisadoPor !== revisado) {
+        const msg = 'La planilla no guardó la revisión. Prueba de nuevo.';
+        setErrorPagos(msg); avisar(msg, 'atencion'); return;
+      }
+      avisar(revisado ? 'Cobro revisado' : 'Revisión quitada'); onCambio();
+    } catch {
+      const msg = 'No hubo conexión con el panel. Prueba de nuevo.';
+      setErrorPagos(msg); avisar(msg, 'atencion');
+    } finally {
+      setRevisando('');
+    }
   }
 
   async function deshacerCobro(c: Cobro) {
@@ -1276,9 +1303,11 @@ export default function CotizacionDialogo({
                               </label>
                             )}
                             {puedePagar && (
-                              <button type="button" onClick={() => void revisar(c, !c.revisadoPor)}
+                              <button type="button" disabled={revisando !== ''}
+                                onClick={() => void revisar(c, !c.revisadoPor)}
                                 className={`boton ${c.revisadoPor ? '' : '!border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
-                                {c.revisadoPor ? 'Quitar revisión' : '✓ Marcar revisado'}
+                                {revisando === c.id ? 'Guardando…'
+                                  : c.revisadoPor ? 'Quitar revisión' : '✓ Marcar revisado'}
                               </button>
                             )}
                             {puedeEditar && (!c.revisadoPor || puedePagar) && (
@@ -1289,6 +1318,10 @@ export default function CotizacionDialogo({
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {errorPagos && (
+                    <p role="alert" className="mt-2 rounded border border-rojo-fuerte/60 bg-rojo/10 px-3 py-2
+                                               text-[14px] font-semibold text-rojo-texto">{errorPagos}</p>
                   )}
                   {puedeEditar && cobrado.falta > 0 && (
                     <div className="mt-3 space-y-2">
