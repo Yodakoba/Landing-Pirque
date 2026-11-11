@@ -22,7 +22,7 @@ import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
 import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
-import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto, yaEstaEnLaCotizacion, cambiarCantidad,
+import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, grupoSinGanar, lineaDeProducto, yaEstaEnLaCotizacion, cambiarCantidad,
          alternativasDe, letraDe, principalDe, sigueViva, vivasDelGrupo, faltaElegir, paraElLink,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
@@ -3717,6 +3717,20 @@ console.log('\nCotizaciones, fase 2');
   ok(otrasAlternativas(pre({ id: 'X' }), [pre({ id: 'X' }), pre({ id: 'Y', grupo: 'X' })])
        .map((p) => p.id).join() === 'Y',
      'la original sin grupo es la cabeza de su grupo');
+  {
+    const g = [
+      pre({ id: 'A', grupo: 'A', estado: ESTADO_PRESUPUESTO.aceptado, idReserva: 'R1', enviada: '2026-11-10' }),
+      pre({ id: 'B', grupo: 'A', estado: ESTADO_PRESUPUESTO.noElegida, enviada: '2026-11-10' }),
+      pre({ id: 'C', grupo: 'A', estado: ESTADO_PRESUPUESTO.rechazado, enviada: '2026-11-10' }),
+      pre({ id: 'D', grupo: 'D', estado: ESTADO_PRESUPUESTO.noElegida })
+    ];
+    const r = grupoSinGanar(g[0], g);
+    ok(r.map((x) => `${x.id}:${x.estado}`).join() === 'A:Enviada,B:Enviada',
+       'deshacer una ganada devuelve a carrera la ganada y su no elegida; la perdida y otro grupo no se tocan');
+    ok(grupoSinGanar(pre({ id: 'X', estado: ESTADO_PRESUPUESTO.aceptado, enviada: '' }), [])[0].estado
+         === ESTADO_PRESUPUESTO.borrador,
+       'una ganada que nunca se mandó vuelve a borrador, no a enviada');
+  }
   ok(!cuentaComoPosible(pre({ estado: ESTADO_PRESUPUESTO.noElegida }), HOY),
      'una no elegida ya no es gente posible');
 

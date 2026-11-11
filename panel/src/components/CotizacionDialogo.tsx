@@ -47,6 +47,7 @@ import { faltaDelCliente, partirHorario, textoHorario, moverHora, PASO_HORARIO }
 import CampoRut from './CampoRut';
 import { frasesCancelacion } from '@/lib/cancelacion';
 import CancelarEvento from './CancelarEvento';
+import CorregirGanada from './CorregirGanada';
 import BloqueCancelada from './BloqueCancelada';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
@@ -255,7 +256,9 @@ export default function CotizacionDialogo({
   /** Por dónde se intentó mandar: la pregunta ofrece abrirlo de nuevo si no se abrió. */
   const [viaEnvio, setViaEnvio] = useState<'' | 'whatsapp' | 'correo' | 'link'>('');
   /** La ventana *¿Marcarla ganada?*, abierta. */
-  const [confirmandoGanar, setConfirmandoGanar] = useState(false);
+  /** El id de la alternativa que se va a marcar ganada, o '' si no se pregunta. */
+  const [confirmandoGanar, setConfirmandoGanar] = useState('');
+  const [corrigiendo, setCorrigiendo] = useState(false);
   /** El día en que se le mandó el contrato (lo pone el servidor). */
   const [contratoEnviado, setContratoEnviado] = useState(p?.contratoEnviado ?? '');
   const [cancelando, setCancelando] = useState(false);
@@ -282,6 +285,18 @@ export default function CotizacionDialogo({
     fetch(`/api/presupuestos/cobros?id=${encodeURIComponent(p.id)}`).then((r) => r.json())
       .then((d) => d.cobros && setCobros(d.cobros)).catch(() => {});
   }, [p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * **Lo pagado en las otras alternativas** (2026-11-12): lo pagado es del
+   * evento, así que para ofrecer *Ganó la B* cuenta también el anticipo
+   * anotado en la A. Al ganar, el servidor pasa esos cobros a la ganadora.
+   */
+  const [cobrosOtras, setCobrosOtras] = useState<Cobro[]>([]);
+  useEffect(() => {
+    if (!p || alternativas.length < 2) return;
+    fetch(`/api/presupuestos/cobros?id=${encodeURIComponent(p.id)}&grupo=1`).then((r) => r.json())
+      .then((d) => d.cobros && setCobrosOtras(d.cobros.filter((c: Cobro) => c.presupuesto !== p.id)))
+      .catch(() => {});
+  }, [p?.id, alternativas.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const [facturacion, setFacturacion] = useState({
     empresa: fichaInicial?.empresa ?? '', rut: fichaInicial?.rut ?? '',
     giro: fichaInicial?.giro ?? '', domicilio: fichaInicial?.domicilio ?? ''
@@ -470,24 +485,26 @@ export default function CotizacionDialogo({
     onCerrar();
   }
 
-  async function ganar() {
-    if (!p) return;
+  async function ganar(objetivo: string) {
+    if (!p || !objetivo) return;
     // La pregunta la hizo antes la ventana *¿Marcarla ganada?* (`confirmandoGanar`).
-    setConfirmandoGanar(false);
+    setConfirmandoGanar('');
     // Primero se guarda lo que esté escrito, para que la reserva salga con eso.
     if (!(await guardar())) return;
     setGuardando(true);
     try {
       const r = await fetch('/api/presupuestos/convertir', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: p.id })
+        body: JSON.stringify({ id: objetivo })
       });
       const d = await r.json();
       // Que no se pierda abajo de la ventana: un ganar que falla tiene que
       // verse en el acto (2026-11-12).
       if (d.error) { avisar(d.error, 'atencion'); return setError(d.error); }
       // **Ganar se festeja** (2026-11-11): es el hito de todo el flujo.
-      avisar(`🎉 Ganada: la reserva de ${enMenus || invitados} personas ya está en el calendario`);
+      const ganadora = alternativas.find((a) => a.id === objetivo);
+      avisar(`🎉 Ganada${alts.length > 1 && ganadora ? ` la ${letraDe(ganadora, alternativas)}` : ''}: `
+        + `la reserva de ${objetivo === p.id ? personasDelEvento : genteDe(ganadora ?? p)} personas ya está en el calendario`);
       onCambio(); onCerrar();
     } finally { setGuardando(false); }
   }
@@ -872,13 +889,63 @@ export default function CotizacionDialogo({
   const resumenLink = enElLink.length > 1
     ? enElLink.map((a) => `${letraDe(a, alternativas)} ${enPesos(totalAlt(a))}`).join(' · ') : '';
 
+  /** La gente de una alternativa: la de esta ventana es la que se ve. */
+  const genteDe = (a: Presupuesto) => a.id === p?.id ? personasDelEvento
+    : lineasDe(datos.lineas ?? [], a.id).reduce((n, l) => n + (l.personas || 0), 0) || a.invitados || 0;
+  /**
+   * **Si se puede ganar cada alternativa** (2026-11-12). Con lo pagado en
+   * todo el grupo: el anticipo es del evento, aunque se haya anotado en otra.
+   */
+  const cobrosGrupo = [...cobros, ...cobrosOtras];
+  const ganable = (a: Presupuesto): { ok: boolean; falta: number } => {
+    const c = a.id === p?.id ? cond : condicionesDe(
+      { anticipo: a.anticipo, saldoDias: a.saldoDias, fecha: a.fecha }, totalAlt(a),
+      datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
+    const est = estadoCobros({ anticipo: c.anticipo, total: totalAlt(a) }, cobrosGrupo);
+    const conContrato = a.id === p?.id ? !!firmado : !!String(a.contrato ?? '').trim();
+    const ok = (c.pct > 0 && c.anticipo > 0 && est.anticipoListo)
+      || (c.pct === 0 && estaMandada(a.id === p?.id ? estado : a.estado)) || conContrato;
+    return { ok, falta: est.faltaAnticipo };
+  };
+  /** Para *Corregir la ganada*: a qué otra alternativa se pueden pasar los pagos. */
+  const vivasParaCorregir = alts.filter((a) => a.id !== p?.id
+    && !([ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.cancelada] as string[]).includes(estadoNormal(a.estado)));
+  /** Con varias alternativas en carrera, alguna ya se puede ganar. */
+  const grupoListo = porElegir && vivas.some((a) => ganable(a).ok);
+
   /** El botón grande de ganar, el mismo en los dos pasos. */
   // Con alternativas en carrera también se ofrece: ganar una es elegirla
   // (2026-11-12, lo decidió el cliente). La confirmación dice cuáles quedan
   // como No elegida.
-  const botonGanar = sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar ? (
+  // **Con varias alternativas, un botón por cada una** (2026-11-12, lo pidió
+  // el cliente: estaba en la A, la marcó ganada y el cliente había elegido la
+  // B). Cada botón dice la letra y el total: se elige cuál ganó, no se gana
+  // "esta" sin mirar.
+  const botonGanar = sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar && porElegir ? (
+    <div className="space-y-2">
+      <p className="text-[15px] font-semibold">¿Con cuál alternativa se quedó el cliente?</p>
+      <div className={`grid gap-2 ${vivas.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+        {vivas.map((a) => {
+          const g = ganable(a);
+          const l = letraDe(a, alternativas);
+          return (
+            <button key={a.id} type="button" disabled={guardando || !g.ok}
+              onClick={() => setConfirmandoGanar(a.id)}
+              className={`tecla flex min-h-[84px] flex-col items-center justify-center rounded-xl border-2 px-4 py-2
+                         disabled:cursor-not-allowed ${g.ok
+                ? 'border-verde-fuerte bg-verde-fuerte text-tinta shadow-md hover:brightness-110'
+                : 'border-hueso/25 text-hueso/70'}`}>
+              <span className="text-[20px] font-extrabold uppercase tracking-wide">✓ Ganó la {l}</span>
+              <span className="text-[15px] font-semibold">{enPesos(totalAlt(a))}{a.id === p?.id ? ' · la que estás viendo' : ''}</span>
+              {!g.ok && <span className="text-[13px]">falta el anticipo: {enPesos(g.falta)}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ) : esFecha(fechaReal) && puedeEditar ? (
     <span className="flex items-center gap-1">
-      <button type="button" disabled={guardando} onClick={() => setConfirmandoGanar(true)}
+      <button type="button" disabled={guardando} onClick={() => setConfirmandoGanar(p?.id ?? '')}
         className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
                    px-6 text-[20px] font-extrabold uppercase tracking-wide text-tinta
                    shadow-md hover:brightness-110 disabled:opacity-50">
@@ -918,7 +985,7 @@ export default function CotizacionDialogo({
   // arriba, con *Abrir la elegida*.
   /** Si el próximo paso del 4 es mandarla: ese cuadro va arriba, no al final. */
   const mandarPrimero = !!p && !cancelada && !noQuedo && !ganada
-    && !(anticipoPagado || (mandada && cond.pct === 0)) && !mandada;
+    && !(anticipoPagado || (mandada && cond.pct === 0) || grupoListo) && !mandada;
   const hitoEnvio: React.ReactNode = !p || cancelada || noQuedo ? null
     : ganada ? (
       saldo && firmado ? saldo : (
@@ -928,7 +995,7 @@ export default function CotizacionDialogo({
             onClick={() => setPaso(5)}>Ir al paso 5: Contrato →</button>
         </Hito>
       )
-    ) : anticipoPagado || (mandada && cond.pct === 0) ? (
+    ) : anticipoPagado || (mandada && cond.pct === 0) || grupoListo ? (
       <Hito tono={sinCupo ? 'ambar' : 'verde'}
         titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
         bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar}>
@@ -1894,6 +1961,13 @@ export default function CotizacionDialogo({
                 ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
                 : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
               <span className="flex-1" />
+              {ganada && !cancelada && puedeEditar && (
+                <span className="inline-flex items-center">
+                  <button type="button" disabled={guardando} onClick={() => setCorrigiendo(true)}
+                    className="boton">Corregir la ganada</button>
+                  <AyudaCorta tema="corregirGanada" />
+                </span>
+              )}
               {p && !ganada && puedeEditar && (
                 <button type="button" onClick={() => void borrar()}
                   className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
@@ -2120,6 +2194,13 @@ export default function CotizacionDialogo({
               <span className="flex-1" />
               {ganada && !cancelada && puedeEditar && (
                 <span className="inline-flex items-center">
+                  <button type="button" disabled={guardando} onClick={() => setCorrigiendo(true)}
+                    className="boton">Corregir la ganada</button>
+                  <AyudaCorta tema="corregirGanada" />
+                </span>
+              )}
+              {ganada && !cancelada && puedeEditar && (
+                <span className="inline-flex items-center">
                   <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
                     className="boton hover:!border-rojo-fuerte hover:text-rojo-texto">
                     Cancelar evento
@@ -2209,42 +2290,74 @@ export default function CotizacionDialogo({
           firmado —una cotización con *Sin anticipo*— se puede igual, pero
           lo dice y ofrece ir a subir el contrato: *"¿tienes un contrato
           firmado? si es el caso, por favor, súbelo"*. */}
-      {confirmandoGanar && p && (
-        <Dialogo titulo="¿Marcarla ganada?" onCerrar={() => setConfirmandoGanar(false)}>
-          <p className="mt-3 text-[16px]">
-            Se crea la reserva de <strong>{personasDelEvento} personas</strong> y le toma el cupo
-            al {esFecha(fechaReal) ? enPalabras(fechaReal) : 'día del evento'}.
-            {porElegir ? (
-              <> El cliente se queda con <strong>la {letra}</strong>: {vivas.filter((a) => a.id !== p?.id)
-                .map((a) => `la ${letraDe(a, alternativas)}`).join(' y ')} pasa{vivas.length > 2 ? 'n' : ''} a{' '}
-                <strong>No elegida</strong>.</>
-            ) : alts.length > 1 ? <> Las otras alternativas pasan a <strong>No elegida</strong>.</> : null}
-          </p>
-          {!anticipoPagado && !firmado && (
-            <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-3 text-[15px]">
-              <p className="font-bold text-ambar-texto">No tienes ningún anticipo ni contrato firmado.</p>
-              <p className="mt-1 text-hueso/85">
-                ¿Tienes un contrato firmado? Si es así, súbelo al sistema antes de marcarla ganada.
-              </p>
-            </div>
-          )}
-          <div className="mt-5 flex flex-wrap justify-end gap-2">
-            <button type="button" className="boton min-h-[48px]" onClick={() => setConfirmandoGanar(false)}>
-              Volver
-            </button>
-            {!anticipoPagado && !firmado && (
-              <button type="button" className="boton min-h-[48px]"
-                onClick={() => { setConfirmandoGanar(false); setPaso(5); }}>
-                📎 Ir a subir el contrato
-              </button>
+      {confirmandoGanar && p && (() => {
+        const objetivo = alts.find((a) => a.id === confirmandoGanar) ?? p;
+        const l = letraDe(objetivo, alternativas);
+        const sinRespaldo = !ganable(objetivo).ok || (objetivo.id === p.id && !anticipoPagado && !firmado
+          && cond.pct > 0);
+        const otras = vivas.filter((a) => a.id !== objetivo.id);
+        return (
+          <Dialogo titulo={alts.length > 1 ? `¿Ganó la ${l}?` : '¿Marcarla ganada?'}
+            onCerrar={() => setConfirmandoGanar('')}>
+            {/* **La letra en grande** (2026-11-12, lo pidió el cliente): se
+                marcó ganada la A cuando era la B. Acá se ve cuál es antes de
+                apretar, con su total, y qué pasa con las demás. */}
+            {alts.length > 1 && (
+              <div className="mt-3 flex items-center gap-4 rounded-xl border-2 border-verde-fuerte bg-verde/10 p-3">
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-verde-fuerte
+                                 text-[36px] font-extrabold text-tinta">{l}</span>
+                <span>
+                  <span className="block text-[18px] font-bold">Alternativa {l} · {enPesos(totalAlt(objetivo))}</span>
+                  <span className="block text-[15px] text-hueso/80">{genteDe(objetivo)} personas</span>
+                </span>
+              </div>
             )}
-            <button type="button" autoFocus disabled={guardando} onClick={() => void ganar()}
-              className="tecla min-h-[52px] rounded-xl border-2 border-verde-fuerte bg-verde-fuerte px-6
-                         text-[16px] font-bold text-tinta disabled:opacity-50">
-              {!anticipoPagado && !firmado ? 'Sí, marcarla ganada igual' : '✓ Sí, marcarla ganada'}
-            </button>
-          </div>
-        </Dialogo>
+            <p className="mt-3 text-[16px]">
+              Se crea la reserva de <strong>{genteDe(objetivo)} personas</strong> y le toma el cupo
+              al {esFecha(fechaReal) ? enPalabras(fechaReal) : 'día del evento'}.
+            </p>
+            {otras.length > 0 && (
+              <p className="mt-2 text-[15px] text-hueso/85">
+                {otras.map((a) => `La ${letraDe(a, alternativas)} (${enPesos(totalAlt(a))})`).join(' y ')}{' '}
+                pasa{otras.length > 1 ? 'n' : ''} a <strong>No elegida</strong>.
+                {cobrosOtras.length > 0 || (objetivo.id !== p.id && cobros.length > 0)
+                  ? ` Los pagos anotados en otra alternativa pasan a la ${l}.` : ''}
+              </p>
+            )}
+            {sinRespaldo && (
+              <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-3 text-[15px]">
+                <p className="font-bold text-ambar-texto">No tienes ningún anticipo ni contrato firmado.</p>
+                <p className="mt-1 text-hueso/85">
+                  ¿Tienes un contrato firmado? Si es así, súbelo al sistema antes de marcarla ganada.
+                </p>
+              </div>
+            )}
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" className="boton min-h-[48px]" onClick={() => setConfirmandoGanar('')}>
+                Volver
+              </button>
+              {sinRespaldo && (
+                <button type="button" className="boton min-h-[48px]"
+                  onClick={() => { setConfirmandoGanar(''); setPaso(5); }}>
+                  📎 Ir a subir el contrato
+                </button>
+              )}
+              <button type="button" autoFocus disabled={guardando} onClick={() => void ganar(objetivo.id)}
+                className="tecla min-h-[52px] rounded-xl border-2 border-verde-fuerte bg-verde-fuerte px-6
+                           text-[16px] font-bold text-tinta disabled:opacity-50">
+                {sinRespaldo ? 'Sí, marcarla ganada igual'
+                  : alts.length > 1 ? `✓ Sí, ganó la ${l}` : '✓ Sí, marcarla ganada'}
+              </button>
+            </div>
+          </Dialogo>
+        );
+      })()}
+      {corrigiendo && p && (
+        <CorregirGanada p={p} letra={letra} gente={personasDelEvento}
+          otras={vivasParaCorregir.map((a) => ({ id: a.id, letra: letraDe(a, alternativas), total: totalAlt(a) }))}
+          onCerrar={() => setCorrigiendo(false)}
+          onCancelarEvento={() => { setCorrigiendo(false); setCancelando(true); }}
+          onListo={(hacia) => { setCorrigiendo(false); onCambio(); if (onAbrir) onAbrir(hacia || p.id, 4); else onCerrar(); }} />
       )}
       {cancelando && p && (
         <CancelarEvento p={p} onCerrar={() => setCancelando(false)}

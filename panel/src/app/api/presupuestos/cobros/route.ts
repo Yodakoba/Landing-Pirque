@@ -7,6 +7,7 @@ import {
 } from '@/lib/datos';
 import { cobrosDe, limpiarCobro, nuevoIdCobro, CONCEPTO_COBRO } from '@/lib/cobros';
 import { folioDe } from '@/lib/presupuestos';
+import { alternativasDe } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { hoy } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
@@ -45,8 +46,18 @@ export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
-    const id = new URL(req.url).searchParams.get('id') ?? '';
-    return NextResponse.json({ cobros: cobrosDe(await leerCobros(), id) });
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id') ?? '';
+    const cobros = await leerCobros();
+    // **`grupo=1`: los de todas las alternativas** (2026-11-12). Lo pagado es
+    // del evento, y la ventana lo necesita para ofrecer ganar cualquiera.
+    if (url.searchParams.get('grupo')) {
+      const lista = await leerPresupuestos();
+      const p = lista.find((x) => x.id === id);
+      const ids = new Set(p ? alternativasDe(p, lista).map((a) => a.id) : [id]);
+      return NextResponse.json({ cobros: cobros.filter((c) => ids.has(c.presupuesto)) });
+    }
+    return NextResponse.json({ cobros: cobrosDe(cobros, id) });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
