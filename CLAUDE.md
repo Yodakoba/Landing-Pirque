@@ -6780,6 +6780,14 @@ usa cuando el cliente lo pide para ese PR ("mergéalo"). Si no lo pide, el PR
 queda abierto y lo mergea él: su merge es el último filtro antes de
 producción, y el panel en Vercel se despliega solo desde `main`.
 
+**Antes de mergear se espera a Vercel** (2026-11-11). Cada rama que se
+empuja dispara una construcción de prueba en Vercel, que GitHub muestra como
+un chequeo; mientras corre, el PR sale **"unstable"**. Mergear en ese
+momento no rompe nada si después termina bien —así pasó con los PRs 141,
+143 y 144—, pero es mergear sin saberlo. Se espera a que el estado del commit
+diga `success` (`gh api repos/<repo>/commits/<sha>/status`) y, si la
+construcción falla, no se mergea: se avisa.
+
 Esto **no cambia** la regla de proponer antes de aplicar: los cambios al
 contenido se siguen conversando antes de hacerlos. Lo que se abre solo es el
 PR de lo que ya se acordó.
