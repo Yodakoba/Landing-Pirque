@@ -6657,6 +6657,29 @@ la página del día, que tampoco se dibuja en cero.
 día, así que en cero dice "no hay nada tomado de los 120" — eso es un dato,
 no un relleno.
 
+#### Las abonadas, aparte: pagadas · abonadas · sin pagar (2026-11-12)
+
+Lo pidió el cliente mirando un jueves con una reserva de 80 personas que ya
+había abonado más de la mitad: la barra mostraba poco verde y mucho ámbar,
+y a quien planifica el equipo eso le decía que esa gente quizás no viene.
+Las abonadas se contaban con las que no han pagado nada.
+
+- **La barra tiene tres tramos**: verde lleno (pagadas), **verde rayado
+  (abonadas: casi seguro vienen, falta el resto)** y ámbar (sin pagar nada).
+- **Debajo, una celda por tramo con gente**, en dos líneas —*✓ 36 /
+  pagadas*, *½ 80 / abonadas*, *○ 12 / sin pagar*—, con los íconos del pago
+  de las cotizaciones. Tres pastillas en una línea pedían 333px de 261 y al
+  envolver estiraban la tarjeta; por eso `ALTO_ESTANDAR` subió a 15.125rem
+  (242px) y todas vuelven a medir lo mismo.
+- **En el cálculo, `abonadas` es parte de `porPagar`** (`estaAbonada()` en
+  `ocupacion.ts`): a una abonada todavía hay que cobrarle el resto, así que
+  `faltaCobrar()` y todo lo que lo usa no cambió. Sin pagar = `porPagar −
+  abonadas`.
+- **La página del día y la cara *Reservas* de `/turnos` dicen lo mismo**:
+  tres azulejos (Pagadas · Abonadas, con borde punteado y *falta el resto*
+  · Sin pagar), y el filtro de la tabla es *Todas · Pagadas · Abonadas · Sin
+  pagar*.
+
 #### "Lunes 2 De Noviembre": el `capitalize` del panel (2026-11-02)
 
 En la misma captura, con mayúscula en **cada** palabra. Este archivo ya

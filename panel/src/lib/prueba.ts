@@ -186,6 +186,19 @@ const oAMano = ocupacionDe([
 ok(oAMano.pagadas === 2 && oAMano.porPagar === 3,
    'una reserva a mano, sin modalidad, igual se sabe si esta pagada');
 
+// Las abonadas: siguen por cobrar (falta el resto), pero se cuentan aparte
+// para que la tarjeta muestre que esa gente ya puso plata.
+const oAbono = ocupacionDe([
+  r({ personas: 36, estadoPago: 'paid' }),
+  r({ personas: 80, estadoPago: 'partially_paid' }),
+  r({ personas: 12, estadoPago: 'pending' }),
+  r({ personas: 7, estadoPago: 'cancelled' })
+], dia({}));
+ok(oAbono.pagadas === 36 && oAbono.porPagar === 92 && oAbono.abonadas === 80,
+   'una abonada sigue por cobrar y además se cuenta como abonada');
+ok(oAbono.tomadas === oAbono.pagadas + oAbono.porPagar,
+   'las abonadas no se suman dos veces a lo tomado');
+
 /* ---------- un día bloqueado ---------- */
 o = ocupacionDe([], dia({ estado: 'Bloqueada', notas: 'Evento privado' }));
 ok(o.bloqueada === true && o.semaforo === 'rojo',
@@ -3516,7 +3529,7 @@ console.log('\nEventos del CRM');
 // ---------- La línea de la semana (2026-11-05) ----------
 {
   const dia = (fecha: string, p: Record<string, unknown> = {}) => ({
-    fecha, capacidad: 120, tomadas: 0, quedan: 120, pagadas: 0, porPagar: 0, porCobrar: 0,
+    fecha, capacidad: 120, tomadas: 0, quedan: 120, pagadas: 0, porPagar: 0, abonadas: 0, porCobrar: 0,
     sinMonto: 0, privada: false, exclusiva: false, presupuestos: 0, presupuestadas: 0,
     semaforo: 'verde', bloqueada: false, notas: '', ...p
   }) as Ocupacion;

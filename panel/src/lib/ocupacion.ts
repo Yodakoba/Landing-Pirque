@@ -56,6 +56,20 @@ export function faltaCobrar(r: Reserva): boolean {
   return String(r.estadoPago || '').trim().toLowerCase() !== ESTADO_PAGO.pagado;
 }
 
+/**
+ * Si esta reserva ya pagó una parte: *Abonada* (`partially_paid`).
+ *
+ * **Es un subconjunto de las que faltan cobrar**, no un tercer grupo aparte
+ * de esa cuenta: a una abonada todavía hay que cobrarle el resto. Lo que la
+ * distingue es para quien planifica (2026-11-12, lo pidió el cliente): una
+ * reserva de 80 personas con más de la mitad abonada casi seguro viene, y
+ * contarla junto a las que no han pagado nada la escondía.
+ */
+export function estaAbonada(r: Reserva): boolean {
+  if (!ocupaLugar(r)) return false;
+  return String(r.estadoPago || '').trim().toLowerCase() === ESTADO_PAGO.abonado;
+}
+
 /** Un monto en pesos, en formato chileno: 218000 -> "$218.000". */
 export function enPesos(n: number): string {
   return '$' + Math.round(n).toLocaleString('es-CL');
@@ -99,10 +113,12 @@ export function ocupacionDe(
 
   let pagadas = 0;
   let porPagar = 0;
+  let abonadas = 0;
   for (const r of delDia) {
     const n = Number(r.personas) || 0;
     if (faltaCobrar(r)) porPagar += n;
     else pagadas += n;
+    if (estaAbonada(r)) abonadas += n;
   }
   const tomadas = pagadas + porPagar;
 
@@ -135,6 +151,7 @@ export function ocupacionDe(
     quedan: Math.max(0, dia.capacidad - tomadas),
     pagadas,
     porPagar,
+    abonadas,
     porCobrar,
     sinMonto,
     privada,
