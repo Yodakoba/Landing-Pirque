@@ -554,6 +554,35 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     ]
   },
 
+  seguimiento: {
+    titulo: 'Seguimiento',
+    texto: [
+      'Al mandarla —WhatsApp, correo o link— el panel pregunta si la mandaste y la pasa a Enviada. Desde ahí corre la vigencia y aparece como posible en el calendario de reservas.',
+      'Después te recuerda preguntarle al cliente: arriba de Cotizaciones, en "Esperando respuesta".'
+    ]
+  },
+  esperandoRespuesta: {
+    titulo: 'Esperando respuesta',
+    texto: [
+      'Las cotizaciones mandadas que llevan días sin moverse, o cuyo evento se acerca sin estar ganadas.',
+      'Contesta ahí mismo: "Está negociando", "Se perdió" o "Sigue esperando", que te vuelve a preguntar más adelante. Los plazos se cambian en cada cotización o en Configuración.'
+    ]
+  },
+  seguimientoDias: {
+    titulo: 'Sin respuesta, a los días',
+    texto: [
+      'Cuántos días después de mandarla te pregunto "¿y?", si nada se movió. "Sigue esperando" lo posterga otro tanto.',
+      'En blanco vale Configuración; en 0 no pregunta.'
+    ]
+  },
+  avisoEvento: {
+    titulo: 'Días antes del evento',
+    texto: [
+      'Cuántos días antes del evento te pregunto si se ganó o se perdió, si todavía no está ganada.',
+      'En blanco vale Configuración; en 0 no pregunta.'
+    ]
+  },
+
   // ---------- Productos ----------
   preciosReserva: {
     titulo: 'Precios de reserva',

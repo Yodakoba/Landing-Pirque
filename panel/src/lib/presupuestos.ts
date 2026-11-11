@@ -155,7 +155,19 @@ export const COL_PRESUPUESTOS = {
    * le hizo nada. Es lo que permite deshacerlo al cancelar: un día que
    * existía solo por esta cotización vuelve a no existir.
    */
-  diaAbierto: 'Día abierto'
+  diaAbierto: 'Día abierto',
+  /**
+   * **El seguimiento** (2026-11-11). `Enviada` es el día en que se le mandó
+   * por primera vez: desde ahí corre la vigencia y desde ahí cuenta en el
+   * calendario principal. `Último seguimiento` es el último "sigue
+   * esperando" o cambio de etapa, para no volver a preguntar antes de
+   * tiempo. Los dos plazos son de esta cotización; en blanco rige
+   * Configuración.
+   */
+  enviada: 'Enviada',
+  ultimoSeguimiento: 'Último seguimiento',
+  seguimientoDias: 'Recordar a los días',
+  avisoEvento: 'Preguntar días antes'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -329,6 +341,12 @@ export interface Presupuesto {
   cancelada: string;
   /** `creado`, `reabierto` o vacío: ver `COL_PRESUPUESTOS.diaAbierto`. */
   diaAbierto: string;
+  /** El día en que se le mandó, o vacío. Ver `COL_PRESUPUESTOS.enviada`. */
+  enviada: string;
+  ultimoSeguimiento: string;
+  /** Los plazos del seguimiento; `null` rige Configuración. */
+  seguimientoDias: number | null;
+  avisoEvento: number | null;
   fila: number;
 }
 
@@ -532,7 +550,15 @@ export function validoHastaDe(desde: Fecha, dias: number): string {
  * **El último día todavía vale.** "Válido hasta el 15" se lee como que el
  * 15 sirve, así que solo vence a partir del 16.
  */
-export function estaVencido(p: Pick<Presupuesto, 'validoHasta'>, hoy: Fecha): boolean {
+export function estaVencido(
+  p: Pick<Presupuesto, 'validoHasta'> & { estado?: string }, hoy: Fecha
+): boolean {
+  // **Lo que no se ha mandado no vence** (2026-11-11): la vigencia corre
+  // desde el envío. Un borrador viejo sigue siendo un borrador.
+  if (p.estado !== undefined) {
+    const e = estadoNormal(p.estado);
+    if (!e || e === ESTADO_PRESUPUESTO.candidato || e === ESTADO_PRESUPUESTO.borrador) return false;
+  }
   const hasta = String(p.validoHasta ?? '').slice(0, 10);
   if (!esFecha(hasta)) return false;
   return hasta < hoy;
@@ -625,6 +651,27 @@ export function vencidoSinCerrar(p: Presupuesto, hoy: Fecha): boolean {
  * escribir es igual de posible que una mandada, y el día la muestra con su
  * estado al lado para que se vea cuál es cuál.
  */
+/**
+ * **Si ya se le mandó al cliente** (2026-11-11): Enviada o Negociación. Es
+ * lo que separa una conversación interna —candidato, borrador— de una que
+ * espera respuesta.
+ */
+export function estaMandada(estado: string): boolean {
+  const e = estadoNormal(estado);
+  return e === ESTADO_PRESUPUESTO.enviado || e === ESTADO_PRESUPUESTO.negociacion;
+}
+
+/**
+ * **Si cuenta en el calendario principal** (2026-11-11, lo pidió el
+ * cliente: *"recién ahí se transforma en una posible reserva… una vez que
+ * se realmente envió"*). Solo lo mandado: un borrador cambia, se conversa,
+ * y no es todavía gente que puede venir. En la pantalla de Cotizaciones
+ * siguen todas (`cuentaComoPosible()`).
+ */
+export function cuentaEnElCalendario(p: Presupuesto, hoy: Fecha): boolean {
+  return cuentaComoPosible(p, hoy) && estaMandada(p.estado);
+}
+
 export function cuentaComoPosible(p: Presupuesto, hoy: Fecha): boolean {
   if (String(p.idReserva ?? '').trim()) return false;
   const e = estadoNormal(p.estado);
@@ -662,7 +709,9 @@ export function estadoVisible(p: Presupuesto, hoy: Fecha): string {
 export function posiblesPorDia(
   presupuestos: Presupuesto[],
   lineas: LineaPresupuesto[],
-  hoy: Fecha
+  hoy: Fecha,
+  /** El calendario principal cuenta solo lo mandado; ver `cuentaEnElCalendario()`. */
+  soloMandadas = true
 ): Map<Fecha, Posibles> {
   const porPresupuesto = new Map<string, LineaPresupuesto[]>();
   for (const l of lineas) {
@@ -677,7 +726,7 @@ export function posiblesPorDia(
   // mostraba 80 posibles donde hay 40.
   const porGrupo = new Map<string, { fecha: Fecha; personas: number; total: number }>();
   for (const p of presupuestos) {
-    if (!cuentaComoPosible(p, hoy)) continue;
+    if (!(soloMandadas ? cuentaEnElCalendario(p, hoy) : cuentaComoPosible(p, hoy))) continue;
     // Sin día exacto no ocupa ninguna fecha: va en su lista aparte.
     if (!esFecha(p.fecha)) continue;
     const suyas = porPresupuesto.get(p.id) ?? [];
@@ -868,6 +917,10 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       canceladaPor: en(f, i.canceladaPor).trim(),
       cancelada: en(f, i.cancelada).trim(),
       diaAbierto: en(f, i.diaAbierto).trim(),
+      enviada: en(f, i.enviada).slice(0, 10),
+      ultimoSeguimiento: en(f, i.ultimoSeguimiento).slice(0, 10),
+      seguimientoDias: numeroONulo(en(f, i.seguimientoDias), 365),
+      avisoEvento: numeroONulo(en(f, i.avisoEvento), 365),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -930,6 +983,10 @@ export function filaPresupuesto(
   poner(i.canceladaPor, p.canceladaPor);
   poner(i.cancelada, p.cancelada);
   poner(i.diaAbierto, p.diaAbierto);
+  poner(i.enviada, p.enviada);
+  poner(i.ultimoSeguimiento, p.ultimoSeguimiento);
+  poner(i.seguimientoDias, p.seguimientoDias === null ? '' : String(p.seguimientoDias));
+  poner(i.avisoEvento, p.avisoEvento === null ? '' : String(p.avisoEvento));
   return fila;
 }
 
@@ -1022,4 +1079,49 @@ export function normalizarLineas(
     });
   }
   return salida;
+}
+
+/**
+ * **El seguimiento de una cotización mandada** (2026-11-11, lo pidió el
+ * cliente: *"¿qué pasa con esta cotización enviada? ¿Aún está en
+ * negociación o ya se perdió?"*). Devuelve por qué hay que preguntar, o
+ * `null` si no toca:
+ *
+ * - `eventoCerca`: el evento está a `antesEvento` días o menos y sigue sin
+ *   ganarse. Va primero porque es lo urgente.
+ * - `sinRespuesta`: pasaron `dias` desde que se mandó —o desde el último
+ *   "sigue esperando" o cambio de etapa— sin moverse.
+ *
+ * "Sigue esperando" posterga las dos preguntas otros `dias`. Un plazo en 0
+ * apaga esa pregunta. Lo que ya se ganó, se perdió o venció no pregunta:
+ * para lo vencido está su propio aviso.
+ */
+export function seguimientoDe(
+  p: Presupuesto, hoy: Fecha,
+  cfg: { seguimientoDias: number; avisoEvento: number }
+): null | { motivo: 'eventoCerca'; dias: number } | { motivo: 'sinRespuesta'; dias: number } {
+  if (!estaMandada(p.estado) || String(p.idReserva ?? '').trim()) return null;
+  if (estaVencido(p, hoy)) return null;
+  const dias = p.seguimientoDias ?? cfg.seguimientoDias;
+  const antes = p.avisoEvento ?? cfg.avisoEvento;
+  const base = [p.enviada, p.ultimoSeguimiento].filter(esFecha).sort().pop();
+  const postergada = !!base && dias > 0 && p.ultimoSeguimiento === base
+    && diasDesde(base, hoy) < dias;
+  if (antes > 0 && esFecha(p.fecha) && p.fecha >= hoy && !postergada) {
+    const faltan = diasDesde(hoy, p.fecha);
+    if (faltan <= antes) return { motivo: 'eventoCerca', dias: faltan };
+  }
+  if (dias > 0 && base) {
+    const pasaron = diasDesde(base, hoy);
+    if (pasaron >= dias) return { motivo: 'sinRespuesta', dias: pasaron };
+  }
+  return null;
+}
+
+/** Días de `desde` a `hasta`, contando en fechas de texto (sin `Date` con huso). */
+function diasDesde(desde: Fecha, hasta: Fecha): number {
+  let n = 0;
+  let f = desde;
+  while (f < hasta && n < 4000) { f = sumarDias(f, 1); n++; }
+  return n;
 }

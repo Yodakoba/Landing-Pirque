@@ -86,6 +86,14 @@ export interface Config {
   cancelacionDias: number;
   reembolsoPct: number;
   /**
+   * **El seguimiento de las cotizaciones** (2026-11-11): a cuántos días de
+   * mandada sin moverse se pregunta "¿y?", y cuántos días antes del evento
+   * se pregunta "¿se ganó o se perdió?". Cada cotización los puede cambiar.
+   * En 0 no se pregunta.
+   */
+  seguimientoDias: number;
+  avisoEvento: number;
+  /**
    * La unidad compartida de Google Drive donde se guardan los comprobantes
    * de pago (2026-11-10). Es el ID que va después de `folders/`; vive acá y
    * no en el código porque Calicanto tendrá la suya. En blanco, no se puede
@@ -149,6 +157,8 @@ export const POR_DEFECTO: Config = {
   cambiosFecha: 2,
   cancelacionDias: 60,
   reembolsoPct: 20,
+  seguimientoDias: 5,
+  avisoEvento: 14,
   driveComprobantes: '',
   empresa: EMPRESA_VACIA
 };
@@ -172,6 +182,8 @@ export const CLAVES = {
   cambiosFecha: 'contrato_cambios_fecha',
   cancelacionDias: 'contrato_cancelacion_dias',
   reembolsoPct: 'contrato_reembolso',
+  seguimientoDias: 'seguimiento_dias',
+  avisoEvento: 'seguimiento_antes_evento',
   driveComprobantes: 'drive_comprobantes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
@@ -309,6 +321,8 @@ export function leerConfigDe(filas: string[][]): Config {
     cambiosFecha: numero(v(CLAVES.cambiosFecha), POR_DEFECTO.cambiosFecha, 0, 10),
     cancelacionDias: numero(v(CLAVES.cancelacionDias), POR_DEFECTO.cancelacionDias, 0, 365),
     reembolsoPct: numero(v(CLAVES.reembolsoPct), POR_DEFECTO.reembolsoPct, 0, 100),
+    seguimientoDias: numero(v(CLAVES.seguimientoDias), POR_DEFECTO.seguimientoDias, 0, 365),
+    avisoEvento: numero(v(CLAVES.avisoEvento), POR_DEFECTO.avisoEvento, 0, 365),
     driveComprobantes: idDeDrive(v(CLAVES.driveComprobantes)),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
@@ -345,6 +359,8 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.cambiosFecha, String(c.cambiosFecha)],
     [CLAVES.cancelacionDias, String(c.cancelacionDias)],
     [CLAVES.reembolsoPct, String(c.reembolsoPct)],
+    [CLAVES.seguimientoDias, String(c.seguimientoDias)],
+    [CLAVES.avisoEvento, String(c.avisoEvento)],
     [CLAVES.driveComprobantes, c.driveComprobantes],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],

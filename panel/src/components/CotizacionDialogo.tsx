@@ -28,7 +28,7 @@ import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  DOCUMENTO, documentoDe, numeroONulo, totalDe, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, numeroONulo, estaMandada, totalDe, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
@@ -66,6 +66,10 @@ export interface DatosCotizar {
   lineas?: LineaPresupuesto[];
   /** Las condiciones de pago por defecto, de Configuración. */
   condiciones?: { anticipoPct: number; saldoDias: number };
+  /** Los plazos del seguimiento de Configuración: los que rigen en blanco. */
+  seguimiento?: { dias: number; antesEvento: number };
+  /** El nombre comercial, para el asunto del correo. */
+  empresa?: string;
   /** Para el contrato: el horario de siempre y qué le falta a la empresa. */
   contrato?: { horario: string; faltaEmpresa: string[];
     tranquilidad?: { cambiosFecha: number; cancelacionDias: number; reembolsoPct: number } };
@@ -177,6 +181,11 @@ export default function CotizacionDialogo({
   const [cambiosTxt, setCambiosTxt] = useState(p?.cambiosFecha == null ? '' : String(p.cambiosFecha));
   const [cancelTxt, setCancelTxt] = useState(p?.cancelacionDias == null ? '' : String(p.cancelacionDias));
   const [reembolsoTxt, setReembolsoTxt] = useState(p?.reembolso == null ? '' : String(p.reembolso));
+  /** Los plazos del seguimiento de esta cotización; en blanco rige Configuración. */
+  const [segTxt, setSegTxt] = useState(p?.seguimientoDias == null ? '' : String(p.seguimientoDias));
+  const [avisoTxt, setAvisoTxt] = useState(p?.avisoEvento == null ? '' : String(p.avisoEvento));
+  /** Por qué vía se acaba de mandar, mientras se pregunta "¿la mandaste?". */
+  const [preguntaEnvio, setPreguntaEnvio] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [acuerdos, setAcuerdos] = useState(p?.acuerdos ?? '');
   /** El contrato firmado subido: quién y cuándo. Que esté es lo que dice "firmado". */
@@ -248,7 +257,8 @@ export default function CotizacionDialogo({
   const firma = JSON.stringify({
     idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
     descuento, motivo, documento, anticipoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
-    horario, ley20393, acuerdos, fact: facturacion, cambiosTxt, cancelTxt, reembolsoTxt
+    horario, ley20393, acuerdos, fact: facturacion, cambiosTxt, cancelTxt, reembolsoTxt,
+    segTxt, avisoTxt
   });
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -336,6 +346,7 @@ export default function CotizacionDialogo({
         anticipo: anticipoTxt, saldoDias: saldoTxt,
         horario, ley20393, acuerdos,
         cambiosFecha: cambiosTxt, cancelacionDias: cancelTxt, reembolso: reembolsoTxt,
+        seguimientoDias: segTxt, avisoEvento: avisoTxt,
         ...(uf ? { uf, fechaUF } : {}),
         estado: estadoForzado ?? estado,
         lineas: vistas
@@ -371,7 +382,8 @@ export default function CotizacionDialogo({
       });
       const d = await r.json();
       if (d.error) return setError(d.error);
-      avisar('Ganada: la reserva ya está en el calendario');
+      // **Ganar se festeja** (2026-11-11): es el hito de todo el flujo.
+      avisar(`🎉 Ganada: la reserva de ${enMenus || invitados} personas ya está en el calendario`);
       onCambio(); onCerrar();
     } finally { setGuardando(false); }
   }
@@ -553,6 +565,131 @@ export default function CotizacionDialogo({
     ? enlaceWhatsApp(cliente.telefono,
         `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`)
     : '';
+  /**
+   * **El correo** (2026-11-11): sin un servidor de correo, abre el programa
+   * de correo de quien cotiza con todo puesto. Solo si la ficha tiene correo.
+   */
+  const correo = link && cliente?.correo
+    ? `mailto:${cliente.correo}?subject=${encodeURIComponent(
+        `Cotización N° ${folioDe({ id: grupoDe(p!) })}${letraDe(p!, alternativas) ? ` · Alternativa ${letraDe(p!, alternativas)}` : ''}`
+        + (datos.empresa ? ` · ${datos.empresa}` : ''))}&body=${encodeURIComponent(
+        `Hola ${cliente.nombre.split(' ')[0]},\n\nTe mando la cotización:\n${link}\n\nQuedo atento.`)}`
+    : '';
+  const mandada = estaMandada(estado);
+  /**
+   * **Mandarla** (2026-11-11). Sin WhatsApp ni correo conectados al panel,
+   * no hay cómo saber si de verdad se mandó: se pregunta. Copiar el link
+   * también, porque casi siempre es para pegarlo en alguna parte.
+   */
+  function mandar(via: 'whatsapp' | 'correo' | 'link') {
+    if (via === 'whatsapp' && whatsapp) window.open(whatsapp, '_blank', 'noreferrer');
+    if (via === 'correo' && correo) window.location.href = correo;
+    if (via === 'link' && link) copiarConAviso(link, 'Link copiado', 'Copia este link:');
+    if (p && !ganada && !mandada && puedeEditar && !cancelada) setPreguntaEnvio(true);
+  }
+  async function confirmarEnvio() {
+    setPreguntaEnvio(false);
+    if (await guardar(ESTADO_PRESUPUESTO.enviado, true)) {
+      avisar('Enviada: desde hoy corre su vigencia y cuenta en el calendario');
+    }
+  }
+  /**
+   * **¿Están negociando?** (2026-11-11): una cotización ya mandada a la que
+   * se le cambian líneas o precios. Se compara contra cómo se abrió.
+   */
+  const firmaPrecio = JSON.stringify({ l: vistas.map((l) => [l.concepto, l.cantidad, l.precio, l.descuento]), descuento });
+  const [precioInicial] = useState(firmaPrecio);
+  const renegociando = !!p && estado === ESTADO_PRESUPUESTO.enviado && firmaPrecio !== precioInicial;
+
+  /**
+   * **El camino** (2026-11-11): los hitos de una cotización, como trofeos.
+   * Sin anticipo, ese hito se cumple al mandarla.
+   */
+  // Un anticipo de $0 —una cotización todavía sin productos— no está pagado.
+  const anticipoPagado = cond.pct > 0 && cond.anticipo > 0 && cobrado.anticipoListo;
+  const camino = [
+    { nombre: 'Enviada', listo: ganada || mandada },
+    { nombre: cond.pct > 0 ? 'Anticipo' : 'Sin anticipo',
+      listo: cond.pct > 0 ? ganada || anticipoPagado : ganada || mandada },
+    { nombre: 'Ganada', listo: ganada },
+    { nombre: 'Contrato firmado', listo: !!firmado },
+    { nombre: 'Pagada', listo: cobrado.completo }
+  ];
+  const personasDelEvento = enMenus || invitados;
+  /**
+   * **El próximo hito: uno solo, grande** (2026-11-11). Es lo que toca
+   * hacer ahora con esta cotización; lo demás sigue abajo, en sus secciones.
+   */
+  const hito: React.ReactNode = !p || cancelada ? null
+    : !ganada && (anticipoPagado || (mandada && cond.pct === 0)) ? (
+      <Hito tono="verde" titulo={esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
+        bajada={esFecha(fechaReal)
+          ? `Crea la reserva de ${personasDelEvento} personas y le toma el cupo al ${enPalabras(fechaReal)}.`
+          : 'Para ganarla, ponle la fecha en el paso 2.'}>
+        {esFecha(fechaReal) && puedeEditar ? (
+          <span className="flex items-center gap-1">
+            <button type="button" disabled={guardando} onClick={() => void ganar()}
+              className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
+                         px-6 text-[20px] font-extrabold uppercase tracking-wide text-tinta
+                         shadow-md hover:brightness-110 disabled:opacity-50">
+              ✓ Marcar ganada
+            </button>
+            <AyudaCorta tema="marcarGanada" />
+          </span>
+        ) : !esFecha(fechaReal) ? (
+          <button type="button" className="boton min-h-[48px]" onClick={() => setPaso(2)}>Ir al paso 2: Evento</button>
+        ) : null}
+      </Hito>
+    ) : !ganada && !mandada ? (
+      <Hito tono="rosa" titulo="Mándasela al cliente"
+        bajada="Al mandarla te pregunto si la mandaste: desde ese momento corre su vigencia y aparece en el calendario de reservas.">
+        <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} grande />
+      </Hito>
+    ) : !ganada ? (
+      <Hito tono="ambar" titulo={`Esperando el anticipo: ${enPesos(cobrado.faltaAnticipo)}`}
+        bajada="Con el anticipo pagado se puede marcar ganada. Si pagó otro monto, anótalo abajo en El pago.">
+        {puedeEditar && (
+          <button type="button" disabled={guardando}
+            onClick={() => void cobrar(cobrado.faltaAnticipo, 'Anticipo')}
+            className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
+                       font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50">
+            ✓ Anticipo recibido · {enPesos(cobrado.faltaAnticipo)}
+          </button>
+        )}
+      </Hito>
+    ) : !firmado ? (
+      <Hito tono="verde" titulo="✓ Ganada · sube el contrato firmado"
+        bajada="La reserva ya está en el calendario. Imprime el contrato, fírmenlo en dos ejemplares y sube el firmado.">
+        <div className="flex flex-wrap gap-2">
+          {linkContrato && (
+            <a href={linkContrato} target="_blank" rel="noreferrer" className="tecla boton min-h-[48px]">📄 Ver el contrato</a>
+          )}
+          {puedeEditar && (
+            <label className={`tecla min-h-[56px] flex-1 cursor-pointer rounded-xl border-2 border-verde-fuerte
+                               px-5 text-center text-[17px] font-bold leading-[52px] text-verde-texto hover:bg-verde/10
+                               ${subiendoContrato ? 'opacity-60' : ''}`}>
+              {subiendoContrato ? 'Subiendo…' : '📎 Subir contrato firmado'}
+              <input type="file" accept="image/*,application/pdf" className="sr-only"
+                disabled={subiendoContrato}
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void subirContrato(f); }} />
+            </label>
+          )}
+        </div>
+      </Hito>
+    ) : cobrado.falta > 0 ? (
+      <Hito tono="ambar" titulo={`Saldo por cobrar: ${enPesos(cobrado.falta)}`}
+        bajada={cond.saldoHasta ? `Hasta el ${enPalabras(cond.saldoHasta)}.` : `${cond.dias} días antes del evento.`}>
+        {puedeEditar && (
+          <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
+            className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
+                       font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50">
+            ✓ Pagó el saldo · {enPesos(cobrado.falta)}
+          </button>
+        )}
+      </Hito>
+    ) : (
+      <Hito tono="verde" titulo="✓ Cerrada: ganada, firmada y pagada" bajada="No queda nada por hacer con esta cotización." />
+    );
 
   // Un número por cotización —el del grupo— y una letra por alternativa.
   const alts = p ? alternativasDe(p, alternativas) : [];
@@ -621,7 +758,7 @@ export default function CotizacionDialogo({
       {cancelada && (
         <p className="mb-3 rounded border border-rojo-fuerte/60 bg-rojo/10 px-3 py-2 text-[14px]">
           <strong className="text-rojo-texto">Cancelada.</strong> Su reserva liberó el cupo. Ya no se
-          edita: lo que queda es la devolución, en el paso Enviar.
+          edita: lo que queda es la devolución, en el paso Condiciones.
         </p>
       )}
       {ganada && !cancelada && (
@@ -1029,6 +1166,22 @@ export default function CotizacionDialogo({
               <p className="mt-1 text-[20px] font-bold text-oro">{enPesos(cuentas.total)}</p>
             </div>
 
+            {/* **El camino y el próximo hito** (2026-11-11, lo pidió el
+                cliente: *"marcar ganada debe ser un botón realmente más
+                grande… aquí cumplimos un hito"*). Arriba se ve por dónde va;
+                debajo, un solo bloque grande con lo que toca ahora. */}
+            {p && !cancelada && <Camino pasos={camino} />}
+            {p && !cancelada && hito}
+
+            {cancelada && p && (
+              <BloqueCancelada p={p} cobros={cobros} puedePagar={puedePagar}
+                onCobros={(c) => { setCobros(c); onCambio(); }} />
+            )}
+
+
+            {/* ---------- Seguimiento ---------- */}
+            {!cancelada && (
+            <Seccion tono="rosa" icono="📨" titulo="Seguimiento" ayuda="seguimiento">
             {!ganada && (
               <div>
                 <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
@@ -1050,12 +1203,65 @@ export default function CotizacionDialogo({
             )}
 
 
-            {cancelada && p && (
-              <BloqueCancelada p={p} cobros={cobros} puedePagar={puedePagar}
-                onCobros={(c) => { setCobros(c); onCambio(); }} />
+
+              {renegociando && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ambar/50
+                                bg-ambar/10 px-3 py-2 text-[15px]">
+                  <span className="flex-1 font-semibold text-ambar-texto">
+                    Cambiaste una cotización ya enviada. ¿Están negociando?
+                    <span className="block text-[14px] font-normal text-hueso/75">
+                      El cliente ve lo nuevo en el mismo link.
+                    </span>
+                  </span>
+                  <button type="button" className="boton min-h-[44px]"
+                    onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Pasar a Negociación</button>
+                </div>
+              )}
+              {p && (p.enviada || p.validoHasta) && (
+                <p className="text-[14px] text-hueso/75">
+                  {p.enviada ? <>Enviada el {enPalabras(p.enviada)}. </> : null}
+                  {p.validoHasta ? <>Vigente hasta el {enPalabras(p.validoHasta)}.</> : null}
+                </p>
+              )}
+              {p && !mandada && !ganada && (
+                <p className="text-[14px] text-hueso/75">
+                  Todavía no se manda: no vence y no aparece en el calendario de reservas.
+                </p>
+              )}
+              {p && (
+                <div>
+                  <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                    Mandarla al cliente
+                  </p>
+                  <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} />
+                </div>
+              )}
+              {!ganada && !cancelada && (
+                <div>
+                  <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                    Recordarme
+                  </p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    {([
+                      ['Sin respuesta, a los días', segTxt, setSegTxt, datos.seguimiento?.dias ?? 5, 'seguimientoDias'],
+                      ['Días antes del evento', avisoTxt, setAvisoTxt, datos.seguimiento?.antesEvento ?? 14, 'avisoEvento']
+                    ] as const).map(([etiqueta, valor, poner, defecto, ayuda]) => (
+                      <label key={etiqueta} className="block">
+                        <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}<AyudaCorta tema={ayuda} /></span>
+                        <input type="number" min={0} max={365} value={valor} className={`${ENTRADA} w-24`}
+                          placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[13px] text-hueso/65">En blanco rige Configuración. En 0 no pregunta.</p>
+                </div>
+              )}
+            </Seccion>
             )}
 
             <fieldset disabled={cancelada} className="min-w-0 space-y-4">
+            {/* ---------- Documento ---------- */}
+            <Seccion tono="neutro" icono="🧾" titulo="Documento">
             {/* **El documento de la venta** (2026-11-10). Nace por definir;
                 apretar el elegido lo vuelve a dejar por definir. Por ahora
                 no cambia el precio. Con factura pide los datos de
@@ -1099,12 +1305,18 @@ export default function CotizacionDialogo({
             </div>
 
 
+            </Seccion>
+            </fieldset>
+
+            {/* ---------- El pago: condiciones y cobros ---------- */}
+            <Seccion tono="verde" icono="💰" titulo="El pago">
+            <fieldset disabled={cancelada} className="min-w-0">
             {/* **Las condiciones de pago** (2026-11-10). En blanco rige
                 Configuración; cada cotización las puede negociar. Las
                 calcula `condicionesDe()`, la misma que usa el documento. */}
             <div>
               <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                Condiciones de pago <AyudaCorta tema="condicionesPago" />
+                Condiciones <AyudaCorta tema="condicionesPago" />
               </p>
               <div className="flex flex-wrap items-end gap-3">
                 <label className="block">
@@ -1135,173 +1347,12 @@ export default function CotizacionDialogo({
               </p>
             </div>
 
-            {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:
-                el precio, las condiciones de pago y el cliente de su ficha.
-                Se firma en papel y se sube el firmado, que va a Drive. Lo
-                único que se escribe acá es lo que la cotización no sabe. */}
-            <div className="rounded border border-hueso/15 bg-panel p-3">
-              <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">Contrato <AyudaCorta tema="contrato" /></p>
-              {!p ? (
-                <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para armar su contrato.</p>
-              ) : (
-                <div className="mt-2 space-y-3">
-                  {firmado ? (
-                    <p className="text-[15px]">
-                      <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2.5 py-1
-                                       font-semibold text-verde-texto">✓ Contrato firmado</span>
-                      <span className="ml-2 text-[14px] text-hueso/70">
-                        subido{firmado.por && ` por ${firmado.por}`}{firmado.cuando && ` el ${firmado.cuando.slice(0, 10)}`}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-[15px]">
-                      <span className="rounded-full border border-ambar/60 px-2.5 py-1 font-semibold
-                                       text-ambar-texto">Sin firmar</span>
-                      <span className="ml-2 text-[14px] text-hueso/70">
-                        Se imprime, se firma en dos ejemplares y se sube el firmado.
-                      </span>
-                    </p>
-                  )}
-                  {firmado && (
-                    <p className="text-[14px] text-hueso/75">
-                      Si cambias la cotización, el contrato del link deja de coincidir con el
-                      firmado: el que vale es el papel.
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {/* Con factura, el RUT y la dirección ya se piden arriba:
-                        son los mismos de la ficha, no se piden dos veces. */}
-                    {documento !== DOCUMENTO.factura && ([
-                      ['rut', 'RUT del cliente', '12.345.678-9'],
-                      ['domicilio', 'Domicilio del cliente', 'Calle, número, comuna']
-                    ] as const).map(([k, etiqueta, ejemplo]) => (
-                      <label key={k} className="block">
-                        <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                          {etiqueta}
-                        </span>
-                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
-                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
-                      </label>
-                    ))}
-                    <label className="block">
-                      <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                        Horario del evento
-                      </span>
-                      <input value={horario} className={ENTRADA}
-                        placeholder={datos.contrato?.horario ?? '13:00 a 18:00'}
-                        onChange={(e) => setHorario(e.target.value)} />
-                    </label>
-                  </div>
-                  <p className="text-[13px] text-hueso/60">
-                    {documento === DOCUMENTO.factura
-                      ? 'El RUT y el domicilio son los de los datos de facturación.'
-                      : 'El RUT y el domicilio se guardan en la ficha del cliente.'}
-                  </p>
-
-                  <button type="button" aria-pressed={ley20393} onClick={() => setLey20393(!ley20393)}
-                    className={`boton min-h-[44px] h-auto max-w-full !whitespace-normal py-2 text-left
-                      ${ley20393 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
-                    <span>
-                      {ley20393 ? '✓ ' : ''}Cláusula de la Ley 20.393{' '}
-                      <span className="font-normal text-hueso/70">(la piden las empresas grandes)</span>
-                    </span>
-                  </button>
-                  <AyudaCorta tema="ley20393" />
-
-                  <label className="block">
-                    <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                      Acuerdos adicionales <AyudaCorta tema="acuerdos" />
-                    </span>
-                    <textarea value={acuerdos} rows={2} className={ENTRADA}
-                      placeholder="Lo acordado aparte con el cliente. Va como la última cláusula."
-                      onChange={(e) => setAcuerdos(e.target.value)} />
-                  </label>
-
-                  {/* **Cambios de fecha y cancelación** (2026-11-11): lo que
-                      se negocia con el cliente. En blanco rige Configuración.
-                      El contrato lo imprime y *Cancelar evento* lo aplica. */}
-                  <div>
-                    <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                      Cambios de fecha y cancelación
-                    </p>
-                    <div className="flex flex-wrap items-end gap-3">
-                      {([
-                        ['Cambios de fecha', cambiosTxt, setCambiosTxt, 10, datos.contrato?.tranquilidad?.cambiosFecha ?? 2, 'cambiosFecha'],
-                        ['Cancela hasta, días antes', cancelTxt, setCancelTxt, 365, datos.contrato?.tranquilidad?.cancelacionDias ?? 60, 'cancelacionDias'],
-                        ['Devuelve, % de lo pagado', reembolsoTxt, setReembolsoTxt, 100, datos.contrato?.tranquilidad?.reembolsoPct ?? 20, 'reembolso']
-                      ] as const).map(([etiqueta, valor, poner, max, defecto, ayuda]) => (
-                        <label key={etiqueta} className="block">
-                          <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}<AyudaCorta tema={ayuda} /></span>
-                          <input type="number" min={0} max={max} value={valor} className={`${ENTRADA} w-24`}
-                            placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
-                        </label>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-[14px] text-hueso/75">
-                      {frasesCancelacion({
-                        cambiosFecha: numeroONulo(cambiosTxt, 10) ?? datos.contrato?.tranquilidad?.cambiosFecha ?? 2,
-                        cancelacionDias: numeroONulo(cancelTxt, 365) ?? datos.contrato?.tranquilidad?.cancelacionDias ?? 60,
-                        reembolsoPct: numeroONulo(reembolsoTxt, 100) ?? datos.contrato?.tranquilidad?.reembolsoPct ?? 20
-                      })}
-                      {' '}En blanco rige Configuración. Va al contrato.
-                    </p>
-                  </div>
-
-                  {(faltaDelCliente(facturacion).length > 0
-                    || (datos.contrato?.faltaEmpresa.length ?? 0) > 0 || !esFecha(fechaReal)) && (
-                    <div className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
-                                    font-semibold text-ambar-texto">
-                      {!esFecha(fechaReal) && <p>Al contrato le falta el día del evento.</p>}
-                      {faltaDelCliente(facturacion).length > 0 && (
-                        <p>Al cliente le falta: {faltaDelCliente(facturacion).join(' y ')}.</p>
-                      )}
-                      {(datos.contrato?.faltaEmpresa.length ?? 0) > 0 && (
-                        <p>En Configuración falta: {datos.contrato?.faltaEmpresa.join(', ')}.</p>
-                      )}
-                      <p className="font-normal">Se puede imprimir igual: lo que falta sale con una raya para completar a mano.</p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2">
-                    {linkContrato && (
-                      <a href={linkContrato} target="_blank" rel="noreferrer"
-                        onClick={() => { if (sucio && !ganada) void guardar(undefined, true); }}
-                        className="tecla boton min-h-[44px]">📄 Ver el contrato</a>
-                    )}
-                    {firmado && (
-                      <a href={`/api/presupuestos/contrato?id=${encodeURIComponent(p.id)}`}
-                        target="_blank" rel="noopener" className="tecla boton min-h-[44px]">📎 Ver el firmado</a>
-                    )}
-                    {puedeEditar && (
-                      <label className={`boton tecla min-h-[44px] cursor-pointer ${subiendoContrato ? 'opacity-60' : ''}
-                        ${firmado ? '' : '!border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
-                        {subiendoContrato ? 'Subiendo…' : firmado ? 'Cambiar el firmado' : '📎 Subir contrato firmado'}
-                        <input type="file" accept="image/*,application/pdf" className="sr-only"
-                          disabled={subiendoContrato}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            e.target.value = '';
-                            if (f) void subirContrato(f);
-                          }} />
-                      </label>
-                    )}
-                    {firmado && puedeEditar && (
-                      <button type="button" onClick={() => void quitarContrato()}
-                        className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto">Quitar</button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
             </fieldset>
-
             {/* **Los cobros al cliente**: se anotan los pagos, no una
                 casilla. Lo normal es un toque —anticipo recibido, o todo—;
                 otro monto abre un campo. Un cobro anotado por error se
                 deshace. */}
-            <div className="rounded border border-hueso/15 bg-panel p-3">
+            <div className="border-t border-verde/25 pt-3">
               <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                 Pagos del cliente <AyudaCorta tema="pagosCliente" />
               </p>
@@ -1425,72 +1476,194 @@ export default function CotizacionDialogo({
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            </Seccion>
+
+            <fieldset disabled={cancelada} className="min-w-0 space-y-4">
+            {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:
+                el precio, las condiciones de pago y el cliente de su ficha.
+                Se firma en papel y se sube el firmado, que va a Drive. Lo
+                único que se escribe acá es lo que la cotización no sabe. */}
+            <Seccion tono="cielo" icono="📄" titulo="El contrato" ayuda="contrato">
+              {!p ? (
+                <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para armar su contrato.</p>
+              ) : (
+                <div className="mt-2 space-y-3">
+                  {firmado ? (
+                    <p className="text-[15px]">
+                      <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2.5 py-1
+                                       font-semibold text-verde-texto">✓ Contrato firmado</span>
+                      <span className="ml-2 text-[14px] text-hueso/70">
+                        subido{firmado.por && ` por ${firmado.por}`}{firmado.cuando && ` el ${firmado.cuando.slice(0, 10)}`}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-[15px]">
+                      <span className="rounded-full border border-ambar/60 px-2.5 py-1 font-semibold
+                                       text-ambar-texto">Sin firmar</span>
+                      <span className="ml-2 text-[14px] text-hueso/70">
+                        Se imprime, se firma en dos ejemplares y se sube el firmado.
+                      </span>
+                    </p>
+                  )}
+                  {firmado && (
+                    <p className="text-[14px] text-hueso/75">
+                      Si cambias la cotización, el contrato del link deja de coincidir con el
+                      firmado: el que vale es el papel.
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {/* Con factura, el RUT y la dirección ya se piden arriba:
+                        son los mismos de la ficha, no se piden dos veces. */}
+                    {documento !== DOCUMENTO.factura && ([
+                      ['rut', 'RUT del cliente', '12.345.678-9'],
+                      ['domicilio', 'Domicilio del cliente', 'Calle, número, comuna']
+                    ] as const).map(([k, etiqueta, ejemplo]) => (
+                      <label key={k} className="block">
+                        <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          {etiqueta}
+                        </span>
+                        <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+                          onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+                      </label>
+                    ))}
+                    <label className="block">
+                      <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                        Horario del evento
+                      </span>
+                      <input value={horario} className={ENTRADA}
+                        placeholder={datos.contrato?.horario ?? '13:00 a 18:00'}
+                        onChange={(e) => setHorario(e.target.value)} />
+                    </label>
+                  </div>
+                  <p className="text-[13px] text-hueso/60">
+                    {documento === DOCUMENTO.factura
+                      ? 'El RUT y el domicilio son los de los datos de facturación.'
+                      : 'El RUT y el domicilio se guardan en la ficha del cliente.'}
+                  </p>
+
+                  <button type="button" aria-pressed={ley20393} onClick={() => setLey20393(!ley20393)}
+                    className={`boton min-h-[44px] h-auto max-w-full !whitespace-normal py-2 text-left
+                      ${ley20393 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
+                    <span>
+                      {ley20393 ? '✓ ' : ''}Cláusula de la Ley 20.393{' '}
+                      <span className="font-normal text-hueso/70">(la piden las empresas grandes)</span>
+                    </span>
+                  </button>
+                  <AyudaCorta tema="ley20393" />
+
+                  <label className="block">
+                    <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                      Acuerdos adicionales <AyudaCorta tema="acuerdos" />
+                    </span>
+                    <textarea value={acuerdos} rows={2} className={ENTRADA}
+                      placeholder="Lo acordado aparte con el cliente. Va como la última cláusula."
+                      onChange={(e) => setAcuerdos(e.target.value)} />
+                  </label>
+
+                  {/* **Cambios de fecha y cancelación** (2026-11-11): lo que
+                      se negocia con el cliente. En blanco rige Configuración.
+                      El contrato lo imprime y *Cancelar evento* lo aplica. */}
+                  <div className="rounded-lg border border-ambar/40 bg-ambar/5 p-3">
+                    <p className="mb-2 text-[14px] font-bold uppercase tracking-wide text-ambar-texto">
+                      Cambios de fecha y cancelación
+                    </p>
+                    <div className="flex flex-wrap items-end gap-3">
+                      {([
+                        ['Cambios de fecha', cambiosTxt, setCambiosTxt, 10, datos.contrato?.tranquilidad?.cambiosFecha ?? 2, 'cambiosFecha'],
+                        ['Cancela hasta, días antes', cancelTxt, setCancelTxt, 365, datos.contrato?.tranquilidad?.cancelacionDias ?? 60, 'cancelacionDias'],
+                        ['Devuelve, % de lo pagado', reembolsoTxt, setReembolsoTxt, 100, datos.contrato?.tranquilidad?.reembolsoPct ?? 20, 'reembolso']
+                      ] as const).map(([etiqueta, valor, poner, max, defecto, ayuda]) => (
+                        <label key={etiqueta} className="block">
+                          <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}<AyudaCorta tema={ayuda} /></span>
+                          <input type="number" min={0} max={max} value={valor} className={`${ENTRADA} w-24`}
+                            placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[14px] text-hueso/75">
+                      {frasesCancelacion({
+                        cambiosFecha: numeroONulo(cambiosTxt, 10) ?? datos.contrato?.tranquilidad?.cambiosFecha ?? 2,
+                        cancelacionDias: numeroONulo(cancelTxt, 365) ?? datos.contrato?.tranquilidad?.cancelacionDias ?? 60,
+                        reembolsoPct: numeroONulo(reembolsoTxt, 100) ?? datos.contrato?.tranquilidad?.reembolsoPct ?? 20
+                      })}
+                      {' '}En blanco rige Configuración. Va al contrato.
+                    </p>
+                  </div>
+
+                  {(faltaDelCliente(facturacion).length > 0
+                    || (datos.contrato?.faltaEmpresa.length ?? 0) > 0 || !esFecha(fechaReal)) && (
+                    <div className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                                    font-semibold text-ambar-texto">
+                      {!esFecha(fechaReal) && <p>Al contrato le falta el día del evento.</p>}
+                      {faltaDelCliente(facturacion).length > 0 && (
+                        <p>Al cliente le falta: {faltaDelCliente(facturacion).join(' y ')}.</p>
+                      )}
+                      {(datos.contrato?.faltaEmpresa.length ?? 0) > 0 && (
+                        <p>En Configuración falta: {datos.contrato?.faltaEmpresa.join(', ')}.</p>
+                      )}
+                      <p className="font-normal">Se puede imprimir igual: lo que falta sale con una raya para completar a mano.</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {linkContrato && (
+                      <a href={linkContrato} target="_blank" rel="noreferrer"
+                        onClick={() => { if (sucio && !ganada) void guardar(undefined, true); }}
+                        className="tecla boton min-h-[44px]">📄 Ver el contrato</a>
+                    )}
+                    {firmado && (
+                      <a href={`/api/presupuestos/contrato?id=${encodeURIComponent(p.id)}`}
+                        target="_blank" rel="noopener" className="tecla boton min-h-[44px]">📎 Ver el firmado</a>
+                    )}
+                    {puedeEditar && (
+                      <label className={`boton tecla min-h-[44px] cursor-pointer ${subiendoContrato ? 'opacity-60' : ''}
+                        ${firmado ? '' : '!border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
+                        {subiendoContrato ? 'Subiendo…' : firmado ? 'Cambiar el firmado' : '📎 Subir contrato firmado'}
+                        <input type="file" accept="image/*,application/pdf" className="sr-only"
+                          disabled={subiendoContrato}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = '';
+                            if (f) void subirContrato(f);
+                          }} />
+                      </label>
+                    )}
+                    {firmado && puedeEditar && (
+                      <button type="button" onClick={() => void quitarContrato()}
+                        className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto">Quitar</button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Seccion>
+
+            </fieldset>
+
+            {/* **Lo secundario va abajo, chico y separado** (2026-11-11):
+                guardar ya es solo, borrar y cancelar son peligrosos. Nunca
+                al lado del hito. */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
               {!cancelada && (
                 <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
               )}
-              {/* **Cancelar el evento** (2026-11-11): solo una ganada. Lo
-                  hace quien puede tocar la cotización, el vendedor incluido. */}
+              <span className="flex-1" />
+              {p && !ganada && puedeEditar && (
+                <button type="button" onClick={() => void borrar()}
+                  className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                  Borrar
+                </button>
+              )}
               {ganada && !cancelada && puedeEditar && (
-                <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
-                  className="boton min-h-[48px] hover:!border-rojo-fuerte hover:text-rojo-texto">
-                  Cancelar evento
-                </button>
+                <span className="inline-flex items-center">
+                  <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
+                    className="boton hover:!border-rojo-fuerte hover:text-rojo-texto">
+                    Cancelar evento
+                  </button>
+                  <AyudaCorta tema="cancelarEvento" />
+                </span>
               )}
-              {ganada && !cancelada && puedeEditar && <span className="self-center"><AyudaCorta tema="cancelarEvento" /></span>}
-              {p && !ganada && esFecha(fechaReal) && (
-                <button type="button" disabled={guardando || !cobrado.anticipoListo}
-                  title={cobrado.anticipoListo ? '' : 'Falta el anticipo'}
-                  onClick={() => void ganar()}
-                  className="boton min-h-[48px] !border-verde-fuerte text-verde-texto hover:bg-verde/10 disabled:opacity-50">
-                  ✓ Marcar ganada
-                </button>
-              )}
-              {p && !ganada && esFecha(fechaReal) && <span className="self-center"><AyudaCorta tema="marcarGanada" /></span>}
             </div>
-            {/* El motivo del botón apagado, en pantalla y no en un globito:
-                en un teléfono no hay mouse que lo muestre. */}
-            {p && !ganada && esFecha(fechaReal) && !cobrado.anticipoListo && (
-              <p className="text-[14px] font-semibold text-ambar-texto">
-                Para marcarla ganada falta el anticipo: {enPesos(cobrado.faltaAnticipo)}.
-              </p>
-            )}
-
-            {p && (
-              <p className="border-t border-hueso/10 pt-3 text-[13px] font-medium uppercase
-                            tracking-wide text-hueso/60">Mandarla al cliente</p>
-            )}
-            {p && (
-              <div className="flex flex-wrap gap-2">
-                {link && (
-                  <button type="button" className="boton min-h-[44px]"
-                    onClick={() => copiarConAviso(link, 'Link copiado', 'Copia este link:')}>
-                    📋 Copiar link
-                  </button>
-                )}
-                {whatsapp && (
-                  <a href={whatsapp} target="_blank" rel="noreferrer" className="tecla boton min-h-[44px]">
-                    WhatsApp al cliente
-                  </a>
-                )}
-                {link && (
-                  <a href={link} target="_blank" rel="noreferrer" className="tecla boton min-h-[44px]">
-                    Ver el documento
-                  </a>
-                )}
-                {!ganada && (
-                  <button type="button" onClick={() => void borrar()}
-                    className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto">
-                    Borrar
-                  </button>
-                )}
-              </div>
-            )}
-            {p && (
-              <p className="text-[13px] text-hueso/60">
-                Guarda antes de mandar el link: el cliente ve lo último guardado.
-              </p>
-            )}
           </div>
         )}
       </fieldset>
@@ -1514,6 +1687,24 @@ export default function CotizacionDialogo({
       )}
 
       {error && <p className="mt-3 text-[15px] font-semibold text-rojo-texto">{error}</p>}
+      {preguntaEnvio && (
+        <Dialogo titulo="¿La mandaste?" onCerrar={() => setPreguntaEnvio(false)}>
+          <p className="mt-3 text-[17px]">
+            ¿Le mandaste la cotización a <strong>{cliente?.nombre ?? 'tu cliente'}</strong>?
+          </p>
+          <p className="mt-2 text-[14px] text-hueso/75">
+            Pasa a <strong>Enviada</strong>: desde hoy corre su vigencia y aparece como posible
+            en el calendario de reservas.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <button type="button" className="boton min-h-[48px]" onClick={() => setPreguntaEnvio(false)}>
+              Todavía no
+            </button>
+            <button type="button" autoFocus disabled={guardando} onClick={() => void confirmarEnvio()}
+              className="boton boton-relleno min-h-[52px] px-6 text-[16px]">✓ Sí, la mandé</button>
+          </div>
+        </Dialogo>
+      )}
       {cancelando && p && (
         <CancelarEvento p={p} onCerrar={() => setCancelando(false)}
           onListo={() => { setCancelando(false); onCambio(); onCerrar(); }} />
@@ -1557,6 +1748,95 @@ function PieDePaso({ paso, guardando, puede, porQueNo, aviso, onVolver, onSeguir
         <p className={`mt-2 text-right text-[14px] ${puede ? 'text-hueso/70' : 'font-semibold text-ambar-texto'}`}>
           {puede ? aviso : porQueNo}
         </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * **Una sección del paso 4, con su color** (2026-11-11, lo pidió el
+ * cliente: *"darle un distinto tono de fondo para que uno cacha: aquí estoy
+ * en el pago del cliente, aquí en cambio de fecha y cancelación"*). El color
+ * dice de qué se trata: verde la plata, cielo el contrato, rosado lo que
+ * está por confirmarse.
+ */
+const TONOS = {
+  verde: 'border-verde/35 bg-verde/[0.06] text-verde-texto',
+  cielo: 'border-cielo/35 bg-cielo/[0.06] text-cielo-texto',
+  rosa: 'border-rosa/35 bg-rosa/[0.06] text-rosa-texto',
+  ambar: 'border-ambar/45 bg-ambar/[0.07] text-ambar-texto',
+  neutro: 'border-hueso/15 bg-panel text-hueso/80'
+} as const;
+function Seccion({ tono, icono, titulo, ayuda, children }: {
+  tono: keyof typeof TONOS; icono: string; titulo: string; ayuda?: string; children: React.ReactNode;
+}) {
+  const [borde, fondo, texto] = TONOS[tono].split(' ');
+  return (
+    <section className={`space-y-4 rounded-xl border-2 ${borde} ${fondo} p-4`}>
+      <h3 className={`flex items-center text-[15px] font-bold uppercase tracking-wide ${texto}`}>
+        <span aria-hidden className="mr-2 text-[18px]">{icono}</span>{titulo}
+        {ayuda && <AyudaCorta tema={ayuda} />}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** El bloque del próximo hito: grande, con su color y lo que pasa al apretarlo. */
+function Hito({ tono, titulo, bajada, children }: {
+  tono: 'verde' | 'rosa' | 'ambar'; titulo: string; bajada: string; children?: React.ReactNode;
+}) {
+  const [borde, fondo, texto] = TONOS[tono].split(' ');
+  return (
+    <div className={`space-y-3 rounded-2xl border-2 ${borde} ${fondo} p-4`}>
+      <div>
+        <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Próximo paso</p>
+        <p className={`text-[22px] font-extrabold leading-tight ${texto}`}>{titulo}</p>
+        <p className="mt-1 text-[15px] text-hueso/80">{bajada}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** Los hitos de la cotización, como trofeos: los cumplidos con su ✓. */
+function Camino({ pasos }: { pasos: { nombre: string; listo: boolean }[] }) {
+  const actual = pasos.findIndex((x) => !x.listo);
+  return (
+    <ol aria-label="Por dónde va" className="flex flex-wrap items-center gap-1.5">
+      {pasos.map((x, i) => (
+        <li key={x.nombre} className="flex items-center gap-1.5">
+          <span className={`rounded-full border-2 px-3 py-1 text-[14px] font-semibold ${x.listo
+            ? 'border-verde-fuerte bg-verde-fuerte text-tinta'
+            : i === actual ? 'border-oro text-oro' : 'border-hueso/20 text-hueso/55'}`}>
+            {x.listo ? '✓ ' : i === actual ? '● ' : ''}{x.nombre}
+          </span>
+          {i < pasos.length - 1 && <span aria-hidden className="text-hueso/40">→</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** WhatsApp, correo y link: los tres preguntan "¿la mandaste?" (ver `mandar()`). */
+function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false }: {
+  link: string; whatsapp: string; correo: string;
+  onMandar: (via: 'whatsapp' | 'correo' | 'link') => void; grande?: boolean;
+}) {
+  const clase = grande ? 'boton min-h-[56px] flex-1 text-[16px] font-semibold' : 'boton min-h-[44px]';
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className={clase} disabled={!whatsapp} onClick={() => onMandar('whatsapp')}>
+        {whatsapp ? '💬 WhatsApp' : 'Falta su teléfono'}
+      </button>
+      <button type="button" className={clase} disabled={!correo} onClick={() => onMandar('correo')}>
+        {correo ? '✉️ Correo' : 'Falta su correo'}
+      </button>
+      <button type="button" className={clase} disabled={!link} onClick={() => onMandar('link')}>
+        📋 Copiar link
+      </button>
+      {link && (
+        <a href={link} target="_blank" rel="noreferrer" className={`tecla ${clase}`}>Ver el documento</a>
       )}
     </div>
   );

@@ -253,20 +253,22 @@ export default function UsuariosEditor() {
 }
 
 /**
- * El `?` de un rol: qué puede y qué no, **sacado de `PERMISOS`** a través de
+ * El `?` de un rol: qué puede, **sacado de `PERMISOS`** a través de
  * `resumenRol()`. No hay texto escrito a mano que pueda quedar viejo.
  */
 function RolExplicado({ rol }: { rol: Rol }) {
+  // **Solo lo que puede** (2026-11-11, lo pidió el cliente): una lista de
+  // lo que no puede era el doble de larga y tapaba lo que importa. Lo que no
+  // está en la lista no es de este rol. El administrador puede todo: la
+  // lista serían todas las líneas para decir eso mismo.
   const { puede, noPuede } = resumenRol(rol);
   return (
     <AyudaCorta titulo={`Rol: ${NOMBRE_ROL[rol] ?? rol}`}>
       <p>{RESUMEN_ROL[rol]}</p>
-      <p className="font-semibold text-verde-texto">Puede</p>
-      <ul className="list-disc pl-5 text-[14px]">{puede.map((f) => <li key={f}>{f}</li>)}</ul>
       {noPuede.length > 0 && (
         <>
-          <p className="font-semibold text-rojo-texto">No puede</p>
-          <ul className="list-disc pl-5 text-[14px]">{noPuede.map((f) => <li key={f}>{f}</li>)}</ul>
+          <p className="font-semibold text-verde-texto">Puede</p>
+          <ul className="list-disc pl-5 text-[14px]">{puede.map((f) => <li key={f}>{f}</li>)}</ul>
         </>
       )}
     </AyudaCorta>
