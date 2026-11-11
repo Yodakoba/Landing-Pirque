@@ -20,6 +20,7 @@ import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
 import DatosBancarios from './DatosBancarios';
+import { usarSoloMira } from './SesionCliente';
 import { bancoVacio, type Banco } from '@/lib/banco';
 import { MODALIDAD, esContratado, type Trabajador } from '@/lib/equipo';
 
@@ -51,6 +52,8 @@ export default function FichaTrabajador({
   const [valorHora, setValorHora] = useState(String(ficha?.valorHora || ''));
   const [propina, setPropina] = useState(ficha?.propina ?? true);
   const [banco, setBanco] = useState<Banco>(ficha?.banco ?? bancoVacio());
+  // Con vista gerencia y el rol sin `sueldos`: se ven, no se cambian.
+  const soloSueldos = usarSoloMira('sueldos');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -124,7 +127,8 @@ export default function FichaTrabajador({
       </div>
 
       {verSueldos && (
-        <div className="mt-4 border-t border-hueso/10 pt-4">
+        <fieldset disabled={soloSueldos}
+          className="m-0 mt-4 min-w-0 border-0 border-t border-hueso/10 p-0 pt-4">
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Pago
           </p>
@@ -177,11 +181,12 @@ export default function FichaTrabajador({
             </label>
             <span className="self-center pt-4"><AyudaCorta tema="propinaFicha" /></span>
           </div>
-        </div>
+        </fieldset>
       )}
 
       {verSueldos && (
-        <div className="mt-4 border-t border-hueso/10 pt-4">
+        <fieldset disabled={soloSueldos}
+          className="m-0 mt-4 min-w-0 border-0 border-t border-hueso/10 p-0 pt-4">
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Transferencia
           </p>
@@ -190,7 +195,7 @@ export default function FichaTrabajador({
             Es lo que sale en la planilla que descarga quien paga. Se puede
             dejar para después, pero es justo lo que después cuesta juntar.
           </p>
-        </div>
+        </fieldset>
       )}
 
       {!verSueldos && (

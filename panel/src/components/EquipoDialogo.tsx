@@ -39,6 +39,7 @@ import AvisoGuardado from './AvisoGuardado';
 import ReservasDelDia from './ReservasDelDia';
 import { AvisoCierre, PieCorreccion } from './Correccion';
 import { usarAutoguardado } from './usarAutoguardado';
+import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 
 /** El rótulo encima de cada campo de la línea abierta de una persona. */
 const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
@@ -164,7 +165,9 @@ export default function EquipoDialogo({
   const [motivo, setMotivo] = useState('');
   /** La asistencia de las reservas que se cambió durante la corrección. */
   const [pendientes, setPendientes] = useState<Record<number, string>>({});
-  const bloqueado = cerrado && !corrigiendo;
+  /** Vista gerencia sin el permiso del equipo: se mira y no se toca. */
+  const soloMira = usarSoloMira('equipo');
+  const bloqueado = (cerrado && !corrigiendo) || soloMira;
 
   function descartarCorreccion() {
     setPlan(inicial.plan);
@@ -369,8 +372,9 @@ export default function EquipoDialogo({
       return undefined;
     },
     600,
-    // En un día cerrado nada se guarda solo: ver `corrigiendo`.
-    !cerrado
+    // En un día cerrado nada se guarda solo: ver `corrigiendo`. Y quien
+    // solo mira no guarda nada.
+    !cerrado && !soloMira
   );
 
   /** Cierra la ventana, mandando antes lo que quede en el reloj. */
@@ -378,7 +382,7 @@ export default function EquipoDialogo({
     if (corrigiendo && !confirm('¿Salir sin guardar la corrección? Lo que cambiaste se descarta.')) {
       return;
     }
-    if (cerrado) { onCancelar(); return; }
+    if (cerrado || soloMira) { onCancelar(); return; }
     await guardado.forzar();
     if (guardado.hubo.current) onListo(); else onCancelar();
   }
@@ -471,9 +475,11 @@ export default function EquipoDialogo({
           Un día cerrado se ve en solo lectura, y la ventana dice por qué y
           qué se puede hacer: corregir, si se puede, o a quién pedírselo. */}
       {cerrado && (
-        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir}
+        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir && !soloMira}
           corrigiendo={corrigiendo} onCorregir={() => setCorrigiendo(true)} />
       )}
+
+      {soloMira && <AvisoSoloMira que="este día" />}
 
       {conReservas && (
         <div role="tablist" aria-label="Qué mirar de este día"
@@ -908,14 +914,14 @@ export default function EquipoDialogo({
           `title` del botón apagado, o sea en un globito que aparece al pasar
           el mouse: en un teléfono eso no existe, y lo que queda es un botón
           muerto sin explicación. */}
-      {conCierre && !cerrado && !corrigiendo && !llego && (
+      {conCierre && !cerrado && !corrigiendo && !llego && !soloMira && (
         <p className="mt-3 rounded border border-cielo/40 bg-cielo/5
                       px-3 py-2 text-sm text-cielo-texto">
           Este día <strong>todavía no llega</strong>. Se cierra desde el mismo
           día en adelante, cuando ya se sabe quién vino.
         </p>
       )}
-      {((conCierre && !cerrado && llego) || corrigiendo) && !listo && (
+      {((conCierre && !cerrado && llego && !soloMira) || corrigiendo) && !listo && (
         <p className="mt-3 rounded border border-ambar/40 bg-ambar/5
                       px-3 py-2 text-sm text-ambar-texto/90">
           {falta.conEquipo === 0
@@ -934,7 +940,7 @@ export default function EquipoDialogo({
           creería que lo escrito se pierde al cerrar. Y sin el botón de
           cerrar hay que decir dónde está, o parecería que el día no se
           puede cerrar en ninguna parte. */}
-      {plan.length > 0 && !cerrado && (
+      {plan.length > 0 && !cerrado && !soloMira && (
         <p className="mt-2 text-xs text-hueso/45">
           Lo que escribas acá <strong>se guarda solo</strong>.
           {/* El encargado no cierra (2026-11-05): se le dice quién lo hace,
@@ -986,7 +992,7 @@ export default function EquipoDialogo({
          teléfono el día se recorta a "Cerrar", que dice lo mismo en menos
          espacio. */
       <div className="mt-3 flex flex-nowrap items-center gap-2">
-        {!cerrado && (
+        {!cerrado && !soloMira && (
           <AvisoGuardado estado={guardado.estado} error={guardado.error}
             onReintentar={() => void guardado.reintentar()} />
         )}
@@ -1001,7 +1007,7 @@ export default function EquipoDialogo({
             no se puede, y arriba dice por qué.
 
             **No aparece en el calendario de la portada**: ver `conCierre`. */}
-        {conCierre && puedeCerrar && !cerrado && (
+        {conCierre && puedeCerrar && !cerrado && !soloMira && (
           <button onClick={() => setConfirmando(true)}
             disabled={cerrando || !listoParaCerrar}
             className="boton boton-relleno boton-hito whitespace-nowrap disabled:opacity-40"

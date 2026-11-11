@@ -5276,10 +5276,25 @@ gerencia** (columna `Vista gerencia` de `Usuarios`, al final; en blanco es
 - **Viaja firmada en la sesión**, como el rol: vale desde la próxima vez que
   esa persona entre. La barra lo dice con la pastilla *👁 Vista gerencia*, y
   una pantalla que solo se mira por ella lleva arriba *"acá solo miras"*.
-- **Lo que falta, a propósito**: las pantallas no se apagan solas en modo
-  lectura —los botones siguen a la vista y el servidor rechaza con el
-  mensaje de arriba—. Si molesta, el paso siguiente es apagar los controles
-  de cada pantalla que se mira por la gerencia.
+- **Las pantallas que se miran por la gerencia se apagan** (2026-11-11, lo
+  pidió el cliente). El rol y la vista gerencia bajan del layout en un
+  contexto (`SesionCliente.tsx`), y cada pantalla pregunta
+  `usarSoloMira(accion)`: con vista gerencia y el rol sin ese permiso,
+  **los campos van en un `<fieldset disabled>`** —el mismo de un día
+  cerrado— y **los botones que escriben no se dibujan** (agregar, guardar,
+  desactivar, cotizar, cerrar el día, Llegó / No vino). Lo que sirve para
+  mirar sigue vivo: abrir fichas, cambiar de mes, filtrar, buscar, girar a
+  *Reservas*. Cubre `/equipo`, `/turnos` y la ventana del día, `/extras`,
+  Productos, Configuración, Cotizaciones (la ventana queda en solo lectura
+  como la de otro vendedor), Clientes, Recepción y el calendario.
+- **El aviso va una vez**: en las páginas lo dice la barra de arriba; dentro
+  de una ventana, una franja propia (`AvisoSoloMira`); y en `/equipo` el caso
+  parcial del encargado —edita las fichas, no el pago ni la cuenta—.
+- **El pago y la cuenta de una ficha se ven y no se cambian** sin `sueldos`
+  (`usarSoloMira('sueldos')`), en `/equipo`, `/extras` y las fichas que se
+  abren desde un día. Antes se podían escribir y el servidor las descartaba
+  callado.
+- El servidor sigue siendo la protección: esto solo decide qué se dibuja.
 - Al administrador no le suma nada: ya ve todo, y no se guarda.
 
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)

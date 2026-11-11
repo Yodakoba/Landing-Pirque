@@ -12,6 +12,7 @@
  * Los cambios van por el `PATCH` de siempre: el servidor pone las fechas
  * (`Último seguimiento`) y comprueba que la cotización sea de quien la toca.
  */
+import { usarSoloMira } from './SesionCliente';
 import { useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import { avisar } from './AvisoFlotante';
@@ -32,6 +33,9 @@ export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
   onAbrir: (p: Presupuesto, paso?: number) => void;
 }) {
   const [perdiendo, setPerdiendo] = useState('');
+  // Con vista gerencia y sin el permiso de cotizar, se ve qué espera
+  // respuesta pero no se contesta.
+  const soloMira = usarSoloMira('presupuestos');
   const [enviando, setEnviando] = useState('');
   if (lista.length === 0) return null;
 
@@ -72,7 +76,7 @@ export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
                 )}
               </span>
             </button>
-            {puedeTocar && motivo === 'contratoSinFirmar' && (
+            {puedeTocar && !soloMira && motivo === 'contratoSinFirmar' && (
               <div className="mt-2 flex flex-wrap gap-2">
                 <button type="button" onClick={() => onAbrir(p, 5)}
                   className="boton min-h-[44px] !border-verde-fuerte font-semibold text-verde-texto">
@@ -83,7 +87,7 @@ export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
                   className="boton min-h-[44px]">Todavía no</button>
               </div>
             )}
-            {puedeTocar && motivo !== 'contratoSinFirmar' && perdiendo !== p.id && (
+            {puedeTocar && !soloMira && motivo !== 'contratoSinFirmar' && perdiendo !== p.id && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {motivo === 'eventoCerca' && (
                   <button type="button" onClick={() => onAbrir(p)}

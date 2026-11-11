@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Cabecera from '@/components/Cabecera';
+import { SesionCliente } from '@/components/SesionCliente';
 import Recorrido from '@/components/Recorrido';
 import AvisoFlotante from '@/components/AvisoFlotante';
 import { headers } from 'next/headers';
@@ -47,7 +48,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen">
         <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} gerencia={sesion?.gerencia === true} />
         <Recorrido />
-        <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+        {/* El rol y la vista gerencia, para que cada pantalla sepa qué se
+            mira y qué se toca (ver `usarSoloMira()`). */}
+        <SesionCliente rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true}>
+          <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+        </SesionCliente>
         <AvisoFlotante />
       </body>
     </html>

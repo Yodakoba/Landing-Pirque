@@ -121,6 +121,9 @@ export default function DayView(
   const conEquipo = puedeVer(rol as Rol, 'equipo', gerencia);
   const conExtras = puedeVer(rol as Rol, 'extras', gerencia);
   const conPresupuestos = puedeVer(rol as Rol, 'presupuestos', gerencia);
+  // Anotar, editar y borrar reservas. Con vista gerencia, un rol sin
+  // `reservas` mira el día sin esos botones.
+  const conReservas = puede(rol as Rol, 'reservas');
   const [todas, setTodas] = useState<Reserva[] | null>(null);
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
@@ -596,8 +599,8 @@ export default function DayView(
           suyo es gente que viene y que el panel todavía no cuenta, y el
           botón lo pasa a reserva. Ver `EventosCRM.tsx`. */}
       <BloqueCRM e={delSocio}
-                 onAnotar={(ev) => { setEditando(null); setCreando(false);
-                                     setAnotandoCRM(ev); }} />
+                 onAnotar={conReservas ? (ev) => { setEditando(null); setCreando(false);
+                                     setAnotandoCRM(ev); } : undefined} />
 
       {/* **Lo cotizado para este día, en su propio bloque y en rosado**
           (2026-11-01). Va debajo del equipo y de las extras porque es lo
@@ -720,11 +723,13 @@ export default function DayView(
         ))}
         <span className="flex-1" />
         <button onClick={exportar} className="boton">Exportar CSV</button>
-        <button onClick={() => { setEditando(null); setCreando(true); }}
-          disabled={diaCerrado && !puedeCorregir}
-          className="boton boton-relleno">
-          Agregar reserva
-        </button>
+        {conReservas && (
+          <button onClick={() => { setEditando(null); setCreando(true); }}
+            disabled={diaCerrado && !puedeCorregir}
+            className="boton boton-relleno">
+            Agregar reserva
+          </button>
+        )}
       </div>
 
       {visibles.length === 0 ? (
@@ -877,7 +882,8 @@ export default function DayView(
                         </div>
                       ) : (
                         <span className="text-[13px] text-hueso/55">
-                          {r.anotadaPor ? `La anotó ${r.anotadaPor}` : 'No la anotaste tú'}
+                          {!conReservas ? (r.anotadaPor ? `La anotó ${r.anotadaPor}` : '')
+                            : r.anotadaPor ? `La anotó ${r.anotadaPor}` : 'No la anotaste tú'}
                         </span>
                       )}
                     </td>

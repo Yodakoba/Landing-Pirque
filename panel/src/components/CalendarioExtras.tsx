@@ -34,6 +34,7 @@ import { normalizar } from '@/lib/columnas';
 import type { Ocupacion } from '@/lib/tipos';
 import { enPesos } from '@/lib/ocupacion';
 import DatosBancarios from './DatosBancarios';
+import { usarSoloMira } from './SesionCliente';
 import Campo from './Campo';
 import { bancoVacio, type Banco } from '@/lib/banco';
 import CampoTelefono from './CampoTelefono';
@@ -53,6 +54,10 @@ export default function CalendarioExtras() {
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [verSueldos, setVerSueldos] = useState(false);
+  // **Vista gerencia** (2026-11-11): las fichas se miran y no se tocan si el
+  // rol no tiene las extras; los montos y la cuenta, si no tiene `sueldos`.
+  const soloMira = usarSoloMira('extras');
+  const soloSueldos = usarSoloMira('sueldos');
   /** Si se muestran los colaboradores desactivados (`MostrarDesactivados`). */
   const [verInactivos, setVerInactivos] = useState(false);
   // Los días cerrados se abren en solo lectura también acá: ver `corregirDiaCerrado()`.
@@ -321,6 +326,7 @@ export default function CalendarioExtras() {
           agregar. */}
       <MostrarDesactivados visible={verInactivos} onCambio={setVerInactivos}
         cuantos={(colaboradores ?? []).filter((c) => !c.activo).length} />
+      <fieldset disabled={soloMira} className="m-0 mt-3 min-w-0 border-0 p-0">
       <ul className="space-y-3">
         {(colaboradores ?? [])
           .map((c, i) => ({ c, i }))
@@ -362,7 +368,7 @@ export default function CalendarioExtras() {
                 {verSueldos && (
                   <Campo etiqueta="Monto habitual" ancho="w-32">
                     <input type="number" min={0} step={1000} className={ENTRADA}
-                      value={c.monto || ''} placeholder="—"
+                      value={c.monto || ''} placeholder="—" disabled={soloSueldos}
                       aria-label={`Monto habitual de ${c.nombre || 'esta persona'}`}
                       onChange={(e) => cambiar(i, 'monto', e.target.value)} />
                   </Campo>
@@ -404,9 +410,11 @@ export default function CalendarioExtras() {
                     <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
                                      text-hueso/35">Transferencia</span>
                     <div className="min-w-[20rem] flex-1">
+                      <fieldset disabled={soloSueldos} className="m-0 min-w-0 border-0 p-0">
                       <DatosBancarios
                         banco={c.banco} nombre={c.nombre}
                         onCambio={(b) => cambiarBanco(i, b)} />
+                      </fieldset>
                     </div>
                   </div>
                 </div>
@@ -421,6 +429,7 @@ export default function CalendarioExtras() {
           </li>
         )}
       </ul>
+      </fieldset>
 
       {/* Las actividades que ya hace alguien, para sugerirlas al escribir. */}
       <datalist id="actividades-de-fichas">
@@ -428,6 +437,7 @@ export default function CalendarioExtras() {
           <option key={a} value={a} />
         ))}
       </datalist>
+      {!soloMira && (
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           onClick={() => {
@@ -444,6 +454,7 @@ export default function CalendarioExtras() {
         {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
         <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardarFichas} />
       </div>
+      )}
 
       {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 

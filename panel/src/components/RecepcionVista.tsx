@@ -20,6 +20,7 @@
  * alguien marcó desde otro lado.
  */
 import IngresoFudo from './IngresoFudo';
+import { usarSoloMira } from './SesionCliente';
 import type { Ingreso } from '@/lib/fudo';
 import { useEffect, useMemo, useState } from 'react';
 import { avisar } from './AvisoFlotante';
@@ -43,6 +44,8 @@ const hora = () => new Intl.DateTimeFormat('es-CL', {
 
 export default function RecepcionVista() {
   const [d, setD] = useState<Datos | null>(null);
+  /** Vista gerencia sin `asistencia`: la entrada se mira y no se marca. */
+  const soloMira = usarSoloMira('asistencia');
   const [error, setError] = useState('');
   const [busca, setBusca] = useState('');
   /** La reserva a la que se le está preguntando "¿llegaron las N?". */
@@ -108,7 +111,7 @@ export default function RecepcionVista() {
     .reduce((n, r) => n + (r.llegaron ?? r.personas ?? 0), 0);
   const porLlegar = cuentan.filter((r) => !r.asistencia).length;
   const noVinieron = cuentan.filter((r) => r.asistencia === ASISTENCIA.noVino).length;
-  const bloqueada = !d.abierta || d.cerrado;
+  const bloqueada = !d.abierta || d.cerrado || soloMira;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -118,7 +121,7 @@ export default function RecepcionVista() {
         {d.apertura && <> · abre a las {d.apertura}</>}
       </p>
 
-      {bloqueada && (
+      {bloqueada && !soloMira && (
         <p className="mt-4 rounded-xl border-2 border-ambar/60 bg-ambar/10 p-4 text-[17px] font-semibold text-ambar-texto">
           {d.cerrado
             ? 'El día ya se cerró. Si algo quedó mal, avísale al jefe de turno.'
