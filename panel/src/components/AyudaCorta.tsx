@@ -70,14 +70,18 @@ export default function AyudaCorta({ tema, titulo, children }: {
           onClick={() => setAbierta(false)}
           className="fixed inset-0 z-[60] flex items-center justify-center
                      bg-black/50 p-4">
+          {/* **Nunca más alta que la pantalla** (2026-11-11, lo reclamó el
+              cliente: en un computador la lista de un rol cortaba el título
+              arriba y *Entendido* abajo). El título y el botón quedan fijos;
+              si el texto no cabe, se desplaza solo el medio. */}
           <div onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-lg border border-hueso/20 bg-panel
-                       p-4 text-left normal-case tracking-normal shadow-xl">
-            <p className="text-[15px] font-semibold text-oro">{t}</p>
-            <div className="mt-2 space-y-2 text-[15px] leading-relaxed text-hueso/85">
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col sm:max-w-lg rounded-lg border
+                       border-hueso/20 bg-panel p-4 text-left normal-case tracking-normal shadow-xl">
+            <p className="shrink-0 text-[15px] font-semibold text-oro">{t}</p>
+            <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto text-[15px] leading-relaxed text-hueso/85">
               {a ? a.texto.map((p, i) => <p key={i}>{p}</p>) : children}
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex shrink-0 justify-end">
               <button type="button" autoFocus onClick={() => setAbierta(false)}
                 className="boton boton-relleno min-h-[40px] px-5">Entendido</button>
             </div>
