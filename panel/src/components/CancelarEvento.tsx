@@ -58,7 +58,8 @@ export default function CancelarEvento({ p, onCerrar, onListo }: {
       });
       const d = await r.json().catch(() => ({ error: `No se pudo cancelar (error ${r.status}).` }));
       if (d.error) { setError(d.error); return; }
-      avisar(d.devolucion ? `Evento cancelado · devolver ${enPesos(d.devolucion)}` : 'Evento cancelado');
+      avisar((d.devolucion ? `Evento cancelado · devolver ${enPesos(d.devolucion)}` : 'Evento cancelado')
+        + (d.dia === 'borrado' ? ' · el día salió del calendario' : d.dia === 'cerrado' ? ' · el día volvió a cerrado' : ''));
       onListo();
     } catch {
       setError('No hubo conexión con el panel.');
@@ -126,8 +127,9 @@ export default function CancelarEvento({ p, onCerrar, onListo }: {
             </label>
             <p className="rounded border border-rojo-fuerte/50 bg-rojo/10 px-3 py-2 text-[14px]
                           font-semibold text-rojo-texto">
-              La reserva se cancela y el día recupera su cupo. No se deshace: si el
-              cliente vuelve, se hace una cotización nueva.
+              La reserva se cancela y el día recupera su cupo. Si el día se abrió solo
+              para este evento y no tiene otras reservas, sale del calendario. No se
+              deshace: si el cliente vuelve, se hace una cotización nueva.
             </p>
           </>
         )}

@@ -148,7 +148,14 @@ export const COL_PRESUPUESTOS = {
   /** Lo que se acordó devolver al cancelar, en pesos. */
   devolucion: 'Devolución acordada',
   canceladaPor: 'Cancelada por',
-  cancelada: 'Cancelada'
+  cancelada: 'Cancelada',
+  /**
+   * **Qué le hizo al día marcarla ganada** (2026-11-11): `creado` si el día
+   * no estaba en el calendario, `reabierto` si estaba cerrado, vacío si no
+   * le hizo nada. Es lo que permite deshacerlo al cancelar: un día que
+   * existía solo por esta cotización vuelve a no existir.
+   */
+  diaAbierto: 'Día abierto'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -319,6 +326,8 @@ export interface Presupuesto {
   devolucion: number;
   canceladaPor: string;
   cancelada: string;
+  /** `creado`, `reabierto` o vacío: ver `COL_PRESUPUESTOS.diaAbierto`. */
+  diaAbierto: string;
   fila: number;
 }
 
@@ -857,6 +866,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       devolucion: Math.max(0, aEntero(en(f, i.devolucion))),
       canceladaPor: en(f, i.canceladaPor).trim(),
       cancelada: en(f, i.cancelada).trim(),
+      diaAbierto: en(f, i.diaAbierto).trim(),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -918,6 +928,7 @@ export function filaPresupuesto(
   poner(i.devolucion, p.devolucion ? String(p.devolucion) : '');
   poner(i.canceladaPor, p.canceladaPor);
   poner(i.cancelada, p.cancelada);
+  poner(i.diaAbierto, p.diaAbierto);
   return fila;
 }
 

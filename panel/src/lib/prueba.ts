@@ -35,7 +35,7 @@ import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          faltaParaFactura, type Cliente } from './clientes.ts';
-import { diaParaReservaManual } from './dias.ts';
+import { diaParaReservaManual, queLeHizo, deshacerDia } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import { tranquilidadDeCotizacion, devolucionSugerida, faltaDevolver, frasesCancelacion,
          CONCEPTO_DEVOLUCION } from './cancelacion.ts';
@@ -2339,7 +2339,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '',
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3564,7 +3564,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '',
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -4082,6 +4082,24 @@ console.log('\nCancelar una cotización ganada');
     idReserva: 'MANUAL-9', anticipo: null, saldoDias: null, total: 1000000 }],
     [{ presupuesto: 'PRE-9', monto: 300000 }], { anticipoPct: 30, saldoDias: 3 }, '2026-11-11', []);
   ok(av.saldo.length === 0, 'a una cancelada no se le avisa el saldo por cobrar');
+}
+
+console.log('\nCancelar devuelve el día a como estaba');
+{
+  const dia = (estado: string) => ({ fecha: '2026-11-11', capacidad: 120, apertura: '13:00', estado, notas: 'ojo', fila: 7 });
+  ok(queLeHizo(undefined) === 'creado', 'ganar en un día que no estaba lo crea');
+  ok(queLeHizo(dia('Cerrada')) === 'reabierto', 'ganar en un día cerrado lo reabre');
+  ok(queLeHizo(dia('Abierta')) === '' && queLeHizo(dia('Privada')) === '',
+     'un día que ya estaba abierto no lo abrió la cotización');
+  const b = deshacerDia(dia('Privada'), 'creado', 0);
+  ok(!!b && 'borrar' in b, 'cancelada la única reserva, un día creado por ella se borra');
+  ok(deshacerDia(dia('Privada'), 'creado', 1) === null,
+     'con otra reserva que ocupa lugar, el día se queda como está');
+  const c = deshacerDia(dia('Privada'), 'reabierto', 0);
+  ok(!!c && 'dia' in c && c.dia.estado === 'Cerrada' && c.dia.capacidad === 120 && c.dia.notas === 'ojo',
+     'un día reabierto vuelve a cerrado, con su cupo y sus notas');
+  ok(deshacerDia(dia('Abierta'), '', 0) === null, 'un día que no abrió la cotización no se toca');
+  ok(deshacerDia(undefined, 'creado', 0) === null, 'si el día ya no está, no hay nada que deshacer');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

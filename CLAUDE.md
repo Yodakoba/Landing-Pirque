@@ -2309,7 +2309,16 @@ estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
   deduce: acordado menos devuelto (`faltaDevolver()`), y arriba de
   `/presupuestos` sale *N devoluciones por hacer*, solo para quien paga.
   Una cancelada no recibe avisos de saldo por cobrar.
-- **El día no se cierra solo** al cancelar: puede tener otras reservas.
+- **El día vuelve a como estaba si existía solo por ella** (2026-11-11, lo
+  pidió el cliente: *"si solo había un evento cotizado, este se cancela,
+  hazlo desaparecer"*). Marcar ganada guarda en la columna `Día abierto`
+  qué le hizo al día (`queLeHizo()`): `creado` si no estaba, `reabierto` si
+  estaba cerrado. Al cancelar, `deshacerDia()` borra el creado y vuelve a
+  cerrar el reabierto — **solo si no le queda otra reserva que ocupe
+  lugar**. Un día que ya existía abierto no se toca. Las ganadas de antes de
+  esta columna no la tienen: su día se borra a mano.
+- **Una cancelada no aparece en el calendario de Cotizaciones**: sigue en
+  *Todas* (filtro *Perdidas y vencidas*), con su devolución.
 
 ### Las fases
 

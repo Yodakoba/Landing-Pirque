@@ -115,13 +115,13 @@ export async function POST(req: Request) {
     // estaba en el calendario se crea privado con el cupo de siempre, y si
     // estaba cerrado se abre para nosotros. Sin esto el día quedaba "sin
     // cupo" con la gente de la cotización adentro.
-    await abrirElDiaSiHaceFalta(p.fecha);
+    const diaAbierto = await abrirElDiaSiHaceFalta(p.fecha);
     // Y recién ahora el vínculo, que es lo que apaga el conteo de posibles.
     // Se guarda la cotización ORIGINAL, no la que tiene el cliente resuelto:
     // las columnas viejas de cliente siguen en blanco si tenía ficha.
     const { fila: _fila, ...sinFila } = original;
     await guardarPresupuesto({
-      ...sinFila, estado: ESTADO_PRESUPUESTO.aceptado, idReserva
+      ...sinFila, estado: ESTADO_PRESUPUESTO.aceptado, idReserva, diaAbierto
     });
     // **Las otras alternativas del grupo pasan a "No elegida"** (lo decidió
     // el cliente): ya no son gente posible, porque el cliente eligió otra.

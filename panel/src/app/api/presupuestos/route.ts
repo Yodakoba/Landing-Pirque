@@ -159,6 +159,8 @@ export async function POST(req: Request) {
         // El contrato firmado es de la cotización que se firmó, no de una
         // alternativa: la copia nace sin firmar.
         contrato: '', contratoSubidoPor: '', contratoSubido: '',
+        // Lo de la cancelación y del día es de la que se ganó, no de la copia.
+        devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
         validoHasta: validoHastaDe(hoy(), cfg.vigenciaPresupuesto),
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
         // una cotización ajena la puede seguir editando.
@@ -221,7 +223,7 @@ export async function POST(req: Request) {
       cancelacionDias: numeroONulo(cuerpo.cancelacionDias, 365),
       reembolso: numeroONulo(cuerpo.reembolso, 100),
       // Lo de la cancelación lo escribe solo /cancelar.
-      devolucion: 0, canceladaPor: '', cancelada: '',
+      devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
