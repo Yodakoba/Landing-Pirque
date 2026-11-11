@@ -2340,7 +2340,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '', enviada: '', ultimoSeguimiento: '', seguimientoDias: null, avisoEvento: null,
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '', enviada: '', ultimoSeguimiento: '', contratoEnviado: '', seguimientoDias: null, avisoEvento: null,
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3565,7 +3565,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '', enviada: '', ultimoSeguimiento: '', seguimientoDias: null, avisoEvento: null,
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '', enviada: '', ultimoSeguimiento: '', contratoEnviado: '', seguimientoDias: null, avisoEvento: null,
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -4157,6 +4157,15 @@ console.log('\nEl seguimiento de lo mandado');
   ok(!estaVencido(pre({ estado: ESTADO_PRESUPUESTO.borrador, validoHasta: '2026-11-01' }), HOY),
      'un borrador no vence: la vigencia corre desde que se manda');
   ok(estaVencido(pre({ validoHasta: '2026-11-01' }), HOY), 'una mandada sí vence');
+  const cs = seguimientoDe(pre({ idReserva: 'R1', contratoEnviado: '2026-11-03' }), HOY, cfg);
+  ok(cs?.motivo === 'contratoSinFirmar' && cs.dias === 8,
+     'una ganada con el contrato mandado hace 8 días y sin firmar pregunta si volvió firmado');
+  ok(seguimientoDe(pre({ idReserva: 'R1', contratoEnviado: '2026-11-03', contrato: 'drive-id' }), HOY, cfg) === null,
+     'con el firmado subido ya no pregunta');
+  ok(seguimientoDe(pre({ idReserva: 'R1', contratoEnviado: '2026-11-03', ultimoSeguimiento: '2026-11-09' }), HOY, cfg) === null,
+     '"sigue esperando" también posterga lo del contrato');
+  ok(seguimientoDe(pre({ idReserva: 'R1', contratoEnviado: '2026-11-09' }), HOY, cfg) === null,
+     'mandado hace 2 días: todavía no');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

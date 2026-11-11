@@ -164,7 +164,7 @@ export async function POST(req: Request) {
         // Lo de la cancelación y del día es de la que se ganó, no de la copia.
         devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
         // Una alternativa nace sin mandar: su vigencia corre cuando se mande.
-        enviada: '', ultimoSeguimiento: '', validoHasta: '',
+        enviada: '', ultimoSeguimiento: '', validoHasta: '', contratoEnviado: '',
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
         // una cotización ajena la puede seguir editando.
         creadoPor: quien.usuario, creado: ahoraEnChile()
@@ -231,7 +231,7 @@ export async function POST(req: Request) {
       // Lo de la cancelación lo escribe solo /cancelar.
       devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
       // El envío no se acepta del navegador: lo marca "¿la mandaste?".
-      enviada: '', ultimoSeguimiento: '',
+      enviada: '', ultimoSeguimiento: '', contratoEnviado: '',
       seguimientoDias: numeroONulo(cuerpo.seguimientoDias, 365),
       avisoEvento: numeroONulo(cuerpo.avisoEvento, 365),
       creadoPor: quien.usuario,
@@ -325,6 +325,12 @@ export async function PATCH(req: Request) {
       estado = ESTADO_PRESUPUESTO.enviado;
     }
     if (cuerpo.seguimiento === 'esperando') ultimoSeguimiento = hoy();
+    // "Sí, mandé el contrato": la fecha la pone el servidor, la primera vez.
+    let contratoEnviado = previo.contratoEnviado;
+    if (cuerpo.seguimiento === 'contratoEnviado') {
+      if (!contratoEnviado) contratoEnviado = hoy();
+      ultimoSeguimiento = hoy();
+    }
     if (estado !== previo.estado) ultimoSeguimiento = hoy();
     // La primera vez que queda mandada —con el botón o eligiendo la etapa a
     // mano— se anota el día y desde ahí corre la vigencia.
@@ -383,7 +389,7 @@ export async function PATCH(req: Request) {
         ? previo.seguimientoDias : numeroONulo(cuerpo.seguimientoDias, 365),
       avisoEvento: cuerpo.avisoEvento === undefined
         ? previo.avisoEvento : numeroONulo(cuerpo.avisoEvento, 365),
-      enviada, ultimoSeguimiento,
+      enviada, ultimoSeguimiento, contratoEnviado,
       // La vigencia se recalcula solo al mandarla o si lo piden. Editar una
       // línea no puede correrle el plazo al cliente.
       validoHasta
@@ -405,7 +411,7 @@ export async function PATCH(req: Request) {
                                : 'Editó una cotización',
       detalle: `${folioDe(p)} · ${p.estado || 'Borrador'}`
              + (motivoCorreccion ? ` · motivo: ${motivoCorreccion}` : '') });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, contratoEnviado: p.contratoEnviado });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

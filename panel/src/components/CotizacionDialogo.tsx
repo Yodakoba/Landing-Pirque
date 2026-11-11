@@ -185,7 +185,9 @@ export default function CotizacionDialogo({
   const [segTxt, setSegTxt] = useState(p?.seguimientoDias == null ? '' : String(p.seguimientoDias));
   const [avisoTxt, setAvisoTxt] = useState(p?.avisoEvento == null ? '' : String(p.avisoEvento));
   /** Por qué vía se acaba de mandar, mientras se pregunta "¿la mandaste?". */
-  const [preguntaEnvio, setPreguntaEnvio] = useState(false);
+  const [preguntaEnvio, setPreguntaEnvio] = useState<'' | 'cotizacion' | 'contrato'>('');
+  /** El día en que se le mandó el contrato (lo pone el servidor). */
+  const [contratoEnviado, setContratoEnviado] = useState(p?.contratoEnviado ?? '');
   const [cancelando, setCancelando] = useState(false);
   const [acuerdos, setAcuerdos] = useState(p?.acuerdos ?? '');
   /** El contrato firmado subido: quién y cuándo. Que esté es lo que dice "firmado". */
@@ -575,20 +577,35 @@ export default function CotizacionDialogo({
         + (datos.empresa ? ` · ${datos.empresa}` : ''))}&body=${encodeURIComponent(
         `Hola ${cliente.nombre.split(' ')[0]},\n\nTe mando la cotización:\n${link}\n\nQuedo atento.`)}`
     : '';
+  const nombreCorto = cliente?.nombre.split(' ')[0] ?? '';
+  const folio = p ? `N° ${folioDe({ id: grupoDe(p) })}` : '';
+  /** **Mandar el contrato** (2026-11-11): los mismos tres caminos que la cotización. */
+  const whatsappContrato = linkContrato && cliente
+    ? enlaceWhatsApp(cliente.telefono, `Hola ${nombreCorto}, te mando el contrato para firmar: ${linkContrato}`)
+    : '';
+  const correoContrato = linkContrato && cliente?.correo
+    ? `mailto:${cliente.correo}?subject=${encodeURIComponent(
+        `Contrato · Cotización ${folio}` + (datos.empresa ? ` · ${datos.empresa}` : ''))}&body=${encodeURIComponent(
+        `Hola ${nombreCorto},\n\nTe mando el contrato para firmar:\n${linkContrato}\n\nSe imprime y se firma en dos ejemplares.\n\nQuedo atento.`)}`
+    : '';
   const mandada = estaMandada(estado);
   /**
    * **Mandarla** (2026-11-11). Sin WhatsApp ni correo conectados al panel,
    * no hay cómo saber si de verdad se mandó: se pregunta. Copiar el link
    * también, porque casi siempre es para pegarlo en alguna parte.
    */
-  function mandar(via: 'whatsapp' | 'correo' | 'link') {
+  function mandar(via: 'whatsapp' | 'correo' | 'link', que: 'cotizacion' | 'contrato' = 'cotizacion') {
     // WhatsApp y correo son enlaces de verdad (`BotonesMandar`): los abre el
     // navegador. Abrirlos con `window.open` los bloqueaba en el teléfono como
     // ventana emergente, y se perdía justo lo que el botón promete (2026-11-11).
-    if (via === 'link' && link) copiarConAviso(link, 'Link copiado', 'Copia este link:');
-    if (!(p && !ganada && !mandada && puedeEditar && !cancelada)) return;
+    const elLink = que === 'contrato' ? linkContrato : link;
+    if (via === 'link' && elLink) copiarConAviso(elLink, 'Link copiado', 'Copia este link:');
+    if (!p || !puedeEditar || cancelada) return;
+    // Se pregunta solo la primera vez: mandarla de nuevo no cambia nada.
+    if (que === 'cotizacion' && (ganada || mandada)) return;
+    if (que === 'contrato' && (contratoEnviado || firmado)) return;
     // Copiar no saca de la pantalla: se pregunta enseguida.
-    if (via === 'link') return setPreguntaEnvio(true);
+    if (via === 'link') return setPreguntaEnvio(que);
     // **WhatsApp y correo preguntan al volver** (lo pidió el cliente: *"cuando
     // vuelvo a la pestaña o al panel, me tiene que preguntar"*). Se espera a
     // que la página vuelva a estar a la vista o a tener el foco. Si nunca se
@@ -599,7 +616,7 @@ export default function CotizacionDialogo({
       window.removeEventListener('focus', alVolver);
       window.removeEventListener('blur', alSalir);
       clearTimeout(reloj);
-      setPreguntaEnvio(true);
+      setPreguntaEnvio(que);
     };
     function alSalir() { salio = true; }
     function alVolver() { if (document.visibilityState === 'visible' && salio) listo(); }
@@ -611,7 +628,23 @@ export default function CotizacionDialogo({
     const reloj = setTimeout(() => { if (!salio) listo(); }, 3000);
   }
   async function confirmarEnvio() {
-    setPreguntaEnvio(false);
+    const que = preguntaEnvio;
+    setPreguntaEnvio('');
+    if (que === 'contrato') {
+      if (!p) return;
+      // Solo la marca: la fecha la pone el servidor, y no hace falta mandar
+      // lo demás de la cotización.
+      const r = await fetch('/api/presupuestos', {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: p.id, seguimiento: 'contratoEnviado' })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d.error) return setError(d.error);
+      setContratoEnviado(d.contratoEnviado || datos.hoy || '');
+      avisar('Contrato enviado: te recuerdo si no vuelve firmado');
+      onCambio();
+      return;
+    }
     if (await guardar(ESTADO_PRESUPUESTO.enviado, true)) {
       avisar('Enviada: desde hoy corre su vigencia y cuenta en el calendario');
     }
@@ -635,6 +668,7 @@ export default function CotizacionDialogo({
     { nombre: cond.pct > 0 ? 'Anticipo' : 'Sin anticipo',
       listo: cond.pct > 0 ? ganada || anticipoPagado : ganada || mandada },
     { nombre: 'Ganada', listo: ganada },
+    { nombre: 'Contrato enviado', listo: !!contratoEnviado || !!firmado },
     { nombre: 'Contrato firmado', listo: !!firmado },
     { nombre: 'Pagada', listo: cobrado.completo }
   ];
@@ -681,24 +715,19 @@ export default function CotizacionDialogo({
         )}
       </Hito>
     ) : !firmado ? (
-      <Hito tono="verde" titulo="✓ Ganada · sube el contrato firmado"
-        bajada="La reserva ya está en el calendario. Imprime el contrato, fírmenlo en dos ejemplares y sube el firmado.">
-        <div className="flex flex-wrap gap-2">
-          {linkContrato && (
-            <a href={linkContrato} target="_blank" rel="noreferrer" className="tecla boton min-h-[48px]">📄 Ver el contrato</a>
-          )}
-          {puedeEditar && (
-            <label className={`tecla min-h-[56px] flex-1 cursor-pointer rounded-xl border-2 border-verde-fuerte
-                               px-5 text-center text-[17px] font-bold leading-[52px] text-verde-texto hover:bg-verde/10
-                               ${subiendoContrato ? 'opacity-60' : ''}`}>
-              {subiendoContrato ? 'Subiendo…' : '📎 Subir contrato firmado'}
-              <input type="file" accept="image/*,application/pdf" className="sr-only"
-                disabled={subiendoContrato}
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void subirContrato(f); }} />
-            </label>
-          )}
-        </div>
-      </Hito>
+      contratoEnviado ? (
+        <Hito tono="verde" titulo="✓ Ganada · esperando el contrato firmado"
+          bajada={`Se lo mandaste el ${enPalabras(contratoEnviado)}. Cuando te lo devuelva firmado, súbelo.`}>
+          {puedeEditar && <SubirFirmado subiendo={subiendoContrato} onArchivo={(f) => void subirContrato(f)} />}
+        </Hito>
+      ) : (
+        <Hito tono="verde" titulo="✓ Ganada · mándale el contrato"
+          bajada="La reserva ya está en el calendario. Mándale el contrato para firmar: al volver te pregunto si lo mandaste.">
+          <BotonesMandar link={linkContrato} whatsapp={whatsappContrato} correo={correoContrato}
+            onMandar={(v) => mandar(v, 'contrato')} ver="Ver el contrato" grande />
+          {puedeEditar && <SubirFirmado subiendo={subiendoContrato} onArchivo={(f) => void subirContrato(f)} />}
+        </Hito>
+      )
     ) : cobrado.falta > 0 ? (
       <Hito tono="ambar" titulo={`Saldo por cobrar: ${enPesos(cobrado.falta)}`}
         bajada={cond.saldoHasta ? `Hasta el ${enPalabras(cond.saldoHasta)}.` : `${cond.dias} días antes del evento.`}>
@@ -1523,7 +1552,9 @@ export default function CotizacionDialogo({
                       <span className="rounded-full border border-ambar/60 px-2.5 py-1 font-semibold
                                        text-ambar-texto">Sin firmar</span>
                       <span className="ml-2 text-[14px] text-hueso/70">
-                        Se imprime, se firma en dos ejemplares y se sube el firmado.
+                        {contratoEnviado
+                          ? <>Enviado el {enPalabras(contratoEnviado)}: falta que vuelva firmado.</>
+                          : 'Se manda, se firma en dos ejemplares y se sube el firmado.'}
                       </span>
                     </p>
                   )}
@@ -1628,12 +1659,14 @@ export default function CotizacionDialogo({
                     </div>
                   )}
 
+                  <div>
+                    <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                      Mandar el contrato <AyudaCorta tema="mandarContrato" />
+                    </p>
+                    <BotonesMandar link={linkContrato} whatsapp={whatsappContrato} correo={correoContrato}
+                      onMandar={(v) => mandar(v, 'contrato')} ver="📄 Ver el contrato" />
+                  </div>
                   <div className="flex flex-wrap gap-2">
-                    {linkContrato && (
-                      <a href={linkContrato} target="_blank" rel="noreferrer"
-                        onClick={() => { if (sucio && !ganada) void guardar(undefined, true); }}
-                        className="tecla boton min-h-[44px]">📄 Ver el contrato</a>
-                    )}
                     {firmado && (
                       <a href={`/api/presupuestos/contrato?id=${encodeURIComponent(p.id)}`}
                         target="_blank" rel="noopener" className="tecla boton min-h-[44px]">📎 Ver el firmado</a>
@@ -1717,20 +1750,24 @@ export default function CotizacionDialogo({
 
       {error && <p className="mt-3 text-[15px] font-semibold text-rojo-texto">{error}</p>}
       {preguntaEnvio && (
-        <Dialogo titulo="¿La mandaste?" onCerrar={() => setPreguntaEnvio(false)}>
+        <Dialogo titulo="¿La mandaste?" onCerrar={() => setPreguntaEnvio('')}>
           <p className="mt-3 text-[17px]">
-            ¿Le mandaste la cotización a <strong>{cliente?.nombre ?? 'tu cliente'}</strong>?
+            ¿Le mandaste {preguntaEnvio === 'contrato' ? 'el contrato' : 'la cotización'} a{' '}
+            <strong>{cliente?.nombre ?? 'tu cliente'}</strong>?
           </p>
           <p className="mt-2 text-[14px] text-hueso/75">
-            Pasa a <strong>Enviada</strong>: desde hoy corre su vigencia y aparece como posible
-            en el calendario de reservas.
+            {preguntaEnvio === 'contrato'
+              ? <>Queda anotado que se lo mandaste, y si no vuelve firmado te lo recuerdo arriba de Cotizaciones.</>
+              : <>Pasa a <strong>Enviada</strong>: desde hoy corre su vigencia y aparece como posible
+                  en el calendario de reservas.</>}
           </p>
           <div className="mt-5 flex flex-wrap justify-end gap-2">
-            <button type="button" className="boton min-h-[48px]" onClick={() => setPreguntaEnvio(false)}>
+            <button type="button" className="boton min-h-[48px]" onClick={() => setPreguntaEnvio('')}>
               Todavía no
             </button>
             <button type="button" autoFocus disabled={guardando} onClick={() => void confirmarEnvio()}
-              className="boton boton-relleno min-h-[52px] px-6 text-[16px]">✓ Sí, la mandé</button>
+              className="boton boton-relleno min-h-[52px] px-6 text-[16px]">
+              {preguntaEnvio === 'contrato' ? '✓ Sí, lo mandé' : '✓ Sí, la mandé'}</button>
           </div>
         </Dialogo>
       )}
@@ -1848,9 +1885,11 @@ function Camino({ pasos }: { pasos: { nombre: string; listo: boolean }[] }) {
 }
 
 /** WhatsApp, correo y link: los tres preguntan "¿la mandaste?" (ver `mandar()`). */
-function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false }: {
+function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false, ver = 'Ver el documento' }: {
   link: string; whatsapp: string; correo: string;
   onMandar: (via: 'whatsapp' | 'correo' | 'link') => void; grande?: boolean;
+  /** Qué dice el botón que abre el documento. */
+  ver?: string;
 }) {
   const clase = grande ? 'boton min-h-[56px] flex-1 text-[16px] font-semibold' : 'boton min-h-[44px]';
   return (
@@ -1866,8 +1905,21 @@ function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false }: {
         📋 Copiar link
       </button>
       {link && (
-        <a href={link} target="_blank" rel="noreferrer" className={`tecla ${clase}`}>Ver el documento</a>
+        <a href={link} target="_blank" rel="noreferrer" className={`tecla ${clase}`}>{ver}</a>
       )}
     </div>
+  );
+}
+
+/** El botón grande de subir el contrato firmado, para el bloque del próximo paso. */
+function SubirFirmado({ subiendo, onArchivo }: { subiendo: boolean; onArchivo: (f: File) => void }) {
+  return (
+    <label className={`tecla block min-h-[56px] w-full cursor-pointer rounded-xl border-2 border-verde-fuerte
+                       px-5 text-center text-[17px] font-bold leading-[52px] text-verde-texto hover:bg-verde/10
+                       ${subiendo ? 'opacity-60' : ''}`}>
+      {subiendo ? 'Subiendo…' : '📎 Subir contrato firmado'}
+      <input type="file" accept="image/*,application/pdf" className="sr-only" disabled={subiendo}
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onArchivo(f); }} />
+    </label>
   );
 }

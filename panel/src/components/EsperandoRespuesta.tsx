@@ -21,7 +21,7 @@ import { enPalabras } from '@/lib/fechas';
 
 export interface PorSeguir {
   p: Presupuesto;
-  motivo: 'eventoCerca' | 'sinRespuesta';
+  motivo: 'eventoCerca' | 'sinRespuesta' | 'contratoSinFirmar';
   dias: number;
   puedeTocar: boolean;
 }
@@ -64,13 +64,26 @@ export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
                 ? 'font-semibold text-ambar-texto' : 'text-hueso/80'}`}>
                 {motivo === 'eventoCerca'
                   ? `Faltan ${dias === 0 ? 'hoy' : dias === 1 ? '1 día' : `${dias} días`} para el evento: ¿se ganó o se perdió?`
-                  : `Mandada hace ${dias} días sin respuesta.`}
+                  : motivo === 'contratoSinFirmar'
+                    ? `Le mandaste el contrato hace ${dias} días: ¿te lo devolvió firmado?`
+                    : `Mandada hace ${dias} días sin respuesta.`}
                 {p.fecha && motivo !== 'eventoCerca' && (
                   <span className="text-hueso/60"> · evento {enPalabras(p.fecha)}</span>
                 )}
               </span>
             </button>
-            {puedeTocar && perdiendo !== p.id && (
+            {puedeTocar && motivo === 'contratoSinFirmar' && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={() => onAbrir(p)}
+                  className="boton min-h-[44px] !border-verde-fuerte font-semibold text-verde-texto">
+                  📎 Sí: subir el firmado
+                </button>
+                <button type="button" disabled={enviando === p.id}
+                  onClick={() => void cambiar(p, { seguimiento: 'esperando' }, 'Te pregunto de nuevo más adelante')}
+                  className="boton min-h-[44px]">Todavía no</button>
+              </div>
+            )}
+            {puedeTocar && motivo !== 'contratoSinFirmar' && perdiendo !== p.id && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {motivo === 'eventoCerca' && (
                   <button type="button" onClick={() => onAbrir(p)}

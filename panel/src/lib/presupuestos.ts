@@ -167,6 +167,8 @@ export const COL_PRESUPUESTOS = {
   enviada: 'Enviada',
   ultimoSeguimiento: 'Último seguimiento',
   seguimientoDias: 'Recordar a los días',
+  /** El día en que se le mandó el contrato para firmar (2026-11-11). Lo pone el servidor. */
+  contratoEnviado: 'Contrato enviado',
   avisoEvento: 'Preguntar días antes'
 } as const;
 
@@ -344,6 +346,8 @@ export interface Presupuesto {
   /** El día en que se le mandó, o vacío. Ver `COL_PRESUPUESTOS.enviada`. */
   enviada: string;
   ultimoSeguimiento: string;
+  /** El día en que se le mandó el contrato, o vacío. */
+  contratoEnviado: string;
   /** Los plazos del seguimiento; `null` rige Configuración. */
   seguimientoDias: number | null;
   avisoEvento: number | null;
@@ -919,6 +923,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       diaAbierto: en(f, i.diaAbierto).trim(),
       enviada: en(f, i.enviada).slice(0, 10),
       ultimoSeguimiento: en(f, i.ultimoSeguimiento).slice(0, 10),
+      contratoEnviado: en(f, i.contratoEnviado).slice(0, 10),
       seguimientoDias: numeroONulo(en(f, i.seguimientoDias), 365),
       avisoEvento: numeroONulo(en(f, i.avisoEvento), 365),
       cliente: en(f, i.cliente).trim(),
@@ -985,6 +990,7 @@ export function filaPresupuesto(
   poner(i.diaAbierto, p.diaAbierto);
   poner(i.enviada, p.enviada);
   poner(i.ultimoSeguimiento, p.ultimoSeguimiento);
+  poner(i.contratoEnviado, p.contratoEnviado);
   poner(i.seguimientoDias, p.seguimientoDias === null ? '' : String(p.seguimientoDias));
   poner(i.avisoEvento, p.avisoEvento === null ? '' : String(p.avisoEvento));
   return fila;
@@ -1099,10 +1105,21 @@ export function normalizarLineas(
 export function seguimientoDe(
   p: Presupuesto, hoy: Fecha,
   cfg: { seguimientoDias: number; avisoEvento: number }
-): null | { motivo: 'eventoCerca'; dias: number } | { motivo: 'sinRespuesta'; dias: number } {
+): null | { motivo: 'eventoCerca' | 'sinRespuesta' | 'contratoSinFirmar'; dias: number } {
+  const dias = p.seguimientoDias ?? cfg.seguimientoDias;
+  // **El contrato mandado y sin volver firmado** (2026-11-11, lo pidió el
+  // cliente: *"te devolvió el contrato firmado?"*). Va primero y vale también
+  // para una ganada, que es cuando más se manda. Lo apaga subir el firmado.
+  const e = estadoNormal(p.estado);
+  if (esFecha(p.contratoEnviado) && !String(p.contrato ?? '').trim() && dias > 0
+      && e !== ESTADO_PRESUPUESTO.cancelada && e !== ESTADO_PRESUPUESTO.rechazado
+      && e !== ESTADO_PRESUPUESTO.noElegida) {
+    const desde = [p.contratoEnviado, p.ultimoSeguimiento].filter(esFecha).sort().pop()!;
+    const pasaron = diasDesde(desde, hoy);
+    if (pasaron >= dias) return { motivo: 'contratoSinFirmar', dias: diasDesde(p.contratoEnviado, hoy) };
+  }
   if (!estaMandada(p.estado) || String(p.idReserva ?? '').trim()) return null;
   if (estaVencido(p, hoy)) return null;
-  const dias = p.seguimientoDias ?? cfg.seguimientoDias;
   const antes = p.avisoEvento ?? cfg.avisoEvento;
   const base = [p.enviada, p.ultimoSeguimiento].filter(esFecha).sort().pop();
   const postergada = !!base && dias > 0 && p.ultimoSeguimiento === base
