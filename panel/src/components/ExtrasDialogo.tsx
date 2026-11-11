@@ -386,8 +386,7 @@ export default function ExtrasDialogo({
         <span className="flex-1" />
         {!corrigiendo && (
           <button onClick={() => void salir()}
-            className="rounded border border-hueso/20 px-4 py-1.5 text-sm
-                       hover:border-hueso/40">
+            className="boton">
             Listo
           </button>
         )}

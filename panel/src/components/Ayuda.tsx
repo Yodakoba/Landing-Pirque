@@ -82,14 +82,13 @@ export default function Ayuda({ tema, onRecorrido }: {
             {onRecorrido && (
               <button type="button"
                 onClick={() => { setAbierta(false); onRecorrido(); }}
-                className="rounded border border-hueso/20 px-3 py-1.5 text-sm
-                           hover:border-oro hover:text-oro">
+                className="boton hover:text-oro">
                 Ver el recorrido de nuevo
               </button>
             )}
             <span className="flex-1" />
             <button type="button" onClick={() => setAbierta(false)}
-              className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta">
+              className="boton boton-relleno min-h-[40px]">
               Entendido
             </button>
           </div>

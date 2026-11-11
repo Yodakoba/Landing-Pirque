@@ -235,12 +235,12 @@ export default function CalendarView({ rol }: { rol: string }) {
           todavía de qué día es: la fecha se elige en el formulario. */}
       <div className="mb-6 flex flex-wrap gap-3">
         <button onClick={() => setCreando(true)}
-          className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta">
+          className="boton boton-relleno min-h-[48px] text-[15px]">
           Agregar reserva
         </button>
         {conDias && (
           <button onClick={() => setAgregandoFecha(true)}
-            className="rounded border border-hueso/20 px-4 py-2 text-sm hover:border-oro">
+            className="boton">
             Agregar fecha
           </button>
         )}

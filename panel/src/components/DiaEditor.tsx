@@ -276,14 +276,14 @@ export default function DiaEditor({
 
         <div className="mt-5 flex flex-wrap gap-3">
           <button onClick={() => guardar()} disabled={guardando}
-            className="rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta disabled:opacity-50">
+            className="boton boton-relleno min-h-[48px] text-[15px] disabled:opacity-40">
             {guardando ? 'Guardando…'
               : esPreparacion ? 'Planificar el equipo'
               : nueva ? 'Agregar' : 'Guardar'}
           </button>
           <span className="flex-1" />
           <button onClick={onCancelar}
-            className="rounded border border-hueso/20 px-4 py-2 text-sm">Cancelar</button>
+            className="boton">Cancelar</button>
         </div>
       </>
     </Dialogo>

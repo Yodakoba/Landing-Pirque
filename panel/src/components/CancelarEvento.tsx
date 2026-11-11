@@ -140,7 +140,7 @@ export default function CancelarEvento({ p, onCerrar, onListo }: {
           <button type="button" className="boton min-h-[48px]" onClick={onCerrar}>Volver</button>
           {s && (
             <button type="button" disabled={guardando || !motivo.trim()} onClick={() => void cancelar()}
-              className="boton min-h-[48px] !border-rojo-fuerte bg-rojo/15 font-semibold text-rojo-texto
+              className="boton boton-hito !border-rojo-fuerte bg-rojo/15 text-rojo-texto
                          disabled:opacity-50">
               {guardando ? 'Cancelando…' : 'Sí, cancelar el evento'}
             </button>

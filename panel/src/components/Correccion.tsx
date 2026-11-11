@@ -88,7 +88,7 @@ export function PieCorreccion({
           Cancelar<span className="hidden sm:inline"> corrección</span>
         </button>
         <button onClick={onGuardar} disabled={guardando || sinMotivo || !!porQueNo}
-          className="boton boton-relleno whitespace-nowrap">
+          className="boton boton-relleno boton-hito whitespace-nowrap">
           {guardando ? 'Guardando…' : 'Guardar corrección'}
         </button>
       </div>

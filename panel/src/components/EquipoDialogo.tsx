@@ -992,8 +992,7 @@ export default function EquipoDialogo({
         )}
         <span className="flex-1" />
         <button onClick={() => void salir()}
-          className="whitespace-nowrap rounded border border-hueso/20 px-4 py-1.5
-                     text-sm hover:border-hueso/40">
+          className="boton whitespace-nowrap">
           Listo
         </button>
         {/* **Cerrar es una declaración, no un cálculo.** Deja dicho que
@@ -1005,8 +1004,7 @@ export default function EquipoDialogo({
         {conCierre && puedeCerrar && !cerrado && (
           <button onClick={() => setConfirmando(true)}
             disabled={cerrando || !listoParaCerrar}
-            className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
-                       font-semibold text-tinta disabled:opacity-40"
+            className="boton boton-relleno boton-hito whitespace-nowrap disabled:opacity-40"
             title={listoParaCerrar
               ? 'Deja el día cerrado, con tu nombre y la hora'
               : !llego ? 'Este día todavía no llega'

@@ -793,7 +793,7 @@ export default function EquipoEditor() {
             setAbierta(gente.length);
             setSucio(true);
           }}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          className="boton">
           Agregar trabajador
         </button>
         <span className="flex-1" />
@@ -827,8 +827,7 @@ export default function EquipoEditor() {
       <div className="mt-10 rounded border border-hueso/15 bg-panel p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <button onClick={() => setVerPuestos(true)}
-            className="rounded border border-hueso/25 px-4 py-2 text-sm font-semibold
-                       hover:border-oro hover:text-oro">
+            className="boton font-semibold hover:text-oro">
             {editarPuestos ? 'Administrar puestos' : 'Ver los puestos'}
           </button>
           <span className="text-sm text-hueso/50">
@@ -930,14 +929,13 @@ export default function EquipoEditor() {
             {editarPuestos && (
               <button
                 onClick={() => { setPuestos([...puestos, { nombre: '', cadaCuantas: 0 }]); setSucio(true); }}
-                className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+                className="boton">
                 Agregar puesto
               </button>
             )}
             <span className="flex-1" />
             <button onClick={() => setVerPuestos(false)}
-              className="rounded border border-hueso/20 px-3 py-1.5 text-sm
-                         hover:border-hueso/40">
+              className="boton">
               Cerrar
             </button>
             {/* Guarda las dos listas, como siempre: es una sola petición y

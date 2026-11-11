@@ -78,7 +78,7 @@ export default function ConfirmarCierre({ fecha, puntos, cerrando, onCerrar, onV
           Volver a revisar
         </button>
         <button type="button" onClick={onCerrar} disabled={cerrando}
-          className="boton boton-relleno min-h-[44px] justify-center text-[15px]">
+          className="boton boton-relleno boton-hito">
           {cerrando ? 'Cerrando…'
             : avisos ? 'Sí, está bien así: cerrar el día' : 'Sí, cerrar el día'}
         </button>

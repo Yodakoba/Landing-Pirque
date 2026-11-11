@@ -255,6 +255,30 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 }
 .boton-relleno:hover { background: rgb(var(--oro)); color: rgb(var(--tinta)); filter: brightness(1.08); }
 
+/**
+ * **El hito: lo que cierra una etapa** (2026-11-11, regla del cliente para
+ * todo el panel). Tres tamaños, y cada botón en el suyo:
+ *
+ * - **hito** (`.boton-hito`): cerrar el día, guardar una corrección, marcar
+ *   ganada, marcar todos pagados, cancelar un evento. Más alto, más letra,
+ *   esquinas más redondas y borde doble. **Uno por vista.**
+ * - **acción** (`.boton`, a veces con `.boton-relleno`): lo de todos los días.
+ * - **secundario** (`.boton` delineado): volver, listo, borrar, quitar. Nunca
+ *   al lado del hito con el mismo peso.
+ *
+ * Se suma a `.boton` (y al relleno o al color que corresponda): solo cambia
+ * el tamaño, no el color, para que un hito rojo —cancelar— siga siendo rojo.
+ */
+.boton-hito {
+  min-height: 52px;
+  padding: .625rem 1.25rem;
+  font-size: 16px;
+  font-weight: 700;
+  border-width: 2px;
+  border-radius: .75rem;
+  justify-content: center;
+}
+
 /* ---------- El presupuesto impreso ---------- */
 
 /**

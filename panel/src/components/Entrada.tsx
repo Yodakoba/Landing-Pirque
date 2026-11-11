@@ -64,8 +64,7 @@ export default function Entrada() {
         {error && <p className="text-sm text-rojo-texto">{error}</p>}
 
         <button type="submit" disabled={entrando || !usuario || !clave}
-          className="w-full rounded bg-oro px-4 py-2 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
+          className="boton boton-relleno w-full min-h-[48px] text-[15px] disabled:opacity-40">
           {entrando ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
