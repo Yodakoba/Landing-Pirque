@@ -1658,6 +1658,14 @@ Tres decisiones que vale la pena tener escritas:
   un estado del día —eso lo dice `PuntoDia`: público, cerrado, preparación—
   es una capa encima. Un sábado cerrado puede tener una cotización dando
   vueltas, y las dos cosas son ciertas.
+- **En la página del día es una línea chica que se abre** (2026-11-12, lo
+  pidió el cliente: tomaba mucho protagonismo para algo que no está
+  decidido, y sumaba mal). Cerrada dice *2 cotizaciones en curso · 2
+  clientes · hasta 32 personas, sin confirmar*; abierta, una fila por
+  cotización —cliente, número, gente, *3 alternativas, de $714.000 a
+  $1.285.200*, en qué va y *Abrir*—. **Las alternativas cuentan una sola
+  vez**, la de más gente, igual que `posiblesPorDia()`: tres alternativas de
+  12 personas eran 36 posibles.
 - **El bloque del día dice por qué no suma.** *"18 personas posibles si se
   confirma este presupuesto. No ocupan cupo todavía: los números de arriba
   no los cuentan."* Va siempre, porque es justo lo que alguien daría por
