@@ -3,8 +3,10 @@ import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
   crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
-  actualizarPagoDeReserva, abrirElDiaSiHaceFalta
+  actualizarPagoDeReserva, abrirElDiaSiHaceFalta, leerFechas, leerReservas
 } from '@/lib/datos';
+import { cupoParaGanar } from '@/lib/dias';
+import { ocupaLugar } from '@/lib/ocupacion';
 import { condicionesDe, estadoCobros, cobrosDe, puedeGanar } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
 import { conCliente, otrasAlternativas } from '@/lib/cotizar';
@@ -110,8 +112,26 @@ export async function POST(req: Request) {
 
     // Quién lo convirtió queda como dueña de la reserva: la anotó una
     // persona, así que tiene dueño como cualquier otra anotada a mano.
-    const idReserva = await crearReserva(
-      reservaDesdePresupuesto(p, suyas, menus, quien.usuario));
+    // **El cupo** (2026-11-11): si mientras se cotizaba el día se llenó, no se
+    // toma la reserva. Se le dice a quien cotiza qué hacer, no solo que no.
+    const nueva = reservaDesdePresupuesto(p, suyas, menus, quien.usuario);
+    const [fechas, reservas] = await Promise.all([leerFechas(), leerReservas()]);
+    const tomadas = reservas.filter((x) => x.fecha === p.fecha && ocupaLugar(x))
+      .reduce((n, x) => n + (x.personas || 0), 0);
+    const cupo = cupoParaGanar(fechas.find((f) => f.fecha === p.fecha), p.fecha, cfg, tomadas, nueva.personas);
+    if (!cupo.cabe) {
+      return NextResponse.json({
+        error: cupo.exclusivo
+          ? 'Ese día está arrendado en exclusiva a otro cliente: no podemos tomar la reserva. '
+            + 'Comunícate con la administración para ver otra fecha, o si habrá que cancelar la cotización.'
+          : `Se está excediendo el cupo del día: quedan ${Math.max(0, cupo.libres)} lugares y la `
+            + `cotización es de ${nueva.personas} personas. No podemos tomar la reserva. Comunícate con `
+            + 'la administración para ver si se pueden abrir más cupos, o si habrá que cancelar la cotización.',
+        cupo
+      }, { status: 409 });
+    }
+
+    const idReserva = await crearReserva(nueva);
     // **Ganar abre el día**, igual que anotar una reserva a mano: si no
     // estaba en el calendario se crea privado con el cupo de siempre, y si
     // estaba cerrado se abre para nosotros. Sin esto el día quedaba "sin
