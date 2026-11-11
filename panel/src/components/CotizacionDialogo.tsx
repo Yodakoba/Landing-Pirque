@@ -28,11 +28,11 @@ import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  DOCUMENTO, documentoDe, numeroONulo, estaMandada, totalDe, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, numeroONulo, estaMandada, totalDe, estadoNormal, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, productoDe, showDe, cambiarCantidad,
-  alternativasDe, letraDe, grupoDe,
+  alternativasDe, letraDe, grupoDe, vivasDelGrupo, sigueViva, paraElLink,
   ESTADOS_A_MANO, MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, COBRO, type Menu } from '@/lib/menus';
@@ -421,7 +421,7 @@ export default function CotizacionDialogo({
     onAbrir?.(id, paso);
   }
 
-  async function duplicar() {
+  async function duplicar(pasoNuevo = 3) {
     if (!p) return;
     // Lo escrito va también en la copia: primero se guarda.
     if (sucio && !(await guardar())) return;
@@ -433,7 +433,31 @@ export default function CotizacionDialogo({
     if (d.error) return setError(d.error);
     avisar('Alternativa creada: ajústala acá mismo');
     onCambio();
-    if (onAbrir) onAbrir(d.presupuesto.id, 3); else onCerrar();
+    if (onAbrir) onAbrir(d.presupuesto.id, pasoNuevo); else onCerrar();
+  }
+
+  /**
+   * **"Se quedó con la B"** (2026-11-11). Elegir pasa las otras a *No
+   * elegida* y el link pasa a mostrar solo esa; `deshacer` las vuelve a
+   * ofrecer. La ventana se reabre con lo que quedó guardado.
+   */
+  async function elegirAlternativa(id: string, deshacer = false) {
+    if (!p) return;
+    if (sucio && !ganada && !(await guardar())) return;
+    setGuardando(true); setError('');
+    try {
+      const r = await fetch('/api/presupuestos/elegir', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, deshacer })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d.error) return setError(d.error);
+      const elegida = alternativas.find((x) => x.id === id);
+      avisar(deshacer ? 'Las alternativas vuelven a estar en carrera'
+        : `Se quedó con la ${elegida ? letraDe(elegida, alternativas) : 'elegida'}`);
+      onCambio();
+      if (onAbrir) onAbrir(id, paso);
+    } finally { setGuardando(false); }
   }
 
   /** Anota un cobro. Lo comprueba el servidor: el vendedor, solo los suyos. */
@@ -567,11 +591,15 @@ export default function CotizacionDialogo({
 
   const link = p?.token && typeof window !== 'undefined'
     ? `${window.location.origin}/presupuesto/${p.token}` : '';
+  /** Cuántas alternativas van en el link: todas las que siguen en carrera. */
+  const enVariasAlt = p ? paraElLink(p, alternativas).length : 0;
   const linkContrato = p?.token && typeof window !== 'undefined'
     ? `${window.location.origin}/contrato/${p.token}` : '';
   const whatsapp = link && cliente
     ? enlaceWhatsApp(cliente.telefono,
-        `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`)
+        enVariasAlt > 1
+          ? `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización con ${enVariasAlt} alternativas para que elijas: ${link}`
+          : `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`)
     : '';
   /**
    * **El correo** (2026-11-11): sin un servidor de correo, abre el programa
@@ -579,7 +607,8 @@ export default function CotizacionDialogo({
    */
   const correo = link && cliente?.correo
     ? `mailto:${cliente.correo}?subject=${encodeURIComponent(
-        `Cotización N° ${folioDe({ id: grupoDe(p!) })}${letraDe(p!, alternativas) ? ` · Alternativa ${letraDe(p!, alternativas)}` : ''}`
+        `Cotización N° ${folioDe({ id: grupoDe(p!) })}${enVariasAlt > 1 ? ` · ${enVariasAlt} alternativas`
+          : letraDe(p!, alternativas) ? ` · Alternativa ${letraDe(p!, alternativas)}` : ''}`
         + (datos.empresa ? ` · ${datos.empresa}` : ''))}&body=${encodeURIComponent(
         `Hola ${cliente.nombre.split(' ')[0]},\n\nTe mando la cotización:\n${link}\n\nQuedo atento.`)}`
     : '';
@@ -716,8 +745,44 @@ export default function CotizacionDialogo({
       </p>
     </div>
   ) : null;
+  // **Las alternativas** (2026-11-10, rehechas el 2026-11-11): un número por
+  // cotización —el del grupo— y una letra por alternativa. Se mandan juntas
+  // en un solo link y, antes de ganar, se elige una.
+  const alts = p ? alternativasDe(p, alternativas) : [];
+  const letra = p ? letraDe(p, alternativas) : '';
+  const vivas = p ? vivasDelGrupo(p, alternativas) : [];
+  const grupoGanado = alts.some((a) => !!a.idReserva);
+  const porElegir = !!p && !ganada && !grupoGanado && !cancelada && vivas.length > 1 && sigueViva(p);
+  const noQuedo = !!p && !ganada && estadoNormal(p.estado) === ESTADO_PRESUPUESTO.noElegida;
+  const laElegida = noQuedo ? vivas[0] : undefined;
+  const enElLink = p ? paraElLink(p, alternativas) : [];
+  const siguienteLetra = String.fromCharCode(65 + alts.length);
+  const totalAlt = (a: Presupuesto) => a.id === p?.id ? cuentas.total
+    : totalDe(lineasDe(datos.lineas ?? [], a.id), a.descuento);
+  const resumenLink = enElLink.length > 1
+    ? enElLink.map((a) => `${letraDe(a, alternativas)} ${enPesos(totalAlt(a))}`).join(' · ') : '';
+  /** **¿Con cuál se quedó?** Un botón grande por alternativa en carrera. */
+  const bloqueElegir = porElegir ? (
+    <Hito tono="ambar" titulo="¿Con cuál alternativa se quedó?"
+      bajada={`Le mandaste ${vivas.length} alternativas. Antes de ganarla y de mandar el contrato, elige la que quedó: las otras pasan a "No elegida" y el mismo link pasa a mostrar solo esa.`}>
+      <div className={`grid gap-2 ${vivas.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        {vivas.map((a) => (
+          <button key={a.id} type="button" disabled={guardando || !puedeEditar}
+            onClick={() => void elegirAlternativa(a.id)}
+            className={`tecla flex min-h-[88px] flex-col items-center justify-center rounded-xl border-2
+                        px-3 py-2 disabled:opacity-50 ${a.id === p?.id
+              ? 'border-oro bg-oro/15' : 'border-hueso/25 bg-panel hover:border-oro'}`}>
+            <span className="text-[28px] font-extrabold leading-none">{letraDe(a, alternativas)}</span>
+            <span className="mt-1 text-[16px] font-bold tabular-nums">{enPesos(totalAlt(a))}</span>
+            <span className="text-[14px] text-hueso/75">Se quedó con esta</span>
+          </button>
+        ))}
+      </div>
+    </Hito>
+  ) : null;
+
   /** El botón grande de ganar, el mismo en los dos pasos. */
-  const botonGanar = sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar ? (
+  const botonGanar = porElegir ? bloqueElegir : sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar ? (
     <span className="flex items-center gap-1">
       <button type="button" disabled={guardando} onClick={() => setConfirmandoGanar(true)}
         className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
@@ -751,7 +816,9 @@ export default function CotizacionDialogo({
    * anticipo y ganarla con él. Con *Sin anticipo* también se ofrece ganar, y
    * la confirmación avisa si tampoco hay contrato firmado.
    */
-  const hitoEnvio: React.ReactNode = !p || cancelada ? null
+  // Una alternativa que no quedó no tiene próximo paso: lo dice su franja
+  // arriba, con *Abrir la elegida*.
+  const hitoEnvio: React.ReactNode = !p || cancelada || noQuedo ? null
     : ganada ? (
       saldo && firmado ? saldo : (
         <Hito tono="verde" titulo="✓ Ganada · sigue el contrato"
@@ -760,15 +827,17 @@ export default function CotizacionDialogo({
             onClick={() => setPaso(5)}>Ir al paso 5: Contrato →</button>
         </Hito>
       )
-    ) : anticipoPagado || (mandada && cond.pct === 0) ? (
+    ) : porElegir && (mandada || anticipoPagado) ? bloqueElegir
+    : anticipoPagado || (mandada && cond.pct === 0) ? (
       <Hito tono={sinCupo ? 'ambar' : 'verde'}
         titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
         bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar}>
         {botonGanar}
       </Hito>
     ) : !mandada ? (
-      <Hito tono="rosa" titulo="Mándasela al cliente"
-        bajada="WhatsApp y Correo abren el mensaje con el link. Al volver te pregunto si la mandaste: desde ahí corre su vigencia y aparece en el calendario de reservas.">
+      <Hito tono="rosa" titulo={enElLink.length > 1 ? `Mándale las ${enElLink.length} alternativas` : 'Mándasela al cliente'}
+        bajada={(enElLink.length > 1 ? `Van todas en un solo link: ${resumenLink}. ` : '')
+          + 'WhatsApp y Correo abren el mensaje con el link. Al volver te pregunto si la mandaste: desde ahí corre su vigencia y aparece en el calendario de reservas.'}>
         <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} grande />
       </Hito>
     ) : (
@@ -793,7 +862,7 @@ export default function CotizacionDialogo({
    * falte el anticipo (`puedeGanar()`): *"en contratos obviamente solo puede
    * marcar ganado si está el contrato"*.
    */
-  const hitoContrato: React.ReactNode = !p || cancelada ? null
+  const hitoContrato: React.ReactNode = !p || cancelada || porElegir || noQuedo ? null
     : !firmado ? (
       contratoEnviado ? (
         <Hito tono="cielo" titulo="Esperando el contrato firmado"
@@ -819,9 +888,6 @@ export default function CotizacionDialogo({
       <Hito tono="verde" titulo="✓ Cerrada: ganada, firmada y pagada" bajada="No queda nada por hacer con esta cotización." />
     );
 
-  // Un número por cotización —el del grupo— y una letra por alternativa.
-  const alts = p ? alternativasDe(p, alternativas) : [];
-  const letra = p ? letraDe(p, alternativas) : '';
   const titulo = p
     ? `${estadoVisible(p, datos.hoy) === ESTADO_PRESUPUESTO.candidato ? 'Candidato' : 'Cotización'}`
       + ` N° ${folioDe({ id: grupoDe(p) })}${letra ? ` · Alternativa ${letra}` : ''}`
@@ -848,26 +914,53 @@ export default function CotizacionDialogo({
       {/* **Las alternativas, dentro de la cotización** (2026-11-10): una
           pestaña por alternativa y *+ Otra alternativa*, en vez de dos
           cotizaciones sueltas con dos números. */}
-      {p && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {alts.length > 1 && (
-            <span className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">Alternativas</span>
-          )}
-          {alts.length > 1 && alts.map((a, i) => (
-            <button key={a.id} type="button" aria-pressed={a.id === p.id}
-              onClick={() => { if (a.id !== p.id) void abrirAlternativa(a.id); }}
-              className={`boton min-h-[44px] min-w-[44px] ${a.id === p.id ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
-              {String.fromCharCode(65 + i)}
-              <span className="text-[13px] font-normal text-hueso/70">
-                {enPesos(totalDe(lineasDe(datos.lineas ?? [], a.id), a.descuento))}
+      {p && paso >= 2 && (
+        <div className="mb-4 rounded-xl border border-hueso/15 bg-panel p-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+              {alts.length > 1 ? 'Alternativas' : 'Una sola versión'}
+              <AyudaCorta tema="alternativas" />
+            </span>
+            {alts.length > 1 && alts.map((a) => {
+              const fuera = !sigueViva(a);
+              const elegidaYa = !fuera && vivas.length === 1 && alts.length > 1;
+              return (
+                <button key={a.id} type="button" aria-pressed={a.id === p.id}
+                  onClick={() => { if (a.id !== p.id) void abrirAlternativa(a.id); }}
+                  className={`boton min-h-[48px] min-w-[48px] gap-1.5 ${a.id === p.id ? '!border-oro bg-oro/15 font-semibold' : ''}
+                              ${fuera ? 'opacity-60' : ''}`}>
+                  <span className={`text-[17px] font-bold ${fuera ? 'line-through' : ''}`}>{letraDe(a, alternativas)}</span>
+                  <span className="text-[13px] font-normal text-hueso/75">{enPesos(totalAlt(a))}</span>
+                  {elegidaYa && <span className="text-[13px] font-semibold text-verde-texto">✓ elegida</span>}
+                  {fuera && <span className="text-[13px]">no quedó</span>}
+                </button>
+              );
+            })}
+            {puedeEditar && !grupoGanado && !cancelada && (
+              <button type="button" disabled={guardando} onClick={() => void duplicar(paso >= 3 ? 3 : 2)}
+                className="boton min-h-[48px] border-dashed">+ Crear alternativa {siguienteLetra}</button>
+            )}
+          </div>
+          {noQuedo && laElegida && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-ambar/50 bg-ambar/10 px-3 py-2">
+              <span className="flex-1 text-[15px] font-semibold text-ambar-texto">
+                Esta alternativa no quedó: el cliente se quedó con la {letraDe(laElegida, alternativas)}.
               </span>
-            </button>
-          ))}
-          {puedeEditar && !ganada && (
-            <button type="button" disabled={guardando} onClick={() => void duplicar()}
-              className="boton min-h-[44px]">+ Otra alternativa</button>
+              <button type="button" className="boton min-h-[44px]"
+                onClick={() => void abrirAlternativa(laElegida.id)}>Abrir la {letraDe(laElegida, alternativas)}</button>
+              {puedeEditar && !grupoGanado && (
+                <button type="button" disabled={guardando} className="boton min-h-[44px]"
+                  onClick={() => void elegirAlternativa(laElegida.id, true)}>Volver a ofrecer todas</button>
+              )}
+            </div>
           )}
-          <AyudaCorta tema="alternativas" />
+          {!noQuedo && !porElegir && !grupoGanado && vivas.length === 1 && alts.length > 1 && puedeEditar && (
+            <p className="mt-2 text-[14px] text-hueso/75">
+              El cliente se quedó con esta.{' '}
+              <button type="button" disabled={guardando} className="font-semibold text-oro underline"
+                onClick={() => void elegirAlternativa(p.id, true)}>Volver a ofrecer todas</button>
+            </p>
+          )}
         </div>
       )}
 
@@ -1280,6 +1373,23 @@ export default function CotizacionDialogo({
                 <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
               )}
             </div>
+
+            {/* **¿Otra versión?** (2026-11-11, lo pidió el cliente: que crear
+                una alternativa esté más presente). Al final de los productos,
+                que es donde se decide si conviene ofrecer otra. */}
+            {p && puedeEditar && !grupoGanado && !cancelada && (
+              <div className="rounded-xl border-2 border-dashed border-oro/50 bg-oro/[0.05] p-4">
+                <p className="text-[17px] font-bold">¿Le ofreces otra versión?</p>
+                <p className="mt-1 text-[14px] text-hueso/75">
+                  Copia esta tal cual —menús, precios y descuentos— para que cambies lo que difiere.
+                  Se mandan todas juntas en un solo link, y el cliente elige.
+                </p>
+                <button type="button" disabled={guardando} onClick={() => void duplicar(3)}
+                  className="boton mt-3 min-h-[52px] w-full !border-oro text-[16px] font-bold sm:w-auto">
+                  + Crear alternativa {siguienteLetra}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1295,6 +1405,14 @@ export default function CotizacionDialogo({
                 {tipoEvento && <> · {tipoEvento}</>}
               </p>
               <p className="mt-1 text-[20px] font-bold text-oro">{enPesos(cuentas.total)}</p>
+              {enElLink.length > 1 && !ganada && (
+                <p className="mt-2 rounded-lg border border-oro/40 bg-oro/[0.06] px-3 py-2 text-[15px]">
+                  <strong>En el link van {enElLink.length} alternativas:</strong> {resumenLink}.
+                  <span className="block text-[14px] text-hueso/75">
+                    Se mandan juntas; cuando el cliente decida, eliges con cuál se quedó.
+                  </span>
+                </p>
+              )}
             </div>
 
             {/* **El camino y el próximo hito** (2026-11-11, lo pidió el
@@ -1651,6 +1769,10 @@ export default function CotizacionDialogo({
             </div>
 
             {p && !cancelada && <Camino pasos={camino} />}
+
+            {/* El contrato es de una sola versión: con varias en carrera, se
+                elige primero. */}
+            {bloqueElegir}
 
             <fieldset disabled={cancelada} className="min-w-0 space-y-4">
             {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:
