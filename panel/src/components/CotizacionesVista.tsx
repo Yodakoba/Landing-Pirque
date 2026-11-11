@@ -95,16 +95,33 @@ export default function CotizacionesVista() {
   const [abierta, setAbierta] = useState<
     { p: Presupuesto | null; fecha?: string; cliente?: string; paso?: number } | null>(null);
   /**
-   * Una cotización que hay que abrir apenas llegue la lista recargada: la
-   * recién creada, o la alternativa elegida. Se abre ya guardada, así que
-   * tiene pagos, comprobantes y su link.
+   * **Abriendo otra cotización** —la recién creada, una alternativa nueva o
+   * la otra pestaña del grupo— mientras llega la lista recargada.
+   *
+   * **La ventana de antes se queda a la vista** (2026-11-12, lo reclamó el
+   * cliente: *"desaparece todo el pop-up"*). Antes se cerraba y se volvía a
+   * abrir cuando la planilla contestaba, y con la planilla de verdad eso era
+   * un par de segundos de pantalla vacía. Ahora se queda, tapada por un
+   * *Abriendo…* que además impide apretar dos veces lo mismo, y se cambia
+   * por la nueva recién cuando está. La nueva se abre ya guardada: con sus
+   * pagos, sus comprobantes y su link.
    */
-  const [pendiente, setPendiente] = useState<{ id: string; paso?: number } | null>(null);
+  const [abriendo, setAbriendo] = useState(false);
 
-  const cargar = () => fetch('/api/presupuestos').then((r) => r.json()).then((d) => {
-    if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
+  const cargar = (): Promise<Datos | null> => fetch('/api/presupuestos').then((r) => r.json()).then((d) => {
+    if (d.error) { setSinPermiso(!!d.permiso); setError(d.error); return null; }
     setDatos(d);
-  }).catch((e) => setError(String(e)));
+    return d as Datos;
+  }).catch((e) => { setError(String(e)); return null; });
+
+  async function abrirOtra(id: string, paso?: number) {
+    setAbriendo(true);
+    try {
+      const d = await cargar();
+      const p = d?.presupuestos.find((x) => x.id === id);
+      if (p) setAbierta({ p, paso });
+    } finally { setAbriendo(false); }
+  }
 
   /**
    * **La ocupación de las semanas que se ven** (2026-11-11), para dibujar
@@ -137,12 +154,6 @@ export default function CotizacionesVista() {
     else if (cliente) setAbierta({ p: null, cliente });
     if (p || cliente) window.history.replaceState(null, '', '/presupuestos');
   }, [datos]);
-
-  useEffect(() => {
-    if (!datos || !pendiente) return;
-    const p = datos.presupuestos.find((x) => x.id === pendiente.id);
-    if (p) { setAbierta({ p, paso: pendiente.paso }); setPendiente(null); }
-  }, [datos, pendiente]);
 
   const porDia = useMemo(() => {
     const m = new Map<string, Presupuesto[]>();
@@ -610,8 +621,15 @@ export default function CotizacionesVista() {
           onCerrar={() => setAbierta(null)}
           pasoInicial={abierta.paso}
           alternativas={abierta.p ? alternativasDe(abierta.p, datos.presupuestos) : []}
-          onAbrir={(id, paso) => { setAbierta(null); setPendiente({ id, paso }); void cargar(); }}
+          onAbrir={(id, paso) => void abrirOtra(id, paso)}
         />
+      )}
+      {abriendo && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/30" aria-live="polite">
+          <p className="rounded-xl border-2 border-oro/60 bg-panel px-5 py-3 text-[16px] font-semibold shadow-lg">
+            Abriendo…
+          </p>
+        </div>
       )}
     </section>
   );

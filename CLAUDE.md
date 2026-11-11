@@ -2133,7 +2133,12 @@ Lo pidió el cliente probando la ventana de cotizar.
 - **Pasar de Evento a Productos guarda solo** (`irA()`): un candidato pasa
   a *Borrador*, y una cotización nueva se crea. La ventana se reabre sobre
   la cotización ya guardada, así que desde ahí se pueden anotar pagos y
-  subir comprobantes. Antes, una cotización recién creada seguía tratándose
+  subir comprobantes. **La ventana de antes se queda a la vista mientras
+  carga la otra** (2026-11-12, lo reclamó el cliente: *"desaparece todo el
+  pop-up"*), tapada por un *Abriendo…* que impide apretar dos veces; vale
+  también para crear una alternativa y cambiar entre A y B
+  (`abrirOtra()` en `CotizacionesVista`). Antes se cerraba y quedaba la
+  pantalla vacía hasta que contestaba la planilla. Antes, una cotización recién creada seguía tratándose
   como nueva en la misma ventana y no ofrecía pagos.
 - ~~"Seguir a los invitados"~~ — **se sacó el 2026-11-11**: ver "Las reglas al
   guardar". Lo por persona se ajusta con − y +; un monto fijo no tiene
