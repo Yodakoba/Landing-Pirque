@@ -2021,6 +2021,13 @@ en $0 y la pantalla avisa que se escriba en pesos.
   y personas posibles, y *+ Cotizar este día*—, la vista **Sin fecha** y la
   vista **Todas** con filtro por estado y buscador. Los avisos de por vencer y
   vencidas siguen arriba.
+- **Mías / De todos** (2026-11-12, lo pidió el cliente): dos botones arriba
+  de Cotizaciones, con cuántas hay en cada uno. Filtran la pantalla entera
+  —calendario, *Sin fecha*, *Todas* y los avisos— por quién la creó
+  (`esSuya()` en `auth.ts`); **un grupo de alternativas va entero** si una
+  es suya. No cambia quién puede tocar qué. El vendedor parte en *Mías* y
+  los demás en *De todos*; la elección se recuerda en el navegador
+  (`localStorage`, `blp-cotizaciones-de`).
 - **La ventana de cotizar** (`CotizacionDialogo`) son cuatro pasos con
   botones: Cliente (buscar o crear, con la misma pregunta de parecidos),
   Evento (fecha o *todavía no hay día exacto*, invitados con − y +, tipo y
