@@ -2344,6 +2344,15 @@ estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
    real; recién ahí se amplía. No arrancar la Fase 5 sin que el cliente lo
    pida.
 
+   **Las empresas van por cuenta, no por rol** (2026-11-11, idea del
+   cliente). Un vendedor que trabaja para Lo Pirque, para Calicanto o para
+   los dos es **el mismo rol vendedor** con una configuración en su cuenta
+   —*Lo Pirque ✓ · Calicanto ✓*—, no tres roles. Mientras sean dos paneles
+   con dos planillas, eso ya existe sin programar nada: es tener cuenta
+   activa en uno, en el otro o en los dos. La casilla por empresa hace falta
+   recién cuando haya una sola entrada para las dos (la del gerente
+   general). Ver "Rol para lo que se hace, alcance para dónde".
+
 ## El CRM del socio (2026-11-02)
 
 > **Apagada desde el 2026-11-10** (lo decidió el cliente: las cotizaciones
@@ -5035,6 +5044,28 @@ admin      verSueldos ✓  jornada 30.000  cuenta ✓  token ✗*  ve los tres
 
 *El token sale vacío también para el admin cuando la persona todavía no
 tiene link creado, que es el caso de la prueba.
+
+### Rol para lo que se hace, alcance para dónde (2026-11-11)
+
+Regla de diseño, acordada con el cliente: **pocos roles fijos para *qué*
+puede hacer alguien, y configuraciones de alcance para *dónde* o *sobre
+qué*.** Antes de crear un rol nuevo hay que preguntarse si es un rol de
+verdad o un rol que ya existe con otro alcance.
+
+- **Por qué**: mezclar las dos cosas multiplica los roles. "Vendedor Lo
+  Pirque", "vendedor Calicanto" y "vendedor de los dos", y después lo mismo
+  para encargado y pagos: con dos empresas y cuatro roles serían doce, y
+  cada permiso nuevo habría que repartirlo doce veces.
+- **El panel ya lo hacía sin nombrarlo**: el vendedor es un rol más una
+  regla de alcance —solo toca lo que anotó o cotizó él
+  (`puedeTocarReserva()`, `puedeTocarPresupuesto()`)—, y esa regla vive al
+  lado de la tabla de permisos, no dentro de ella. La empresa de una cuenta
+  es el mismo tipo de cosa.
+- **El límite**: el alcance no son permisos sueltos por persona. Casillas
+  de "éste sí ve el informe, éste no cierra el día" en cada cuenta serían
+  una jungla: nadie sabría qué puede alguien sin abrir su ficha, y la
+  explicación de los roles (`roles.ts`) dejaría de decir la verdad. Lo que
+  se hace lo dice el rol; el alcance solo acota dónde.
 
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
