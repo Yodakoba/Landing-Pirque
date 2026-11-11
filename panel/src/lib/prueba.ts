@@ -22,7 +22,7 @@ import { aReserva, estadoDe, telefonoDe, emailDe, nombreDe, personasDe, menuDe,
 import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
-import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto, cambiarCantidad,
+import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto, yaEstaEnLaCotizacion, cambiarCantidad,
          alternativasDe, letraDe, principalDe, sigueViva, vivasDelGrupo, faltaElegir, paraElLink,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
@@ -3653,6 +3653,10 @@ console.log('\nCotizaciones, fase 2');
   ok(prepararLineas([li({ concepto: 'Show ecuestre', cantidad: 3, precio: 500000, personas: 0 })],
        catalogo, 40, false)[0].cantidad === 1,
      'un monto fijo es siempre 1, aunque llegue con otra cantidad');
+  ok(yaEstaEnLaCotizacion([li({ concepto: 'Lo Pirque' })], 'lo pirque')
+     && !yaEstaEnLaCotizacion([li({ concepto: 'Lo Pirque' })], 'Niños')
+     && !yaEstaEnLaCotizacion([], ''),
+     'un producto ya agregado se reconoce sin tildes ni mayúsculas, y uno distinto no');
   const menu = lineaDeProducto(catalogo[0], 'PRE-1', 25, 44000);
   ok(lineaDeProducto(catalogo[0], 'PRE-1', 40, 44000, 0).cantidad === 40
      && lineaDeProducto(catalogo[0], 'PRE-1', 40, 19000, 40).cantidad === 0

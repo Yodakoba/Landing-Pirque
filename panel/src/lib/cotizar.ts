@@ -102,6 +102,23 @@ export function prepararLineas(
 }
 
 /** Una línea nueva para un producto del catálogo, como la propone la pantalla. */
+/**
+ * **Un producto del catálogo va una sola vez por cotización** (2026-11-12,
+ * lo pidió el cliente: *"no quiero que se puedan poner dos veces el mismo
+ * ítem"*). Lo Pirque se cotiza una vez con cuánta gente lo come, y los niños
+ * en su propia línea; dos líneas de Lo Pirque solo confunden. Se compara sin
+ * tildes ni mayúsculas, como el resto del panel.
+ *
+ * Da vuelta lo que decía este proyecto el 2026-11-01 (*"dos líneas del mismo
+ * concepto no se juntan"*, por el caso de una cortesía a precio cero): una
+ * cortesía va ahora como descuento de la línea. Lo que ya tenga dos líneas
+ * de antes no se junta solo: se ve como está y se corrige a mano.
+ */
+export function yaEstaEnLaCotizacion(lineas: { concepto: string }[], producto: string): boolean {
+  const n = normalizar(producto);
+  return !!n && lineas.some((l) => normalizar(l.concepto) === n);
+}
+
 export function lineaDeProducto(
   m: Menu, presupuesto: string, invitados: number, precio: number,
   /** Cuánta gente ya está en los menús de la cotización. */
