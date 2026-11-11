@@ -20,6 +20,10 @@ export interface Reserva {
   // "efectivo en el mesón". Texto libre a propósito: cuáles son los medios
   // de pago del negocio es dato del cliente, no una lista nuestra.
   notaPago: string;
+  /** Cuánta gente llegó, según la anfitriona; `null` si no se anotó. */
+  llegaron?: number | null;
+  /** El aviso de recepción al jefe de turno, o vacío. */
+  avisoRecepcion?: string;
   /** El id del evento del CRM del socio del que salió, o vacío. */
   eventoCRM: string;
   /**

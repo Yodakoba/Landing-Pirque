@@ -34,6 +34,8 @@ import { puede, type Rol, type Accion } from '@/lib/auth';
  */
 const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/', texto: 'Calendario', accion: 'ver' },
+  // La pantalla de la entrada, el día de apertura (2026-11-11).
+  { href: '/recepcion', texto: 'Recepción', accion: 'asistencia' },
   { href: '/equipo', texto: 'Equipo', accion: 'equipo' },
   { href: '/turnos', texto: 'Turnos', accion: 'equipo' },
   { href: '/extras', texto: 'Extras', accion: 'extras' },

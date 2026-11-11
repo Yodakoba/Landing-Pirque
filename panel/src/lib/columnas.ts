@@ -31,6 +31,15 @@ export const COL_RESERVAS = {
   asistencia: 'Asistencia',
   notaPago: 'Nota de pago',
   /**
+   * **Lo que anota la anfitriona en la entrada** (2026-11-11). `Llegaron` es
+   * cuánta gente llegó de verdad, en blanco si nadie lo anotó; no cambia
+   * `Personas` —eso lo decide el jefe de turno editando la reserva—.
+   * `Aviso recepción` es lo que la anfitriona le avisa al jefe de turno, y se
+   * vacía cuando alguien lo marca resuelto.
+   */
+  llegaron: 'Llegaron',
+  avisoRecepcion: 'Aviso recepción',
+  /**
    * De qué evento del CRM del socio salió esta reserva.
    *
    * **Es lo que impide contar la misma gente dos veces** (2026-11-03). Un

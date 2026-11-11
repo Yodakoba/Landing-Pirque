@@ -318,7 +318,7 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  * actualiza la borraría.
  */
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
-  const { asistencia, creada, notaPago, eventoCRM, anotadaPor, ...resto } = r;
+  const { asistencia, creada, notaPago, eventoCRM, anotadaPor, llegaron, avisoRecepcion, ...resto } = r;
   return resto;
 }
 

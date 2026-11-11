@@ -109,8 +109,9 @@ export const ROL = {
   /**
    * **Recibe a los clientes en la entrada** (2026-11-11, lo pidió el
    * cliente: *"solo tiene que poder ver las reservas y decir vino o no vino.
-   * Por ahora"*). Dos permisos: `ver` y `asistencia`. Marca en la página del
-   * día, que es la única pantalla a la que llega.
+   * Por ahora"*). Un solo permiso, `asistencia`, y una sola
+   * pantalla, `/recepcion`: las reservas de hoy, en grande para una tablet.
+   * No ve el calendario ni otros días: el rol se usa solo el día de apertura.
    */
   anfitrion: 'anfitrion',
   /** Solo mira, y solo lo suyo. Entra por un link personal, sin contraseña. */
@@ -181,7 +182,7 @@ export const PERMISOS = {
    * calendario" y "ve los teléfonos del equipo y lo que cobra cada jinete".
    * Cada una de esas cuatro pide ahora el permiso de su propia pantalla.
    */
-  ver: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor, ROL.anfitrion],
+  ver: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
   /**
    * **Marcar si una reserva vino o no** (2026-11-11), y nada más de la
    * reserva. Existe aparte de `reservas` por la anfitriona: ella marca a los

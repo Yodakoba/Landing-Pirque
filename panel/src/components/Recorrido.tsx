@@ -68,6 +68,8 @@ export default function Recorrido() {
   const fuera = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
              || ruta.startsWith('/presupuesto/')
              || ruta.startsWith('/contrato/')
+             // La recepción la usa la anfitriona, que no administra nada.
+             || ruta.startsWith('/recepcion')
              || ruta === '/login';
   if (fuera) return null;
 

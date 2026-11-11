@@ -125,6 +125,14 @@ export async function middleware(req: NextRequest) {
     // entra por la puerta de siempre. Se deja porque la guarda es correcta
     // para cualquier rol que mañana tenga el informe y no el calendario, y
     // porque no cuesta nada: es un `if` que no se cumple.
+    // La anfitriona (2026-11-11): no ve el calendario, entra a la recepción.
+    if (ruta === '/' && !puede(sesion.rol as Rol, 'ver')
+        && puede(sesion.rol as Rol, 'asistencia')) {
+      const recepcion = req.nextUrl.clone();
+      recepcion.pathname = '/recepcion';
+      recepcion.search = '';
+      return NextResponse.redirect(recepcion);
+    }
     if (ruta === '/' && !puede(sesion.rol as Rol, 'ver')
         && puede(sesion.rol as Rol, 'informe')) {
       const informe = req.nextUrl.clone();

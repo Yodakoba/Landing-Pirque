@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
-import { puedeTocarReserva, type Rol } from '@/lib/auth';
+import { puedeTocarReserva, puede, type Rol } from '@/lib/auth';
 import { editarReserva, borrarReserva, anotar, leerReservas,
-         reservasDeCotizaciones } from '@/lib/datos';
+         reservasDeCotizaciones, leerFechas, leerConfig } from '@/lib/datos';
 import { folioDe } from '@/lib/presupuestos';
 import { empujarDias } from '@/lib/crm-escribir';
 import { guardaDelDia } from '@/lib/guardaCierre';
-import { yaLlego } from '@/lib/cierres';
+import { yaLlego, yaAbrio } from '@/lib/cierres';
+import { ahoraEnChile } from '@/lib/bitacora';
 import { hoy } from '@/lib/fechas';
 
 export const dynamic = 'force-dynamic';
@@ -48,9 +49,30 @@ async function duenaDeLaReserva(req: Request, antes: { anotadaPor: string } | un
 
 // La fila de la planilla es el identificador para editar: el ID Orden puede
 // venir vacío en pedidos viejos, la fila nunca.
+/**
+ * **Lo que se cambia en la entrada** (2026-11-11): si vino, cuántos
+ * llegaron y el aviso al jefe de turno. Es todo lo que puede tocar la
+ * anfitriona, con el permiso `asistencia`; cualquier otro campo pide
+ * `reservas`, igual que siempre.
+ */
+const DE_LA_ENTRADA = new Set(['asistencia', 'llegaron', 'avisoRecepcion']);
+
 export async function PATCH(req: Request, { params }: { params: { fila: string } }) {
-  const no = await exigir(req, 'reservas');
-  if (no) return no;
+  const cuerpo = await req.json().catch(() => ({}));
+  const soloEntrada = Object.keys(cuerpo).length > 0
+    && Object.keys(cuerpo).every((k) => DE_LA_ENTRADA.has(k));
+  const quien0 = await quienEs(req);
+  const conAsistencia = soloEntrada && puede(quien0.rol as Rol, 'asistencia');
+  const no = await exigir(req, conAsistencia ? 'asistencia' : 'reservas');
+  if (no) {
+    // La anfitriona que intenta algo más recibe qué hacer, no solo un no.
+    if (puede(quien0.rol as Rol, 'asistencia') && !puede(quien0.rol as Rol, 'reservas')) {
+      return NextResponse.json({
+        error: 'Eso no lo puedes cambiar tú: avísale al jefe de turno.', permiso: true
+      }, { status: 403 });
+    }
+    return no;
+  }
   try {
     const fila = Number(params.fila);
     if (!(fila > 1)) return NextResponse.json({ error: 'Fila inválida.' }, { status: 400 });
@@ -65,7 +87,15 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // `anotadaPor` sale de la lista igual que `tipoPago`: quién anotó una
     // reserva es un hecho de cuando se anotó, no algo que se edite después.
     const { tipoPago, id, creada, fila: _f, correccion, anotadaPor,
-            ...cambios } = await req.json();
+            ...cambios } = cuerpo;
+    if (cambios.llegaron !== undefined) {
+      const n = Number(cambios.llegaron);
+      cambios.llegaron = cambios.llegaron === null || cambios.llegaron === '' || !Number.isFinite(n)
+        ? null : Math.max(0, Math.round(n));
+    }
+    if (cambios.avisoRecepcion !== undefined) {
+      cambios.avisoRecepcion = String(cambios.avisoRecepcion ?? '').trim().slice(0, 300);
+    }
     // **Se lee ANTES de escribir, y sirve para dos cosas**: la guarda del día
     // cerrado necesita saber en qué día está la reserva, y el empujón al CRM
     // necesita el día del que sale —una edición puede moverla de fecha, y
@@ -73,7 +103,11 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     const antes = (await leerReservas()).find((r) => r.fila === fila);
     // **Y sirve para una tercera cosa desde el 2026-11-05**: saber de quién
     // es, porque un vendedor solo toca las suyas.
-    const ajena = await duenaDeLaReserva(req, antes);
+    // La anfitriona marca la entrada de cualquier reserva: no es dueña de
+    // ninguna y no las edita.
+    const ajena = conAsistencia ? (antes ? null
+      : NextResponse.json({ error: 'Esa reserva ya no está.' }, { status: 404 }))
+      : await duenaDeLaReserva(req, antes);
     if (ajena) return ajena;
     // **Una reserva que nació de una cotización se edita desde la
     // cotización** (2026-11-10): la escribe el sistema, y una edición acá
@@ -81,7 +115,7 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // se cambia acá es lo del día: si vino, cómo va el pago y su nota.
     const deCotizacion = antes ? (await reservasDeCotizaciones()).get(antes.id) : undefined;
     if (deCotizacion) {
-      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago']);
+      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago', 'llegaron', 'avisoRecepcion']);
       const ajenos = Object.keys(cambios).filter((k) => !DEL_DIA.has(k));
       if (ajenos.length) {
         return NextResponse.json({
@@ -107,6 +141,25 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
       return NextResponse.json(
         { error: 'Ese día todavía no llega: quién vino se marca desde el mismo día.' },
         { status: 400 });
+    }
+    // **Lo de la entrada, desde la hora de apertura** (2026-11-11, lo pidió
+    // el cliente): ni la anfitriona ni el jefe de turno anotan quién llegó,
+    // cuántos ni avisos antes de que el día abra (`yaAbrio()`).
+    const deEntrada = ['asistencia', 'llegaron', 'avisoRecepcion'].some((k) => cambios[k] !== undefined);
+    if (deEntrada && diaDeLaReserva) {
+      const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
+      const apertura = fechas.find((f) => f.fecha === diaDeLaReserva)?.apertura || cfg.horaApertura;
+      if (!yaAbrio(diaDeLaReserva, apertura, ahoraEnChile())) {
+        return NextResponse.json({
+          error: `La recepción de ese día se abre ${diaDeLaReserva === hoy() ? `a las ${apertura}` : 'el mismo día, a la hora de apertura'}.`
+        }, { status: 400 });
+      }
+      // La anfitriona solo trabaja el día de hoy: lo de otros días es del jefe.
+      if (conAsistencia && !puede(quien0.rol as Rol, 'reservas') && diaDeLaReserva !== hoy()) {
+        return NextResponse.json({
+          error: 'Solo se anota la recepción de hoy. Para otro día, avísale al jefe de turno.', permiso: true
+        }, { status: 403 });
+      }
     }
     await editarReserva(fila, cambios);
     // Los dos días, el de antes y el de después. Si no se movió es el mismo y
