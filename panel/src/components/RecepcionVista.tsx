@@ -46,6 +46,13 @@ export default function RecepcionVista() {
   /** La reserva a la que se le está escribiendo un aviso. */
   const [avisando, setAvisando] = useState<{ fila: number; texto: string } | null>(null);
   const [guardando, setGuardando] = useState(0);
+  /**
+   * **La recibida que se volvió a abrir.** En el celular —la pantalla
+   * número uno, lo pidió el cliente— una reserva ya marcada se achica a una
+   * línea, para no tener que bajar por todas las que ya entraron. *Cambiar*
+   * la vuelve a abrir.
+   */
+  const [abierta, setAbierta] = useState(0);
 
   const cargar = () => fetch('/api/recepcion').then((r) => r.json()).then((x) => {
     if (x.error) return setError(x.error);
@@ -73,11 +80,11 @@ export default function RecepcionVista() {
     finally { setGuardando(0); }
   }
 
-  const llego = (r: R, n: number) => guardar(r, {
+  const llego = (r: R, n: number) => { setAbierta(0); return guardar(r, {
     asistencia: ASISTENCIA.vino, llegaron: n,
     // **Lo distinto avisa solo**: el jefe de turno lo ve y decide.
     ...(n !== r.personas ? { avisoRecepcion: `${hora()} · Llegaron ${n} de ${r.personas}` } : {})
-  }, n === r.personas ? `✓ ${r.nombre}: llegaron los ${n}` : `${r.nombre}: llegaron ${n} de ${r.personas} · avisado al jefe de turno`);
+  }, n === r.personas ? `✓ ${r.nombre}: llegaron los ${n}` : `${r.nombre}: llegaron ${n} de ${r.personas} · avisado al jefe de turno`); };
 
   const lista = useMemo(() => {
     const todas = d?.reservas ?? [];
@@ -100,9 +107,9 @@ export default function RecepcionVista() {
   const bloqueada = !d.abierta || d.cerrado;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-[22px] font-bold uppercase tracking-wide">Recepción</h1>
-      <p className="mt-1 text-[18px] text-hueso/80">
+    <div className="mx-auto max-w-5xl">
+      <h1 className="text-[20px] font-bold uppercase tracking-wide sm:text-[22px]">Recepción</h1>
+      <p className="mt-0.5 text-[16px] text-hueso/80 sm:text-[18px]">
         <span className="inline-block first-letter:uppercase">{enPalabras(d.fecha)}</span>
         {d.apertura && <> · abre a las {d.apertura}</>}
       </p>
@@ -115,24 +122,36 @@ export default function RecepcionVista() {
         </p>
       )}
 
-      {/* Los tres números que se miran de lejos. */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      {/* **Los números y el buscador quedan fijos arriba** al bajar por la
+          lista: en el celular, quien recibe busca un nombre tras otro y no
+          puede volver a subir cada vez. Llevan su propio fondo para que la
+          lista no se vea por debajo. */}
+      <div className="sticky top-0 z-10 -mx-5 mt-2 bg-tinta px-5 pb-3 pt-3 shadow-sm">
+      <div className="grid grid-cols-3 gap-2">
         {([
           [`${llegaron}/${esperadas}`, 'personas llegaron', 'text-verde-texto'],
           [String(porLlegar), porLlegar === 1 ? 'reserva por llegar' : 'reservas por llegar', 'text-oro'],
           [String(noVinieron), noVinieron === 1 ? 'no vino' : 'no vinieron', 'text-rojo-texto']
         ] as const).map(([n, que, color]) => (
-          <div key={que} className="rounded-xl border border-hueso/15 bg-panel p-3 text-center">
-            <p className={`text-[30px] font-extrabold leading-none tabular-nums ${color}`}>{n}</p>
-            <p className="mt-1 text-[14px] text-hueso/75">{que}</p>
+          <div key={que} className="rounded-xl border border-hueso/15 bg-panel px-2 py-2.5 text-center">
+            <p className={`text-[26px] font-extrabold leading-none tabular-nums sm:text-[30px] ${color}`}>{n}</p>
+            <p className="mt-1 text-[13px] leading-tight text-hueso/75 sm:text-[14px]">{que}</p>
           </div>
         ))}
       </div>
 
       <input value={busca} onChange={(e) => setBusca(e.target.value)} type="search"
         placeholder="Buscar por nombre…" aria-label="Buscar reserva por nombre"
-        className="mt-4 w-full rounded-xl border-2 border-hueso/20 bg-panel px-4 py-3 text-[18px]
+        className="mt-3 w-full rounded-xl border-2 border-hueso/20 bg-panel px-4 py-3 text-[18px]
                    outline-none focus:border-oro" />
+      </div>
+
+      {/* Una sola vez y no en cada tarjeta: repetida era ruido. */}
+      {!bloqueada && (
+        <p className="mt-1 text-[14px] text-hueso/65">
+          Para cambiar personas, menús o el pago, usa <strong>📣 Avisar al jefe de turno</strong>.
+        </p>
+      )}
 
       {cuentan.length === 0 && (
         <p className="mt-6 text-[17px] text-hueso/70">Hoy no hay reservas.</p>
@@ -141,13 +160,37 @@ export default function RecepcionVista() {
         <p className="mt-6 text-[17px] text-hueso/70">Nadie calza con “{busca}”.</p>
       )}
 
-      <ul className="mt-4 space-y-3">
+      <ul className="mt-3 grid grid-cols-1 items-start gap-3 md:grid-cols-2">
         {lista.map((r) => {
           const vino = r.asistencia === ASISTENCIA.vino;
           const noVino = r.asistencia === ASISTENCIA.noVino;
           const n = r.llegaron ?? r.personas;
+          // Ya recibida y sin tocar: una línea. Abierta a mano, contando o
+          // avisando, la tarjeta entera.
+          if ((vino || noVino) && abierta !== r.fila && contando?.fila !== r.fila && avisando?.fila !== r.fila) {
+            return (
+              <li key={r.fila} className={`flex min-w-0 items-center gap-3 rounded-xl border-2 px-3 py-2 ${vino
+                ? 'border-verde/40 bg-verde/[0.06]' : 'border-rojo/35 bg-rojo/[0.05]'}`}>
+                <span aria-hidden className={`text-[22px] font-bold ${vino ? 'text-verde-texto' : 'text-rojo-texto'}`}>
+                  {vino ? '✓' : '✕'}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[17px] font-semibold">{r.nombre || 'Sin nombre'}</span>
+                  <span className={`block text-[14px] ${vino && n !== r.personas ? 'font-semibold text-ambar-texto'
+                    : 'text-hueso/70'}`}>
+                    {vino ? `Llegaron ${n}${n !== r.personas ? ` de ${r.personas}` : ''}` : 'No vino'}
+                    {r.avisoRecepcion && ' · 📣 avisado'}
+                  </span>
+                </span>
+                {!bloqueada && (
+                  <button type="button" className="boton min-h-[44px] shrink-0"
+                    onClick={() => setAbierta(r.fila)}>Cambiar</button>
+                )}
+              </li>
+            );
+          }
           return (
-            <li key={r.fila} className={`rounded-2xl border-2 p-4 ${vino
+            <li key={r.fila} className={`min-w-0 rounded-2xl border-2 p-3.5 sm:p-4 ${vino
               ? 'border-verde/50 bg-verde/[0.06]' : noVino ? 'border-rojo/40 bg-rojo/[0.05] opacity-80'
               : 'border-hueso/20 bg-panel'}`}>
               <div className="flex flex-wrap items-baseline gap-x-3">
@@ -181,22 +224,22 @@ export default function RecepcionVista() {
                     ✓ Sí, las {r.personas}
                   </button>
                   <p className="mt-3 text-[15px] text-hueso/75">Llegaron más o menos:</p>
-                  <div className="mt-1 flex items-center gap-3">
-                    <button type="button" aria-label="Una menos" className="boton h-14 w-14 text-2xl"
+                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                    <button type="button" aria-label="Una menos" className="boton h-14 w-14 !text-[28px] !font-bold"
                       onClick={() => setContando({ fila: r.fila, n: Math.max(0, contando.n - 1) })}>−</button>
                     <span className="w-16 text-center text-[28px] font-bold tabular-nums">{contando.n}</span>
-                    <button type="button" aria-label="Una más" className="boton h-14 w-14 text-2xl"
+                    <button type="button" aria-label="Una más" className="boton h-14 w-14 !text-[28px] !font-bold"
                       onClick={() => setContando({ fila: r.fila, n: contando.n + 1 })}>+</button>
                     <button type="button" disabled={!!guardando || contando.n === r.personas}
                       onClick={() => { const k = contando.n; setContando(null); void llego(r, k); }}
-                      className="boton boton-relleno boton-hito flex-1 disabled:opacity-40">
+                      className="boton boton-relleno boton-hito w-full disabled:opacity-40 sm:w-auto sm:flex-1">
                       Llegaron {contando.n}
                     </button>
                   </div>
                   <p className="mt-2 text-[14px] text-hueso/65">
                     Si es otro número, la reserva no cambia: se le avisa al jefe de turno.
                   </p>
-                  <button type="button" className="boton mt-2" onClick={() => setContando(null)}>Volver</button>
+                  <button type="button" className="boton mt-2 min-h-[44px]" onClick={() => setContando(null)}>Volver</button>
                 </div>
               ) : avisando?.fila === r.fila ? (
                 <div className="mt-3 rounded-xl border-2 border-ambar/60 p-3">
@@ -224,20 +267,20 @@ export default function RecepcionVista() {
                       ✓ Llegó
                     </button>
                     <button type="button" disabled={!!guardando}
-                      onClick={() => void guardar(r, { asistencia: noVino ? '' : ASISTENCIA.noVino, llegaron: null },
-                        noVino ? `${r.nombre}: sin marcar` : `${r.nombre}: no vino`)}
+                      onClick={() => { setAbierta(0); void guardar(r, { asistencia: noVino ? '' : ASISTENCIA.noVino, llegaron: null },
+                        noVino ? `${r.nombre}: sin marcar` : `${r.nombre}: no vino`); }}
                       className={`tecla min-h-[64px] rounded-xl border-2 text-[20px] font-bold ${noVino
                         ? 'border-rojo-fuerte bg-rojo-fuerte text-white'
                         : 'border-rojo-fuerte/70 text-rojo-texto hover:bg-rojo/10'}`}>
                       ✕ No vino
                     </button>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button type="button" className="boton min-h-[48px]"
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" className="boton min-h-[48px] flex-1 !text-[15px]"
                       onClick={() => setAvisando({ fila: r.fila, texto: '' })}>📣 Avisar al jefe de turno</button>
-                    <span className="text-[14px] text-hueso/60">
-                      Para cambiar personas, menús o el pago, avisa al jefe de turno.
-                    </span>
+                    {abierta === r.fila && (
+                      <button type="button" className="boton min-h-[48px]" onClick={() => setAbierta(0)}>Listo</button>
+                    )}
                   </div>
                 </>
               )}

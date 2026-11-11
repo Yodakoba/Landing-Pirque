@@ -5392,6 +5392,14 @@ vino o no vino. Por ahora"*. El rol se usa **solo el día de apertura**.
   **✓ Resuelto** (que vacía el aviso), y *llegaron N* bajo las personas; lo
   mismo en la cara *Reservas* de la ventana del día en `/turnos`; y arriba
   del calendario de la portada, *📣 La recepción dejó N avisos hoy*.
+- **El celular es la pantalla número uno**, y la tablet la segunda (lo
+  pidió el cliente). Los tres números y el buscador **quedan fijos arriba**
+  al bajar; una reserva ya marcada se achica a **una línea** con *Cambiar*,
+  para no recorrer las que ya entraron; la frase de "para cambiar personas,
+  menús o el pago" va una vez arriba y no en cada tarjeta; y en el contador
+  *Llegaron N* va en su propia línea, para que entre a 360px. Desde 768px
+  las tarjetas van en dos columnas. Comprobado a 360, 393, 820 y 1180 sin
+  corrimiento lateral.
 - **Pendiente, a propósito**: *"Llegó alguien sin reserva"*. El cliente lo
   dejó para después.
 
