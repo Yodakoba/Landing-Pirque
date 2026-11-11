@@ -169,7 +169,13 @@ export const COL_PRESUPUESTOS = {
   seguimientoDias: 'Recordar a los días',
   /** El día en que se le mandó el contrato para firmar (2026-11-11). Lo pone el servidor. */
   contratoEnviado: 'Contrato enviado',
-  avisoEvento: 'Preguntar días antes'
+  avisoEvento: 'Preguntar días antes',
+  /**
+   * **El anticipo en pesos, si se acordó un monto** (2026-11-12, lo pidió el
+   * cliente: *"págame 500 más"*). Si está, manda sobre el `Anticipo %`. En
+   * blanco rige el porcentaje.
+   */
+  anticipoMonto: 'Anticipo monto'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -320,6 +326,8 @@ export interface Presupuesto {
   documento: Documento;
   /** El anticipo en %, o `null` si rige Configuración. 0 es sin anticipo. */
   anticipo: number | null;
+  /** El anticipo en pesos acordado a mano, o `null`: rige el %. */
+  anticipoMonto?: number | null;
   /** Días antes del evento para el saldo, o `null` si rige Configuración. */
   saldoDias: number | null;
   /** El valor de la UF fijado en esta cotización, o 0 si no tiene. */
@@ -359,6 +367,12 @@ export interface Presupuesto {
  * Configuración—, y un número se acota entre 0 y `max`. **Un 0 escrito es
  * 0**, no "en blanco": es *sin anticipo*.
  */
+/** Un monto en pesos que puede faltar: solo los dígitos ("$500.000" → 500000); en blanco o 0, `null`. */
+export function montoONulo(v: unknown): number | null {
+  const n = Number(String(v ?? '').replace(/[^\d]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function numeroONulo(v: unknown, max: number): number | null {
   const t = String(v ?? '').trim().replace(',', '.').replace('%', '');
   if (!t) return null;
@@ -905,6 +919,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       motivo: en(f, i.motivo).trim(),
       documento: documentoDe(en(f, i.documento)),
       anticipo: numeroONulo(en(f, i.anticipo), 100),
+      anticipoMonto: montoONulo(en(f, i.anticipoMonto)),
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       uf: aPrecio(en(f, i.uf)),
       fechaUF: en(f, i.fechaUF).slice(0, 10),
@@ -972,6 +987,7 @@ export function filaPresupuesto(
   poner(i.motivo, p.motivo);
   poner(i.documento, p.documento);
   poner(i.anticipo, p.anticipo === null ? '' : String(p.anticipo));
+  poner(i.anticipoMonto, p.anticipoMonto ? String(p.anticipoMonto) : '');
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   poner(i.uf, p.uf ? String(p.uf) : '');
   poner(i.fechaUF, p.uf ? p.fechaUF : '');

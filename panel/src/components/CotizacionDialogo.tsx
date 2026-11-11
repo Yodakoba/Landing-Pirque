@@ -29,7 +29,7 @@ import CampoTelefono from './CampoTelefono';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import {
   cuentasDe, totalDeLinea, folioDe, estadoVisible, ESTADO_PRESUPUESTO, IVA,
-  DOCUMENTO, documentoDe, numeroONulo, estaMandada, totalDe, estadoNormal, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
+  DOCUMENTO, documentoDe, numeroONulo, montoONulo, estaMandada, totalDe, estadoNormal, lineasDe, type Documento, type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, yaEstaEnLaCotizacion, productoDe, showDe, cambiarCantidad,
@@ -230,6 +230,8 @@ export default function CotizacionDialogo({
    * blanco rige Configuración**, y "0" en el anticipo es sin anticipo.
    */
   const [anticipoTxt, setAnticipoTxt] = useState(p?.anticipo == null ? '' : String(p.anticipo));
+  /** El anticipo en pesos, si se acordó un monto (manda sobre el %). */
+  const [anticipoMontoTxt, setAnticipoMontoTxt] = useState(p?.anticipoMonto ? String(p.anticipoMonto) : '');
   const [saldoTxt, setSaldoTxt] = useState(p?.saldoDias == null ? '' : String(p.saldoDias));
   /**
    * **La UF de esta cotización**, fija: se pide la primera vez que se agrega
@@ -335,9 +337,18 @@ export default function CotizacionDialogo({
   /** Cuánta gente suman los menús: tiene que calzar con los invitados. */
   const enMenus = vistas.reduce((n, l) => n + l.personas, 0);
   const cond = condicionesDe(
-    { anticipo: numeroONulo(anticipoTxt, 100), saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
+    { anticipo: numeroONulo(anticipoTxt, 100), anticipoMonto: montoONulo(anticipoMontoTxt),
+      saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
     cuentas.total, datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
-  const cobrado = estadoCobros({ anticipo: cond.anticipo, total: cuentas.total }, cobros);
+  /**
+   * **Lo pagado es del evento** (2026-11-12, lo reclamó el cliente: pagó
+   * $299.000 anotados en la A y la C le pedía el anticipo entero). Mientras
+   * ninguna alternativa esté ganada, cuenta lo anotado en todas; al ganar,
+   * el servidor lo pasa a la ganadora.
+   */
+  const otraGanada = alternativas.some((a) => a.id !== p?.id && !!a.idReserva);
+  const cobrosEvento = otraGanada ? cobros : [...cobros, ...cobrosOtras];
+  const cobrado = estadoCobros({ anticipo: cond.anticipo, total: cuentas.total }, cobrosEvento);
 
   /**
    * **Si hay algo sin guardar** (2026-11-10): una firma de todo lo que se
@@ -347,7 +358,7 @@ export default function CotizacionDialogo({
    */
   const firma = JSON.stringify({
     idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
-    descuento, motivo, documento, anticipoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
+    descuento, motivo, documento, anticipoTxt, anticipoMontoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
     horario, ley20393, acuerdos, fact: facturacion, cambiosTxt, cancelTxt, reembolsoTxt,
     segTxt, avisoTxt
   });
@@ -449,7 +460,7 @@ export default function CotizacionDialogo({
       const cuerpo = {
         id: p?.id, idCliente, fecha: fechaReal, periodo: sinFecha ? periodo : '',
         invitados, tipoEvento, notas, descuento, motivo, documento,
-        anticipo: anticipoTxt, saldoDias: saldoTxt,
+        anticipo: anticipoTxt, anticipoMonto: anticipoMontoTxt, saldoDias: saldoTxt,
         horario, ley20393, acuerdos,
         cambiosFecha: cambiosTxt, cancelacionDias: cancelTxt, reembolso: reembolsoTxt,
         seguimientoDias: segTxt, avisoEvento: avisoTxt,
@@ -899,7 +910,7 @@ export default function CotizacionDialogo({
   const cobrosGrupo = [...cobros, ...cobrosOtras];
   const ganable = (a: Presupuesto): { ok: boolean; falta: number } => {
     const c = a.id === p?.id ? cond : condicionesDe(
-      { anticipo: a.anticipo, saldoDias: a.saldoDias, fecha: a.fecha }, totalAlt(a),
+      { anticipo: a.anticipo, anticipoMonto: a.anticipoMonto, saldoDias: a.saldoDias, fecha: a.fecha }, totalAlt(a),
       datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 });
     const est = estadoCobros({ anticipo: c.anticipo, total: totalAlt(a) }, cobrosGrupo);
     const conContrato = a.id === p?.id ? !!firmado : !!String(a.contrato ?? '').trim();
@@ -1672,11 +1683,27 @@ export default function CotizacionDialogo({
                 <label className="block">
                   <span className="mb-1 block text-[13px] text-hueso/70">Anticipo %</span>
                   <input type="number" min={0} max={100} value={anticipoTxt} className={`${ENTRADA} w-24`}
-                    placeholder={String(datos.condiciones?.anticipoPct ?? 30)}
+                    placeholder={String(datos.condiciones?.anticipoPct ?? 30)} disabled={cond.fijo}
                     onChange={(e) => setAnticipoTxt(e.target.value)} />
                 </label>
+                {/* **O un monto acordado** (2026-11-12, lo pidió el cliente:
+                    *"págame 500 más"*). Si se escribe, manda sobre el %. */}
+                <label className="block">
+                  <span className="mb-1 block text-[13px] text-hueso/70">o un monto acordado</span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-[15px] text-hueso/70">$</span>
+                    <input inputMode="numeric" value={anticipoMontoTxt ? Number(anticipoMontoTxt).toLocaleString('es-CL') : ''}
+                      className={`${ENTRADA} w-36`} placeholder="ej. 500.000"
+                      onChange={(e) => setAnticipoMontoTxt(e.target.value.replace(/[^\d]/g, ''))} />
+                    {cond.fijo && (
+                      <button type="button" className="boton min-h-[44px]" onClick={() => setAnticipoMontoTxt('')}>
+                        Volver al %
+                      </button>
+                    )}
+                  </span>
+                </label>
                 <button type="button" aria-pressed={cond.pct === 0}
-                  onClick={() => setAnticipoTxt(cond.pct === 0 ? '' : '0')}
+                  onClick={() => { setAnticipoMontoTxt(''); setAnticipoTxt(cond.pct === 0 ? '' : '0'); }}
                   className={`boton min-h-[44px] ${cond.pct === 0 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
                   Sin anticipo
                 </button>
@@ -1689,7 +1716,7 @@ export default function CotizacionDialogo({
               </div>
               <p className="mt-2 text-[15px]">
                 {cond.pct > 0
-                  ? <>Anticipo {cond.pct}%: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha · Saldo <strong>{enPesos(cond.saldo)}</strong></>
+                  ? <>Anticipo {cond.fijo ? 'acordado' : `${cond.pct}%`}: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha · Saldo <strong>{enPesos(cond.saldo)}</strong></>
                   : <>Sin anticipo · Todo <strong>{enPesos(cond.saldo)}</strong></>}
                 {cond.saldoHasta
                   ? <> hasta el {enPalabras(cond.saldoHasta)}.</>
@@ -1716,6 +1743,23 @@ export default function CotizacionDialogo({
                     {cobrado.completo && <span className="ml-2 rounded-full border border-verde/50 px-2 py-0.5
                       text-[13px] font-semibold text-verde-texto">✓ Pagado completo</span>}
                   </p>
+                  {!otraGanada && cobrosOtras.length > 0 && (
+                    <div className="mt-2 rounded-lg border border-cielo-fuerte/50 bg-cielo/10 px-3 py-2 text-[14px]">
+                      <p className="font-semibold">Anotado en otra alternativa, cuenta para esta:</p>
+                      <ul className="mt-1">
+                        {cobrosOtras.map((c) => {
+                          const a = alternativas.find((x) => x.id === c.presupuesto);
+                          return (
+                            <li key={c.id}>
+                              {c.concepto} <strong>{enPesos(c.monto)}</strong> · {c.fecha}
+                              {a ? ` · en la ${letraDe(a, alternativas)}` : ''}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <p className="mt-1 text-[13px] text-hueso/75">Al marcar ganada esta alternativa, esos pagos pasan a ella.</p>
+                    </div>
+                  )}
                   {cobros.length > 0 && (
                     <ul className="mt-2 divide-y divide-hueso/10 border-y border-hueso/10">
                       {cobros.map((c) => (

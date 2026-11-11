@@ -228,7 +228,7 @@ function Alternativa({ p, letra, lineas, cfg, distintaFecha }: {
           </p>
           {cond.pct > 0 ? (
             <p className="mt-1">
-              Anticipo {cond.pct}%: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha.
+              Anticipo{cond.fijo ? '' : ` ${cond.pct}%`}: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha.
               Saldo: <strong>{enPesos(cond.saldo)}</strong>
               {cond.saldoHasta
                 ? <> hasta el <span>{enPalabras(cond.saldoHasta)}</span>.</>

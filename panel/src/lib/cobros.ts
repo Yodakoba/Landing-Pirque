@@ -74,8 +74,10 @@ export interface Cobro {
 /* ---------- las condiciones ---------- */
 
 export interface Condiciones {
-  /** El anticipo en %. 0 es sin anticipo. */
+  /** El anticipo en %. 0 es sin anticipo. Con un monto fijo, el % que representa. */
   pct: number;
+  /** Si el anticipo es un monto acordado en pesos y no un %. */
+  fijo: boolean;
   anticipo: number;
   saldo: number;
   /** Días antes del evento para el saldo. */
@@ -94,15 +96,20 @@ export interface Condiciones {
  * suman el total siempre.
  */
 export function condicionesDe(
-  p: { anticipo: number | null; saldoDias: number | null; fecha: string },
+  p: { anticipo: number | null; anticipoMonto?: number | null; saldoDias: number | null; fecha: string },
   total: number,
   cfg: { anticipoPct: number; saldoDias: number }
 ): Condiciones {
-  const pct = p.anticipo ?? cfg.anticipoPct;
-  const anticipo = Math.round((total * pct) / 100);
   const dias = p.saldoDias ?? cfg.saldoDias;
+  // **Un monto acordado manda sobre el %** (2026-11-12): se negocia "págame
+  // 500 más", no un porcentaje. Nunca más que el total.
+  const monto = p.anticipoMonto && p.anticipoMonto > 0 ? Math.round(p.anticipoMonto) : 0;
+  const fijo = monto > 0;
+  const anticipo = fijo ? Math.min(monto, Math.max(0, total)) : Math.round((total * (p.anticipo ?? cfg.anticipoPct)) / 100);
+  const pct = fijo ? (total > 0 ? Math.max(1, Math.round((anticipo * 100) / total)) : 1)
+    : (p.anticipo ?? cfg.anticipoPct);
   return {
-    pct, anticipo, saldo: total - anticipo, dias,
+    pct, fijo, anticipo, saldo: total - anticipo, dias,
     saldoHasta: esFecha(p.fecha) ? sumarDias(p.fecha, -dias) : ''
   };
 }
