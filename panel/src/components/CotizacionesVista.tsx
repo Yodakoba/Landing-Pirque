@@ -410,7 +410,7 @@ export default function CotizacionesVista() {
         || porSeguir.length > 0) && (
         <div className="mb-4 space-y-2">
           <EsperandoRespuesta lista={porSeguir} onCambio={() => void cargar()}
-            onAbrir={(p) => setAbierta({ p, paso: 4 })} />
+            onAbrir={(p, paso) => setAbierta({ p, paso: paso ?? 4 })} />
           {porDevolver.length > 0 && (
             <div className="rounded border border-rojo-fuerte/50 bg-rojo/5 p-3">
               <p className="text-[15px] font-semibold text-rojo-texto">

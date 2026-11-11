@@ -2346,6 +2346,34 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   frase de lo que pasa), acción (44px) y secundario (delineado y chico).
   Un solo hito a la vista. Es la regla para todo el panel.
 
+### Cinco pasos: el envío y el contrato van separados (2026-11-11)
+
+Lo pidió el cliente: el paso 4 mezclaba dos conversaciones con el cliente
+—la cotización y el contrato— en una pantalla larga con hitos al medio.
+Ahora la ventana de cotizar son **Cliente · Evento · Productos · Envío ·
+Contrato**, y cada uno de los dos últimos termina en su propio próximo paso.
+
+| Paso | Qué tiene | Su próximo paso |
+|---|---|---|
+| **4 · Envío** | En qué va, mandarla, recordatorios, documento, condiciones de pago y los pagos del cliente | Mándasela → esperando el anticipo → **Marcar ganada** |
+| **5 · Contrato** | Datos, horario, Ley 20.393, acuerdos, cambios de fecha y cancelación, mandar el contrato, el firmado | Mándale el contrato → esperando el firmado → **Marcar ganada** → el saldo |
+
+- **Marcar ganada aparece en los dos** (`puedeGanar()` en `cobros.ts`, la
+  misma regla en la ruta `/convertir` y en la pantalla): con el anticipo
+  pagado, **o con el contrato firmado subido aunque falte el anticipo** —lo
+  decidió el cliente: *"en contratos obviamente solo puede marcar ganado si
+  está el contrato"*—. Con *Sin anticipo* también se ofrece en Envío.
+- **Ganar pregunta en una ventana**, no un `confirm()`: qué reserva se crea y
+  para qué día, y si no hay anticipo pagado ni contrato firmado lo dice en
+  ámbar —*"¿Tienes un contrato firmado? Si es así, súbelo"*— con *Ir a subir
+  el contrato* y *Sí, marcarla ganada igual*.
+- **Los botones de mandar no se repiten**: antes de mandarla —la cotización
+  o el contrato— están grandes en el próximo paso; después quedan en la
+  sección como *Mandar de nuevo*. Lo mismo el subir firmado.
+- **Borrar** va en Envío; **Cancelar evento** en Contrato, porque la
+  devolución sale de sus condiciones. *Esperando respuesta* abre el paso 5
+  cuando lo que falta es el contrato firmado.
+
 ### Cancelar una cotización ganada, y la devolución (2026-11-11)
 
 Lo pidió el cliente: *"puede pasar igual que la reserva se cae… cambiar el
