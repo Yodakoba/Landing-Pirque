@@ -36,12 +36,15 @@ import {
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, COBRO, type Menu } from '@/lib/menus';
 import {
-  condicionesDe, estadoCobros, montoCobro, type Cobro
+  condicionesDe, estadoCobros, montoCobro, CONCEPTO_COBRO, type Cobro
 } from '@/lib/cobros';
 import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { achicarFoto } from '@/lib/achicarFoto';
 import { faltaDelCliente } from '@/lib/contrato';
+import { frasesCancelacion } from '@/lib/cancelacion';
+import CancelarEvento from './CancelarEvento';
+import BloqueCancelada from './BloqueCancelada';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
@@ -63,7 +66,8 @@ export interface DatosCotizar {
   /** Las condiciones de pago por defecto, de Configuración. */
   condiciones?: { anticipoPct: number; saldoDias: number };
   /** Para el contrato: el horario de siempre y qué le falta a la empresa. */
-  contrato?: { horario: string; faltaEmpresa: string[] };
+  contrato?: { horario: string; faltaEmpresa: string[];
+    tranquilidad?: { cambiosFecha: number; cancelacionDias: number; reembolsoPct: number } };
   hoy: string;
   usuario: string;
   rol: string;
@@ -162,6 +166,15 @@ export default function CotizacionDialogo({
   /** Lo del contrato (Fase 4): el horario, la Ley 20.393 y lo acordado aparte. */
   const [horario, setHorario] = useState(p?.horario ?? '');
   const [ley20393, setLey20393] = useState(p?.ley20393 ?? false);
+  /**
+   * **Las condiciones de cancelación** (2026-11-11): en blanco rige
+   * Configuración, igual que el anticipo. Son las que imprime el contrato y
+   * las que aplica *Cancelar evento* (`lib/cancelacion.ts`).
+   */
+  const [cambiosTxt, setCambiosTxt] = useState(p?.cambiosFecha == null ? '' : String(p.cambiosFecha));
+  const [cancelTxt, setCancelTxt] = useState(p?.cancelacionDias == null ? '' : String(p.cancelacionDias));
+  const [reembolsoTxt, setReembolsoTxt] = useState(p?.reembolso == null ? '' : String(p.reembolso));
+  const [cancelando, setCancelando] = useState(false);
   const [acuerdos, setAcuerdos] = useState(p?.acuerdos ?? '');
   /** El contrato firmado subido: quién y cuándo. Que esté es lo que dice "firmado". */
   const [firmado, setFirmado] = useState<null | { por: string; cuando: string }>(
@@ -204,6 +217,7 @@ export default function CotizacionDialogo({
   }, [idCliente]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ganada = !!p?.idReserva;
+  const cancelada = p?.estado === ESTADO_PRESUPUESTO.cancelada;
   const puedeEditar = !p || puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor);
   /** Revisar cobros es de quien hace los pagos, no de quien los anota. */
   const puedePagar = puede(datos.rol as Rol, 'pagar');
@@ -231,7 +245,7 @@ export default function CotizacionDialogo({
   const firma = JSON.stringify({
     idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
     descuento, motivo, documento, anticipoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
-    horario, ley20393, acuerdos, fact: facturacion
+    horario, ley20393, acuerdos, fact: facturacion, cambiosTxt, cancelTxt, reembolsoTxt
   });
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -318,6 +332,7 @@ export default function CotizacionDialogo({
         invitados, tipoEvento, notas, descuento, motivo, documento,
         anticipo: anticipoTxt, saldoDias: saldoTxt,
         horario, ley20393, acuerdos,
+        cambiosFecha: cambiosTxt, cancelacionDias: cancelTxt, reembolso: reembolsoTxt,
         ...(uf ? { uf, fechaUF } : {}),
         estado: estadoForzado ?? estado,
         lineas: vistas
@@ -599,14 +614,22 @@ export default function CotizacionDialogo({
           La creó <strong>{p?.creadoPor || 'otra persona'}</strong>: la puedes ver, no cambiar.
         </p>
       )}
-      {ganada && (
+      {cancelada && (
+        <p className="mb-3 rounded border border-rojo-fuerte/60 bg-rojo/10 px-3 py-2 text-[14px]">
+          <strong className="text-rojo-texto">Cancelada.</strong> Su reserva liberó el cupo. Ya no se
+          edita: lo que queda es la devolución, en el paso Enviar.
+        </p>
+      )}
+      {ganada && !cancelada && (
         <p className="mb-3 rounded border border-verde-fuerte/60 bg-verde/10 px-3 py-2 text-[14px]">
           <strong className="text-verde-texto">Ganada.</strong> Tiene su reserva en el calendario.
           Si cambias algo acá, la reserva se actualiza sola.
         </p>
       )}
 
-      <fieldset disabled={!puedeEditar} className="min-w-0">
+      {/* Una cancelada se ve, no se edita: solo quedan sus pagos (paso 4),
+          para anotar la devolución. */}
+      <fieldset disabled={!puedeEditar || (cancelada && paso !== 4)} className="min-w-0">
         {/* ---------- 1. Cliente ---------- */}
         {paso === 1 && (
           <div className="space-y-3">
@@ -1034,6 +1057,12 @@ export default function CotizacionDialogo({
             )}
 
 
+            {cancelada && p && (
+              <BloqueCancelada p={p} cobros={cobros} puedePagar={puedePagar}
+                onCobros={(c) => { setCobros(c); onCambio(); }} />
+            )}
+
+            <fieldset disabled={cancelada} className="min-w-0 space-y-4">
             {/* **El documento de la venta** (2026-11-10). Nace por definir;
                 apretar el elegido lo vuelve a dejar por definir. Por ahora
                 no cambia el precio. Con factura pide los datos de
@@ -1195,6 +1224,36 @@ export default function CotizacionDialogo({
                       onChange={(e) => setAcuerdos(e.target.value)} />
                   </label>
 
+                  {/* **Cambios de fecha y cancelación** (2026-11-11): lo que
+                      se negocia con el cliente. En blanco rige Configuración.
+                      El contrato lo imprime y *Cancelar evento* lo aplica. */}
+                  <div>
+                    <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                      Cambios de fecha y cancelación
+                    </p>
+                    <div className="flex flex-wrap items-end gap-3">
+                      {([
+                        ['Cambios de fecha', cambiosTxt, setCambiosTxt, 10, datos.contrato?.tranquilidad?.cambiosFecha ?? 2],
+                        ['Cancela hasta, días antes', cancelTxt, setCancelTxt, 365, datos.contrato?.tranquilidad?.cancelacionDias ?? 60],
+                        ['Devuelve, % de lo pagado', reembolsoTxt, setReembolsoTxt, 100, datos.contrato?.tranquilidad?.reembolsoPct ?? 20]
+                      ] as const).map(([etiqueta, valor, poner, max, defecto]) => (
+                        <label key={etiqueta} className="block">
+                          <span className="mb-1 block text-[13px] text-hueso/70">{etiqueta}</span>
+                          <input type="number" min={0} max={max} value={valor} className={`${ENTRADA} w-24`}
+                            placeholder={String(defecto)} onChange={(e) => poner(e.target.value)} />
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[14px] text-hueso/75">
+                      {frasesCancelacion({
+                        cambiosFecha: numeroONulo(cambiosTxt, 10) ?? datos.contrato?.tranquilidad?.cambiosFecha ?? 2,
+                        cancelacionDias: numeroONulo(cancelTxt, 365) ?? datos.contrato?.tranquilidad?.cancelacionDias ?? 60,
+                        reembolsoPct: numeroONulo(reembolsoTxt, 100) ?? datos.contrato?.tranquilidad?.reembolsoPct ?? 20
+                      })}
+                      {' '}En blanco rige Configuración. Va al contrato.
+                    </p>
+                  </div>
+
                   {(faltaDelCliente(facturacion).length > 0
                     || (datos.contrato?.faltaEmpresa.length ?? 0) > 0 || !esFecha(fechaReal)) && (
                     <div className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
@@ -1241,6 +1300,8 @@ export default function CotizacionDialogo({
                 </div>
               )}
             </div>
+
+            </fieldset>
 
             {/* **Los cobros al cliente**: se anotan los pagos, no una
                 casilla. Lo normal es un toque —anticipo recibido, o todo—;
@@ -1310,7 +1371,9 @@ export default function CotizacionDialogo({
                                   : c.revisadoPor ? 'Quitar revisión' : '✓ Marcar revisado'}
                               </button>
                             )}
-                            {puedeEditar && (!c.revisadoPor || puedePagar) && (
+                            {/* Una devolución la deshace solo quien paga: la anotó él. */}
+                            {puedeEditar && (!c.revisadoPor || puedePagar)
+                              && (c.concepto !== CONCEPTO_COBRO.devolucion || puedePagar) && (
                               <button type="button" onClick={() => void deshacerCobro(c)}
                                 className="boton hover:border-rojo-fuerte hover:text-rojo-texto">Deshacer</button>
                             )}
@@ -1323,7 +1386,7 @@ export default function CotizacionDialogo({
                     <p role="alert" className="mt-2 rounded border border-rojo-fuerte/60 bg-rojo/10 px-3 py-2
                                                text-[14px] font-semibold text-rojo-texto">{errorPagos}</p>
                   )}
-                  {puedeEditar && cobrado.falta > 0 && (
+                  {puedeEditar && !cancelada && cobrado.falta > 0 && (
                     <div className="mt-3 space-y-2">
                       <input value={medio} onChange={(e) => setMedio(e.target.value)}
                         placeholder="Cómo pagó: transferencia, efectivo… (opcional)"
@@ -1369,7 +1432,17 @@ export default function CotizacionDialogo({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
+              {!cancelada && (
+                <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
+              )}
+              {/* **Cancelar el evento** (2026-11-11): solo una ganada. Lo
+                  hace quien puede tocar la cotización, el vendedor incluido. */}
+              {ganada && !cancelada && puedeEditar && (
+                <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
+                  className="boton min-h-[48px] hover:!border-rojo-fuerte hover:text-rojo-texto">
+                  Cancelar evento
+                </button>
+              )}
               {p && !ganada && esFecha(fechaReal) && (
                 <button type="button" disabled={guardando || !cobrado.anticipoListo}
                   title={cobrado.anticipoListo ? '' : 'Falta el anticipo'}
@@ -1423,6 +1496,10 @@ export default function CotizacionDialogo({
       </fieldset>
 
       {error && <p className="mt-3 text-[15px] font-semibold text-rojo-texto">{error}</p>}
+      {cancelando && p && (
+        <CancelarEvento p={p} onCerrar={() => setCancelando(false)}
+          onListo={() => { setCancelando(false); onCambio(); onCerrar(); }} />
+      )}
     </Dialogo>
   );
 }

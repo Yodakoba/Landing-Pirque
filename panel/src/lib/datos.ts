@@ -47,7 +47,8 @@ import {
   HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   COL_PRESUPUESTOS, leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
   normalizarLineas, posiblesPorDia, lineasDe, reservaDesdePresupuesto, totalDe,
-  type Presupuesto, type LineaPresupuesto, type Posibles, type LineaEntrante
+  type Presupuesto, type LineaPresupuesto, type Posibles, type LineaEntrante,
+  ESTADO_PRESUPUESTO
 } from './presupuestos.ts';
 import { conCliente } from './cotizar.ts';
 import { HOJA_COBROS, ENCABEZADO_COBROS, leerCobrosDe, filaCobro, cobrosDe, estadoCobros,
@@ -919,6 +920,9 @@ export async function sincronizarReserva(idPresupuesto: string): Promise<string>
   ]);
   const p = presupuestos.find((x) => x.id === idPresupuesto);
   if (!p?.idReserva) return '';
+  // Una cancelada ya liberó su cupo: reescribir su reserva —o abrirle el
+  // día— la traería de vuelta. Editar la ficha del cliente pasa por acá.
+  if (p.estado === ESTADO_PRESUPUESTO.cancelada) return '';
   const filas = await leerHoja(HOJA_RESERVAS);
   const fila = buscarFilaPorId(filas, filas[0] ?? [], p.idReserva);
   if (fila < 2) return '';
@@ -990,6 +994,20 @@ export async function borrarCobro(id: string): Promise<Cobro | undefined> {
   const c = leerCobrosDe(filas).find((x) => x.id === id);
   if (c) await borrarFilas(HOJA_COBROS, [c.fila]);
   return c;
+}
+
+/**
+ * **Cancela la reserva de una cotización** (2026-11-11): la deja en
+ * `cancelled`, que libera el cupo del día y el sitio lo vuelve a ofrecer.
+ * La fila no se borra: es el rastro de que ese evento existió.
+ */
+export async function cancelarReservaDe(idReserva: string): Promise<boolean> {
+  if (!idReserva) return false;
+  const filas = await leerHoja(HOJA_RESERVAS);
+  const fila = buscarFilaPorId(filas, filas[0] ?? [], idReserva);
+  if (fila < 2) return false;
+  await editarReserva(fila, { estadoPago: ESTADO_PAGO.cancelado });
+  return true;
 }
 
 /**

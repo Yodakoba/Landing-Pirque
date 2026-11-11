@@ -134,7 +134,21 @@ export const COL_PRESUPUESTOS = {
    */
   contrato: 'Contrato firmado',
   contratoSubidoPor: 'Contrato subido por',
-  contratoSubido: 'Contrato subido'
+  contratoSubido: 'Contrato subido',
+  // ---- La cancelación (2026-11-11). Al final y por nombre.
+  /**
+   * **Las condiciones de cancelación de esta cotización**: cuántos cambios
+   * de fecha, hasta cuántos días antes se cancela y qué % de lo pagado se
+   * devuelve. **En blanco rige Configuración**, igual que el anticipo. Son
+   * las que imprime el contrato y las que aplica *Cancelar evento*.
+   */
+  cambiosFecha: 'Cambios de fecha',
+  cancelacionDias: 'Cancelación días',
+  reembolso: 'Reembolso %',
+  /** Lo que se acordó devolver al cancelar, en pesos. */
+  devolucion: 'Devolución acordada',
+  canceladaPor: 'Cancelada por',
+  cancelada: 'Cancelada'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -199,7 +213,14 @@ export const ESTADO_PRESUPUESTO = {
   /** Perdida, con su motivo. */
   rechazado: 'Perdida',
   /** Otra alternativa del mismo grupo ganó. La pone el sistema. */
-  noElegida: 'No elegida'
+  noElegida: 'No elegida',
+  /**
+   * **Ganada y después cancelada** (2026-11-11). Se llega solo por
+   * *Cancelar evento*, que cancela su reserva —libera el cupo— y anota lo
+   * que se acordó devolver. No vuelve atrás: si el cliente vuelve, es otra
+   * cotización.
+   */
+  cancelada: 'Cancelada'
 } as const;
 
 /**
@@ -223,7 +244,8 @@ export function estadoNormal(texto: unknown): string {
 
 /** Los estados que ya no van a cambiar solos: la conversación terminó. */
 export const ESTADOS_CERRADOS: string[] = [
-  ESTADO_PRESUPUESTO.aceptado, ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida
+  ESTADO_PRESUPUESTO.aceptado, ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida,
+  ESTADO_PRESUPUESTO.cancelada
 ];
 
 export type EstadoPresupuesto =
@@ -289,6 +311,14 @@ export interface Presupuesto {
   contrato: string;
   contratoSubidoPor: string;
   contratoSubido: string;
+  /** Las condiciones de cancelación; `null` rige Configuración. */
+  cambiosFecha: number | null;
+  cancelacionDias: number | null;
+  reembolso: number | null;
+  /** Lo acordado devolver al cancelar, en pesos. 0 si no se cancela o no se devuelve. */
+  devolucion: number;
+  canceladaPor: string;
+  cancelada: string;
   fila: number;
 }
 
@@ -603,8 +633,11 @@ export function gentePosible(p: Pick<Presupuesto, 'invitados'>, lineas: LineaPre
 
 /** En qué va, con el vencimiento ya resuelto, para mostrarlo. */
 export function estadoVisible(p: Presupuesto, hoy: Fecha): string {
-  if (String(p.idReserva ?? '').trim()) return ESTADO_PRESUPUESTO.aceptado;
   const e = estadoNormal(p.estado);
+  // Una cancelada conserva su `ID Reserva` —el rastro de su reserva—, así
+  // que se mira antes que eso.
+  if (e === ESTADO_PRESUPUESTO.cancelada) return e;
+  if (String(p.idReserva ?? '').trim()) return ESTADO_PRESUPUESTO.aceptado;
   if (e === ESTADO_PRESUPUESTO.rechazado || e === ESTADO_PRESUPUESTO.noElegida) return e;
   if (estaVencido(p, hoy)) return 'Vencida';
   return e || ESTADO_PRESUPUESTO.borrador;
@@ -818,6 +851,12 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       contrato: en(f, i.contrato).trim(),
       contratoSubidoPor: en(f, i.contratoSubidoPor).trim(),
       contratoSubido: en(f, i.contratoSubido).trim(),
+      cambiosFecha: numeroONulo(en(f, i.cambiosFecha), 10),
+      cancelacionDias: numeroONulo(en(f, i.cancelacionDias), 365),
+      reembolso: numeroONulo(en(f, i.reembolso), 100),
+      devolucion: Math.max(0, aEntero(en(f, i.devolucion))),
+      canceladaPor: en(f, i.canceladaPor).trim(),
+      cancelada: en(f, i.cancelada).trim(),
       cliente: en(f, i.cliente).trim(),
       email: en(f, i.email).trim(),
       telefono: en(f, i.telefono).trim(),
@@ -873,6 +912,12 @@ export function filaPresupuesto(
   poner(i.contrato, p.contrato);
   poner(i.contratoSubidoPor, p.contratoSubidoPor);
   poner(i.contratoSubido, p.contratoSubido);
+  poner(i.cambiosFecha, p.cambiosFecha === null ? '' : String(p.cambiosFecha));
+  poner(i.cancelacionDias, p.cancelacionDias === null ? '' : String(p.cancelacionDias));
+  poner(i.reembolso, p.reembolso === null ? '' : String(p.reembolso));
+  poner(i.devolucion, p.devolucion ? String(p.devolucion) : '');
+  poner(i.canceladaPor, p.canceladaPor);
+  poner(i.cancelada, p.cancelada);
   return fila;
 }
 
