@@ -12,6 +12,9 @@ import { ahoraEnChile } from '@/lib/bitacora';
 import { enPesos } from '@/lib/ocupacion';
 
 export const dynamic = 'force-dynamic';
+// Varias lecturas y escrituras a la planilla por petición: los 10 s de
+// Vercel por defecto quedan justos.
+export const maxDuration = 30;
 
 /**
  * Los cobros al cliente de una cotización (2026-11-10).
@@ -122,7 +125,12 @@ export async function PATCH(req: Request) {
     const p = (await leerPresupuestos()).find((x) => x.id === c.presupuesto);
     await anotar({ ...quien, accion: revisado ? 'Revisó un cobro' : 'Quitó la revisión de un cobro',
       detalle: `${p ? folioDe(p) : c.presupuesto} · ${c.concepto} · ${enPesos(c.monto)}` });
-    return NextResponse.json({ cobros: cobrosDe(await leerCobros(), c.presupuesto) });
+    // Lo que se acaba de escribir manda sobre lo que se relee: la pantalla
+    // tiene que ver la revisión aunque la lectura llegue un instante tarde.
+    const { fila: _f, ...escrito } = c;
+    const lista = cobrosDe(await leerCobros(), c.presupuesto)
+      .map((x) => (x.id === c.id ? { ...x, revisadoPor: escrito.revisadoPor, revisado: escrito.revisado } : x));
+    return NextResponse.json({ cobros: lista });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
