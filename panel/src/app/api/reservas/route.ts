@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
-import { leerReservas, crearReserva, leerMenus, leerFechas, leerConfig,
-         guardarFecha } from '@/lib/datos';
-import { diaParaReservaManual } from '@/lib/dias';
+import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta } from '@/lib/datos';
 import { ASISTENCIA } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
 import { guardaDelDia } from '@/lib/guardaCierre';
@@ -92,23 +90,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ id });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
-  }
-}
-
-/**
- * Deja el día usable después de anotarle una reserva a mano.
- *
- * **Si falla, la reserva ya está guardada y no se pierde.** El día se puede
- * abrir después desde el calendario; perder la reserva por esto sería
- * cambiar un problema chico por uno grande.
- */
-async function abrirElDiaSiHaceFalta(fecha: string) {
-  try {
-    const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
-    const actual = fechas.find((f) => f.fecha === fecha);
-    const nuevo = diaParaReservaManual(actual, fecha, cfg);
-    if (nuevo) await guardarFecha(nuevo);
-  } catch (e) {
-    console.error('[reservas] abrir el dia', fecha, e);
   }
 }

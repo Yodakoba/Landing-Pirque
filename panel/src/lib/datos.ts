@@ -17,6 +17,7 @@ import {
   indices, faltantes, esManual
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
+import { diaParaReservaManual } from './dias.ts';
 import { filaReserva, filaFecha, buscarFilaPorId, leerReservasDe,
          idsRepetidos } from './filas.ts';
 import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
@@ -889,6 +890,29 @@ async function asegurarColumnas(hoja: string, encabezado: string[], columnas: st
  * Devuelve la fecha que tenía la reserva antes, para que quien llame pueda
  * avisar a los dos días si se movió. Vacío si no había reserva que tocar.
  */
+/**
+ * Deja el día usable después de anotarle una reserva: lo crea privado con el
+ * cupo de siempre, abre uno cerrado, o le pone cupo a uno que no tenía
+ * (`diaParaReservaManual()`). Lo usan la reserva a mano, **marcar ganada una
+ * cotización** y la reserva que se reescribe al editar una ganada
+ * (2026-11-11: una ganada caía en un día sin fila y el panel lo mostraba
+ * *sin cupo*, con la gente adentro).
+ *
+ * **Si falla, la reserva ya está guardada y no se pierde.** El día se puede
+ * abrir después desde el calendario; perder la reserva por esto sería
+ * cambiar un problema chico por uno grande.
+ */
+export async function abrirElDiaSiHaceFalta(fecha: string): Promise<void> {
+  try {
+    const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
+    const actual = fechas.find((f) => f.fecha === fecha);
+    const nuevo = diaParaReservaManual(actual, fecha, cfg);
+    if (nuevo) await guardarFecha(nuevo);
+  } catch (e) {
+    console.error('[reservas] abrir el dia', fecha, e);
+  }
+}
+
 export async function sincronizarReserva(idPresupuesto: string): Promise<string> {
   const [presupuestos, lineas, menus, clientes] = await Promise.all([
     leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerClientes()
@@ -904,6 +928,9 @@ export async function sincronizarReserva(idPresupuesto: string): Promise<string>
     fecha: r.fecha, nombre: r.nombre, email: r.email, telefono: r.telefono,
     menu: r.menu, personas: r.personas, monto: r.monto
   });
+  // El día de la reserva tiene que poder recibirla, también si se movió de
+  // fecha. De paso arregla las ganadas de antes que quedaron sin día.
+  await abrirElDiaSiHaceFalta(r.fecha);
   return antes?.fecha ?? '';
 }
 

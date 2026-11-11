@@ -254,7 +254,7 @@ export default function CotizacionesVista() {
     const abiertaEsta = diaAbierto === f;
     return (
       <div key={f} className={`flex flex-col rounded border bg-panel ${abiertaEsta
-        ? 'border-oro sm:col-span-2' : 'border-hueso/15'}`}>
+        ? 'border-oro ring-1 ring-oro' : 'border-hueso/15'}`}>
         <button type="button" onClick={() => setDiaAbierto(abiertaEsta ? null : f)}
           aria-expanded={abiertaEsta}
           className="flex flex-1 flex-col items-start gap-2 p-3 text-left hover:bg-hueso/5">
@@ -295,11 +295,27 @@ export default function CotizacionesVista() {
           <button type="button" onClick={() => setAbierta({ p: null, fecha: f })}
             className="boton w-full min-h-[44px]">+ Cotizar este día</button>
         </div>
-        {abiertaEsta && delDia.length > 0 && (
-          <ul className="space-y-2 border-t border-hueso/10 p-2">
-            {delDia.map((p) => fila(p, false))}
-          </ul>
-        )}
+      </div>
+    );
+  };
+
+  /**
+   * **Las cotizaciones del día abierto van en una franja bajo su semana**, a
+   * todo el ancho (2026-11-11, lo reclamó el cliente: el día abierto se
+   * estiraba a dos columnas y arrastraba el alto de toda la fila). Así las
+   * tarjetas de la semana miden siempre lo mismo y la lista tiene espacio.
+   */
+  const franjaDelDia = (dias: string[]) => {
+    if (!diaAbierto || !dias.includes(diaAbierto)) return null;
+    const delDia = agrupar(porDia.get(diaAbierto) ?? []);
+    if (delDia.length === 0) return null;
+    return (
+      <div className="mt-2 rounded border border-oro bg-panel p-2">
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <p className="text-[14px] font-semibold first-letter:uppercase">{enPalabras(diaAbierto)}</p>
+          <button type="button" onClick={() => setDiaAbierto(null)} className="boton">Cerrar</button>
+        </div>
+        <ul className="space-y-2">{delDia.map((p) => fila(p, false))}</ul>
       </div>
     );
   };
@@ -443,6 +459,7 @@ export default function CotizacionesVista() {
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {c.dias.map(tarjeta)}
               </div>
+              {franjaDelDia(c.dias)}
             </div>
           ))}
           <button type="button" className="boton min-h-[44px]" onClick={() => setSemanas(semanas + 8)}>
