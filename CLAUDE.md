@@ -2275,6 +2275,42 @@ la carpeta de la cotización junto a sus comprobantes, por
 - **Sin la versión de matrimonio** (Novia y Novio, dos firmas) que tenía el
   CRM: queda para la Fase 5, con Calicanto.
 
+### Cancelar una cotización ganada, y la devolución (2026-11-11)
+
+Lo pidió el cliente: *"puede pasar igual que la reserva se cae… cambiar el
+estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
+`lib/cancelacion.ts` (puro, con pruebas) y `/api/presupuestos/cancelar`.
+
+- **Las condiciones de cancelación son por cotización**: cuántos cambios de
+  fecha, hasta cuántos días antes se cancela y **qué % de lo pagado** se
+  devuelve. Columnas `Cambios de fecha`, `Cancelación días` y `Reembolso %`;
+  **en blanco rige Configuración** (2, 60 y 20), un 0 es 0. Se escriben en
+  el bloque Contrato de la ventana de cotizar. **El contrato imprime esas
+  mismas** (`tranquilidadDeCotizacion()`), y dice *"de lo pagado"*: lo que
+  se negocia es lo que se firma y lo que se aplica.
+- **Cancela quien puede tocar la cotización, el vendedor incluido** (lo
+  decidió el cliente). Botón *Cancelar evento* en el paso Enviar, solo en
+  una ganada. Pregunta en serio: muestra cuántos días faltan, si está en
+  plazo, cuánto pagó el cliente y **propone** la devolución
+  (`devolucionSugerida()`): en plazo, el % sobre lo pagado; fuera de plazo
+  o sin días de cancelación, nada. **El monto se puede cambiar** —se
+  negocia—, nunca por encima de lo pagado. El motivo es obligatorio.
+- **Qué hace**: la reserva pasa a `cancelled` (libera el cupo; la fila
+  queda), la cotización a **Cancelada** con `Cancelada por`, `Cancelada` y
+  `Devolución acordada`. Primero la reserva, después la cotización, por lo
+  mismo que al ganar. En un día cerrado es una corrección (`guardaDelDia()`).
+- **Una cancelada no se edita ni vuelve atrás**: el `PATCH` responde 409, y
+  `sincronizarReserva()` no la toca (editar la ficha del cliente pasa por
+  ahí). Se ve en solo lectura salvo sus pagos. Si el cliente vuelve, es una
+  cotización nueva.
+- **La devolución es un cobro *Devolución* en negativo**, y la anota
+  **quien paga** (la ruta lo comprueba y le pone el signo). Lleva su
+  comprobante y su revisión como cualquier cobro. Lo que falta devolver se
+  deduce: acordado menos devuelto (`faltaDevolver()`), y arriba de
+  `/presupuestos` sale *N devoluciones por hacer*, solo para quien paga.
+  Una cancelada no recibe avisos de saldo por cobrar.
+- **El día no se cierra solo** al cancelar: puede tener otras reservas.
+
 ### Las fases
 
 1. **Hecha**: catálogo de productos, fichas de clientes, descuentos y datos

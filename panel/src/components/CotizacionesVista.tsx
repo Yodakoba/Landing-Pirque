@@ -30,13 +30,14 @@ import { semanaDe, sumarDias, diaSemana, rangoEnPalabras, enPalabras, esFecha } 
 import { enPesos } from '@/lib/ocupacion';
 import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
 import { avisosDeCobro, porRevisar } from '@/lib/cobros';
+import { faltaDevolver } from '@/lib/cancelacion';
 import { puede, type Rol } from '@/lib/auth';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
-  cobros?: { presupuesto: string; monto: number; revisadoPor?: string }[];
+  cobros?: { presupuesto: string; monto: number; revisadoPor?: string; concepto?: string }[];
 };
 
 /** El color de cada estado: se distingue por la pastilla con borde. */
@@ -48,6 +49,7 @@ const COLOR: Record<string, string> = {
   [ESTADO_PRESUPUESTO.aceptado]: 'border-verde-fuerte bg-verde/15 text-verde-texto',
   [ESTADO_PRESUPUESTO.rechazado]: 'border-hueso/20 text-hueso/55',
   [ESTADO_PRESUPUESTO.noElegida]: 'border-hueso/20 text-hueso/55',
+  [ESTADO_PRESUPUESTO.cancelada]: 'border-rojo-fuerte/70 text-rojo-texto',
   Vencida: 'border-ambar/50 text-ambar-texto'
 };
 
@@ -180,7 +182,8 @@ export default function CotizacionesVista() {
     if (filtro === 'todas') return true;
     if (filtro === 'candidatos') return e === ESTADO_PRESUPUESTO.candidato;
     if (filtro === 'ganadas') return e === ESTADO_PRESUPUESTO.aceptado;
-    if (filtro === 'cerradas') return [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida, 'Vencida'].includes(e);
+    if (filtro === 'cerradas') return [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida,
+      ESTADO_PRESUPUESTO.cancelada, 'Vencida'].includes(e);
     return cuentaComoPosible(p, hoy);
   };
 
@@ -203,6 +206,18 @@ export default function CotizacionesVista() {
       sinRevisar.set(c.presupuesto, { n: a.n + 1, monto: a.monto + c.monto });
     }
   }
+
+  // **Devoluciones por hacer** (2026-11-11): las canceladas con algo
+  // acordado devolver que todavía no se anotó. Solo para quien paga, que es
+  // quien transfiere.
+  const porDevolver = puede(datos.rol as Rol, 'pagar')
+    ? datos.presupuestos
+      .filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.cancelada && p.devolucion > 0)
+      .map((p) => ({ p, falta: faltaDevolver(p.devolucion,
+        (datos.cobros ?? []).filter((c) => c.presupuesto === p.id)
+          .map((c) => ({ monto: c.monto, concepto: c.concepto ?? '' }))).falta }))
+      .filter((x) => x.falta > 0)
+    : [];
 
   /** Una cotización como línea, para las listas. */
   const fila = (p: Presupuesto, conFecha = true) => (
@@ -346,8 +361,26 @@ export default function CotizacionesVista() {
       </div>
 
       {(pronto.length > 0 || vencidas.length > 0 || avisos.anticipoSinGanar.length > 0
-        || avisos.saldo.length > 0 || sinRevisar.size > 0) && (
+        || avisos.saldo.length > 0 || sinRevisar.size > 0 || porDevolver.length > 0) && (
         <div className="mb-4 space-y-2">
+          {porDevolver.length > 0 && (
+            <div className="rounded border border-rojo-fuerte/50 bg-rojo/5 p-3">
+              <p className="text-[15px] font-semibold text-rojo-texto">
+                {porDevolver.length === 1 ? '1 devolución por hacer'
+                  : `${porDevolver.length} devoluciones por hacer`}
+              </p>
+              <p className="text-[14px] text-hueso/70">
+                Eventos cancelados con plata acordada para devolver. Ábrelo y anota la devolución al transferir.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {porDevolver.map(({ p, falta }) => (
+                  <button key={p.id} type="button" onClick={() => setAbierta({ p, paso: 4 })} className="boton">
+                    {p.cliente || 'Sin cliente'} · {enPesos(falta)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {sinRevisar.size > 0 && (
             <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
               <p className="text-[15px] font-semibold text-ambar-texto">

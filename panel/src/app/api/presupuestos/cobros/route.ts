@@ -4,7 +4,7 @@ import {
   leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar,
   editarCobro
 } from '@/lib/datos';
-import { cobrosDe, limpiarCobro, nuevoIdCobro } from '@/lib/cobros';
+import { cobrosDe, limpiarCobro, nuevoIdCobro, CONCEPTO_COBRO } from '@/lib/cobros';
 import { folioDe } from '@/lib/presupuestos';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { hoy } from '@/lib/fechas';
@@ -60,6 +60,15 @@ export async function POST(req: Request) {
     if ('error' in r) return r.error;
     const limpio = limpiarCobro(cuerpo, hoy());
     if ('error' in limpio) return NextResponse.json({ error: limpio.error }, { status: 400 });
+    // **Una devolución la anota quien paga** (2026-11-11), que es quien
+    // transfiere, y va siempre en negativo: es plata que sale.
+    if (limpio.cobro.concepto === CONCEPTO_COBRO.devolucion) {
+      if (!puede(r.quien.rol as Rol, 'pagar')) {
+        return NextResponse.json({ error: 'Una devolución la anota quien hace los pagos.', permiso: true },
+          { status: 403 });
+      }
+      limpio.cobro.monto = -Math.abs(limpio.cobro.monto);
+    }
     await anotarCobro({
       ...limpio.cobro, id: nuevoIdCobro(), presupuesto: r.p.id,
       registradoPor: r.quien.usuario, cuando: ahoraEnChile(),

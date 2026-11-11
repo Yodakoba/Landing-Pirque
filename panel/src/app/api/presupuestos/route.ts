@@ -45,7 +45,7 @@ export async function GET(req: Request) {
       // Lo justo para los avisos de la lista: de qué cotización, cuánto y si
       // ya se revisó.
       cobros: cobros.map((c) => ({ presupuesto: c.presupuesto, monto: c.monto,
-        revisadoPor: c.revisadoPor })),
+        revisadoPor: c.revisadoPor, concepto: c.concepto })),
       // Solo lo que hace falta para saber si un día es público, privado o
       // cerrado: de eso dependen la tarjeta y la regla del show ecuestre.
       fechas: fechas.map((f) => ({ fecha: f.fecha, estado: f.estado, capacidad: f.capacidad })),
@@ -56,7 +56,11 @@ export async function GET(req: Request) {
       // en Configuración para que el contrato salga completo.
       contrato: {
         horario: horarioDe({ horario: '' }, cfg),
-        faltaEmpresa: faltaDeEmpresa(cfg.empresa)
+        faltaEmpresa: faltaDeEmpresa(cfg.empresa),
+        // Las condiciones de cancelación por defecto: lo que rige donde la
+        // cotización las deja en blanco.
+        tranquilidad: { cambiosFecha: cfg.cambiosFecha, cancelacionDias: cfg.cancelacionDias,
+          reembolsoPct: cfg.reembolsoPct }
       },
       hoy: hoy(),
       usuario: quien.usuario,
@@ -213,6 +217,11 @@ export async function POST(req: Request) {
       // El contrato firmado no se acepta del navegador: lo escribe la ruta
       // que lo sube (`/api/presupuestos/contrato`).
       contrato: '', contratoSubidoPor: '', contratoSubido: '',
+      cambiosFecha: numeroONulo(cuerpo.cambiosFecha, 10),
+      cancelacionDias: numeroONulo(cuerpo.cancelacionDias, 365),
+      reembolso: numeroONulo(cuerpo.reembolso, 100),
+      // Lo de la cancelación lo escribe solo /cancelar.
+      devolucion: 0, canceladaPor: '', cancelada: '',
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
@@ -258,6 +267,14 @@ export async function PATCH(req: Request) {
       }, { status: 403 });
     }
 
+    // Una cancelada no se edita: su reserva ya liberó el cupo, y lo que
+    // queda —la devolución— se anota en sus cobros.
+    if (previo.estado === ESTADO_PRESUPUESTO.cancelada) {
+      return NextResponse.json({
+        error: 'Esta cotización está cancelada: ya no se edita. Si el cliente vuelve, haz una nueva.'
+      }, { status: 409 });
+    }
+
     const cuando = cuandoDelCuerpo(cuerpo, previo);
     if (!cuando) {
       return NextResponse.json(
@@ -270,8 +287,8 @@ export async function PATCH(req: Request) {
       const pedido = estadoNormal(cuerpo.estado);
       if (previo.idReserva && pedido !== ESTADO_PRESUPUESTO.aceptado) {
         return NextResponse.json({
-          error: 'Esta cotización ya es una reserva. Si el cliente cancela, marca la '
-               + 'reserva como cancelada en el día: así libera su cupo.'
+          error: 'Esta cotización ya es una reserva. Si el cliente cancela, usa '
+               + '"Cancelar evento": libera el cupo y anota lo que se devuelve.'
         }, { status: 409 });
       }
       if (!previo.idReserva) {
@@ -324,6 +341,12 @@ export async function PATCH(req: Request) {
       horario: texto('horario', previo.horario),
       ley20393: cuerpo.ley20393 === undefined ? previo.ley20393 : cuerpo.ley20393 === true,
       acuerdos: texto('acuerdos', previo.acuerdos),
+      cambiosFecha: cuerpo.cambiosFecha === undefined
+        ? previo.cambiosFecha : numeroONulo(cuerpo.cambiosFecha, 10),
+      cancelacionDias: cuerpo.cancelacionDias === undefined
+        ? previo.cancelacionDias : numeroONulo(cuerpo.cancelacionDias, 365),
+      reembolso: cuerpo.reembolso === undefined
+        ? previo.reembolso : numeroONulo(cuerpo.reembolso, 100),
       // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
       // línea no puede correrle el plazo al cliente.
       validoHasta: cuerpo.renovarVigencia

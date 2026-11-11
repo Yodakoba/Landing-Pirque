@@ -7,6 +7,7 @@ import { gentePosible, cuentasDe, folioDe,
          type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
 import { grupoDe, letraDe } from '@/lib/cotizar';
 import { condicionesDe } from '@/lib/cobros';
+import { tranquilidadDeCotizacion } from '@/lib/cancelacion';
 import { clausulasDe, comparecencia, horarioDe, aliasDe, RAYA, type Parrafo } from '@/lib/contrato';
 import { negocioDe } from '@/lib/negocio';
 import type { Config } from '@/lib/config';
@@ -54,7 +55,7 @@ export default function HojaContrato({ p, lista, lineas, clientes, cfg }: {
     condiciones: condicionesDe(p, cuentas.total, cfg),
     ley20393: p.ley20393,
     acuerdos: p.acuerdos,
-    tranquilidad: cfg
+    tranquilidad: tranquilidadDeCotizacion(p, cfg)
   };
   const clausulas = clausulasDe(datos);
 

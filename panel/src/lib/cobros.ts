@@ -44,7 +44,12 @@ export const ENCABEZADO_COBROS: string[] = Object.values(COL_COBROS);
 export const CONCEPTO_COBRO = {
   anticipo: 'Anticipo',
   saldo: 'Saldo',
-  otro: 'Otro'
+  otro: 'Otro',
+  /**
+   * Plata que se le devuelve al cliente al cancelar (2026-11-11). Va en
+   * negativo y la anota quien paga. Ver `lib/cancelacion.ts`.
+   */
+  devolucion: 'Devolución'
 } as const;
 export type ConceptoCobro = (typeof CONCEPTO_COBRO)[keyof typeof CONCEPTO_COBRO];
 
@@ -294,6 +299,9 @@ export function avisosDeCobro(
   const saldo: AvisoCobro[] = [];
   for (const p of cotizaciones) {
     if (cerrados.includes(p.estado) && !p.idReserva) continue;
+    // Una cancelada conserva su reserva (cancelada), pero ya no se le cobra:
+    // lo que queda es devolver, y eso tiene su propio aviso.
+    if (p.estado === 'Cancelada') continue;
     const cond = condicionesDe(p, p.total, cfg);
     const e = estadoCobros({ anticipo: cond.anticipo, total: p.total },
       cobros.filter((c) => c.presupuesto === p.id));

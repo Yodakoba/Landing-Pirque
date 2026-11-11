@@ -37,6 +37,9 @@ import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          faltaParaFactura, type Cliente } from './clientes.ts';
 import { diaParaReservaManual } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
+import { tranquilidadDeCotizacion, devolucionSugerida, faltaDevolver, frasesCancelacion,
+         CONCEPTO_DEVOLUCION } from './cancelacion.ts';
+import { tranquilidadDe } from './contrato.ts';
 import { clausulasDe, comparecencia, faltaDelCliente, faltaDeEmpresa, horarioDe, fechaLarga,
          RAYA, LEY_20393, type DatosContrato } from './contrato.ts';
 import {
@@ -2336,7 +2339,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '',
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '',
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3561,7 +3564,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '',
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '',
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3952,7 +3955,7 @@ console.log('\nCotizaciones, fase 2');
      && texto(clausulasDe({ ...datos, tipoEvento: 'Empresa' })).includes('la celebración de un evento de empresa'),
      'el tipo de evento se lee como frase: "un evento de empresa", no "de empresa"');
   ok(texto(cl).includes('cambiar dos veces la fecha')
-     && texto(cl).includes('hasta con 60 días de anticipación y con un reembolso del 20% de la reserva'),
+     && texto(cl).includes('hasta con 60 días de anticipación y con un reembolso del 20% de lo pagado'),
      'las medidas de tranquilidad dicen lo de Configuración (por defecto, las del CRM)');
   const otra = clausulasDe({ ...datos, tranquilidad: { cambiosFecha: 1, cancelacionDias: 30, reembolsoPct: 0 } });
   ok(texto(otra).includes('cambiar una vez la fecha') && texto(otra).includes('30 días de anticipación, sin reembolso'),
@@ -4008,6 +4011,77 @@ console.log('\nCotizaciones, fase 2');
   const occ = ocupacionDe([leida], { ...dia!, fila: 2 });
   ok(occ.tomadas === 40 && occ.quedan === POR_DEFECTO.cupoNormal - 40,
      'y ese día cuenta a la gente de la cotización: ocupa cupo');
+}
+
+console.log('\nCancelar una cotización ganada');
+{
+  const CFG = { cambiosFecha: 2, cancelacionDias: 60, reembolsoPct: 20 };
+  // Las condiciones: en blanco rige Configuración, y un 0 escrito es 0.
+  const enBlanco = { cambiosFecha: null, cancelacionDias: null, reembolso: null };
+  ok(JSON.stringify(tranquilidadDeCotizacion(enBlanco, CFG)) === JSON.stringify(CFG),
+     'una cotización sin condiciones propias usa las de Configuración');
+  const negociada = tranquilidadDeCotizacion({ cambiosFecha: 0, cancelacionDias: 30, reembolso: 50 }, CFG);
+  ok(negociada.cambiosFecha === 0 && negociada.cancelacionDias === 30 && negociada.reembolsoPct === 50,
+     'y las negociadas mandan, también un 0 (sin cambios de fecha)');
+
+  // El contrato imprime las de la cotización, y dice "de lo pagado".
+  const parrafos = tranquilidadDe(negociada).join(' ');
+  ok(/hasta con 30 días/.test(parrafos) && /50% de lo pagado/.test(parrafos) && !/cambiar/.test(parrafos),
+     'el contrato imprime las condiciones de la cotización, con el % sobre lo pagado');
+  ok(/30 días antes con devolución del 50% de lo pagado/.test(frasesCancelacion(negociada)),
+     'y la ventana de cotizar dice lo mismo en una frase');
+
+  // Lo que se devuelve: el % sobre lo pagado, solo en plazo.
+  const cobros = [
+    { monto: 300000, concepto: 'Anticipo' }, { monto: 200000, concepto: 'Saldo' }
+  ];
+  const enPlazo = devolucionSugerida(cobros, '2027-03-20', '2026-11-11', CFG);
+  ok(enPlazo.enPlazo && enPlazo.pagado === 500000 && enPlazo.devolver === 100000,
+     'cancelando con más de 60 días se devuelve el 20% de lo pagado');
+  const justo = devolucionSugerida(cobros, '2027-01-10', '2026-11-11', CFG);
+  ok(justo.dias === 60 && justo.enPlazo, 'el día 60 justo todavía está en plazo ("hasta con 60 días")');
+  const tarde = devolucionSugerida(cobros, '2026-12-01', '2026-11-11', CFG);
+  ok(!tarde.enPlazo && tarde.devolver === 0 && tarde.dias === 20,
+     'fuera de plazo el contrato no obliga a devolver nada');
+  ok(devolucionSugerida(cobros, '2027-03-20', '2026-11-11', { ...CFG, cancelacionDias: 0 }).devolver === 0,
+     'sin días de cancelación el contrato no promete cancelar: no hay devolución');
+  const conDevuelto = devolucionSugerida([...cobros, { monto: -50000, concepto: CONCEPTO_DEVOLUCION }],
+    '2027-03-20', '2026-11-11', CFG);
+  ok(conDevuelto.pagado === 500000, 'lo pagado no descuenta las devoluciones: el % es sobre lo que entró');
+
+  // Lo que falta devolver.
+  const f1 = faltaDevolver(100000, cobros);
+  ok(f1.devuelto === 0 && f1.falta === 100000, 'sin devoluciones anotadas falta todo lo acordado');
+  const f2 = faltaDevolver(100000, [...cobros, { monto: -60000, concepto: CONCEPTO_DEVOLUCION }]);
+  ok(f2.devuelto === 60000 && f2.falta === 40000, 'una devolución parcial deja lo que falta');
+  ok(faltaDevolver(100000, [{ monto: -120000, concepto: CONCEPTO_DEVOLUCION }]).falta === 0,
+     'devolver de más no deja un "falta" negativo');
+  ok(CONCEPTO_DEVOLUCION === CONCEPTO_COBRO.devolucion,
+     'el concepto de la devolución es el mismo en los cobros y en la cancelación');
+
+  // La cotización: columnas nuevas, ida y vuelta, y el estado.
+  const enc = [...ENCABEZADO_PRESUPUESTOS];
+  const fila = new Array(enc.length).fill('');
+  const poner = (col: string, v: string) => { fila[enc.indexOf(col)] = v; };
+  poner('ID', 'PRE-9'); poner('Fecha', '2027-01-16'); poner('Estado', 'Cancelada');
+  poner('ID Reserva', 'MANUAL-9'); poner('Cancelación días', '0'); poner('Reembolso %', '');
+  poner('Devolución acordada', '100000'); poner('Cancelada por', 'Verónica');
+  const leida = leerPresupuestosDe([enc, fila])[0];
+  ok(leida.cancelacionDias === 0 && leida.reembolso === null && leida.cambiosFecha === null
+     && leida.devolucion === 100000 && leida.canceladaPor === 'Verónica',
+     'las condiciones de cancelación se leen con 0 distinto de en blanco, y la devolución acordada');
+  const vuelta = leerPresupuestosDe([enc, filaPresupuesto(enc, leida)])[0];
+  ok(vuelta.cancelacionDias === 0 && vuelta.reembolso === null && vuelta.devolucion === 100000,
+     'y se escriben igual: ida y vuelta sin perder el 0');
+  ok(estadoVisible(leida, '2026-11-11') === ESTADO_PRESUPUESTO.cancelada,
+     'una cancelada se ve Cancelada aunque conserve su ID Reserva');
+  ok(!cuentaComoPosible(leida, '2026-11-11'), 'y no cuenta como gente posible');
+
+  // Los avisos de cobro no le cobran el saldo a una cancelada.
+  const av = avisosDeCobro([{ id: 'PRE-9', fecha: '2026-11-13', estado: ESTADO_PRESUPUESTO.cancelada,
+    idReserva: 'MANUAL-9', anticipo: null, saldoDias: null, total: 1000000 }],
+    [{ presupuesto: 'PRE-9', monto: 300000 }], { anticipoPct: 30, saldoDias: 3 }, '2026-11-11', []);
+  ok(av.saldo.length === 0, 'a una cancelada no se le avisa el saldo por cobrar');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

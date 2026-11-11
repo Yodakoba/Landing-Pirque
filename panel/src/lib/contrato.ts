@@ -136,7 +136,7 @@ export interface DatosContrato {
   condiciones: Condiciones;
   ley20393: boolean;
   acuerdos: string;
-  /** Las medidas de tranquilidad, de Configuración. */
+  /** Las medidas de tranquilidad: las de la cotización, o las de Configuración. */
   tranquilidad: Tranquilidad;
 }
 
@@ -164,8 +164,8 @@ export function tranquilidadDe(t: Tranquilidad): Parrafo[] {
   if (t.cancelacionDias > 0) {
     salida.push(`El Cliente tendrá la opción de cancelar el Evento hasta con ${t.cancelacionDias} días `
       + 'de anticipación' + (t.reembolsoPct > 0
-        ? ` y con un reembolso del ${t.reembolsoPct}% de la reserva.`
-        : ', sin reembolso de la reserva.'));
+        ? ` y con un reembolso del ${t.reembolsoPct}% de lo pagado.`
+        : ', sin reembolso de lo pagado.'));
   }
   return salida;
 }
