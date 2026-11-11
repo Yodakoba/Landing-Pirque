@@ -22,11 +22,20 @@
  * puedes ir**. Son dos preguntas distintas y ahora se ven distintas.
  */
 import { usePathname } from 'next/navigation';
-import Nav from './Nav';
+import Nav, { PAGINAS } from './Nav';
+import { puede, puedeVer, type Rol } from '@/lib/auth';
 import BotonTema from './BotonTema';
 
-export default function Cabecera({ rol, usuario }: { rol: string; usuario: string }) {
+export default function Cabecera({ rol, usuario, gerencia = false }: {
+  rol: string; usuario: string; gerencia?: boolean;
+}) {
   const ruta = usePathname();
+  // **Vista gerencia** (2026-11-11): la página que se está mirando, y si se
+  // ve solo por la gerencia —o sea, que el rol no la puede cambiar—.
+  const pagina = [...PAGINAS].sort((a, b) => b.href.length - a.href.length)
+    .find((p) => (p.href === '/' ? ruta === '/' : ruta.startsWith(p.href)));
+  const soloMira = !!pagina && gerencia && !puede(rol as Rol, pagina.accion)
+    && puedeVer(rol as Rol, pagina.accion, gerencia);
   // Ni la página del trabajador ni la planilla del grupo llevan barra:
   // todos sus enlaces pedirían una contraseña que quien las abre no tiene.
   //
@@ -75,14 +84,24 @@ export default function Cabecera({ rol, usuario }: { rol: string; usuario: strin
                     {usuario}
                     <span className="ml-1 text-hueso/50">· {rol}</span>
                   </span>
+                  {gerencia && (
+                    <span className="rounded-full border-2 border-cielo-fuerte/60 bg-cielo/10 px-2.5 py-0.5
+                                     text-[13px] font-semibold text-cielo-texto">👁 Vista gerencia</span>
+                  )}
                   <button onClick={salir} className="tecla boton">Salir</button>
                 </>
               )}
             </div>
             {/* Fila 2: a dónde puedes ir. */}
             <div className="mt-3">
-              <Nav rol={rol} />
+              <Nav rol={rol} gerencia={gerencia} />
             </div>
+            {soloMira && (
+              <p className="mt-3 rounded-xl border-2 border-cielo-fuerte/60 bg-cielo/10 px-3 py-2 text-[14px]">
+                <strong className="text-cielo-texto">👁 Vista gerencia: acá solo miras.</strong>{' '}
+                Tu rol ({rol}) no cambia esta pantalla; si algo hay que corregir, pídeselo a quien la tiene a cargo.
+              </p>
+            )}
           </>
         )}
       </div>

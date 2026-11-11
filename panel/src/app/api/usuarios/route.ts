@@ -63,7 +63,10 @@ export async function PUT(req: Request) {
         usuario,
         rol: esRolDeCuenta(rol) ? (rol as Rol) : ROL.encargado,
         activo: u?.activo === undefined ? true : esSi(u.activo),
-        huella: previas.get(normalizar(usuario)) ?? ''
+        huella: previas.get(normalizar(usuario)) ?? '',
+        // La vista gerencia: un agregado a la cuenta, no un rol. Al
+        // administrador no le suma nada —ya ve todo—, así que no se guarda.
+        gerencia: u?.gerencia === true && rol !== ROL.admin
       });
     }
 

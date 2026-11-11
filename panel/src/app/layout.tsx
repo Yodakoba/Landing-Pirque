@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         }} />
       </head>
       <body className="min-h-screen">
-        <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} />
+        <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} gerencia={sesion?.gerencia === true} />
         <Recorrido />
         <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
         <AvisoFlotante />

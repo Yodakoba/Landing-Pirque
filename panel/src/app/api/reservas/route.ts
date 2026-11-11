@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
 import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasDeCotizaciones } from '@/lib/datos';
@@ -11,7 +11,7 @@ import { guardaDelDia } from '@/lib/guardaCierre';
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'ver');
+  const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
     // Los menus viajan junto a las reservas: las dos vistas que leen esto

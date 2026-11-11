@@ -6,9 +6,9 @@ import {
 import { aEntero, esSi, sinFicha, esContratado, MODALIDAD,
          type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { anotar } from '@/lib/datos';
-import { ROL, puede, type Rol } from '@/lib/auth';
+import { ROL, puede, puedeVer, type Rol } from '@/lib/auth';
 import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
 
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
   // tenían los dos permisos la diferencia no existía; con el vendedor sí,
   // y es justo la que el cliente pidió: *"no necesita ver nada más que
   // esto"*. Para el administrador, el encargado y quien paga no cambia nada.
-  const no = await exigir(req, 'equipo');
+  const no = await exigirVer(req, 'equipo');
   if (no) return no;
   try {
     // Los cierres y las actividades extras viajan con el resto porque las
@@ -66,13 +66,15 @@ export async function GET(req: Request) {
     const [puestos, trabajadores, turnos, cierres, extras] = await Promise.all([
       leerPuestos(), leerTrabajadores(), leerTurnos(), leerCierres(), leerExtras()
     ]);
-    const rol = (await quienEs(req)).rol as Rol;
+    const { rol, gerencia } = await quienEs(req);
     // **Tres banderas, una por permiso**, en vez de un `esAdmin` que
     // gobernaba cosas sin relación: la plata, las credenciales y la lista
     // de puestos. Hoy las tres las tiene el mismo par de roles, pero cada
     // una dice qué gobierna, así que moverlas por separado es cambiar la
     // tabla de permisos y nada más.
-    const verSueldos = puede(rol, 'sueldos');
+    // Los sueldos se VEN también con vista gerencia; guardarlos sigue
+    // pidiendo el rol (el `PUT` de abajo descarta lo que no puede pisar).
+    const verSueldos = puedeVer(rol, 'sueldos', gerencia);
     const verLinks = puede(rol, 'links');
     const editarPuestos = puede(rol, 'puestos');
     // Si puede corregir un día cerrado. Solo decide qué botón se dibuja: la

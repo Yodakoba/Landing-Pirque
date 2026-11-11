@@ -13,7 +13,7 @@
  * vez de dejar apretar y fallar.
  */
 import { NextResponse } from 'next/server';
-import { exigir } from '@/lib/permisos';
+import { exigir, exigirVer } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig, leerCierres, leerMenus, reservasDeCotizaciones } from '@/lib/datos';
 import { comoIngresar } from '@/lib/fudo';
 import { hoy } from '@/lib/fechas';
@@ -24,7 +24,7 @@ import { ocupaLugar } from '@/lib/ocupacion';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'asistencia');
+  const no = await exigirVer(req, 'asistencia');
   if (no) return no;
   try {
     const fecha = hoy();

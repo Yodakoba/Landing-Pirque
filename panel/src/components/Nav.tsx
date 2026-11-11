@@ -19,7 +19,7 @@
  * del texto. Quien no distinga el dorado del hueso igual ve cuál es.
  */
 import { usePathname } from 'next/navigation';
-import { puede, type Rol, type Accion } from '@/lib/auth';
+import { puedeVer, type Rol, type Accion } from '@/lib/auth';
 
 /**
  * Cada página con el permiso que de verdad la abre.
@@ -32,7 +32,7 @@ import { puede, type Rol, type Accion } from '@/lib/auth';
  * Esconder un enlace es cortesía, no seguridad: quien escriba /config a mano
  * igual recibe un 403 de la ruta, que es donde esto se decide.
  */
-const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
+export const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/', texto: 'Calendario', accion: 'ver' },
   // La pantalla de la entrada, el día de apertura (2026-11-11).
   { href: '/recepcion', texto: 'Recepción', accion: 'asistencia' },
@@ -51,7 +51,7 @@ const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/bitacora', texto: 'Bitácora', accion: 'bitacora' }
 ];
 
-export default function Nav({ rol }: { rol: string }) {
+export default function Nav({ rol, gerencia = false }: { rol: string; gerencia?: boolean }) {
   const ruta = usePathname();
 
   // `flex-wrap`: la barra envuelve en vez de empujar. Con nueve páginas ya no
@@ -65,7 +65,8 @@ export default function Nav({ rol }: { rol: string }) {
 
   return (
     <nav className="flex flex-wrap gap-2">
-      {PAGINAS.filter((p) => puede(rol as Rol, p.accion))
+      {/* Con vista gerencia aparecen también las que solo se miran. */}
+      {PAGINAS.filter((p) => puedeVer(rol as Rol, p.accion, gerencia))
               .map(({ href, texto }) => {
         // La raíz calza exacto; las demás también con lo que cuelgue de
         // ellas. /dia/2026-11-14 no es ninguna de las tres, así que ahí no

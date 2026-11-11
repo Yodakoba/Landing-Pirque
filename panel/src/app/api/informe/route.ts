@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { leerTurnos, leerTrabajadores, leerExtras, leerColaboradores,
          leerPagosEquipo, anotarPagoEquipo, anotarPagosEquipo, borrarPagoEquipo, leerBoletas,
          anotar } from '@/lib/datos';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { normalizar } from '@/lib/columnas';
 import { pagoDelCuerpo } from '@/lib/remuneraciones';
 import { puede } from '@/lib/auth';
@@ -39,7 +39,7 @@ export const dynamic = 'force-dynamic';
  * Es una ruta de solo lectura: el informe no escribe nada.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'informe');
+  const no = await exigirVer(req, 'informe');
   if (no) return no;
   try {
     const [turnos, extras, gente, colaboradores, pagos, boletas] = await Promise.all([

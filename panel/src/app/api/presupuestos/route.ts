@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { horarioDe, faltaDeEmpresa } from '@/lib/contrato';
 import { UF_MINIMA, UF_MAXIMA } from '@/lib/uf';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto, guardarLineas,
   borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar, leerCobros,
@@ -31,7 +31,7 @@ export const dynamic = 'force-dynamic';
  * mostrando lo que tenían escrito.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
     const quien = await quienEs(req);

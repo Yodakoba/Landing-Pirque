@@ -35,6 +35,8 @@ export interface Sesion {
   rol: string;
   /** Cuándo caduca, en segundos desde epoch. */
   expira: number;
+  /** Si la cuenta tiene vista gerencia: ve todo, edita lo de su rol. */
+  gerencia?: boolean;
 }
 
 export const COOKIE_SESION = 'sesion';
@@ -79,13 +81,14 @@ function clave(secreto: string): Promise<CryptoKey> {
  * días.
  */
 export async function firmarSesion(
-  datos: { usuario: string; rol: string },
+  datos: { usuario: string; rol: string; gerencia?: boolean },
   secreto: string,
   ahora = Math.floor(Date.now() / 1000),
   duracion = DURACION_SESION
 ): Promise<string> {
   const cuerpo: Sesion = {
-    usuario: datos.usuario, rol: datos.rol, expira: ahora + duracion
+    usuario: datos.usuario, rol: datos.rol, expira: ahora + duracion,
+    ...(datos.gerencia ? { gerencia: true } : {})
   };
   const payload = aBase64Url(new TextEncoder().encode(JSON.stringify(cuerpo)));
   const firma = await crypto.subtle.sign(
@@ -128,7 +131,8 @@ export async function leerSesion(
     const sesion: Sesion = {
       usuario: String(datos?.usuario ?? ''),
       rol: String(datos?.rol ?? ''),
-      expira: Number(datos?.expira ?? 0)
+      expira: Number(datos?.expira ?? 0),
+      gerencia: datos?.gerencia === true
     };
     if (!sesion.usuario || !sesion.rol) return null;
     if (!Number.isFinite(sesion.expira) || sesion.expira <= ahora) return null;

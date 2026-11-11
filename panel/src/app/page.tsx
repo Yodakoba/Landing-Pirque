@@ -20,5 +20,5 @@ export default async function Pagina() {
   const sesion = await leerSesion(
     cookieDe(headers().get('cookie'), COOKIE_SESION), secretoDeSesion(process.env)
   );
-  return <CalendarView rol={sesion?.rol ?? ''} />;
+  return <CalendarView rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true} />;
 }

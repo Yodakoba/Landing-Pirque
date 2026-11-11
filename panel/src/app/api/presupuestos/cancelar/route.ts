@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerConfig, leerCobros, guardarPresupuesto, cancelarReservaDe, anotar,
   devolverElDia
@@ -64,7 +64,7 @@ async function sugerencia(p: Presupuesto) {
 }
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
     const r = await cancelable(req, new URL(req.url).searchParams.get('id') ?? '');

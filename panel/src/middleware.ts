@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from './lib/sesion.ts';
-import { puede, type Rol } from './lib/auth.ts';
+import { puede, puedeVer, type Rol } from './lib/auth.ts';
 
 
 /**
@@ -126,14 +126,14 @@ export async function middleware(req: NextRequest) {
     // para cualquier rol que mañana tenga el informe y no el calendario, y
     // porque no cuesta nada: es un `if` que no se cumple.
     // La anfitriona (2026-11-11): no ve el calendario, entra a la recepción.
-    if (ruta === '/' && !puede(sesion.rol as Rol, 'ver')
+    if (ruta === '/' && !puedeVer(sesion.rol as Rol, 'ver', sesion.gerencia)
         && puede(sesion.rol as Rol, 'asistencia')) {
       const recepcion = req.nextUrl.clone();
       recepcion.pathname = '/recepcion';
       recepcion.search = '';
       return NextResponse.redirect(recepcion);
     }
-    if (ruta === '/' && !puede(sesion.rol as Rol, 'ver')
+    if (ruta === '/' && !puedeVer(sesion.rol as Rol, 'ver', sesion.gerencia)
         && puede(sesion.rol as Rol, 'informe')) {
       const informe = req.nextUrl.clone();
       informe.pathname = '/informe';

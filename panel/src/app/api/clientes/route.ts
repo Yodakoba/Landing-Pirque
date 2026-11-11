@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerClientes, crearCliente, editarCliente, borrarCliente, leerPresupuestos,
   migrarPresupuestosAClientes, anotar, sincronizarReserva, leerLineasPresupuesto
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
  * pantalla ofrezca pasarlos — pero solo a quien puede ver presupuestos.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'clientes');
+  const no = await exigirVer(req, 'clientes');
   if (no) return no;
   try {
     const quien = await quienEs(req);

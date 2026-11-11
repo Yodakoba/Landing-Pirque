@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar,
   editarCobro
@@ -41,7 +41,7 @@ async function cotizacionTocable(req: Request, id: string) {
 }
 
 export async function GET(req: Request) {
-  const no = await exigir(req, 'presupuestos');
+  const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
     const id = new URL(req.url).searchParams.get('id') ?? '';

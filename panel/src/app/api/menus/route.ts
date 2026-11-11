@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir, quienEs } from '@/lib/permisos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerMenus, guardarMenus, anotar, leerReservas, leerLineasPresupuesto } from '@/lib/datos';
 import { limpiarProducto, usados, quitadosUsados, type Menu } from '@/lib/menus';
 import { menusConocidos } from '@/lib/shopify';
@@ -21,7 +21,7 @@ async function nombresVistos(): Promise<string[]> {
  * ofrece *Quitar* sino *Desactivar*.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'configurar');
+  const no = await exigirVer(req, 'configurar');
   if (no) return no;
   try {
     const menus = await leerMenus();

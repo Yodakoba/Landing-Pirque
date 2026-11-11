@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exigir } from '@/lib/permisos';
+import { exigir, exigirVer } from '@/lib/permisos';
 import { climaDe, urlPronostico, IDENTIFICACION } from '@/lib/clima';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
  * está vacía, y entonces el calendario se dibuja sin íconos.
  */
 export async function GET(req: Request) {
-  const no = await exigir(req, 'ver');
+  const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
     const r = await fetch(urlPronostico(), {

@@ -26,6 +26,8 @@ interface Fila {
   rol: string;
   activo: boolean;
   tieneClave: boolean;
+  /** Vista gerencia: ve todo el panel, edita solo lo de su rol. */
+  gerencia?: boolean;
 }
 
 const ENTRADA =
@@ -86,6 +88,7 @@ export default function UsuariosEditor() {
   const cambiar = (i: number, campo: keyof Fila, valor: string | boolean) => {
     const copia = lista.map((u) => ({ ...u }));
     if (campo === 'activo') copia[i].activo = Boolean(valor);
+    else if (campo === 'gerencia') copia[i].gerencia = Boolean(valor);
     else (copia[i] as unknown as Record<string, string>)[campo] = String(valor);
     setLista(copia);
     setSucio(true);
@@ -155,6 +158,19 @@ export default function UsuariosEditor() {
                     <p className="mt-1 text-[13px] leading-snug text-hueso/65">
                       {RESUMEN_ROL[u.rol]}
                     </p>
+                  )}
+                  {/* **Vista gerencia** (2026-11-11): un agregado a la cuenta,
+                      no un rol. Al administrador no le suma nada. */}
+                  {u.rol !== 'admin' && (
+                    <div className="mt-2 flex items-center">
+                      <button type="button" aria-pressed={!!u.gerencia}
+                        onClick={() => cambiar(i, 'gerencia', !u.gerencia)}
+                        className={`boton min-h-[40px] ${u.gerencia
+                          ? '!border-cielo-fuerte bg-cielo/15 font-semibold text-cielo-texto' : ''}`}>
+                        {u.gerencia ? '✓ 👁 Vista gerencia' : '+ Vista gerencia'}
+                      </button>
+                      <AyudaCorta tema="vistaGerencia" />
+                    </div>
                   )}
                 </td>
                 <td className="py-2 pr-3">

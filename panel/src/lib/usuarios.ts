@@ -27,7 +27,9 @@ export const COL_USUARIOS = {
   usuario: 'Usuario',
   rol: 'Rol',
   activo: 'Activo',
-  clave: 'Clave (huella)'
+  clave: 'Clave (huella)',
+  /** Ver ↓ `gerencia`. Va al final: una planilla vieja se lee igual. */
+  gerencia: 'Vista gerencia'
 } as const;
 
 export interface Usuario {
@@ -45,6 +47,13 @@ export interface Usuario {
    * cuenta recién creada a la que aún no le asignaron clave.
    */
   huella: string;
+  /**
+   * **Vista gerencia** (2026-11-11, idea del cliente): un agregado a la
+   * cuenta, no un rol. Quien la tiene **ve** todo el panel —calendario,
+   * reservas, informe, bitácora, cotizaciones, equipo con sus sueldos,
+   * configuración— y **edita solo lo de su rol**. Ver `puedeVer()`.
+   */
+  gerencia: boolean;
 }
 
 /* ---------- La huella de la contraseña ---------- */
@@ -113,7 +122,10 @@ export function leerUsuariosDe(filas: string[][]): Usuario[] {
       // error de tecleo en esa celda no puede repartir permisos de más.
       rol: esRolDeCuenta(rol) ? (rol as Rol) : ROL.encargado,
       activo: esSi(filas[i]?.[3]),
-      huella: String(filas[i]?.[4] ?? '').trim()
+      huella: String(filas[i]?.[4] ?? '').trim(),
+      // En blanco es NO, al revés que `Activo`: ver más es un permiso que
+      // se da a propósito, no uno que se tiene por defecto.
+      gerencia: String(filas[i]?.[5] ?? '').trim() !== '' && esSi(filas[i]?.[5])
     });
   }
   return salida;
@@ -122,8 +134,9 @@ export function leerUsuariosDe(filas: string[][]): Usuario[] {
 export function aFilasUsuarios(lista: Usuario[]): string[][] {
   return [
     [COL_USUARIOS.nombre, COL_USUARIOS.usuario, COL_USUARIOS.rol,
-     COL_USUARIOS.activo, COL_USUARIOS.clave],
-    ...lista.map((u) => [u.nombre, u.usuario, u.rol, u.activo ? 'Sí' : 'No', u.huella])
+     COL_USUARIOS.activo, COL_USUARIOS.clave, COL_USUARIOS.gerencia],
+    ...lista.map((u) => [u.nombre, u.usuario, u.rol, u.activo ? 'Sí' : 'No', u.huella,
+                         u.gerencia ? 'Sí' : 'No'])
   ];
 }
 
