@@ -2209,6 +2209,17 @@ cotización decía 30% y 3 días y el contrato 20% y 10.
   blanco hace fallar una prueba.
 - **El anticipo se redondea al peso y el saldo es la resta**: los dos suman
   el total siempre.
+- **El anticipo también se puede acordar en pesos** (2026-11-12, lo pidió el
+  cliente: *"págame 500 más"*). Al lado del % hay *o un monto acordado*; si
+  se escribe, **manda sobre el %** (columna `Anticipo monto` de
+  `Presupuestos`, al final; `montoONulo()`), nunca pasa del total, y la
+  pantalla y la hoja dicen *Anticipo acordado* en vez del %. *Volver al %*
+  lo borra.
+- **Lo pagado es del evento**: mientras ninguna alternativa esté ganada, la
+  ventana de cada una cuenta lo anotado en todas (*"Anotado en otra
+  alternativa, cuenta para esta"*), así que a la C solo le falta la
+  diferencia de su anticipo. Lo mismo comprueba `/convertir`, y al ganar
+  los cobros pasan a la ganadora.
 - **Se guardan los cobros, no una casilla**: pestaña `Cobros` (ID · ID
   Presupuesto · Fecha de pago · Concepto · Monto · Medio · Nota ·
   Registrado por · Cuándo). Concepto *Anticipo*, *Saldo* u *Otro*; el

@@ -3860,6 +3860,15 @@ console.log('\nCotizaciones, fase 2');
   ok(c.saldoHasta === '2026-12-02', 'el saldo vence 3 días antes del evento');
   const neg = condicionesDe({ anticipo: 20, saldoDias: 10, fecha: '2026-12-05' }, 100000, cfg);
   ok(neg.anticipo === 20000 && neg.saldoHasta === '2026-11-25', 'lo negociado en la cotización manda');
+  {
+    const m = condicionesDe({ anticipo: 30, anticipoMonto: 500000, saldoDias: null, fecha: '' }, 2000000, cfg);
+    ok(m.fijo && m.anticipo === 500000 && m.saldo === 1500000 && m.pct === 25,
+       'un anticipo acordado en pesos manda sobre el %, y el saldo es la resta');
+    ok(condicionesDe({ anticipo: null, anticipoMonto: 9000000, saldoDias: null, fecha: '' }, 100000, cfg).anticipo === 100000,
+       'un anticipo acordado nunca pasa del total');
+    ok(!condicionesDe({ anticipo: 20, anticipoMonto: null, saldoDias: null, fecha: '' }, 100000, cfg).fijo,
+       'sin monto acordado rige el %');
+  }
   const sin = condicionesDe({ anticipo: 0, saldoDias: null, fecha: '' }, 100000, cfg);
   ok(sin.pct === 0 && sin.anticipo === 0 && sin.saldoHasta === '',
      'un 0 es sin anticipo —no "en blanco"—, y sin día no hay fecha de saldo');

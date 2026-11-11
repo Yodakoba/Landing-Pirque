@@ -16,7 +16,7 @@ import {
 } from '@/lib/datos';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, estaMandada, aEntero, folioDe, estadoNormal, lineasDe,
-  documentoDe, numeroONulo, type Presupuesto, type LineaEntrante
+  documentoDe, numeroONulo, montoONulo, type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
 import {
   prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe, otrasAlternativas
@@ -226,6 +226,7 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJ
       motivo: '',
       documento: documentoDe(cuerpo.documento),
       anticipo: numeroONulo(cuerpo.anticipo, 100),
+      anticipoMonto: montoONulo(cuerpo.anticipoMonto),
       saldoDias: numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, { uf: 0, fechaUF: '' }),
       horario: normalizarHorario(String(cuerpo.horario ?? '')),
@@ -387,6 +388,8 @@ export const PATCH = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HO
       documento: cuerpo.documento === undefined ? previo.documento : documentoDe(cuerpo.documento),
       anticipo: cuerpo.anticipo === undefined
         ? previo.anticipo : numeroONulo(cuerpo.anticipo, 100),
+      anticipoMonto: cuerpo.anticipoMonto === undefined
+        ? (previo.anticipoMonto ?? null) : montoONulo(cuerpo.anticipoMonto),
       saldoDias: cuerpo.saldoDias === undefined
         ? previo.saldoDias : numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, previo),
