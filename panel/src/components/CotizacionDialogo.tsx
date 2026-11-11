@@ -50,6 +50,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { enlaceWhatsApp } from '@/lib/contacto';
+import { cupoParaGanar } from '@/lib/dias';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-3 py-2 text-[15px] ' +
@@ -70,6 +71,9 @@ export interface DatosCotizar {
   seguimiento?: { dias: number; antesEvento: number };
   /** El nombre comercial, para el asunto del correo. */
   empresa?: string;
+  /** El cupo de un día nuevo, para `cupoParaGanar()`. */
+  cupoNormal?: number;
+  horaApertura?: string;
   /** Para el contrato: el horario de siempre y qué le falta a la empresa. */
   contrato?: { horario: string; faltaEmpresa: string[];
     tranquilidad?: { cambiosFecha: number; cancelacionDias: number; reembolsoPct: number } };
@@ -675,8 +679,45 @@ export default function CotizacionDialogo({
     { nombre: 'Pagada', listo: cobrado.completo }
   ];
   const personasDelEvento = enMenus || invitados;
+  /**
+   * **¿Cabe en el día?** (2026-11-11, lo pidió el cliente). Lo ya tomado ese
+   * día se pide a `/api/ocupacion` cada vez que cambia la fecha; la regla es
+   * la misma `cupoParaGanar()` que usa `/convertir` para rechazarlo. Una
+   * ganada no se mira: su propia reserva ya está contada.
+   */
+  const [tomadasDia, setTomadasDia] = useState<number | null>(null);
+  useEffect(() => {
+    setTomadasDia(null);
+    if (!esFecha(fechaReal) || ganada) return;
+    let vivo = true;
+    fetch(`/api/ocupacion?desde=${fechaReal}&hasta=${fechaReal}`).then((r) => r.json())
+      .then((d) => {
+        if (!vivo) return;
+        const o = (d.ocupacion ?? []).find((x: { fecha: string }) => x.fecha === fechaReal);
+        setTomadasDia(o ? o.tomadas : 0);
+      }).catch(() => {});
+    return () => { vivo = false; };
+  }, [fechaReal, ganada]);
+  const cupo = tomadasDia === null || !esFecha(fechaReal) ? null
+    : cupoParaGanar(datos.fechas.find((f) => f.fecha === fechaReal), fechaReal,
+        { cupoNormal: datos.cupoNormal ?? 120, horaApertura: datos.horaApertura ?? '' },
+        tomadasDia, personasDelEvento);
+  const sinCupo = !!cupo && !cupo.cabe && !ganada && personasDelEvento > 0;
+  const avisoCupo = sinCupo && cupo ? (
+    <div role="alert" className="rounded-xl border-2 border-rojo-fuerte/70 bg-rojo/10 p-3 text-[15px]">
+      <p className="font-bold text-rojo-texto">
+        {cupo.exclusivo
+          ? 'Ese día está arrendado en exclusiva a otro cliente.'
+          : `Se está excediendo el cupo del día: quedan ${Math.max(0, cupo.libres)} lugares y la cotización es de ${personasDelEvento} personas.`}
+      </p>
+      <p className="mt-1 text-hueso/85">
+        No podemos tomar la reserva. Comunícate con la administración para ver si se pueden
+        abrir más cupos, o si habrá que cancelar la cotización.
+      </p>
+    </div>
+  ) : null;
   /** El botón grande de ganar, el mismo en los dos pasos. */
-  const botonGanar = esFecha(fechaReal) && puedeEditar ? (
+  const botonGanar = sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar ? (
     <span className="flex items-center gap-1">
       <button type="button" disabled={guardando} onClick={() => setConfirmandoGanar(true)}
         className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
@@ -720,7 +761,9 @@ export default function CotizacionDialogo({
         </Hito>
       )
     ) : anticipoPagado || (mandada && cond.pct === 0) ? (
-      <Hito tono="verde" titulo={esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'} bajada={bajadaGanar}>
+      <Hito tono={sinCupo ? 'ambar' : 'verde'}
+        titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
+        bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar}>
         {botonGanar}
       </Hito>
     ) : !mandada ? (
@@ -766,8 +809,9 @@ export default function CotizacionDialogo({
         </Hito>
       )
     ) : !ganada ? (
-      <Hito tono="verde" titulo={esFecha(fechaReal) ? '✓ Contrato firmado · lista para ganar' : 'Falta el día del evento'}
-        bajada={bajadaGanar + (cobrado.faltaAnticipo > 0
+      <Hito tono={sinCupo ? 'ambar' : 'verde'}
+        titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? '✓ Contrato firmado · lista para ganar' : 'Falta el día del evento'}
+        bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar + (cobrado.faltaAnticipo > 0
           ? ` El anticipo (${enPesos(cobrado.faltaAnticipo)}) queda por cobrar.` : '')}>
         {botonGanar}
       </Hito>
@@ -980,6 +1024,7 @@ export default function CotizacionDialogo({
                 {estadoDelDia(fecha, datos.fechas)}
               </p>
             )}
+            {avisoCupo}
 
             <div>
               <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">

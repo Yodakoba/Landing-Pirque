@@ -35,7 +35,7 @@ import { puedeTocarPresupuesto } from './auth.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          faltaParaFactura, type Cliente } from './clientes.ts';
-import { diaParaReservaManual, queLeHizo, deshacerDia } from './dias.ts';
+import { diaParaReservaManual, queLeHizo, deshacerDia, cupoParaGanar } from './dias.ts';
 import { valorSeguro } from './celdas.ts';
 import { tranquilidadDeCotizacion, devolucionSugerida, faltaDevolver, frasesCancelacion,
          CONCEPTO_DEVOLUCION } from './cancelacion.ts';
@@ -4166,6 +4166,22 @@ console.log('\nEl seguimiento de lo mandado');
      '"sigue esperando" también posterga lo del contrato');
   ok(seguimientoDe(pre({ idReserva: 'R1', contratoEnviado: '2026-11-09' }), HOY, cfg) === null,
      'mandado hace 2 días: todavía no');
+}
+
+console.log('\nEl cupo al ganar una cotización');
+{
+  const cfg = { cupoNormal: 120, horaApertura: '13:00' };
+  const abierto = { estado: 'Abierta', capacidad: 150 };
+  ok(cupoParaGanar(abierto, '2026-11-21', cfg, 100, 40).cabe, '150 de cupo, 100 tomadas: caben 40');
+  const lleno = cupoParaGanar(abierto, '2026-11-21', cfg, 130, 40);
+  ok(!lleno.cabe && lleno.libres === 20, 'con 130 tomadas quedan 20 y 40 no caben');
+  ok(cupoParaGanar(undefined, '2026-11-21', cfg, 0, 100).cabe
+     && !cupoParaGanar(undefined, '2026-11-21', cfg, 0, 150).cabe,
+     'un día que no existe se abre con el cupo de siempre: 100 caben, 150 no');
+  ok(cupoParaGanar({ estado: 'Cerrada', capacidad: 0 }, '2026-11-21', cfg, 0, 100).capacidad === 120,
+     'un día cerrado sin cupo se reabre con el de siempre');
+  const excl = cupoParaGanar({ estado: 'Privada exclusiva', capacidad: 300 }, '2026-11-21', cfg, 50, 10);
+  ok(!excl.cabe && excl.exclusivo, 'un día exclusivo con alguien adentro no recibe otro evento');
 }
 
 console.log('\nCuándo se puede marcar ganada');

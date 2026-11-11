@@ -54,6 +54,8 @@ export async function GET(req: Request) {
       condiciones: { anticipoPct: cfg.anticipoPct, saldoDias: cfg.saldoDias },
       seguimiento: { dias: cfg.seguimientoDias, antesEvento: cfg.avisoEvento },
       empresa: cfg.empresa.nombre,
+      // Para avisar antes de ganar si el día ya no tiene cupo (`cupoParaGanar()`).
+      cupoNormal: cfg.cupoNormal, horaApertura: cfg.horaApertura,
       // Para el contrato: el horario de siempre, y qué le falta a la empresa
       // en Configuración para que el contrato salga completo.
       contrato: {

@@ -14,7 +14,7 @@
  * Sin red: recibe el día como está y devuelve cómo tiene que quedar, o
  * `null` si no hay nada que cambiar.
  */
-import { ESTADO_DIA, estaCerrado } from './columnas.ts';
+import { ESTADO_DIA, estaCerrado, esExclusiva } from './columnas.ts';
 import type { FechaHabil } from './tipos.ts';
 import type { Config } from './config.ts';
 
@@ -94,4 +94,31 @@ export function deshacerDia(
     return { dia: { ...resto, estado: ESTADO_DIA.cerrada } };
   }
   return null;
+}
+
+/**
+ * **¿Cabe esta cotización en su día?** (2026-11-11, lo pidió el cliente: un
+ * vendedor arma el borrador con cupo de sobra, después Shopify u otro llena
+ * el día, y al ganarla *"los 150 no alcanzan"*). Se mira el día **como va a
+ * quedar al ganarla** —el mismo cupo que le pondría `diaParaReservaManual()`
+ * a uno que no existe o está cerrado—, menos lo que ya está tomado.
+ *
+ * Un día exclusivo con alguien adentro no cabe: el recinto ya está arrendado.
+ * La usan `/convertir`, que lo rechaza, y la ventana de cotizar, que lo avisa
+ * antes de que alguien apriete.
+ */
+export function cupoParaGanar(
+  actual: Pick<FechaHabil, 'estado' | 'capacidad'> | undefined,
+  fecha: string,
+  cfg: Pick<Config, 'cupoNormal' | 'horaApertura'>,
+  tomadas: number,
+  personas: number
+): { cabe: boolean; capacidad: number; libres: number; exclusivo: boolean } {
+  const dia = diaParaReservaManual(
+    actual ? { fecha, apertura: '', notas: '', fila: 0, ...actual } as FechaHabil : undefined,
+    fecha, cfg as Config);
+  const capacidad = dia ? dia.capacidad : (actual?.capacidad ?? cfg.cupoNormal);
+  const libres = capacidad - Math.max(0, tomadas);
+  const exclusivo = !!actual && esExclusiva(actual.estado) && tomadas > 0;
+  return { cabe: !exclusivo && personas <= libres, capacidad, libres, exclusivo };
 }

@@ -2374,6 +2374,26 @@ Contrato**, y cada uno de los dos últimos termina en su propio próximo paso.
   devolución sale de sus condiciones. *Esperando respuesta* abre el paso 5
   cuando lo que falta es el contrato firmado.
 
+### Si el día se llenó mientras se cotizaba (2026-11-11)
+
+Lo pidió el cliente: el vendedor arma el borrador con cupo de sobra, después
+Shopify u otro vendedor llena el día, y al ganarla ya no cabe.
+`cupoParaGanar()` (`lib/dias.ts`, con pruebas) mira el día **como va a quedar
+al ganarla** —el mismo cupo que le pondría `diaParaReservaManual()` a uno que
+no existe o está cerrado— menos lo ya tomado. Un día exclusivo con alguien
+adentro no cabe.
+
+- **`/convertir` lo rechaza** con 409 y el mensaje: *"Se está excediendo el
+  cupo del día: quedan N lugares y la cotización es de M personas. No
+  podemos tomar la reserva. Comunícate con la administración para ver si se
+  pueden abrir más cupos, o si habrá que cancelar la cotización."*
+- **La ventana lo avisa antes**: pide lo tomado de ese día a
+  `/api/ocupacion` cuando cambia la fecha, y muestra el aviso rojo bajo la
+  fecha (paso 2) y en vez de *Marcar ganada* (pasos 4 y 5).
+- **La contra a asumir**: un evento más grande que el cupo de siempre, en un
+  día que todavía no está en el calendario, tampoco cabe. Es lo que pide el
+  mensaje: que la administración abra ese día con más cupo antes de ganar.
+
 ### Cancelar una cotización ganada, y la devolución (2026-11-11)
 
 Lo pidió el cliente: *"puede pasar igual que la reserva se cae… cambiar el
