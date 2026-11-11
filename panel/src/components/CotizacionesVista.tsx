@@ -201,7 +201,11 @@ export default function CotizacionesVista() {
   const sinRevisar = new Map<string, { n: number; monto: number }>();
   if (puede(datos.rol as Rol, 'pagar')) {
     for (const c of porRevisar((datos.cobros ?? []).map((c) => ({ ...c, revisadoPor: c.revisadoPor ?? '' })))) {
-      if (!porId.has(c.presupuesto)) continue;
+      const p = porId.get(c.presupuesto);
+      if (!p) continue;
+      // Una cancelada ya no pide revisar lo cobrado: lo que queda es la
+      // devolución, que tiene su propio aviso (2026-11-11).
+      if (estadoDe(p) === ESTADO_PRESUPUESTO.cancelada) continue;
       const a = sinRevisar.get(c.presupuesto) ?? { n: 0, monto: 0 };
       sinRevisar.set(c.presupuesto, { n: a.n + 1, monto: a.monto + c.monto });
     }
