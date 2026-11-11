@@ -164,14 +164,14 @@ export default function CalendarioExtras() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <button onClick={() => setMes(sumarMeses(mes, -1))}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          className="boton">
           ‹ Mes anterior
         </button>
         <h2 className="text-sm font-semibold uppercase tracking-wide capitalize">
           {mesEnPalabras(mes)}
         </h2>
         <button onClick={() => setMes(sumarMeses(mes, 1))}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          className="boton">
           Mes siguiente ›
         </button>
         <span className="flex-1" />
@@ -437,7 +437,7 @@ export default function CalendarioExtras() {
             }]);
             setSucio(true);
           }}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          className="boton">
           Agregar colaborador
         </button>
         <span className="flex-1" />

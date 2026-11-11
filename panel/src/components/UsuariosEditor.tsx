@@ -202,7 +202,7 @@ export default function UsuariosEditor() {
                                   activo: true, tieneClave: false }]);
             setSucio(true);
           }}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-oro">
+          className="boton">
           Agregar cuenta
         </button>
         <span className="flex-1" />
@@ -237,12 +237,11 @@ export default function UsuariosEditor() {
           <div className="mt-5 flex items-center gap-3">
             <span className="flex-1" />
             <button onClick={() => setPoniendoClave(null)}
-              className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
+              className="boton">
               Cancelar
             </button>
             <button onClick={ponerClave} disabled={clave.length < LARGO_MINIMO_CLAVE}
-              className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                         disabled:opacity-40">
+              className="boton boton-relleno min-h-[40px] disabled:opacity-40">
               Guardar contraseña
             </button>
           </div>

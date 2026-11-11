@@ -99,7 +99,7 @@ export default function Recorrido() {
             </span>
             <span className="flex-1" />
             <button onClick={() => { setPaso(0); setAbierto(true); }}
-              className="rounded bg-oro px-3 py-1 text-sm font-semibold text-tinta">
+              className="boton boton-relleno min-h-[40px]">
               Ver cómo funciona
             </button>
             <button onClick={ahoraNo}
@@ -138,13 +138,12 @@ export default function Recorrido() {
             <span className="flex-1" />
             {paso > 0 && (
               <button onClick={() => setPaso(paso - 1)}
-                className="rounded border border-hueso/20 px-3 py-1.5 text-sm
-                           hover:border-hueso/40">
+                className="boton">
                 Atrás
               </button>
             )}
             <button onClick={() => (ultimo ? cerrarYa() : setPaso(paso + 1))}
-              className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta">
+              className="boton boton-relleno min-h-[40px]">
               {ultimo ? 'Listo' : 'Siguiente'}
             </button>
           </div>

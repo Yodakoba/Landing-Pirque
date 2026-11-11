@@ -205,12 +205,11 @@ export default function FichaTrabajador({
       <div className="mt-5 flex items-center gap-3">
         <span className="flex-1" />
         <button onClick={onCancelar}
-          className="rounded border border-hueso/20 px-3 py-1.5 text-sm hover:border-hueso/40">
+          className="boton">
           Cancelar
         </button>
         <button onClick={guardar} disabled={guardando || !nombre.trim()}
-          className="whitespace-nowrap rounded bg-oro px-4 py-1.5 text-sm
-                     font-semibold text-tinta disabled:opacity-40">
+          className="boton boton-relleno whitespace-nowrap min-h-[40px] disabled:opacity-40">
           {guardando ? 'Guardando…' : creando ? 'Crear y asignar' : 'Guardar ficha'}
         </button>
       </div>

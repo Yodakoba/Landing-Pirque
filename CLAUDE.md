@@ -6133,6 +6133,28 @@ necesariamente quien pasa lista.
   aceptando la asistencia de quien tenga `turnos`. Si se separa el rol de
   verdad, el lugar es la tabla de `PERMISOS`, no esconder más botones.
 
+### Tres tamaños de botón en todo el panel (2026-11-11)
+
+La regla de la cotización, aplicada al resto (lo pidió el cliente): **hito,
+acción y secundario**. El hito es lo que cierra una etapa y lleva
+**`.boton-hito`** sobre `.boton` —52px, letra 16 en negrita, borde doble y
+esquinas más redondas—; cambia el tamaño, no el color, así que un hito rojo
+sigue rojo. **Uno por vista.**
+
+| Hito | Dónde |
+|---|---|
+| Cerrar el día | ventana del día en `/turnos` (y *Sí, cerrar el día* en su confirmación) |
+| Guardar corrección | un día cerrado |
+| Marcar N pagados | la transferencia masiva del informe |
+| Sí, cancelar el evento | la ventana de cancelar |
+| Marcar ganada | la cotización (con su propio verde) |
+
+**De paso, los botones escritos a mano** —`rounded bg-oro px-4 py-1.5
+text-sm` y `rounded border … px-3 py-1.5 text-sm`, una veintena en doce
+pantallas— **pasaron a `.boton` y `.boton-relleno`**, así que miden y se
+ven igual en todas partes. *Listo*, *Volver* y *Cancelar* quedan como
+secundarios delineados.
+
 ### El botón del panel vive en `globals.css`, no en cada pantalla
 
 `.boton` —borde, **36px de alto y 13px**— y `.boton-relleno`, el dorado.

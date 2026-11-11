@@ -642,7 +642,7 @@ function ConfirmarTodos({ cual, periodo, entran, fuera, total, onGuardar, onCanc
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" disabled={guardando}
           onClick={() => { setGuardando(true); onGuardar(nota); }}
-          className="boton boton-relleno min-h-[48px] text-[15px]">
+          className="boton boton-relleno boton-hito">
           {guardando ? 'Guardando…' : `Marcar ${entran.length} pagados · ${enPesos(total)}`}
         </button>
         <button type="button" onClick={onCancelar} className="boton min-h-[48px]">Cancelar</button>
@@ -1208,8 +1208,7 @@ export default function InformeEquipo() {
         <span className="flex-1" />
         <button onClick={exportar}
           disabled={lineas.length === 0 && lineasExtras.length === 0}
-          className="rounded bg-oro px-4 py-1.5 text-sm font-semibold text-tinta
-                     disabled:opacity-40">
+          className="boton boton-relleno min-h-[44px] disabled:opacity-40">
           Descargar planilla
         </button>
       </div>
