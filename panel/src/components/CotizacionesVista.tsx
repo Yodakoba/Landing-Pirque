@@ -301,6 +301,18 @@ export default function CotizacionesVista() {
               <span className="text-[13px] text-hueso/55">nada cotizado</span>
             )}
           </span>
+          {/* **Lo ya reservado** (2026-11-11, lo pidió el cliente): la gente
+              que ese día ya ocupa cupo —reservas del sitio, a mano o de una
+              ganada—, para saber antes de cotizar si el día está tomado.
+              Misma forma que la tarjeta de la portada: "150/120". */}
+          {occ && occ.tomadas > 0 && (
+            <span className="text-[14px]">
+              <strong className={occ.quedan <= 0 ? 'text-rojo-texto' : ''}>
+                {occ.tomadas}{occ.capacidad > 0 ? `/${occ.capacidad}` : ''}
+              </strong>
+              <span className="text-hueso/70"> reservadas{occ.quedan <= 0 ? ' · sin cupo' : ''}</span>
+            </span>
+          )}
           {posibles > 0 && (
             <span className="text-[14px]"><strong>{posibles}</strong>
               <span className="text-hueso/70"> personas posibles</span></span>
