@@ -31,6 +31,8 @@ import { enPesos } from '@/lib/ocupacion';
 import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
 import { avisosDeCobro, porRevisar } from '@/lib/cobros';
 import { puede, type Rol } from '@/lib/auth';
+import type { Ocupacion } from '@/lib/tipos';
+import PuntoDia, { PuntoYPalabra } from './PuntoDia';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
@@ -60,13 +62,17 @@ export function PastillaEstado({ estado }: { estado: string }) {
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-/** Qué es ese día, en una palabra. */
-function palabraDelDia(estado: string | undefined): { texto: string; clase: string } {
-  if (estado === undefined) return { texto: 'sin abrir', clase: 'text-hueso/60' };
-  if (estaCerrado(estado)) return { texto: 'cerrado', clase: 'text-rojo-texto' };
-  if (esExclusiva(estado)) return { texto: 'exclusivo', clase: 'text-cielo-texto' };
-  if (esPrivada(estado)) return { texto: 'privado', clase: 'text-cielo-texto' };
-  return { texto: 'público', clase: 'text-verde-texto' };
+/**
+ * Qué es ese día cuando no trae ocupación —uno cerrado sin reservas, o uno
+ * que no está en el calendario—, con el mismo punto y los mismos colores que
+ * `PuntoDia`. Con ocupación manda `PuntoDia`, que además pinta el semáforo.
+ */
+function palabraDelDia(estado: string | undefined): { punto: string; texto: string; clase: string } {
+  if (estado === undefined) return { punto: '⚪', texto: 'sin abrir', clase: 'text-hueso/60' };
+  if (estaCerrado(estado)) return { punto: '🔴', texto: 'cerrado', clase: 'text-rojo-texto' };
+  if (esExclusiva(estado)) return { punto: '🔵', texto: 'exclusivo', clase: 'text-cielo-texto' };
+  if (esPrivada(estado)) return { punto: '🔵', texto: 'privado', clase: 'text-cielo-texto' };
+  return { punto: '🟢', texto: 'público', clase: 'text-hueso/65' };
 }
 
 export default function CotizacionesVista() {
@@ -93,6 +99,23 @@ export default function CotizacionesVista() {
     if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
     setDatos(d);
   }).catch((e) => setError(String(e)));
+
+  /**
+   * **La ocupación de las semanas que se ven** (2026-11-11), para dibujar
+   * cada día con su punto y su palabra igual que los otros calendarios —el
+   * semáforo incluido—. Si no llega, el calendario se dibuja igual con el
+   * estado del día; nada de esta pantalla depende de ella.
+   */
+  const [ocupacion, setOcupacion] = useState<Map<string, Ocupacion>>(new Map());
+  useEffect(() => {
+    if (!datos) return;
+    const desde = semanaDe(datos.hoy);
+    fetch(`/api/ocupacion?desde=${desde}&hasta=${sumarDias(desde, semanas * 7)}`)
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d.ocupacion)
+        && setOcupacion(new Map((d.ocupacion as Ocupacion[]).map((o) => [o.fecha, o]))))
+      .catch(() => {});
+  }, [datos?.hoy, semanas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { void cargar(); }, []);
 
@@ -227,6 +250,7 @@ export default function CotizacionesVista() {
     const ganadas = delDia.filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.aceptado).length;
     const posibles = vivas.reduce((n, p) => n + gente(p), 0);
     const palabra = palabraDelDia(estadoDelDia.get(f));
+    const occ = ocupacion.get(f);
     const abiertaEsta = diaAbierto === f;
     return (
       <div key={f} className={`flex flex-col rounded border bg-panel ${abiertaEsta
@@ -234,10 +258,13 @@ export default function CotizacionesVista() {
         <button type="button" onClick={() => setDiaAbierto(abiertaEsta ? null : f)}
           aria-expanded={abiertaEsta}
           className="flex flex-1 flex-col items-start gap-2 p-3 text-left hover:bg-hueso/5">
-          <span className="flex w-full items-baseline gap-2">
-            <span className="text-[13px] font-semibold uppercase text-hueso/70">{DIAS[diaSemana(f)]}</span>
-            <span className="text-[26px] font-bold leading-none">{Number(f.slice(8))}</span>
-            <span className={`text-[13px] font-semibold ${palabra.clase}`}>{palabra.texto}</span>
+          <span className="flex w-full items-start justify-between gap-2">
+            <span className="flex items-baseline gap-2">
+              <span className="text-[13px] font-semibold uppercase text-hueso/70">{DIAS[diaSemana(f)]}</span>
+              <span className="text-[26px] font-bold leading-none">{Number(f.slice(8))}</span>
+            </span>
+            {/* El punto y su palabra debajo, como en los demás calendarios. */}
+            {occ ? <PuntoDia d={occ} /> : <PuntoYPalabra {...palabra} />}
           </span>
           <span className="flex flex-wrap gap-1.5">
             {candidatos > 0 && (

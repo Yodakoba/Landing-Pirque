@@ -1969,6 +1969,13 @@ en $0 y la pantalla avisa que se escriba en pesos.
   de pérdida, Guardar, *Marcar ganada*, copiar link, WhatsApp, documento,
   *Hacer una alternativa*, borrar). Lo de otro vendedor se ve en solo
   lectura.
+- **El día de cada tarjeta lleva el punto de color y su palabra debajo**
+  (2026-11-11, lo pidió el cliente): *público*, *privado*, *exclusivo*,
+  *cerrado*, con `PuntoDia`, igual que la portada, `/turnos` y `/extras`.
+  Para el semáforo la pantalla pide además `/api/ocupacion` de las semanas
+  que muestra; un día sin ocupación —cerrado sin reservas, o fuera del
+  calendario, que dice *sin abrir*— se dibuja igual con `PuntoYPalabra`. Si
+  la ocupación no llega, el calendario sale igual.
 - **`/clientes`**: cada ficha muestra su historial de cotizaciones, la ganada
   en verde y las alternativas marcadas, y *+ Cotizarle*.
 - **El documento** (`/presupuesto/<token>`) dice *Cotización*, toma el cliente
@@ -2264,7 +2271,12 @@ la carpeta de la cotización junto a sus comprobantes, por
 3. **Hecha**: documento de la venta, condiciones de pago, cobros con
    comprobante y revisión, UF del día, avisos y CRM apagado.
 4. **Hecha**: el contrato desde la cotización, firmado en papel y subido.
-5. Calicanto y el rol de gerente general.
+5. **En espera, pero viene sí o sí** (decidido el 2026-11-10): Calicanto,
+   el rol de gerente general y la versión de matrimonio del contrato (Novia
+   y Novio, dos firmas). **Antes se prueba lo hecho hasta la Fase 4** y se
+   hacen las últimas adaptaciones hasta que el sistema funcione con uso
+   real; recién ahí se amplía. No arrancar la Fase 5 sin que el cliente lo
+   pida.
 
 ## El CRM del socio (2026-11-02)
 
