@@ -15,6 +15,7 @@
  */
 import { indices } from './columnas.ts';
 import { esFecha, sumarDias, type Fecha } from './fechas.ts';
+import { estadoNormal } from './presupuestos.ts';
 
 export const HOJA_COBROS = 'Cobros';
 
@@ -298,7 +299,7 @@ export function avisosDeCobro(
   const anticipoSinGanar: AvisoCobro[] = [];
   const saldo: AvisoCobro[] = [];
   for (const p of cotizaciones) {
-    if (cerrados.includes(p.estado) && !p.idReserva) continue;
+    if ((cerrados.includes(p.estado) || cerrados.includes(estadoNormal(p.estado))) && !p.idReserva) continue;
     // Una cancelada conserva su reserva (cancelada), pero ya no se le cobra:
     // lo que queda es devolver, y eso tiene su propio aviso.
     if (p.estado === 'Cancelada') continue;

@@ -481,7 +481,9 @@ export default function CotizacionDialogo({
         body: JSON.stringify({ id: p.id })
       });
       const d = await r.json();
-      if (d.error) return setError(d.error);
+      // Que no se pierda abajo de la ventana: un ganar que falla tiene que
+      // verse en el acto (2026-11-12).
+      if (d.error) { avisar(d.error, 'atencion'); return setError(d.error); }
       // **Ganar se festeja** (2026-11-11): es el hito de todo el flujo.
       avisar(`🎉 Ganada: la reserva de ${enMenus || invitados} personas ya está en el calendario`);
       onCambio(); onCerrar();
@@ -866,25 +868,6 @@ export default function CotizacionDialogo({
     : totalDe(lineasDe(datos.lineas ?? [], a.id), a.descuento);
   const resumenLink = enElLink.length > 1
     ? enElLink.map((a) => `${letraDe(a, alternativas)} ${enPesos(totalAlt(a))}`).join(' · ') : '';
-  /** **¿Con cuál se quedó?** Un botón grande por alternativa en carrera. */
-  const bloqueElegir = porElegir ? (
-    <Hito tono="ambar" titulo="¿Con cuál alternativa se quedó?"
-      bajada={`Le mandaste ${vivas.length} alternativas. Antes de ganarla y de mandar el contrato, elige la que quedó: las otras pasan a "No elegida" y el mismo link pasa a mostrar solo esa.`}>
-      <div className={`grid gap-2 ${vivas.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-        {vivas.map((a) => (
-          <button key={a.id} type="button" disabled={guardando || !puedeEditar}
-            onClick={() => void elegirAlternativa(a.id)}
-            className={`tecla flex min-h-[88px] flex-col items-center justify-center rounded-xl border-2
-                        px-3 py-2 disabled:opacity-50 ${a.id === p?.id
-              ? 'border-oro bg-oro/15' : 'border-hueso/25 bg-panel hover:border-oro'}`}>
-            <span className="text-[28px] font-extrabold leading-none">{letraDe(a, alternativas)}</span>
-            <span className="mt-1 text-[16px] font-bold tabular-nums">{enPesos(totalAlt(a))}</span>
-            <span className="text-[14px] text-hueso/75">Se quedó con esta</span>
-          </button>
-        ))}
-      </div>
-    </Hito>
-  ) : null;
 
   /** El botón grande de ganar, el mismo en los dos pasos. */
   // Con alternativas en carrera también se ofrece: ganar una es elegirla
@@ -973,7 +956,7 @@ export default function CotizacionDialogo({
    * falte el anticipo (`puedeGanar()`): *"en contratos obviamente solo puede
    * marcar ganado si está el contrato"*.
    */
-  const hitoContrato: React.ReactNode = !p || cancelada || porElegir || noQuedo ? null
+  const hitoContrato: React.ReactNode = !p || cancelada || noQuedo ? null
     : !firmado ? (
       contratoEnviado ? (
         <Hito tono="cielo" titulo="Esperando el contrato firmado"
@@ -1583,6 +1566,19 @@ export default function CotizacionDialogo({
                   <button type="button" className="boton min-h-[44px]"
                     onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Están negociando</button>
                 )}
+                {/* **Deshacer un "Sí, la mandé" apretado por error** (2026-11-12,
+                    lo pidió el cliente). Vuelve a Borrador, junto con las
+                    alternativas del grupo, y el servidor borra la fecha de
+                    envío y la vigencia: corren de nuevo cuando de verdad se
+                    mande. */}
+                {estado === ESTADO_PRESUPUESTO.enviado && (
+                  <button type="button" className="boton min-h-[44px]"
+                    onClick={() => {
+                      if (confirm('¿Todavía no se mandó? Vuelve a Borrador: deja de contar en el calendario y su vigencia corre de nuevo cuando la mandes.')) {
+                        setEstado(ESTADO_PRESUPUESTO.borrador);
+                      }
+                    }}>Todavía no se mandó</button>
+                )}
                 <button type="button" className="boton min-h-[44px] hover:!border-rojo-fuerte hover:text-rojo-texto"
                   onClick={() => setEstado(ESTADO_PRESUPUESTO.rechazado)}>Se perdió…</button>
                 <AyudaCorta tema="estadoCotizacion" />
@@ -1914,9 +1910,18 @@ export default function CotizacionDialogo({
 
             {p && !cancelada && <Camino pasos={camino} />}
 
-            {/* El contrato es de una sola versión: con varias en carrera, se
-                elige primero. */}
-            {bloqueElegir}
+            {/* **El contrato es de la alternativa que está abierta** (2026-11-12,
+                lo pidió el cliente: *"la que se eligió pasa a contrato"*). Ya
+                no hay un paso aparte de elegir: mandar el contrato desde la B
+                es mandar el de la B, y ganarla —con el anticipo o con ese
+                contrato firmado— la elige y deja las otras No elegida. */}
+            {porElegir && (
+              <p className="rounded-lg border-2 border-oro/50 bg-oro/[0.06] px-3 py-2 text-[15px]">
+                <strong>Este contrato es de la alternativa {letra}</strong>
+                {' '}({enPesos(cuentas.total)}). Si el cliente se quedó con otra, ábrela arriba y
+                manda el contrato desde esa.
+              </p>
+            )}
 
             <fieldset disabled={cancelada} className="min-w-0 space-y-4">
             {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:

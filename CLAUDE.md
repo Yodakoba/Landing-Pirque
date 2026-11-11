@@ -2390,7 +2390,9 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   desaparecía *Marcar ganada*. Ahora avanza solo con acciones: *Sí, la
   mandé* (Enviada), *Están negociando*, *Se perdió…* (con su motivo y
   *No se perdió: volver a abrirla*, que reabre también las alternativas del
-  grupo) y *Marcar ganada*.
+  grupo) y *Marcar ganada*. **Y *Todavía no se mandó*** deshace un *Sí, la
+  mandé* apretado por error: vuelve a Borrador con las alternativas del
+  grupo, y el servidor borra la fecha de envío y la vigencia.
 - **Cambiar precios de una Enviada** muestra una franja: *¿Están
   negociando?* con *Pasar a Negociación*. **Compara contra los precios del
   momento en que quedó Enviada**, no contra cómo se abrió la ventana: con la
@@ -2479,10 +2481,20 @@ las alternativas usa"*.
   pagado, la confirmación dice *"El cliente se queda con la A: la B pasa a
   No elegida"*, y `/convertir` ya no exige elegir antes. El paso aparte se
   perdía: el cliente había elegido la B y no quedó tomado (justo ese
-  minuto la planilla cortaba por el límite de lecturas). **Elegir sigue en
-  el paso 5**, porque el contrato es de una sola versión. Una alternativa
-  que no quedó dice *"el cliente se quedó con la A"* y no tiene próximo
-  paso.
+  minuto la planilla cortaba por el límite de lecturas). **Tampoco hay que
+  elegir para el contrato** (2026-11-12, *"la que se eligió pasa a
+  contrato"*): el paso 5 dice *"Este contrato es de la alternativa B"* y
+  manda el de la que está abierta; ganarla con ese contrato firmado la
+  elige. Una alternativa que no quedó dice *"el cliente se quedó con la
+  A"* y no tiene próximo paso.
+- **Una ganada a medias se vuelve a vincular, no se duplica** (2026-11-12).
+  Ganar escribe la reserva y después el vínculo; si lo segundo falla (el
+  límite de Google), la cotización aparece en el aviso verde *"ya pagó el
+  anticipo y falta marcarla ganada"*, y apretar otra vez creaba una
+  segunda reserva. `/convertir` busca primero una reserva viva de ese día
+  con la nota *"De la cotización N° …"* que ninguna cotización reclame, y
+  la usa. Un error al ganar sale además en el aviso flotante.
+- **El aviso verde abre el paso 4**, que es donde está *Marcar ganada*.
 
 ### Si el día se llenó mientras se cotizaba (2026-11-11)
 
