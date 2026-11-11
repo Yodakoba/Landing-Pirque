@@ -428,6 +428,14 @@ export function puedeTocarReserva(
  * criterio y misma regla que `puedeTocarReserva()`, y por lo mismo: ver todo
  * es útil para no cotizar dos veces al mismo cliente; tocar lo de otro no.
  */
+/**
+ * Si la cotización la hizo esta cuenta. Para el filtro *Mías / De todos* de
+ * Cotizaciones (2026-11-12); la regla de quién puede tocarla es la de abajo.
+ */
+export function esSuya(usuario: string, creadoPor: string): boolean {
+  return !!usuario && mismoUsuario(usuario, creadoPor);
+}
+
 export function puedeTocarPresupuesto(
   rol: Rol, usuario: string, creadoPor: string
 ): boolean {

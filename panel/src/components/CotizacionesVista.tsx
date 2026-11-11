@@ -32,7 +32,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
 import { avisosDeCobro, porRevisar } from '@/lib/cobros';
 import { faltaDevolver } from '@/lib/cancelacion';
-import { puede, puedeTocarPresupuesto, type Rol } from '@/lib/auth';
+import { puede, puedeTocarPresupuesto, esSuya, ROL, type Rol } from '@/lib/auth';
 import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
@@ -88,6 +88,23 @@ export default function CotizacionesVista() {
   const soloMira = usarSoloMira('presupuestos');
   const [filtro, setFiltro] = useState<'activas' | 'candidatos' | 'ganadas' | 'cerradas' | 'todas'>('activas');
   const [busqueda, setBusqueda] = useState('');
+  /**
+   * **Mías o de todos** (2026-11-12, lo pidió el cliente). Filtra la pantalla
+   * entera —el calendario, *Sin fecha*, *Todas* y los avisos de arriba— y no
+   * lo que cada uno puede tocar, que sigue igual. El vendedor parte en las
+   * suyas; los demás, en todas. La elección se recuerda en este navegador.
+   */
+  const [de, setDe] = useState<'' | 'mias' | 'todos'>('');
+  useEffect(() => {
+    try {
+      const g = localStorage.getItem('blp-cotizaciones-de');
+      if (g === 'mias' || g === 'todos') setDe(g);
+    } catch { /* sin almacenamiento: vale el de siempre */ }
+  }, []);
+  function elegirDe(v: 'mias' | 'todos') {
+    setDe(v);
+    try { localStorage.setItem('blp-cotizaciones-de', v); } catch { /* da igual */ }
+  }
   const [semanas, setSemanas] = useState(10);
   /** Qué día está abierto en el calendario, para ver sus cotizaciones. */
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
@@ -157,7 +174,7 @@ export default function CotizacionesVista() {
 
   const porDia = useMemo(() => {
     const m = new Map<string, Presupuesto[]>();
-    for (const p of datos?.presupuestos ?? []) {
+    for (const p of visiblesDe(datos, de)) {
       if (!esFecha(p.fecha)) continue;
       // Una cancelada no ocupa el calendario de cotizar (2026-11-11, lo
       // pidió el cliente): sigue en *Todas*, con su devolución.
@@ -166,14 +183,17 @@ export default function CotizacionesVista() {
       m.get(p.fecha)!.push(p);
     }
     return m;
-  }, [datos]);
+  }, [datos, de]);
 
   if (error) return <Aviso error={error} permiso={sinPermiso} />;
   if (!datos) return <p className="text-hueso/50">Cargando…</p>;
 
   const hoy = datos.hoy;
   const estadoDe = (p: Presupuesto) => estadoVisible(p, hoy);
-  const sinFecha = datos.presupuestos.filter((p) => !esFecha(p.fecha));
+  const soloMias = soloMiasDe(datos, de);
+  const visibles = visiblesDe(datos, de);
+  const mias = visiblesDe(datos, 'mias');
+  const sinFecha = visibles.filter((p) => !esFecha(p.fecha));
   const estadoDelDia = new Map(datos.fechas.map((f) => [f.fecha, f.estado]));
   const total = (p: Presupuesto) => totalDe(lineasDe(datos.lineas, p.id), p.descuento);
   const gente = (p: Presupuesto) => gentePosible(p, lineasDe(datos.lineas, p.id));
@@ -205,13 +225,13 @@ export default function CotizacionesVista() {
     return cuentaComoPosible(p, hoy);
   };
 
-  const pronto = datos.presupuestos.filter((p) => porVencer(p, hoy));
+  const pronto = visibles.filter((p) => porVencer(p, hoy));
   // **El seguimiento** (2026-11-11): lo mandado que espera respuesta. De
   // cada grupo de alternativas, una sola tarjeta.
   const cfgSeg = { seguimientoDias: datos.seguimiento?.dias ?? 5, avisoEvento: datos.seguimiento?.antesEvento ?? 14 };
   const porSeguir: PorSeguir[] = [];
   const gruposVistos = new Set<string>();
-  for (const p of datos.presupuestos) {
+  for (const p of visibles) {
     const s = seguimientoDe(p, hoy, cfgSeg);
     if (!s || gruposVistos.has(grupoDe(p))) continue;
     gruposVistos.add(grupoDe(p));
@@ -219,21 +239,22 @@ export default function CotizacionesVista() {
   }
   porSeguir.sort((a, b) => (a.motivo === b.motivo ? 0 : a.motivo === 'eventoCerca' ? -1 : 1));
   const seguirIds = new Set(porSeguir.map((x) => grupoDe(x.p)));
-  const vencidas = datos.presupuestos.filter((p) => vencidoSinCerrar(p, hoy));
+  const vencidas = visibles.filter((p) => vencidoSinCerrar(p, hoy));
   // **Los avisos de plata** (2026-11-10): anticipo pagado sin ganar, y el
   // saldo de una ganada que vence pronto o ya venció. Ver `avisosDeCobro()`.
   const avisos = avisosDeCobro(
-    datos.presupuestos.map((p) => ({ ...p, total: totalDe(lineasDe(datos.lineas, p.id), p.descuento) })),
+    visibles.map((p) => ({ ...p, total: totalDe(lineasDe(datos.lineas, p.id), p.descuento) })),
     datos.cobros ?? [], datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 }, hoy,
     [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida]);
   const porId = new Map(datos.presupuestos.map((p) => [p.id, p]));
+  const idsVisibles = new Set(visibles.map((p) => p.id));
   // **Cobros por revisar** (2026-11-10): solo para quien hace los pagos,
   // que es quien los revisa. Uno por cotización, con cuántos y cuánto.
   const sinRevisar = new Map<string, { n: number; monto: number }>();
   if (puede(datos.rol as Rol, 'pagar')) {
     for (const c of porRevisar((datos.cobros ?? []).map((c) => ({ ...c, revisadoPor: c.revisadoPor ?? '' })))) {
       const p = porId.get(c.presupuesto);
-      if (!p) continue;
+      if (!p || !idsVisibles.has(p.id)) continue;
       // Una cancelada ya no pide revisar lo cobrado: lo que queda es la
       // devolución, que tiene su propio aviso (2026-11-11).
       if (estadoDe(p) === ESTADO_PRESUPUESTO.cancelada) continue;
@@ -246,7 +267,7 @@ export default function CotizacionesVista() {
   // acordado devolver que todavía no se anotó. Solo para quien paga, que es
   // quien transfiere.
   const porDevolver = puede(datos.rol as Rol, 'pagar')
-    ? datos.presupuestos
+    ? visibles
       .filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.cancelada && p.devolucion > 0)
       .map((p) => ({ p, falta: faltaDevolver(p.devolucion,
         (datos.cobros ?? []).filter((c) => c.presupuesto === p.id)
@@ -411,6 +432,20 @@ export default function CotizacionesVista() {
             className="boton boton-relleno min-h-[48px] px-5 text-[15px]">+ Cotizar</button>
         )}
         <span className="flex-1" />
+        <div className="flex gap-2" role="group" aria-label="De quién">
+          {([
+            ['mias', `Mías (${agrupar(mias).length})`],
+            ['todos', `De todos (${agrupar(datos.presupuestos).length})`]
+          ] as const).map(([k, texto]) => {
+            const elegido = (k === 'mias') === soloMias;
+            return (
+              <button key={k} type="button" onClick={() => elegirDe(k)} aria-pressed={elegido}
+                className={`boton min-h-[48px] ${elegido ? 'border-cielo-fuerte bg-cielo/15 font-semibold' : ''}`}>
+                {texto}
+              </button>
+            );
+          })}
+        </div>
         {([
           ['calendario', 'Calendario'],
           ['sinFecha', `Sin fecha (${agrupar(sinFecha).filter((p) => cuentaComoPosible(p, hoy)).length})`],
@@ -581,7 +616,7 @@ export default function CotizacionesVista() {
       )}
 
       {vista === 'todas' && (() => {
-        const lista = agrupar(datos.presupuestos).filter(pasaFiltro)
+        const lista = agrupar(visibles).filter(pasaFiltro)
           .sort((a, b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
         return (
           <div>
@@ -633,4 +668,26 @@ export default function CotizacionesVista() {
       )}
     </section>
   );
+}
+
+/** Si se está mirando solo lo propio: lo elegido, o el valor de partida del rol. */
+function soloMiasDe(datos: { rol: string } | null, de: '' | 'mias' | 'todos'): boolean {
+  if (de) return de === 'mias';
+  return datos?.rol === ROL.vendedor;
+}
+
+/**
+ * Las cotizaciones que se ven con el filtro *Mías / De todos*. **Un grupo de
+ * alternativas va entero**: si una es suya, se ven todas, para que la
+ * ventana no muestre una A sin su B.
+ */
+function visiblesDe(
+  datos: { presupuestos: Presupuesto[]; usuario: string; rol: string } | null,
+  de: '' | 'mias' | 'todos'
+): Presupuesto[] {
+  if (!datos) return [];
+  if (de === 'todos' || (!de && !soloMiasDe(datos, de))) return datos.presupuestos;
+  const grupos = new Set(datos.presupuestos
+    .filter((p) => esSuya(datos.usuario, p.creadoPor)).map((p) => grupoDe(p)));
+  return datos.presupuestos.filter((p) => grupos.has(grupoDe(p)));
 }
