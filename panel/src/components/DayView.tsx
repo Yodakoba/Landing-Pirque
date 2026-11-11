@@ -7,6 +7,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
+import { grupoDe, principalDe } from '@/lib/cotizar';
 import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
@@ -162,6 +163,8 @@ export default function DayView(
   const [cotizado, setCotizado] = useState<
     { presupuestos: Presupuesto[]; lineas: LineaPresupuesto[]; hoy: string } | null>(null);
   const pronostico = usePronostico();
+  /** Si la línea de lo cotizado está abierta (2026-11-12: cerrada por defecto). */
+  const [verCotizado, setVerCotizado] = useState(false);
 
   /** Quita el aviso de la recepción: el jefe de turno ya lo vio y lo atendió. */
   async function resolverAviso(r: Reserva) {
@@ -610,47 +613,72 @@ export default function DayView(
           No se edita desde acá a propósito: el presupuesto se arma en
           `/presupuestos`, que es donde viven las líneas y los precios.
           Tenerlo en dos lugares sería tener dos formularios para lo mismo. */}
+      {/* **Una línea chica que se abre** (2026-11-12, lo pidió el cliente:
+          tomaba mucho protagonismo para algo que todavía no se decide). Y
+          **las alternativas de un mismo cliente cuentan una sola vez**, con
+          la de más gente —la misma regla de `posiblesPorDia()`—: tres
+          alternativas de 12 personas son 12 posibles, no 36. */}
       {cotizado && (() => {
         const vivos = cotizado.presupuestos.filter(
           (p) => p.fecha === fecha && cuentaEnElCalendario(p, cotizado.hoy));
         if (vivos.length === 0) return null;
-        const gente = vivos.reduce(
-          (n, p) => n + gentePosible(p, lineasDe(cotizado.lineas, p.id)), 0);
+        const grupos = new Map<string, Presupuesto[]>();
+        for (const p of vivos) {
+          const g = grupoDe(p);
+          if (!grupos.has(g)) grupos.set(g, []);
+          grupos.get(g)!.push(p);
+        }
+        const gente = (p: Presupuesto) => gentePosible(p, lineasDe(cotizado.lineas, p.id));
+        const total = (p: Presupuesto) => totalDe(lineasDe(cotizado.lineas, p.id), p.descuento);
+        const filas = [...grupos.values()].map((alts) => {
+          const principal = principalDe(alts, () => true);
+          const totales = alts.map(total);
+          return {
+            p: principal, n: alts.length,
+            personas: Math.max(...alts.map(gente)),
+            min: Math.min(...totales), max: Math.max(...totales)
+          };
+        });
+        const posibles = filas.reduce((n, f) => n + f.personas, 0);
+        const clientes = new Set(filas.map((f) => f.p.cliente || f.p.id)).size;
         return (
-          <div className="mt-3 rounded border border-rosa/40 bg-rosa/[0.06] px-3 py-2">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <RotuloBloque>Presupuestos</RotuloBloque>
-              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                {vivos.map((p) => (
-                  <li key={p.id}>
-                    <a href={`/presupuestos?abrir=${encodeURIComponent(p.id)}`}
-                       className="font-semibold text-hueso/85 underline-offset-2 hover:underline">
-                      {p.cliente}
-                    </a>
-                    <span className="text-hueso/60">
-                      {' · '}{gentePosible(p, lineasDe(cotizado.lineas, p.id))} pers.
-                      {' · '}{enPesos(totalDe(lineasDe(cotizado.lineas, p.id), p.descuento))}
-                      {' · '}{estadoVisible(p, cotizado.hoy).toLowerCase()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <span className="flex-1" />
-              <a href="/presupuestos" className="tecla boton">Ver cotizaciones</a>
-            </div>
-            {/* La frase que explica por qué este bloque no suma a los números
-                de arriba. Va siempre, porque es justo lo que alguien podría
-                dar por hecho mirando una tarjeta con gente. */}
-            <p className="mt-2 border-t border-rosa/20 pt-2 text-[13px]">
-              <strong className="tabular-nums text-rosa-texto">{gente}</strong>
-              <span className="text-hueso/65">
-                {' '}personas posibles si se{' '}
-                {vivos.length === 1
-                  ? 'confirma este presupuesto'
-                  : 'confirman estos presupuestos'}.
-                No ocupan cupo todavía: los números de arriba no los cuentan.
+          <div className="mt-3">
+            <button type="button" onClick={() => setVerCotizado((v) => !v)} aria-expanded={verCotizado}
+              className="tecla flex min-h-[44px] w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg
+                         border border-rosa/40 bg-rosa/[0.05] px-3 py-2 text-left text-[14px] hover:bg-rosa/10">
+              <span className="font-semibold text-rosa-texto">
+                {filas.length === 1 ? '1 cotización en curso' : `${filas.length} cotizaciones en curso`}
               </span>
-            </p>
+              {clientes > 1 && <span className="text-hueso/70">· {clientes} clientes</span>}
+              <span className="text-hueso/70">· hasta {posibles} personas, sin confirmar</span>
+              <span className="flex-1" />
+              <span className="text-hueso/70">{verCotizado ? 'Cerrar ▴' : 'Ver ▾'}</span>
+            </button>
+            {verCotizado && (
+              <div className="mt-1 rounded-lg border border-rosa/30 px-3 py-2">
+                <ul className="divide-y divide-hueso/10">
+                  {filas.map((f) => (
+                    <li key={f.p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[14px]">
+                      <span className="font-semibold">{f.p.cliente || 'Sin cliente'}</span>
+                      <span className="text-hueso/70">
+                        N° {folioDe({ id: grupoDe(f.p) })}
+                        {' · '}{f.personas} personas
+                        {' · '}{f.n > 1
+                          ? `${f.n} alternativas, de ${enPesos(f.min)} a ${enPesos(f.max)}`
+                          : enPesos(f.max)}
+                        {' · '}{estadoVisible(f.p, cotizado.hoy).toLowerCase()}
+                      </span>
+                      <span className="flex-1" />
+                      <a href={`/presupuestos?abrir=${encodeURIComponent(f.p.id)}`} className="tecla boton">Abrir</a>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 border-t border-hueso/10 pt-2 text-[13px] text-hueso/70">
+                  No ocupan cupo todavía: los números de arriba no los cuentan. De cada cotización
+                  cuenta una sola alternativa, la de más gente.
+                </p>
+              </div>
+            )}
           </div>
         );
       })()}
