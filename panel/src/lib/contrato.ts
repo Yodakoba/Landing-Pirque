@@ -95,6 +95,43 @@ export function faltaDeEmpresa(
   return falta;
 }
 
+/**
+ * **El horario siempre en el mismo formato** (2026-11-12, lo pidió el
+ * cliente: *"que quede guardado siempre en el mismo formato y no que uno
+ * pone otro"*). Se elige con − y + de media hora y se guarda como
+ * `13:00 a 18:00`. Lo escrito a mano antes se lee si se entiende
+ * (`13.00-18.00`, `13:00 hasta 18:00`) y si no, se deja tal cual.
+ */
+export const PASO_HORARIO = 30;
+
+export function partirHorario(h: string): { desde: string; hasta: string } | null {
+  const m = String(h ?? '').trim().toLowerCase()
+    .match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(?:hrs?\.?)?\s*(?:a|-|–|hasta)\s*(\d{1,2})(?:[:.](\d{2}))?/);
+  if (!m) return null;
+  const hora = (h: string, mm?: string) => {
+    const n = Number(h), min = Number(mm ?? 0);
+    return n <= 24 && min < 60 ? `${String(n % 24).padStart(2, '0')}:${String(min).padStart(2, '0')}` : '';
+  };
+  const desde = hora(m[1], m[2]), hasta = hora(m[3], m[4]);
+  return desde && hasta ? { desde, hasta } : null;
+}
+
+export const textoHorario = (desde: string, hasta: string) => `${desde} a ${hasta}`;
+
+/** Corre una hora `HH:MM` en minutos, dando la vuelta a medianoche. */
+export function moverHora(hhmm: string, minutos: number): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = (((h * 60 + m + minutos) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** Lo que se guarda: el formato de siempre si se entiende, si no tal cual. */
+export function normalizarHorario(h: string): string {
+  const t = String(h ?? '').trim();
+  const x = partirHorario(t);
+  return x ? textoHorario(x.desde, x.hasta) : t;
+}
+
 /** El horario del evento: el de la cotización, o el de Configuración. */
 export function horarioDe(
   p: { horario: string },

@@ -2314,7 +2314,15 @@ imprime a PDF desde el navegador como la hoja de la cotización. Código en
   siempre en raya**: se escribe a mano al firmar.
 - **El RUT y el domicilio se escriben en el bloque Contrato y van a la
   ficha** del cliente, igual que los datos de la factura. Con factura no se
-  repiten: son los mismos campos.
+  repiten: son los mismos campos. El RUT se controla (`CampoRut`).
+- **El horario se elige con − y + de media hora** (2026-11-12, lo pidió el
+  cliente: *"siempre el mismo formato"*), y se guarda como `13:00 a 18:00`
+  (`normalizarHorario()` en `contrato.ts`, también en el servidor). En
+  blanco rige el de Configuración; lo escrito a mano antes se lee si se
+  entiende y si no se deja tal cual, con un aviso.
+- **Ganada, el paso 5 no vuelve a ofrecer ganarla**: dice lo que falta para
+  completar la reserva —*✓ Ganada y firmada · falta el saldo*, con *Pagó el
+  saldo*— o *Cerrada* si no falta nada.
 
 **Se firma en papel, en dos ejemplares, y se sube el firmado** (lo decidió
 el cliente; era lo que se hacía con el CRM). La foto o el PDF va a Drive, a
@@ -4220,11 +4228,13 @@ bastaban para cortarlo.
 
 - **El autoguardado ya no recarga la lista**: se recarga una vez, al cerrar
   la ventana (`cerrar()` en `CotizacionDialogo`).
-- **`leerHoja()` recuerda lo leído tres segundos** y dos lecturas
-  simultáneas de la misma pestaña comparten la llamada. **Cualquier
-  escritura en esa pestaña la olvida**, antes y después de escribir, así
-  que una instancia nunca se lee a sí misma desactualizada; otra instancia
-  de Vercel puede verla hasta tres segundos tarde.
+- **Dos lecturas simultáneas de la misma pestaña comparten la llamada**
+  (`leerHoja()`), y apenas contesta se olvida. **Se probó recordar lo leído
+  tres segundos y se sacó el mismo día**: en Vercel cada ruta corre aparte,
+  así que *Marcar ganada* escribía por `/convertir` y la lista que se
+  recargaba salía de `/api/presupuestos` con la cotización todavía sin
+  ganar; al abrirla ofrecía ganarla otra vez. Un dato viejo que parece
+  nuevo es peor que una lectura de más.
 - **El id de cada pestaña se recuerda** (`idDeHoja()`): borrar filas leía el
   libro entero cada vez solo para traducir el nombre a un número que nunca
   cambia.
@@ -6791,9 +6801,12 @@ Decisiones que vale la pena tener escritas:
   cooperativas, así que ahí hay texto libre con sugerencias. Un tipo que no
   está en la lista **se descarta en el servidor**, porque un valor inventado
   llegaría hasta la planilla del banco.
-- **El RUT se empareja pero no se valida** (`rutLimpio()`): sin puntos y con
-  guion, para que la carga masiva lo acepte. Lo que no parece un RUT se
-  devuelve tal cual — el panel no está para corregirle el RUT a nadie.
+- **El RUT se empareja** (`rutLimpio()`): sin puntos y con guion, para que
+  la carga masiva lo acepte. Lo que no parece un RUT se devuelve tal cual.
+  **Desde el 2026-11-12 el del cliente además se controla** (`CampoRut`,
+  `avisoRut()`): en la ficha, la factura y el contrato avisa en ámbar si no
+  tiene forma de RUT o si el dígito verificador no calza. Avisa, no
+  bloquea.
 - **Falta algo = banco, tipo, número o RUT.** El titular y el correo no
   entran en esa cuenta: uno tiene valor por defecto y el otro es para el
   comprobante, no para la transferencia.

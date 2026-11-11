@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { horarioDe, faltaDeEmpresa } from '@/lib/contrato';
+import { horarioDe, faltaDeEmpresa, normalizarHorario } from '@/lib/contrato';
 import { UF_MINIMA, UF_MAXIMA } from '@/lib/uf';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
@@ -221,7 +221,7 @@ export async function POST(req: Request) {
       anticipo: numeroONulo(cuerpo.anticipo, 100),
       saldoDias: numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, { uf: 0, fechaUF: '' }),
-      horario: String(cuerpo.horario ?? '').trim(),
+      horario: normalizarHorario(String(cuerpo.horario ?? '')),
       ley20393: cuerpo.ley20393 === true,
       acuerdos: String(cuerpo.acuerdos ?? '').trim(),
       // El contrato firmado no se acepta del navegador: lo escribe la ruta
@@ -378,7 +378,7 @@ export async function PATCH(req: Request) {
         ? previo.saldoDias : numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, previo),
       notas: texto('notas', previo.notas),
-      horario: texto('horario', previo.horario),
+      horario: normalizarHorario(texto('horario', previo.horario)),
       ley20393: cuerpo.ley20393 === undefined ? previo.ley20393 : cuerpo.ley20393 === true,
       acuerdos: texto('acuerdos', previo.acuerdos),
       cambiosFecha: cuerpo.cambiosFecha === undefined
