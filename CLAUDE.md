@@ -2171,7 +2171,10 @@ Cuentas y Clientes. **Todo botón de guardar nuevo va con este
 componente.** Lo que se guarda solo sigue con `AvisoGuardado`.
 
 **Una cotización ya creada se guarda sola** (2026-11-10, lo pidió el
-cliente: ahorrar el *Guardar* donde se pueda). Es la regla de siempre —se
+cliente: ahorrar el *Guardar* donde se pueda). **Desde el 2026-11-12 no
+tiene botón Guardar**: donde estaba dice *✓ Guardado* / *Guardando…*
+(`AvisoGuardado`), y abajo queda solo *Ir al paso N*. El botón vuelve solo
+en una ganada. Cambiar de paso deja la ventana arriba. Es la regla de siempre —se
 guarda solo lo que es un valor sobre algo que ya existe— y una cotización
 creada lo es: cantidades, precios, descuentos, documento, condiciones.
 `usarAutoguardado` con 1,2 s de espera; al cerrar la ventana o cambiar de
@@ -4191,6 +4194,31 @@ Ahora escribe y **después limpia** desde la fila siguiente hasta el final.
 dejaría la pestaña vacía; así, lo peor que puede pasar es quedarse con la
 fila de más —que es exactamente lo que pasaba antes— y se corrige al
 siguiente guardado.
+
+### El límite de lecturas de Google (2026-11-12)
+
+Lo vio el cliente rellenando una alternativa: *"Quota exceeded for quota
+metric 'Read requests'…"*. **La API de Sheets deja 60 lecturas por minuto
+para la cuenta del panel, que es una sola para todos los usuarios**, y cada
+autoguardado de una cotización hacía unas 7 lecturas para guardar **y otras
+7 para recargar la lista de atrás**. Cuatro pausas al escribir por minuto
+bastaban para cortarlo.
+
+- **El autoguardado ya no recarga la lista**: se recarga una vez, al cerrar
+  la ventana (`cerrar()` en `CotizacionDialogo`).
+- **`leerHoja()` recuerda lo leído tres segundos** y dos lecturas
+  simultáneas de la misma pestaña comparten la llamada. **Cualquier
+  escritura en esa pestaña la olvida**, antes y después de escribir, así
+  que una instancia nunca se lee a sí misma desactualizada; otra instancia
+  de Vercel puede verla hasta tres segundos tarde.
+- **El id de cada pestaña se recuerda** (`idDeHoja()`): borrar filas leía el
+  libro entero cada vez solo para traducir el nombre a un número que nunca
+  cambia.
+- **El 429 se dice en español** (`MENSAJE_LIMITE`): que no se perdió nada y
+  que en medio minuto vuelve. **El autoguardado de una cotización se
+  reintenta solo a los 30 segundos** cuando el error es ese.
+- Si vuelve a pasar con uso normal, lo siguiente es leer varias pestañas en
+  una sola llamada (`values.batchGet`), o pedir más cupo en Google Cloud.
 
 ### La planilla se comía los datos que parecen fórmula (2026-11-01)
 
