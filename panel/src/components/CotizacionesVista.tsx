@@ -478,7 +478,7 @@ export default function CotizacionesVista() {
                 {avisos.anticipoSinGanar.map((a) => {
                   const p = porId.get(a.id)!;
                   return (
-                    <button key={a.id} type="button" onClick={() => setAbierta({ p })} className="boton">
+                    <button key={a.id} type="button" onClick={() => setAbierta({ p, paso: 4 })} className="boton">
                       {p.cliente} · pagó {enPesos(a.monto)}
                     </button>
                   );

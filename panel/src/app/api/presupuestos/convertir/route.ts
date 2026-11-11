@@ -121,10 +121,23 @@ export async function POST(req: Request) {
     // toma la reserva. Se le dice a quien cotiza qué hacer, no solo que no.
     const nueva = reservaDesdePresupuesto(p, suyas, menus, quien.usuario);
     const [fechas, reservas] = await Promise.all([leerFechas(), leerReservas()]);
-    const tomadas = reservas.filter((x) => x.fecha === p.fecha && ocupaLugar(x))
+    /**
+     * **Una ganada que quedó a medias se vuelve a vincular, no se duplica**
+     * (2026-11-12). Ganar escribe primero la reserva y después el vínculo en
+     * la cotización; si lo segundo falla —el límite de Google, por
+     * ejemplo— la cotización sigue apareciendo sin ganar, y apretar *Marcar
+     * ganada* otra vez creaba una segunda reserva para la misma gente. Si
+     * ya existe la reserva de esta cotización (su nota dice "De la
+     * cotización N° …") y ninguna otra cotización la reclama, se usa esa.
+     */
+    const nota = `De la cotización N° ${folioDe(p)}`;
+    const aMedias = reservas.find((x) => x.fecha === p.fecha && ocupaLugar(x)
+      && String(x.notaPago ?? '').startsWith(nota)
+      && !lista.some((o) => o.idReserva === x.id));
+    const tomadas = reservas.filter((x) => x.fecha === p.fecha && ocupaLugar(x) && x.id !== aMedias?.id)
       .reduce((n, x) => n + (x.personas || 0), 0);
     const cupo = cupoParaGanar(fechas.find((f) => f.fecha === p.fecha), p.fecha, cfg, tomadas, nueva.personas);
-    if (!cupo.cabe) {
+    if (!cupo.cabe && !aMedias) {
       return NextResponse.json({
         error: cupo.exclusivo
           ? 'Ese día está arrendado en exclusiva a otro cliente: no podemos tomar la reserva. '
@@ -136,7 +149,7 @@ export async function POST(req: Request) {
       }, { status: 409 });
     }
 
-    const idReserva = await crearReserva(nueva);
+    const idReserva = aMedias ? aMedias.id : await crearReserva(nueva);
     // **Ganar abre el día**, igual que anotar una reserva a mano: si no
     // estaba en el calendario se crea privado con el cupo de siempre, y si
     // estaba cerrado se abre para nosotros. Sin esto el día quedaba "sin

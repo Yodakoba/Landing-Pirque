@@ -340,6 +340,12 @@ export async function PATCH(req: Request) {
       enviada = hoy();
       validoHasta = validoHastaDe(hoy(), cfgSeg.vigenciaPresupuesto);
     }
+    // **"Todavía no se mandó"** (2026-11-12): de mandada a borrador se borran
+    // la fecha de envío y la vigencia, que corren de nuevo al mandarla.
+    const desmandada = estaMandada(previo.estado) && !previo.idReserva
+      && (estadoNormal(estado) === ESTADO_PRESUPUESTO.borrador
+          || estadoNormal(estado) === ESTADO_PRESUPUESTO.candidato);
+    if (desmandada) { enviada = ''; validoHasta = ''; }
 
     // Una ganada que cambia de día: si el día de antes o el de después ya
     // se cerraron, es una corrección, con motivo.
@@ -442,6 +448,15 @@ export async function PATCH(req: Request) {
           o.ultimoSeguimiento = p.ultimoSeguimiento; cambio = true;
         }
         if (cambio) await guardarPresupuesto(o);
+      }
+      // Y "Todavía no se mandó" vale para todo el link: las que se habían
+      // marcado enviadas con ella vuelven a borrador.
+      if (desmandada) {
+        for (const otra of otrasAlternativas(previo, lista)) {
+          if (!estaMandada(otra.estado)) continue;
+          const { fila: _fd, ...o } = otra;
+          await guardarPresupuesto({ ...o, estado: ESTADO_PRESUPUESTO.borrador, enviada: '', validoHasta: '' });
+        }
       }
       // **Volver a abrir una perdida reabre las del grupo** (2026-11-12): *Se
       // perdió* se copia a todas, así que deshacerlo también. Sin esto la
