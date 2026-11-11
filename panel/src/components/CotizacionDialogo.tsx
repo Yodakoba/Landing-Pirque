@@ -11,7 +11,7 @@
  *   pregunta de "¿es alguno de estos?" de `/clientes`). Se escribe una vez.
  * - **Lo que se ve es lo que se guarda**: las líneas pasan por
  *   `prepararLineas()` —la misma función que usa el servidor— en cada
- *   dibujado, así que la cantidad que sigue a los invitados y la regla del
+ *   dibujado, así que el monto fijo en 1 y la regla del
  *   show ecuestre se ven mientras se escribe.
  * - **Un candidato** es una cotización que se guarda en el paso 2, con
  *   cliente, fecha e invitados. Después se sigue cotizando desde ahí mismo.
@@ -74,7 +74,9 @@ export interface DatosCotizar {
   rol: string;
 }
 
-const PASOS = ['Cliente', 'Evento', 'Productos', 'Enviar'] as const;
+/** El 4 se llamaba *Enviar* y ahí no se manda nada solo: tiene el documento,
+ *  el pago, el contrato y el cierre (2026-11-11). Mandarla es un botón más. */
+const PASOS = ['Cliente', 'Evento', 'Productos', 'Condiciones'] as const;
 const TIPOS_EVENTO = ['Cumpleaños', 'Matrimonio', 'Empresa', 'Paseo', 'Otro'];
 
 /** Qué es ese día, en palabras, para el paso 2. */
@@ -382,7 +384,7 @@ export default function CotizacionDialogo({
    * se reabre sobre la cotización guardada, en el paso pedido.
    */
   async function irA(n: number) {
-    if (n <= 2 || paso >= 3) return setPaso(n);
+    if (n <= 2 || paso >= 3 || !puedeEditar) return setPaso(n);
     const nuevoEstado = estado === ESTADO_PRESUPUESTO.candidato ? ESTADO_PRESUPUESTO.borrador : undefined;
     if (!p || sucio || nuevoEstado) {
       const id = await guardar(nuevoEstado);
@@ -644,8 +646,6 @@ export default function CotizacionDialogo({
                     {[cliente.empresa, cliente.telefono, cliente.correo].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <button type="button" className="boton boton-relleno min-h-[44px]"
-                  onClick={() => setPaso(2)}>Seguir →</button>
               </div>
             )}
             {!nuevoCliente && (
@@ -774,7 +774,7 @@ export default function CotizacionDialogo({
               </div>
               <p className="mt-1 text-[13px] text-hueso/60">
                 La cantidad de personas completa, adultos y niños. Los menús se reparten
-                este número; la once, el desayuno y lo que toman todos lo siguen solos.
+                este número; la once y el desayuno nacen con todos y se ajustan con − y +.
               </p>
             </div>
 
@@ -791,16 +791,14 @@ export default function CotizacionDialogo({
                 placeholder="Lo que conviene recordar de esta conversación" className={ENTRADA} />
             </Campo>
 
-            <div className="flex flex-wrap gap-2 border-t border-hueso/10 pt-3">
-              {!p && (
+            {!p && (
+              <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={guardando} className="boton min-h-[44px]"
                   onClick={async () => { if (await guardar(ESTADO_PRESUPUESTO.candidato)) onCerrar(); }}>
                   Guardar como candidato
                 </button>
-              )}
-              <button type="button" className="boton boton-relleno min-h-[44px]"
-                onClick={() => void irA(3)}>Seguir: productos →</button>
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -879,25 +877,26 @@ export default function CotizacionDialogo({
                       </div>
                       {!esShowIncluido && (
                         <div className="mt-2 flex flex-wrap items-end gap-3">
-                          <Campo etiqueta={l.sigue ? 'Cantidad (= invitados)' : 'Cantidad'} ancho="w-auto">
+                          {/* **Un monto fijo no tiene cantidad** (2026-11-11): el
+                              arriendo o el show van o no van. Lo por persona —menús,
+                              la once, el desayuno— se ajusta con − y +. */}
+                          {(!prod || prod.cobro !== COBRO.fijo) && (
+                          <Campo etiqueta="Cantidad" ancho="w-auto">
                             {/* − y + grandes, y el número se puede escribir. En un
                                 menú, lo que sube se le resta al primero
                                 (`cambiarCantidad()`). */}
                             <div className="flex items-center gap-2">
-                              {!l.sigue && (
-                                <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno menos"
-                                  onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad - 1, datos.menus, invitados))}>−</button>
-                              )}
-                              <input type="number" min={0} value={l.cantidad} disabled={l.sigue}
+                              <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno menos"
+                                onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad - 1, datos.menus, invitados))}>−</button>
+                              <input type="number" min={0} value={l.cantidad}
                                 onChange={(e) => setLineas(cambiarCantidad(vistas, i,
                                   Number(e.target.value) || 0, datos.menus, invitados))}
                                 className={`${ENTRADA} h-11 !w-20 text-center text-[17px] font-bold`} />
-                              {!l.sigue && (
-                                <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno más"
-                                  onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad + 1, datos.menus, invitados))}>+</button>
-                              )}
+                              <button type="button" className="boton h-11 w-11 text-xl" aria-label="Uno más"
+                                onClick={() => setLineas(cambiarCantidad(vistas, i, l.cantidad + 1, datos.menus, invitados))}>+</button>
                             </div>
                           </Campo>
+                          )}
                           {l.precioUF > 0 ? (
                             <Campo etiqueta={`Precio en UF${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-auto" ayuda="precioLinea">
                               <input type="text" inputMode="decimal" defaultValue={String(l.precioUF).replace('.', ',')}
@@ -929,18 +928,6 @@ export default function CotizacionDialogo({
                               ))}
                             </div>
                           </div>
-                          {/* Solo lo que se cobra por persona y no es un menú —la
-                              once, el desayuno— puede seguir a los invitados. El
-                              show o el arriendo son uno, no uno por invitado. */}
-                          {prod && prod.tipo !== TIPO_PRODUCTO.menu && prod.cobro === COBRO.porPersona && (
-                          <button type="button" onClick={() => cambiarLinea(i, { sigue: !l.sigue })}
-                            className={`boton min-h-[40px] ${l.sigue ? 'border-oro bg-oro/15' : ''}`}>
-                            {l.sigue ? '✓ Sigue a los invitados' : 'Seguir a los invitados'}
-                          </button>
-                          )}
-                          {prod && prod.tipo !== TIPO_PRODUCTO.menu && prod.cobro === COBRO.porPersona && (
-                            <span className="-ml-2 self-center"><AyudaCorta tema="sigueInvitados" /></span>
-                          )}
                           <span className="ml-auto text-[16px] font-bold tabular-nums">
                             {enPesos(totalDeLinea(l))}
                             <span className="ml-1 text-[13px] font-normal text-hueso/60">
@@ -1024,8 +1011,6 @@ export default function CotizacionDialogo({
               {p && puedeEditar && (
                 <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
               )}
-              <button type="button" className="boton min-h-[44px]"
-                onClick={() => setPaso(4)}>Seguir: enviar →</button>
             </div>
           </div>
         )}
@@ -1472,7 +1457,11 @@ export default function CotizacionDialogo({
             )}
 
             {p && (
-              <div className="flex flex-wrap gap-2 border-t border-hueso/10 pt-3">
+              <p className="border-t border-hueso/10 pt-3 text-[13px] font-medium uppercase
+                            tracking-wide text-hueso/60">Mandarla al cliente</p>
+            )}
+            {p && (
+              <div className="flex flex-wrap gap-2">
                 {link && (
                   <button type="button" className="boton min-h-[44px]"
                     onClick={() => copiarConAviso(link, 'Link copiado', 'Copia este link:')}>
@@ -1506,11 +1495,69 @@ export default function CotizacionDialogo({
         )}
       </fieldset>
 
+      {paso < 4 && (
+        <PieDePaso paso={paso} guardando={guardando}
+          puede={paso !== 1 || !!idCliente}
+          porQueNo="Elige o crea el cliente para seguir."
+          aviso={paso !== 2 || !puedeEditar ? ''
+            : !p ? 'Al seguir, se crea la cotización.'
+            : estado === ESTADO_PRESUPUESTO.candidato ? 'Al seguir, deja de ser candidato y pasa a borrador.'
+            : ''}
+          onVolver={() => void irA(paso - 1)} onSeguir={() => void irA(paso + 1)} />
+      )}
+      {paso === 4 && (
+        <div className="mt-4 flex border-t border-hueso/10 pt-3">
+          <button type="button" className="boton min-h-[48px]" onClick={() => void irA(3)}>
+            ← 3 · {PASOS[2]}
+          </button>
+        </div>
+      )}
+
       {error && <p className="mt-3 text-[15px] font-semibold text-rojo-texto">{error}</p>}
       {cancelando && p && (
         <CancelarEvento p={p} onCerrar={() => setCancelando(false)}
           onListo={() => { setCancelando(false); onCambio(); onCerrar(); }} />
       )}
     </Dialogo>
+  );
+}
+
+/**
+ * **El pie de cada paso, igual en los cuatro** (2026-11-11, lo pidió el
+ * cliente: *"estás con el botón abajo, ¿qué estoy haciendo?"*). Antes cada
+ * paso terminaba distinto —*Seguir →*, *Seguir: productos →*, *Seguir:
+ * enviar →*, este último gris y sonando a que se mandaba algo— y ninguno
+ * volvía atrás.
+ *
+ * - **A la derecha, siempre el dorado**, y dice a dónde va: *Ir al paso 3:
+ *   Productos →*.
+ * - **Debajo, una línea solo si seguir hace algo más que cambiar de paso**:
+ *   pasar de Evento a Productos guarda (`irA()`), y eso se dice antes.
+ * - **A la izquierda, volver**, delineado.
+ */
+function PieDePaso({ paso, guardando, puede, porQueNo, aviso, onVolver, onSeguir }: {
+  paso: number; guardando: boolean; puede: boolean; porQueNo: string; aviso: string;
+  onVolver: () => void; onSeguir: () => void;
+}) {
+  return (
+    <div className="mt-4 border-t border-hueso/10 pt-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {paso > 1 && (
+          <button type="button" className="boton min-h-[48px]" onClick={onVolver}>
+            ← {paso - 1} · {PASOS[paso - 2]}
+          </button>
+        )}
+        <span className="flex-1" />
+        <button type="button" disabled={guardando || !puede} onClick={onSeguir}
+          className="boton boton-relleno min-h-[52px] px-5 text-[16px] disabled:opacity-50">
+          {guardando ? 'Guardando…' : <>Ir al paso {paso + 1}: {PASOS[paso]} →</>}
+        </button>
+      </div>
+      {(aviso || !puede) && (
+        <p className={`mt-2 text-right text-[14px] ${puede ? 'text-hueso/70' : 'font-semibold text-ambar-texto'}`}>
+          {puede ? aviso : porQueNo}
+        </p>
+      )}
+    </div>
   );
 }

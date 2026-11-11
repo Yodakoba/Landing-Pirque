@@ -1925,8 +1925,13 @@ tenían.
 pantalla usa la misma función para mostrar, así que lo que se ve es lo que se
 guarda:
 - **La gente sale del tipo del producto**: Menú = su cantidad; lo demás, cero.
-- **Una línea que sigue a los invitados toma su número** (la once, el
-  desayuno). Un menú no sigue: 40 invitados pueden ser 30 adultos y 10 niños.
+- **Ninguna línea sigue sola a los invitados** (desde el 2026-11-11, lo
+  decidió el cliente: *"10 menús, pero solo 8 desayunan y 6 toman once"*).
+  La once y el desayuno nacen con todos los invitados y se ajustan con − y
+  +. El botón *Seguir a los invitados* se sacó; la columna `Sigue invitados`
+  queda en la planilla por las filas viejas, que conservan su cantidad.
+- **Un monto fijo —arriendo, show— no tiene cantidad**: va o no va. La
+  pantalla no la muestra y `prepararLineas()` la deja siempre en 1.
 - **El show ecuestre en un día público va siempre, incluido y a cero**, y no
   se puede quitar ni cobrar. En un día privado, exclusivo, cerrado o fuera
   del calendario es una línea opcional con su precio.
@@ -1973,7 +1978,7 @@ en $0 y la pantalla avisa que se escriba en pesos.
   botones: Cliente (buscar o crear, con la misma pregunta de parecidos),
   Evento (fecha o *todavía no hay día exacto*, invitados con − y +, tipo y
   notas; *Guardar como candidato*), Productos (botones por producto, precio y
-  descuento por línea, descuento total y las cuentas) y Enviar (estado, motivo
+  descuento por línea, descuento total y las cuentas) y Condiciones —antes *Enviar*— (estado, motivo
   de pérdida, Guardar, *Marcar ganada*, copiar link, WhatsApp, documento,
   *Hacer una alternativa*, borrar). Lo de otro vendedor se ve en solo
   lectura.
@@ -2028,9 +2033,8 @@ ponía 40 en cada uno —80 personas—. Ahora:
 - **Subir un menú se lo descuenta al primero** (`cambiarCantidad()`), con −
   y + grandes: Niños a 10 deja Lo Pirque en 30. El primero nunca baja de
   cero. Cambiar el primero no mueve los demás.
-- **Un menú no puede "seguir a los invitados"**: se fuerza en
-  `prepararLineas()`, no solo escondiendo el botón. La once y el desayuno sí
-  siguen, porque los toman todos.
+- **Nada sigue solo a los invitados** (desde el 2026-11-11): ni un menú ni
+  la once. Se fuerza en `prepararLineas()`.
 - Si igual no calzan, una línea ámbar dice cuántos sobran o faltan; si
   calzan, una verde lo confirma. No bloquea.
 
@@ -2092,8 +2096,17 @@ Lo pidió el cliente probando la ventana de cotizar.
   la cotización ya guardada, así que desde ahí se pueden anotar pagos y
   subir comprobantes. Antes, una cotización recién creada seguía tratándose
   como nueva en la misma ventana y no ofrecía pagos.
-- **"Seguir a los invitados" solo aparece en lo que se cobra por persona y
-  no es menú** (la once, el desayuno). El show o el arriendo, no.
+- ~~"Seguir a los invitados"~~ — **se sacó el 2026-11-11**: ver "Las reglas al
+  guardar". Lo por persona se ajusta con − y +; un monto fijo no tiene
+  cantidad.
+- **El pie de cada paso es el mismo** (2026-11-11, lo pidió el cliente:
+  *"estás con el botón abajo, ¿qué estoy haciendo?"*). A la derecha, el
+  dorado dice a dónde va —*Ir al paso 3: Productos →*—; debajo, una línea
+  solo si seguir hace algo más, como *"Al seguir, se crea la cotización"*;
+  a la izquierda, *← 2 · Evento*. **El paso 4 dejó de llamarse *Enviar***
+  —sonaba a que se le mandaba algo al cliente— y es **Condiciones**:
+  documento, pago, contrato y cierre, con *Mandarla al cliente* como un
+  bloque más.
 
 ### El botón de guardar es uno para todo el panel (2026-11-10)
 

@@ -3614,8 +3614,9 @@ console.log('\nCotizaciones, fase 2');
     li({ concepto: 'Arriendo especial', cantidad: 1, precio: 100000, personas: 50 })
   ], catalogo, 40, false);
   ok(listas[0].personas === 30, 'un menú son tantas personas como su cantidad');
-  ok(listas[1].concepto === 'Once campestre' && listas[1].cantidad === 40 && listas[1].personas === 0,
-     'la once sigue a los invitados (40) y no suma gente: son los mismos invitados');
+  ok(listas[1].concepto === 'Once campestre' && listas[1].cantidad === 3 && listas[1].personas === 0
+     && !listas[1].sigue,
+     'una once vieja marcada "sigue" conserva su cantidad: nada sigue solo a los invitados, y no suma gente');
   ok(listas[2].personas === 0, 'una línea libre no inventa gente, aunque venga con un número');
   ok(!listas.some((l) => l.concepto === 'Show ecuestre'),
      'en un día privado el show no aparece solo: es opcional');
@@ -3633,8 +3634,11 @@ console.log('\nCotizaciones, fase 2');
   ok(privado[0].precio === 500000, 'en un día privado el show cobra su precio');
 
   const once = lineaDeProducto(catalogo[1], 'PRE-1', 25, 8000);
-  ok(once.sigue && once.cantidad === 25 && !once.ivaIncluido,
-     'agregar la once la deja siguiendo a los invitados y "+ IVA", como dice el catálogo');
+  ok(!once.sigue && once.cantidad === 25 && !once.ivaIncluido,
+     'agregar la once la deja con todos los invitados, sin seguirlos, y "+ IVA" como dice el catálogo');
+  ok(prepararLineas([li({ concepto: 'Show ecuestre', cantidad: 3, precio: 500000, personas: 0 })],
+       catalogo, 40, false)[0].cantidad === 1,
+     'un monto fijo es siempre 1, aunque llegue con otra cantidad');
   const menu = lineaDeProducto(catalogo[0], 'PRE-1', 25, 44000);
   ok(lineaDeProducto(catalogo[0], 'PRE-1', 40, 44000, 0).cantidad === 40
      && lineaDeProducto(catalogo[0], 'PRE-1', 40, 19000, 40).cantidad === 0
@@ -3659,6 +3663,11 @@ console.log('\nCotizaciones, fase 2');
     ok(b[0].cantidad === 0 && b[1].cantidad === 40, 'el primero nunca baja de cero');
     ok(cambiarCantidad(ls, 0, 35, cat2, 40)[1].cantidad === 0, 'cambiar el primero no mueve a los demás');
     ok(cambiarCantidad(ls, 1, 10, cat2, 0)[0].cantidad === 40, 'sin invitados no se reparte nada');
+    const once = [{ concepto: catalogo[1].nombre, cantidad: 10 }];
+    const ocho = cambiarCantidad(once, 0, 8, cat2, 10)[0];
+    ok(ocho.cantidad === 8, '8 onces para 10 invitados');
+    ok(prepararLineas([{ ...lineaDeProducto(catalogo[1], 'PRE-1', 10, 8000), ...ocho }], catalogo, 10, false)[0].cantidad === 8,
+       'al guardar, las 8 onces quedan en 8 y no vuelven a 10');
   }
   ok(lineaDeProducto(catalogo[1], 'PRE-1', 40, 8000, 40).cantidad === 40,
      'la once sigue siendo de todos los invitados');
