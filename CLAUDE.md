@@ -2288,6 +2288,47 @@ la carpeta de la cotización junto a sus comprobantes, por
 - **Sin la versión de matrimonio** (Novia y Novio, dos firmas) que tenía el
   CRM: queda para la Fase 5, con Calicanto.
 
+### Mandarla, el seguimiento y los hitos (2026-11-11)
+
+Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
+*"estilo PlayStation… ayudar al usuario de la forma más fácil posible"*.
+
+- **Mandarla pregunta.** WhatsApp, Correo (nuevo: abre el programa de correo
+  con el link, el asunto y el correo de la ficha) y Copiar link abren una
+  ventana *¿Le mandaste la cotización a …?*. *Sí, la mandé* la pasa a
+  **Enviada**. No hay WhatsApp ni correo conectados al panel, así que no hay
+  otra forma de saberlo; cuando los haya, la pregunta se reemplaza.
+- **La vigencia corre desde el envío**, no desde la creación: una nueva nace
+  sin `Válido hasta`, y la primera vez que queda Enviada o en Negociación
+  —con el botón o eligiendo la etapa a mano— el servidor anota `Enviada` y
+  calcula la vigencia. **Un candidato o un borrador no vence** (`estaVencido()`).
+- **Solo lo mandado cuenta en el calendario principal**
+  (`cuentaEnElCalendario()`; `posiblesPorDia()` con `soloMandadas`). El
+  borrador se conversa y cambia; recién mandado es gente que puede venir.
+  En Cotizaciones siguen viéndose todas (`cuentaComoPosible()`).
+- **El seguimiento** (`seguimientoDe()`): arriba de Cotizaciones,
+  *Esperando respuesta*, con una tarjeta por cotización mandada que lleva
+  N días sin moverse, o cuyo evento está a N días o menos sin ganarse. Se
+  contesta ahí: *Está negociando*, *Se perdió* (con el motivo), *Sigue
+  esperando* (posterga N días) y, si el evento está cerca, *Se ganó*. Los
+  dos plazos son **por cotización** (`Recordar a los días`, `Preguntar días
+  antes`) y en blanco rige Configuración (`seguimiento_dias` = 5,
+  `seguimiento_antes_evento` = 14). En 0 no pregunta. El servidor pone
+  `Último seguimiento`; el navegador nunca escribe esas fechas.
+- **Cambiar precios de una Enviada** muestra una franja: *¿Están
+  negociando?* con *Pasar a Negociación*.
+- **El paso 4 es un camino de hitos**: arriba, *Enviada → Anticipo → Ganada
+  → Contrato firmado → Pagada* como trofeos; debajo, **un solo bloque
+  grande con el próximo paso** (mandarla, el anticipo, **Marcar ganada** en
+  verde a todo el ancho, el contrato, el saldo). Ganar se festeja con 🎉.
+- **Las secciones tienen color**: Seguimiento en rosado, Documento neutro,
+  El pago en verde, El contrato en cielo con *Cambios de fecha y
+  cancelación* en ámbar adentro. **Guardar, Borrar y Cancelar evento van
+  abajo, chicos y separados**: nunca al lado del hito.
+- **Tres tamaños de botón**: hito (ancho completo, 56–64px, con color y la
+  frase de lo que pasa), acción (44px) y secundario (delineado y chico).
+  Un solo hito a la vista. Es la regla para todo el panel.
+
 ### Cancelar una cotización ganada, y la devolución (2026-11-11)
 
 Lo pidió el cliente: *"puede pasar igual que la reserva se cae… cambiar el
@@ -5777,7 +5818,8 @@ dos o tres frases sobre **esa sola cosa**.
 - **Escape cierra la cajita y no la ventana de atrás**: se escucha en
   captura y se marca usado, y `Dialogo` ignora un Escape ya usado.
 - **Los roles se explican desde `PERMISOS`** (`lib/roles.ts`): bajo el rol
-  elegido en Cuentas va una línea corta, y su `?` lista qué puede y qué no,
+  elegido en Cuentas va una línea corta, y su `?` lista **solo qué puede** (lo pidió
+  el cliente: lo que no está no es de ese rol; el administrador no lleva lista),
   deducido de la tabla. Un permiso nuevo sin su frase en `PALABRAS` no
   compila, y hay una prueba de que cada permiso aparece una vez por rol.
 

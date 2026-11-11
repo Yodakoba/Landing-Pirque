@@ -64,7 +64,7 @@ import {
   ESTADO_PRESUPUESTO, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
   leerPresupuestosDe, filaPresupuesto, leerLineasDe, filaLinea,
   normalizarLineas, posiblesPorDia, cuentaComoPosible, estadoVisible, porToken,
-  reservaDesdePresupuesto, diasParaVencer, porVencer, vencidoSinCerrar,
+  reservaDesdePresupuesto, diasParaVencer, seguimientoDe, estaVencido, porVencer, vencidoSinCerrar,
   totalDe, validoHastaDe, personasDe as personasDeLineas, desglosarIVA, IVA,
   type Presupuesto, type LineaPresupuesto
 } from './presupuestos.ts';
@@ -2340,7 +2340,7 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 {
   const HOY = '2026-11-01';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
+    id: 'PRE-1', fecha: '2026-11-14', cliente: 'Agencia Sur', email: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '', enviada: '', ultimoSeguimiento: '', seguimientoDias: null, avisoEvento: null,
     telefono: '', estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-16',
     token: '', notas: '', idReserva: '', creadoPor: 'jefe', creado: '', idCliente: '',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3565,7 +3565,7 @@ console.log('\nCotizaciones, fase 2');
 {
   const HOY = '2026-11-10';
   const pre = (x: Partial<Presupuesto>): Presupuesto => ({
-    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
+    id: 'PRE-1', fecha: '2026-11-21', cliente: '', email: '', telefono: '', documento: '', anticipo: null, saldoDias: null, uf: 0, fechaUF: '', horario: '', ley20393: false, acuerdos: '', contrato: '', contratoSubidoPor: '', contratoSubido: '', cambiosFecha: null, cancelacionDias: null, reembolso: null, devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '', enviada: '', ultimoSeguimiento: '', seguimientoDias: null, avisoEvento: null,
     estado: ESTADO_PRESUPUESTO.enviado, validoHasta: '2026-11-30', token: '', notas: '',
     idReserva: '', creadoPor: 'vero', creado: '', idCliente: 'C-0001',
     invitados: 0, periodo: '', tipoEvento: '', grupo: '', descuento: 0, motivo: '',
@@ -3713,9 +3713,15 @@ console.log('\nCotizaciones, fase 2');
   const pos = posiblesPorDia([
     pre({ id: 'P1', fecha: '', periodo: 'marzo', invitados: 100 }),
     pre({ id: 'P2', estado: ESTADO_PRESUPUESTO.candidato, invitados: 30 })
-  ], [], HOY);
+  ], [], HOY, false);
   ok(pos.size === 1 && pos.get('2026-11-21')?.personas === 30,
      'la sin fecha no ocupa ningún día; el candidato sin menús suma sus invitados como posibles');
+  ok(posiblesPorDia([pre({ id: 'P2', estado: ESTADO_PRESUPUESTO.candidato, invitados: 30 }),
+                     pre({ id: 'P3', estado: ESTADO_PRESUPUESTO.borrador, invitados: 30 })], [], HOY).size === 0,
+     'en el calendario principal no cuentan ni el candidato ni el borrador: todavía no se mandaron');
+  ok(posiblesPorDia([pre({ id: 'P4', estado: ESTADO_PRESUPUESTO.negociacion, invitados: 30 })], [], HOY)
+       .get('2026-11-21')?.personas === 30,
+     'una en negociación sí cuenta: ya se mandó');
 
   // --- El vendedor ---
   ok(puedeTocarPresupuesto(ROL.vendedor, 'Vero', 'vero') && !puedeTocarPresupuesto(ROL.vendedor, 'vero', 'hugo'),
@@ -3898,7 +3904,7 @@ console.log('\nCotizaciones, fase 2');
      'cada alternativa tiene su letra; una cotización sola no lleva');
   ok(principalDe([a, { ...b, idReserva: 'R1' }], () => true).id === 'PRE-200',
      'la ganada representa al grupo en las listas');
-  const pos = posiblesPorDia(lista, [], '2026-11-10');
+  const pos = posiblesPorDia(lista, [], '2026-11-10', false);
   ok(pos.get('2026-12-05')?.presupuestos === 2 && pos.get('2026-12-05')?.personas === 60,
      'dos alternativas del mismo cliente cuentan como una cotización y su gente no se suma (50 + 10, no 100)');
 }
@@ -4124,6 +4130,33 @@ console.log('\nLos roles se explican desde la tabla de permisos');
   ok(resumenRol(ROL.pagos).noPuede.length === 2, 'pagos no puede dos cosas: cuentas y mantención');
   ok(resumenRol(ROL.vendedor).puede.some((f) => f.includes('solo las suyas')),
      'al vendedor se le dice que toca solo lo suyo');
+}
+
+console.log('\nEl seguimiento de lo mandado');
+{
+  const HOY = '2026-11-11';
+  const cfg = { seguimientoDias: 5, avisoEvento: 14 };
+  const pre = (x: Partial<Presupuesto>): Presupuesto => ({
+    ...leerPresupuestosDe([ENCABEZADO_PRESUPUESTOS, ['PRE-1', '2026-12-20']])[0],
+    estado: ESTADO_PRESUPUESTO.enviado, enviada: '2026-11-01', ...x });
+  ok(seguimientoDe(pre({ estado: ESTADO_PRESUPUESTO.borrador }), HOY, cfg) === null,
+     'un borrador no pregunta: todavía no se mandó');
+  const sr = seguimientoDe(pre({}), HOY, cfg);
+  ok(sr?.motivo === 'sinRespuesta' && sr.dias === 10, 'mandada hace 10 días sin moverse: pregunta');
+  ok(seguimientoDe(pre({ enviada: '2026-11-09' }), HOY, cfg) === null, 'mandada hace 2 días: todavía no');
+  ok(seguimientoDe(pre({ ultimoSeguimiento: '2026-11-09' }), HOY, cfg) === null,
+     '"sigue esperando" hace 2 días la posterga');
+  ok(seguimientoDe(pre({ seguimientoDias: 15 }), HOY, cfg) === null,
+     'el plazo de la cotización le gana al de Configuración');
+  ok(seguimientoDe(pre({ seguimientoDias: 0 }), HOY, cfg) === null, 'en 0 no pregunta');
+  const ce = seguimientoDe(pre({ fecha: '2026-11-21', enviada: '2026-11-10' }), HOY, cfg);
+  ok(ce?.motivo === 'eventoCerca' && ce.dias === 10, 'el evento a 10 días pregunta aunque se mandó ayer');
+  ok(seguimientoDe(pre({ fecha: '2026-11-21', avisoEvento: 7, enviada: '2026-11-10' }), HOY, cfg) === null,
+     'con 7 días antes del evento, a 10 todavía no');
+  ok(seguimientoDe(pre({ idReserva: 'R1' }), HOY, cfg) === null, 'una ganada no pregunta');
+  ok(!estaVencido(pre({ estado: ESTADO_PRESUPUESTO.borrador, validoHasta: '2026-11-01' }), HOY),
+     'un borrador no vence: la vigencia corre desde que se manda');
+  ok(estaVencido(pre({ validoHasta: '2026-11-01' }), HOY), 'una mandada sí vence');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

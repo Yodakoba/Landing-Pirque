@@ -8,7 +8,7 @@ import {
   sincronizarReserva
 } from '@/lib/datos';
 import {
-  nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, aEntero, folioDe, estadoNormal, lineasDe,
+  nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, estaMandada, aEntero, folioDe, estadoNormal, lineasDe,
   documentoDe, numeroONulo, type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
 import {
@@ -52,6 +52,8 @@ export async function GET(req: Request) {
       vigencia: cfg.vigenciaPresupuesto,
       descuentos: cfg.descuentos,
       condiciones: { anticipoPct: cfg.anticipoPct, saldoDias: cfg.saldoDias },
+      seguimiento: { dias: cfg.seguimientoDias, antesEvento: cfg.avisoEvento },
+      empresa: cfg.empresa.nombre,
       // Para el contrato: el horario de siempre, y qué le falta a la empresa
       // en Configuración para que el contrato salga completo.
       contrato: {
@@ -161,7 +163,8 @@ export async function POST(req: Request) {
         contrato: '', contratoSubidoPor: '', contratoSubido: '',
         // Lo de la cancelación y del día es de la que se ganó, no de la copia.
         devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
-        validoHasta: validoHastaDe(hoy(), cfg.vigenciaPresupuesto),
+        // Una alternativa nace sin mandar: su vigencia corre cuando se mande.
+        enviada: '', ultimoSeguimiento: '', validoHasta: '',
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
         // una cotización ajena la puede seguir editando.
         creadoPor: quien.usuario, creado: ahoraEnChile()
@@ -200,7 +203,10 @@ export async function POST(req: Request) {
       // en blanco: el nombre y el contacto se leen de `Clientes`.
       cliente: '', email: '', telefono: '', idCliente,
       estado,
-      validoHasta: validoHastaDe(hoy(), cfg.vigenciaPresupuesto),
+      // **La vigencia corre desde que se manda, no desde que se crea**
+      // (2026-11-11): un borrador que estuvo una semana armándose no puede
+      // llegarle al cliente con media vigencia gastada.
+      validoHasta: '',
       token: nuevoToken(),
       notas: String(cuerpo.notas ?? '').trim(),
       idReserva: '',
@@ -224,6 +230,10 @@ export async function POST(req: Request) {
       reembolso: numeroONulo(cuerpo.reembolso, 100),
       // Lo de la cancelación lo escribe solo /cancelar.
       devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
+      // El envío no se acepta del navegador: lo marca "¿la mandaste?".
+      enviada: '', ultimoSeguimiento: '',
+      seguimientoDias: numeroONulo(cuerpo.seguimientoDias, 365),
+      avisoEvento: numeroONulo(cuerpo.avisoEvento, 365),
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
@@ -303,6 +313,26 @@ export async function PATCH(req: Request) {
       }
     }
 
+    // **El seguimiento** (2026-11-11). `seguimiento: 'enviada'` es el "Sí,
+    // la mandé"; `'esperando'` es "sigue esperando". Las fechas las pone el
+    // servidor, nunca el navegador.
+    const cfgSeg = await leerConfig();
+    let enviada = previo.enviada;
+    let ultimoSeguimiento = previo.ultimoSeguimiento;
+    let validoHasta = cuerpo.renovarVigencia
+      ? validoHastaDe(hoy(), cfgSeg.vigenciaPresupuesto) : previo.validoHasta;
+    if (cuerpo.seguimiento === 'enviada' && !previo.idReserva && !estaMandada(estado)) {
+      estado = ESTADO_PRESUPUESTO.enviado;
+    }
+    if (cuerpo.seguimiento === 'esperando') ultimoSeguimiento = hoy();
+    if (estado !== previo.estado) ultimoSeguimiento = hoy();
+    // La primera vez que queda mandada —con el botón o eligiendo la etapa a
+    // mano— se anota el día y desde ahí corre la vigencia.
+    if (estaMandada(estado) && !enviada) {
+      enviada = hoy();
+      validoHasta = validoHastaDe(hoy(), cfgSeg.vigenciaPresupuesto);
+    }
+
     // Una ganada que cambia de día: si el día de antes o el de después ya
     // se cerraron, es una corrección, con motivo.
     let motivoCorreccion = '';
@@ -349,11 +379,14 @@ export async function PATCH(req: Request) {
         ? previo.cancelacionDias : numeroONulo(cuerpo.cancelacionDias, 365),
       reembolso: cuerpo.reembolso === undefined
         ? previo.reembolso : numeroONulo(cuerpo.reembolso, 100),
-      // La vigencia se recalcula solo si lo piden: al mandarla. Editar una
+      seguimientoDias: cuerpo.seguimientoDias === undefined
+        ? previo.seguimientoDias : numeroONulo(cuerpo.seguimientoDias, 365),
+      avisoEvento: cuerpo.avisoEvento === undefined
+        ? previo.avisoEvento : numeroONulo(cuerpo.avisoEvento, 365),
+      enviada, ultimoSeguimiento,
+      // La vigencia se recalcula solo al mandarla o si lo piden. Editar una
       // línea no puede correrle el plazo al cliente.
-      validoHasta: cuerpo.renovarVigencia
-        ? validoHastaDe(hoy(), (await leerConfig()).vigenciaPresupuesto)
-        : previo.validoHasta
+      validoHasta
     };
     await guardarPresupuesto(p);
     // Las líneas se vuelven a preparar también cuando solo cambian los

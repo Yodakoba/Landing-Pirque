@@ -197,7 +197,7 @@ export default function ConfigEditor() {
             'se pueden cambiar en cada una.',
       cuerpo: <>
         {campo('vigencia', 'Vigencia',
-          'Cuántos días vale una cotización desde que se crea. En 0 no vence.',
+          'Cuántos días vale una cotización desde que se manda al cliente. En 0 no vence.',
           numerico('vigencia', config.vigenciaPresupuesto, (n) => ({ vigenciaPresupuesto: n }), { min: 0, max: 365, unidad: 'días' }))}
         {campo('descuentos', 'Descuentos con botón',
           'Los que se ofrecen con un toque, por línea y sobre el total. Separados por coma.',
@@ -210,6 +210,14 @@ export default function ConfigEditor() {
         {campo('saldoDias', 'Saldo',
           'Hasta cuántos días antes del evento se paga el resto.',
           numerico('saldoDias', config.saldoDias, (n) => ({ saldoDias: n }), { min: 0, max: 365, unidad: 'días antes' }))}
+        {campo('seguimientoDias', 'Seguimiento: sin respuesta',
+          'A cuántos días de mandada una cotización, sin moverse, el panel pregunta "¿y?". ' +
+          'Cada cotización lo puede cambiar. En 0 no pregunta.',
+          numerico('seguimientoDias', config.seguimientoDias, (n) => ({ seguimientoDias: n }), { min: 0, max: 365, unidad: 'días' }))}
+        {campo('avisoEvento', 'Seguimiento: antes del evento',
+          'Cuántos días antes del evento pregunta si se ganó o se perdió. Cada cotización lo ' +
+          'puede cambiar. En 0 no pregunta.',
+          numerico('avisoEvento', config.avisoEvento, (n) => ({ avisoEvento: n }), { min: 0, max: 365, unidad: 'días antes' }))}
         {campo('driveComprobantes', 'Carpeta de comprobantes',
           'La unidad compartida de Google Drive donde se guardan los comprobantes y los ' +
           'contratos firmados. Pega el link de la unidad. La cuenta del panel tiene que ser ' +

@@ -14,7 +14,7 @@ import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
 import { enPalabras } from '@/lib/fechas';
-import { cuentaComoPosible, estadoVisible, lineasDe, totalDe, personasDe,
+import { cuentaEnElCalendario, estadoVisible, lineasDe, totalDe, personasDe,
          folioDe, gentePosible, type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
 import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
@@ -595,7 +595,7 @@ export default function DayView(
           Tenerlo en dos lugares sería tener dos formularios para lo mismo. */}
       {cotizado && (() => {
         const vivos = cotizado.presupuestos.filter(
-          (p) => p.fecha === fecha && cuentaComoPosible(p, cotizado.hoy));
+          (p) => p.fecha === fecha && cuentaEnElCalendario(p, cotizado.hoy));
         if (vivos.length === 0) return null;
         const gente = vivos.reduce(
           (n, p) => n + gentePosible(p, lineasDe(cotizado.lineas, p.id)), 0);

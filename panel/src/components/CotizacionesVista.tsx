@@ -22,7 +22,7 @@ import { Aviso } from './CalendarView';
 import CotizacionDialogo, { type DatosCotizar } from './CotizacionDialogo';
 import {
   estadoVisible, folioDe, lineasDe, totalDe, gentePosible, cuentaComoPosible,
-  porVencer, vencidoSinCerrar, diasParaVencer, ESTADO_PRESUPUESTO,
+  porVencer, vencidoSinCerrar, diasParaVencer, ESTADO_PRESUPUESTO, seguimientoDe,
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import { normalizar, estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
@@ -31,7 +31,8 @@ import { enPesos } from '@/lib/ocupacion';
 import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
 import { avisosDeCobro, porRevisar } from '@/lib/cobros';
 import { faltaDevolver } from '@/lib/cancelacion';
-import { puede, type Rol } from '@/lib/auth';
+import { puede, puedeTocarPresupuesto, type Rol } from '@/lib/auth';
+import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
 
@@ -191,6 +192,19 @@ export default function CotizacionesVista() {
   };
 
   const pronto = datos.presupuestos.filter((p) => porVencer(p, hoy));
+  // **El seguimiento** (2026-11-11): lo mandado que espera respuesta. De
+  // cada grupo de alternativas, una sola tarjeta.
+  const cfgSeg = { seguimientoDias: datos.seguimiento?.dias ?? 5, avisoEvento: datos.seguimiento?.antesEvento ?? 14 };
+  const porSeguir: PorSeguir[] = [];
+  const gruposVistos = new Set<string>();
+  for (const p of datos.presupuestos) {
+    const s = seguimientoDe(p, hoy, cfgSeg);
+    if (!s || gruposVistos.has(grupoDe(p))) continue;
+    gruposVistos.add(grupoDe(p));
+    porSeguir.push({ p, ...s, puedeTocar: puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor) });
+  }
+  porSeguir.sort((a, b) => (a.motivo === b.motivo ? 0 : a.motivo === 'eventoCerca' ? -1 : 1));
+  const seguirIds = new Set(porSeguir.map((x) => grupoDe(x.p)));
   const vencidas = datos.presupuestos.filter((p) => vencidoSinCerrar(p, hoy));
   // **Los avisos de plata** (2026-11-10): anticipo pagado sin ganar, y el
   // saldo de una ganada que vence pronto o ya venció. Ver `avisosDeCobro()`.
@@ -276,6 +290,7 @@ export default function CotizacionesVista() {
     const candidatos = vivas.filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.candidato).length;
     const activas = vivas.length - candidatos;
     const ganadas = delDia.filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.aceptado).length;
+    const porSeguirDia = delDia.filter((p) => seguirIds.has(grupoDe(p))).length;
     const posibles = vivas.reduce((n, p) => n + gente(p), 0);
     const palabra = palabraDelDia(estadoDelDia.get(f));
     const occ = ocupacion.get(f);
@@ -308,6 +323,11 @@ export default function CotizacionesVista() {
             {ganadas > 0 && (
               <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2 py-0.5 text-[13px] font-semibold text-verde-texto">
                 ✓ {ganadas} ganada{ganadas === 1 ? '' : 's'}
+              </span>
+            )}
+            {porSeguirDia > 0 && (
+              <span className="rounded-full border-2 border-ambar-fuerte px-2 py-0.5 text-[13px] font-semibold text-ambar-texto">
+                ! esperando respuesta
               </span>
             )}
             {delDia.length === 0 && (
@@ -386,8 +406,11 @@ export default function CotizacionesVista() {
       </div>
 
       {(pronto.length > 0 || vencidas.length > 0 || avisos.anticipoSinGanar.length > 0
-        || avisos.saldo.length > 0 || sinRevisar.size > 0 || porDevolver.length > 0) && (
+        || avisos.saldo.length > 0 || sinRevisar.size > 0 || porDevolver.length > 0
+        || porSeguir.length > 0) && (
         <div className="mb-4 space-y-2">
+          <EsperandoRespuesta lista={porSeguir} onCambio={() => void cargar()}
+            onAbrir={(p) => setAbierta({ p, paso: 4 })} />
           {porDevolver.length > 0 && (
             <div className="rounded border border-rojo-fuerte/50 bg-rojo/5 p-3">
               <p className="text-[15px] font-semibold text-rojo-texto">
