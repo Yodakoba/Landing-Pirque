@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { ESTADO_PAGO } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { puedeTocarReserva, puede, type Rol } from '@/lib/auth';
@@ -58,7 +59,7 @@ async function duenaDeLaReserva(req: Request, antes: { anotadaPor: string } | un
  */
 const DE_LA_ENTRADA = new Set(['asistencia', 'llegaron', 'avisoRecepcion']);
 
-export async function PATCH(req: Request, { params }: { params: { fila: string } }) {
+export const PATCH = conLecturas([], async function PATCH(req: Request, { params }: { params: { fila: string } }) {
   const cuerpo = await req.json().catch(() => ({}));
   const soloEntrada = Object.keys(cuerpo).length > 0
     && Object.keys(cuerpo).every((k) => DE_LA_ENTRADA.has(k));
@@ -184,9 +185,9 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: Request, { params }: { params: { fila: string } }) {
+export const DELETE = conLecturas([], async function DELETE(req: Request, { params }: { params: { fila: string } }) {
   const no = await exigir(req, 'reservas');
   if (no) return no;
   try {
@@ -227,4 +228,4 @@ export async function DELETE(req: Request, { params }: { params: { fila: string 
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

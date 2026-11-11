@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_RESERVAS } from '@/lib/columnas';
+import { HOJA_MENUS } from '@/lib/menus';
+import { HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
@@ -10,7 +14,7 @@ import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
@@ -28,9 +32,9 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'reservas');
   if (no) return no;
   try {
@@ -102,4 +106,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

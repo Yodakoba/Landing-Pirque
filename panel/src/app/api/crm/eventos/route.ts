@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { CRM_APAGADO } from '@/lib/crm';
 import { exigir, exigirVer } from '@/lib/permisos';
 import {
@@ -34,7 +35,7 @@ export const dynamic = 'force-dynamic';
  * perfecto"). La ruta sigue siendo dinámica: el permiso se revisa en cada
  * petición; lo que se reutiliza es la respuesta del CRM.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   // **`presupuestos` y no `ver`** (2026-11-05), por lo mismo que `/api/equipo`:
   // esto no son nuestras reservas, son las cotizaciones y los cerrados del
   // socio. Es la misma capa comercial que los presupuestos —de hecho la
@@ -91,4 +92,4 @@ export async function GET(req: Request) {
       { status: 502 }
     );
   }
-}
+});

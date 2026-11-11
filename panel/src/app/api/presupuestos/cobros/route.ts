@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar,
@@ -40,7 +41,7 @@ async function cotizacionTocable(req: Request, id: string) {
   return { p, quien };
 }
 
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
@@ -49,9 +50,9 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -82,10 +83,10 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /** Deshace un cobro anotado por error: borra su fila. Queda en la bitácora. */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -111,7 +112,7 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * **Marca un cobro como revisado**, o lo desmarca (2026-11-10): quien hace
@@ -120,7 +121,7 @@ export async function DELETE(req: Request) {
  * Es del permiso `pagar` —administrador y quien paga—, no del vendedor:
  * la gracia es que lo revise alguien distinto de quien lo anotó.
  */
-export async function PATCH(req: Request) {
+export const PATCH = conLecturas([], async function PATCH(req: Request) {
   const no = await exigir(req, 'pagar');
   if (no) return no;
   try {
@@ -143,4 +144,4 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
+import { HOJA_CONFIG } from '@/lib/config';
+import { HOJA_LINEAS, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { exigir, exigirVer } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
@@ -40,7 +44,7 @@ export const dynamic = 'force-dynamic';
  * sin ocupación ningún día recibe público— y la tarjeta además decía 0
  * personas. Lo notó el cliente mirando octubre.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PRESUPUESTOS, HOJA_LINEAS], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
@@ -107,4 +111,4 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

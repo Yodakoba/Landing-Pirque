@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { marcarBoleta, anotar } from '@/lib/datos';
 import { exigir, quienEs } from '@/lib/permisos';
 import { esFecha } from '@/lib/fechas';
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic';
  * papel que respalda un pago llegó es parte de pagar, y queda en la
  * bitácora con nombre y hora. El encargado ve el informe, pero no marca.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'pagar');
   if (no) return no;
   try {
@@ -34,4 +35,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

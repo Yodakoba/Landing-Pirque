@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerConfig, guardarConfig , anotar } from '@/lib/datos';
 import { leerConfigDe, aFilasConfig, aDiasSemana, aDescuentos } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigirVer(req, 'configurar');
   if (no) return no;
   try {
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Guarda la configuración.
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
  * un valor imposible —un cupo en cero, un corte amarillo por encima del
  * rojo— se corrige acá en vez de quedar escrito en la planilla.
  */
-export async function PATCH(req: Request) {
+export const PATCH = conLecturas([], async function PATCH(req: Request) {
   const no = await exigir(req, 'configurar');
   if (no) return no;
   try {
@@ -57,4 +58,4 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

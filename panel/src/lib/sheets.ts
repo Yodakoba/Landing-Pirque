@@ -4,6 +4,7 @@
  */
 import { google } from 'googleapis';
 import type { sheets_v4 } from 'googleapis';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { celdas } from './celdas.ts';
 
 // La planilla, y los eventos del calendario. El segundo se agregó el
@@ -100,8 +101,23 @@ function clave(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 }
 
-async function leerTitulos(): Promise<Map<string, string>> {
-  const libro = await amable(() => sheets().spreadsheets.get({ spreadsheetId: idPlanilla() }));
+let titulosEnVuelo: Promise<Map<string, string>> | null = null;
+function leerTitulos(): Promise<Map<string, string>> {
+  // Varias lecturas que llegan juntas a una instancia recién prendida
+  // comparten la misma consulta del libro.
+  if (!titulosEnVuelo) {
+    titulosEnVuelo = leerTitulosYa();
+    const p = titulosEnVuelo;
+    const soltar = () => { if (titulosEnVuelo === p) titulosEnVuelo = null; };
+    p.then(soltar, soltar);
+  }
+  return titulosEnVuelo;
+}
+
+async function leerTitulosYa(): Promise<Map<string, string>> {
+  const libro = await conReintento(() => sheets().spreadsheets.get({
+    spreadsheetId: idPlanilla(), fields: 'sheets.properties(title,sheetId)'
+  }));
   ids = new Map((libro.data.sheets ?? [])
     .filter((s) => s.properties?.title && s.properties.sheetId != null)
     .map((s) => [s.properties!.title!, s.properties!.sheetId!]));
@@ -166,48 +182,156 @@ export function esLimiteDeGoogle(e: unknown): boolean {
   return x?.code === 429 || x?.status === 429 || /quota exceeded/i.test(String(x?.message ?? ''));
 }
 
-async function amable<T>(fn: () => Promise<T>): Promise<T> {
-  try { return await fn(); } catch (e) {
-    if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
-    throw e;
+/**
+ * **Las lecturas se juntan** (2026-11-12). La API de Sheets cobra el cupo
+ * por consulta, no por pestaña: pedir siete pestañas en un `batchGet` cuesta
+ * **una** lectura, y pedirlas de a una cuesta siete. Abrir el calendario
+ * llegó a gastar 20 de las 60 que hay por minuto para todo el panel.
+ *
+ * Funciona así: la primera lectura que llega abre una **tanda** y espera unos
+ * milisegundos; todas las que lleguen mientras tanto —las de un
+ * `Promise.all`, o las de otra petición que entró al mismo tiempo— van en la
+ * misma consulta. Dos lecturas de la misma pestaña en la misma tanda, o
+ * mientras otra está en vuelo, comparten la respuesta.
+ *
+ * **No se recuerda nada entre peticiones.** Se probó guardar lo leído tres
+ * segundos y se sacó el mismo día: en Vercel cada ruta corre aparte, así que
+ * una escritura en una ruta no le borraba el recuerdo a otra, y *Marcar
+ * ganada* volvía a aparecer en una cotización ya ganada. Dentro de UNA
+ * petición sí se recuerda —ver `conLecturas()`—, porque ahí no hay otra
+ * instancia que escriba sin avisar.
+ */
+const lecturas = new Map<string, Promise<string[][]>>();
+interface Pedida { hoja: string; res: (f: string[][]) => void; rej: (e: unknown) => void }
+let tanda: Map<string, Pedida> | null = null;
+/** Cuánto espera una tanda a que lleguen las demás lecturas. */
+const ESPERA_TANDA = 8;
+
+/**
+ * Lo leído dentro de una petición. Lo abre `conLecturas()`; fuera de ella no
+ * hay ámbito y cada lectura va a la planilla.
+ */
+const ambito = new AsyncLocalStorage<Map<string, Promise<string[][]>>>();
+
+/**
+ * Envuelve una ruta para que **lo que ya leyó en esta petición no lo vuelva a
+ * leer**. Un autoguardado de una cotización leía la pestaña de cotizaciones
+ * dos veces, y la configuración, y los menús… Lo que la propia petición
+ * escribe se olvida en el acto, así que nunca lee un dato suyo viejo.
+ *
+ * `precargar` son las pestañas que la ruta va a necesitar: se piden juntas al
+ * entrar, en una sola consulta, aunque después se lean de a una.
+ */
+export function conLecturas<A extends unknown[], R>(
+  precargar: string[], fn: (...a: A) => Promise<R>
+): (...a: A) => Promise<R> {
+  return (...a: A) => ambito.run(new Map(), () => {
+    for (const h of precargar) leerHoja(h).catch(() => {});
+    return fn(...a);
+  });
+}
+
+function olvidar(hoja: string) {
+  const k = clave(hoja);
+  lecturas.delete(k);
+  ambito.getStore()?.delete(k);
+}
+
+/** Espera y vuelve a intentar si Google dice que se pasó del límite. */
+async function conReintento<T>(fn: () => Promise<T>): Promise<T> {
+  // Cortas a propósito: una petición no puede quedarse esperando el minuto
+  // entero, y el cupo se va liberando de a poco.
+  const esperas = [1500, 4000];
+  for (let i = 0; ; i++) {
+    try { return await fn(); } catch (e) {
+      if (!esLimiteDeGoogle(e)) throw e;
+      if (i >= esperas.length) throw new Error(MENSAJE_LIMITE);
+      await new Promise((r) => setTimeout(r, esperas[i]));
+    }
   }
 }
 
-/**
- * **Dos lecturas simultáneas de la misma pestaña comparten la llamada**
- * (2026-11-12), y nada más: apenas contesta, se olvida.
- *
- * **Se probó recordar lo leído tres segundos, y se sacó el mismo día.** En
- * Vercel cada ruta corre aparte, así que una escritura en una ruta no le
- * borraba el recuerdo a otra: *Marcar ganada* escribía por `/convertir`, la
- * lista que se recargaba al cerrar salía de `/api/presupuestos` con la
- * cotización todavía sin ganar, y al volver a abrirla ofrecía ganarla otra
- * vez. Un dato viejo que parece nuevo es peor que una lectura de más.
- */
-const lecturas = new Map<string, Promise<string[][]>>();
-
-function olvidar(hoja: string) { lecturas.delete(clave(hoja)); }
-
-/** Lee una hoja entera. Devuelve [] si está vacía. */
-export async function leerHoja(hoja: string): Promise<string[][]> {
-  const k = clave(hoja);
-  const hay = lecturas.get(k);
-  if (hay) return (await hay).map((f) => [...f]);
-  const filas = amable(async () => {
-    const res = await sheets().spreadsheets.values.get({
+async function despachar(): Promise<void> {
+  const pedidas = [...(tanda?.values() ?? [])];
+  tanda = null;
+  // El nombre real de cada pestaña. Una que no existe falla sola, sin
+  // arrastrar a las demás.
+  const listas: (Pedida & { real: string })[] = [];
+  for (const x of pedidas) {
+    try { listas.push({ ...x, real: await nombreReal(x.hoja) }); } catch (e) { x.rej(e); }
+  }
+  if (!listas.length) return;
+  try {
+    const res = await conReintento(() => sheets().spreadsheets.values.batchGet({
       spreadsheetId: idPlanilla(),
-      range: `'${await nombreReal(hoja)}'`,
+      ranges: listas.map((x) => `'${x.real}'`),
       valueRenderOption: 'UNFORMATTED_VALUE',
       dateTimeRenderOption: 'FORMATTED_STRING'
+    }));
+    const rangos = res.data.valueRanges ?? [];
+    listas.forEach((x, i) => x.res((rangos[i]?.values ?? [])
+      .map((f) => f.map((c) => (c == null ? '' : String(c))))));
+  } catch (e) {
+    for (const x of listas) x.rej(e);
+  }
+}
+
+/** Pide una pestaña: se suma a la tanda abierta, o abre una. */
+function pedir(hoja: string): Promise<string[][]> {
+  const k = clave(hoja);
+  const hay = lecturas.get(k);
+  if (hay) return hay;
+  if (!tanda) { tanda = new Map(); setTimeout(() => void despachar(), ESPERA_TANDA); }
+  const ya = tanda.get(k);
+  const filas = new Promise<string[][]>((res, rej) => {
+    if (!ya) tanda!.set(k, { hoja, res, rej });
+    else tanda!.set(k, {
+      hoja,
+      res: (f) => { ya.res(f); res(f); },
+      rej: (e) => { ya.rej(e); rej(e); }
     });
-    return (res.data.values ?? []).map((f) => f.map((c) => (c == null ? '' : String(c))));
   });
   lecturas.set(k, filas);
   // Contestó (bien o mal): la siguiente lectura vuelve a preguntar.
   const soltar = () => { if (lecturas.get(k) === filas) lecturas.delete(k); };
   filas.then(soltar, soltar);
+  return filas;
+}
+
+/**
+ * Lee una hoja entera. Devuelve [] si está vacía.
+ *
+ * `fresca` se salta lo recordado en la petición: es para las lecturas que
+ * buscan **en qué fila escribir**. Ahí un número de fila de hace un segundo
+ * puede ser otra fila si alguien borró una entremedio.
+ */
+export async function leerHoja(hoja: string, fresca = false): Promise<string[][]> {
+  const k = clave(hoja);
+  const recuerdo = ambito.getStore();
+  let filas = !fresca ? recuerdo?.get(k) : undefined;
+  if (!filas) {
+    filas = pedir(hoja);
+    if (recuerdo) {
+      recuerdo.set(k, filas);
+      const p = filas;
+      p.catch(() => { if (recuerdo.get(k) === p) recuerdo.delete(k); });
+    }
+  }
   // Copias, para que quien la modifique no le cambie la fila a otro.
   return (await filas).map((f) => [...f]);
+}
+
+/**
+ * Solo la primera fila, para saber si la pestaña tiene encabezado sin
+ * traerla entera. Es lo que usa la bitácora, que crece con cada acción.
+ */
+export async function leerEncabezado(hoja: string): Promise<string[]> {
+  const res = await conReintento(async () => sheets().spreadsheets.values.get({
+    spreadsheetId: idPlanilla(),
+    range: `'${await nombreReal(hoja)}'!1:1`,
+    valueRenderOption: 'UNFORMATTED_VALUE'
+  }));
+  return (res.data.values?.[0] ?? []).map((c) => (c == null ? '' : String(c)));
 }
 
 /** El id interno de una pestaña, sin leer el libro entero cada vez. */
@@ -224,13 +348,13 @@ export async function agregarFila(hoja: string, fila: unknown[]): Promise<void> 
   // Lo leído de esta pestaña deja de valer, antes y después de escribir.
   olvidar(hoja);
   try {
-    await sheets().spreadsheets.values.append({
+    await conReintento(async () => sheets().spreadsheets.values.append({
       spreadsheetId: idPlanilla(),
       range: `'${await nombreReal(hoja)}'`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: [celdas(fila)] }
-    });
+    }));
   } catch (e) {
     if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
     throw e;
@@ -242,12 +366,12 @@ export async function escribirFila(hoja: string, fila: number, valores: unknown[
   // Lo leído de esta pestaña deja de valer, antes y después de escribir.
   olvidar(hoja);
   try {
-    await sheets().spreadsheets.values.update({
+    await conReintento(async () => sheets().spreadsheets.values.update({
       spreadsheetId: idPlanilla(),
       range: `'${await nombreReal(hoja)}'!A${fila}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [celdas(valores)] }
-    });
+    }));
   } catch (e) {
     if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
     throw e;
@@ -266,7 +390,7 @@ export async function borrarFila(hoja: string, fila: number): Promise<void> {
   try {
     const sheetId = await idDeHoja(hoja);
   
-    await sheets().spreadsheets.batchUpdate({
+    await conReintento(async () => sheets().spreadsheets.batchUpdate({
       spreadsheetId: idPlanilla(),
       requestBody: {
         requests: [{
@@ -275,7 +399,7 @@ export async function borrarFila(hoja: string, fila: number): Promise<void> {
           }
         }]
       }
-    });
+    }));
   } catch (e) {
     if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
     throw e;
@@ -297,10 +421,10 @@ export async function asegurarHoja(hoja: string): Promise<string> {
       return await nombreReal(hoja);
     } catch {
       try {
-        await sheets().spreadsheets.batchUpdate({
+        await conReintento(async () => sheets().spreadsheets.batchUpdate({
           spreadsheetId: idPlanilla(),
           requestBody: { requests: [{ addSheet: { properties: { title: hoja } } }] }
-        });
+        }));
       } catch (e) {
         // "A sheet with the name X already exists": alguien la creó entremedio.
         // Eso es justo lo que queríamos, así que no es un error — pero sí hay
@@ -338,16 +462,16 @@ export async function escribirBloque(hoja: string, filas: unknown[][]): Promise<
   olvidar(hoja);
   try {
     const titulo = await asegurarHoja(hoja);
-    await sheets().spreadsheets.values.update({
+    await conReintento(async () => sheets().spreadsheets.values.update({
       spreadsheetId: idPlanilla(),
       range: `'${titulo}'!A1`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: filas.map(celdas) }
-    });
-    await sheets().spreadsheets.values.clear({
+    }));
+    await conReintento(async () => sheets().spreadsheets.values.clear({
       spreadsheetId: idPlanilla(),
       range: `'${titulo}'!A${filas.length + 1}:ZZ`
-    });
+    }));
   } catch (e) {
     if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
     throw e;
@@ -366,13 +490,13 @@ export async function agregarFilas(hoja: string, filas: unknown[][]): Promise<vo
   olvidar(hoja);
   try {
     if (!filas.length) return;
-    await sheets().spreadsheets.values.append({
+    await conReintento(async () => sheets().spreadsheets.values.append({
       spreadsheetId: idPlanilla(),
       range: `'${await nombreReal(hoja)}'`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: filas.map(celdas) }
-    });
+    }));
   } catch (e) {
     if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
     throw e;
@@ -399,7 +523,7 @@ export async function borrarFilas(hoja: string, filas: number[]): Promise<void> 
   
     const sheetId = await idDeHoja(hoja);
   
-    await sheets().spreadsheets.batchUpdate({
+    await conReintento(async () => sheets().spreadsheets.batchUpdate({
       spreadsheetId: idPlanilla(),
       requestBody: {
         requests: orden.map((fila) => ({
@@ -408,7 +532,7 @@ export async function borrarFilas(hoja: string, filas: number[]): Promise<void> 
           }
         }))
       }
-    });
+    }));
   } catch (e) {
     if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
     throw e;
@@ -449,7 +573,8 @@ export async function asegurarEncabezado(
   hoja: string, encabezado: string[]
 ): Promise<string[][]> {
   await asegurarHoja(hoja);
-  const filas = await leerHoja(hoja);
+  // Fresca: quien pide el encabezado va a buscar en qué fila escribir.
+  const filas = await leerHoja(hoja, true);
   if (filas.length > 0 && (filas[0] ?? []).some((c) => String(c).trim() !== '')) {
     return filas;
   }

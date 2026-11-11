@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, quienEs } from '@/lib/permisos';
 import { guardarExtrasDelDia, leerExtras, anotar } from '@/lib/datos';
 import { esFecha, hoy } from '@/lib/fechas';
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic';
  * Un día cerrado solo acepta una corrección, igual que el equipo: ver
  * `guardaDelDia()`.
  */
-export async function PUT(req: Request) {
+export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
   try {
@@ -70,4 +71,4 @@ export async function PUT(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

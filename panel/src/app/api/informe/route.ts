@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
+import { HOJA_ACTIVIDADES, HOJA_COLABORADORES } from '@/lib/extras';
+import { HOJA_BOLETAS, HOJA_PAGOS } from '@/lib/remuneraciones';
 import { leerTurnos, leerTrabajadores, leerExtras, leerColaboradores,
          leerPagosEquipo, anotarPagoEquipo, anotarPagosEquipo, borrarPagoEquipo, leerBoletas,
          anotar } from '@/lib/datos';
@@ -38,7 +42,7 @@ export const dynamic = 'force-dynamic';
  *
  * Es una ruta de solo lectura: el informe no escribe nada.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_PAGOS, HOJA_BOLETAS], async function GET(req: Request) {
   const no = await exigirVer(req, 'informe');
   if (no) return no;
   try {
@@ -60,7 +64,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Anota que a alguien ya se le pagó, entero o en parte.
@@ -74,7 +78,7 @@ export async function GET(req: Request) {
  * un estado intermedio que haya que mantener: es un pago más chico, y pagar
  * el resto después es otra fila. La suma cierra sola.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'pagar');
   if (no) return no;
   try {
@@ -113,10 +117,10 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /** Borra un pago anotado por error. Queda en la bitácora. */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const no = await exigir(req, 'pagar');
   if (no) return no;
   try {
@@ -131,4 +135,4 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

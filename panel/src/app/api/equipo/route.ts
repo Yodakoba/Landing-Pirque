@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_CIERRES } from '@/lib/cierres';
+import { HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
+import { HOJA_ACTIVIDADES } from '@/lib/extras';
 import {
   leerPuestos, guardarPuestos, leerTrabajadores, guardarTrabajadores, leerTurnos,
   leerCierres, leerExtras
@@ -49,7 +53,7 @@ const recortada = (gente: Trabajador[], verLinks: boolean, verSueldos: boolean) 
     // turno, entre quiénes se reparte— y ninguna dice cuánto gana nadie.
   }));
 
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_CIERRES, HOJA_ACTIVIDADES], async function GET(req: Request) {
   // **`equipo` y no `ver`** (2026-11-05). Esto devuelve la lista entera del
   // equipo —nombres, teléfonos, puesto— y quién trabaja cada día, que no es
   // el calendario de reservas. Mientras los tres roles que entraban al panel
@@ -93,7 +97,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Guarda la lista de puestos, la de trabajadores, o las dos.
@@ -103,7 +107,7 @@ export async function GET(req: Request) {
  * para que no convivan `Garzón` y `GARZON` como si fueran dos puestos. Lo
  * que se guarda es exactamente lo que se va a volver a leer.
  */
-export async function PUT(req: Request) {
+export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
   const rol = (await quienEs(req)).rol as Rol;
@@ -204,4 +208,4 @@ export async function PUT(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

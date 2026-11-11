@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerMenus, guardarMenus, anotar, leerReservas, leerLineasPresupuesto } from '@/lib/datos';
 import { limpiarProducto, usados, quitadosUsados, type Menu } from '@/lib/menus';
@@ -20,7 +21,7 @@ async function nombresVistos(): Promise<string[]> {
  * El catálogo, y cuáles productos ya se usaron: a esos la pantalla no les
  * ofrece *Quitar* sino *Desactivar*.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigirVer(req, 'configurar');
   if (no) return no;
   try {
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Guarda la lista entera.
@@ -49,7 +50,7 @@ export async function GET(req: Request) {
  * **No deja quitar un producto que ya se usó** (2026-11-10): responde 409
  * con su nombre. Ese se desactiva. Se comprueba acá y no solo en la pantalla.
  */
-export async function PUT(req: Request) {
+export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'configurar');
   if (no) return no;
   try {
@@ -83,4 +84,4 @@ export async function PUT(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

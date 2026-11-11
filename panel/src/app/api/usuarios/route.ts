@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerUsuarios, guardarUsuarios, anotar } from '@/lib/datos';
 import {
   hashDeClave, esRolDeCuenta, LARGO_MINIMO_CLAVE, type Usuario
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic';
 const sinHuellas = (lista: Usuario[]) =>
   lista.map(({ huella, ...resto }) => ({ ...resto, tieneClave: !!huella }));
 
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigir(req, 'usuarios');
   if (no) return no;
   try {
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Guarda la lista: nombres, roles y quién está activo.
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
  * y separarlas evita el accidente de que guardar la lista deje a alguien sin
  * poder entrar.
  */
-export async function PUT(req: Request) {
+export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'usuarios');
   if (no) return no;
   try {
@@ -78,7 +79,7 @@ export async function PUT(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Le pone contraseña a una cuenta.
@@ -86,7 +87,7 @@ export async function PUT(req: Request) {
  * La clave llega en claro —no hay otra forma, viene de un formulario— y se
  * guarda como huella scrypt. **Nunca se devuelve ni se anota.**
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'usuarios');
   if (no) return no;
   try {
@@ -117,4 +118,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

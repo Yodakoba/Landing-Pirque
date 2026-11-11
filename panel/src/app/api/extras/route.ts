@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_CIERRES } from '@/lib/cierres';
+import { HOJA_ACTIVIDADES, HOJA_COLABORADORES } from '@/lib/extras';
 import {
   leerColaboradores, guardarColaboradores, leerExtras, leerCierres, anotar
 } from '@/lib/datos';
@@ -30,7 +33,7 @@ const sinPlata = (gente: Colaborador[]) => gente.map((c) => ({
   ...c, monto: 0, banco: bancoVacio()
 }));
 
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_CIERRES], async function GET(req: Request) {
   const no = await exigirVer(req, 'extras');
   if (no) return no;
   try {
@@ -50,7 +53,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Guarda la lista de colaboradores completa.
@@ -59,7 +62,7 @@ export async function GET(req: Request) {
  * sin nombres vacíos y sin repetidos, donde "repetido" se decide
  * normalizado, para que no convivan `Juan` y `JUAN` como si fueran dos.
  */
-export async function PUT(req: Request) {
+export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
   const verSueldos = puede((await quienEs(req)).rol as Rol, 'sueldos');
@@ -105,4 +108,4 @@ export async function PUT(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

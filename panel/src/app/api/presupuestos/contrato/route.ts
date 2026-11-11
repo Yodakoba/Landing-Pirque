@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerPresupuestos, leerConfig, leerClientes, guardarPresupuesto, anotar } from '@/lib/datos';
 import { problemaConArchivo } from '@/lib/cobros';
@@ -36,7 +37,7 @@ const noEsTuya = (p: Presupuesto) => NextResponse.json({
 const sinFila = ({ fila: _f, ...resto }: Presupuesto) => resto;
 
 /** Muestra el contrato firmado. Lo ve quien ve las cotizaciones. */
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   const r = await cotizacionDe(req, new URL(req.url).searchParams.get('id') ?? '');
@@ -57,14 +58,14 @@ export async function GET(req: Request) {
     console.error('[contrato:ver]', e);
     return NextResponse.json({ error: errorDeDrive(e) }, { status: 502 });
   }
-}
+});
 
 /**
  * Sube el contrato firmado: una foto o un PDF, hasta 4 MB. Lo sube quien
  * puede tocar la cotización —el vendedor, solo las suyas—. Subir otro
  * reemplaza al anterior en la cotización; el archivo viejo queda en Drive.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -113,13 +114,13 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Quita el contrato firmado de la cotización, para cuando se subió el de
  * otra. El archivo no se borra de Drive: queda en su carpeta.
  */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -135,4 +136,4 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
