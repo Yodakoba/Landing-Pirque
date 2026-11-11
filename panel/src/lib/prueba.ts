@@ -3981,5 +3981,34 @@ console.log('\nCotizaciones, fase 2');
      'lo del contrato va y vuelve de la planilla');
 }
 
+/* ---------- una cotización ganada llega entera a Reservas y ocupa el día (2026-11-11) ---------- */
+{
+  // El camino completo de "Marcar ganada", sin la planilla: la cotización se
+  // vuelve fila de Reservas, la fila se vuelve a leer, y el día —abierto con
+  // la regla de una reserva a mano— la cuenta.
+  const catalogo = [nuevoProducto({ nombre: 'Lo Pirque', precioEnLinea: 25000, precioEnLocal: 25000 })];
+  const encP = ENCABEZADO_PRESUPUESTOS;
+  const base = leerPresupuestosDe([encP, ['PRE-77', '2026-11-11']])[0];
+  const p = { ...base, cliente: 'Dei Mudder', email: 'dei@correo.cl', telefono: '+56 9 1234 5678',
+    invitados: 40, descuento: 0 };
+  const lineas = [{ presupuesto: 'PRE-77', concepto: 'Lo Pirque', cantidad: 40, precio: 25000,
+    personas: 40, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0, fila: 2 }];
+  const r = reservaDesdePresupuesto(p, lineas as never, catalogo, 'Verónica');
+  const enc = Object.values(COL_RESERVAS) as string[];
+  const fila = filaReserva(enc, { ...r, id: 'MANUAL-1', creada: '2026-11-11' }).map(String);
+  const leida = leerReservasDe([enc, fila])[0];
+  ok(leida.fecha === '2026-11-11' && leida.nombre === 'Dei Mudder' && leida.email === 'dei@correo.cl'
+     && leida.telefono === '+56 9 1234 5678' && leida.personas === 40 && leida.monto === 1000000
+     && /40 × Lo Pirque/.test(leida.menu) && leida.anotadaPor === 'Verónica'
+     && leida.notaPago.includes('cotización'),
+     'una cotización ganada llega a Reservas con fecha, cliente, contacto, menús, personas, monto y quién la ganó');
+  const dia = diaParaReservaManual(undefined, '2026-11-11', POR_DEFECTO);
+  ok(!!dia && dia.capacidad === POR_DEFECTO.cupoNormal && esPrivada(dia.estado),
+     'el día de una ganada que no estaba en el calendario se abre privado, con el cupo de siempre');
+  const occ = ocupacionDe([leida], { ...dia!, fila: 2 });
+  ok(occ.tomadas === 40 && occ.quedan === POR_DEFECTO.cupoNormal - 40,
+     'y ese día cuenta a la gente de la cotización: ocupa cupo');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);
