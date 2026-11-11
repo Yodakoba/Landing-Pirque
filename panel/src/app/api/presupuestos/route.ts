@@ -443,6 +443,18 @@ export async function PATCH(req: Request) {
         }
         if (cambio) await guardarPresupuesto(o);
       }
+      // **Volver a abrir una perdida reabre las del grupo** (2026-11-12): *Se
+      // perdió* se copia a todas, así que deshacerlo también. Sin esto la
+      // otra alternativa quedaba perdida y ya no iba en el link.
+      if (estadoNormal(previo.estado) === ESTADO_PRESUPUESTO.rechazado
+          && estadoNormal(p.estado) !== ESTADO_PRESUPUESTO.rechazado) {
+        for (const otra of lista) {
+          if (otra.id === p.id || grupoDe(otra) !== grupoDe(p) || otra.idReserva
+              || estadoNormal(otra.estado) !== ESTADO_PRESUPUESTO.rechazado) continue;
+          const { fila: _fr, ...o } = otra;
+          await guardarPresupuesto({ ...o, estado: p.estado, motivo: '' });
+        }
+      }
     }
 
     await anotar({ ...quien,

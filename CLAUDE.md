@@ -2375,6 +2375,14 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   antes`) y en blanco rige Configuración (`seguimiento_dias` = 5,
   `seguimiento_antes_evento` = 14). En 0 no pregunta. El servidor pone
   `Último seguimiento`; el navegador nunca escribe esas fechas.
+- **El estado no se elige con botones** (2026-11-12, lo pidió el cliente:
+  *"se dobla información"*). Los botones *Candidato · Borrador · Enviada ·
+  Negociación · Perdida* de la sección Seguimiento repetían el camino de
+  arriba, y apretar el marcado lo devolvía a Borrador sin avisar: con eso
+  desaparecía *Marcar ganada*. Ahora avanza solo con acciones: *Sí, la
+  mandé* (Enviada), *Están negociando*, *Se perdió…* (con su motivo y
+  *No se perdió: volver a abrirla*, que reabre también las alternativas del
+  grupo) y *Marcar ganada*.
 - **Cambiar precios de una Enviada** muestra una franja: *¿Están
   negociando?* con *Pasar a Negociación*. **Compara contra los precios del
   momento en que quedó Enviada**, no contra cómo se abrió la ventana: con la
@@ -2457,10 +2465,16 @@ las alternativas usa"*.
   paso del 4 (ya mandada) y arriba del 5. Las otras pasan a **No elegida** y
   **el mismo link pasa a mostrar solo la elegida**. *Volver a ofrecer todas*
   lo deshace mientras ninguna esté ganada. Elegir no toca el cupo.
-- **Ganar exige una sola en carrera** (`faltaElegir()`): mientras haya otra,
-  *Marcar ganada* se reemplaza por la pregunta, el contrato no se ofrece
-  —es de una sola versión— y `/convertir` responde 409. Una alternativa que
-  no quedó dice *"el cliente se quedó con la A"* y no tiene próximo paso.
+- ~~**Ganar exige una sola en carrera**~~ — **cambió el 2026-11-12**: **ganar
+  una alternativa es elegirla** (lo decidió el cliente: *"ganar elige
+  sola"*). *Marcar ganada* aparece en cada alternativa con su anticipo
+  pagado, la confirmación dice *"El cliente se queda con la A: la B pasa a
+  No elegida"*, y `/convertir` ya no exige elegir antes. El paso aparte se
+  perdía: el cliente había elegido la B y no quedó tomado (justo ese
+  minuto la planilla cortaba por el límite de lecturas). **Elegir sigue en
+  el paso 5**, porque el contrato es de una sola versión. Una alternativa
+  que no quedó dice *"el cliente se quedó con la A"* y no tiene próximo
+  paso.
 
 ### Si el día se llenó mientras se cotizaba (2026-11-11)
 

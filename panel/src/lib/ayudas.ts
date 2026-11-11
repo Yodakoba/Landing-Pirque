@@ -484,8 +484,8 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   estadoCotizacion: {
     titulo: 'En qué va',
     texto: [
-      'Es para ordenarte y para los avisos: candidato, borrador, enviada, negociación, perdida.',
-      '"Ganada" no se elige acá: se llega con "Marcar ganada", que crea la reserva.',
+      'El camino de arriba dice en qué va. Avanza con lo que haces: "Sí, la mandé" la deja Enviada, "Marcar ganada" crea la reserva.',
+      '"Están negociando" y "Se perdió…" son para ordenarte y para los avisos. Una perdida se puede volver a abrir.',
       'Con varias alternativas vale para todas: van en un solo link y es una sola conversación.'
     ]
   },

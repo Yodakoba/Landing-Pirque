@@ -34,7 +34,7 @@ import {
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, yaEstaEnLaCotizacion, productoDe, showDe, cambiarCantidad,
   alternativasDe, letraDe, grupoDe, vivasDelGrupo, sigueViva, paraElLink,
-  ESTADOS_A_MANO, MOTIVOS_PERDIDA
+  MOTIVOS_PERDIDA
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, COBRO, type Menu } from '@/lib/menus';
 import {
@@ -840,7 +840,10 @@ export default function CotizacionDialogo({
   ) : null;
 
   /** El botón grande de ganar, el mismo en los dos pasos. */
-  const botonGanar = porElegir ? bloqueElegir : sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar ? (
+  // Con alternativas en carrera también se ofrece: ganar una es elegirla
+  // (2026-11-12, lo decidió el cliente). La confirmación dice cuáles quedan
+  // como No elegida.
+  const botonGanar = sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar ? (
     <span className="flex items-center gap-1">
       <button type="button" disabled={guardando} onClick={() => setConfirmandoGanar(true)}
         className="tecla min-h-[64px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
@@ -885,8 +888,7 @@ export default function CotizacionDialogo({
             onClick={() => setPaso(5)}>Ir al paso 5: Contrato →</button>
         </Hito>
       )
-    ) : porElegir && (mandada || anticipoPagado) ? bloqueElegir
-    : anticipoPagado || (mandada && cond.pct === 0) ? (
+    ) : anticipoPagado || (mandada && cond.pct === 0) ? (
       <Hito tono={sinCupo ? 'ambar' : 'verde'}
         titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
         bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar}>
@@ -1497,23 +1499,42 @@ export default function CotizacionDialogo({
             {/* ---------- Seguimiento ---------- */}
             {!cancelada && (
             <Seccion tono="rosa" icono="📨" titulo="Seguimiento y envío" ayuda="seguimiento">
-            {!ganada && (
-              <div>
-                <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                  En qué va <AyudaCorta tema="estadoCotizacion" />
+            {/* **Sin botones de estado** (2026-11-12, lo pidió el cliente:
+                *"se dobla información"*). El camino de arriba ya dice en qué
+                va, y los botones *Candidato · Borrador · Enviada…* lo
+                repetían; peor, apretar el marcado lo devolvía a Borrador sin
+                avisar y con eso desaparecía *Marcar ganada*. Ahora el estado
+                avanza solo con acciones: *Sí, la mandé* (Enviada), *Están
+                negociando*, *Se perdió…* y *Marcar ganada*. */}
+            {!ganada && estado === ESTADO_PRESUPUESTO.rechazado ? (
+              <div className="rounded-lg border-2 border-hueso/25 p-3">
+                <p className="text-[16px] font-bold">Se perdió</p>
+                <p className="mb-1 mt-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                  Por qué
                 </p>
-                <Elegir etiqueta="Estado" opciones={ESTADOS_A_MANO} valor={estado}
-                  onElegir={(v) => setEstado(v || ESTADO_PRESUPUESTO.borrador)} />
-                {estado === ESTADO_PRESUPUESTO.rechazado && (
-                  <div className="mt-3">
-                    <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                      Por qué se perdió
-                    </p>
-                    <Elegir etiqueta="Motivo" opciones={MOTIVOS_PERDIDA} valor={motivo} onElegir={setMotivo} />
-                    <input value={motivo} onChange={(e) => setMotivo(e.target.value)}
-                      placeholder="u otro motivo" className={`${ENTRADA} mt-2 sm:w-80`} />
-                  </div>
+                <Elegir etiqueta="Motivo" opciones={MOTIVOS_PERDIDA} valor={motivo} onElegir={setMotivo} />
+                <input value={motivo} onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="u otro motivo" className={`${ENTRADA} mt-2 sm:w-80`} />
+                {puedeEditar && (
+                  <button type="button" className="boton mt-3 min-h-[44px]"
+                    onClick={() => { setEstado(p?.enviada ? ESTADO_PRESUPUESTO.enviado : ESTADO_PRESUPUESTO.borrador); setMotivo(''); }}>
+                    No se perdió: volver a abrirla
+                  </button>
                 )}
+              </div>
+            ) : !ganada && puedeEditar && p && (
+              <div className="flex flex-wrap items-center gap-2">
+                {estado === ESTADO_PRESUPUESTO.negociacion && (
+                  <span className="rounded-full border-2 border-ambar/60 bg-ambar/10 px-3 py-1 text-[14px]
+                                   font-semibold text-ambar-texto">En negociación</span>
+                )}
+                {estado === ESTADO_PRESUPUESTO.enviado && (
+                  <button type="button" className="boton min-h-[44px]"
+                    onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Están negociando</button>
+                )}
+                <button type="button" className="boton min-h-[44px] hover:!border-rojo-fuerte hover:text-rojo-texto"
+                  onClick={() => setEstado(ESTADO_PRESUPUESTO.rechazado)}>Se perdió…</button>
+                <AyudaCorta tema="estadoCotizacion" />
               </div>
             )}
 
@@ -2083,8 +2104,12 @@ export default function CotizacionDialogo({
         <Dialogo titulo="¿Marcarla ganada?" onCerrar={() => setConfirmandoGanar(false)}>
           <p className="mt-3 text-[16px]">
             Se crea la reserva de <strong>{personasDelEvento} personas</strong> y le toma el cupo
-            al {esFecha(fechaReal) ? enPalabras(fechaReal) : 'día del evento'}. Las otras
-            alternativas de este cliente pasan a <strong>No elegida</strong>.
+            al {esFecha(fechaReal) ? enPalabras(fechaReal) : 'día del evento'}.
+            {porElegir ? (
+              <> El cliente se queda con <strong>la {letra}</strong>: {vivas.filter((a) => a.id !== p?.id)
+                .map((a) => `la ${letraDe(a, alternativas)}`).join(' y ')} pasa{vivas.length > 2 ? 'n' : ''} a{' '}
+                <strong>No elegida</strong>.</>
+            ) : alts.length > 1 ? <> Las otras alternativas pasan a <strong>No elegida</strong>.</> : null}
           </p>
           {!anticipoPagado && !firmado && (
             <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-3 text-[15px]">
