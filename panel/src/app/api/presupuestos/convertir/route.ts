@@ -3,7 +3,7 @@ import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
   crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
-  actualizarPagoDeReserva
+  actualizarPagoDeReserva, abrirElDiaSiHaceFalta
 } from '@/lib/datos';
 import { condicionesDe, estadoCobros, cobrosDe } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
@@ -111,6 +111,11 @@ export async function POST(req: Request) {
     // persona, así que tiene dueño como cualquier otra anotada a mano.
     const idReserva = await crearReserva(
       reservaDesdePresupuesto(p, suyas, menus, quien.usuario));
+    // **Ganar abre el día**, igual que anotar una reserva a mano: si no
+    // estaba en el calendario se crea privado con el cupo de siempre, y si
+    // estaba cerrado se abre para nosotros. Sin esto el día quedaba "sin
+    // cupo" con la gente de la cotización adentro.
+    await abrirElDiaSiHaceFalta(p.fecha);
     // Y recién ahora el vínculo, que es lo que apaga el conteo de posibles.
     // Se guarda la cotización ORIGINAL, no la que tiene el cliente resuelto:
     // las columnas viejas de cliente siguen en blanco si tenía ficha.

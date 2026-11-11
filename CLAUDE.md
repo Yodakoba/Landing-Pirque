@@ -1950,6 +1950,14 @@ en $0 y la pantalla avisa que se escriba en pesos.
   nota del pago— no se toca. Si el día está cerrado, es una corrección con
   motivo (`guardaDelDia()`).
 - **Editar la ficha del cliente reescribe las reservas** de sus ganadas.
+- **Marcar ganada abre el día** (2026-11-11, lo reclamó el cliente: una
+  ganada del miércoles 11 dejaba el día *sin cupo* con la gente adentro).
+  Es la misma regla de una reserva a mano, `diaParaReservaManual()`, a
+  través de `abrirElDiaSiHaceFalta()` en `datos.ts`: un día que no está en
+  el calendario se crea **privado** con el cupo de siempre, uno cerrado se
+  abre para nosotros, y uno sin cupo recibe el de siempre. Lo hace también
+  `sincronizarReserva()`, así que **guardar una ganada de antes la arregla**
+  y una ganada que cambia de fecha abre el día nuevo.
 - **La reserva no se edita a mano** salvo lo del día, ni se borra: la ruta
   responde 409 y la página del día muestra *Cotización N° …* en vez de
   *Editar / Borrar*. **No hizo falta una columna nueva en `Reservas`**: el
@@ -1976,6 +1984,10 @@ en $0 y la pantalla avisa que se escriba en pesos.
   que muestra; un día sin ocupación —cerrado sin reservas, o fuera del
   calendario, que dice *sin abrir*— se dibuja igual con `PuntoYPalabra`. Si
   la ocupación no llega, el calendario sale igual.
+- **Abrir un día no lo agranda** (2026-11-11): la tarjeta queda del mismo
+  tamaño, marcada en dorado, y sus cotizaciones van en una franja a todo el
+  ancho bajo su semana. Antes se estiraba a dos columnas y arrastraba el
+  alto de toda la fila.
 - **`/clientes`**: cada ficha muestra su historial de cotizaciones, la ganada
   en verde y las alternativas marcadas, y *+ Cotizarle*.
 - **El documento** (`/presupuesto/<token>`) dice *Cotización*, toma el cliente
