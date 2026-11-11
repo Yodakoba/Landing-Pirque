@@ -2360,7 +2360,10 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   `seguimiento_antes_evento` = 14). En 0 no pregunta. El servidor pone
   `Último seguimiento`; el navegador nunca escribe esas fechas.
 - **Cambiar precios de una Enviada** muestra una franja: *¿Están
-  negociando?* con *Pasar a Negociación*.
+  negociando?* con *Pasar a Negociación*. **Compara contra los precios del
+  momento en que quedó Enviada**, no contra cómo se abrió la ventana: con la
+  base al abrir, armar las líneas y después apretar *Sí, la mandé* sacaba la
+  franja en el acto (lo reclamó el cliente el mismo día).
 - **El contrato se manda igual que la cotización** (2026-11-11, lo pidió el
   cliente): WhatsApp, Correo, Copiar link y Ver el contrato, en la sección
   El contrato y en el próximo paso de una ganada. Al volver pregunta *¿Le
