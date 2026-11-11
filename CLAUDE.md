@@ -1257,6 +1257,45 @@ parejas obligan a leerlas todas para elegir la primera.
   equipo y de las actividades extras. Era el último `<select>` de los tres
   lugares donde se pregunta exactamente lo mismo.
 
+### Un solo vocabulario del pago, y cómo se ingresa en Fudo (2026-11-11)
+
+Lo pidió el cliente: el estado del pago tenía que ser *"estilo PlayStation y
+coherente… entre cotizaciones, Shopify y reservas manuales"*, y quien abre
+la mesa tiene que ver **a primera vista con qué precio la ingresa en Fudo**.
+
+- **Un estado nuevo, *Abonada*** (`partially_paid`, el mismo código que usa
+  Shopify): pagó una parte. Viene y ocupa su lugar, y cuenta como **por
+  cobrar**. La columna nueva `Abonado` (al final, se agrega sola) guarda
+  cuánto. Shopify `partially_paid` → Abonada sin monto; una cotización ganada
+  lo saca de sus cobros (`pagoPorCobros()`: todo → Pagada, algo → Abonada con
+  lo cobrado, nada → Por pagar).
+- **El mismo vocabulario en todas partes** (`PastillaPago`): de dónde viene
+  —*Shopify · Pago directo*, *Shopify · Solo reserva*, *Cotización*,
+  *Anotada a mano*— y cómo va, **✓ Pagada · ½ Abonada · ○ Por pagar**, con
+  el ícono para distinguirlo sin leer. Rojo si ya no viene.
+- **En el formulario son botones, no un desplegable**: tres grandes
+  (Pagada · Abonada · Por pagar). Con Abonada pide **cuánto abonó** y dice
+  cuánto falta; con Pagada o Abonada, **cómo pagó** con botones rápidos
+  —*Transferencia · Efectivo · Tarjeta*, confirmados por el cliente— que
+  escriben el medio, y el texto sigue libre. **La reserva se cayó…** es un
+  botón aparte que abre los tres rojos. **De Shopify, el pago lo pone la
+  tienda**: el formulario lo muestra y solo deja marcar que se cayó.
+- **Cómo ingresarla en Fudo** (`comoIngresar()` en `lib/fudo.ts`, pura y con
+  pruebas; la arma el servidor en `/api/reservas` y `/api/recepcion`). Una
+  caja con su ícono, en la recepción, en la página del día y en la cara
+  *Reservas* de /turnos:
+  - **✓ Ya pagó · ingrésalo como pago directo**, menú por menú.
+  - **$ Solo reserva · cobra el precio sin descuento**: *2 × Tradiciones a
+    $49.000*, el precio de pagar en el local de Productos, y el total.
+  - **½ Abonó $X · cobra el resto**, con lo que falta.
+  - **De una cotización**, el precio acordado y no el de la carta.
+  - **! Compró pago directo pero no aparece pagado**: que lo vea el jefe de
+    turno antes de abrir la mesa. Reemplaza al viejo "⚠ pago directo sin
+    pagar".
+- **Esto le muestra montos a la anfitriona**, que antes no veía ninguno: es
+  lo que el cliente pidió —saber qué cobrar al abrir la mesa—, y llega como
+  instrucción armada, no como los datos del pago.
+
 ### La modalidad la escribe Shopify; el estado del pago, cualquiera (2026-10-30)
 
 Lo encontró el cliente, y era un error lógico de fondo: *"cuando se agrega una

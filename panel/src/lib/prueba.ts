@@ -8,7 +8,7 @@
  */
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, faltaCobrar,
          enPesos, CORTES } from './ocupacion.ts';
-import { pagoEnEspanol, pagoConGlosa, ESTADOS_QUE_LIBERAN,
+import { pagoEnEspanol, pagoConGlosa, ESTADOS_QUE_LIBERAN, pagoPorCobros,
          ESTADOS_QUE_VIENEN } from './pagos.ts';
 import { aCSV } from './csv.ts';
 import { proximosFinesDeSemana, diaSemana, sumarDias, enPalabras, fechaEnZona,
@@ -32,6 +32,7 @@ import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS
 import { idDeDrive } from './config.ts';
 import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto } from './auth.ts';
+import { comoIngresar } from './fudo.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          faltaParaFactura, type Cliente } from './clientes.ts';
@@ -218,7 +219,7 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
                'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
-               'Llegaron','Aviso recepción'];
+               'Llegaron','Aviso recepción','Abonado'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -359,9 +360,11 @@ ok(aReserva(pedido({ line_items: [linea('Tradiciones', 2, 'Pago directo', 'no-es
 /* ---------- el estado, donde una cancelacion gana ---------- */
 ok(estadoDe(pedido({ financial_status: 'paid' })) === ESTADO_PAGO.pagado, 'paid es pagado');
 ok(estadoDe(pedido({ financial_status: 'pending' })) === ESTADO_PAGO.pendiente, 'pending, pendiente');
+ok(estadoDe(pedido({ financial_status: 'partially_paid' })) === ESTADO_PAGO.abonado,
+   'partially_paid es Abonada, no "por pagar" ni "pagada"');
 ok(estadoDe(pedido({ financial_status: 'authorized' })) === ESTADO_PAGO.pendiente,
    'authorized cuenta como PENDIENTE: la tarjeta esta retenida pero la plata no se cobro');
-ok(estadoDe(pedido({ financial_status: 'partially_paid' })) === ESTADO_PAGO.pendiente,
+ok(estadoDe(pedido({ financial_status: 'partially_paid' })) !== ESTADO_PAGO.pagado,
    'un pago a medias tampoco esta pagado');
 ok(estadoDe(pedido({ financial_status: 'refunded' })) === ESTADO_PAGO.reembolsado, 'refunded');
 
@@ -1002,6 +1005,16 @@ ok(rangoEnPalabras([]) === '', 'sin dias no se nombra nada');
 // Se decide por el ESTADO DEL PAGO, no por la modalidad comprada.
 ok(!faltaCobrar(r({ estadoPago: 'paid' })), 'una pagada no se cobra de nuevo');
 ok(faltaCobrar(r({ estadoPago: 'pending' })), 'una pendiente si');
+ok(faltaCobrar(r({ estadoPago: 'partially_paid' })) && ocupaLugar(r({ estadoPago: 'partially_paid' })),
+   'una abonada viene, y todavía hay que cobrarle el resto');
+ok(pagoEnEspanol('partially_paid') === 'Abonada' && ESTADOS_QUE_VIENEN.includes('partially_paid'),
+   'Abonada se dice en español y está entre las que vienen');
+ok(pagoPorCobros(100000, 100000).estado === 'paid' && pagoPorCobros(100000, 100000).abonado === null,
+   'cobros que cubren el total: Pagada');
+ok(pagoPorCobros(100000, 30000).estado === 'partially_paid' && pagoPorCobros(100000, 30000).abonado === 30000,
+   'cobros que cubren una parte: Abonada, con lo que entró');
+ok(pagoPorCobros(100000, 0).estado === 'pending' && pagoPorCobros(0, 0).estado === 'pending',
+   'sin cobros, o sin total: Por pagar');
 ok(!faltaCobrar(r({ estadoPago: 'refunded' })), 'una reembolsada no: ni viene ni paga');
 ok(!faltaCobrar(r({ estadoPago: 'cancelled' })), 'ni una cancelada');
 
@@ -2785,8 +2798,8 @@ ok(pagoEnEspanol('algo_nuevo') === 'algo_nuevo',
 ok(pagoEnEspanol('') === '', 'y uno vacio se queda vacio');
 ok(pagoConGlosa('pending') === 'Por pagar — paga cuando llegue',
    'en el formulario va la palabra y lo que significa, sin el codigo en ingles');
-ok(ESTADOS_QUE_LIBERAN.length === 3 && ESTADOS_QUE_VIENEN.length === 2,
-   'cinco estados, repartidos en los dos grupos que ofrece el formulario');
+ok(ESTADOS_QUE_LIBERAN.length === 3 && ESTADOS_QUE_VIENEN.length === 3,
+   'seis estados, repartidos en los dos grupos que ofrece el formulario');
 ok(ESTADOS_QUE_LIBERAN.every((e) => !ocupaLugar(r({ estadoPago: e }))),
    'los tres del grupo "ya no viene" liberan el cupo DE VERDAD: es la misma lista que mira ocupaLugar()');
 ok(ESTADOS_QUE_VIENEN.every((e) => ocupaLugar(r({ estadoPago: e }))),
@@ -4241,6 +4254,39 @@ console.log('\nCuándo se puede marcar ganada');
 ok(puedeGanar(true, false), 'con el anticipo pagado se gana');
 ok(puedeGanar(false, true), 'con el contrato firmado se gana aunque falte el anticipo');
 ok(!puedeGanar(false, false), 'sin anticipo pagado ni contrato firmado, no');
+
+console.log('\nCómo se ingresa en Fudo');
+{
+  const carta = [
+    nuevoProducto({ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 }),
+    nuevoProducto({ nombre: 'Niños', precioEnLinea: 19000, precioEnLocal: 24000 })
+  ];
+  const base = { id: '7345', menu: '3 × Tradiciones + 1 × Niños', monto: 151000, abonado: null };
+  const directo = comoIngresar({ ...base, tipoPago: 'Pago directo', estadoPago: 'paid' }, carta);
+  ok(directo?.tono === 'verde' && directo.lineas[0] === '3 × Tradiciones · pago directo',
+     'pago directo pagado: se ingresa como pago directo, menú por menú');
+  const solo = comoIngresar({ ...base, tipoPago: 'Solo reserva', estadoPago: 'pending' }, carta);
+  ok(solo?.tono === 'ambar' && solo.titulo.startsWith('Solo reserva')
+     && solo.lineas[0] === '3 × Tradiciones a $49.000 · sin descuento',
+     'solo reserva: Tradiciones a $49.000, no a $44.000');
+  ok(solo?.lineas.includes('Total a cobrar: $171.000') ?? false,
+     'y el total sale de la carta sin descuento, no del monto de Shopify');
+  const raro = comoIngresar({ ...base, tipoPago: 'Pago directo', estadoPago: 'pending' }, carta);
+  ok(raro?.tono === 'rojo', 'compró pago directo y no aparece pagado: se avisa, no se adivina');
+  const manual = comoIngresar({ ...base, id: 'MANUAL-1', tipoPago: '', estadoPago: 'paid' }, carta);
+  ok(manual?.tono === 'verde', 'una reserva a mano pagada también va como pago directo');
+  const abonada = comoIngresar({ ...base, id: 'MANUAL-2', tipoPago: '', estadoPago: 'partially_paid', abonado: 71000 }, carta);
+  ok(abonada?.tono === 'cielo' && abonada.lineas.includes('Falta por cobrar: $100.000'),
+     'abonada: dice cuánto abonó y cobra el resto de la carta');
+  const cot = comoIngresar({ ...base, id: 'MANUAL-3', tipoPago: '', estadoPago: 'pending', monto: 2000000 }, carta, true);
+  ok(!!cot?.lineas.includes('Total a cobrar: $2.000.000') && !!cot && !cot.lineas.some((l) => l.includes('49.000')),
+     'de una cotización: el precio acordado, no el de la carta');
+  ok(comoIngresar({ ...base, menu: '2 × Menú Tradiciones', tipoPago: 'Solo reserva', estadoPago: 'pending' }, carta)
+       ?.lineas[0] === '2 × Menú Tradiciones a $49.000 · sin descuento',
+     'una fila vieja con "Menú Tradiciones" encuentra igual su precio');
+  ok(comoIngresar({ ...base, tipoPago: 'Solo reserva', estadoPago: 'cancelled' }, carta) === null,
+     'una cancelada no se ingresa');
+}
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

@@ -24,6 +24,14 @@ export interface Reserva {
   llegaron?: number | null;
   /** El aviso de recepción al jefe de turno, o vacío. */
   avisoRecepcion?: string;
+  /** Cuánto abonó, si está *Abonada*; `null` si no se sabe. */
+  abonado?: number | null;
+  /**
+   * **Cómo se ingresa en Fudo** (`comoIngresar()`). No es una columna: lo
+   * arma el servidor al responder, para que la pantalla no tenga que
+   * deducirlo.
+   */
+  ingreso?: import('./fudo.ts').Ingreso | null;
   /** El id del evento del CRM del socio del que salió, o vacío. */
   eventoCRM: string;
   /**

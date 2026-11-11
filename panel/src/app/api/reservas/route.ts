@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
-import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta } from '@/lib/datos';
-import { ASISTENCIA } from '@/lib/columnas';
+import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasDeCotizaciones } from '@/lib/datos';
+import { comoIngresar } from '@/lib/fudo';
+import { ASISTENCIA, ESTADO_PAGO } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
 import { guardaDelDia } from '@/lib/guardaCierre';
 
@@ -15,8 +16,15 @@ export async function GET(req: Request) {
   try {
     // Los menus viajan junto a las reservas: las dos vistas que leen esto
     // los necesitan para agrupar, y asi no hay una peticion mas.
-    const [reservas, menus] = await Promise.all([leerReservas(), leerMenus()]);
-    return NextResponse.json({ reservas, menus });
+    const [reservas, menus, deCot] = await Promise.all([
+      leerReservas(), leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>())
+    ]);
+    // **Cómo ingresarla en Fudo**, armado acá (2026-11-11): la misma
+    // instrucción en la página del día, en /turnos y en la recepción.
+    return NextResponse.json({
+      reservas: reservas.map((r) => ({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) })),
+      menus
+    });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
@@ -60,6 +68,9 @@ export async function POST(req: Request) {
       // nace sin ella, que es lo que de verdad pasó.
       tipoPago: '', estadoPago: b.estadoPago ?? '',
       notaPago: String(b.notaPago ?? '').trim(),
+      // Cuánto abonó, solo si quedó *Abonada* (2026-11-11).
+      abonado: b.estadoPago === ESTADO_PAGO.abonado && Number(b.abonado) > 0
+        ? Math.round(Number(b.abonado)) : null,
       // **De qué ganado del socio sale esta reserva**, cuando sale de uno.
       // Al revés que `tipoPago`, este campo SÍ se acepta del navegador: no
       // es una opinión sobre la reserva, es de dónde viene — y acá no se

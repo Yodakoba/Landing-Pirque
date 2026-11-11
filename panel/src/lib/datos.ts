@@ -54,7 +54,7 @@ import {
 import { conCliente } from './cotizar.ts';
 import { HOJA_COBROS, ENCABEZADO_COBROS, leerCobrosDe, filaCobro, cobrosDe, estadoCobros,
          type Cobro } from './cobros.ts';
-import { liberaCupo } from './pagos.ts';
+import { liberaCupo, pagoPorCobros } from './pagos.ts';
 import { ESTADO_PAGO } from './columnas.ts';
 import {
   HOJA_COLABORADORES, HOJA_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
@@ -100,6 +100,7 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
   // Las de la recepción (2026-11-11), por lo mismo.
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.llegaron);
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.avisoRecepcion);
+  enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.abonado);
   // MANUAL- para que no pueda chocar con un id de Shopify, que es numérico.
   const id = 'MANUAL-' + Date.now();
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, {
@@ -116,6 +117,7 @@ export async function editarReserva(fila: number, cambios: Partial<Reserva>): Pr
   // Las de la anfitriona se agregan solas la primera vez que se escriben.
   if (cambios.llegaron !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.llegaron);
   if (cambios.avisoRecepcion !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.avisoRecepcion);
+  if (cambios.abonado !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.abonado);
   const previa = filas[fila - 1];
   if (!previa) throw new Error(`La fila ${fila} ya no existe en la planilla.`);
   await escribirFila(HOJA_RESERVAS, fila, filaReserva(enc, cambios, previa));
@@ -1059,7 +1061,8 @@ export async function cancelarReservaDe(idReserva: string): Promise<boolean> {
 
 /**
  * **El estado del pago de la reserva de una cotización ganada sale de sus
- * cobros**: *Pagada* cuando cubren el total, *Por pagar* mientras falte.
+ * cobros**: *Pagada* cuando cubren el total, *Abonada* con lo cobrado
+ * mientras falte una parte (2026-11-11), *Por pagar* sin nada.
  *
  * Una reserva que liberó su lugar —cancelada, reembolsada, anulada— no se
  * toca: eso lo decidió una persona en el día, y un cobro no la revive.
@@ -1077,6 +1080,8 @@ export async function actualizarPagoDeReserva(idPresupuesto: string): Promise<vo
   if (!r || liberaCupo(r.estadoPago)) return;
   const total = totalDe(lineasDe(lineas, p.id), p.descuento);
   const e = estadoCobros({ anticipo: 0, total }, cobrosDe(cobros, p.id));
-  const estado = e.completo ? ESTADO_PAGO.pagado : ESTADO_PAGO.pendiente;
-  if (r.estadoPago !== estado) await editarReserva(fila, { estadoPago: estado });
+  const { estado, abonado } = pagoPorCobros(total, e.pagado);
+  if (r.estadoPago !== estado || (r.abonado ?? null) !== abonado) {
+    await editarReserva(fila, { estadoPago: estado, abonado });
+  }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ESTADO_PAGO } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { puedeTocarReserva, puede, type Rol } from '@/lib/auth';
 import { editarReserva, borrarReserva, anotar, leerReservas,
@@ -101,6 +102,13 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // necesita el día del que sale —una edición puede moverla de fecha, y
     // entonces el día que la pierde también cambia para el socio—.
     const antes = (await leerReservas()).find((r) => r.fila === fila);
+    // Cuánto abonó: un número, y solo si queda *Abonada*; cualquier otro
+    // estado lo vacía, para que no quede un abono viejo colgando.
+    if (cambios.abonado !== undefined || cambios.estadoPago !== undefined) {
+      const abonada = (cambios.estadoPago ?? antes?.estadoPago) === ESTADO_PAGO.abonado;
+      const n = Number(cambios.abonado);
+      cambios.abonado = abonada && Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    }
     // **Y sirve para una tercera cosa desde el 2026-11-05**: saber de quién
     // es, porque un vendedor solo toca las suyas.
     // La anfitriona marca la entrada de cualquier reserva: no es dueña de
@@ -115,7 +123,7 @@ export async function PATCH(req: Request, { params }: { params: { fila: string }
     // se cambia acá es lo del día: si vino, cómo va el pago y su nota.
     const deCotizacion = antes ? (await reservasDeCotizaciones()).get(antes.id) : undefined;
     if (deCotizacion) {
-      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago', 'llegaron', 'avisoRecepcion']);
+      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago', 'abonado', 'llegaron', 'avisoRecepcion']);
       const ajenos = Object.keys(cambios).filter((k) => !DEL_DIA.has(k));
       if (ajenos.length) {
         return NextResponse.json({

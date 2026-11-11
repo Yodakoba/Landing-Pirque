@@ -61,6 +61,8 @@ export function estadoDe(p: PedidoShopify): string {
   if (f === 'refunded') return ESTADO_PAGO.reembolsado;
   if (f === 'voided') return ESTADO_PAGO.anulado;
   if (f === 'paid') return ESTADO_PAGO.pagado;
+  // Pagó una parte: *Abonada*, que cuenta como por cobrar (2026-11-11).
+  if (f === 'partially_paid') return ESTADO_PAGO.abonado;
   return ESTADO_PAGO.pendiente;
 }
 
@@ -318,7 +320,7 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  * actualiza la borraría.
  */
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
-  const { asistencia, creada, notaPago, eventoCRM, anotadaPor, llegaron, avisoRecepcion, ...resto } = r;
+  const { asistencia, creada, notaPago, eventoCRM, anotadaPor, llegaron, avisoRecepcion, abonado, ...resto } = r;
   return resto;
 }
 

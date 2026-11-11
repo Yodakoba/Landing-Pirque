@@ -20,6 +20,8 @@ import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
+import PastillaPago from './PastillaPago';
+import IngresoFudo from './IngresoFudo';
 import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
 import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
@@ -752,21 +754,9 @@ export default function DayView(
             </thead>
             <tbody>
               {visibles.map((r) => {
-                // "Pago directo / pending" es la combinación imposible: significa
-                // que la regla de medios de pago de Shopify no aplicó.
-                // **Solo puede pasarle a un pedido de Shopify**, que es lo
-                // que vuelve confiable este aviso: desde que la modalidad no
-                // se edita a mano, una fila con "Pago directo" ahí es un
-                // pedido de verdad. La guarda del id cubre a las filas
-                // viejas, de cuando el formulario sí la dejaba elegir.
-                const raro = !esManual(r.id) &&
-                             r.tipoPago === TIPO_PAGO.directo &&
-                             r.estadoPago === ESTADO_PAGO.pendiente;
-                // La modalidad, en color, para distinguirla sin leerla. Se
-                // mira con `includes` y no con `===` porque un pedido con
-                // las dos modalidades se anota como "A + B": si hay algo que
-                // se paga en el local, manda el ámbar.
-                const enElLocal = String(r.tipoPago).includes(TIPO_PAGO.local);
+                // "Pago directo / pending" —la regla de medios de pago de
+                // Shopify no aplicó— lo avisa ahora la caja roja de Fudo
+                // (`comoIngresar()`), que es donde se mira al abrir la mesa.
                 // **El mismo pedido anotado dos veces en la planilla.**
                 // El panel ya lo cuenta una sola vez —ver `leerReservasDe()`—
                 // así que esto no cambia ningún total: avisa, para que
@@ -807,34 +797,13 @@ export default function DayView(
                         <span className="block text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</span>
                       )}
                     </td>
-                    <td className="py-2 pr-3">
-                      {r.tipoPago ? (
-                        /* **Con borde, no solo con fondo de color.** Una
-                           pastilla delineada se reconoce sin distinguir el
-                           verde del ámbar, que es lo que pide la regla. */
-                        <span className={`inline-block whitespace-nowrap rounded-full border
-                                          px-2 py-0.5 text-[13px] font-semibold ${
-                          enElLocal ? 'border-ambar/50 bg-ambar/15 text-ambar-texto'
-                                    : 'border-verde/50 bg-verde/15 text-verde-texto'}`}>
-                          {r.tipoPago}
-                        </span>
-                      ) : (
-                        <span className="text-[13px] text-hueso/55">
-                          {esManual(r.id) ? 'anotada a mano' : '—'}
-                        </span>
-                      )}
-                      <div className={`mt-1 text-[13px] font-semibold ${
-                        liberaCupo(r.estadoPago) ? 'text-rojo-texto'
-                        : faltaCobrar(r) ? 'text-ambar-texto' : 'text-verde-texto'}`}>
-                        {pagoEnEspanol(r.estadoPago) || '—'}
-                      </div>
-                      {r.notaPago && (
-                        <div className="text-[13px] text-hueso/60">{r.notaPago}</div>
-                      )}
-                      {raro && (
-                        <div className="mt-1 text-[13px] font-semibold text-ambar-texto">
-                          ⚠ pago directo sin pagar
-                        </div>
+                    <td className="min-w-[240px] py-2 pr-3">
+                      {/* **El pago, dicho igual en todas partes** (2026-11-11):
+                          de dónde viene y cómo va, y debajo cómo se ingresa
+                          en Fudo. Ver `PastillaPago` y `comoIngresar()`. */}
+                      <PastillaPago r={r} deCotizacion={!!deCotizacion} />
+                      {ocupaLugar(r) && (
+                        <div className="mt-1.5"><IngresoFudo ingreso={r.ingreso} compacto /></div>
                       )}
                       {repetida && (
                         <div className="mt-1 text-[13px] font-semibold text-ambar-texto"

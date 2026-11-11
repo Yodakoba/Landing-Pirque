@@ -24,12 +24,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { yaLlego } from '@/lib/cierres';
 import { hoy } from '@/lib/fechas';
 import type { Reserva } from '@/lib/tipos';
-import { ASISTENCIA, TIPO_PAGO, esManual } from '@/lib/columnas';
-import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
+import { ASISTENCIA } from '@/lib/columnas';
 import { ocupaLugar, faltaCobrar } from '@/lib/ocupacion';
 import { menusDe } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import Asistencia from './Asistencia';
+import PastillaPago from './PastillaPago';
+import IngresoFudo from './IngresoFudo';
 
 /**
  * Un azulejo: el número grande arriba y qué es debajo. La misma forma que
@@ -202,7 +203,6 @@ export default function ReservasDelDia({
           <fieldset disabled={modo === 'bloqueado'} className="m-0 min-w-0 border-0 p-0">
           <ul className="mt-2 space-y-2">
             {delDia.map((r) => {
-              const enElLocal = String(r.tipoPago).includes(TIPO_PAGO.local);
               const libero = !ocupaLugar(r);
               return (
                 <li key={r.fila}
@@ -219,26 +219,13 @@ export default function ReservasDelDia({
                   {/* El menú tal como está anotado: un pedido con dos menús
                       dice "3 × Tradiciones + 2 × Niños", que ya se lee solo. */}
                   {r.menu && <div className="mt-0.5 text-sm text-hueso/70">{r.menu}</div>}
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px]">
-                    {r.tipoPago ? (
-                      <span className={`whitespace-nowrap rounded-full border px-2 py-0.5
-                                        font-semibold ${enElLocal
-                        ? 'border-ambar/50 bg-ambar/15 text-ambar-texto'
-                        : 'border-verde/50 bg-verde/15 text-verde-texto'}`}>
-                        {r.tipoPago}
-                      </span>
-                    ) : (
-                      <span className="text-hueso/55">
-                        {esManual(r.id) ? 'anotada a mano' : '—'}
-                      </span>
-                    )}
-                    <span className={`font-semibold ${
-                      liberaCupo(r.estadoPago) ? 'text-rojo-texto'
-                      : faltaCobrar(r) ? 'text-ambar-texto' : 'text-verde-texto'}`}>
-                      {pagoEnEspanol(r.estadoPago) || '—'}
-                    </span>
-                    {r.telefono && <span className="text-hueso/60">{r.telefono}</span>}
+                  {/* El pago, dicho igual que en la página del día, y cómo se
+                      ingresa en Fudo (2026-11-11). */}
+                  <div className="mt-2 flex flex-wrap items-start gap-x-4 gap-y-1">
+                    <PastillaPago r={r} />
+                    {r.telefono && <span className="text-[13px] text-hueso/60">{r.telefono}</span>}
                   </div>
+                  {!libero && <div className="mt-2"><IngresoFudo ingreso={r.ingreso} compacto /></div>}
                   {/* Lo que anotó la anfitriona (2026-11-11): cuántos llegaron
                       si fue distinto, y su aviso hasta que alguien lo resuelve. */}
                   {r.llegaron != null && r.llegaron !== r.personas && (

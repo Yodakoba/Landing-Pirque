@@ -40,6 +40,12 @@ export const COL_RESERVAS = {
   llegaron: 'Llegaron',
   avisoRecepcion: 'Aviso recepción',
   /**
+   * **Cuánto abonó una reserva *Abonada*** (2026-11-11): la plata que ya
+   * entró de una que pagó una parte. En blanco si no se sabe —Shopify no lo
+   * dice en el estado—. Una reserva de una cotización lo toma de sus cobros.
+   */
+  abonado: 'Abonado',
+  /**
    * De qué evento del CRM del socio salió esta reserva.
    *
    * **Es lo que impide contar la misma gente dos veces** (2026-11-03). Un
@@ -132,6 +138,8 @@ export function esManual(id: unknown): boolean {
 export const ESTADO_PAGO = {
   pagado: 'paid',
   pendiente: 'pending',
+  /** Pagó una parte: el `partially_paid` de Shopify (2026-11-11). */
+  abonado: 'partially_paid',
   reembolsado: 'refunded',
   anulado: 'voided',
   cancelado: 'cancelled'
