@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
-  leerPresupuestos, leerConfig, leerCobros, guardarPresupuesto, cancelarReservaDe, anotar
+  leerPresupuestos, leerConfig, leerCobros, guardarPresupuesto, cancelarReservaDe, anotar,
+  devolverElDia
 } from '@/lib/datos';
 import { cobrosDe } from '@/lib/cobros';
 import { devolucionSugerida, tranquilidadDeCotizacion } from '@/lib/cancelacion';
@@ -107,10 +108,13 @@ export async function POST(req: Request) {
       ...sinFila, estado: ESTADO_PRESUPUESTO.cancelada, motivo, devolucion,
       canceladaPor: quien.usuario, cancelada: ahoraEnChile()
     });
+    // Si el día existía solo por esta cotización, vuelve a como estaba.
+    const dia = await devolverElDia(p.fecha, p.diaAbierto, p.idReserva);
     await anotar({ ...quien, accion: 'Canceló un evento',
       detalle: `${folioDe(p)} · ${p.fecha} · motivo: ${motivo}`
-        + (devolucion ? ` · devolver ${enPesos(devolucion)}` : ' · sin devolución') });
-    return NextResponse.json({ ok: true, devolucion });
+        + (devolucion ? ` · devolver ${enPesos(devolucion)}` : ' · sin devolución')
+        + (dia === 'borrado' ? ' · el día salió del calendario' : dia === 'cerrado' ? ' · el día volvió a cerrado' : '') });
+    return NextResponse.json({ ok: true, devolucion, dia });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

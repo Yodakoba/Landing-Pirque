@@ -17,7 +17,8 @@ import {
   indices, faltantes, esManual
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
-import { diaParaReservaManual } from './dias.ts';
+import { diaParaReservaManual, queLeHizo, deshacerDia } from './dias.ts';
+import { ocupaLugar } from './ocupacion.ts';
 import { filaReserva, filaFecha, buscarFilaPorId, leerReservasDe,
          idsRepetidos } from './filas.ts';
 import { HOJA_CONFIG, leerConfigDe, aFilasConfig, POR_DEFECTO,
@@ -903,14 +904,42 @@ async function asegurarColumnas(hoja: string, encabezado: string[], columnas: st
  * abrir después desde el calendario; perder la reserva por esto sería
  * cambiar un problema chico por uno grande.
  */
-export async function abrirElDiaSiHaceFalta(fecha: string): Promise<void> {
+export async function abrirElDiaSiHaceFalta(fecha: string): Promise<'' | 'creado' | 'reabierto'> {
   try {
     const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
     const actual = fechas.find((f) => f.fecha === fecha);
     const nuevo = diaParaReservaManual(actual, fecha, cfg);
-    if (nuevo) await guardarFecha(nuevo);
+    if (!nuevo) return '';
+    await guardarFecha(nuevo);
+    // Qué se le hizo, para que una cotización cancelada lo pueda deshacer.
+    return queLeHizo(actual);
   } catch (e) {
     console.error('[reservas] abrir el dia', fecha, e);
+    return '';
+  }
+}
+
+/**
+ * **Al cancelar una cotización, el día vuelve a como estaba** si existía
+ * solo por ella (2026-11-11): `creado` se borra, `reabierto` vuelve a
+ * cerrado. Solo si no le queda ninguna otra reserva que ocupe lugar
+ * (`deshacerDia()`). Si falla, la cancelación ya está hecha: el día queda
+ * abierto y se puede borrar a mano desde el calendario.
+ */
+export async function devolverElDia(fecha: string, hizo: string, idReserva: string): Promise<string> {
+  try {
+    if (!hizo) return '';
+    const [fechas, reservas] = await Promise.all([leerFechas(), leerReservas()]);
+    const actual = fechas.find((f) => f.fecha === fecha);
+    const otras = reservas.filter((r) => r.fecha === fecha && r.id !== idReserva && ocupaLugar(r)).length;
+    const que = deshacerDia(actual, hizo, otras);
+    if (!que || !actual) return '';
+    if ('borrar' in que) { await borrarFecha(actual.fila); return 'borrado'; }
+    await guardarFecha(que.dia);
+    return 'cerrado';
+  } catch (e) {
+    console.error('[cotizaciones] devolver el dia', fecha, e);
+    return '';
   }
 }
 
@@ -934,7 +963,12 @@ export async function sincronizarReserva(idPresupuesto: string): Promise<string>
   });
   // El día de la reserva tiene que poder recibirla, también si se movió de
   // fecha. De paso arregla las ganadas de antes que quedaron sin día.
-  await abrirElDiaSiHaceFalta(r.fecha);
+  const hizo = await abrirElDiaSiHaceFalta(r.fecha);
+  // Si cambió de día, lo que importa recordar es qué se le hizo al nuevo.
+  if (antes && antes.fecha !== r.fecha && hizo !== p.diaAbierto) {
+    const { fila: _f, ...resto } = p;
+    await guardarPresupuesto({ ...resto, diaAbierto: hizo });
+  }
   return antes?.fecha ?? '';
 }
 

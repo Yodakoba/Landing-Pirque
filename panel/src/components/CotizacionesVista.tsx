@@ -144,6 +144,9 @@ export default function CotizacionesVista() {
     const m = new Map<string, Presupuesto[]>();
     for (const p of datos?.presupuestos ?? []) {
       if (!esFecha(p.fecha)) continue;
+      // Una cancelada no ocupa el calendario de cotizar (2026-11-11, lo
+      // pidió el cliente): sigue en *Todas*, con su devolución.
+      if (p.estado === ESTADO_PRESUPUESTO.cancelada) continue;
       if (!m.has(p.fecha)) m.set(p.fecha, []);
       m.get(p.fecha)!.push(p);
     }

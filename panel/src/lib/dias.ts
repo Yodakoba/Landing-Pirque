@@ -61,3 +61,37 @@ export function diaParaReservaManual(
   // Abierto y con cupo: no hay nada que hacerle.
   return null;
 }
+
+/**
+ * **Qué le hizo al día abrirlo para una reserva** (2026-11-11): `creado` si
+ * no existía, `reabierto` si estaba cerrado, vacío si solo le puso cupo o no
+ * le hizo nada. Lo guarda la cotización ganada para poder deshacerlo.
+ */
+export function queLeHizo(actual: FechaHabil | undefined): '' | 'creado' | 'reabierto' {
+  if (!actual) return 'creado';
+  if (estaCerrado(actual.estado)) return 'reabierto';
+  return '';
+}
+
+/**
+ * **Deshacer lo que se le hizo a un día al ganar una cotización**, cuando
+ * se cancela (2026-11-11, lo pidió el cliente: *"si solo había un evento
+ * cotizado, este se cancela, hazlo desaparecer"*).
+ *
+ * - Solo si **no le queda ninguna otra reserva que ocupe lugar**: con gente
+ *   de otro lado, el día sigue como está.
+ * - `creado` → se **borra** la fila: el día vuelve a no existir.
+ * - `reabierto` → vuelve a **cerrado**, con su cupo y sus notas.
+ * - Un día que ya existía abierto no se toca: no lo abrió esta cotización.
+ */
+export function deshacerDia(
+  actual: FechaHabil | undefined, hizo: string, otrasReservas: number
+): { borrar: true } | { dia: Omit<FechaHabil, 'fila'> } | null {
+  if (!actual || otrasReservas > 0) return null;
+  if (hizo === 'creado') return { borrar: true };
+  if (hizo === 'reabierto') {
+    const { fila: _f, ...resto } = actual;
+    return { dia: { ...resto, estado: ESTADO_DIA.cerrada } };
+  }
+  return null;
+}
