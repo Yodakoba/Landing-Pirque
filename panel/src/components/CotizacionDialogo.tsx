@@ -252,6 +252,8 @@ export default function CotizacionDialogo({
   const [avisoTxt, setAvisoTxt] = useState(p?.avisoEvento == null ? '' : String(p.avisoEvento));
   /** Por qué vía se acaba de mandar, mientras se pregunta "¿la mandaste?". */
   const [preguntaEnvio, setPreguntaEnvio] = useState<'' | 'cotizacion' | 'contrato'>('');
+  /** Por dónde se intentó mandar: la pregunta ofrece abrirlo de nuevo si no se abrió. */
+  const [viaEnvio, setViaEnvio] = useState<'' | 'whatsapp' | 'correo' | 'link'>('');
   /** La ventana *¿Marcarla ganada?*, abierta. */
   const [confirmandoGanar, setConfirmandoGanar] = useState(false);
   /** El día en que se le mandó el contrato (lo pone el servidor). */
@@ -689,12 +691,11 @@ export default function CotizacionDialogo({
   const enVariasAlt = p ? paraElLink(p, alternativas).length : 0;
   const linkContrato = p?.token && typeof window !== 'undefined'
     ? `${window.location.origin}/contrato/${p.token}` : '';
-  const whatsapp = link && cliente
-    ? enlaceWhatsApp(cliente.telefono,
-        enVariasAlt > 1
-          ? `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización con ${enVariasAlt} alternativas para que elijas: ${link}`
-          : `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`)
-    : '';
+  const textoWhatsapp = !link || !cliente ? ''
+    : enVariasAlt > 1
+      ? `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización con ${enVariasAlt} alternativas para que elijas: ${link}`
+      : `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`;
+  const whatsapp = textoWhatsapp ? enlaceWhatsApp(cliente!.telefono, textoWhatsapp) : '';
   /**
    * **El correo** (2026-11-11): sin un servidor de correo, abre el programa
    * de correo de quien cotiza con todo puesto. Solo si la ficha tiene correo.
@@ -709,9 +710,10 @@ export default function CotizacionDialogo({
   const nombreCorto = cliente?.nombre.split(' ')[0] ?? '';
   const folio = p ? `N° ${folioDe({ id: grupoDe(p) })}` : '';
   /** **Mandar el contrato** (2026-11-11): los mismos tres caminos que la cotización. */
-  const whatsappContrato = linkContrato && cliente
-    ? enlaceWhatsApp(cliente.telefono, `Hola ${nombreCorto}, te mando el contrato para firmar: ${linkContrato}`)
-    : '';
+  const textoWhatsappContrato = linkContrato && cliente
+    ? `Hola ${nombreCorto}, te mando el contrato para firmar: ${linkContrato}` : '';
+  const whatsappContrato = textoWhatsappContrato
+    ? enlaceWhatsApp(cliente!.telefono, textoWhatsappContrato) : '';
   const correoContrato = linkContrato && cliente?.correo
     ? `mailto:${cliente.correo}?subject=${encodeURIComponent(
         `Contrato · Cotización ${folio}` + (datos.empresa ? ` · ${datos.empresa}` : ''))}&body=${encodeURIComponent(
@@ -728,6 +730,7 @@ export default function CotizacionDialogo({
     // navegador. Abrirlos con `window.open` los bloqueaba en el teléfono como
     // ventana emergente, y se perdía justo lo que el botón promete (2026-11-11).
     const elLink = que === 'contrato' ? linkContrato : link;
+    setViaEnvio(via);
     if (via === 'link' && elLink) copiarConAviso(elLink, 'Link copiado', 'Copia este link:');
     if (!p || !puedeEditar || cancelada) return;
     // Se pregunta solo la primera vez: mandarla de nuevo no cambia nada.
@@ -913,6 +916,9 @@ export default function CotizacionDialogo({
    */
   // Una alternativa que no quedó no tiene próximo paso: lo dice su franja
   // arriba, con *Abrir la elegida*.
+  /** Si el próximo paso del 4 es mandarla: ese cuadro va arriba, no al final. */
+  const mandarPrimero = !!p && !cancelada && !noQuedo && !ganada
+    && !(anticipoPagado || (mandada && cond.pct === 0)) && !mandada;
   const hitoEnvio: React.ReactNode = !p || cancelada || noQuedo ? null
     : ganada ? (
       saldo && firmado ? saldo : (
@@ -1530,6 +1536,11 @@ export default function CotizacionDialogo({
             )}
 
 
+            {/* **Mandarla va antes del seguimiento** (2026-11-12, lo pidió el
+                cliente): mientras no se mande, es lo primero que hay que
+                hacer, y los recordatorios de abajo recién corren después. */}
+            {mandarPrimero && hitoEnvio}
+
             {/* ---------- Seguimiento ---------- */}
             {!cancelada && (
             <Seccion tono="rosa" icono="📨" titulo="Seguimiento y envío" ayuda="seguimiento">
@@ -1873,7 +1884,7 @@ export default function CotizacionDialogo({
                 cliente: *"primero hacemos el seguimiento, los datos… y de ahí
                 te ofrezco marcar como ganado"*). Cada uno de los dos pasos
                 del final —Envío y Contrato— cierra con el suyo. */}
-            {p && !cancelada && hitoEnvio}
+            {p && !cancelada && !mandarPrimero && hitoEnvio}
 
             {/* **Lo secundario va abajo, chico y separado**: guardar ya es
                 solo y borrar es peligroso. Nunca al lado del hito. */}
@@ -2151,6 +2162,38 @@ export default function CotizacionDialogo({
               : <>Pasa a <strong>Enviada</strong>: desde hoy corre su vigencia y aparece como posible
                   en el calendario de reservas.</>}
           </p>
+          {/* **Si no se abrió, se abre de acá** (2026-11-12, lo reclamó el
+              cliente: apretó WhatsApp y solo apareció esta pregunta). Pasa
+              cuando el navegador no deja abrir otra pestaña; el mensaje se
+              puede copiar y pegar a mano. */}
+          {(viaEnvio === 'whatsapp' || viaEnvio === 'correo') && (() => {
+            const contrato = preguntaEnvio === 'contrato';
+            const url = viaEnvio === 'whatsapp' ? (contrato ? whatsappContrato : whatsapp)
+              : (contrato ? correoContrato : correo);
+            const texto = viaEnvio === 'whatsapp' ? (contrato ? textoWhatsappContrato : textoWhatsapp)
+              : (contrato ? linkContrato : link);
+            return (
+              <div className="mt-4 rounded-lg border border-hueso/20 bg-hueso/[0.04] p-3">
+                <p className="text-[15px] font-semibold">
+                  ¿No se abrió {viaEnvio === 'whatsapp' ? 'WhatsApp' : 'el correo'}?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {url && (
+                    <a href={url} target={viaEnvio === 'whatsapp' ? '_blank' : undefined} rel="noreferrer"
+                      className="tecla boton min-h-[44px]">
+                      {viaEnvio === 'whatsapp' ? '💬 Abrir WhatsApp de nuevo' : '✉️ Abrir el correo de nuevo'}
+                    </a>
+                  )}
+                  {texto && (
+                    <button type="button" className="boton min-h-[44px]"
+                      onClick={() => copiarConAviso(texto, viaEnvio === 'whatsapp' ? 'Mensaje copiado: pégalo en WhatsApp' : 'Link copiado', 'Copia esto:')}>
+                      📋 Copiar {viaEnvio === 'whatsapp' ? 'el mensaje' : 'el link'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             <button type="button" className="boton min-h-[48px]" onClick={() => setPreguntaEnvio('')}>
               Todavía no
@@ -2315,6 +2358,19 @@ function Camino({ pasos }: { pasos: { nombre: string; listo: boolean }[] }) {
   );
 }
 
+/**
+ * **Abre WhatsApp en otra pestaña, y si el navegador no lo deja, en esta**
+ * (2026-11-12). Lo reclamó el cliente: apretaba WhatsApp y solo aparecía la
+ * pregunta de si la había mandado. Un navegador que bloquea la pestaña nueva
+ * no avisa; `window.open` sí lo dice —devuelve `null`— y entonces se abre en
+ * la misma, que en un teléfono salta directo a la aplicación.
+ */
+function abrirFuera(url: string) {
+  const w = window.open(url, '_blank');
+  if (w) { try { w.opener = null; } catch { /* sin acceso: da igual */ } }
+  else window.location.href = url;
+}
+
 /** WhatsApp, correo y link: los tres preguntan "¿la mandaste?" (ver `mandar()`). */
 function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false, ver = 'Ver el documento' }: {
   link: string; whatsapp: string; correo: string;
@@ -2327,7 +2383,7 @@ function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false, ver =
     <div className="flex flex-wrap gap-2">
       {whatsapp ? (
         <a href={whatsapp} target="_blank" rel="noreferrer" className={`tecla ${clase}`}
-          onClick={() => onMandar('whatsapp')}>💬 WhatsApp</a>
+          onClick={(e) => { e.preventDefault(); abrirFuera(whatsapp); onMandar('whatsapp'); }}>💬 WhatsApp</a>
       ) : <button type="button" className={clase} disabled>Falta su teléfono</button>}
       {correo ? (
         <a href={correo} className={`tecla ${clase}`} onClick={() => onMandar('correo')}>✉️ Correo</a>

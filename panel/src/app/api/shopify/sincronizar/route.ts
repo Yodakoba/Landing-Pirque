@@ -17,6 +17,7 @@
  * guardarPedido() es idempotente.
  */
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir } from '@/lib/permisos';
 import { iguales } from '@/lib/auth';
 import { pedidosDesde, configurado } from '@/lib/admin';
@@ -32,7 +33,7 @@ export const maxDuration = 60;
 
 const DIAS_ATRAS = 10;
 
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   // Dos formas legítimas de llegar acá, y ninguna más.
   //
   // 1. La tarea programada de Vercel, con su secreto en la cabecera.
@@ -108,4 +109,4 @@ export async function GET(req: Request) {
     console.error('[sincronizar]', e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

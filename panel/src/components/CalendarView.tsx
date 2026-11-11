@@ -191,17 +191,18 @@ export default function CalendarView({ rol, gerencia = false }: { rol: string; g
 
   /**
    * **Los avisos de la recepción de hoy** (2026-11-11): lo que la anfitriona
-   * le dejó al jefe de turno. Se pide aparte —si falla, el calendario sale
-   * igual— y solo a quien puede resolverlos.
+   * le dejó al jefe de turno, solo para quien puede resolverlos.
+   *
+   * **Salen de las reservas que esta pantalla ya cargó** (2026-11-12). Antes
+   * se pedía `/api/recepcion` entera solo para contarlos, y eran seis
+   * pestañas leídas del límite de Google en cada visita a la portada.
    */
-  const [avisosHoy, setAvisosHoy] = useState<{ fecha: string; n: number } | null>(null);
-  useEffect(() => {
-    if (!puede(rol as Rol, 'asistencia')) return;
-    fetch('/api/recepcion').then((r) => r.json()).then((d) => {
-      const n = (d.reservas ?? []).filter((x: { avisoRecepcion?: string }) => x.avisoRecepcion).length;
-      if (n > 0) setAvisosHoy({ fecha: d.fecha, n });
-    }).catch(() => {});
-  }, [rol]);
+  const avisosHoy = useMemo(() => {
+    if (!puede(rol as Rol, 'asistencia')) return null;
+    const fecha = hoy();
+    const n = reservas.filter((x) => x.fecha === fecha && x.avisoRecepcion).length;
+    return n > 0 ? { fecha, n } : null;
+  }, [reservas, rol]);
 
   /**
    * Agrupado **por semana**, conservando el orden.

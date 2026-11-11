@@ -13,6 +13,12 @@
  * vez de dejar apretar y fallar.
  */
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_CIERRES } from '@/lib/cierres';
+import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
+import { HOJA_CONFIG } from '@/lib/config';
+import { HOJA_MENUS } from '@/lib/menus';
+import { HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { exigir, exigirVer } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig, leerCierres, leerMenus, reservasDeCotizaciones } from '@/lib/datos';
 import { comoIngresar } from '@/lib/fudo';
@@ -23,7 +29,7 @@ import { ocupaLugar } from '@/lib/ocupacion';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CIERRES, HOJA_MENUS, HOJA_PRESUPUESTOS], async function GET(req: Request) {
   const no = await exigirVer(req, 'asistencia');
   if (no) return no;
   try {
@@ -47,4 +53,4 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

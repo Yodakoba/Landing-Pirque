@@ -18,6 +18,7 @@
  * manejo de errores.
  */
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { paraElSitio } from '@/lib/publico';
@@ -40,7 +41,7 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
 }
 
-export async function GET() {
+export const GET = conLecturas([], async function GET() {
   try {
     const [reservas, fechas, cfg] = await Promise.all([
       leerReservas(), leerFechas(), leerConfig()
@@ -68,4 +69,4 @@ export async function GET() {
       { status: 500, headers: CORS }
     );
   }
-}
+});

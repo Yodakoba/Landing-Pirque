@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
@@ -41,7 +42,7 @@ export const dynamic = 'force-dynamic';
  *
  * El error visible gana siempre sobre el invisible.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -179,4 +180,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_CLIENTES } from '@/lib/clientes';
+import { HOJA_LINEAS, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerClientes, crearCliente, editarCliente, borrarCliente, leerPresupuestos,
@@ -19,7 +22,7 @@ export const dynamic = 'force-dynamic';
  * Trae además cuántos presupuestos todavía no tienen ficha, para que la
  * pantalla ofrezca pasarlos — pero solo a quien puede ver presupuestos.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_CLIENTES, HOJA_PRESUPUESTOS, HOJA_LINEAS], async function GET(req: Request) {
   const no = await exigirVer(req, 'clientes');
   if (no) return no;
   try {
@@ -64,7 +67,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Crea una ficha, o pasa los presupuestos viejos a fichas (`accion: 'migrar'`).
@@ -74,7 +77,7 @@ export async function GET(req: Request) {
  * `forzar: true` —la persona ya vio las parecidas y dijo que no— se crea
  * igual. Es la regla que en el CRM del socio faltaba.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'clientes');
   if (no) return no;
   try {
@@ -105,13 +108,13 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Edita una ficha. Lo que no viene en el cuerpo se conserva, igual que el
  * `PATCH` de un trabajador. Avisa —sin bloquear— si quedó igual a otra.
  */
-export async function PATCH(req: Request) {
+export const PATCH = conLecturas([], async function PATCH(req: Request) {
   const no = await exigir(req, 'clientes');
   if (no) return no;
   try {
@@ -145,14 +148,14 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Borra una ficha **solo si no tiene cotizaciones**. Se comprueba acá y no
  * solo en la pantalla: una cotización que apunta a una ficha borrada queda
  * sin cliente, que es justo lo que las fichas vinieron a evitar.
  */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const no = await exigir(req, 'clientes');
   if (no) return no;
   try {
@@ -175,4 +178,4 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

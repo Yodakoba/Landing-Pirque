@@ -17,6 +17,7 @@
  * PUBLICAS de src/middleware.ts.
  */
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { firmaValida } from '@/lib/firma';
 import { aReserva } from '@/lib/shopify';
 import { guardarPedido, leerMenus, leerConfig } from '@/lib/datos';
@@ -27,7 +28,7 @@ import type { Reserva } from '@/lib/tipos';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   // El cuerpo CRUDO, sin parsear: la firma se calcula sobre el texto exacto
   // que llegó. Parsear y volver a serializar cambia un espacio y la firma
   // deja de calzar.
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
     console.error('[webhook]', e);
     return NextResponse.json({ error: 'No pudimos anotar la reserva.' }, { status: 500 });
   }
-}
+});
 
 /**
  * El evento del calendario, que es una comodidad y no la verdad.

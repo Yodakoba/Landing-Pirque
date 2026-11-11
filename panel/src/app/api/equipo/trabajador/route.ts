@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerTrabajadores, guardarTrabajadores, leerTurnos, anotar } from '@/lib/datos';
 import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
@@ -26,7 +27,7 @@ export const dynamic = 'force-dynamic';
  * cualquier otro, con su puesto habitual, y desde ahí se le pone sueldo o
  * link como a todos.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
 
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Edita la ficha de UN trabajador, sin tocar al resto.
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
  * los turnos de los otros días huérfanos. Eso se hace en `/equipo`, que es
  * donde el panel avisa del daño.
  */
-export async function PATCH(req: Request) {
+export const PATCH = conLecturas([], async function PATCH(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
 
@@ -169,7 +170,7 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Saca UNA ficha de la lista.
@@ -185,7 +186,7 @@ export async function PATCH(req: Request) {
  * aprieta *Quitar* en una línea cerrada no tiene por qué mandar —ni pisar—
  * lo que haya escrito en otra.
  */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
 
@@ -221,4 +222,4 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

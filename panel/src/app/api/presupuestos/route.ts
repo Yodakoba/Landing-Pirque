@@ -1,4 +1,11 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_CLIENTES } from '@/lib/clientes';
+import { HOJA_COBROS } from '@/lib/cobros';
+import { HOJA_FECHAS } from '@/lib/columnas';
+import { HOJA_CONFIG } from '@/lib/config';
+import { HOJA_MENUS } from '@/lib/menus';
+import { HOJA_LINEAS, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { horarioDe, faltaDeEmpresa, normalizarHorario } from '@/lib/contrato';
 import { UF_MINIMA, UF_MAXIMA } from '@/lib/uf';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
@@ -30,7 +37,7 @@ export const dynamic = 'force-dynamic';
  * nombre y el contacto ya puestos. Las de antes de las fichas siguen
  * mostrando lo que tenían escrito.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
@@ -73,7 +80,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /** Lo que llega del navegador, limpiado. El servidor no confía en el cliente. */
 function lineasDelCuerpo(crudo: unknown, id: string): LineaEntrante[] {
@@ -141,7 +148,7 @@ function ufDelCuerpo(cuerpo: Record<string, unknown>, antes: { uf: number; fecha
  * Con `duplicarDe` es una **alternativa**: copia el cliente, la fecha, los
  * invitados y las líneas de otra, y queda en su mismo grupo.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS], async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -248,7 +255,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Edita una cotización. **Es parcial**: lo que no viene se conserva.
@@ -262,7 +269,7 @@ export async function POST(req: Request) {
  *   reescribe sola** (`sincronizarReserva()`). Si el día de la reserva ya
  *   está cerrado, eso es corregirlo, con motivo.
  */
-export async function PATCH(req: Request) {
+export const PATCH = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_FECHAS], async function PATCH(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -481,13 +488,13 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Borra una cotización y sus líneas. **Una ganada no se borra**: su
  * `ID Reserva` es el rastro de dónde salió esa reserva.
  */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -512,4 +519,4 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerConfig, guardarConfig, anotar } from '@/lib/datos';
 import { nuevoToken } from '@/lib/equipo';
 import { exigir, quienEs } from '@/lib/permisos';
@@ -18,7 +19,7 @@ export const dynamic = 'force-dynamic';
  * link que la gente que sí trabaja tiene guardado, así que hay que volver a
  * mandarlo.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   /**
    * **Crear y renovar son del encargado; quitar, del administrador.**
    *
@@ -65,4 +66,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

@@ -2362,10 +2362,17 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   —la página vuelve a estar a la vista o recupera el foco— preguntan *¿Le
   mandaste la cotización a …?*. Si la página nunca se fue, pregunta a los 3
   s. Copiar link pregunta enseguida. *Sí, la mandé* la pasa a **Enviada**.
-  La primera versión abría WhatsApp con `window.open` y en el teléfono quedó
-  bloqueado como ventana emergente: el botón solo preguntaba. No hay
-  WhatsApp ni correo conectados al panel; cuando los haya, la pregunta se
-  reemplaza.
+  No hay WhatsApp ni correo conectados al panel; cuando los haya, la
+  pregunta se reemplaza.
+  **WhatsApp se abre con `window.open` y, si el navegador lo bloquea, en la
+  misma pestaña** (`abrirFuera()`, 2026-11-12). Dos veces pasó que el botón
+  solo preguntaba sin abrir nada —primero con un `window.open` sin
+  respaldo, después con el enlace pelado—: un bloqueo de pestaña nueva no
+  avisa, `window.open` sí (devuelve `null`). Y la pregunta trae *¿No se
+  abrió WhatsApp?* con *Abrir de nuevo* y *Copiar el mensaje*.
+- **El cuadro de mandarla va arriba de *Seguimiento y envío*** mientras no
+  se haya mandado (2026-11-12, lo pidió el cliente). Los demás próximos
+  pasos —el anticipo, *Marcar ganada*, el saldo— siguen al final.
 - **La vigencia corre desde el envío**, no desde la creación: una nueva nace
   sin `Válido hasta`, y la primera vez que queda Enviada o en Negociación
   —con el botón o eligiendo la etapa a mano— el servidor anota `Enviada` y
@@ -4232,29 +4239,58 @@ siguiente guardado.
 ### El límite de lecturas de Google (2026-11-12)
 
 Lo vio el cliente rellenando una alternativa: *"Quota exceeded for quota
-metric 'Read requests'…"*. **La API de Sheets deja 60 lecturas por minuto
-para la cuenta del panel, que es una sola para todos los usuarios**, y cada
-autoguardado de una cotización hacía unas 7 lecturas para guardar **y otras
-7 para recargar la lista de atrás**. Cuatro pausas al escribir por minuto
-bastaban para cortarlo.
+metric 'Read requests'…"*, y siguió pasando en varias pantallas. **La API de
+Sheets deja 60 lecturas por minuto para la cuenta del panel, que es una sola
+para todos los usuarios.** Medido antes del arreglo, cada pestaña se leía
+con su propia consulta:
 
-- **El autoguardado ya no recarga la lista**: se recarga una vez, al cerrar
-  la ventana (`cerrar()` en `CotizacionDialogo`).
-- **Dos lecturas simultáneas de la misma pestaña comparten la llamada**
-  (`leerHoja()`), y apenas contesta se olvida. **Se probó recordar lo leído
-  tres segundos y se sacó el mismo día**: en Vercel cada ruta corre aparte,
-  así que *Marcar ganada* escribía por `/convertir` y la lista que se
-  recargaba salía de `/api/presupuestos` con la cotización todavía sin
-  ganar; al abrirla ofrecía ganarla otra vez. Un dato viejo que parece
-  nuevo es peor que una lectura de más.
-- **El id de cada pestaña se recuerda** (`idDeHoja()`): borrar filas leía el
-  libro entero cada vez solo para traducir el nombre a un número que nunca
-  cambia.
-- **El 429 se dice en español** (`MENSAJE_LIMITE`): que no se perdió nada y
-  que en medio minuto vuelve. **El autoguardado de una cotización se
-  reintenta solo a los 30 segundos** cuando el error es ese.
-- Si vuelve a pasar con uso normal, lo siguiente es leer varias pestañas en
-  una sola llamada (`values.batchGet`), o pedir más cupo en Google Cloud.
+| | Antes | Ahora |
+|---|---|---|
+| Abrir el calendario de la portada | 20 | 5 (una por ruta) |
+| La página de un día | 18 | 4 |
+| Abrir Cotizaciones | 12 | 2 |
+| Un autoguardado de una cotización | 4 a 7 | 2 a 3 |
+| Recepción abierta | 6 por minuto | 1 por minuto |
+
+Lo que se hizo, en `lib/sheets.ts`:
+
+- **Las lecturas se juntan en un `batchGet`**, que cuesta una lectura sin
+  importar cuántas pestañas pida. La primera lectura abre una tanda que
+  espera 8 ms; las que llegan mientras tanto —un `Promise.all`, u otra
+  petición que entró al mismo tiempo en esa instancia— van en la misma.
+- **Dentro de una petición, lo leído se recuerda** (`conLecturas()`, con
+  `AsyncLocalStorage`). Envuelve a todas las rutas que leen la planilla, y
+  las más usadas **precargan** sus pestañas juntas al entrar. Lo que la
+  propia petición escribe se olvida en el acto.
+- **Entre peticiones no se recuerda nada.** Se probó guardar lo leído tres
+  segundos y se sacó el mismo día: en Vercel cada ruta corre aparte, así que
+  *Marcar ganada* escribía por `/convertir` y la lista que se recargaba salía
+  de `/api/presupuestos` con la cotización todavía sin ganar.
+- **Lo que busca en qué fila escribir lee fresco** (`leerHoja(hoja, true)`,
+  y `asegurarEncabezado()` siempre): un número de fila de hace un segundo es
+  otra fila si alguien borró una entremedio. Las líneas de una cotización se
+  borran y se escriben en cada guardado, así que esto no es teórico.
+- **La bitácora ya no se lee para escribir en ella**: cada acción traía la
+  pestaña entera —la más larga— para mirar su primera fila. Ahora se mira
+  solo el encabezado, una vez por instancia (`leerEncabezado()`).
+- **Las líneas que no cambiaron no se reescriben** (`guardarLineas()`): el
+  autoguardado las manda siempre, y borrarlas y escribirlas iguales gastaba
+  dos escrituras, que tienen su propio límite de 60.
+- **Ante un 429, el servidor espera y reintenta solo** (1,5 s y 4 s, en
+  lecturas y escrituras: un 429 no aplicó nada, así que repetir es seguro).
+  Recién si eso falla sale el mensaje en español (`MENSAJE_LIMITE`), y el
+  autoguardado de una cotización se reintenta a los 30 segundos.
+- **La portada ya no pide `/api/recepcion`** para contar los avisos de la
+  entrada: salen de las reservas que ya cargó.
+- **El id de cada pestaña se recuerda** (`idDeHoja()`), y los títulos se
+  piden una vez por instancia, compartidos si llegan varias lecturas juntas.
+
+**Cómo se midió**, para repetirlo: un Google falso en memoria que cuenta las
+consultas, cargado con un hook de `node --import` que cambia `googleapis`
+por él, y cada ruta llamada directo (`NODE_ENV=development` entra como
+administrador). Si vuelve a aparecer con uso normal, lo siguiente es pedir
+más cupo para el proyecto `brasas-panel` en Google Cloud (Sheets API →
+Cuotas), que es gratis.
 
 ### La planilla se comía los datos que parecen fórmula (2026-11-01)
 

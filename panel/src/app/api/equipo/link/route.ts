@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerTrabajadores, guardarTrabajadores, anotar } from '@/lib/datos';
 import { nuevoToken } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
  * Renovar es crear uno nuevo encima: el anterior deja de servir en el acto.
  * Es lo que hay que hacer cuando alguien pierde el teléfono.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'links');
   if (no) return no;
 
@@ -57,4 +58,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

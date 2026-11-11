@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, quienEs } from '@/lib/permisos';
 import { borrarFecha, leerFechas, anotar } from '@/lib/datos';
 import { empujarDia } from '@/lib/crm-escribir';
 
 export const dynamic = 'force-dynamic';
 
-export async function DELETE(req: Request, { params }: { params: { fila: string } }) {
+export const DELETE = conLecturas([], async function DELETE(req: Request, { params }: { params: { fila: string } }) {
   const no = await exigir(req, 'dias');
   if (no) return no;
   try {
@@ -28,4 +29,4 @@ export async function DELETE(req: Request, { params }: { params: { fila: string 
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, quienEs } from '@/lib/permisos';
 import { guardarEquipoDelDia, leerTurnos, anotar } from '@/lib/datos';
 import { esFecha, hoy } from '@/lib/fechas';
@@ -23,7 +24,7 @@ export const dynamic = 'force-dynamic';
  * así que la corrección tiene que dejarlo como un día cerrado tiene que
  * estar: con gente y sin nadie por marcar. Ver `corregirDiaCerrado()`.
  */
-export async function PUT(req: Request) {
+export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'equipo');
   if (no) return no;
   try {
@@ -90,4 +91,4 @@ export async function PUT(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

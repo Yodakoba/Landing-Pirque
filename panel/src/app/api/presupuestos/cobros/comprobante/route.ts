@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerCobros, leerPresupuestos, leerConfig, leerClientes, editarCobro, anotar } from '@/lib/datos';
 import { problemaConArchivo } from '@/lib/cobros';
@@ -16,7 +17,7 @@ export const maxDuration = 60;
  * `lib/drive.ts`) y **nunca se sirve por un link público**: se ve a través
  * de esta ruta, que comprueba el permiso de quien lo pide.
  */
-export async function GET(req: Request) {
+export const GET = conLecturas([], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   const id = new URL(req.url).searchParams.get('id') ?? '';
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
     console.error('[comprobante:ver]', e);
     return NextResponse.json({ error: errorDeDrive(e) }, { status: 502 });
   }
-}
+});
 
 /**
  * Sube el comprobante de un cobro: una foto o un PDF, hasta 10 MB.
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
  * el comprobante deja el cobro sin revisar**: lo que se revisó era el
  * archivo anterior.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -104,4 +105,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});

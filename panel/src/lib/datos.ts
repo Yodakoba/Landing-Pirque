@@ -10,7 +10,7 @@
  * MANUAL-<timestamp>: no pueden chocar con los ids numéricos de Shopify.
  */
 import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFilas,
-         escribirBloque, asegurarEncabezado, asegurarColumna,
+         escribirBloque, asegurarEncabezado, asegurarColumna, asegurarHoja, leerEncabezado,
          esPestanaQueNoExiste } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
@@ -79,7 +79,7 @@ export async function leerReservas(): Promise<Reserva[]> {
 export { leerReservasDe };
 
 export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): Promise<string> {
-  const filas = await leerHoja(HOJA_RESERVAS);
+  const filas = await leerHoja(HOJA_RESERVAS, true);
   // La nota de pago y el evento del CRM llegaron después que la planilla, así
   // que sus columnas pueden no estar. Se agregan solas la primera vez: sin
   // esto el campo se escribiría en el formulario y no quedaría en ninguna
@@ -110,7 +110,7 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
 }
 
 export async function editarReserva(fila: number, cambios: Partial<Reserva>): Promise<void> {
-  const filas = await leerHoja(HOJA_RESERVAS);
+  const filas = await leerHoja(HOJA_RESERVAS, true);
   let enc = cambios.notaPago === undefined
     ? (filas[0] ?? [])
     : await asegurarColumna(HOJA_RESERVAS, filas[0] ?? [], COL_RESERVAS.notaPago);
@@ -129,8 +129,9 @@ export async function borrarReserva(fila: number): Promise<void> {
 
 /* ---------- Fechas hábiles ---------- */
 
-export async function leerFechas(): Promise<FechaHabil[]> {
-  const filas = await leerHoja(HOJA_FECHAS);
+/** `fresca`: para quien va a borrar o escribir por número de fila. */
+export async function leerFechas(fresca = false): Promise<FechaHabil[]> {
+  const filas = await leerHoja(HOJA_FECHAS, fresca);
   if (filas.length < 2) return [];
   const i = indices(filas[0], COL_FECHAS);
   const en = (f: string[], k: number) => (k === -1 ? '' : (f[k] ?? ''));
@@ -155,7 +156,7 @@ export async function leerFechas(): Promise<FechaHabil[]> {
 }
 
 export async function guardarFecha(d: Omit<FechaHabil, 'fila'>): Promise<void> {
-  const filas = await leerHoja(HOJA_FECHAS);
+  const filas = await leerHoja(HOJA_FECHAS, true);
   const enc = filas[0] ?? [];
   const i = indices(enc, COL_FECHAS);
   // Una fecha no puede estar dos veces: si ya está, se actualiza.
@@ -269,7 +270,7 @@ export async function guardarConfig(c: Config): Promise<void> {
 export async function guardarPedido(
   r: Omit<Reserva, 'fila'>
 ): Promise<'creada' | 'actualizada'> {
-  const filas = await leerHoja(HOJA_RESERVAS);
+  const filas = await leerHoja(HOJA_RESERVAS, true);
   const enc = filas[0] ?? [];
   const fila = buscarFilaPorId(filas, enc, r.id);
 
@@ -502,6 +503,9 @@ export async function guardarUsuarios(lista: Usuario[]): Promise<void> {
 
 /* ---------- La bitácora ---------- */
 
+/** Si esta instancia ya comprobó que la bitácora tiene encabezado. */
+let bitacoraLista = false;
+
 /**
  * Anota una acción.
  *
@@ -517,7 +521,16 @@ export async function anotar(a: {
   usuario: string; rol: string; accion: string; detalle?: unknown;
 }): Promise<void> {
   try {
-    await asegurarEncabezado(HOJA_BITACORA, ENCABEZADO_BITACORA);
+    // **Sin leer la bitácora entera** (2026-11-12): antes cada acción del
+    // panel traía la pestaña completa —la más larga de todas— solo para mirar
+    // su primera fila, y eso gastaba una lectura del límite de Google por
+    // cada clic. Ahora se mira solo el encabezado, una vez por instancia.
+    if (!bitacoraLista) {
+      await asegurarHoja(HOJA_BITACORA);
+      const enc = await leerEncabezado(HOJA_BITACORA);
+      if (!enc.some((c) => c.trim() !== '')) await escribirFila(HOJA_BITACORA, 1, ENCABEZADO_BITACORA);
+      bitacoraLista = true;
+    }
     await agregarFila(HOJA_BITACORA, filaBitacora({
       cuando: ahoraEnChile(),
       quien: a.usuario,
@@ -782,6 +795,13 @@ export async function guardarLineas(
     ENCABEZADO_LINEAS);
   const previas = leerLineasDe(filas).filter((l) => l.presupuesto === id).map((l) => l.fila);
   const nuevas = normalizarLineas(lineas.map((l) => ({ ...l, presupuesto: id })));
+  // **Si no cambió nada, no se escribe** (2026-11-12): el autoguardado manda
+  // las líneas cada vez, y borrarlas y volver a escribirlas iguales gastaba
+  // dos escrituras del límite de Google por cada cambio en otra parte.
+  const comoTexto = (f: unknown[]) => f.map((c) => String(c ?? '').trim()).join('\u0001').replace(/\u0001+$/, '');
+  const antes = previas.map((n) => comoTexto(filas[n - 1] ?? []));
+  const despues = nuevas.map((l) => comoTexto(filaLinea(enc, l)));
+  if (antes.length === despues.length && antes.every((a, i) => a === despues[i])) return;
   await borrarFilas(HOJA_LINEAS, previas);
   await agregarFilas(HOJA_LINEAS, nuevas.map((l) => filaLinea(enc, l)));
 }
@@ -937,7 +957,7 @@ export async function abrirElDiaSiHaceFalta(fecha: string): Promise<'' | 'creado
 export async function devolverElDia(fecha: string, hizo: string, idReserva: string): Promise<string> {
   try {
     if (!hizo) return '';
-    const [fechas, reservas] = await Promise.all([leerFechas(), leerReservas()]);
+    const [fechas, reservas] = await Promise.all([leerFechas(true), leerReservas()]);
     const actual = fechas.find((f) => f.fecha === fecha);
     const otras = reservas.filter((r) => r.fecha === fecha && r.id !== idReserva && ocupaLugar(r)).length;
     const que = deshacerDia(actual, hizo, otras);
@@ -960,7 +980,7 @@ export async function sincronizarReserva(idPresupuesto: string): Promise<string>
   // Una cancelada ya liberó su cupo: reescribir su reserva —o abrirle el
   // día— la traería de vuelta. Editar la ficha del cliente pasa por acá.
   if (p.estado === ESTADO_PRESUPUESTO.cancelada) return '';
-  const filas = await leerHoja(HOJA_RESERVAS);
+  const filas = await leerHoja(HOJA_RESERVAS, true);
   const fila = buscarFilaPorId(filas, filas[0] ?? [], p.idReserva);
   if (fila < 2) return '';
   const antes = leerReservasDe(filas).find((r) => r.fila === fila);
@@ -1052,7 +1072,7 @@ export async function borrarCobro(id: string): Promise<Cobro | undefined> {
  */
 export async function cancelarReservaDe(idReserva: string): Promise<boolean> {
   if (!idReserva) return false;
-  const filas = await leerHoja(HOJA_RESERVAS);
+  const filas = await leerHoja(HOJA_RESERVAS, true);
   const fila = buscarFilaPorId(filas, filas[0] ?? [], idReserva);
   if (fila < 2) return false;
   await editarReserva(fila, { estadoPago: ESTADO_PAGO.cancelado });
@@ -1073,7 +1093,7 @@ export async function actualizarPagoDeReserva(idPresupuesto: string): Promise<vo
   ]);
   const p = presupuestos.find((x) => x.id === idPresupuesto);
   if (!p?.idReserva) return;
-  const filas = await leerHoja(HOJA_RESERVAS);
+  const filas = await leerHoja(HOJA_RESERVAS, true);
   const fila = buscarFilaPorId(filas, filas[0] ?? [], p.idReserva);
   if (fila < 2) return;
   const r = leerReservasDe(filas).find((x) => x.fila === fila);

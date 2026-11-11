@@ -16,6 +16,7 @@
  *     las que sirven para rastrear quién hizo qué.
  */
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerUsuarios, anotar } from '@/lib/datos';
 import { buscarUsuario, claveCalza, ENCARGADO_COMPARTIDO } from '@/lib/usuarios';
 import { iguales, ROL, type Rol } from '@/lib/auth';
@@ -52,7 +53,7 @@ async function identificar(
   return null;
 }
 
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   try {
     const { usuario, clave } = await req.json();
     const quien = await identificar(String(usuario ?? ''), String(clave ?? ''));
@@ -90,13 +91,13 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /** Salir. Borra la cookie; el token sigue firmado pero ya no lo manda nadie. */
-export async function DELETE(req: Request) {
+export const DELETE = conLecturas([], async function DELETE(req: Request) {
   const { usuario, rol } = await quienEs(req);
   const res = NextResponse.json({ listo: true });
   res.cookies.set(COOKIE_SESION, '', { path: '/', maxAge: 0 });
   if (usuario) await anotar({ usuario, rol, accion: 'Salió del panel' });
   return res;
-}
+});

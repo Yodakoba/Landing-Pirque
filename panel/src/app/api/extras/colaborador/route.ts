@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { conLecturas } from '@/lib/sheets';
 import { leerColaboradores, guardarColaboradores, anotar } from '@/lib/datos';
 import { aEntero, esSi } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
@@ -22,7 +23,7 @@ export const dynamic = 'force-dynamic';
  *
  * Si el nombre ya existe no falla: devuelve el que hay y lo dice.
  */
-export async function POST(req: Request) {
+export const POST = conLecturas([], async function POST(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
 
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
 
 /**
  * Edita la ficha de UN colaborador, sin tocar al resto.
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
  * la persona por su nombre; renombrarla desde la ventana de un día dejaría
  * las de los otros días apuntando a nadie. Eso se hace en `/extras`.
  */
-export async function PATCH(req: Request) {
+export const PATCH = conLecturas([], async function PATCH(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
 
@@ -135,4 +136,4 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
+});
