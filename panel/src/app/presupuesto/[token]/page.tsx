@@ -12,6 +12,12 @@
  * con un token prestado para sacar datos en bruto. Lo único que sale de acá
  * es el HTML de una cotización.
  *
+ * **Un solo link para todas las alternativas** (2026-11-11, lo pidió el
+ * cliente). Mientras se decide, la hoja muestra la A, la B y la C una debajo
+ * de la otra, cada una con su tabla y sus condiciones; elegida una, el mismo
+ * link muestra solo esa (`paraElLink()`). Cualquier token del grupo abre lo
+ * mismo, así que no importa cuál se mandó.
+ *
  * **Lo que NO tiene, a propósito: un botón de "acepto".** Sería una puerta
  * de escritura sin contraseña sobre un dato que mueve el cupo de un día. El
  * cliente responde por WhatsApp y el encargado lo marca en el panel.
@@ -19,7 +25,9 @@
 import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
 import { porToken, lineasDe, gentePosible, cuentasDe,
          estadoVisible, folioDe, DOCUMENTO } from '@/lib/presupuestos';
-import { clienteDe, grupoDe, letraDe } from '@/lib/cotizar';
+import { clienteDe, grupoDe, letraDe, paraElLink } from '@/lib/cotizar';
+import type { Presupuesto, LineaPresupuesto } from '@/lib/presupuestos';
+import type { Config } from '@/lib/config';
 import { condicionesDe } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
@@ -53,17 +61,18 @@ export default async function Pagina({ params }: { params: { token: string } }) 
     );
   }
 
-  const lineas = lineasDe(todas, p.id);
-  // **Las cuentas como en una cotización** (Fase 2): cada línea en neto, el
-  // descuento sobre el total, y el IVA encima. Ver `cuentasDe()`.
-  const cuentas = cuentasDe(lineas, p.descuento);
-  const personas = gentePosible(p, lineas);
-  const cliente = clienteDe(p, clientes);
-  const cond = condicionesDe(p, cuentas.total, cfg);
+  const alts = paraElLink(p, lista);
+  const varias = alts.length > 1;
+  // Lo que es de la conversación —el cliente, el documento, la vigencia— se
+  // lee de la primera que se muestra; lo de cada versión, de cada una.
+  const q = alts[0];
+  const lineas = lineasDe(todas, q.id);
+  const personas = gentePosible(q, lineas);
+  const cliente = clienteDe(q, clientes);
   // Con factura, los datos de facturación de la ficha van en la hoja.
-  const ficha = p.documento === DOCUMENTO.factura
-    ? clientes.find((c) => c.id === p.idCliente) : undefined;
-  const estado = estadoVisible(p, hoy());
+  const ficha = q.documento === DOCUMENTO.factura
+    ? clientes.find((c) => c.id === q.idCliente) : undefined;
+  const estado = estadoVisible(q, hoy());
   const vencido = estado === 'Vencida';
 
   return (
@@ -80,7 +89,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
         <p className="mb-6 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-sm
                       text-ambar-texto">
           <strong>Esta cotización venció</strong> el{' '}
-          <span className="first-letter:uppercase">{enPalabras(p.validoHasta)}</span>. Escríbenos
+          <span className="first-letter:uppercase">{enPalabras(q.validoHasta)}</span>. Escríbenos
           y te lo actualizamos con los precios de hoy.
         </p>
       )}
@@ -96,8 +105,9 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           </p>
         )}
         <p className="mt-1 text-[13px] text-hueso/60">
-          N° {folioDe({ id: grupoDe(p) })}{letraDe(p, lista) && <> · Alternativa {letraDe(p, lista)}</>}
-          {p.creado && <> · emitido el {p.creado.slice(0, 10)}</>}
+          N° {folioDe({ id: grupoDe(q) })}
+          {!varias && letraDe(q, lista) && <> · Alternativa {letraDe(q, lista)}</>}
+          {q.creado && <> · emitido el {q.creado.slice(0, 10)}</>}
         </p>
       </header>
 
@@ -110,10 +120,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
           {cliente.empresa && <p className="text-sm text-hueso/70">{cliente.empresa}</p>}
           {cliente.telefono && <p className="text-sm text-hueso/70">{cliente.telefono}</p>}
           {cliente.email && <p className="text-sm text-hueso/70">{cliente.email}</p>}
-          {p.documento && (
+          {q.documento && (
             <p className="mt-2 text-sm">
-              <span className="font-semibold">{p.documento === DOCUMENTO.sin
-                ? 'Sin documento' : `Con ${p.documento.toLowerCase()}`}</span>
+              <span className="font-semibold">{q.documento === DOCUMENTO.sin
+                ? 'Sin documento' : `Con ${q.documento.toLowerCase()}`}</span>
             </p>
           )}
           {ficha && (ficha.rut || ficha.giro || ficha.domicilio) && (
@@ -129,10 +139,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
             Fecha del evento
           </p>
           <p className="mt-1 text-base font-semibold first-letter:uppercase">
-            {p.fecha ? enPalabras(p.fecha) : `Por definir: ${p.periodo}`}
+            {q.fecha ? enPalabras(q.fecha) : `Por definir: ${q.periodo}`}
           </p>
-          {p.tipoEvento && <p className="text-sm text-hueso/70">{p.tipoEvento}</p>}
-          {personas > 0 && (
+          {q.tipoEvento && <p className="text-sm text-hueso/70">{q.tipoEvento}</p>}
+          {!varias && personas > 0 && (
             <p className="text-sm text-hueso/70">
               {personas} {personas === 1 ? 'persona' : 'personas'}
             </p>
@@ -140,10 +150,74 @@ export default async function Pagina({ params }: { params: { token: string } }) 
         </div>
       </div>
 
-      <div className="mt-7">
-        <TablaCotizacion lineas={lineas} cuentas={cuentas} descuento={p.descuento}
-          uf={p.uf} fechaUF={p.fechaUF} />
+      {varias && (
+        <p className="mt-7 rounded border border-oro/50 bg-oro/[0.06] p-3 text-[15px]">
+          <strong>Te ofrecemos {alts.length} alternativas.</strong> Míralas con calma y
+          cuéntanos con cuál te quedas: {alts.map((a) => letraDe(a, lista)).join(', ')}.
+        </p>
+      )}
+
+      {alts.map((a) => (
+        <Alternativa key={a.id} p={a} letra={varias ? letraDe(a, lista) : ''}
+          lineas={lineasDe(todas, a.id)} cfg={cfg} distintaFecha={varias && a.fecha !== q.fecha} />
+      ))}
+
+      <div className="mt-7 border-t border-hueso/20 pt-5 text-[13px] text-hueso/70">
+        {q.validoHasta && !vencido && (
+          <p>
+            <strong>Válido hasta el{' '}
+              <span className="first-letter:uppercase">{enPalabras(q.validoHasta)}</span>.</strong>{' '}
+            La fecha del evento se confirma al aceptar esta cotización; mientras
+            tanto no está reservada.
+          </p>
+        )}
+        {!q.validoHasta && (
+          <p>
+            La fecha del evento se confirma al aceptar esta cotización; mientras
+            tanto no está reservada.
+          </p>
+        )}
+        <p className="mt-3">
+          ¿Lo tomamos? Escríbenos por WhatsApp al{' '}
+          <strong>{negocio.whatsapp}</strong> o a {negocio.email}.
+        </p>
+        <p className="mt-3 text-hueso/55">
+          {negocio.nombre} · {negocio.direccion}
+        </p>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Una alternativa en la hoja: su tabla, sus condiciones y sus notas. Con
+ * varias lleva su letra y su total arriba, para que el cliente pueda decir
+ * "la B" sin tener que sumar nada.
+ */
+function Alternativa({ p, letra, lineas, cfg, distintaFecha }: {
+  p: Presupuesto; letra: string; lineas: LineaPresupuesto[]; cfg: Config; distintaFecha: boolean;
+}) {
+  // **Las cuentas como en una cotización** (Fase 2): cada línea en neto, el
+  // descuento sobre el total, y el IVA encima. Ver `cuentasDe()`.
+  const cuentas = cuentasDe(lineas, p.descuento);
+  const cond = condicionesDe(p, cuentas.total, cfg);
+  const personas = gentePosible(p, lineas);
+  return (
+    <div className={letra ? 'mt-7 break-inside-avoid rounded-lg border-2 border-hueso/20 p-4' : 'mt-7'}>
+      {letra && (
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-hueso/15 pb-2">
+          <h2 className="text-lg font-bold uppercase tracking-wide">Alternativa {letra}</h2>
+          <p className="text-base font-semibold">{enPesos(cuentas.total)}</p>
+          <p className="w-full text-sm text-hueso/70">
+            {distintaFecha && <span className="first-letter:uppercase inline-block">
+              {p.fecha ? enPalabras(p.fecha) : `Por definir: ${p.periodo}`}</span>}
+            {distintaFecha && personas > 0 && ' · '}
+            {personas > 0 && `${personas} ${personas === 1 ? 'persona' : 'personas'}`}
+          </p>
+        </div>
+      )}
+      <TablaCotizacion lineas={lineas} cuentas={cuentas} descuento={p.descuento}
+        uf={p.uf} fechaUF={p.fechaUF} />
 
       {/* **Las condiciones de pago**, de la misma función que usa la
           pantalla (y el contrato después): no pueden decir cosas distintas. */}
@@ -175,34 +249,10 @@ export default async function Pagina({ params }: { params: { token: string } }) 
       )}
 
       {p.notas && (
-        <p className="mt-6 rounded border border-hueso/15 bg-panel p-3 text-sm">
+        <p className="mt-5 rounded border border-hueso/15 bg-panel p-3 text-sm">
           {p.notas}
         </p>
       )}
-
-      <div className="mt-7 border-t border-hueso/20 pt-5 text-[13px] text-hueso/70">
-        {p.validoHasta && !vencido && (
-          <p>
-            <strong>Válido hasta el{' '}
-              <span className="first-letter:uppercase">{enPalabras(p.validoHasta)}</span>.</strong>{' '}
-            La fecha del evento se confirma al aceptar esta cotización; mientras
-            tanto no está reservada.
-          </p>
-        )}
-        {!p.validoHasta && (
-          <p>
-            La fecha del evento se confirma al aceptar esta cotización; mientras
-            tanto no está reservada.
-          </p>
-        )}
-        <p className="mt-3">
-          ¿Lo tomamos? Escríbenos por WhatsApp al{' '}
-          <strong>{negocio.whatsapp}</strong> o a {negocio.email}.
-        </p>
-        <p className="mt-3 text-hueso/55">
-          {negocio.nombre} · {negocio.direccion}
-        </p>
-      </div>
-    </section>
+    </div>
   );
 }

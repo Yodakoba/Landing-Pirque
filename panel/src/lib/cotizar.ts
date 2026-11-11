@@ -227,6 +227,47 @@ export function otrasAlternativas(ganadora: Presupuesto, lista: Presupuesto[]): 
 }
 
 /**
+ * **Si una alternativa sigue en carrera** (2026-11-11). Fuera quedan las
+ * perdidas, las *No elegida* y las canceladas; la ganada sigue, porque es
+ * la que el cliente eligió.
+ */
+export function sigueViva(p: Pick<Presupuesto, 'estado' | 'idReserva'>): boolean {
+  const e = estadoNormal(p.estado);
+  if (e === ESTADO_PRESUPUESTO.cancelada) return false;
+  if (p.idReserva) return true;
+  return e !== ESTADO_PRESUPUESTO.rechazado && e !== ESTADO_PRESUPUESTO.noElegida;
+}
+
+/** Las alternativas del grupo que siguen en carrera, en orden A, B, C. */
+export function vivasDelGrupo(p: Presupuesto, lista: Presupuesto[]): Presupuesto[] {
+  return alternativasDe(p, lista).filter(sigueViva);
+}
+
+/**
+ * **Antes de ganar hay que elegir** (2026-11-11, lo pidió el cliente: *"antes
+ * de marcar como ganado, tiene que decidir cuál de las alternativas usa"*).
+ * Verdadero si a esta cotización todavía le queda otra alternativa en
+ * carrera. La misma regla la usan `/convertir` y la pantalla.
+ */
+export function faltaElegir(p: Presupuesto, lista: Presupuesto[]): boolean {
+  return !p.idReserva && sigueViva(p) && otrasAlternativas(p, lista).length > 0;
+}
+
+/**
+ * **Lo que muestra el link del cliente** (2026-11-11): un solo link para todo
+ * el grupo. Mientras se decide, las alternativas en carrera, A, B y C juntas;
+ * elegida una —o ganada—, solo esa. Un candidato no va: todavía no es una
+ * cotización. Si no queda ninguna viva —se perdió—, la del propio link.
+ */
+export function paraElLink(p: Presupuesto, lista: Presupuesto[]): Presupuesto[] {
+  const vivas = vivasDelGrupo(p, lista)
+    .filter((x) => estadoNormal(x.estado) !== ESTADO_PRESUPUESTO.candidato);
+  const ganada = vivas.find((x) => !!x.idReserva);
+  if (ganada) return [ganada];
+  return vivas.length ? vivas : [p];
+}
+
+/**
  * Qué estados se pueden poner a mano. **Ganada no**: se llega solo por
  * "Marcar ganada", que crea la reserva. **No elegida tampoco**: la pone el
  * sistema cuando gana otra alternativa.

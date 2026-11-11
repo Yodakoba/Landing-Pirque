@@ -23,7 +23,7 @@ import { ESTADO_PAGO, esPrivada } from './columnas.ts';
 import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, lineaDeProducto, cambiarCantidad,
-         alternativasDe, letraDe, principalDe,
+         alternativasDe, letraDe, principalDe, sigueViva, vivasDelGrupo, faltaElegir, paraElLink,
          ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
@@ -3702,6 +3702,42 @@ console.log('\nCotizaciones, fase 2');
      'la original sin grupo es la cabeza de su grupo');
   ok(!cuentaComoPosible(pre({ estado: ESTADO_PRESUPUESTO.noElegida }), HOY),
      'una no elegida ya no es gente posible');
+
+  // --- Elegir antes de ganar, y el link único (2026-11-11) ---
+  {
+    const env = ESTADO_PRESUPUESTO.enviado;
+    const tres = [
+      pre({ id: 'A', grupo: 'A', estado: env }), pre({ id: 'B', grupo: 'A', estado: env }),
+      pre({ id: 'C', grupo: 'A', estado: ESTADO_PRESUPUESTO.borrador })
+    ];
+    ok(faltaElegir(tres[0], tres) && faltaElegir(tres[2], tres),
+       'con tres alternativas en carrera, ninguna se puede ganar sin elegir');
+    ok(paraElLink(tres[1], tres).map((x) => x.id).join() === 'A,B,C',
+       'el link de cualquiera muestra las tres juntas, en orden');
+    const elegida = [tres[0], { ...tres[1], estado: ESTADO_PRESUPUESTO.noElegida },
+      { ...tres[2], estado: ESTADO_PRESUPUESTO.noElegida }];
+    ok(!faltaElegir(elegida[0], elegida), 'elegida la A, ya se puede ganar');
+    ok(paraElLink(elegida[1], elegida).map((x) => x.id).join() === 'A',
+       'elegida la A, el mismo link de la B muestra solo la A');
+    ok(!sigueViva(elegida[1]) && sigueViva(pre({ estado: ESTADO_PRESUPUESTO.aceptado, idReserva: 'R' })),
+       'una no elegida queda fuera; la ganada sigue');
+    ok(!sigueViva(pre({ estado: ESTADO_PRESUPUESTO.cancelada, idReserva: 'R' })),
+       'una cancelada ya no está en carrera, aunque tenga reserva');
+    const ganada = [{ ...tres[0], idReserva: 'R1', estado: ESTADO_PRESUPUESTO.aceptado }, tres[1]];
+    ok(paraElLink(tres[1], ganada).map((x) => x.id).join() === 'A',
+       'con una ganada, el link muestra solo la ganada');
+    ok(paraElLink(pre({ id: 'S', grupo: '' }), [pre({ id: 'S', grupo: '' })]).length === 1
+       && !faltaElegir(pre({ id: 'S' }), [pre({ id: 'S' })]),
+       'una cotización sola no pide elegir');
+    const perdida = [{ ...tres[0], estado: ESTADO_PRESUPUESTO.rechazado }];
+    ok(paraElLink(perdida[0], perdida).map((x) => x.id).join() === 'A',
+       'si se perdió, el link sigue mostrando la suya');
+    ok(vivasDelGrupo(tres[0], [...tres, pre({ id: 'D', grupo: 'D' })]).length === 3,
+       'las vivas son solo las del grupo');
+    const conCandidato = [tres[0], pre({ id: 'K', grupo: 'A', estado: ESTADO_PRESUPUESTO.candidato })];
+    ok(paraElLink(tres[0], conCandidato).map((x) => x.id).join() === 'A',
+       'un candidato no sale en el link del cliente');
+  }
 
   // --- Sin fecha y candidatos ---
   const encP = ENCABEZADO_PRESUPUESTOS;

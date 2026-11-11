@@ -425,8 +425,9 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   alternativas: {
     titulo: 'Alternativas',
     texto: [
-      'Son versiones de la misma cotización para el mismo cliente: otro menú, otro precio. Cada una tiene su letra y su total.',
-      'Al marcar una como ganada, las otras pasan solas a "No elegida". En el calendario cuentan una sola vez.'
+      'Son versiones de la misma cotización para el mismo cliente: otro menú, otro precio, otro día. Cada una tiene su letra y su total.',
+      'Se mandan todas juntas en un solo link. Cuando el cliente decide, eliges "Se quedó con esta": las otras pasan a "No elegida" y el link muestra solo la elegida.',
+      'Antes de ganarla o de mandar el contrato hay que elegir. En el calendario cuentan una sola vez.'
     ]
   },
   sinFecha: {
@@ -475,7 +476,8 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'En qué va',
     texto: [
       'Es para ordenarte y para los avisos: candidato, borrador, enviada, negociación, perdida.',
-      '"Ganada" no se elige acá: se llega con "Marcar ganada", que crea la reserva.'
+      '"Ganada" no se elige acá: se llega con "Marcar ganada", que crea la reserva.',
+      'Con varias alternativas vale para todas: van en un solo link y es una sola conversación.'
     ]
   },
   documento: {

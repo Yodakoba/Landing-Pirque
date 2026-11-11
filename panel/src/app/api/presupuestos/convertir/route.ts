@@ -9,7 +9,7 @@ import { cupoParaGanar } from '@/lib/dias';
 import { ocupaLugar } from '@/lib/ocupacion';
 import { condicionesDe, estadoCobros, cobrosDe, puedeGanar } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
-import { conCliente, otrasAlternativas } from '@/lib/cotizar';
+import { conCliente, otrasAlternativas, faltaElegir, letraDe } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { esFecha } from '@/lib/fechas';
 import {
@@ -80,6 +80,18 @@ export async function POST(req: Request) {
       return NextResponse.json({
         error: `Este presupuesto está ${visible.toLowerCase()}. `
              + 'Renueva su vigencia o vuelve a marcarlo antes de convertirlo.'
+      }, { status: 409 });
+    }
+
+    // **Antes de ganar se elige la alternativa** (2026-11-11). Con otras
+    // todavía en carrera, el cliente no ha dicho con cuál se queda: ganar
+    // una a ciegas dejaría a las otras "No elegida" sin que nadie lo
+    // decidiera. Se comprueba acá además de en la pantalla.
+    if (faltaElegir(p, lista)) {
+      const otras = otrasAlternativas(p, lista).map((x) => letraDe(x, lista)).filter(Boolean);
+      return NextResponse.json({
+        error: `Antes de ganarla, elige con cuál alternativa se quedó el cliente`
+             + (otras.length ? ` (todavía están en carrera la ${otras.join(' y la ')}).` : '.')
       }, { status: 409 });
     }
 

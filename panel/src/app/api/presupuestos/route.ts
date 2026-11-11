@@ -12,7 +12,7 @@ import {
   documentoDe, numeroONulo, type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
 import {
-  prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe
+  prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe, otrasAlternativas
 } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { nuevoToken } from '@/lib/equipo';
@@ -407,6 +407,43 @@ export async function PATCH(req: Request) {
       await guardarLineas(id, await lineasListas(crudo, id, invitados, p.fecha, p.uf));
     }
     if (p.idReserva) await sincronizarReserva(id);
+
+    // **Las alternativas se mandan y se siguen juntas** (2026-11-11): van en
+    // un solo link, así que lo que es de la conversación con el cliente —que
+    // se mandó, que está negociando, que se perdió, que sigue esperando—
+    // vale para todas las que siguen en carrera. Solo hacia adelante: una
+    // alternativa que pasa de candidato a borrador no devuelve a las demás.
+    if (!previo.idReserva) {
+      const adelante: string[] = [
+        ESTADO_PRESUPUESTO.enviado, ESTADO_PRESUPUESTO.negociacion, ESTADO_PRESUPUESTO.rechazado
+      ];
+      const estadoAdelante = p.estado !== previo.estado && adelante.includes(estadoNormal(p.estado));
+      for (const otra of otrasAlternativas(previo, lista)) {
+        const { fila: _fo, ...o } = otra;
+        let cambio = false;
+        if (estadoAdelante && estadoNormal(o.estado) !== estadoNormal(p.estado)
+            && !(estadoNormal(p.estado) === ESTADO_PRESUPUESTO.enviado && estaMandada(o.estado))) {
+          o.estado = p.estado;
+          if (estadoNormal(p.estado) === ESTADO_PRESUPUESTO.rechazado) o.motivo = p.motivo;
+          cambio = true;
+        }
+        // "Sí, la mandé" —también "Mandar de nuevo"— manda el link entero:
+        // una alternativa nueva que todavía era borrador ya va en él.
+        if (cuerpo.seguimiento === 'enviada' && !estaMandada(o.estado)) {
+          o.estado = ESTADO_PRESUPUESTO.enviado; cambio = true;
+        }
+        if (p.enviada && !o.enviada && estaMandada(o.estado)) {
+          o.enviada = p.enviada; o.validoHasta = p.validoHasta; cambio = true;
+        }
+        if (cuerpo.renovarVigencia && o.validoHasta !== p.validoHasta) {
+          o.validoHasta = p.validoHasta; cambio = true;
+        }
+        if (p.ultimoSeguimiento !== previo.ultimoSeguimiento && o.ultimoSeguimiento !== p.ultimoSeguimiento) {
+          o.ultimoSeguimiento = p.ultimoSeguimiento; cambio = true;
+        }
+        if (cambio) await guardarPresupuesto(o);
+      }
+    }
 
     await anotar({ ...quien,
       accion: motivoCorreccion ? 'Corrigió una cotización ganada de un día cerrado'

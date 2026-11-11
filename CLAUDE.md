@@ -2374,6 +2374,36 @@ Contrato**, y cada uno de los dos últimos termina en su propio próximo paso.
   devolución sale de sus condiciones. *Esperando respuesta* abre el paso 5
   cuando lo que falta es el contrato firmado.
 
+### Las alternativas: se mandan juntas y se elige una antes de ganar (2026-11-11)
+
+Lo pidió el cliente: crear una alternativa tenía que estar más a mano, y
+*"en la sección envío tengo que ver que existen tres variantes, le mando las
+tres… y sobre todo, antes de marcar como ganado, tiene que decidir cuál de
+las alternativas usa"*.
+
+- **Crear una está a la vista**: la franja *Alternativas* (A · B · C con su
+  total) sale desde el paso 2 aunque haya una sola, con *+ Crear alternativa
+  B*; y el paso 3 termina en un bloque *¿Le ofreces otra versión?*. Copia
+  todo y se abre ahí mismo.
+- **Un solo link para todo el grupo** (`paraElLink()`): mientras se decide,
+  `/presupuesto/<token>` muestra las alternativas en carrera una debajo de
+  la otra, cada una con su letra, su total, su tabla y sus condiciones.
+  Cualquier token del grupo abre lo mismo. Un candidato no sale.
+- **Lo de la conversación vale para todo el grupo**: *Sí, la mandé* —también
+  *Mandar de nuevo*— pasa a Enviada a todas las que siguen en carrera; y
+  pasar a Negociación, perderla o *Sigue esperando* también se copia. Solo
+  hacia adelante (en el `PATCH`): pasar una de candidato a borrador no
+  devuelve a las otras.
+- **Elegir es un paso propio** (`/api/presupuestos/elegir`): *¿Con cuál
+  alternativa se quedó?*, un botón grande por alternativa, en el próximo
+  paso del 4 (ya mandada) y arriba del 5. Las otras pasan a **No elegida** y
+  **el mismo link pasa a mostrar solo la elegida**. *Volver a ofrecer todas*
+  lo deshace mientras ninguna esté ganada. Elegir no toca el cupo.
+- **Ganar exige una sola en carrera** (`faltaElegir()`): mientras haya otra,
+  *Marcar ganada* se reemplaza por la pregunta, el contrato no se ofrece
+  —es de una sola versión— y `/convertir` responde 409. Una alternativa que
+  no quedó dice *"el cliente se quedó con la A"* y no tiene próximo paso.
+
 ### Si el día se llenó mientras se cotizaba (2026-11-11)
 
 Lo pidió el cliente: el vendedor arma el borrador con cupo de sobra, después
