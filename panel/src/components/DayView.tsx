@@ -18,7 +18,7 @@ import { enPalabras } from '@/lib/fechas';
 import { cuentaEnElCalendario, estadoVisible, lineasDe, totalDe, personasDe,
          folioDe, gentePosible, type Presupuesto, type LineaPresupuesto } from '@/lib/presupuestos';
 import { aCSV } from '@/lib/csv';
-import { ocupaLugar, faltaCobrar, enPesos } from '@/lib/ocupacion';
+import { ocupaLugar, faltaCobrar, estaAbonada, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import PastillaPago from './PastillaPago';
@@ -105,7 +105,7 @@ function Pendiente({ children }: { children: React.ReactNode }) {
  * en línea y todavía sin pagar salía en "Pagadas". Lo que se quiere saber
  * en el mesón es a quién hay que cobrarle.
  */
-type Filtro = 'todas' | 'pagadas' | 'porCobrar';
+type Filtro = 'todas' | 'pagadas' | 'abonadas' | 'sinPagar';
 
 export default function DayView(
   { fecha, rol, usuario, gerencia = false }: { fecha: string; rol: string; usuario: string; gerencia?: boolean }
@@ -257,7 +257,8 @@ export default function DayView(
   );
 
   const visibles = useMemo(() => delDia.filter((r) => {
-    if (filtro === 'porCobrar') return faltaCobrar(r);
+    if (filtro === 'abonadas') return estaAbonada(r);
+    if (filtro === 'sinPagar') return faltaCobrar(r) && !estaAbonada(r);
     if (filtro === 'pagadas') return ocupaLugar(r) && !faltaCobrar(r);
     return true;
   }), [delDia, filtro]);
@@ -368,7 +369,10 @@ export default function DayView(
   // Los números grandes son PERSONAS, para que las dos filas sumen lo mismo;
   // cuántas reservas son va en la línea chica.
   const cuentan = visibles.filter(ocupaLugar);
-  const porCobrar = cuentan.filter(faltaCobrar);
+  // Tres grupos, los mismos tres tramos de la barra de la tarjeta: pagadas,
+  // abonadas (pagaron una parte: casi seguro vienen) y sin pagar nada.
+  const abonadas = cuentan.filter(estaAbonada);
+  const sinPagar = cuentan.filter((r) => faltaCobrar(r) && !estaAbonada(r));
   const pagadas = cuentan.filter((r) => !faltaCobrar(r));
   const liberadas = visibles.filter((r) => !ocupaLugar(r));
   const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + (Number(r.personas) || 0), 0);
@@ -411,7 +415,11 @@ export default function DayView(
           <div className="mt-1.5 flex flex-wrap gap-2">
             <Azulejo n={gente(pagadas)} titulo="Pagadas" nota={cuantas(pagadas)}
               color="text-verde-texto" borde="border-verde/40" />
-            <Azulejo n={gente(porCobrar)} titulo="Por cobrar" nota={cuantas(porCobrar)}
+            {abonadas.length > 0 && (
+              <Azulejo n={gente(abonadas)} titulo="Abonadas" nota={`${cuantas(abonadas)} · falta el resto`}
+                color="text-verde-texto" borde="border-verde/40 border-dashed" />
+            )}
+            <Azulejo n={gente(sinPagar)} titulo="Sin pagar" nota={cuantas(sinPagar)}
               color="text-ambar-texto" borde="border-ambar/40" />
             {liberadas.length > 0 && (
               <Azulejo n={gente(liberadas)} titulo="Ya no vienen"
@@ -741,12 +749,12 @@ export default function DayView(
           relleno entero a propósito: el único relleno de esta pantalla es
           *Agregar reserva*, y dos rellenos es no tener ninguno. */}
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        {(['todas','pagadas','porCobrar'] as Filtro[]).map((f) => (
+        {(['todas','pagadas','abonadas','sinPagar'] as Filtro[]).map((f) => (
           <button key={f} onClick={() => setFiltro(f)}
             aria-pressed={filtro === f}
             className={`boton rounded-full ${filtro === f
               ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
-            {f === 'todas' ? 'Todas' : f === 'pagadas' ? 'Pagadas' : 'Por cobrar'}
+            {{ todas: 'Todas', pagadas: 'Pagadas', abonadas: 'Abonadas', sinPagar: 'Sin pagar' }[f]}
           </button>
         ))}
         <span className="flex-1" />

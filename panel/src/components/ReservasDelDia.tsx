@@ -25,7 +25,7 @@ import { yaLlego } from '@/lib/cierres';
 import { hoy } from '@/lib/fechas';
 import type { Reserva } from '@/lib/tipos';
 import { ASISTENCIA } from '@/lib/columnas';
-import { ocupaLugar, faltaCobrar } from '@/lib/ocupacion';
+import { ocupaLugar, faltaCobrar, estaAbonada } from '@/lib/ocupacion';
 import { menusDe } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import Asistencia from './Asistencia';
@@ -141,7 +141,9 @@ export default function ReservasDelDia({
 
   if (!todas && !error) return <p className="mt-5 text-sm text-hueso/60">Cargando reservas…</p>;
 
-  const porCobrar = cuentan.filter(faltaCobrar);
+  // Los mismos tres grupos de la barra de la tarjeta y de la página del día.
+  const abonadas = cuentan.filter(estaAbonada);
+  const sinPagar = cuentan.filter((r) => faltaCobrar(r) && !estaAbonada(r));
   const pagadas = cuentan.filter((r) => !faltaCobrar(r));
   const liberadas = delDia.filter((r) => !ocupaLugar(r));
   const vinieron = cuentan.filter((r) => r.asistencia === ASISTENCIA.vino);
@@ -186,7 +188,11 @@ export default function ReservasDelDia({
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Azulejo n={gente(pagadas)} titulo="ya pagaron" nota={reservas(pagadas.length)}
               color="text-verde-texto" borde="border-verde/40" />
-            <Azulejo n={gente(porCobrar)} titulo="por cobrar" nota={reservas(porCobrar.length)}
+            {abonadas.length > 0 && (
+              <Azulejo n={gente(abonadas)} titulo="abonaron" nota={`${reservas(abonadas.length)} · falta el resto`}
+                color="text-verde-texto" borde="border-verde/40 border-dashed" />
+            )}
+            <Azulejo n={gente(sinPagar)} titulo="sin pagar" nota={reservas(sinPagar.length)}
               color="text-ambar-texto" borde="border-ambar/40" />
           </div>
         </>

@@ -104,13 +104,20 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
  * página del mismo alto — no solo las de una misma fila. Es la medida que
  * hay que volver a tomar cada vez que la tarjeta cambie de contenido.
  *
+ * **Y a 15.125 el 2026-11-12**, cuando las pastillas del pago pasaron a ser
+ * celdas de dos líneas (pagadas · abonadas · sin pagar): el frente con gente
+ * mide 241px.
+ *
  * **Es `min-height` y no `height`, y esa es toda la diferencia**: la medida
  * fija que este archivo venía evitando es la que recorta el contenido cuando
  * crece. Un piso no recorta nada — si algún día no alcanza (una pantalla
  * angosta hace envolver más la lista), la tarjeta crece y `h-full` deja
  * pareja su fila igual.
  */
-const ALTO_ESTANDAR = 'min-h-[14.25rem]';
+const ALTO_ESTANDAR = 'min-h-[15.125rem]';
+
+/** El tramo de las abonadas: el verde de las pagadas, rayado (falta el resto). */
+const RAYAS = 'repeating-linear-gradient(135deg, rgb(var(--verde-fuerte)) 0 4px, rgb(var(--verde-fuerte) / 0.4) 4px 7px)';
 
 const CARA = `col-start-1 row-start-1 flex h-full flex-col rounded border p-4 ` +
              `${ALTO_ESTANDAR} [backface-visibility:hidden]`;
@@ -160,6 +167,14 @@ export default function TarjetaDia({
   // Lo que no se ve no se puede tabular. Ver el comentario de arriba.
   const alFrente = { tabIndex: volteada ? -1 : 0 };
   const alDorso = { tabIndex: volteada ? 0 : -1 };
+  // Las abonadas son parte de las por cobrar; las que no pagaron nada, el resto.
+  const abonadas = d.abonadas ?? 0;
+  const sinPagar = Math.max(0, d.porPagar - abonadas);
+  const tramos = [
+    { n: d.pagadas, icono: '✓', palabra: 'pagadas', clase: 'border-verde/40 bg-verde/10 text-verde-texto' },
+    { n: abonadas, icono: '½', palabra: 'abonadas', clase: 'border-dashed border-verde/50 bg-verde/5 text-verde-texto' },
+    { n: sinPagar, icono: '○', palabra: 'sin pagar', clase: 'border-ambar/40 bg-ambar/10 text-ambar-texto' }
+  ].filter((t) => t.n > 0);
 
   return (
     /* `h-full` en los tres niveles: **todas las tarjetas de una misma fila
@@ -237,24 +252,22 @@ export default function TarjetaDia({
                     muerto a la derecha del número, así que no alarga nada. */}
                 <Clima c={clima} tamano="tarjeta" />
               </div>
-              {/* La barra: cuánto del cupo está cobrado y cuánto falta
-                  cobrar el mismo día. Verde es plata que ya está; ámbar
-                  es plata que hay que cobrar en la puerta. El resto de la
-                  barra es lo que queda libre. */}
+              {/* La barra: tres tramos de gente (2026-11-12, lo pidió el
+                  cliente). Verde lleno: ya pagaron todo. **Verde rayado:
+                  abonaron una parte** —casi seguro vienen, falta el resto—;
+                  antes iban en ámbar con las que no han pagado nada, y un
+                  día con 80 personas abonadas se veía casi sin plata.
+                  Ámbar: no han pagado nada. El resto es lo libre. */}
               <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-hueso/15"
                    role="img"
-                   aria-label={`${d.pagadas} pagadas, ${d.porPagar} por cobrar, de ${d.capacidad} lugares`}>
+                   aria-label={`${d.pagadas} pagadas, ${abonadas} abonadas, ${sinPagar} sin pagar, de ${d.capacidad} lugares`}>
                 <div className="bg-verde-fuerte"
                      style={{ width: `${pct(d.pagadas, d.capacidad)}%` }} />
+                <div style={{ width: `${pct(abonadas, d.capacidad)}%`, backgroundImage: RAYAS }} />
                 <div className="bg-ambar-fuerte"
-                     style={{ width: `${pct(d.porPagar, d.capacidad)}%` }} />
+                     style={{ width: `${pct(sinPagar, d.capacidad)}%` }} />
               </div>
 
-              {/* **Dos pastillas y no dos textos con un cuadradito.** Es la
-                  regla PlayStation: lo que hay que distinguir de un vistazo
-                  se distingue por forma y color, no por un punto de 8px al
-                  lado de una letra de 12. El punto se queda igual, porque
-                  el color solo no alcanza para quien no lo distingue. */}
               {/* **Las dos pastillas aparecen solo si hay alguien**
                   (2026-11-02, lo notó el cliente mirando un miércoles y un
                   domingo vacíos). "0 pagadas · 0 por cobrar" no contesta
@@ -267,19 +280,25 @@ export default function TarjetaDia({
                   **La barra sí se queda**, aunque vaya vacía: es lo que
                   dibuja el cupo del día, así que en cero dice "no hay nada
                   tomado de los 120" — que es un dato, no un relleno. */}
-              {(d.pagadas > 0 || d.porPagar > 0) && (
-                <p className="mt-3 flex flex-wrap gap-2 text-[13px]">
-                  <span className="inline-flex items-center gap-1.5 rounded-md border
-                                   border-verde/40 bg-verde/10 px-2 py-1 text-verde-texto">
-                    <span aria-hidden className="h-2 w-2 rounded-full bg-verde-fuerte" />
-                    <strong className="tabular-nums">{d.pagadas}</strong> pagadas
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-md border
-                                   border-ambar/40 bg-ambar/10 px-2 py-1 text-ambar-texto">
-                    <span aria-hidden className="h-2 w-2 rounded-full bg-ambar-fuerte" />
-                    <strong className="tabular-nums">{d.porPagar}</strong> por cobrar
-                  </span>
-                </p>
+              {/* **Una celda por tramo, solo si tiene gente**, en una grilla
+                  de columnas parejas: número arriba con su ícono —✓ ½ ○,
+                  los mismos del pago en las cotizaciones, para distinguirlas
+                  sin el color— y la palabra abajo. Tres pastillas en una
+                  línea no caben en la tarjeta (piden 333px de 261) y al
+                  envolver la estiraban; en dos líneas siempre miden igual. */}
+              {tramos.length > 0 && (
+                <div className="mt-3 grid gap-1.5"
+                     style={{ gridTemplateColumns: `repeat(${tramos.length}, minmax(0, 1fr))` }}>
+                  {tramos.map((t) => (
+                    <span key={t.palabra}
+                      className={`rounded-md border px-2 py-1 leading-tight ${t.clase}`}>
+                      <span className="block text-[15px] font-bold tabular-nums">
+                        <span aria-hidden>{t.icono} </span>{t.n}
+                      </span>
+                      <span className="block text-[13px]">{t.palabra}</span>
+                    </span>
+                  ))}
+                </div>
               )}
 
               {/* **Acá iba "$X por cobrar", y se sacó el 2026-10-23 a pedido

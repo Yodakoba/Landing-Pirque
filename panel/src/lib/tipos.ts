@@ -66,6 +66,8 @@ export interface Ocupacion {
   quedan: number;
   pagadas: number;       // personas de reservas ya pagadas
   porPagar: number;      // personas a las que hay que cobrarles
+  /** De `porPagar`, las que ya abonaron una parte. Sin pagar nada = porPagar - abonadas. */
+  abonadas: number;
   porCobrar: number;     // pesos a cobrar el mismo día
   sinMonto: number;      // reservas por cobrar SIN monto anotado
   privada: boolean;      // recibe reservas, pero el sitio no la ofrece
