@@ -2322,6 +2322,15 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
   `Último seguimiento`; el navegador nunca escribe esas fechas.
 - **Cambiar precios de una Enviada** muestra una franja: *¿Están
   negociando?* con *Pasar a Negociación*.
+- **El contrato se manda igual que la cotización** (2026-11-11, lo pidió el
+  cliente): WhatsApp, Correo, Copiar link y Ver el contrato, en la sección
+  El contrato y en el próximo paso de una ganada. Al volver pregunta *¿Le
+  mandaste el contrato?*; el sí anota `Contrato enviado` (la fecha la pone
+  el servidor, con `seguimiento: 'contratoEnviado'`). Si a los N días del
+  seguimiento no se subió el firmado, *Esperando respuesta* pregunta
+  *¿te lo devolvió firmado?* con *Sí: subir el firmado* y *Todavía no*
+  (`seguimientoDe()`, motivo `contratoSinFirmar`, que vale también para una
+  ganada). Subir el firmado lo apaga.
 - **El paso 4 es un camino de hitos**: arriba, *Enviada → Anticipo → Ganada
   → Contrato firmado → Pagada* como trofeos; **al final**, después de todas
   las secciones, **un solo bloque grande con el próximo paso** (mandarla, el

@@ -498,6 +498,13 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Se imprime, se firma en papel y se sube el firmado. Si después cambias la cotización, el que vale es el papel.'
     ]
   },
+  mandarContrato: {
+    titulo: 'Mandar el contrato',
+    texto: [
+      'WhatsApp y Correo abren el mensaje con el link del contrato. Al volver te pregunto si lo mandaste.',
+      'Si no vuelve firmado, te lo recuerdo arriba de Cotizaciones. Se sube el firmado y listo.'
+    ]
+  },
   ley20393: {
     titulo: 'Ley 20.393',
     texto: [
@@ -564,7 +571,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   esperandoRespuesta: {
     titulo: 'Esperando respuesta',
     texto: [
-      'Las cotizaciones mandadas que llevan días sin moverse, o cuyo evento se acerca sin estar ganadas.',
+      'Las cotizaciones mandadas que llevan días sin moverse, las que tienen el evento cerca sin estar ganadas, y los contratos mandados que no han vuelto firmados.',
       'Contesta ahí mismo: "Está negociando", "Se perdió" o "Sigue esperando", que te vuelve a preguntar más adelante. Los plazos se cambian en cada cotización o en Configuración.'
     ]
   },
