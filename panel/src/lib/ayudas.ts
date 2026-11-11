@@ -193,7 +193,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'invitados y tipo.',
       'Productos: agrégalos con los botones. Cada línea tiene su precio y su '
       + 'descuento; abajo va el descuento sobre el total y el IVA.',
-      'Enviar: guarda, copia el link o mándalo por WhatsApp. Si el cliente '
+      'Condiciones: documento, pago y contrato; desde ahí se copia el link o se '
+      + 'manda por WhatsApp. Si el cliente '
       + 'acepta, “Ver el contrato”, imprímelo y fírmenlo en dos ejemplares.',
       'Sube la foto o el PDF del contrato firmado, anota el anticipo y '
       + '“Marcar ganada”.'
@@ -455,13 +456,6 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Los porcentajes de los botones se cambian en Configuración.'
     ]
   },
-  sigueInvitados: {
-    titulo: 'Seguir a los invitados',
-    texto: [
-      'La cantidad de esta línea queda igual a los invitados, y se mueve sola si cambian.',
-      'Es para lo que toman todos, como la once o el desayuno.'
-    ]
-  },
   ufCotizacion: {
     titulo: 'La UF de la cotización',
     texto: [
@@ -571,7 +565,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   cobro: {
     titulo: 'Cómo se cobra',
     texto: [
-      'Por persona: el precio se multiplica por la cantidad. Monto fijo: un solo precio, como el arriendo o el show.'
+      'Por persona: el precio se multiplica por la cantidad, que se ajusta con − y + en cada cotización. Monto fijo: un solo precio, sin cantidad, como el arriendo o el show: va o no va.'
     ]
   },
   moneda: {

@@ -269,7 +269,8 @@ export interface LineaPresupuesto {
   descuento: number;
   /** Si el precio trae el IVA. Ver `COL_LINEAS.iva`. */
   ivaIncluido: boolean;
-  /** Si la cantidad sigue a los invitados. */
+  /** Si la cantidad seguía a los invitados. Ya no se usa (2026-11-11): se
+   *  escribe siempre en no, y la columna queda por las filas viejas. */
   sigue: boolean;
   /** El precio en UF, o 0 si la línea es en pesos. */
   precioUF: number;

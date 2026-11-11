@@ -2,14 +2,14 @@
  * Las reglas de armar una cotización (Fase 2, 2026-11-10).
  *
  * Todo lo que el servidor decide al guardar vive acá, puro y con pruebas:
- * cuánta gente es cada línea, qué líneas siguen a los invitados, la regla del
+ * cuánta gente es cada línea, qué es monto fijo, la regla del
  * show ecuestre y de dónde sale el cliente. La pantalla propone lo mismo
  * para que se vea mientras se escribe, pero **lo que se guarda lo decide
  * esto**, porque una llamada directa a la API tiene que obedecer las mismas
  * reglas que un clic.
  */
 import { normalizar, estaCerrado, esPrivada } from './columnas.ts';
-import { canonizar, TIPO_PRODUCTO, IVA_PRECIO, MONEDA, type Menu } from './menus.ts';
+import { canonizar, TIPO_PRODUCTO, IVA_PRECIO, MONEDA, COBRO, type Menu } from './menus.ts';
 import {
   normalizarLineas, ESTADO_PRESUPUESTO, estadoNormal,
   type LineaEntrante, type LineaPresupuesto, type Presupuesto
@@ -49,8 +49,12 @@ export function showDe(catalogo: Menu[]): Menu | undefined {
  *   tipo Menú son tantas personas como su cantidad; cualquier otra —la once,
  *   el arriendo, el show, una línea libre— son cero. Ya no hay una columna
  *   de personas que alguien tenga que llenar a mano.
- * - **Las que siguen a los invitados toman su número**, aunque vengan con
- *   otra cantidad: si el cliente pasa de 40 a 55, la once pasa a 55.
+ * - **Ninguna línea sigue sola a los invitados** (2026-11-11, lo decidió el
+ *   cliente): 10 invitados pueden ser 8 desayunos y 6 onces. La once nace
+ *   con los invitados y se ajusta con − y +. Las líneas viejas que venían
+ *   marcadas conservan la cantidad con que se guardaron.
+ * - **Un monto fijo —arriendo, show— es siempre 1**: va o no va, y no hay
+ *   cantidad que cambiar, ni en la pantalla ni llamando a la API.
  * - **El show ecuestre en un día público va siempre, incluido y a cero.**
  *   Si no viene, se agrega; si viene con precio, se le quita. En un día
  *   privado es una línea más, que se agrega o no y cobra su precio.
@@ -71,10 +75,9 @@ export function prepararLineas(
   const lineas = normalizarLineas(entrantes).map((l) => {
     const prod = productoDe(l.concepto, catalogo);
     const esMenu = prod?.tipo === TIPO_PRODUCTO.menu;
-    // **Un menú no sigue a los invitados**: con dos menús que los siguieran,
-    // 40 invitados serían 80 personas. Se fuerza acá, no solo en la pantalla.
-    const sigue = l.sigue && !esMenu;
-    const cantidad = sigue && invitados > 0 ? invitados : l.cantidad;
+    const montoFijo = !!prod && normalizar(prod.cobro) === normalizar(COBRO.fijo);
+    const sigue = false;
+    const cantidad = montoFijo ? 1 : l.cantidad;
     const esShow = !!prod && prod.tipo === TIPO_PRODUCTO.show;
     return {
       ...l,
@@ -105,10 +108,9 @@ export function lineaDeProducto(
   yaEnMenus = 0
 ): Omit<LineaPresupuesto, 'fila'> {
   const porPersona = normalizar(m.cobro) === normalizar('Por persona');
-  // Un menú por persona NO sigue a los invitados: 40 invitados pueden ser
-  // 30 Tradiciones y 10 de niños. Lo que sigue es lo que toman todos, como
-  // la once o el desayuno.
-  const sigue = porPersona && m.tipo !== TIPO_PRODUCTO.menu;
+  // Nada sigue solo a los invitados (2026-11-11): la once nace con todos y
+  // se ajusta a mano, porque no todos la toman.
+  const sigue = false;
   // **Un menú nuevo toma los invitados que faltan, no todos** (2026-11-10,
   // lo reclamó el cliente: 40 invitados, Lo Pirque con 40 y el de niños con
   // otros 40 eran 80). El primero toma los 40; el segundo nace en 0 y se le
