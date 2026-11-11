@@ -555,9 +555,9 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   },
 
   seguimiento: {
-    titulo: 'Seguimiento',
+    titulo: 'Seguimiento y envío',
     texto: [
-      'Al mandarla —WhatsApp, correo o link— el panel pregunta si la mandaste y la pasa a Enviada. Desde ahí corre la vigencia y aparece como posible en el calendario de reservas.',
+      'WhatsApp y Correo abren el mensaje con el link, listo para mandar. Al volver al panel te pregunta si la mandaste y la pasa a Enviada. Desde ahí corre la vigencia y aparece como posible en el calendario de reservas.',
       'Después te recuerda preguntarle al cliente: arriba de Cotizaciones, en "Esperando respuesta".'
     ]
   },

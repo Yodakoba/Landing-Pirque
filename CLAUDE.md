@@ -2293,11 +2293,16 @@ la carpeta de la cotización junto a sus comprobantes, por
 Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
 *"estilo PlayStation… ayudar al usuario de la forma más fácil posible"*.
 
-- **Mandarla pregunta.** WhatsApp, Correo (nuevo: abre el programa de correo
-  con el link, el asunto y el correo de la ficha) y Copiar link abren una
-  ventana *¿Le mandaste la cotización a …?*. *Sí, la mandé* la pasa a
-  **Enviada**. No hay WhatsApp ni correo conectados al panel, así que no hay
-  otra forma de saberlo; cuando los haya, la pregunta se reemplaza.
+- **Mandarla abre y después pregunta.** WhatsApp y Correo (abre el programa
+  de correo con el link, el asunto y el correo de la ficha) son **enlaces de
+  verdad**: abren el mensaje listo para mandar, y **al volver al panel**
+  —la página vuelve a estar a la vista o recupera el foco— preguntan *¿Le
+  mandaste la cotización a …?*. Si la página nunca se fue, pregunta a los 3
+  s. Copiar link pregunta enseguida. *Sí, la mandé* la pasa a **Enviada**.
+  La primera versión abría WhatsApp con `window.open` y en el teléfono quedó
+  bloqueado como ventana emergente: el botón solo preguntaba. No hay
+  WhatsApp ni correo conectados al panel; cuando los haya, la pregunta se
+  reemplaza.
 - **La vigencia corre desde el envío**, no desde la creación: una nueva nace
   sin `Válido hasta`, y la primera vez que queda Enviada o en Negociación
   —con el botón o eligiendo la etapa a mano— el servidor anota `Enviada` y
@@ -2318,10 +2323,13 @@ Lo pidió el cliente: que el panel acompañe al vendedor por las etapas,
 - **Cambiar precios de una Enviada** muestra una franja: *¿Están
   negociando?* con *Pasar a Negociación*.
 - **El paso 4 es un camino de hitos**: arriba, *Enviada → Anticipo → Ganada
-  → Contrato firmado → Pagada* como trofeos; debajo, **un solo bloque
-  grande con el próximo paso** (mandarla, el anticipo, **Marcar ganada** en
-  verde a todo el ancho, el contrato, el saldo). Ganar se festeja con 🎉.
-- **Las secciones tienen color**: Seguimiento en rosado, Documento neutro,
+  → Contrato firmado → Pagada* como trofeos; **al final**, después de todas
+  las secciones, **un solo bloque grande con el próximo paso** (mandarla, el
+  anticipo, **Marcar ganada** en verde a todo el ancho, el contrato, el
+  saldo). Va al final a pedido del cliente: primero se revisa el
+  seguimiento, los datos y el contrato, y recién ahí se gana. Ganar se
+  festeja con 🎉.
+- **Las secciones tienen color**: Seguimiento y envío en rosado, Documento neutro,
   El pago en verde, El contrato en cielo con *Cambios de fecha y
   cancelación* en ámbar adentro. **Guardar, Borrar y Cancelar evento van
   abajo, chicos y separados**: nunca al lado del hito.

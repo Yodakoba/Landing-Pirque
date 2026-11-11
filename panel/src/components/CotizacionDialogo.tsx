@@ -582,10 +582,33 @@ export default function CotizacionDialogo({
    * también, porque casi siempre es para pegarlo en alguna parte.
    */
   function mandar(via: 'whatsapp' | 'correo' | 'link') {
-    if (via === 'whatsapp' && whatsapp) window.open(whatsapp, '_blank', 'noreferrer');
-    if (via === 'correo' && correo) window.location.href = correo;
+    // WhatsApp y correo son enlaces de verdad (`BotonesMandar`): los abre el
+    // navegador. Abrirlos con `window.open` los bloqueaba en el teléfono como
+    // ventana emergente, y se perdía justo lo que el botón promete (2026-11-11).
     if (via === 'link' && link) copiarConAviso(link, 'Link copiado', 'Copia este link:');
-    if (p && !ganada && !mandada && puedeEditar && !cancelada) setPreguntaEnvio(true);
+    if (!(p && !ganada && !mandada && puedeEditar && !cancelada)) return;
+    // Copiar no saca de la pantalla: se pregunta enseguida.
+    if (via === 'link') return setPreguntaEnvio(true);
+    // **WhatsApp y correo preguntan al volver** (lo pidió el cliente: *"cuando
+    // vuelvo a la pestaña o al panel, me tiene que preguntar"*). Se espera a
+    // que la página vuelva a estar a la vista o a tener el foco. Si nunca se
+    // fue —un correo sin programa de correo—, pregunta igual a los 3 s.
+    let salio = false;
+    const listo = () => {
+      document.removeEventListener('visibilitychange', alVolver);
+      window.removeEventListener('focus', alVolver);
+      window.removeEventListener('blur', alSalir);
+      clearTimeout(reloj);
+      setPreguntaEnvio(true);
+    };
+    function alSalir() { salio = true; }
+    function alVolver() { if (document.visibilityState === 'visible' && salio) listo(); }
+    const alOcultar = () => { if (document.visibilityState === 'hidden') salio = true; };
+    document.addEventListener('visibilitychange', alOcultar, { once: true });
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', alVolver);
+    window.addEventListener('blur', alSalir);
+    const reloj = setTimeout(() => { if (!salio) listo(); }, 3000);
   }
   async function confirmarEnvio() {
     setPreguntaEnvio(false);
@@ -642,7 +665,7 @@ export default function CotizacionDialogo({
       </Hito>
     ) : !ganada && !mandada ? (
       <Hito tono="rosa" titulo="Mándasela al cliente"
-        bajada="Al mandarla te pregunto si la mandaste: desde ese momento corre su vigencia y aparece en el calendario de reservas.">
+        bajada="WhatsApp y Correo abren el mensaje con el link. Al volver te pregunto si la mandaste: desde ahí corre su vigencia y aparece en el calendario de reservas.">
         <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} grande />
       </Hito>
     ) : !ganada ? (
@@ -1171,7 +1194,6 @@ export default function CotizacionDialogo({
                 grande… aquí cumplimos un hito"*). Arriba se ve por dónde va;
                 debajo, un solo bloque grande con lo que toca ahora. */}
             {p && !cancelada && <Camino pasos={camino} />}
-            {p && !cancelada && hito}
 
             {cancelada && p && (
               <BloqueCancelada p={p} cobros={cobros} puedePagar={puedePagar}
@@ -1181,7 +1203,7 @@ export default function CotizacionDialogo({
 
             {/* ---------- Seguimiento ---------- */}
             {!cancelada && (
-            <Seccion tono="rosa" icono="📨" titulo="Seguimiento" ayuda="seguimiento">
+            <Seccion tono="rosa" icono="📨" titulo="Seguimiento y envío" ayuda="seguimiento">
             {!ganada && (
               <div>
                 <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
@@ -1640,6 +1662,13 @@ export default function CotizacionDialogo({
 
             </fieldset>
 
+            {/* **El próximo paso va al final** (2026-11-11, lo pidió el
+                cliente: *"primero hacemos el seguimiento, los datos, el
+                contrato… y de ahí te ofrezco marcar como ganado"*). Arriba
+                queda el camino, que dice por dónde va; el botón grande cierra
+                la pantalla, después de todo lo que hay que revisar. */}
+            {p && !cancelada && hito}
+
             {/* **Lo secundario va abajo, chico y separado** (2026-11-11):
                 guardar ya es solo, borrar y cancelar son peligrosos. Nunca
                 al lado del hito. */}
@@ -1826,12 +1855,13 @@ function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false }: {
   const clase = grande ? 'boton min-h-[56px] flex-1 text-[16px] font-semibold' : 'boton min-h-[44px]';
   return (
     <div className="flex flex-wrap gap-2">
-      <button type="button" className={clase} disabled={!whatsapp} onClick={() => onMandar('whatsapp')}>
-        {whatsapp ? '💬 WhatsApp' : 'Falta su teléfono'}
-      </button>
-      <button type="button" className={clase} disabled={!correo} onClick={() => onMandar('correo')}>
-        {correo ? '✉️ Correo' : 'Falta su correo'}
-      </button>
+      {whatsapp ? (
+        <a href={whatsapp} target="_blank" rel="noreferrer" className={`tecla ${clase}`}
+          onClick={() => onMandar('whatsapp')}>💬 WhatsApp</a>
+      ) : <button type="button" className={clase} disabled>Falta su teléfono</button>}
+      {correo ? (
+        <a href={correo} className={`tecla ${clase}`} onClick={() => onMandar('correo')}>✉️ Correo</a>
+      ) : <button type="button" className={clase} disabled>Falta su correo</button>}
       <button type="button" className={clase} disabled={!link} onClick={() => onMandar('link')}>
         📋 Copiar link
       </button>
