@@ -24,6 +24,7 @@ import { aEntero, esContratado, MODALIDAD, porNombre,
          type Puesto, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import DatosBancarios from './DatosBancarios';
+import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 import { bancoVacio, sePuedeTransferir, type Banco } from '@/lib/banco';
 import Dialogo from './Dialogo';
 import CampoTelefono from './CampoTelefono';
@@ -58,6 +59,10 @@ export default function EquipoEditor() {
   const [verSueldos, setVerSueldos] = useState(false);
   const [verLinks, setVerLinks] = useState(false);
   const [editarPuestos, setEditarPuestos] = useState(false);
+  // **Vista gerencia** (2026-11-11): con el rol sin `equipo` las fichas se
+  // miran y no se tocan; sin `sueldos`, el pago y la cuenta tampoco.
+  const soloMira = usarSoloMira('equipo');
+  const soloSueldos = usarSoloMira('sueldos');
   const [avisoLink, setAvisoLink] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -452,6 +457,11 @@ export default function EquipoEditor() {
           perdidos. */}
       <MostrarDesactivados cuantos={inactivos} visible={verInactivos}
         onCambio={(v) => { setVerInactivos(v); setAbierta(null); }} />
+      {/* Si toda la página se mira, ya lo dice la barra de arriba; acá
+          solo el caso parcial: edita las fichas, no el pago ni la cuenta. */}
+      {!soloMira && verSueldos && soloSueldos && (
+        <AvisoSoloMira que="el pago y la cuenta de cada ficha" />
+      )}
       {/* **La lista se muestra alfabética** (2026-11-01, lo pidió el
           cliente). Venía en el orden de la planilla, o sea en el que se
           grabó cada ficha: para encontrar a alguien entre quince había que
@@ -536,7 +546,7 @@ export default function EquipoEditor() {
                     quitar la ficha de alguien que ya trabajó dejaría sus
                     turnos con un nombre que no está en ninguna parte, y esos
                     turnos son el registro de quién trabajó qué día. */}
-                {turnos === 0 ? (
+                {soloMira ? null : turnos === 0 ? (
                   <button
                     onClick={() => {
                       if (t.nombre.trim() && !confirm(
@@ -572,6 +582,7 @@ export default function EquipoEditor() {
 
               {abierta === i && (
                 <div className="border-t border-hueso/10 p-3">
+                <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
 
                 {/* Quién es, y cómo se entra a su link. */}
                 <div className="flex flex-wrap items-start gap-3">
@@ -712,7 +723,8 @@ export default function EquipoEditor() {
 
                 {/* Cuánto gana. El administrador y quien paga (`sueldos`). */}
                 {verSueldos && (
-                  <div className="mt-3 border-t border-hueso/10 pt-3">
+                  <fieldset disabled={soloMira || soloSueldos}
+                    className="m-0 mt-3 min-w-0 border-0 border-t border-hueso/10 p-0 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
                       <span className="w-36 pt-4 text-[13px] font-semibold uppercase
                                        tracking-widest text-hueso/60">Pago</span>
@@ -752,12 +764,13 @@ export default function EquipoEditor() {
                       </label>
                       <span className="self-center pt-4"><AyudaCorta tema="propinaFicha" /></span>
                     </div>
-                  </div>
+                  </fieldset>
                 )}
 
                 {/* Dónde se le transfiere. También `sueldos`. */}
                 {verSueldos && (
-                  <div className="mt-3 border-t border-hueso/10 pt-3">
+                  <fieldset disabled={soloMira || soloSueldos}
+                    className="m-0 mt-3 min-w-0 border-0 border-t border-hueso/10 p-0 pt-3">
                     <div className="flex flex-wrap items-start gap-3">
                       <span className="w-36 pt-4 text-[13px] font-semibold uppercase
                                        tracking-widest text-hueso/60">Transferencia</span>
@@ -767,8 +780,9 @@ export default function EquipoEditor() {
                           onCambio={(b) => cambiarBanco(i, b)} />
                       </div>
                     </div>
-                  </div>
+                  </fieldset>
                 )}
+                </fieldset>
                 </div>
               )}
             </li>
@@ -780,6 +794,7 @@ export default function EquipoEditor() {
           </li>
         )}
       </ul>
+      {!soloMira && (
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           onClick={() => {
@@ -799,6 +814,7 @@ export default function EquipoEditor() {
         <span className="flex-1" />
         {botonGuardar}
       </div>
+      )}
 
       {verSueldos && (
         <p className="mt-4 max-w-2xl text-[13px] text-hueso/50">

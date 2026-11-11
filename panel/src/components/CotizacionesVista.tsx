@@ -18,6 +18,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
+import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
 import CotizacionDialogo, { type DatosCotizar } from './CotizacionDialogo';
 import {
@@ -83,6 +84,8 @@ export default function CotizacionesVista() {
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   const [vista, setVista] = useState<'calendario' | 'sinFecha' | 'todas'>('calendario');
+  /** Vista gerencia sin el permiso de cotizar: se mira y no se crea nada. */
+  const soloMira = usarSoloMira('presupuestos');
   const [filtro, setFiltro] = useState<'activas' | 'candidatos' | 'ganadas' | 'cerradas' | 'todas'>('activas');
   const [busqueda, setBusqueda] = useState('');
   const [semanas, setSemanas] = useState(10);
@@ -351,10 +354,12 @@ export default function CotizacionesVista() {
               <span className="text-hueso/70"> personas posibles</span></span>
           )}
         </button>
-        <div className="border-t border-hueso/10 p-2">
-          <button type="button" onClick={() => setAbierta({ p: null, fecha: f })}
-            className="boton w-full min-h-[44px]">+ Cotizar este día</button>
-        </div>
+        {!soloMira && (
+          <div className="border-t border-hueso/10 p-2">
+            <button type="button" onClick={() => setAbierta({ p: null, fecha: f })}
+              className="boton w-full min-h-[44px]">+ Cotizar este día</button>
+          </div>
+        )}
       </div>
     );
   };
@@ -390,8 +395,10 @@ export default function CotizacionesVista() {
       </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setAbierta({ p: null })}
-          className="boton boton-relleno min-h-[48px] px-5 text-[15px]">+ Cotizar</button>
+        {!soloMira && (
+          <button type="button" onClick={() => setAbierta({ p: null })}
+            className="boton boton-relleno min-h-[48px] px-5 text-[15px]">+ Cotizar</button>
+        )}
         <span className="flex-1" />
         {([
           ['calendario', 'Calendario'],

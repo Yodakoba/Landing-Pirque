@@ -11,6 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
+import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
 import { deDiasSemana, idDeDrive, type Config } from '@/lib/config';
 
@@ -33,6 +34,8 @@ export default function ConfigEditor() {
   const [guardando, setGuardando] = useState('');
   const [revisando, setRevisando] = useState(false);
   const [resumen, setResumen] = useState('');
+  /** Vista gerencia sin `configurar`: se mira y no se toca. */
+  const soloMira = usarSoloMira('configurar');
 
   /**
    * Le pide a Shopify los pedidos recientes y anota lo que falte.
@@ -311,7 +314,11 @@ export default function ConfigEditor() {
               {x.titulo}
             </h2>
             <p className="mt-1 max-w-2xl text-[14px] text-hueso/70">{x.para}</p>
-            <div className="mt-2 border-t border-hueso/15">{x.cuerpo}</div>
+            {/* Con vista gerencia, los campos se ven apagados: `fieldset
+                disabled` los apaga todos de una vez. */}
+            <fieldset disabled={soloMira} className="m-0 mt-2 min-w-0 border-0 border-t border-hueso/15 p-0">
+              {x.cuerpo}
+            </fieldset>
           </section>
         ))}
       </div>

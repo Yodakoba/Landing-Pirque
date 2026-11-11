@@ -51,6 +51,7 @@ import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { enlaceWhatsApp } from '@/lib/contacto';
 import { cupoParaGanar } from '@/lib/dias';
+import { usarSoloMira } from './SesionCliente';
 
 const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-3 py-2 text-[15px] ' +
@@ -238,7 +239,11 @@ export default function CotizacionDialogo({
 
   const ganada = !!p?.idReserva;
   const cancelada = p?.estado === ESTADO_PRESUPUESTO.cancelada;
-  const puedeEditar = !p || puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor);
+  // Con vista gerencia y sin el permiso de cotizar, todo se ve en solo
+  // lectura, igual que la cotización de otro vendedor.
+  const soloMira = usarSoloMira('presupuestos');
+  const puedeEditar = !soloMira
+    && (!p || puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor));
   /** Revisar cobros es de quien hace los pagos, no de quien los anota. */
   const puedePagar = puede(datos.rol as Rol, 'pagar');
   const cliente = clientes.find((c) => c.id === idCliente);
@@ -975,7 +980,9 @@ export default function CotizacionDialogo({
 
       {!puedeEditar && (
         <p className="mb-3 rounded border border-hueso/25 bg-hueso/5 px-3 py-2 text-[14px]">
-          La creó <strong>{p?.creadoPor || 'otra persona'}</strong>: la puedes ver, no cambiar.
+          {soloMira
+            ? <>👁 <strong>Vista gerencia:</strong> la puedes ver, no cambiar.</>
+            : <>La creó <strong>{p?.creadoPor || 'otra persona'}</strong>: la puedes ver, no cambiar.</>}
         </p>
       )}
       {cancelada && (

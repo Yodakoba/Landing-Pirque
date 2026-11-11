@@ -26,6 +26,7 @@ import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
 import DatosBancarios from './DatosBancarios';
+import { usarSoloMira } from './SesionCliente';
 import { bancoVacio, type Banco } from '@/lib/banco';
 import type { Colaborador } from '@/lib/extras';
 
@@ -51,6 +52,8 @@ export default function FichaColaborador({
   const [activo, setActivo] = useState(ficha?.activo ?? true);
   const [monto, setMonto] = useState(String(ficha?.monto || ''));
   const [banco, setBanco] = useState<Banco>(ficha?.banco ?? bancoVacio());
+  // Con vista gerencia y el rol sin `sueldos`: se ven, no se cambian.
+  const soloSueldos = usarSoloMira('sueldos');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -111,7 +114,7 @@ export default function FichaColaborador({
         {verSueldos && (
           <Campo etiqueta="Monto habitual" ancho="w-32">
             <input type="number" min={0} step={1000} value={monto}
-              className={ENTRADA} placeholder="—"
+              className={ENTRADA} placeholder="—" disabled={soloSueldos}
               aria-label={`Monto habitual de ${nombre || 'esta persona'}`}
               onChange={(e) => setMonto(e.target.value)} />
           </Campo>
@@ -129,7 +132,8 @@ export default function FichaColaborador({
       </div>
 
       {verSueldos && (
-        <div className="mt-4 border-t border-hueso/10 pt-4">
+        <fieldset disabled={soloSueldos}
+          className="m-0 mt-4 min-w-0 border-0 border-t border-hueso/10 p-0 pt-4">
           <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
             Transferencia
           </p>
@@ -138,7 +142,7 @@ export default function FichaColaborador({
             Es lo que sale en la planilla que descarga quien paga. Se puede
             dejar para después, pero es justo lo que después cuesta juntar.
           </p>
-        </div>
+        </fieldset>
       )}
 
       {!verSueldos && (

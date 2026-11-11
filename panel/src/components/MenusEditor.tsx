@@ -27,6 +27,7 @@ import {
 } from '@/lib/menus';
 import Campo from './Campo';
 import MostrarDesactivados from './MostrarDesactivados';
+import { usarSoloMira } from './SesionCliente';
 import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
 import { menusConocidos } from '@/lib/shopify';
@@ -98,6 +99,8 @@ export default function MenusEditor() {
    */
   const [usados, setUsados] = useState<Set<string>>(new Set());
   const [verInactivos, setVerInactivos] = useState(false);
+  /** Vista gerencia sin `configurar`: el catálogo se mira y no se toca. */
+  const soloMira = usarSoloMira('configurar');
 
   useEffect(() => {
     fetch('/api/menus').then((r) => r.json())
@@ -221,7 +224,7 @@ export default function MenusEditor() {
                   Desactivar y activar **se guardan en el acto**, como en
                   `/equipo`: al desactivar, la línea desaparece de la lista
                   y con ella el botón de guardarla. */}
-              {!usados.has(normalizar(m.nombre)) ? (
+              {soloMira ? null : !usados.has(normalizar(m.nombre)) ? (
                 <button onClick={() => {
                   if (m.nombre.trim() && !confirm(`¿Quitar ${m.nombre} del catálogo? `
                     + 'Nunca se vendió ni se cotizó, así que se borra.')) return;
@@ -252,7 +255,8 @@ export default function MenusEditor() {
             </div>
 
             {abierta === i && (
-              <div className="space-y-5 border-t border-hueso/10 p-4">
+              <fieldset disabled={soloMira}
+                className="m-0 min-w-0 space-y-5 border-0 border-t border-hueso/10 p-4">
                 <Campo etiqueta="Nombre" ancho="w-full sm:max-w-md">
                   <input type="text" value={m.nombre} className={ENTRADA}
                     placeholder="Si es un menú: como se llama en Shopify"
@@ -349,12 +353,13 @@ export default function MenusEditor() {
                 )}
 
                 {sucio && <div className="flex justify-end">{botonGuardar}</div>}
-              </div>
+              </fieldset>
             )}
           </li>
         ))}
       </ul>
 
+      {!soloMira && (
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           onClick={() => {
@@ -369,6 +374,7 @@ export default function MenusEditor() {
         {sucio && <span className="text-[14px] text-hueso/70">Hay cambios sin guardar.</span>}
         {botonGuardar}
       </div>
+      )}
 
       <p className="mt-6 max-w-2xl text-[14px] text-hueso/60">
         <strong>Un producto que ya se vendió o se cotizó no se quita, se

@@ -257,10 +257,12 @@ export default function CalendarView({ rol, gerencia = false }: { rol: string; g
           primero. Una reserva que llega por teléfono se anota sin saber
           todavía de qué día es: la fecha se elige en el formulario. */}
       <div className="mb-6 flex flex-wrap gap-3">
-        <button onClick={() => setCreando(true)}
-          className="boton boton-relleno min-h-[48px] text-[15px]">
-          Agregar reserva
-        </button>
+        {puede(rol as Rol, 'reservas') && (
+          <button onClick={() => setCreando(true)}
+            className="boton boton-relleno min-h-[48px] text-[15px]">
+            Agregar reserva
+          </button>
+        )}
         {conDias && (
           <button onClick={() => setAgregandoFecha(true)}
             className="boton">

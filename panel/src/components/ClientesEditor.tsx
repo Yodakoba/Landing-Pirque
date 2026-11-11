@@ -17,6 +17,7 @@
 import BotonGuardar from './BotonGuardar';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
+import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
@@ -72,6 +73,10 @@ export default function ClientesEditor() {
   const [parecidas, setParecidas] = useState<Cliente[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState('');
+  /** Vista gerencia sin `clientes`: las fichas se miran y no se tocan. */
+  const soloMira = usarSoloMira('clientes');
+  /** Cotizarle a alguien es del permiso de las cotizaciones. */
+  const soloMiraCotizar = usarSoloMira('presupuestos');
 
   const cargar = () => fetch('/api/clientes').then((r) => r.json()).then((d) => {
     if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
@@ -218,7 +223,7 @@ export default function ClientesEditor() {
         Una ficha por cliente. Se escribe una vez y la usan todas sus cotizaciones.
       </p>
 
-      {sinFicha > 0 && (
+      {sinFicha > 0 && !soloMira && (
         <div className="mb-5 flex flex-wrap items-center gap-3 rounded border
                         border-ambar/50 bg-ambar/5 p-4">
           <p className="flex-1 text-[15px]">
@@ -236,7 +241,7 @@ export default function ClientesEditor() {
           placeholder="Buscar por nombre, empresa, teléfono, correo o RUT"
           aria-label="Buscar cliente"
           className={`${ENTRADA} min-h-[44px] flex-1 sm:max-w-md`} />
-        {!nuevo && (
+        {!nuevo && !soloMira && (
           <button onClick={() => { setNuevo({ ...VACIO, nombre: busqueda }); setParecidas([]);
                                    setAviso(''); }}
             className="boton boton-relleno min-h-[44px] px-5 text-[15px]">
@@ -323,7 +328,7 @@ export default function ClientesEditor() {
                       </span>
                     )}
                   </button>
-                  {n === 0 && (
+                  {n === 0 && !soloMira && (
                     <button onClick={() => void borrar(c)}
                       className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto"
                       title="No tiene cotizaciones, así que se puede borrar">Borrar</button>
@@ -341,8 +346,10 @@ export default function ClientesEditor() {
                           Cotizaciones
                         </p>
                         <span className="flex-1" />
-                        <a href={`/presupuestos?cliente=${encodeURIComponent(c.id)}`}
-                          className="tecla boton">+ Cotizarle</a>
+                        {!soloMiraCotizar && (
+                          <a href={`/presupuestos?cliente=${encodeURIComponent(c.id)}`}
+                            className="tecla boton">+ Cotizarle</a>
+                        )}
                       </div>
                       {(historial[c.id] ?? []).length === 0 ? (
                         <p className="text-[14px] text-hueso/60">Todavía ninguna.</p>
@@ -374,7 +381,9 @@ export default function ClientesEditor() {
                         </ul>
                       )}
                     </div>
+                    <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
                     {formulario(edicion!, (k, v) => setEdicion({ ...edicion!, [k]: v }), c.nombre)}
+                    </fieldset>
                     {aviso && <p className="mt-3 text-[15px] text-rojo-texto">{aviso}</p>}
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       {cambios.length > 0 && (
@@ -382,8 +391,10 @@ export default function ClientesEditor() {
                           Cambiaste {cambios.map((k) => NOMBRE_CAMPO[k]).join(', ')}.
                         </span>
                       )}
-                      <BotonGuardar sucio={cambios.length > 0} guardando={guardando}
-                        onClick={() => void guardar(c)} texto="Guardar cambios" />
+                      {!soloMira && (
+                        <BotonGuardar sucio={cambios.length > 0} guardando={guardando}
+                          onClick={() => void guardar(c)} texto="Guardar cambios" />
+                      )}
                       <span className="flex-1" />
                       <span className="text-[13px] text-hueso/60">
                         {c.id}{c.creadoPor && <> · creada por {c.creadoPor}</>}

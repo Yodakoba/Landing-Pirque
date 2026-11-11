@@ -33,6 +33,7 @@ const ENTRADA_GRANDE =
   'rounded-lg border-2 border-hueso/20 bg-tinta px-2.5 py-1.5 text-[15px] ' +
   'focus:border-oro focus:outline-none';
 import { AvisoCierre, PieCorreccion } from './Correccion';
+import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 import type { Cierre } from '@/lib/cierres';
 
 export default function ExtrasDialogo({
@@ -68,7 +69,9 @@ export default function ExtrasDialogo({
   const [corrigiendo, setCorrigiendo] = useState(false);
   const [motivo, setMotivo] = useState('');
   const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
-  const bloqueado = cerrado && !corrigiendo;
+  /** Vista gerencia sin el permiso de las extras: se mira y no se toca. */
+  const soloMira = usarSoloMira('extras');
+  const bloqueado = (cerrado && !corrigiendo) || soloMira;
   // La lista de fichas se guarda en estado y no se lee del prop: crear a
   // alguien desde acá tiene que dejarlo disponible sin cerrar la ventana.
   const [gente, setGente] = useState<Colaborador[]>(colaboradores);
@@ -128,7 +131,7 @@ export default function ExtrasDialogo({
     });
     const d = await r.json();
     return d.error || undefined;
-  }, 600, !cerrado);
+  }, 600, !cerrado && !soloMira);
 
   async function guardarCorreccion() {
     const m = motivo.trim();
@@ -153,7 +156,7 @@ export default function ExtrasDialogo({
     if (corrigiendo && !confirm('¿Salir sin guardar la corrección? Lo que cambiaste se descarta.')) {
       return;
     }
-    if (cerrado) { onCancelar(); return; }
+    if (cerrado || soloMira) { onCancelar(); return; }
     await guardado.forzar();
     if (guardado.hubo.current) onListo(); else onCancelar();
   }
@@ -162,9 +165,10 @@ export default function ExtrasDialogo({
     <Dialogo titulo={`Actividades · ${enPalabras(fecha)}`} onCerrar={() => void salir()}
              ancho="max-w-4xl">
       {cerrado && (
-        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir}
+        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir && !soloMira}
           corrigiendo={corrigiendo} onCorregir={() => setCorrigiendo(true)} />
       )}
+      {soloMira && <AvisoSoloMira que="las actividades de este día" />}
       {/* Todo lo editable va en un `fieldset disabled` mientras el día está
           cerrado: ver la ventana del equipo. */}
       <fieldset disabled={bloqueado} className="m-0 min-w-0 border-0 p-0">
@@ -361,7 +365,7 @@ export default function ExtrasDialogo({
       {/* Sin botón de guardar hay que decirlo una vez. */}
       </fieldset>
 
-      {!cerrado && (
+      {!cerrado && !soloMira && (
         <p className="mt-2 text-xs text-hueso/45">
           Lo que escribas acá <strong>se guarda solo</strong>.
         </p>
@@ -379,7 +383,7 @@ export default function ExtrasDialogo({
             )}
           </span>
         )}
-        {!cerrado && (
+        {!cerrado && !soloMira && (
           <AvisoGuardado estado={guardado.estado} error={guardado.error}
             onReintentar={() => void guardado.reintentar()} />
         )}
