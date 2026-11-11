@@ -18,6 +18,7 @@ import { PERMISOS, ROL, puede, type Accion, type Rol } from './auth.ts';
 export const PALABRAS: Record<Accion, string> = {
   ver: 'Ver el calendario y las reservas',
   reservas: 'Anotar, editar y borrar reservas',
+  asistencia: 'Marcar si cada reserva vino o no',
   presupuestos: 'Cotizar: crear cotizaciones, marcarlas ganadas, cancelarlas',
   clientes: 'Ver y editar las fichas de clientes',
   dias: 'Abrir, cerrar y editar días del calendario',
@@ -42,7 +43,8 @@ export const NOMBRE_ROL: Record<string, string> = {
   [ROL.admin]: 'Administrador',
   [ROL.encargado]: 'Encargado',
   [ROL.pagos]: 'Pagos',
-  [ROL.vendedor]: 'Vendedor'
+  [ROL.vendedor]: 'Vendedor',
+  [ROL.anfitrion]: 'Anfitrión'
 };
 
 /**
@@ -53,7 +55,8 @@ export const RESUMEN_ROL: Record<string, string> = {
   [ROL.admin]: 'Puede todo, incluidas las cuentas del panel.',
   [ROL.encargado]: 'El día a día: reservas, días, equipo y cotizaciones. Sin plata ni configuración.',
   [ROL.pagos]: 'Lo del encargado, más la plata y la configuración. No toca cuentas.',
-  [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.'
+  [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',
+  [ROL.anfitrion]: 'Recibe a los clientes: ve las reservas del día y marca si vinieron.'
 };
 
 /**
