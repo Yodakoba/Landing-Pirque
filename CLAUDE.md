@@ -5714,6 +5714,29 @@ Se arregla en `Dialogo` —`normal-case font-normal tracking-normal`— y no
 sacando el `?` del título, porque cualquier ventana que mañana se abra desde
 otro lugar tendría exactamente el mismo problema.
 
+### Los `?` chicos, uno por cosa (2026-11-11)
+
+Lo pidió el cliente: *"mejor un signo de interrogación más y que explica esta
+sección específica en corto que solo un gran signo de interrogación arriba y
+tengo que leer todo el chorizo"*. Además del `?` de cada pantalla, ahora hay
+**`AyudaCorta`**: un `?` de 30px al lado de un rótulo o un botón, que abre
+dos o tres frases sobre **esa sola cosa**.
+
+- **Los textos viven en `AYUDAS_CORTAS`**, en `ayudas.ts`, junto a los de
+  pantalla. Regla extra: si una frase bajo el campo ya lo dice, no va `?`.
+  Configuración, por eso, casi no tiene: cada campo ya trae su línea.
+- **`Campo` acepta `ayuda="llave"`** y pone el `?` junto al rótulo.
+- **La cajita va en un portal** (`document.body`): el `?` suele vivir dentro
+  de un `<label>`, y sin portal tocar la explicación activaría el campo o
+  marcaría una casilla. `react-dom` no trae tipos en este proyecto, así que
+  `src/react-dom.d.ts` declara solo `createPortal`.
+- **Escape cierra la cajita y no la ventana de atrás**: se escucha en
+  captura y se marca usado, y `Dialogo` ignora un Escape ya usado.
+- **Los roles se explican desde `PERMISOS`** (`lib/roles.ts`): bajo el rol
+  elegido en Cuentas va una línea corta, y su `?` lista qué puede y qué no,
+  deducido de la tabla. Un permiso nuevo sin su frase en `PALABRAS` no
+  compila, y hay una prueba de que cada permiso aparece una vez por rol.
+
 ## El panel tiene tema claro (2026-10-30)
 
 Lo pidió el cliente: *"créame una versión diurna… pero no simplemente blanco

@@ -16,6 +16,7 @@
  * llamada directa a la API tiene que obedecer la misma regla.
  */
 import { useMemo, useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
 import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
@@ -855,6 +856,7 @@ export default function EquipoDialogo({
                   setPropina(Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
                 }} />
             </label>
+            <AyudaCorta tema="propinaDia" />
             <span className="text-xs text-hueso/50">
               {propina > 0
                 ? <>se reparte entre {reciben} {reciben === 1 ? 'persona' : 'personas'},

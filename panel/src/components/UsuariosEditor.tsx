@@ -16,7 +16,9 @@ import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import Dialogo from './Dialogo';
-import { LARGO_MINIMO_CLAVE, ROLES_DE_CUENTA } from '@/lib/auth';
+import { LARGO_MINIMO_CLAVE, ROLES_DE_CUENTA, esRolDeCuenta, type Rol } from '@/lib/auth';
+import { NOMBRE_ROL, RESUMEN_ROL, resumenRol } from '@/lib/roles';
+import AyudaCorta from './AyudaCorta';
 
 interface Fila {
   nombre: string;
@@ -118,7 +120,7 @@ export default function UsuariosEditor() {
             <tr className="border-b border-hueso/10">
               <th className="py-2 pr-3">Nombre</th>
               <th className="w-40 py-2 pr-3">Usuario</th>
-              <th className="w-36 py-2 pr-3">Rol</th>
+              <th className="w-64 py-2 pr-3">Rol <RolesExplicados /></th>
               <th className="w-20 py-2 pr-3">Activo</th>
               <th className="w-44 py-2 pr-3">Contraseña</th>
               <th className="w-20 py-2" />
@@ -138,12 +140,22 @@ export default function UsuariosEditor() {
                     onChange={(e) => cambiar(i, 'usuario', e.target.value)} />
                 </td>
                 <td className="py-2 pr-3">
-                  <select value={u.rol} className={ENTRADA}
-                    onChange={(e) => cambiar(i, 'rol', e.target.value)}>
-                    {ROLES_DE_CUENTA.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center">
+                    <select value={u.rol} className={ENTRADA}
+                      onChange={(e) => cambiar(i, 'rol', e.target.value)}>
+                      {ROLES_DE_CUENTA.map((r) => (
+                        <option key={r} value={r}>{NOMBRE_ROL[r] ?? r}</option>
+                      ))}
+                    </select>
+                    {esRolDeCuenta(u.rol) && <RolExplicado rol={u.rol} />}
+                  </div>
+                  {/* La línea corta, siempre a la vista: es lo que se lee al
+                      elegir. El detalle está detrás del `?`. */}
+                  {RESUMEN_ROL[u.rol] && (
+                    <p className="mt-1 text-[13px] leading-snug text-hueso/65">
+                      {RESUMEN_ROL[u.rol]}
+                    </p>
+                  )}
                 </td>
                 <td className="py-2 pr-3">
                   <input type="checkbox" checked={u.activo}
@@ -237,5 +249,38 @@ export default function UsuariosEditor() {
         </Dialogo>
       )}
     </section>
+  );
+}
+
+/**
+ * El `?` de un rol: qué puede y qué no, **sacado de `PERMISOS`** a través de
+ * `resumenRol()`. No hay texto escrito a mano que pueda quedar viejo.
+ */
+function RolExplicado({ rol }: { rol: Rol }) {
+  const { puede, noPuede } = resumenRol(rol);
+  return (
+    <AyudaCorta titulo={`Rol: ${NOMBRE_ROL[rol] ?? rol}`}>
+      <p>{RESUMEN_ROL[rol]}</p>
+      <p className="font-semibold text-verde-texto">Puede</p>
+      <ul className="list-disc pl-5 text-[14px]">{puede.map((f) => <li key={f}>{f}</li>)}</ul>
+      {noPuede.length > 0 && (
+        <>
+          <p className="font-semibold text-rojo-texto">No puede</p>
+          <ul className="list-disc pl-5 text-[14px]">{noPuede.map((f) => <li key={f}>{f}</li>)}</ul>
+        </>
+      )}
+    </AyudaCorta>
+  );
+}
+
+/** El `?` de la columna: los roles lado a lado, una línea cada uno. */
+function RolesExplicados() {
+  return (
+    <AyudaCorta titulo="Los roles">
+      {ROLES_DE_CUENTA.map((r) => (
+        <p key={r}><strong>{NOMBRE_ROL[r] ?? r}:</strong> {RESUMEN_ROL[r]}</p>
+      ))}
+      <p className="text-hueso/65">El rol se aplica al volver a entrar: quien ya tiene la sesión abierta tiene que salir y entrar.</p>
+    </AyudaCorta>
   );
 }

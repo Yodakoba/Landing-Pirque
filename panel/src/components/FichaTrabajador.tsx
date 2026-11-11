@@ -15,6 +15,7 @@
  * `/equipo`, que es donde el panel avisa del daño (`sinFicha()`).
  */
 import { useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
 import CampoTelefono from './CampoTelefono';
@@ -140,7 +141,7 @@ export default function FichaTrabajador({
             un feriado— se anota en ese día, con su motivo.
           </p>
           <div className="flex flex-wrap items-start gap-3">
-            <Campo etiqueta="Modalidad" ancho="w-44">
+            <Campo etiqueta="Modalidad" ancho="w-52" ayuda="modalidad">
               <select value={modalidad} className={ENTRADA}
                 aria-label={`Cómo se le paga a ${nombre || 'esta persona'}`}
                 onChange={(e) => setModalidad(e.target.value)}>
@@ -170,10 +171,11 @@ export default function FichaTrabajador({
               <input type="checkbox" checked={propina} className="h-4 w-4 accent-oro"
                 aria-label={`${nombre || 'Esta persona'} entra en el reparto de propina`}
                 onChange={(e) => setPropina(e.target.checked)} />
-              <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+              <span className="text-[13px] text-hueso/70">
                 Entra en la propina
               </span>
             </label>
+            <span className="self-center pt-4"><AyudaCorta tema="propinaFicha" /></span>
           </div>
         </div>
       )}

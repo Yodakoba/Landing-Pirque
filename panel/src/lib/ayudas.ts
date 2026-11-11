@@ -286,17 +286,16 @@ export const AYUDAS: Record<string, Ayuda> = {
   cuentas: {
     titulo: 'Las cuentas del panel',
     cuerpo: [
-      'Quiénes pueden entrar y hasta dónde llega cada uno.',
-      'Administrador ve y hace todo. Encargado organiza el día a día '
-      + '—reservas, turnos, asistencia— y por ahora también abre el informe, '
-      + 'pero no toca precios ni configuración. Pagos hace todo lo del '
-      + 'encargado y además es el único que puede anotar que a alguien ya se '
-      + 'le pagó. Un trabajador no entra acá: su acceso es su link personal.',
-      'Vendedor es la cuenta más acotada: ve el calendario y anota reservas. '
-      + 'Ve todas las del día, pero solo edita y borra las que anotó él.'
+      'Quiénes pueden entrar y con qué rol. Una cuenta por persona: así la '
+      + 'bitácora dice quién hizo qué.',
+      'Qué puede cada rol se ve bajo el rol elegido, y el detalle en su signo de pregunta. '
+      + 'Sale de la misma tabla de permisos que usa el panel, así que siempre '
+      + 'está al día.',
+      'Un trabajador no entra acá: su acceso es su link personal.'
     ],
     ojo: 'Es mejor desactivar una cuenta que borrarla: así sus líneas de la '
-       + 'bitácora siguen diciendo quién hizo qué.'
+       + 'bitácora siguen diciendo quién hizo qué. Un cambio de rol vale cuando '
+       + 'la persona sale y vuelve a entrar.'
   },
 
   bitacora: {
@@ -394,3 +393,252 @@ export const RECORRIDO: Paso[] = [
     ]
   }
 ];
+
+/**
+ * **Las ayudas chicas**: el `?` que va al lado de un campo o de un botón
+ * (`AyudaCorta.tsx`), no de una pantalla entera.
+ *
+ * Lo pidió el cliente (2026-11-11): *"mejor un signo de interrogación más y
+ * que explica esta sección específica en corto que solo un gran signo de
+ * interrogación arriba y tengo que leer todo el chorizo"*. Por eso cada una
+ * es **una sola cosa, en dos o tres frases**, y dice lo que pasa al tocarla
+ * —qué cambia, qué no, quién la puede tocar—, que es lo que se pregunta
+ * justo antes de apretar.
+ *
+ * Las mismas reglas que las de arriba, más una: **si una frase corta bajo el
+ * campo ya lo dice, no va un `?`**. Un `?` que repite lo que está a la vista
+ * enseña a no apretarlos.
+ *
+ * Los roles no están acá: su explicación sale de la tabla de permisos
+ * (`roles.ts`), para que no pueda quedar vieja.
+ */
+export interface AyudaCorta {
+  titulo: string;
+  /** Dos o tres frases, una por elemento. */
+  texto: string[];
+}
+
+export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
+  // ---------- La ventana de cotizar ----------
+  alternativas: {
+    titulo: 'Alternativas',
+    texto: [
+      'Son versiones de la misma cotización para el mismo cliente: otro menú, otro precio. Cada una tiene su letra y su total.',
+      'Al marcar una como ganada, las otras pasan solas a "No elegida". En el calendario cuentan una sola vez.'
+    ]
+  },
+  sinFecha: {
+    titulo: 'Sin día exacto',
+    texto: [
+      'Para cuando el cliente dice "marzo o abril". La cotización queda en la vista Sin fecha y no aparece en ningún día.',
+      'Para marcarla ganada hay que ponerle la fecha.'
+    ]
+  },
+  agregarProducto: {
+    titulo: 'Agregar productos',
+    texto: [
+      'Aparecen los productos marcados "Se puede cotizar" en Productos, con el precio que proponen.',
+      'El precio se cambia en la línea: es parte de la negociación. "Otra línea" es para algo que no está en el catálogo.'
+    ]
+  },
+  precioLinea: {
+    titulo: 'Con IVA o + IVA',
+    texto: [
+      'Con IVA: el precio ya trae el IVA adentro. + IVA: el IVA se suma encima.',
+      'Lo dice el catálogo de cada producto. Abajo, las cuentas muestran siempre neto, IVA y total.'
+    ]
+  },
+  descuentoLinea: {
+    titulo: 'Descuento de la línea',
+    texto: [
+      'Rebaja solo esta línea. Se puede usar junto con el descuento sobre el total: primero se aplica el de la línea y después el del total.',
+      'Los porcentajes de los botones se cambian en Configuración.'
+    ]
+  },
+  sigueInvitados: {
+    titulo: 'Seguir a los invitados',
+    texto: [
+      'La cantidad de esta línea queda igual a los invitados, y se mueve sola si cambian.',
+      'Es para lo que toman todos, como la once o el desayuno.'
+    ]
+  },
+  ufCotizacion: {
+    titulo: 'La UF de la cotización',
+    texto: [
+      'Queda fija desde que se agregó el primer producto en UF, para que la cifra que recibió el cliente no cambie sola.',
+      '"Usar la UF de hoy" la actualiza y cambia los precios en pesos: úsalo solo si vas a mandar la cotización de nuevo.'
+    ]
+  },
+  descuentoTotal: {
+    titulo: 'Descuento sobre el total',
+    texto: [
+      'Rebaja la cotización completa, encima de los descuentos de cada línea.',
+      'Sale en la hoja del cliente, en el contrato y en el monto de la reserva al ganarla.'
+    ]
+  },
+  estadoCotizacion: {
+    titulo: 'En qué va',
+    texto: [
+      'Es para ordenarte y para los avisos: candidato, borrador, enviada, negociación, perdida.',
+      '"Ganada" no se elige acá: se llega con "Marcar ganada", que crea la reserva.'
+    ]
+  },
+  documento: {
+    titulo: 'Documento de la venta',
+    texto: [
+      'Sin documento, boleta o factura. Por ahora no cambia el precio.',
+      'Con factura pide los datos de facturación, que quedan guardados en la ficha del cliente.'
+    ]
+  },
+  condicionesPago: {
+    titulo: 'Condiciones de pago',
+    texto: [
+      'En blanco vale lo de Configuración; lo que escribas acá vale solo para esta cotización. Un 0 en el anticipo es "sin anticipo".',
+      'Si hay anticipo, la cotización no se puede marcar ganada hasta que esté pagado. Son las mismas condiciones que imprime el contrato.'
+    ]
+  },
+  contrato: {
+    titulo: 'El contrato',
+    texto: [
+      'Sale de esta cotización: cliente, fecha, precio línea por línea y condiciones. No se escribe nada dos veces.',
+      'Se imprime, se firma en papel y se sube el firmado. Si después cambias la cotización, el que vale es el papel.'
+    ]
+  },
+  ley20393: {
+    titulo: 'Ley 20.393',
+    texto: [
+      'Agrega al contrato la cláusula de prevención de delitos que suelen pedir las empresas grandes.',
+      'Si el cliente no la pidió, déjala sin marcar.'
+    ]
+  },
+  acuerdos: {
+    titulo: 'Acuerdos adicionales',
+    texto: [
+      'Lo que se acordó aparte con el cliente. Va como la última cláusula del contrato, tal como lo escribes.'
+    ]
+  },
+  cambiosFecha: {
+    titulo: 'Cambios de fecha',
+    texto: [
+      'Cuántas veces el cliente puede mover la fecha. En blanco vale Configuración; un 0 saca la frase del contrato.'
+    ]
+  },
+  cancelacionDias: {
+    titulo: 'Cancela hasta',
+    texto: [
+      'Hasta cuántos días antes del evento el cliente puede cancelar con devolución. Un 0 saca la frase del contrato.',
+      'Al apretar "Cancelar evento", el panel mira esto para proponer cuánto devolver.'
+    ]
+  },
+  reembolso: {
+    titulo: 'Devuelve, % de lo pagado',
+    texto: [
+      'Qué parte de lo que el cliente ya pagó se le devuelve si cancela a tiempo.',
+      'Es lo que imprime el contrato y lo que propone "Cancelar evento". Se negocia por cotización.'
+    ]
+  },
+  pagosCliente: {
+    titulo: 'Pagos del cliente',
+    texto: [
+      'Cada pago se anota con su monto y su comprobante. Todo lo cobrado cuenta primero para el anticipo.',
+      'Quien hace los pagos revisa cada comprobante; si se cambia el archivo, vuelve a quedar sin revisar.',
+      'Un pago anotado por error se deshace. Una devolución es un pago en negativo.'
+    ]
+  },
+  marcarGanada: {
+    titulo: 'Marcar ganada',
+    texto: [
+      'Crea la reserva en el calendario y le toma el cupo al día. Si el día no estaba abierto, lo abre como privado.',
+      'Las otras alternativas pasan a "No elegida". La cotización se sigue pudiendo editar, y su reserva se actualiza sola.'
+    ]
+  },
+  cancelarEvento: {
+    titulo: 'Cancelar evento',
+    texto: [
+      'Deja la reserva cancelada y libera el cupo. Propone cuánto devolver según las condiciones de esta cotización, y el monto se puede cambiar.',
+      'Si el día existía solo por este evento, vuelve a como estaba. No se deshace: si el cliente vuelve, es una cotización nueva.'
+    ]
+  },
+
+  // ---------- Productos ----------
+  preciosReserva: {
+    titulo: 'Precios de reserva',
+    texto: [
+      'Se usan para el monto sugerido al anotar una reserva a mano.',
+      'No cambian el precio del sitio público ni el de Shopify: esos se cambian aparte.'
+    ]
+  },
+  cobro: {
+    titulo: 'Cómo se cobra',
+    texto: [
+      'Por persona: el precio se multiplica por la cantidad. Monto fijo: un solo precio, como el arriendo o el show.'
+    ]
+  },
+  moneda: {
+    titulo: 'Pesos o UF',
+    texto: [
+      'En UF, la cotización lo convierte a pesos con la UF del día en que se agrega, y esa UF queda fija en la cotización.'
+    ]
+  },
+  ivaProducto: {
+    titulo: 'IVA del precio',
+    texto: [
+      'Incluido: el precio que escribes ya trae el IVA. + IVA: el IVA se suma encima en la cotización.'
+    ]
+  },
+
+  // ---------- Equipo ----------
+  modalidad: {
+    titulo: 'Por turno o contratado',
+    texto: [
+      'Por turno: se le paga la jornada de cada día que viene.',
+      'Contratado: su sueldo va por liquidación, fuera del panel. Acá solo se le suman horas extra y ajustes del día.'
+    ]
+  },
+  propinaFicha: {
+    titulo: 'Entra en la propina',
+    texto: [
+      'La propina de un día se reparte en partes iguales entre quienes vinieron y tienen esta casilla marcada.',
+      'Desmárcala solo para quien no participa del reparto.'
+    ]
+  },
+
+  // ---------- El día ----------
+  diaCerrado: {
+    titulo: 'Un día cerrado',
+    texto: [
+      'Ya no se edita: lo cerró alguien que revisó quién vino y cuánto se paga.',
+      'Si algo quedó mal, quien hace los pagos lo corrige con un motivo, o lo compensa con un ajuste en la semana siguiente.'
+    ]
+  },
+  propinaDia: {
+    titulo: 'Propina del día',
+    texto: [
+      'Se escribe el total del día. El panel lo reparte en partes iguales entre quienes vinieron y participan.',
+      'No suma al costo del equipo: es plata que pasa por el negocio, no que sale de él.'
+    ]
+  },
+
+  // ---------- Informe ----------
+  boleta: {
+    titulo: 'La boleta',
+    texto: [
+      'Una por semana, por su sueldo o su servicio. La propina nunca la pide, y a un contratado tampoco.',
+      'Si falta, igual se puede pagar: el aviso queda en ámbar hasta que llegue.'
+    ]
+  },
+  transferenciaMasiva: {
+    titulo: 'Transferencia masiva',
+    texto: [
+      'La planilla trae a quien le falta pago y tiene su cuenta completa. "Todos pagados" marca exactamente a esa misma gente.',
+      'Sueldos y propinas van por separado: son dos pagos.'
+    ]
+  },
+  deshacerPago: {
+    titulo: 'Deshacer o pago negativo',
+    texto: [
+      'Deshacer es para un pago anotado sin querer, que nunca ocurrió: borra la fila.',
+      'Si se pagó de más o devolvieron plata, anota un pago en negativo: ahí sí hubo dos movimientos.'
+    ]
+  }
+};
