@@ -83,10 +83,19 @@ export default function PuntoDia({ d, preparacion = false }: {
   // decir de él, y una palabra ahí sería ruido en todas las celdas vacías.
   if (!estado) return null;
   const { texto, clase, punto } = PALABRA[estado];
+  return <PuntoYPalabra punto={punto ?? (d ? PUNTO_TARJETA(d) : '🟡')} texto={texto} clase={clase} />;
+}
 
+/**
+ * El dibujo solo —el punto y su palabra debajo—, para quien ya sabe qué
+ * decir. Lo usa `PuntoDia`, y las cotizaciones para un día que no trae
+ * ocupación (uno cerrado sin reservas, o fuera del calendario): así se ve
+ * igual que los demás en vez de una palabra suelta.
+ */
+export function PuntoYPalabra({ punto, texto, clase }: { punto: string; texto: string; clase: string }) {
   return (
     <span className="flex shrink-0 flex-col items-end leading-none">
-      <span aria-hidden className="text-[15px]">{punto ?? (d ? PUNTO_TARJETA(d) : '🟡')}</span>
+      <span aria-hidden className="text-[15px]">{punto}</span>
       <span className={`mt-1 text-[12px] font-semibold uppercase tracking-wide ${clase}`}>
         {texto}
       </span>

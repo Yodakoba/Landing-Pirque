@@ -1969,6 +1969,13 @@ en $0 y la pantalla avisa que se escriba en pesos.
   de pérdida, Guardar, *Marcar ganada*, copiar link, WhatsApp, documento,
   *Hacer una alternativa*, borrar). Lo de otro vendedor se ve en solo
   lectura.
+- **El día de cada tarjeta lleva el punto de color y su palabra debajo**
+  (2026-11-11, lo pidió el cliente): *público*, *privado*, *exclusivo*,
+  *cerrado*, con `PuntoDia`, igual que la portada, `/turnos` y `/extras`.
+  Para el semáforo la pantalla pide además `/api/ocupacion` de las semanas
+  que muestra; un día sin ocupación —cerrado sin reservas, o fuera del
+  calendario, que dice *sin abrir*— se dibuja igual con `PuntoYPalabra`. Si
+  la ocupación no llega, el calendario sale igual.
 - **`/clientes`**: cada ficha muestra su historial de cotizaciones, la ganada
   en verde y las alternativas marcadas, y *+ Cotizarle*.
 - **El documento** (`/presupuesto/<token>`) dice *Cotización*, toma el cliente
