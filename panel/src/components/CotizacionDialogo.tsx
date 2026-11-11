@@ -18,9 +18,10 @@
  * - **Lo que no es de esta cuenta se ve y no se toca**: el vendedor ve las
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import BotonGuardar from './BotonGuardar';
+import AvisoGuardado from './AvisoGuardado';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
@@ -143,6 +144,19 @@ export default function CotizacionDialogo({
   const p = presupuesto;
   const [clientes, setClientes] = useState<Cliente[]>(datos.clientes);
   const [paso, setPaso] = useState(pasoInicial ?? (p ? 3 : clienteInicial ? 2 : 1));
+  /** Lo último que dijo el servidor al guardar, para el aviso del autoguardado. */
+  const ultimoError = useRef('');
+  /** Si el autoguardado guardó algo: al cerrar, la lista de atrás se recarga. */
+  const huboGuardado = useRef(false);
+  /**
+   * **Cambiar de paso empieza arriba** (2026-11-12, lo pidió el cliente): se
+   * cambia con el botón del pie, y la ventana se quedaba abajo, en el
+   * scroll del paso anterior.
+   */
+  const arriba = useRef<HTMLElement>(null);
+  useEffect(() => {
+    arriba.current?.closest('[role=dialog]')?.scrollTo({ top: 0 });
+  }, [paso]);
   const [idCliente, setIdCliente] = useState(p?.idCliente ?? clienteInicial ?? '');
   const [fecha, setFecha] = useState(p ? p.fecha : (fechaInicial ?? ''));
   const [sinFecha, setSinFecha] = useState(p ? !p.fecha && !!p.periodo : false);
@@ -290,9 +304,21 @@ export default function CotizacionDialogo({
    * también en las demás, para quien quiera mandar ya: con todo guardado
    * dice *✓ Guardado* en gris.
    */
+  const autoActivo = !!p && puedeEditar && !ganada;
   const auto = usarAutoguardado(firma, async () => {
-    if (!(await guardar(undefined, true))) return 'No se pudo guardar';
-  }, 1200, !!p && puedeEditar && !ganada);
+    if (!(await guardar(undefined, true))) return ultimoError.current || 'No se pudo guardar';
+  }, 1200, autoActivo);
+  /**
+   * **Si la planilla dijo "demasiadas consultas", se reintenta sola**
+   * (2026-11-12). Google corta a 60 lecturas por minuto para la cuenta del
+   * panel; a los 30 segundos ya hay cupo de nuevo y lo escrito se manda sin
+   * que nadie tenga que apretar nada.
+   */
+  useEffect(() => {
+    if (auto.estado !== 'error' || !/demasiadas consultas/i.test(auto.error)) return;
+    const t = setTimeout(() => { void auto.reintentar(); }, 30000);
+    return () => clearTimeout(t);
+  }, [auto.estado, auto.error]); // eslint-disable-line react-hooks/exhaustive-deps
   const cotizables = paraCotizar(datos.menus);
   const show = showDe(datos.menus);
   const encontrados = useMemo(
@@ -333,6 +359,7 @@ export default function CotizacionDialogo({
   /** Guarda. Devuelve el id, o '' si falló. */
   async function guardar(estadoForzado?: string, solo = false): Promise<string> {
     setError('');
+    ultimoError.current = '';
     // Guardando solo no se salta de paso: quien está escribiendo se queda
     // donde está, y el error se lee abajo.
     if (!idCliente) { if (!solo) setPaso(1); setError('Elige o crea el cliente primero.'); return ''; }
@@ -371,16 +398,27 @@ export default function CotizacionDialogo({
         body: JSON.stringify(cuerpo)
       });
       const d = await r.json();
-      if (d.error) { setError(d.error); return ''; }
+      if (d.error) { setError(d.error); ultimoError.current = d.error; return ''; }
       if (!solo) {
         avisar(p ? 'Cotización guardada' : (cuerpo.estado === ESTADO_PRESUPUESTO.candidato
           ? 'Candidato anotado' : 'Cotización creada'));
       }
       if (estadoForzado) setEstado(estadoForzado);
       setGuardada(JSON.stringify({ ...JSON.parse(firma), estado: estadoForzado ?? estado }));
-      onCambio();
+      // **Guardando solo no se recarga la lista de atrás** (2026-11-12): cada
+      // recarga son siete lecturas de la planilla, y con un autoguardado por
+      // pausa al escribir se pasaba del límite de Google (60 por minuto). Se
+      // recarga una vez, al cerrar la ventana (`cerrar()`).
+      if (solo) huboGuardado.current = true; else onCambio();
       return p?.id ?? d.presupuesto?.id ?? '';
     } finally { setGuardando(false); }
+  }
+
+  /** Cerrar manda lo pendiente y, si se guardó algo, recarga la lista una vez. */
+  async function cerrar() {
+    if (autoActivo) await auto.forzar();
+    if (huboGuardado.current) onCambio();
+    onCerrar();
   }
 
   async function ganar() {
@@ -914,11 +952,11 @@ export default function CotizacionDialogo({
     : 'Nueva cotización';
 
   return (
-    <Dialogo titulo={titulo} onCerrar={onCerrar} ancho="max-w-3xl">
+    <Dialogo titulo={titulo} onCerrar={() => void cerrar()} ancho="max-w-3xl">
       {/* Los cinco pasos, como botones: se ve dónde se está y se puede saltar.
           Desde el 2026-11-11 son cinco: el envío y el contrato son dos
           conversaciones con el cliente, cada una con su hito al final. */}
-      <nav aria-label="Pasos" className="mb-4 grid grid-cols-5 gap-1">
+      <nav ref={arriba} aria-label="Pasos" className="mb-4 grid grid-cols-5 gap-1">
         {PASOS.map((nombre, i) => (
           <button key={nombre} type="button" onClick={() => void irA(i + 1)}
             aria-current={paso === i + 1 ? 'step' : undefined}
@@ -1398,9 +1436,9 @@ export default function CotizacionDialogo({
             </div>
 
             <div className="flex flex-wrap justify-end gap-2">
-              {p && puedeEditar && (
-                <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
-              )}
+              {p && puedeEditar && (autoActivo
+                ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
+                : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
             </div>
 
             {/* **¿Otra versión?** (2026-11-11, lo pidió el cliente: que crear
@@ -1767,9 +1805,9 @@ export default function CotizacionDialogo({
             {/* **Lo secundario va abajo, chico y separado**: guardar ya es
                 solo y borrar es peligroso. Nunca al lado del hito. */}
             <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
-              {!cancelada && (
-                <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
-              )}
+              {!cancelada && (autoActivo
+                ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
+                : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
               <span className="flex-1" />
               {p && !ganada && puedeEditar && (
                 <button type="button" onClick={() => void borrar()}
@@ -1978,9 +2016,9 @@ export default function CotizacionDialogo({
             {p && !cancelada && hitoContrato}
 
             <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
-              {!cancelada && (
-                <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />
-              )}
+              {!cancelada && (autoActivo
+                ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
+                : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
               <span className="flex-1" />
               {ganada && !cancelada && puedeEditar && (
                 <span className="inline-flex items-center">
