@@ -4,13 +4,13 @@ import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
   crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
-  actualizarPagoDeReserva, abrirElDiaSiHaceFalta, leerFechas, leerReservas
+  actualizarPagoDeReserva, abrirElDiaSiHaceFalta, leerFechas, leerReservas, moverCobros
 } from '@/lib/datos';
 import { cupoParaGanar } from '@/lib/dias';
 import { ocupaLugar } from '@/lib/ocupacion';
-import { condicionesDe, estadoCobros, cobrosDe, puedeGanar } from '@/lib/cobros';
+import { condicionesDe, estadoCobros, puedeGanar } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
-import { conCliente, otrasAlternativas } from '@/lib/cotizar';
+import { conCliente, otrasAlternativas, alternativasDe } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { esFecha } from '@/lib/fechas';
 import {
@@ -107,7 +107,12 @@ export const POST = conLecturas([], async function POST(req: Request) {
     const [cfg, cobros] = await Promise.all([leerConfig(), leerCobros()]);
     const total = totalDe(suyas, p.descuento);
     const cond = condicionesDe(p, total, cfg);
-    const cobrado = estadoCobros({ anticipo: cond.anticipo, total }, cobrosDe(cobros, p.id));
+    // **Lo pagado es del evento, no de una alternativa** (2026-11-12): el
+    // anticipo pudo quedar anotado en la A aunque el cliente eligió la B. Se
+    // cuenta lo del grupo entero, y al ganar pasa todo a la ganadora.
+    const delGrupo = new Set(alternativasDe(original, lista).map((a) => a.id));
+    const cobrosGrupo = cobros.filter((c) => delGrupo.has(c.presupuesto));
+    const cobrado = estadoCobros({ anticipo: cond.anticipo, total }, cobrosGrupo);
     // Desde el 2026-11-11 también basta el contrato firmado (`puedeGanar()`).
     if (!puedeGanar(cobrado.anticipoListo, !!String(p.contrato ?? '').trim())) {
       return NextResponse.json({
@@ -170,6 +175,10 @@ export const POST = conLecturas([], async function POST(req: Request) {
       await guardarPresupuesto({ ...resto, estado: ESTADO_PRESUPUESTO.noElegida });
     }
 
+    // Los pagos anotados en otra alternativa pasan a la ganadora.
+    for (const otra of delGrupo) {
+      if (otra !== p.id && cobrosGrupo.some((c) => c.presupuesto === otra)) await moverCobros(otra, p.id);
+    }
     // Si ya pagó todo, la reserva nace pagada.
     await actualizarPagoDeReserva(p.id);
 

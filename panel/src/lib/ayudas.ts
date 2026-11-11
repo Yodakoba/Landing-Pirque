@@ -566,6 +566,13 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Las otras alternativas pasan a "No elegida". La cotización se sigue pudiendo editar, y su reserva se actualiza sola.'
     ]
   },
+  corregirGanada: {
+    titulo: 'Corregir la ganada',
+    texto: [
+      'Para cuando se marcó ganada por error, o la ganada se cayó.',
+      'Puedes volver a antes de ganar —la reserva sale del calendario y la cotización queda con su anticipo—, pasar a otra alternativa con sus pagos, o cancelar el evento si el cliente ya no viene.'
+    ]
+  },
   cancelarEvento: {
     titulo: 'Cancelar evento',
     texto: [

@@ -1070,6 +1070,40 @@ export async function borrarCobro(id: string): Promise<Cobro | undefined> {
  * `cancelled`, que libera el cupo del día y el sitio lo vuelve a ofrecer.
  * La fila no se borra: es el rastro de que ese evento existió.
  */
+/**
+ * **Borra la reserva de una ganada por error** (2026-11-12). No la cancela:
+ * esa reserva nunca debió existir, y una cancelada se seguiría viendo en el
+ * día como gente que "ya no viene". Devuelve la reserva borrada, o
+ * undefined si ya no estaba —así corregir dos veces no falla—.
+ */
+export async function borrarReservaDe(idReserva: string): Promise<Reserva | undefined> {
+  if (!idReserva) return undefined;
+  const filas = await leerHoja(HOJA_RESERVAS, true);
+  const fila = buscarFilaPorId(filas, filas[0] ?? [], idReserva);
+  if (fila < 2) return undefined;
+  const r = leerReservasDe(filas).find((x) => x.id === idReserva);
+  await borrarFila(HOJA_RESERVAS, fila);
+  return r;
+}
+
+/**
+ * **Pasa los cobros de una alternativa a otra** (2026-11-12): el cliente
+ * pagó el anticipo del evento, y se anotó en la alternativa equivocada.
+ * Cada cobro conserva su fecha, su comprobante y su revisión: lo único que
+ * cambia es a qué cotización pertenece.
+ */
+export async function moverCobros(desde: string, hacia: string): Promise<number> {
+  if (!desde || !hacia || desde === hacia) return 0;
+  const filas = await asegurarEncabezado(HOJA_COBROS, ENCABEZADO_COBROS);
+  const enc = await asegurarColumnas(HOJA_COBROS, filas[0] ?? ENCABEZADO_COBROS, ENCABEZADO_COBROS);
+  const suyos = leerCobrosDe(filas).filter((c) => c.presupuesto === desde);
+  for (const c of suyos) {
+    const { fila, ...sinFila } = c;
+    await escribirFila(HOJA_COBROS, fila, filaCobro(enc, { ...sinFila, presupuesto: hacia }));
+  }
+  return suyos.length;
+}
+
 export async function cancelarReservaDe(idReserva: string): Promise<boolean> {
   if (!idReserva) return false;
   const filas = await leerHoja(HOJA_RESERVAS, true);

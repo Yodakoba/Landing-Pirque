@@ -298,3 +298,25 @@ export const ESTADOS_A_MANO: string[] = [
 export const MOTIVOS_PERDIDA = [
   'Precio', 'Fecha no disponible', 'Eligió otra opción', 'No respondió', 'Se canceló el evento'
 ];
+
+/**
+ * **Cómo queda el grupo al deshacer una ganada** (2026-11-12, lo pidió el
+ * cliente: marcó ganada la A cuando el cliente había elegido la B). La
+ * ganada y las que pasaron a *No elegida* por ella vuelven a estar en
+ * carrera: *Enviada* si ya se mandó, *Borrador* si no. Una *Perdida* o una
+ * *Cancelada* se quedan como están: no las tocó la ganada.
+ *
+ * No se guarda en qué etapa estaba cada una antes de ganar, así que una que
+ * iba en *Negociación* vuelve a *Enviada*. Es lo más cercano que se sabe, y
+ * la conversación sigue igual.
+ */
+export function grupoSinGanar(
+  ganada: Presupuesto, lista: Presupuesto[]
+): { id: string; estado: string }[] {
+  return alternativasDe(ganada, lista)
+    .filter((a) => a.id === ganada.id || estadoNormal(a.estado) === ESTADO_PRESUPUESTO.noElegida)
+    .map((a) => ({
+      id: a.id,
+      estado: String(a.enviada ?? '').trim() ? ESTADO_PRESUPUESTO.enviado : ESTADO_PRESUPUESTO.borrador
+    }));
+}

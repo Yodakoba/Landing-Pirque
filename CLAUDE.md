@@ -2511,6 +2511,28 @@ las alternativas usa"*.
   con la nota *"De la cotización N° …"* que ninguna cotización reclame, y
   la usa. Un error al ganar sale además en el aviso flotante.
 - **El aviso verde abre el paso 4**, que es donde está *Marcar ganada*.
+- **Con varias alternativas, un botón por cada una** (2026-11-12, lo pidió
+  el cliente: estaba en la A, la marcó ganada y el cliente había elegido la
+  B). En vez de un solo *Marcar ganada*, el próximo paso pregunta *¿Con cuál
+  alternativa se quedó el cliente?* con **✓ Ganó la A · $980.000** y **✓ Ganó
+  la B · $900.000**, cada uno apagado si a esa le falta el anticipo. La
+  confirmación muestra **la letra en grande** con su total y su gente, y qué
+  pasa con las otras. Se puede ganar la B desde la ventana de la A.
+- **Lo pagado es del evento, no de una alternativa**: para ofrecer ganar una
+  cuenta el anticipo anotado en cualquiera del grupo (`/api/presupuestos/
+  cobros?grupo=1`), y `/convertir` hace lo mismo y, al ganar, **pasa los
+  cobros de las otras a la ganadora** (`moverCobros()`).
+- **Corregir la ganada** (`CorregirGanada.tsx`, `/api/presupuestos/corregir`),
+  un botón chico abajo de los pasos 4 y 5 en una ganada, con tres salidas:
+  **El cliente eligió la B** (deshace y pasa los pagos a la B; después se
+  marca ganada la B), **Volver a antes de ganar** (queda con su anticipo) y
+  **El cliente ya no viene** (abre *Cancelar evento*). Deshacer **borra** la
+  reserva —no la cancela: nunca debió existir—, devuelve el día como al
+  cancelar (`devolverElDia()`) y deja en carrera la ganada y sus *No
+  elegida* (`grupoSinGanar()`: *Enviada* si se mandó, si no *Borrador*; una
+  que iba en *Negociación* vuelve a *Enviada*, porque eso no se guarda). En
+  un día cerrado pide motivo, como toda corrección. Reserva primero: si algo
+  falla después, se ve y se reintenta.
 
 ### Si el día se llenó mientras se cotizaba (2026-11-11)
 
