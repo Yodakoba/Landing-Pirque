@@ -18,6 +18,7 @@
  * - **Lo que no es de esta cuenta se ve y no se toca**: el vendedor ve las
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
+import BuscarEnLista from './BuscarEnLista';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import BotonGuardar from './BotonGuardar';
@@ -218,6 +219,8 @@ export default function CotizacionDialogo({
   const [tipoEvento, setTipoEvento] = useState(p?.tipoEvento ?? '');
   /** El socio comercial que trajo la venta: su id, o vacío (2026-11-12). */
   const [socio, setSocio] = useState(p?.socio ?? '');
+  /** Si la lista de socios con buscador está abierta. */
+  const [buscandoSocio, setBuscandoSocio] = useState(false);
   const [notas, setNotas] = useState(p?.notas ?? '');
   const [estado, setEstado] = useState(
     p ? (estadoVisible(p, datos.hoy) === 'Vencida' ? p.estado : estadoVisible(p, datos.hoy))
@@ -1431,34 +1434,51 @@ export default function CotizacionDialogo({
             {/* **¿Viene por un socio comercial?** (2026-11-12, lo pidió el
                 cliente): una agencia, un chofer, una municipalidad. El socio
                 cobra su comisión y el vendedor la parte que diga su ficha.
-                Botones a la vista, no un desplegable; un desactivado se
-                muestra solo si ya era el elegido. */}
-            {(datos.socios ?? []).length > 0 && (
-              <div>
-                <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                  ¿Viene por un socio comercial?
-                </p>
-                <div role="radiogroup" aria-label="Socio comercial" className="flex flex-wrap gap-2">
-                  <button type="button" role="radio" aria-checked={!socio} onClick={() => setSocio('')}
-                    className={`boton min-h-[44px] ${!socio ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
-                    {!socio ? '✓ ' : ''}No, directo
-                  </button>
-                  {(datos.socios ?? []).filter((x) => x.activo || x.id === socio).map((x) => (
-                    <button key={x.id} type="button" role="radio" aria-checked={x.id === socio}
-                      onClick={() => setSocio(x.id === socio ? '' : x.id)}
-                      className={`boton min-h-[44px] ${x.id === socio ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
-                      {x.id === socio ? '✓ ' : ''}🤝 {x.nombre}{x.activo ? '' : ' (desactivado)'}
-                    </button>
-                  ))}
-                </div>
-                {socio && (
-                  <p className="mt-1 text-[13px] text-hueso/70">
-                    {(datos.socios ?? []).find((x) => x.id === socio)?.nombre ?? 'El socio'} cobra su comisión por esta venta,
-                    y quien la vende, la parte de la suya que diga su ficha.
+                **Dos botones, no uno por socio** (regla del cliente): *No,
+                directo* y *Por un socio comercial*, que abre la lista con
+                buscador (`BuscarEnLista`). Un desactivado se lista solo si ya
+                era el elegido. */}
+            {(datos.socios ?? []).length > 0 && (() => {
+              const elegido = (datos.socios ?? []).find((x) => x.id === socio);
+              return (
+                <div>
+                  <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                    ¿Viene por un socio comercial?
                   </p>
-                )}
-              </div>
-            )}
+                  <div role="radiogroup" aria-label="Socio comercial" className="flex flex-wrap gap-2">
+                    <button type="button" role="radio" aria-checked={!socio}
+                      onClick={() => { setSocio(''); setBuscandoSocio(false); }}
+                      className={`boton min-h-[44px] ${!socio ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
+                      {!socio ? '✓ ' : ''}No, directo
+                    </button>
+                    <button type="button" role="radio" aria-checked={!!socio} aria-expanded={buscandoSocio}
+                      onClick={() => setBuscandoSocio(true)}
+                      className={`boton min-h-[44px] ${socio ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
+                      {socio ? `✓ 🤝 ${elegido?.nombre ?? socio}${elegido && !elegido.activo ? ' (desactivado)' : ''}` : '🤝 Por un socio comercial…'}
+                    </button>
+                    {socio && !buscandoSocio && (
+                      <button type="button" className="boton min-h-[44px]" onClick={() => setBuscandoSocio(true)}>Cambiar</button>
+                    )}
+                  </div>
+                  {buscandoSocio && (
+                    <div className="mt-2">
+                      <BuscarEnLista etiqueta="Buscar socio comercial" elegido={socio}
+                        vacia="No hay socios comerciales activos."
+                        opciones={(datos.socios ?? []).filter((x) => x.activo || x.id === socio)
+                          .map((x) => ({ id: x.id, nombre: x.nombre, detalle: x.activo ? '' : 'desactivado' }))}
+                        onElegir={(id) => { setSocio(id); setBuscandoSocio(false); }}
+                        onCerrar={() => setBuscandoSocio(false)} />
+                    </div>
+                  )}
+                  {socio && (
+                    <p className="mt-1 text-[13px] text-hueso/70">
+                      {elegido?.nombre ?? 'El socio'} cobra su comisión por esta venta, y quien la vende,
+                      la parte de la suya que diga su ficha.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <Campo etiqueta="Notas internas" ancho="w-full">
               <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)}

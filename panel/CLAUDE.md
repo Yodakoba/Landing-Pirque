@@ -18,6 +18,12 @@ revisan antes de cada cambio en esta carpeta.
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
   desplegables, una frase que dice qué pasa al seguir.
+- **Elegir de una lista que crece se hace con buscador** (regla del
+  cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
+  pocas; para personas o empresas —vendedores, socios, clientes— van **dos
+  botones**: el directo (*No, directo*) y otro que **abre la lista con
+  buscador** (*Por un socio comercial…*), con `BuscarEnLista`. Nunca un
+  botón por persona.
 - **Autoguardado por defecto** (regla del cliente, 2026-11-12). Todo lo
   que se escribe se guarda solo, con el estado a la vista (*Guardando… /
   ✓ Guardado*, y *Reintentar* en rojo si falla). **Se confirma a mano
@@ -1833,6 +1839,11 @@ vendedor"*, y fijó la parte del vendedor: **50%**. Código en
   no tiene cuenta**: su ficha se crea en `/vendedores` con *+ Agregar socio
   comercial* (pide el nombre, permiso `pagar`) y se identifica por un id,
   `S-0001`…, en la columna `Usuario` (`nuevoIdSocio()`).
+- **En `/vendedores` se elige con dos botones**, *👤 Vendedores (N)* y
+  *🤝 Socios comerciales (N)*, que abren su lista con buscador; arriba dice
+  a quién se está mirando. *+ Agregar socio comercial* va al pie de la
+  lista de socios. El primer corte traía un botón por persona y el cliente
+  lo cambió: esas listas crecen.
 - **Nace con el trato del landing**: 5% desde 22 personas, 10% desde 55 y
   15% desde 77, sobre el neto (`fichaSocio()`, `TRATO_SOCIO`). Todo se edita
   en su ficha y se guarda solo, como la del vendedor; no lleva sueldo fijo.
@@ -1844,7 +1855,9 @@ vendedor"*, y fijó la parte del vendedor: **50%**. Código en
   nombre* / *Deshacer*, y *Desactivar* con su pregunta. Un desactivado deja
   de ofrecerse al cotizar; sus ventas siguen.
 - **La pregunta en la cotización**: paso 2, *¿Viene por un socio
-  comercial?*, con *No, directo* y un botón por socio activo. Se guarda solo
+  comercial?*, con dos botones: *No, directo* y *🤝 Por un socio
+  comercial…*, que abre la lista de los activos con buscador. Elegido, el
+  botón dice su nombre, con *Cambiar* al lado. Se guarda solo
   en la columna nueva `Socio comercial` de `Presupuestos` (solo un id
   `S-…` o vacío: `socioDelCuerpo()`), y una alternativa la copia.
   `/api/presupuestos` manda la lista de socios —id, nombre y si está

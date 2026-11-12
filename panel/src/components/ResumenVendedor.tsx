@@ -7,17 +7,19 @@
  *
  * - **El vendedor ve solo lo suyo**, como *Mi resumen*, y lee cómo se le
  *   paga sin poder cambiarlo.
- * - **Quien paga, la gerencia y el administrador** eligen al vendedor con un
- *   botón por cada uno y editan su forma de pago y su cuenta, que se guardan
+ * - **Quien paga, la gerencia y el administrador** eligen al vendedor en su
+ *   lista con buscador y editan su forma de pago y su cuenta, que se guardan
  *   solas (`usarGuardadoPorFicha`).
- * - **Los socios comerciales** (2026-11-12) van en la misma pantalla, con
- *   un botón por socio y *+ Agregar socio comercial*: no tienen cuenta, así
- *   que su ficha se crea acá. Mismo resumen, misma fórmula; sin sueldo fijo.
+ * - **Los socios comerciales** (2026-11-12) van en la misma pantalla. Se
+ *   elige con dos botones —*Vendedores* y *Socios comerciales*— que abren
+ *   su lista con buscador, y al pie de la de socios va *+ Agregar socio
+ *   comercial*: no tienen cuenta, así que su ficha se crea acá. Mismo resumen, misma fórmula; sin sueldo fijo.
  * - **El periodo es un mes o una semana**, con flechas sin tope, igual que el
  *   link del trabajador. Parte en el mes en curso: el sueldo fijo es mensual.
  */
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
+import BuscarEnLista from './BuscarEnLista';
 import DatosBancarios from './DatosBancarios';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { enPesos } from '@/lib/ocupacion';
@@ -91,6 +93,8 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   /** El nombre de un socio escrito y sin confirmar. */
   const [nombreEscrito, setNombreEscrito] = useState<string | null>(null);
   const [aviso, setAviso] = useState('');
+  /** Qué lista está abierta para elegir: la de vendedores, la de socios o ninguna. */
+  const [lista, setLista] = useState<'' | 'vendedores' | 'socios'>('');
 
   const cargar = (u = usuario, p = periodo) => {
     const q = new URLSearchParams();
@@ -153,17 +157,9 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok || d.error) { setAviso(d.error || 'No se pudo crear.'); return; }
-    setNuevoSocio(null);
+    setNuevoSocio(null); setLista('');
     elegir(d.ficha.usuario);
   };
-  const botonDe = (v: { usuario: string; nombre: string; activo: boolean }) => (
-    <button key={v.usuario} type="button" aria-pressed={v.usuario === datos.usuario}
-      onClick={() => elegir(v.usuario)}
-      className={`boton min-h-[44px] rounded-full text-[15px] ${v.usuario === datos.usuario
-        ? 'border-oro bg-oro/15 font-semibold text-oro' : ''} ${v.activo ? '' : 'opacity-70'}`}>
-      {v.usuario === datos.usuario ? '✓ ' : ''}{v.nombre}{v.activo ? '' : ' (inactivo)'}
-    </button>
-  );
 
   return (
     <div className="space-y-6">
@@ -176,62 +172,64 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
         </p>
       </div>
 
-      {/* Un botón por vendedor y uno por socio: se ven todos y se elige de un toque. */}
+      {/* **Dos botones que abren su lista con buscador** (2026-11-12, regla
+          del cliente), no un botón por persona: la lista de vendedores y la
+          de socios crecen. Arriba dice a quién se está mirando. */}
       {!esVendedor && (
-        <div className="space-y-4">
-          <div>
-            <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-hueso/65">Vendedores</p>
-            {datos.vendedores.length === 0 ? (
-              <p className="rounded-xl border-2 border-dashed border-hueso/25 p-3 text-[15px]">
-                Todavía no hay cuentas de vendedor. Se crean en <a href="/usuarios" className="font-semibold text-oro underline">Cuentas</a>,
-                con el rol Vendedor.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Vendedor">
-                {datos.vendedores.map(botonDe)}
-              </div>
-            )}
-          </div>
-          <div>
-            <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-hueso/65">Socios comerciales</p>
-            <p className="mb-2 text-[14px] text-hueso/70">
-              Agencias, choferes o municipalidades que traen clientes. No tienen cuenta: se eligen en la cotización.
+        <div className="space-y-3">
+          {datos.usuario && (
+            <p className="text-[15px] text-hueso/80">
+              Viendo a <b className="text-hueso">{datos.nombre}</b> · {esSocio ? 'socio comercial' : 'vendedor'}
+              {esSocio && !datos.ficha.activo ? ' · desactivado' : ''}
+              {esSocio && <>. Suman las cotizaciones que lo nombran en <i>¿Viene por un socio comercial?</i></>}
             </p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Socio comercial">
-              {datos.socios.map(botonDe)}
-              {datos.puedeEditar && nuevoSocio === null && (
-                <button type="button" className="boton min-h-[44px] rounded-full border-dashed text-[15px]"
-                  onClick={() => setNuevoSocio('')}>+ Agregar socio comercial</button>
-              )}
-            </div>
-            {nuevoSocio !== null && (
-              <form className="mt-2 flex flex-wrap items-end gap-2 rounded-xl border-2 border-oro/40 p-3"
-                onSubmit={(e) => { e.preventDefault(); void crearSocio(); }}>
-                <label className="block min-w-[14rem] flex-1 text-[14px] font-semibold">
-                  Nombre del socio
-                  <input autoFocus className={ENTRADA} value={nuevoSocio} placeholder="Ej.: Turismo Maipo"
-                    onChange={(e) => setNuevoSocio(e.target.value)} />
-                </label>
-                <button type="submit" className="boton boton-relleno min-h-[44px]" disabled={!nuevoSocio.trim()}>Crear el socio</button>
-                <button type="button" className="boton min-h-[44px]" onClick={() => setNuevoSocio(null)}>Cancelar</button>
-                <p className="w-full text-[13px] text-hueso/70">
-                  Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto. Se cambia en su ficha.
-                </p>
-              </form>
-            )}
+          )}
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Elegir a quién ver">
+            {([['vendedores', '👤 Vendedores', datos.vendedores.length, !esSocio],
+               ['socios', '🤝 Socios comerciales', datos.socios.length, esSocio]] as const).map(([k, rotulo, n, actual]) => (
+              <button key={k} type="button" aria-expanded={lista === k}
+                onClick={() => { setLista(lista === k ? '' : k); setNuevoSocio(null); }}
+                className={`boton min-h-[44px] text-[15px] ${actual && datos.usuario ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
+                {rotulo} ({n}) {lista === k ? '▴' : '▾'}
+              </button>
+            ))}
           </div>
+          {lista === 'vendedores' && (
+            <BuscarEnLista etiqueta="Buscar vendedor" elegido={datos.usuario}
+              vacia="Todavía no hay cuentas de vendedor. Se crean en Cuentas, con el rol Vendedor."
+              opciones={datos.vendedores.map((v) => ({ id: v.usuario, nombre: v.nombre, detalle: v.activo ? '' : 'inactivo' }))}
+              onElegir={(u) => { setLista(''); elegir(u); }} onCerrar={() => setLista('')} />
+          )}
+          {lista === 'socios' && (
+            <BuscarEnLista etiqueta="Buscar socio comercial" elegido={datos.usuario}
+              vacia="Todavía no hay socios comerciales."
+              opciones={datos.socios.map((v) => ({ id: v.usuario, nombre: v.nombre, detalle: v.activo ? '' : 'desactivado' }))}
+              onElegir={(u) => { setLista(''); elegir(u); }} onCerrar={() => { setLista(''); setNuevoSocio(null); }}
+              pie={datos.puedeEditar && (nuevoSocio === null ? (
+                <button type="button" className="boton min-h-[44px] w-full border-dashed text-[15px]"
+                  onClick={() => setNuevoSocio('')}>+ Agregar socio comercial</button>
+              ) : (
+                <form className="flex flex-wrap items-end gap-2"
+                  onSubmit={(e) => { e.preventDefault(); void crearSocio(); }}>
+                  <label className="block min-w-[12rem] flex-1 text-[14px] font-semibold">
+                    Nombre del socio nuevo
+                    <input autoFocus className={ENTRADA} value={nuevoSocio} placeholder="Ej.: Turismo Maipo"
+                      onChange={(e) => setNuevoSocio(e.target.value)} />
+                  </label>
+                  <button type="submit" className="boton boton-relleno min-h-[44px]" disabled={!nuevoSocio.trim()}>Crear el socio</button>
+                  <button type="button" className="boton min-h-[44px]" onClick={() => setNuevoSocio(null)}>Cancelar</button>
+                  <p className="w-full text-[13px] text-hueso/70">
+                    Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto. Se cambia en su ficha.
+                  </p>
+                </form>
+              ))} />
+          )}
           {aviso && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px]">{aviso}</p>}
         </div>
       )}
 
       {datos.usuario && (
         <>
-          {esSocio && (
-            <p className="text-[15px] text-hueso/80">
-              <b className="text-hueso">{datos.nombre}</b> · socio comercial{datos.ficha.activo ? '' : ' · desactivado'}.
-              Suman las cotizaciones que lo nombran en <i>¿Viene por un socio comercial?</i>
-            </p>
-          )}
           {/* El periodo: mes o semana, con flechas sin tope. */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-2" role="group" aria-label="Periodo">
