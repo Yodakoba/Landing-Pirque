@@ -5,9 +5,9 @@
  * Una cotización con **arriendo** pregunta *"¿el día es exclusivo?"* —no se
  * asume: con buena negociación puede haber arriendo y un segundo grupo—. Si
  * es exclusivo y ese día ya tiene reservas de otros, **no se automatiza
- * nada**: el vendedor ve la alarma y le pide a la gerencia liberar el día, y
- * decide el encargado de pagos, la gerencia general o el administrador
- * (permiso `exclusividad`), caso a caso.
+ * nada**: el vendedor ve la alarma y pide liberar el día, y decide el
+ * encargado de operaciones, el de pagos, la gerencia general o el
+ * administrador (permiso `exclusividad`), caso a caso.
  *
  * - **El plazo**: con menos de `exclusivo_dias_minimos` días (7) para el
  *   evento, pedirlo va como **caso especial**, y aprobarlo pide motivo.

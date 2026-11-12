@@ -926,7 +926,7 @@ export default function CotizacionDialogo({
       if (!r.ok || d.error) { avisar(d.error || 'No se pudo mandar el pedido.', 'atencion'); return; }
       if (d.exclusividad !== undefined) setMarcaExcl(d.exclusividad);
       huboGuardado.current = true;
-      avisar('Pedido enviado: le llega a la gerencia en su bandeja');
+      avisar('Pedido enviado: le llega a quien decide, en su bandeja de aprobaciones');
     } finally { setPidiendoExcl(false); }
   }
   const alarmaExclusivo = choqueExclusivo ? (
@@ -936,7 +936,7 @@ export default function CotizacionDialogo({
       </p>
       <p className="mt-1 text-hueso/85">
         Para ganarla hay que liberar el día: cancelar o cambiar de fecha esas reservas, con
-        disculpas a cada cliente. Eso no se hace solo: lo decide el encargado de pagos o la gerencia.
+        disculpas a cada cliente. Eso no se hace solo: lo decide el encargado de operaciones, el de pagos o la gerencia.
       </p>
       {plazoExcl && !plazoExcl.enPlazo && decisionExcl.estado !== 'aprobada' && (
         <p className="mt-2 font-semibold text-ambar-texto">
@@ -969,7 +969,7 @@ export default function CotizacionDialogo({
           className="tecla mt-3 min-h-[52px] w-full rounded-xl border-2 border-morado-fuerte px-5 text-[16px]
                      font-bold text-morado-texto hover:bg-morado/10 disabled:opacity-50">
           {pidiendoExcl ? 'Mandando…' : decisionExcl.estado === 'rechazada'
-            ? '🙋 Pedirlo de nuevo' : '🙋 Pedir a la gerencia liberar el día'}
+            ? '🙋 Pedirlo de nuevo' : '🙋 Pedir liberar el día'}
         </button>
       )}
     </div>

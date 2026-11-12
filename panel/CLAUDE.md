@@ -1550,11 +1550,14 @@ nada**: se avisa y decide alguien de arriba. Código en `lib/exclusivo.ts`
   día ya hay N personas reservadas*, en el paso 3 y en lugar de *Marcar
   ganada* (el hito dice *Falta liberar el día*). La regla de cupo no cambió:
   si el grupo no cabe, se pide abrir cupo como siempre.
-- **El vendedor pide, no decide**: *🙋 Pedir a la gerencia liberar el día*
+- **El vendedor pide, no decide**: *🙋 Pedir liberar el día*
   escribe `Exclusividad` = *Pedida · quién · cuándo · nota*. Le llega a la
   **bandeja de aprobaciones** de quien tiene el permiso nuevo
-  **`exclusividad`**: el encargado de pagos, la gerencia general y el
-  administrador. El encargado de operaciones no decide: avisa.
+  **`exclusividad`**: el encargado de operaciones, el de pagos, la gerencia
+  general y el administrador. **El de operaciones entró el mismo día** (lo
+  corrigió el cliente: *"lo aclaraste con la gerencia en algún momento
+  puede ser, pero él al final lo tiene que gestionar"*): recibe el pedido
+  en su bandeja, lo resuelve y ejecuta el plan de liberar el día.
 - **El plazo vive en Configuración** (`exclusivo_dias_minimos`, 7, en
   *Cotizaciones*). Con menos días se puede pedir igual, como **caso
   especial**, y aprobarlo pide motivo.
