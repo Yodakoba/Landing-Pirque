@@ -2440,7 +2440,7 @@ console.log('\nActividades extras');
 
 const co = (p: Partial<Colaborador>): Colaborador => ({
   nombre: 'Jinete', actividad: 'Show ecuestre', telefono: '', activo: true,
-  monto: 0, banco: bancoVacio(), ...p
+  monto: 0, banco: bancoVacio(), token: '', ...p
 });
 const ex = (p: Partial<Extra>): Extra => ({
   fecha: '2026-11-14', colaborador: 'Jinete', actividad: 'Show ecuestre',
@@ -4831,6 +4831,19 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
   ok(dp(pagoV as never, 'Carla', '2026-11-01', '2026-11-30', 469500, 0).total.falta === 0
      && cd('comision') === CO.comision && pb('vendedor', false),
      'un pago de comisión salda al vendedor en el informe, y su pago pide boleta como el de un extra');
+}
+
+console.log('\nEl link personal de los extras');
+{
+  const { colaboradorPorToken, aFilasColaboradores: af, leerColaboradoresDe: lc } = await import('./extras.ts');
+  const conLink = co({ nombre: 'Pedro', token: 'abc123' });
+  const ida = lc(af([conLink, co({ nombre: 'Marta' })]));
+  ok(ida[0].token === 'abc123' && ida[1].token === '', 'el token del colaborador se guarda al final de la fila y se lee igual');
+  ok(colaboradorPorToken(ida, 'abc123')?.nombre === 'Pedro' && !colaboradorPorToken(ida, '')
+     && !colaboradorPorToken([{ ...ida[0], activo: false }], 'abc123'),
+     'el link abre su ficha; uno vacío no encuentra a nadie, y uno de una ficha desactivada tampoco');
+  ok(lc([['Nombre', 'Actividad'], ['Juan', 'Karting']])[0].token === '',
+     'una planilla vieja, sin la columna, se lee sin link');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

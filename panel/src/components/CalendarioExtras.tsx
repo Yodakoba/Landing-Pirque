@@ -19,7 +19,7 @@
  */
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
-import { avisar } from './AvisoFlotante';
+import { avisar, copiarConAviso } from './AvisoFlotante';
 import MostrarDesactivados from './MostrarDesactivados';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
@@ -56,6 +56,8 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [verSueldos, setVerSueldos] = useState(false);
+  /** Si esta cuenta administra los links personales (`links`), como en Equipo. */
+  const [verLinks, setVerLinks] = useState(false);
   // **Vista gerencia** (2026-11-11): las fichas se miran y no se tocan si el
   // rol no tiene las extras; los montos y la cuenta, si no tiene `sueldos`.
   const soloMira = usarSoloMira('extras');
@@ -92,6 +94,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
         setListo(true);
         setExtras(d.extras ?? []);
         setVerSueldos(!!d.verSueldos);
+        setVerLinks(!!d.verLinks);
         setCierres(d.cierres ?? []);
         setPuedeCorregir(!!d.puedeCorregir);
       })
@@ -232,6 +235,28 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       </>
     );
   };
+
+  /**
+   * **El link personal del colaborador** (2026-11-12, lo pidió el cliente):
+   * un solo botón, *Copiar link personal*, que lo crea la primera vez; y
+   * *Renovar* / *Quitar link*, igual que en Equipo.
+   */
+  async function link(nombre: string, accion: 'crear' | 'renovar' | 'quitar') {
+    if (accion === 'quitar' && !confirm(`¿Quitarle el acceso a ${nombre}? Su link deja de servir al instante.`)) return;
+    await fichas.forzar();
+    const r = await fetch('/api/extras/link', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre, accion })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { avisar(d.error || 'No se pudo.', 'atencion'); return; }
+    setColaboradores((lista) => (lista ?? []).map((c) => (c.nombre === d.nombre ? { ...c, token: d.token } : c)));
+    if (accion !== 'quitar') copiarLink(d.token, nombre);
+    else avisar(`${nombre} ya no tiene acceso.`);
+  }
+  function copiarLink(token: string, nombre: string) {
+    copiarConAviso(`${window.location.origin}/mi/${token}`, `Link de ${nombre} copiado`, `Link de ${nombre}:`);
+  }
 
   /** El buscador: nombre, actividad y teléfono, sin tildes ni mayúsculas (como en Equipo). */
   const qBusca = normalizar(busca);
@@ -559,6 +584,35 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                   {guardarEnTarjeta(i)}
                 </div>
               </div>
+
+              {verLinks && (
+                <div className="mt-3 border-t border-hueso/10 pt-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="w-36 whitespace-nowrap text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
+                      Link personal
+                    </span>
+                    {!c.nombre.trim() || (nombreEscrito[i] !== undefined && nombreEscrito[i].trim() !== c.nombre) ? (
+                      <span className="text-[13px] text-ambar-texto/85">Guarda el nombre para administrar su link.</span>
+                    ) : (
+                      <>
+                        <button onClick={() => (c.token ? copiarLink(c.token, c.nombre) : void link(c.nombre, 'crear'))}
+                          className="boton boton-relleno">Copiar link personal</button>
+                        {c.token && (
+                          <>
+                            <button onClick={() => void link(c.nombre, 'renovar')} className="boton"
+                              title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
+                            <button onClick={() => void link(c.nombre, 'quitar')}
+                              className="boton hover:border-rojo-fuerte hover:text-rojo-texto">Quitar link</button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[13px] text-hueso/65">
+                    Abre sus días, lo que ganó y lo que se le pagó, sin contraseña. Mándaselo por WhatsApp.
+                  </p>
+                </div>
+              )}
 
               {verSueldos && (
                 <div className="mt-3 border-t border-hueso/10 pt-3">
