@@ -1,20 +1,18 @@
 'use client';
 
 /**
- * La página `/ayuda`: todo lo que una cuenta necesita para volver a revisar
- * cómo se usa su panel. Ver `lib/ayudaRol.ts`.
+ * La página `/ayuda` (2026-11-12): las misiones del rol arriba y, debajo, la
+ * consulta rápida. Ver `lib/misiones.ts` y `lib/ayudaRol.ts`.
  *
- * - **Arriba, el recorrido**: el único botón relleno de la vista, porque es lo
- *   que se vino a buscar la primera vez.
- * - **Una tarjeta por pantalla que la cuenta abre**, con el mismo texto del
- *   `?` entero —para qué sirve, cómo se usa y el *Ojo*— y un botón para ir.
- *   Va a la vista, sin desplegables: es una página para leer.
+ * - **Las misiones** son lo que se vino a buscar: cuatro con la pantalla real
+ *   y *Tu voz*, el formulario de comentarios, como quinta.
+ * - **La consulta rápida** es para quien ya sabe y busca algo puntual: cada
+ *   pantalla con su `?` (el mismo texto de la pantalla) y *Ir →*.
  * - **Qué puede y qué no tu cuenta**, sacado de la tabla de permisos. Contesta
  *   *"¿por qué no tengo esto?"* antes de que haya que preguntarlo.
- * - **Al final, Comentar**: si después de leer algo falta, es el lugar.
  */
-import Comentar from './Comentar';
-import { verRecorrido } from './Recorrido';
+import Ayuda from './Ayuda';
+import MisionesAyuda from './MisionesAyuda';
 import { pantallasDe } from '@/lib/ayudaRol';
 import { NOMBRE_ROL, RESUMEN_ROL, resumenRol } from '@/lib/roles';
 import type { Rol } from '@/lib/auth';
@@ -27,51 +25,29 @@ export default function AyudaRol({ rol, gerencia, conComentar }: {
   const nombre = NOMBRE_ROL[rol] ?? rol;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <section className="space-y-3">
+    <div className="mx-auto max-w-5xl space-y-10">
+      <header className="space-y-2">
         <h1 className="text-2xl font-bold uppercase tracking-wide">Ayuda</h1>
-        <p className="text-[15px] text-hueso/80">
+        <p className="max-w-3xl text-[15px] text-hueso/80">
           Tu cuenta es <strong className="text-oro">{nombre}</strong>. {RESUMEN_ROL[rol] ?? ''}
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={verRecorrido} className="boton boton-relleno min-h-[44px]">
-            ▶ Ver el recorrido de tu panel
-          </button>
-          <span className="text-[14px] text-hueso/60">
-            {pantallas.length === 1 ? 'Una pantalla' : `${pantallas.length} pantallas`}, en un minuto.
-          </span>
-        </div>
-      </section>
+      </header>
 
-      <section className="space-y-4" aria-label="Tus pantallas">
-        <h2 className="text-[15px] font-semibold uppercase tracking-wide text-hueso/60">Tus pantallas</h2>
-        {pantallas.map((p) => (
-          <article key={p.href} className="space-y-3 rounded-xl border border-hueso/15 bg-panel p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-lg font-bold">{p.texto}</h3>
+      <MisionesAyuda rol={rol} nombreRol={nombre} conComentar={conComentar} />
+
+      <section className="space-y-3" aria-label="Consulta rápida">
+        <h2 className="text-[15px] font-semibold uppercase tracking-wide text-hueso/60">Consulta rápida</h2>
+        <p className="text-[14px] text-hueso/65">Cada pantalla que abres, con su explicación en el ?.</p>
+        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {pantallas.map((p) => (
+            <li key={p.href} className="flex items-center gap-2 rounded-xl border border-hueso/15 bg-panel px-3 py-2">
+              <span className="font-semibold">{p.texto}</span>
+              <Ayuda tema={p.tema} />
               <span className="flex-1" />
-              <a href={p.href} className="tecla boton min-h-[40px]">Ir a {p.texto} →</a>
-            </div>
-            <div className="space-y-2 text-[15px] leading-relaxed text-hueso/80">
-              {p.ayuda.cuerpo.map((t, i) => <p key={i}>{t}</p>)}
-            </div>
-            {p.ayuda.pasos && (
-              <ol className="space-y-1.5 text-[15px] text-hueso/80">
-                {p.ayuda.pasos.map((t, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="shrink-0 font-semibold tabular-nums text-oro">{i + 1}.</span>
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-            {p.ayuda.ojo && (
-              <p className="rounded border border-ambar/40 bg-ambar/5 px-3 py-2 text-[14px] text-ambar-texto">
-                <strong>Ojo:</strong> {p.ayuda.ojo}
-              </p>
-            )}
-          </article>
-        ))}
+              <a href={p.href} className="tecla boton min-h-[40px]">Ir →</a>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2" aria-label="Qué puede tu cuenta">
@@ -86,19 +62,13 @@ export default function AyudaRol({ rol, gerencia, conComentar }: {
           <ul className="mt-2 space-y-1 text-[14px] text-hueso/60">
             {noPuede.length ? noPuede.map((t) => <li key={t}>· {t}</li>) : <li>Nada: puedes todo.</li>}
           </ul>
+          {noPuede.length > 0 && conComentar && (
+            <p className="mt-3 text-[14px] text-hueso/70">
+              ¿Necesitas algo de esta lista para tu trabajo? Cuéntalo en la misión <strong>💬 Tu voz</strong>.
+            </p>
+          )}
         </div>
       </section>
-
-      {conComentar && (
-        <section className="space-y-3 rounded-xl border-2 border-oro/40 bg-oro/5 p-4">
-          <h2 className="text-lg font-bold">¿Algo falla, no se entiende o te falta?</h2>
-          <p className="text-[15px] text-hueso/80">
-            Cuéntalo con <strong>💬 Comentar</strong>, arriba en todas las pantallas. Si piensas
-            «¿y por qué no puedo hacer esto?», justamente eso es lo que más sirve.
-          </p>
-          <Comentar />
-        </section>
-      )}
     </div>
   );
 }
