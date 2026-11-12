@@ -45,6 +45,12 @@ export interface Reserva {
    * que sigue en pie. Ver `COL_RESERVAS.liberada` y `ocupaLugar()`.
    */
   liberada?: string;
+  /** La rectificación del día: ver `rectificacion.ts`. */
+  personasReales?: number | null;
+  menuReal?: string;
+  descuento?: number | null;
+  rectificacion?: string;
+  aprobacion?: string;
   fila: number;          // número de fila en la planilla, para poder editarla
   /**
    * Cuántas filas de la planilla traen este mismo `ID Orden`. Ausente o 1 es

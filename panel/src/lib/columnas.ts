@@ -90,7 +90,18 @@ export const COL_RESERVAS = {
    * sin que nadie se entere. Esta columna Shopify no la toca
    * (`camposDeShopify()`), y `ocupaLugar()` la respeta.
    */
-  liberada: 'Se cayó por cupo'
+  liberada: 'Se cayó por cupo',
+  /**
+   * **La rectificación del día** (2026-11-12): lo que de verdad pasó en la
+   * mesa, aparte de lo reservado. Ver `rectificacion.ts`. Shopify y la
+   * cotización no las tocan: si las pisaran, la rectificación se borraría
+   * sola en la próxima sincronización.
+   */
+  personasReales: 'Personas reales',
+  menuReal: 'Menú real',
+  descuento: 'Descuento',
+  rectificacion: 'Rectificación',
+  aprobacion: 'Aprobación'
 } as const;
 
 export const COL_FECHAS = {
