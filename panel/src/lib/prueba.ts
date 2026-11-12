@@ -4946,5 +4946,53 @@ console.log('\nGanar sin ningún respaldo');
      'la reserva de una ganada sin pago nace Por pagar y no tiene preferencia, igual que una de Shopify sin pago; con el primer pago sí');
 }
 
+console.log('\nLa ayuda de cada rol');
+{
+  const { pantallasDe, recorridoDe, pantallaDeRuta } = await import('./ayudaRol.ts');
+  const { PAGINAS } = await import('./paginas.ts');
+  const { AYUDAS } = await import('./ayudas.ts');
+  const { ROL, puedeVer, ROLES_DE_CUENTA } = await import('./auth.ts');
+  ok(PAGINAS.every((p) => AYUDAS[p.tema]),
+     'cada pantalla del menú tiene su explicación en AYUDAS: una nueva sin texto no pasa');
+  ok(ROLES_DE_CUENTA.every((r) => {
+       const hrefs = pantallasDe(r).map((p) => p.href);
+       return hrefs.length === PAGINAS.filter((p) => puedeVer(r, p.accion)).length
+         && hrefs.every((h) => PAGINAS.some((p) => p.href === h && puedeVer(r, p.accion)));
+     }),
+     'la ayuda de cada rol trae exactamente las pantallas que su menú abre, ni una más');
+  const anf = pantallasDe(ROL.anfitrion).map((p) => p.href);
+  ok(anf.length === 1 && anf[0] === '/recepcion', 'la anfitriona ve la ayuda de Recepción y nada más');
+  const ven = pantallasDe(ROL.vendedor);
+  ok(!ven.some((p) => p.href === '/turnos' || p.href === '/equipo')
+     && ven.some((p) => p.texto === 'Mi resumen'),
+     'el vendedor no recibe Turnos ni Equipo, y su pestaña de ventas se llama Mi resumen, como en su menú');
+  const r = recorridoDe(ROL.vendedor);
+  ok(r.length === ven.length + 2 && r[0].titulo.includes('Vendedor') && r.slice(1, -1).every((p) => p.ir),
+     'el recorrido es: quién eres, una pantalla por paso con su botón para ir, y dónde volver');
+  ok(recorridoDe(ROL.vendedor, false, true).at(-1)!.cuerpo.join(' ').includes('Comentar')
+     && !recorridoDe(ROL.vendedor, false, false).at(-1)!.cuerpo.join(' ').includes('Comentar'),
+     'el último paso nombra Comentar solo si está conectado');
+  ok(pantallaDeRuta('/presupuestos') === 'Cotizaciones' && pantallaDeRuta('/') === 'Calendario'
+     && pantallaDeRuta('/dia/2026-11-14') === 'Día 2026-11-14' && pantallaDeRuta('/ayuda') === 'Ayuda',
+     'el comentario sabe en qué pantalla se escribió');
+}
+
+console.log('\nLos comentarios del equipo');
+{
+  const { limpiarComentario, filaComentario, COLUMNAS_COMENTARIOS } = await import('./comentarios.ts');
+  ok('error' in limpiarComentario({ tipo: 'otro', texto: 'x' }) && 'error' in limpiarComentario({ tipo: '💡 Idea', texto: '   ' })
+     && 'error' in limpiarComentario(null),
+     'sin una de las cuatro clases o sin texto, no se manda');
+  const l = limpiarComentario({ tipo: '🧩 Me falta', texto: ' x'.repeat(3000), para: 'cobrar', pantalla: 'Recepción' });
+  ok('comentario' in l && l.comentario.texto.length === 2000 && l.comentario.para === 'cobrar',
+     'el texto se corta en 2000 caracteres y se limpia');
+  if ('comentario' in l) {
+    const f = filaComentario(l.comentario, { nombre: 'Camila', rol: 'Anfitrión' }, '2026-11-12 10:30');
+    ok(f.length === COLUMNAS_COMENTARIOS.length && f[0] === '2026-11-12 10:30' && f[1] === 'Anfitrión'
+       && f[2] === 'Camila' && f[3] === '🧩 Me falta' && f[4] === 'Recepción' && f[7] === 'Nuevo' && f[8] === '',
+       'la fila calza con las once columnas de la planilla del testeo y nace en Nuevo');
+  }
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

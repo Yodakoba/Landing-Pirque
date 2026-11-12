@@ -5929,6 +5929,73 @@ mira un cartel, y eso no vale lo que cuesta.
 gente que no administra nada, y un recorrido por el panel sería ofrecerle una
 visita a una casa en la que no vive.
 
+> **Desde el 2026-11-12 el recorrido es uno por rol**: ver "La ayuda de cada
+> rol y el botón 💬 Comentar". Lo de arriba sigue valiendo —pantallas de
+> texto, ofrecido dos veces, `localStorage`—, pero ya no son cuatro pasos
+> fijos y la recepción ya no queda fuera.
+
+### La ayuda de cada rol y el botón 💬 Comentar (2026-11-12)
+
+Lo pidió el cliente al cerrar el testeo: que los recorridos por rol que se
+armaron para probar el panel queden **dentro del panel**, como ayuda para
+volver a revisar cosas, y que el formulario de comentarios del recorrido se
+integre al sistema **con la misma planilla** donde ya los trabaja.
+
+**La ayuda: `/ayuda`, con el botón ❓ Ayuda en la cabecera de todas las
+pantallas** (`components/AyudaRol.tsx`, lógica pura en `lib/ayudaRol.ts`).
+
+- **No hay una lista escrita por rol.** Se arma con dos fuentes que ya
+  existían: qué pantallas abre la cuenta (`PAGINAS` filtrada por `puedeVer()`,
+  igual que el menú) y cómo se explica cada una (`AYUDAS`, los textos del
+  `?`). Un permiso que cambia de manos o un rol nuevo cambian la ayuda solos.
+- **`PAGINAS` se mudó a `lib/paginas.ts`** y ganó `tema`, la llave de su
+  texto en `AYUDAS`. `Nav.tsx` la vuelve a exportar. Se mudó porque la ayuda
+  y las pruebas no pueden importar un componente.
+- **Recepción y Vendedores no tenían texto** y ahora lo tienen. Una prueba
+  fija que **toda pantalla del menú tiene el suyo**: una nueva sin texto no
+  pasa `npm run prueba`.
+- **La página**: arriba *▶ Ver el recorrido de tu panel* (el único relleno);
+  una tarjeta por pantalla con el texto entero del `?` y *Ir a …*; y **qué
+  puede y qué no tu cuenta** (`resumenRol()`), que contesta *"¿por qué no
+  tengo esto?"* antes de que haya que preguntarlo. Al final, Comentar.
+- **El recorrido de bienvenida ahora es por rol** (`recorridoDe()`): quién
+  eres, un paso por pantalla con su botón para ir, y dónde volver. Antes eran
+  cuatro pasos fijos que le mostraban Turnos y Equipo al vendedor, que no
+  entra ahí. **Se recuerda por rol** (`brasas-recorrido-<rol>`), así que un
+  cambio de rol vuelve a ofrecerlo. **La recepción ya no queda fuera**: la
+  anfitriona tiene su recorrido de una pantalla.
+
+**Los comentarios: 💬 Comentar en la cabecera** (`components/Comentar.tsx`,
+`/api/comentarios`, lógica pura en `lib/comentarios.ts`).
+
+- **Escribe en la planilla del testeo del cliente, no en la del panel**:
+  *Gran Testeo - Panel*, de la cuenta contacto@, pestaña `Comentarios`, con
+  **las mismas once columnas y en el mismo orden** que ya usaba. Su hoja
+  `Panel` y su forma de trabajarlos (Estado, Prioridad, Respuesta) no cambian.
+- **Se conecta con `COMENTARIOS_SHEET_ID`** y compartiendo esa planilla con
+  la cuenta de servicio como editor. **Sin la variable el botón no aparece**
+  y la ayuda no lo nombra: no hay un botón que responda error.
+- **Nombre, rol y pantalla los pone el servidor** desde la sesión
+  (`pantallaDeRuta()`), no la persona: quedan tres decisiones —qué es, qué
+  pasó, para qué— en vez de siete campos. Un administrador en *Ver como…*
+  queda anotado como *Vendedor (visto por Administrador)*.
+- **Las cuatro clases son botones a la vista** (Me falta, Algo falla, No se
+  entiende, Idea), con ✓ además del color. **Se manda a mano**, no se
+  autoguarda: es un mensaje que le llega a alguien.
+- **Cuesta una escritura y cero lecturas** de Google
+  (`agregarFilaEnOtraPlanilla()` pone el nombre de la pestaña tal cual en el
+  rango, sin pedir la lista de títulos). `npm run comentarios` lo comprueba
+  contra el Google falso: una fila, once columnas, cero lecturas, y un texto
+  que parece fórmula no entra como fórmula.
+- **El Apps Script de esa planilla vive en `planilla-comentarios/`.** Lo que
+  escribe el panel llega por la API y no dispara `onEdit`, así que su `Panel`
+  se pone al día **al abrir la planilla** (`onOpen`) o con *Testeo →
+  Actualizar panel*. Cuenta los roles con los nombres que lleguen, nuevos o
+  viejos.
+- **Lo que no hace todavía**: adjuntar una captura (se pide por WhatsApp; el
+  panel ya sabe subir a Drive, es el paso siguiente), y el link personal del
+  trabajador (`/mi/`) no tiene el botón, porque no tiene sesión.
+
 ### La página quedaba trabada al cerrar dos ventanas (2026-10-30)
 
 Lo reportó el cliente, y el síntoma es tan raro que vale tenerlo escrito
