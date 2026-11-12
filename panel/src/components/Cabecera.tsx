@@ -27,9 +27,12 @@ import Nav, { PAGINAS } from './Nav';
 import { puede, puedeVer, type Rol } from '@/lib/auth';
 import { NOMBRE_ROL } from '@/lib/roles';
 import BotonTema from './BotonTema';
+import Comentar from './Comentar';
 
-export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '', verComoHasta = 0 }: {
+export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '', verComoHasta = 0, conComentar = false }: {
   rol: string; usuario: string; gerencia?: boolean;
+  /** Si los comentarios están conectados a su planilla (`COMENTARIOS_SHEET_ID`). */
+  conComentar?: boolean;
   /** 'admin' si es un administrador mirando como otro rol ("ver como"). */
   rolReal?: string;
   /** Cuándo se cierra la vista "ver como", en segundos desde epoch. */
@@ -100,6 +103,13 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '',
                                      text-[13px] font-semibold text-cielo-texto">👁 Vista gerencia</span>
                   )}
                   {rol === 'admin' && !rolReal && <BotonVerComo />}
+                  {/* La ayuda del rol y el canal de comentarios (2026-11-12):
+                      en todas las pantallas, al lado de quién eres. */}
+                  <a href="/ayuda" aria-current={ruta.startsWith('/ayuda') ? 'page' : undefined}
+                    className={`tecla boton ${ruta.startsWith('/ayuda') ? 'border-oro text-oro' : ''}`}>
+                    ❓ Ayuda
+                  </a>
+                  {conComentar && <Comentar />}
                   <button onClick={salir} className="tecla boton">Salir</button>
                 </>
               )}

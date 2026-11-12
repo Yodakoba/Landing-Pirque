@@ -361,6 +361,31 @@ export async function agregarFila(hoja: string, fila: unknown[]): Promise<void> 
   } finally { olvidar(hoja); }
 }
 
+/**
+ * Agrega una fila al final de una pestaña de **otra planilla** (2026-11-12):
+ * los comentarios del equipo van a la planilla del testeo del cliente, no a
+ * la del panel. **No gasta lecturas**: el nombre de la pestaña va tal cual
+ * en el rango, sin pedir la lista de títulos. La misma cuenta de servicio, el
+ * mismo reintento ante un 429 y la misma protección contra lo que parece
+ * fórmula (`celdas()`).
+ */
+export async function agregarFilaEnOtraPlanilla(
+  spreadsheetId: string, hoja: string, fila: unknown[]
+): Promise<void> {
+  try {
+    await conReintento(() => sheets().spreadsheets.values.append({
+      spreadsheetId,
+      range: `'${hoja.replace(/'/g, "''")}'!A1`,
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [celdas(fila)] }
+    }));
+  } catch (e) {
+    if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
+    throw e;
+  }
+}
+
 /** Reescribe una fila completa. `fila` es 1-based, como la ve la planilla. */
 export async function escribirFila(hoja: string, fila: number, valores: unknown[]): Promise<void> {
   // Lo leído de esta pestaña deja de valer, antes y después de escribir.

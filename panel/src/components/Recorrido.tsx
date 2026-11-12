@@ -21,40 +21,52 @@
  * Si `localStorage` está bloqueado, la tira aparece siempre: molesto, no
  * roto, y sin lanzar errores.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Dialogo from './Dialogo';
-import { RECORRIDO } from '@/lib/ayudas';
+import { recorridoDe } from '@/lib/ayudaRol';
+import type { Rol } from '@/lib/auth';
 
+/**
+ * **Uno por rol** (2026-11-12): el recorrido se arma con las pantallas que
+ * abre la cuenta (`recorridoDe()`), y se recuerda por rol. Antes era uno
+ * solo, de cuatro pasos fijos, y le mostraba Turnos y Equipo al vendedor,
+ * que no puede entrar ahí.
+ */
 const LLAVE = 'brasas-recorrido';
 /** Cuántas veces se ofrece antes de no molestar más. */
 const OFRECIDAS = 2;
 
-const leer = (): string => {
-  try { return localStorage.getItem(LLAVE) ?? ''; } catch { return ''; }
+const leer = (llave: string): string => {
+  try { return localStorage.getItem(llave) ?? ''; } catch { return ''; }
 };
-const anotar = (v: string) => {
-  try { localStorage.setItem(LLAVE, v); } catch { /* sin memoria, paciencia */ }
+const anotar = (llave: string, v: string) => {
+  try { localStorage.setItem(llave, v); } catch { /* sin memoria, paciencia */ }
 };
 
-/** Abre el recorrido desde otro lado (el `?` del calendario). */
+/** Abre el recorrido desde otro lado (el `?` del calendario, la página de ayuda). */
 export function verRecorrido() {
   window.dispatchEvent(new CustomEvent('brasas:recorrido'));
 }
 
-export default function Recorrido() {
+export default function Recorrido({ rol, gerencia = false, conComentar = false }: {
+  rol: string; gerencia?: boolean; conComentar?: boolean;
+}) {
   const ruta = usePathname();
+  const llave = `${LLAVE}-${rol}`;
+  const RECORRIDO = useMemo(() => recorridoDe(rol as Rol, gerencia, conComentar),
+    [rol, gerencia, conComentar]);
   const [abierto, setAbierto] = useState(false);
   const [paso, setPaso] = useState(0);
   const [ofrecer, setOfrecer] = useState(false);
 
   useEffect(() => {
-    const v = leer();
+    const v = leer(llave);
     if (v !== 'listo') setOfrecer(Number(v || 0) < OFRECIDAS);
     const abrir = () => { setPaso(0); setAbierto(true); };
     window.addEventListener('brasas:recorrido', abrir);
     return () => window.removeEventListener('brasas:recorrido', abrir);
-  }, []);
+  }, [llave]);
 
   // Ni la página del trabajador, ni la planilla del grupo, ni el
   // presupuesto, ni la entrada: las cuatro las abre gente que no administra
@@ -68,19 +80,21 @@ export default function Recorrido() {
   const fuera = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
              || ruta.startsWith('/presupuesto/')
              || ruta.startsWith('/contrato/')
-             // La recepción la usa la anfitriona, que no administra nada.
-             || ruta.startsWith('/recepcion')
-             || ruta === '/login';
+             || ruta === '/login'
+             // Sin sesión no hay rol, y sin rol no hay recorrido que armar.
+             || !rol;
+  // **La recepción ya no queda fuera** (2026-11-12): la anfitriona tiene su
+  // propio recorrido, de una pantalla, y antes no se le ofrecía ninguno.
   if (fuera) return null;
 
   const cerrarYa = () => {
-    anotar('listo');
+    anotar(llave, 'listo');
     setOfrecer(false);
     setAbierto(false);
   };
 
   const ahoraNo = () => {
-    anotar(String(Number(leer() || 0) + 1));
+    anotar(llave, String(Number(leer(llave) || 0) + 1));
     setOfrecer(false);
   };
 

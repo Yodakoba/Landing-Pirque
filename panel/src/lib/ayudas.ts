@@ -309,6 +309,44 @@ export const AYUDAS: Record<string, Ayuda> = {
     ]
   },
 
+  // Las dos que faltaban para que cada pantalla del menú tenga la suya
+  // (2026-11-12): la ayuda por rol arma un paso por pantalla desde acá.
+  recepcion: {
+    titulo: 'La recepción',
+    cuerpo: [
+      'La pantalla de la entrada: solo las reservas de hoy, en grande, para '
+      + 'recibir a la gente con un tablet o el celular en la mano.',
+      'Al apretar Llegó te pregunta si llegaron todos. Si vino más o menos '
+      + 'gente, lo cuentas con − y +: eso no cambia la reserva, le avisa al '
+      + 'jefe de turno.'
+    ],
+    pasos: [
+      'Busca la reserva por nombre.',
+      'Aprieta Llegó o No vino. Una ya marcada se achica; Cambiar la vuelve a '
+      + 'abrir.',
+      'Para todo lo demás —personas, menús, pago, un pedido especial— aprieta '
+      + 'Avisar al jefe de turno y escríbelo.'
+    ],
+    ojo: 'Antes de la hora de apertura, o con el día cerrado, los botones no '
+       + 'aparecen.'
+  },
+
+  vendedores: {
+    titulo: 'Las ventas y lo que se le paga a cada vendedor',
+    cuerpo: [
+      'Por cada vendedor: lo que ganó en el periodo —comisiones de las '
+      + 'cotizaciones que ganó y su sueldo fijo—, lo que ya se le pagó y lo que '
+      + 'falta.',
+      'La comisión cuenta cuando el cliente terminó de pagar el evento. Una '
+      + 'cotización cancelada no deja comisión.'
+    ],
+    pasos: [
+      'Elige mes o semana y muévete con las flechas.',
+      'Los azulejos de arriba dicen cuánto toca, cuánto se pagó y cuánto falta.',
+      'Abajo está el detalle de cada venta.'
+    ]
+  },
+
   asistencia: {
     titulo: 'Marcar quién vino',
     cuerpo: [
@@ -330,71 +368,9 @@ export interface Paso {
   ir?: { texto: string; url: string };
 }
 
-/**
- * El recorrido de la primera vez.
- *
- * **Son cuatro pantallas de texto y no globitos flotando sobre la página**,
- * que era la otra forma de hacerlo. Un globito hay que anclarlo a un elemento
- * que esté a la vista: en un teléfono la mitad quedan fuera de pantalla, y si
- * alguien hace scroll el globito apunta al aire. Cuatro pasos leídos de
- * corrido no se rompen nunca y se entienden igual.
- *
- * **Cuatro y no diez**: esto es para orientarse, no para aprender el panel.
- * Lo demás está en el `?` de cada pantalla, que se abre cuando hace falta.
- */
-export const RECORRIDO: Paso[] = [
-  {
-    titulo: 'Esto es el panel',
-    cuerpo: [
-      'Acá se administra todo lo que pasa en Brasas: las reservas que llegan, '
-      + 'quién trabaja cada día y cuánto se le paga.',
-      'Son cuatro pantallas y te las muestro en un minuto. Puedes salir '
-      + 'cuando quieras.'
-    ]
-  },
-  {
-    titulo: 'Calendario: cómo viene cada día',
-    cuerpo: [
-      'La primera pantalla muestra los días que reciben público, con cuánta '
-      + 'gente hay reservada y cuánto cupo queda.',
-      'Apretando la fecha se ve quiénes vienen; apretando Equipo al pie de la '
-      + 'tarjeta se planifica quién trabaja ese día.'
-    ],
-    ir: { texto: 'Ver el calendario', url: '/' }
-  },
-  {
-    titulo: 'Turnos: quién trabaja, y cerrar el día',
-    cuerpo: [
-      'Acá está el mes completo, para asignar equipo a cualquier día — '
-      + 'incluidos los de preparación, en que no entra nadie y se trabaja '
-      + 'igual.',
-      'Cuando el día ya pasó, es también donde se marca quién vino, se '
-      + 'escriben los montos y la propina, y se cierra. Al entrar, la '
-      + 'pantalla te dice arriba qué quedó pendiente.'
-    ],
-    ir: { texto: 'Ver Turnos', url: '/turnos' }
-  },
-  {
-    titulo: 'Equipo: las fichas de cada persona',
-    cuerpo: [
-      'Quiénes trabajan, en qué puesto, cuánto gana cada uno y dónde se le '
-      + 'transfiere.',
-      'Desde acá también se le crea a cada persona su link personal, que se '
-      + 'manda por WhatsApp y le muestra solo sus propios turnos.'
-    ],
-    ir: { texto: 'Ver Equipo', url: '/equipo' }
-  },
-  {
-    titulo: 'Y si algo no se entiende',
-    cuerpo: [
-      'Cada pantalla tiene un signo de interrogación al lado del título. '
-      + 'Apretándolo se abre una explicación corta de para qué sirve y cómo '
-      + 'se usa.',
-      'Eso es todo. Puedes volver a ver este recorrido cuando quieras, desde '
-      + 'ese mismo signo en el calendario.'
-    ]
-  }
-];
+// El recorrido de bienvenida ya no es una lista fija: se arma por rol en
+// `lib/ayudaRol.ts` (`recorridoDe()`), con las pantallas que abre la cuenta.
+
 
 /**
  * **Las ayudas chicas**: el `?` que va al lado de un campo o de un botón

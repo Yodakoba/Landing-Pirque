@@ -24,6 +24,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const sesion = await leerSesion(
     cookieDe(headers().get('cookie'), COOKIE_SESION), secretoDeSesion(process.env)
   );
+  // El botón 💬 Comentar aparece recién cuando hay planilla donde anotar.
+  const conComentar = !!process.env.COMENTARIOS_SHEET_ID?.trim();
   return (
     <html lang="es" data-tema="claro">
       <head>
@@ -47,8 +49,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen">
         <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} gerencia={sesion?.gerencia === true}
-          rolReal={sesion?.rolReal ?? ''} verComoHasta={sesion?.rolReal ? sesion.expira : 0} />
-        <Recorrido />
+          rolReal={sesion?.rolReal ?? ''} verComoHasta={sesion?.rolReal ? sesion.expira : 0}
+          conComentar={conComentar} />
+        <Recorrido rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true} conComentar={conComentar} />
         {/* El rol y la vista gerencia, para que cada pantalla sepa qué se
             mira y qué se toca (ver `usarSoloMira()`). */}
         <SesionCliente rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true}>

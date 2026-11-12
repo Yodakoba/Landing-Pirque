@@ -19,39 +19,12 @@
  * del texto. Quien no distinga el dorado del hueso igual ve cuál es.
  */
 import { usePathname } from 'next/navigation';
-import { ROL, puedeVer, type Rol, type Accion } from '@/lib/auth';
+import { ROL, puedeVer, type Rol } from '@/lib/auth';
+import { PAGINAS } from '@/lib/paginas';
 
-/**
- * Cada página con el permiso que de verdad la abre.
- *
- * **Se consulta la misma tabla que usan las rutas**, no una lista aparte de
- * "esto es de administrador". Con tres roles, una segunda lista era una
- * segunda verdad: el día que alguien agregara un rol, el menú le ofrecería
- * puertas cerradas o le escondería las suyas.
- *
- * Esconder un enlace es cortesía, no seguridad: quien escriba /config a mano
- * igual recibe un 403 de la ruta, que es donde esto se decide.
- */
-export const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
-  { href: '/', texto: 'Calendario', accion: 'ver' },
-  // La pantalla de la entrada, el día de apertura (2026-11-11).
-  { href: '/recepcion', texto: 'Recepción', accion: 'asistencia' },
-  { href: '/equipo', texto: 'Equipo', accion: 'equipo' },
-  { href: '/turnos', texto: 'Turnos', accion: 'equipo' },
-  { href: '/extras', texto: 'Extras', accion: 'extras' },
-  { href: '/presupuestos', texto: 'Cotizaciones', accion: 'presupuestos' },
-  { href: '/clientes', texto: 'Clientes', accion: 'clientes' },
-  // Desde el 2026-11-10 es el catálogo de todo lo que se vende y se cotiza,
-  // no solo los menús del sitio. La ruta sigue siendo /menus para no romper
-  // enlaces, y la pestaña de la planilla sigue llamándose `Menús`.
-  { href: '/menus', texto: 'Productos', accion: 'configurar' },
-  { href: '/config', texto: 'Configuración', accion: 'configurar' },
-  { href: '/informe', texto: 'Informe', accion: 'informe' },
-  // El equipo de ventas (2026-11-12): el vendedor la ve como *Mi resumen*.
-  { href: '/vendedores', texto: 'Vendedores', accion: 'vendedores' },
-  { href: '/usuarios', texto: 'Cuentas', accion: 'usuarios' },
-  { href: '/bitacora', texto: 'Bitácora', accion: 'bitacora' }
-];
+// La lista vive en `lib/paginas.ts` (2026-11-12): la usan también la ayuda
+// por rol y sus pruebas, que no pueden importar un componente.
+export { PAGINAS };
 
 export default function Nav({ rol, gerencia = false }: { rol: string; gerencia?: boolean }) {
   const ruta = usePathname();
