@@ -104,8 +104,11 @@ export default function Recorrido() {
               className="boton boton-relleno min-h-[40px]">
               Ver cómo funciona
             </button>
+            {/* **Un botón delineado, no texto suelto** (2026-11-12): medía
+                20px y no se veía apretable. Mismo alto que *Ver cómo
+                funciona*, que sigue siendo el único relleno. */}
             <button onClick={ahoraNo}
-              className="text-sm text-hueso/55 hover:text-hueso">
+              className="boton min-h-[40px] text-hueso/70 hover:text-hueso">
               Ahora no
             </button>
           </div>

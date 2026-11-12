@@ -37,9 +37,11 @@ export default function Ayuda({ tema, onRecorrido }: {
            del panel que seguía bajo el piso de la regla: un signo de 12px
            dentro de un círculo de 24 no se acierta con el dedo, y este es
            justamente el botón que aprieta quien no sabe usar la pantalla. */
-        className="ml-2 inline-flex h-[30px] w-[30px] shrink-0 items-center
+        /* **36px y 16px desde el 2026-11-12**: 30 seguía bajo el piso de
+           34px de `revisarPlayStation()`. */
+        className="ml-2 inline-flex h-9 w-9 shrink-0 items-center
                    justify-center rounded-full border border-hueso/30 align-middle
-                   text-[15px] font-bold text-hueso/70 hover:border-oro
+                   text-[16px] font-bold text-hueso/70 hover:border-oro
                    hover:text-oro">
         ?
       </button>
