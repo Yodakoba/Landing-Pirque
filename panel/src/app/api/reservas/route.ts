@@ -5,10 +5,11 @@ import { HOJA_CONFIG } from '@/lib/config';
 import { ocupacionDe } from '@/lib/ocupacion';
 import { esFecha } from '@/lib/fechas';
 import { HOJA_MENUS } from '@/lib/menus';
-import { HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
+import { HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
+import { leerPresupuestos } from '@/lib/datos';
 import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasDeCotizaciones,
          leerFechas, leerConfig } from '@/lib/datos';
 import { comoIngresar } from '@/lib/fudo';
@@ -25,9 +26,17 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
   try {
     // Los menus viajan junto a las reservas: las dos vistas que leen esto
     // los necesitan para agrupar, y asi no hay una peticion mas.
-    const [reservas, menus, deCot] = await Promise.all([
-      leerReservas(), leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>())
+    const [reservas, menus, deCot, presupuestos] = await Promise.all([
+      leerReservas(), leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>()),
+      leerPresupuestos().catch(() => [])
     ]);
+    // **Quién vendió cada reserva que viene de una cotización** (2026-11-12,
+    // lo pidió el cliente): el encargado lo ve en la lista del día para saber
+    // con quién hablar. Sale de la misma tanda de lecturas.
+    const vendedorDe: Record<string, string> = {};
+    for (const p of presupuestos) if (p.idReserva) vendedorDe[p.idReserva] = p.creadoPor;
+    const folioDeReserva: Record<string, string> = {};
+    for (const p of presupuestos) if (p.idReserva) folioDeReserva[p.idReserva] = folioDe(p);
     // **Cómo ingresarla en Fudo**, armado acá (2026-11-11): la misma
     // instrucción en la página del día, en /turnos y en la recepción.
     // **Con `?dia=AAAA-MM-DD`, el cupo de ese día** (2026-11-12): lo pide la
@@ -54,7 +63,8 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
       menus, dia, capacidadMaxima, firma: firmaDe(reservas, fechas),
       // Qué reservas vienen de una cotización: esas no se sueltan acá, se
       // cancelan desde su cotización.
-      deCotizacion: Object.fromEntries(deCot)
+      deCotizacion: Object.fromEntries(deCot),
+      vendedorDe, folioDeReserva
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

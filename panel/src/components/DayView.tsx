@@ -90,6 +90,13 @@ function RotuloBloque({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** El rótulo de cada dato dentro de una reserva abierta. */
+function Etiqueta({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-1 text-[13px] font-semibold uppercase tracking-wide text-hueso/60">{children}</p>
+  );
+}
+
 /** Un aviso corto en ámbar: pastilla con borde, para reconocerlo sin leerlo. */
 function Pendiente({ children }: { children: React.ReactNode }) {
   return (
@@ -133,6 +140,11 @@ export default function DayView(
   const [cupoDia, setCupoDia] = useState<CupoDelDia | null>(null);
   const [capacidadMaxima, setCapacidadMaxima] = useState(900);
   const [deCotizacionIds, setDeCotizacionIds] = useState<Record<string, string>>({});
+  /** La reserva abierta en la lista del día (una a la vez); vacío, ninguna. */
+  const [reservaAbierta, setReservaAbierta] = useState('');
+  /** Quién vendió y qué número tiene la cotización de cada reserva (por id de reserva). */
+  const [origen, setOrigen] = useState<{ vendedor: Record<string, string>; folio: Record<string, string> }>(
+    { vendedor: {}, folio: {} });
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [editando, setEditando] = useState<Reserva | null>(null);
@@ -196,6 +208,7 @@ export default function DayView(
         setCupoDia(d.dia ?? null);
         if (d.capacidadMaxima) setCapacidadMaxima(d.capacidadMaxima);
         if (d.deCotizacion) setDeCotizacionIds(d.deCotizacion);
+        setOrigen({ vendedor: d.vendedorDe ?? {}, folio: d.folioDeReserva ?? {} });
       })
       .catch((e) => setError(String(e)));
 
@@ -801,169 +814,192 @@ export default function DayView(
       {visibles.length === 0 ? (
         <p className="mt-8 text-hueso/50">No hay reservas para este filtro.</p>
       ) : (
-        /* **La columna del nombre queda fija al correr de lado**
-           (2026-11-01), igual que la de la planilla semanal y por lo mismo:
-           con siete columnas la tabla no cabe en un teléfono, y al correrla
-           uno queda mirando pastillas de pago sin saber de quién son. Los
-           dos detalles de implementación son los ya anotados: la celda fija
-           lleva su propio fondo, o los demás datos se verían por debajo, y
-           su línea de corte es un `shadow` y no un `border`, porque con
-           `border-collapse: collapse` el borde de una celda fija se va con
-           el desplazamiento. La caja lleva `relative`. */
-        <div className="relative mt-5 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-[13px] font-semibold uppercase
-                              tracking-wide text-hueso/60">
-              <tr className="border-b border-hueso/10">
-                <th className="sticky left-0 z-20 bg-tinta py-2 pr-3
-                               shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">Nombre</th>
-                <th className="py-2 pr-3">Contacto</th>
-                <th className="py-2 pr-3">Menú</th>
-                <th className="py-2 pr-3 text-right">Personas</th>
-                <th className="py-2 pr-3">Pago</th>
-                <th className="py-2 pr-3">Asistencia</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {visibles.map((r) => {
-                // "Pago directo / pending" —la regla de medios de pago de
-                // Shopify no aplicó— lo avisa ahora la caja roja de Fudo
-                // (`comoIngresar()`), que es donde se mira al abrir la mesa.
-                // **El mismo pedido anotado dos veces en la planilla.**
-                // El panel ya lo cuenta una sola vez —ver `leerReservasDe()`—
-                // así que esto no cambia ningún total: avisa, para que
-                // alguien borre la fila de más. Quien mira el día es quien
-                // lo va a notar.
-                const repetida = (r.duplicadas ?? 1) > 1;
-                /**
-                 * Si esta cuenta puede tocar **esta** reserva.
-                 *
-                 * Para los tres roles de siempre es todas; un vendedor solo
-                 * las que anotó él. La regla vive en `auth.ts` y la
-                 * comprueba la ruta: esto es lo mismo preguntado antes, para
-                 * no ofrecer un botón que va a devolver 403.
-                 */
-                const mia = puedeTocarReserva(rol as Rol, usuario, r.anotadaPor);
-                // **Una reserva que nació de una cotización se edita en la
-                // cotización** (2026-11-10): la escribe el sistema. Acá se
-                // dice de cuál viene y se lleva a ella.
-                const deCotizacion = cotizado?.presupuestos.find((p) => p.idReserva === r.id);
-                return (
-                  <tr key={r.fila} className={`border-b border-hueso/5 ${
-                        ocupaLugar(r) ? '' : 'opacity-40 line-through'}`}>
-                    <td className="sticky left-0 z-10 bg-tinta py-2 pr-3
-                                   shadow-[1px_0_0_0_rgb(var(--hueso)_/_0.15)]">
+        /* **Cada reserva es una línea que se abre** (2026-11-12, lo pidió el
+           cliente): cerrada dice solo quién es, su número y cuánta gente;
+           apretándola aparece todo lo demás —contacto, menú, pago, Fudo,
+           asistencia y lo que se hace con ella—. Una abierta a la vez, igual
+           que las fichas de `/equipo` y las líneas del informe. Reemplaza a
+           la tabla de siete columnas, que en un teléfono había que correr de
+           lado. Lo que no puede quedar escondido —un aviso de la recepción,
+           un pedido repetido— lleva su marca también en la línea cerrada. */
+        <ul className="mt-5 space-y-2">
+          {visibles.map((r) => {
+            // **El mismo pedido anotado dos veces en la planilla.** El panel
+            // ya lo cuenta una sola vez —ver `leerReservasDe()`— así que esto
+            // no cambia ningún total: avisa, para que alguien borre la fila
+            // de más.
+            const repetida = (r.duplicadas ?? 1) > 1;
+            /**
+             * Si esta cuenta puede tocar **esta** reserva: para los roles de
+             * siempre es todas; un vendedor solo las que anotó él. La regla
+             * vive en `auth.ts` y la comprueba la ruta.
+             */
+            const mia = puedeTocarReserva(rol as Rol, usuario, r.anotadaPor);
+            // **Una reserva que nació de una cotización se edita en la
+            // cotización** (2026-11-10). El servidor dice de cuál viene aunque
+            // la lista de cotizaciones no haya llegado.
+            const deCotizacion = cotizado?.presupuestos.find((p) => p.idReserva === r.id);
+            const idCotizacion = deCotizacion?.id ?? deCotizacionIds[r.id] ?? '';
+            const folio = origen.folio[r.id] || (deCotizacion ? folioDe(deCotizacion) : '');
+            const abierta = reservaAbierta === r.id;
+            const libera = !ocupaLugar(r);
+            return (
+              <li key={r.fila} className={`rounded-xl border-2 ${
+                abierta ? 'border-oro/70 bg-panel' : 'border-hueso/15 bg-panel'} ${libera ? 'opacity-50' : ''}`}>
+                <button type="button" aria-expanded={abierta}
+                  onClick={() => setReservaAbierta(abierta ? '' : r.id)}
+                  className="tecla flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left
+                             hover:bg-hueso/5">
+                  <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full
+                                               border-2 text-[14px] font-bold ${abierta
+                    ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
+                    {abierta ? '−' : '+'}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate text-[15px] font-semibold ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}
-                      <div className="text-[13px] text-hueso/55">{r.id}</div>
-                    </td>
-                    <td className="py-2 pr-3 text-hueso/70">
-                      {r.telefono && <div>{r.telefono}</div>}
-                      {r.email && <div className="text-[13px]">{r.email}</div>}
-                      {!r.telefono && !r.email && <span className="text-hueso/50">—</span>}
-                    </td>
-                    <td className="py-2 pr-3">{r.menu}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {r.personas}
-                      {/* Lo que anotó la anfitriona, si es distinto (2026-11-11). */}
-                      {r.llegaron != null && r.llegaron !== r.personas && (
-                        <span className="block text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</span>
-                      )}
-                    </td>
-                    <td className="min-w-[240px] py-2 pr-3">
-                      {/* **El pago, dicho igual en todas partes** (2026-11-11):
-                          de dónde viene y cómo va, y debajo cómo se ingresa
-                          en Fudo. Ver `PastillaPago` y `comoIngresar()`. */}
-                      <PastillaPago r={r} deCotizacion={!!deCotizacion} />
-                      {ocupaLugar(r) && (
-                        <div className="mt-1.5"><IngresoFudo ingreso={r.ingreso} compacto /></div>
-                      )}
-                      {repetida && (
-                        <div className="mt-1 text-[13px] font-semibold text-ambar-texto"
-                          title={`El mismo ID Orden está en ${r.duplicadas} filas de la `
-                               + 'planilla. El panel lo cuenta una sola vez; conviene '
-                               + 'borrar la de más.'}>
-                          ⚠ {r.duplicadas} filas con este pedido
+                    </span>
+                    <span className="block truncate text-[13px] text-hueso/60">
+                      {idCotizacion ? `Cotización N° ${folio}` : r.id}
+                    </span>
+                  </span>
+                  {r.avisoRecepcion && (
+                    <span title="La recepción dejó un aviso" className="shrink-0 rounded-full border-2
+                      border-ambar/60 bg-ambar/10 px-2 py-0.5 text-[13px] font-semibold text-ambar-texto">📣</span>
+                  )}
+                  {repetida && (
+                    <span title="Pedido repetido en la planilla" className="shrink-0 text-[13px] font-semibold
+                      text-ambar-texto">⚠</span>
+                  )}
+                  <span className="shrink-0 text-right text-[15px] font-bold tabular-nums">
+                    {r.personas}
+                    <span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
+                  </span>
+                </button>
+
+                {abierta && (
+                  <div className="border-t border-hueso/10 px-3 pb-3 pt-2">
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <Etiqueta>Contacto</Etiqueta>
+                        <div className="text-[14px] text-hueso/80">
+                          {r.telefono && <div>{r.telefono}</div>}
+                          {r.email && <div className="break-all text-[13px]">{r.email}</div>}
+                          {!r.telefono && !r.email && <span className="text-hueso/50">—</span>}
                         </div>
-                      )}
-                      {/* **El aviso de la recepción** (2026-11-11): lo que la
-                          anfitriona le dejó al jefe de turno. Se ve acá, donde
-                          se edita la reserva, hasta que alguien lo resuelve. */}
-                      {r.avisoRecepcion && (
-                        <div className="mt-2 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-2 text-[13px]">
-                          <p className="font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {mia && !deCotizacion && (
-                              <button type="button" className="boton" onClick={() => setEditando(r)}>
-                                Editar la reserva
-                              </button>
-                            )}
-                            {puede(rol as Rol, 'asistencia') && (
-                              <button type="button" className="boton !border-verde-fuerte text-verde-texto"
-                                onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
-                            )}
+                      </div>
+                      <div>
+                        <Etiqueta>Menú</Etiqueta>
+                        <div className="text-[14px]">{r.menu || <span className="text-hueso/50">—</span>}</div>
+                        {/* Lo que anotó la anfitriona, si es distinto (2026-11-11). */}
+                        {r.llegaron != null && r.llegaron !== r.personas && (
+                          <div className="text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</div>
+                        )}
+                      </div>
+                      <div>
+                        {/* **El pago, dicho igual en todas partes** (2026-11-11):
+                            de dónde viene y cómo va, y debajo cómo se ingresa
+                            en Fudo. Ver `PastillaPago` y `comoIngresar()`. */}
+                        <Etiqueta>Pago</Etiqueta>
+                        <PastillaPago r={r} deCotizacion={!!idCotizacion} />
+                        {ocupaLugar(r) && (
+                          <div className="mt-1.5"><IngresoFudo ingreso={r.ingreso} compacto /></div>
+                        )}
+                        {repetida && (
+                          <div className="mt-1 text-[13px] font-semibold text-ambar-texto"
+                            title={`El mismo ID Orden está en ${r.duplicadas} filas de la `
+                                 + 'planilla. El panel lo cuenta una sola vez; conviene '
+                                 + 'borrar la de más.'}>
+                            ⚠ {r.duplicadas} filas con este pedido
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        {/* **Acá se lee, no se marca** (2026-11-05): *Vino / No
+                            vino* vive solo en `/turnos`. */}
+                        <Etiqueta>Asistencia</Etiqueta>
+                        <span className={`inline-block whitespace-nowrap rounded-full border-2 px-2.5
+                                          py-0.5 text-[13px] font-semibold ${
+                          r.asistencia === VINO.si ? 'border-verde/50 text-verde-texto'
+                          : r.asistencia === VINO.no ? 'border-rojo/50 text-rojo-texto'
+                          : 'border-hueso/20 text-hueso/60'}`}>
+                          {r.asistencia === VINO.si ? '✓ vino'
+                            : r.asistencia === VINO.no ? '✕ no vino' : 'sin marcar'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* **El aviso de la recepción** (2026-11-11): lo que la
+                        anfitriona le dejó al jefe de turno, hasta que alguien
+                        lo resuelve. */}
+                    {r.avisoRecepcion && (
+                      <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-2 text-[13px]">
+                        <p className="font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {mia && !idCotizacion && (
+                            <button type="button" className="boton" onClick={() => setEditando(r)}>
+                              Editar la reserva
+                            </button>
+                          )}
+                          {puede(rol as Rol, 'asistencia') && (
+                            <button type="button" className="boton !border-verde-fuerte text-verde-texto"
+                              onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lo que se hace con ella. **La reserva de otro se ve y no
+                        se toca**: en vez de botones apagados va quién la anotó.
+                        **Quién la vendió va debajo del botón de la cotización**
+                        (2026-11-12, lo pidió el cliente): el encargado tiene que
+                        saber con quién hablar al planificar. */}
+                    <div className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5">
+                      {idCotizacion ? (
+                        <div className="text-right">
+                          <a href={`/presupuestos?abrir=${encodeURIComponent(idCotizacion)}`}
+                            className="tecla boton whitespace-nowrap">
+                            Cotización N° {folio}
+                          </a>
+                          <div className="mt-1 text-[13px] text-hueso/70">
+                            vendió <strong className="text-hueso">
+                              {origen.vendedor[r.id] || deCotizacion?.creadoPor || 'sin vendedor'}</strong>
                           </div>
                         </div>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3">
-                      {/* **Acá se lee, no se marca** (2026-11-05, lo pidió el
-                          cliente): quien mira el calendario y las reservas
-                          puede ser otro rol que quien pasa lista, así que
-                          *Vino / No vino* vive solo en `/turnos`. */}
-                      <span className={`inline-block whitespace-nowrap rounded-full border-2 px-2.5
-                                        py-0.5 text-[13px] font-semibold ${
-                        r.asistencia === VINO.si ? 'border-verde/50 text-verde-texto'
-                        : r.asistencia === VINO.no ? 'border-rojo/50 text-rojo-texto'
-                        : 'border-hueso/20 text-hueso/60'}`}>
-                        {r.asistencia === VINO.si ? '✓ vino'
-                          : r.asistencia === VINO.no ? '✕ no vino' : 'sin marcar'}
-                      </span>
-                    </td>
-                    {/* **Dos botones, no dos textos en gris de 20px.** Son
-                        las dos acciones de la fila y una de ellas borra: lo
-                        que se aprieta tiene que verse que se aprieta, y
-                        medir para el dedo. */}
-                    <td className="py-2 text-right whitespace-nowrap">
-                      {/* **La reserva de otro se ve y no se toca** — lo pidió
-                          el cliente al crear el vendedor. En vez de dos
-                          botones apagados va quién la anotó, que es lo que
-                          alguien necesita saber para ir a pedírselo: un botón
-                          que no responde se lee como un panel roto. */}
-                      {deCotizacion ? (
-                        <a href={`/presupuestos?abrir=${encodeURIComponent(deCotizacion.id)}`}
-                          className="tecla boton whitespace-nowrap">
-                          Cotización N° {folioDe(deCotizacion)}
-                        </a>
                       ) : mia && r.liberada ? (
-                        // Se cayó por cupo: lo que queda por hacer es
-                        // avisarle, y el botón vuelve a estar acá por si se
-                        // cerró la ventana sin hacerlo.
+                        // Se cayó por cupo: lo que queda es avisarle.
                         <AvisarCaida r={r} />
                       ) : mia ? (
-                        <div className="flex justify-end gap-2">
-                          <button onClick={() => { setCreando(false); setEditando(r); }}
-                            disabled={diaCerrado && !puedeCorregir}
-                            className="boton">Editar</button>
-                          <button onClick={() => borrar(r)}
-                            disabled={diaCerrado && !puedeCorregir}
-                            className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
-                            Borrar
-                          </button>
+                        <div className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => { setCreando(false); setEditando(r); }}
+                              disabled={diaCerrado && !puedeCorregir}
+                              className="boton">Editar</button>
+                            <button onClick={() => borrar(r)}
+                              disabled={diaCerrado && !puedeCorregir}
+                              className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                              Borrar
+                            </button>
+                          </div>
+                          {r.anotadaPor && (
+                            <div className="mt-1 text-[13px] text-hueso/70">
+                              anotó <strong className="text-hueso">{r.anotadaPor}</strong>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        <span className="text-[13px] text-hueso/55">
+                        <span className="text-[13px] text-hueso/60">
                           {!conReservas ? (r.anotadaPor ? `La anotó ${r.anotadaPor}` : '')
                             : r.anotadaPor ? `La anotó ${r.anotadaPor}` : 'No la anotaste tú'}
                         </span>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       {(creando || editando || anotandoCRM) && (

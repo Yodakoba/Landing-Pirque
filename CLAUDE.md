@@ -6903,6 +6903,31 @@ Comprobado en los dos temas, a 393 y 1280: ninguna pantalla se corre de lado,
 y con la tabla corrida 900px la celda del nombre sigue en su lugar con su
 sombra.
 
+### Las reservas del día se abren de a una, y dicen quién las vendió (2026-11-12)
+
+Lo pidió el cliente: la lista de reservas de la página del día tomaba mucho
+espacio, y el encargado necesitaba saber **de qué cotización viene una
+reserva y quién la vendió**, para saber con quién hablar al planificar.
+
+- **La tabla de siete columnas pasó a ser una lista de líneas que se abren**,
+  una a la vez, como las fichas de `/equipo`. Cerrada: el nombre, el número
+  de reserva —*Cotización N° 1002* si viene de una, si no su id— y cuántas
+  personas. Lo que no puede quedar escondido lleva su marca también cerrada:
+  📣 si la recepción dejó un aviso y ⚠ si el pedido está repetido. Abierta:
+  contacto, menú, pago con su caja de Fudo, asistencia, el aviso y las
+  acciones. Con esto la columna fija del nombre ya no hace falta en esta
+  pantalla.
+- **Debajo del botón *Cotización N° …* dice *vendió Verónica*** (lo pidió el
+  cliente: *"ahí hay espacio"*), y debajo de *Editar / Borrar* de una
+  anotada a mano, *anotó Carla*. El vendedor es el `creadoPor` de la
+  cotización: `/api/reservas` lo manda en `vendedorDe` junto con
+  `folioDeReserva`, de la misma tanda de lecturas, así que lo ve también
+  quien no puede leer las cotizaciones.
+- **De qué cotización viene una reserva lo dice el servidor**
+  (`deCotizacion`), no solo la lista de cotizaciones de la pantalla: si esa
+  lista no llegaba, la reserva de una cotización se veía *Anotada a mano* y
+  con *Editar / Borrar*.
+
 ## El pronóstico del tiempo (2026-10-29)
 
 Cada día del panel muestra en chico el pronóstico —"☀️ 28°"— en el
