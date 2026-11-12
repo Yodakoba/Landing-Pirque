@@ -157,7 +157,14 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     { delta: {}, desde: '' });
   const anteriores = useRef<{ dias: Ocupacion[]; cuando: number } | null>(null);
 
-  const cargar = () => {
+  /**
+   * `marcar`: si los días que cambiaron se marcan en dorado. **Solo cuando
+   * la recarga viene de afuera** —la revisión automática o ↻ Actualizar—
+   * (2026-11-12, lo pidió el cliente). Después de guardar algo en esta
+   * misma pantalla no se marca: quien anotó 6 personas ya sabe que las
+   * anotó. La base para comparar se actualiza igual.
+   */
+  const cargar = (marcar = false) => {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
     const ocupacion = fetch('/api/ocupacion')
       .then((r) => r.json())
@@ -165,7 +172,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         if (d.error) return setError(d.error);
         // Si había una carga antes, se compara: qué días ganaron o perdieron gente.
         const antes = anteriores.current;
-        if (antes) {
+        if (antes && marcar) {
           const tomadas = (ds: Ocupacion[]) => Object.fromEntries(ds.map((x) => [x.fecha, x.tomadas]));
           const delta = diferencias(tomadas(antes.dias), tomadas(d.ocupacion ?? []));
           if (Object.keys(delta).length) setMarcas({ delta, desde: horaDe(antes.cuando) });
@@ -215,7 +222,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     return ocupacion;
   };
   useEffect(() => { void cargar(); }, []);
-  const alDia = usarAlDia(firma, cargar);
+  const alDia = usarAlDia(firma, () => cargar(true));
   // La marca dorada dura un minuto.
   useEffect(() => {
     if (!Object.keys(marcas.delta).length) return;
