@@ -7,7 +7,7 @@ import {
   actualizarPagoDeReserva, abrirElDiaSiHaceFalta, leerFechas, leerReservas, moverCobros
 } from '@/lib/datos';
 import { cupoParaGanar } from '@/lib/dias';
-import { ocupaLugar } from '@/lib/ocupacion';
+import { ocupaLugar, tienePrioridad } from '@/lib/ocupacion';
 import { condicionesDe, estadoCobros, puedeGanar } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
 import { conCliente, otrasAlternativas, alternativasDe } from '@/lib/cotizar';
@@ -140,7 +140,14 @@ export const POST = conLecturas([], async function POST(req: Request) {
     const aMedias = reservas.find((x) => x.fecha === p.fecha && ocupaLugar(x)
       && String(x.notaPago ?? '').startsWith(nota)
       && !lista.some((o) => o.idReserva === x.id));
-    const tomadas = reservas.filter((x) => x.fecha === p.fecha && ocupaLugar(x) && x.id !== aMedias?.id)
+    // **Con anticipo pagado tiene prioridad** (2026-11-12, la regla del
+    // cliente): una reserva sin pagar queda sujeta a espacio, así que no le
+    // cierra el día a una cotización que ya puso plata. Se cuentan solo las
+    // que también pagaron o abonaron; si al ganarla el día se pasa del cupo,
+    // el panel lo avisa como sobrecupo y alguien decide (`sobrecupo.ts`).
+    const conPrioridad = cobrado.pagado > 0;
+    const tomadas = reservas.filter((x) => x.fecha === p.fecha && x.id !== aMedias?.id
+        && (conPrioridad ? tienePrioridad(x) : ocupaLugar(x)))
       .reduce((n, x) => n + (x.personas || 0), 0);
     const cupo = cupoParaGanar(fechas.find((f) => f.fecha === p.fecha), p.fecha, cfg, tomadas, nueva.personas);
     if (!cupo.cabe && !aMedias) {

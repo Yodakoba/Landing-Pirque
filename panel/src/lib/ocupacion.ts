@@ -37,9 +37,29 @@ export function semaforo(
 /**
  * Una reserva reembolsada o anulada NO ocupa lugar: la silla se libera.
  * Una pendiente SÍ ocupa: el cliente viene igual, paga al llegar.
+ *
+ * **Una que se cayó por cupo tampoco** (2026-11-12), aunque su estado diga
+ * *por pagar*: se mira su propia columna (`liberada`) y no el estado, porque
+ * el estado de una reserva de Shopify lo reescribe la tienda en cada pasada.
  */
 export function ocupaLugar(r: Reserva): boolean {
+  if (String(r.liberada ?? '').trim()) return false;
   return !liberaCupo(r.estadoPago);
+}
+
+/**
+ * **Si esta reserva tiene prioridad sobre el cupo** (2026-11-12, la regla del
+ * cliente): una reserva **sin pagar** queda sujeta a espacio; una **pagada o
+ * abonada** ya puso plata y no se suelta. Cuando un pago llena el día, las
+ * que no tienen prioridad son las que quedan en riesgo.
+ *
+ * Vale para todas, vengan de donde vengan —Shopify, a mano o una cotización
+ * ganada—: la regla es sobre la plata, no sobre el origen.
+ */
+export function tienePrioridad(r: Reserva): boolean {
+  if (!ocupaLugar(r)) return false;
+  const e = String(r.estadoPago || '').trim().toLowerCase();
+  return e === ESTADO_PAGO.pagado || e === ESTADO_PAGO.abonado;
 }
 
 /**
@@ -144,11 +164,23 @@ export function ocupacionDe(
   // Lo cotizado y sin confirmar. Se copia y no se usa: ver arriba.
   const pos = posibles?.get(dia.fecha) ?? SIN_POSIBLES;
 
+  // **Las que tienen prioridad** (2026-11-12): pagadas y abonadas. Lo que
+  // queda para quien paga se cuenta solo contra ellas —una reserva sin pagar
+  // no le quita el lugar a quien paga—, y si el día se pasa del cupo, lo que
+  // sobra es el **sobrecupo**: lugares de reservas sin pagar que hay que
+  // decidir (ampliar el cupo o soltarlas). Ver `sobrecupo.ts`.
+  const prioritarias = pagadas + abonadas;
+
   return {
     fecha: dia.fecha,
     capacidad: dia.capacidad,
     tomadas,
     quedan: Math.max(0, dia.capacidad - tomadas),
+    quedanPagando: Math.max(0, dia.capacidad - prioritarias),
+    // Solo en un día con cupo y abierto: uno que no está en el calendario
+    // tiene cupo 0 —no "lleno"—, y uno cerrado con gente ya se avisa aparte.
+    sobrecupo: dia.capacidad > 0 && !estaCerrado(dia.estado)
+      ? Math.max(0, tomadas - dia.capacidad) : 0,
     pagadas,
     porPagar,
     abonadas,

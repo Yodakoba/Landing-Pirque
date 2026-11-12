@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CLIENTES } from '@/lib/clientes';
 import { HOJA_COBROS } from '@/lib/cobros';
-import { HOJA_FECHAS } from '@/lib/columnas';
+import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
+import { ocupacionDeTodos } from '@/lib/ocupacion';
+import { diasConSobrecupo } from '@/lib/sobrecupo';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_MENUS } from '@/lib/menus';
 import { HOJA_LINEAS, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
@@ -12,7 +14,7 @@ import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto, guardarLineas,
   borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar, leerCobros,
-  sincronizarReserva
+  sincronizarReserva, leerReservas
 } from '@/lib/datos';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, estaMandada, aEntero, folioDe, estadoNormal, lineasDe,
@@ -37,15 +39,24 @@ export const dynamic = 'force-dynamic';
  * nombre y el contacto ya puestos. Las de antes de las fichas siguen
  * mostrando lo que tenían escrito.
  */
-export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS, HOJA_RESERVAS], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
     const quien = await quienEs(req);
-    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros] = await Promise.all([
+    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros, reservas] = await Promise.all([
       leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerConfig(),
-      leerClientes(), leerFechas(), leerCobros().catch(() => [])
+      leerClientes(), leerFechas(), leerCobros().catch(() => []), leerReservas().catch(() => [])
     ]);
+    // **Los días que se pasaron del cupo** (2026-11-12): un pago entró sobre
+    // reservas sin pagar. Va en la misma lectura —la tanda ya trae
+    // `Reservas`—, y al vendedor solo los días donde la reserva en riesgo
+    // es suya. Lo justo para el aviso: quién y cuánta gente.
+    const desdeHoy = fechas.filter((f) => f.fecha >= hoy());
+    const sobrecupo = diasConSobrecupo(ocupacionDeTodos(reservas, desdeHoy), reservas,
+      quien.rol as Rol, quien.usuario)
+      .map((d) => ({ fecha: d.fecha, exceso: d.exceso, capacidad: d.capacidad, tomadas: d.tomadas,
+        riesgo: d.riesgo.map((r) => ({ nombre: r.nombre, personas: r.personas, anotadaPor: r.anotadaPor })) }));
     return NextResponse.json({
       presupuestos: presupuestos.map((p) => conCliente(p, clientes)),
       lineas, menus, clientes,
@@ -75,7 +86,8 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       },
       hoy: hoy(),
       usuario: quien.usuario,
-      rol: quien.rol
+      rol: quien.rol,
+      sobrecupo
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

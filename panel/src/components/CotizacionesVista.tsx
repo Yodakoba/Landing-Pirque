@@ -37,9 +37,13 @@ import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
 
+import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
+
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
   cobros?: { presupuesto: string; monto: number; revisadoPor?: string; concepto?: string }[];
+  /** Los días que se pasaron del cupo (2026-11-12). Ver `AvisoSobrecupo`. */
+  sobrecupo?: SobrecupoCorto[];
 };
 
 /** El color de cada estado: se distingue por la pastilla con borde. */
@@ -458,6 +462,7 @@ export default function CotizacionesVista() {
         ))}
       </div>
 
+      <AvisoSobrecupo dias={datos.sobrecupo ?? []} />
       {(pronto.length > 0 || vencidas.length > 0 || avisos.anticipoSinGanar.length > 0
         || avisos.saldo.length > 0 || sinRevisar.size > 0 || porDevolver.length > 0
         || porSeguir.length > 0) && (

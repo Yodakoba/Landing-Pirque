@@ -26,6 +26,8 @@ import { lineaDeSemana, type Tono } from '@/lib/semana';
 import { puede, puedeVer, type Rol } from '@/lib/auth';
 import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from '@/lib/fechas';
 import { copiarConAviso } from './AvisoFlotante';
+import AvisoSobrecupo from './AvisoSobrecupo';
+import { diasConSobrecupo } from '@/lib/sobrecupo';
 
 /** El color de cada aviso de la línea de la semana: el mismo significado que en el resto del panel. */
 const TONO: Record<Tono, string> = {
@@ -36,7 +38,9 @@ const TONO: Record<Tono, string> = {
   rosa: 'border-rosa/50 bg-rosa/10 text-rosa-texto'
 };
 
-export default function CalendarView({ rol, gerencia = false }: { rol: string; gerencia?: boolean }) {
+export default function CalendarView({ rol, usuario = '', gerencia = false }: {
+  rol: string; usuario?: string; gerencia?: boolean;
+}) {
   /**
    * Lo que esta cuenta puede hacer, sacado de la **misma** tabla de permisos
    * que usan el menú y las rutas.
@@ -197,6 +201,12 @@ export default function CalendarView({ rol, gerencia = false }: { rol: string; g
    * se pedía `/api/recepcion` entera solo para contarlos, y eran seis
    * pestañas leídas del límite de Google en cada visita a la portada.
    */
+  // **Los días que se pasaron del cupo** (2026-11-12): un pago entró sobre
+  // reservas sin pagar. El vendedor ve solo los suyos (`diasConSobrecupo()`).
+  const sobrecupo = useMemo(
+    () => diasConSobrecupo(dias ?? [], reservas, rol as Rol, usuario),
+    [dias, reservas, rol, usuario]);
+
   const avisosHoy = useMemo(() => {
     if (!puede(rol as Rol, 'asistencia')) return null;
     const fecha = hoy();
@@ -236,6 +246,7 @@ export default function CalendarView({ rol, gerencia = false }: { rol: string; g
             o sea donde vuelve quien se perdió. */}
         <Ayuda tema="calendario" onRecorrido={verRecorrido} />
       </h1>
+      <AvisoSobrecupo dias={sobrecupo} />
       {avisosHoy && (
         <a href={`/dia/${avisosHoy.fecha}`}
           className="tecla mb-4 flex flex-wrap items-center gap-3 rounded-xl border-2 border-ambar/60

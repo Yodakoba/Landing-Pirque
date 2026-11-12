@@ -301,6 +301,19 @@ export default function TarjetaDia({
                 </div>
               )}
 
+              {/* **Sobrecupo** (2026-11-12): un pago entró sobre reservas sin
+                  pagar y el día se pasó. Es algo que hay que hacer —ampliar
+                  el cupo o soltar una reserva—, así que es una línea que se
+                  aprieta y lleva a decidirlo, no una palabra bajo el punto. */}
+              {(d.sobrecupo ?? 0) > 0 && (
+                <a href={`/dia/${d.fecha}#sobrecupo`} {...alFrente}
+                  className="tecla mt-2 flex items-center gap-2 rounded-md border-2 border-rojo-fuerte/70
+                             bg-rojo/10 px-2 py-1 text-[13px] font-bold text-rojo-texto hover:bg-rojo/20">
+                  ⚠ {d.sobrecupo} sobre el cupo
+                  <span className="ml-auto font-semibold underline">Decidir</span>
+                </a>
+              )}
+
               {/* **Acá iba "$X por cobrar", y se sacó el 2026-10-23 a pedido
                   del cliente.** El número era la suma de las reservas que
                   pagan en el local, y en el local se paga otra cosa: una

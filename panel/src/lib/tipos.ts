@@ -40,6 +40,11 @@ export interface Reserva {
    * un vendedor puede tocarla: ver `puedeTocarReserva()`.
    */
   anotadaPor: string;
+  /**
+   * Si se cayó por cupo: *"2026-11-12 14:03 · Felipe · motivo"*. Vacía es
+   * que sigue en pie. Ver `COL_RESERVAS.liberada` y `ocupaLugar()`.
+   */
+  liberada?: string;
   fila: number;          // número de fila en la planilla, para poder editarla
   /**
    * Cuántas filas de la planilla traen este mismo `ID Orden`. Ausente o 1 es
@@ -68,6 +73,14 @@ export interface Ocupacion {
   porPagar: number;      // personas a las que hay que cobrarles
   /** De `porPagar`, las que ya abonaron una parte. Sin pagar nada = porPagar - abonadas. */
   abonadas: number;
+  /**
+   * Lugares para quien **paga ahora** (2026-11-12): la capacidad menos lo
+   * pagado y lo abonado. Una reserva sin pagar no le quita el lugar a quien
+   * paga; `quedan` sí la cuenta y es lo que le queda a quien solo reserva.
+   */
+  quedanPagando: number;
+  /** Personas por encima del cupo: un pago entró sobre reservas sin pagar. */
+  sobrecupo: number;
   porCobrar: number;     // pesos a cobrar el mismo día
   sinMonto: number;      // reservas por cobrar SIN monto anotado
   privada: boolean;      // recibe reservas, pero el sitio no la ofrece

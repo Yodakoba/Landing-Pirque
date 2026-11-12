@@ -68,10 +68,13 @@
     // verdad. Ver panel/DESPLIEGUE.md.
     //
     // Esta línea es toda la costura con el backend: de la respuesta se
-    // consumen tres campos, {fecha, quedan, pocos}. Cambiar de backend es
-    // cambiar esta URL más permitir CORS en el nuevo endpoint. Conviene no
-    // engordar ese contrato: cada campo que se agregue es un campo que
-    // cualquier reemplazo futuro tendrá que imitar.
+    // consumen tres campos, {fecha, quedan, pocos}, más uno opcional desde
+    // el 2026-11-12: `quedanPagando`, lo que queda para quien paga ahora
+    // (una reserva sin pagar no le quita el lugar a quien paga). Si un
+    // backend no lo manda, se usa `quedan` y todo sigue como antes.
+    // Cambiar de backend es cambiar esta URL más permitir CORS en el nuevo
+    // endpoint. Conviene no engordar ese contrato: cada campo que se
+    // agregue es un campo que cualquier reemplazo futuro tendrá que imitar.
     backend: 'https://landing-pirque-alpha.vercel.app/api/publico/fechas'
   };
 
@@ -97,6 +100,7 @@
       pocos: 'Pocos cupos: quedan {n}.',
       ultimos: 'Últimos cupos disponibles: quedan {n}.',
       noAlcanza: 'Para esa fecha quedan {n} lugares y estás pidiendo {p}.',
+      soloPagando: 'Para esa fecha ya solo hay lugar pagando ahora: para {p} personas, «Solo reservar» no alcanza.',
       eligeFecha: 'Elige una fecha en el calendario.',
       sinNadie: 'Elige cuántas personas van con cada menú.',
       // El nombre de la fila de adultos lo escribe el JS, porque cambia con
@@ -121,6 +125,7 @@
       pocos: 'Few spots left: {n} remaining.',
       ultimos: 'Last spots available: {n} left.',
       noAlcanza: 'That date has {n} places left and you are asking for {p}.',
+      soloPagando: 'For that date there is only room if you pay now: for {p} people, “Book only” is no longer available.',
       eligeFecha: 'Pick a date on the calendar.',
       sinNadie: 'Choose how many people go with each menu.',
       menuBase: 'Tradiciones menu',
@@ -142,6 +147,7 @@
       pocos: 'Poucas vagas: restam {n}.',
       ultimos: 'Últimas vagas disponíveis: restam {n}.',
       noAlcanza: 'Nessa data restam {n} lugares e você está pedindo {p}.',
+      soloPagando: 'Nessa data só há lugar pagando agora: para {p} pessoas, “Só reservar” não está mais disponível.',
       eligeFecha: 'Escolha uma data no calendário.',
       sinNadie: 'Escolha quantas pessoas vão com cada menu.',
       menuBase: 'Menu Tradiciones',
@@ -165,9 +171,12 @@
   // El rojo se calcula acá con `quedan`, que ya viaja en el contrato: no
   // hace falta un campo más que cualquier backend futuro tenga que imitar.
   var ULTIMOS_CUPOS = 10;
+  //
+  // Desde el 2026-11-12 miran `pagando`, lo que queda para quien paga ahora:
+  // es lo mejor que el sitio puede ofrecer ese día (ver `cargarFechas()`).
   function etapaDe(info) {
     if (!info) return '';
-    if (info.quedan < ULTIMOS_CUPOS) return 'ultimos';
+    if (info.pagando < ULTIMOS_CUPOS) return 'ultimos';
     if (info.pocos) return 'pocos';
     return '';
   }
@@ -517,15 +526,22 @@
     }
 
     var piden = personas();
-    if (piden > info.quedan) {
+    if (piden > info.pagando) {
       avisoFecha.textContent = T.noAlcanza
-        .replace('{n}', info.quedan).replace('{p}', piden);
+        .replace('{n}', info.pagando).replace('{p}', piden);
       avisoFecha.className = 'aviso error';
+      return;
+    }
+    // Caben pagando, pero no reservando sin pagar: el día se llenó de
+    // reservas sin pagar, y quien paga tiene preferencia (2026-11-12).
+    if (piden > info.quedan) {
+      avisoFecha.textContent = T.soloPagando.replace('{p}', piden);
+      avisoFecha.className = 'aviso cupo pocos';
       return;
     }
     var etapa = etapaDe(info);
     if (etapa) {
-      avisoFecha.textContent = T[etapa].replace('{n}', info.quedan);
+      avisoFecha.textContent = T[etapa].replace('{n}', info.pagando);
       avisoFecha.className = 'aviso cupo ' + etapa;
       return;
     }
@@ -533,14 +549,20 @@
     avisoFecha.className = 'aviso';
   }
 
-  /** ¿Se puede apretar reservar con lo que hay elegido? */
-  function pedidoUsable() {
+  /**
+   * ¿Se puede apretar este botón con lo que hay elegido?
+   *
+   * **Cada modalidad tiene su cupo** (2026-11-12, la regla del cliente): una
+   * reserva sin pagar queda sujeta a espacio, así que no le quita el lugar a
+   * quien paga. *Pagar ahora* mira `pagando`; *Solo reservar*, `quedan`.
+   */
+  function pedidoUsable(modo) {
     var info = disponibles[selFecha.value];
     if (!info) return false;              // sin fecha elegida no hay nada
     if (personas() < 1) return false;     // ni con el pedido vacío
     // El menú de niños se puede pedir solo: lo decidió el cliente el
     // 2026-10-14. No hay mínimo de adultos.
-    return personas() <= info.quedan;
+    return personas() <= (modo === 'directo' ? info.pagando : info.quedan);
   }
 
   function pintarEstado(texto) {
@@ -577,8 +599,13 @@
 
         disponibles = {};
         for (var i = 0; i < lista.length; i++) {
+          var quedan = Number(lista[i].quedan) || 0;
           disponibles[lista[i].fecha] = {
-            quedan: Number(lista[i].quedan) || 0,
+            quedan: quedan,
+            // Lo que queda para quien paga ahora. Un backend que no lo
+            // mande (el contrato tenía tres campos) deja todo como antes.
+            pagando: lista[i].quedanPagando == null ? quedan
+              : Math.max(quedan, Number(lista[i].quedanPagando) || 0),
             pocos: !!lista[i].pocos
           };
         }
@@ -621,7 +648,6 @@
     // Cada botón lleva su propio total. Así la diferencia entre pagar
     // ahora y pagar en el local se ve sin tener que cambiar nada
     // primero, que era lo que obligaba un selector de modalidad.
-    var usable = pedidoUsable();
     for (var k = 0; k < botones.length; k++) {
       if (botones[k].salida) {
         botones[k].salida.textContent = personas() ? pesos(totalDe(botones[k].modo)) : '';
@@ -629,7 +655,7 @@
       // Sin fecha elegida, con el pedido vacío, o pidiendo más lugares
       // de los que quedan, los dos se apagan. Vale más que dejen apretar
       // y fallen en el checkout.
-      botones[k].nodo.disabled = !usable;
+      botones[k].nodo.disabled = !pedidoUsable(botones[k].modo);
     }
 
     avisarSobreFecha();
@@ -683,7 +709,7 @@
   ].join('\n');
 
   function reservar(boton) {
-    if (!pedidoUsable()) { avisarSobreFecha(); return; }
+    if (!pedidoUsable(boton.modo)) { avisarSobreFecha(); return; }
 
     if (!CONFIG.token) {
       mensaje(T.sinPago, 'error');

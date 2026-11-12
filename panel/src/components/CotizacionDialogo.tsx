@@ -852,7 +852,10 @@ export default function CotizacionDialogo({
    * la misma `cupoParaGanar()` que usa `/convertir` para rechazarlo. Una
    * ganada no se mira: su propia reserva ya está contada.
    */
-  const [tomadasDia, setTomadasDia] = useState<number | null>(null);
+  // Dos números: todo lo tomado, y lo tomado por quien pagó o abonó. **Con
+  // algo pagado la cotización tiene prioridad** (2026-11-12) y solo cuentan
+  // los segundos; es la misma regla de `/convertir`.
+  const [tomadasDia, setTomadasDia] = useState<{ todas: number; prioridad: number } | null>(null);
   useEffect(() => {
     setTomadasDia(null);
     if (!esFecha(fechaReal) || ganada) return;
@@ -861,14 +864,15 @@ export default function CotizacionDialogo({
       .then((d) => {
         if (!vivo) return;
         const o = (d.ocupacion ?? []).find((x: { fecha: string }) => x.fecha === fechaReal);
-        setTomadasDia(o ? o.tomadas : 0);
+        setTomadasDia(o ? { todas: o.tomadas, prioridad: (o.pagadas ?? 0) + (o.abonadas ?? 0) }
+          : { todas: 0, prioridad: 0 });
       }).catch(() => {});
     return () => { vivo = false; };
   }, [fechaReal, ganada]);
   const cupo = tomadasDia === null || !esFecha(fechaReal) ? null
     : cupoParaGanar(datos.fechas.find((f) => f.fecha === fechaReal), fechaReal,
         { cupoNormal: datos.cupoNormal ?? 120, horaApertura: datos.horaApertura ?? '' },
-        tomadasDia, personasDelEvento);
+        cobrado.pagado > 0 ? tomadasDia.prioridad : tomadasDia.todas, personasDelEvento);
   const sinCupo = !!cupo && !cupo.cabe && !ganada && personasDelEvento > 0;
   const avisoCupo = sinCupo && cupo ? (
     <div role="alert" className="rounded-xl border-2 border-rojo-fuerte/70 bg-rojo/10 p-3 text-[15px]">

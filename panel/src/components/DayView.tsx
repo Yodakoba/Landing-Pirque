@@ -22,6 +22,7 @@ import { ocupaLugar, faltaCobrar, estaAbonada, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import PastillaPago from './PastillaPago';
+import BloqueSobrecupo, { AvisarCaida, type CupoDelDia } from './BloqueSobrecupo';
 import IngresoFudo from './IngresoFudo';
 import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
 import type { EventoCRM, EventosDelDia } from '@/lib/crm';
@@ -125,7 +126,12 @@ export default function DayView(
   // Anotar, editar y borrar reservas. Con vista gerencia, un rol sin
   // `reservas` mira el día sin esos botones.
   const conReservas = puede(rol as Rol, 'reservas');
+  const conDias = puede(rol as Rol, 'dias');
   const [todas, setTodas] = useState<Reserva[] | null>(null);
+  /** El cupo de este día, para el bloque de sobrecupo (2026-11-12). */
+  const [cupoDia, setCupoDia] = useState<CupoDelDia | null>(null);
+  const [capacidadMaxima, setCapacidadMaxima] = useState(900);
+  const [deCotizacionIds, setDeCotizacionIds] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [editando, setEditando] = useState<Reserva | null>(null);
@@ -177,12 +183,15 @@ export default function DayView(
   }
 
   const cargar = () =>
-    fetch('/api/reservas')
+    fetch(`/api/reservas?dia=${fecha}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) return setError(d.error);
         setTodas(d.reservas);
         if (d.menus) setCatalogo(d.menus);
+        setCupoDia(d.dia ?? null);
+        if (d.capacidadMaxima) setCapacidadMaxima(d.capacidadMaxima);
+        if (d.deCotizacion) setDeCotizacionIds(d.deCotizacion);
       })
       .catch((e) => setError(String(e)));
 
@@ -428,6 +437,12 @@ export default function DayView(
             )}
           </div>
         </>
+      )}
+
+      {cupoDia && cupoDia.sobrecupo > 0 && todas && (
+        <BloqueSobrecupo dia={cupoDia} reservas={todas} capacidadMaxima={capacidadMaxima}
+          rol={rol} usuario={usuario} conDias={conDias} deCotizacion={deCotizacionIds}
+          onCambio={() => void cargar()} />
       )}
 
       {/* **Acá iba "$X por cobrar en el local", y se sacó el 2026-10-23**,
@@ -905,6 +920,11 @@ export default function DayView(
                           className="tecla boton whitespace-nowrap">
                           Cotización N° {folioDe(deCotizacion)}
                         </a>
+                      ) : mia && r.liberada ? (
+                        // Se cayó por cupo: lo que queda por hacer es
+                        // avisarle, y el botón vuelve a estar acá por si se
+                        // cerró la ventana sin hacerlo.
+                        <AvisarCaida r={r} />
                       ) : mia ? (
                         <div className="flex justify-end gap-2">
                           <button onClick={() => { setCreando(false); setEditando(r); }}

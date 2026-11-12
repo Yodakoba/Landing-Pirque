@@ -167,6 +167,10 @@ export default function ConfigEditor() {
           'Las personas que caben en una jornada, niños incluidos. Es el valor de un día nuevo; ' +
           'cada día se puede cambiar aparte.',
           numerico('cupo', config.cupoNormal, (n) => ({ cupoNormal: n }), { min: 1, max: 5000, unidad: 'personas' }))}
+        {campo('maxima', 'Capacidad máxima del recinto',
+          'El tope al ampliar el cupo de un día cuando entraron reservas pagadas sobre reservas ' +
+          'sin pagar. Más allá de esto hay que soltar una reserva sin pagar.',
+          numerico('maxima', config.capacidadMaxima, (n) => ({ capacidadMaxima: n }), { min: 1, max: 100000, unidad: 'personas' }))}
         {campo('futuro', 'Días hacia adelante',
           'Hasta cuántos días en el futuro se ofrecen fechas en el sitio, para no tomar ' +
           'reservas a un año plazo.',
