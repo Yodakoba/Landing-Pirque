@@ -1,38 +1,23 @@
 'use client';
 
 /**
- * El recorrido de bienvenida: cuatro pantallas de texto, una tras otra.
+ * La tira de bienvenida: *¿Primera vez acá?* con un botón a las misiones de
+ * la ayuda.
  *
- * **Se ofrece, no se impone, y se ofrece dos veces.** La tira de arriba
- * aparece la primera vez que alguien entra y, si contesta "Ahora no", vuelve
- * a aparecer una segunda vez y nunca más. Una sola oferta se la pierde quien
- * entró apurado; una oferta eterna se vuelve parte del fondo y deja de
- * verse. Dos es el punto donde todavía se agradece.
+ * **Desde el 2026-11-12 ya no tiene recorrido propio**: el recorrido son las
+ * misiones de `/ayuda` (`lib/misiones.ts`), con capturas reales del panel de
+ * cada rol. Dos recorridos distintos habrían enseñado dos versiones del mismo
+ * panel.
  *
- * Quien lo cierra o lo termina no lo ve nunca más, y de todas formas se puede
- * volver a ver desde el `?` del calendario.
- *
- * **Se recuerda en `localStorage`**, o sea por navegador: si el equipo
- * comparte un teléfono, la tira aparece una vez para ese teléfono y no una
- * por persona. No hay forma de hacerlo por persona sin guardarlo en la
- * planilla, y una escritura por cada vez que alguien mira un cartel no vale
- * lo que cuesta.
- *
- * Si `localStorage` está bloqueado, la tira aparece siempre: molesto, no
- * roto, y sin lanzar errores.
+ * **Se ofrece, no se impone, y se ofrece dos veces.** Una sola oferta se la
+ * pierde quien entró apurado; una oferta eterna se vuelve parte del fondo.
+ * Quien la cierra o va a las misiones no la ve más. Se recuerda **por rol** en
+ * `localStorage`: un cambio de rol la vuelve a ofrecer. Si `localStorage` está
+ * bloqueado, la tira aparece siempre: molesto, no roto.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import Dialogo from './Dialogo';
-import { recorridoDe } from '@/lib/ayudaRol';
-import type { Rol } from '@/lib/auth';
 
-/**
- * **Uno por rol** (2026-11-12): el recorrido se arma con las pantallas que
- * abre la cuenta (`recorridoDe()`), y se recuerda por rol. Antes era uno
- * solo, de cuatro pasos fijos, y le mostraba Turnos y Equipo al vendedor,
- * que no puede entrar ahí.
- */
 const LLAVE = 'brasas-recorrido';
 /** Cuántas veces se ofrece antes de no molestar más. */
 const OFRECIDAS = 2;
@@ -44,130 +29,45 @@ const anotar = (llave: string, v: string) => {
   try { localStorage.setItem(llave, v); } catch { /* sin memoria, paciencia */ }
 };
 
-/** Abre el recorrido desde otro lado (el `?` del calendario, la página de ayuda). */
+/** Lleva a las misiones (el `?` del calendario la usa). */
 export function verRecorrido() {
-  window.dispatchEvent(new CustomEvent('brasas:recorrido'));
+  window.location.href = '/ayuda';
 }
 
-export default function Recorrido({ rol, gerencia = false, conComentar = false }: {
-  rol: string; gerencia?: boolean; conComentar?: boolean;
-}) {
+export default function Recorrido({ rol }: { rol: string }) {
   const ruta = usePathname();
   const llave = `${LLAVE}-${rol}`;
-  const RECORRIDO = useMemo(() => recorridoDe(rol as Rol, gerencia, conComentar),
-    [rol, gerencia, conComentar]);
-  const [abierto, setAbierto] = useState(false);
-  const [paso, setPaso] = useState(0);
   const [ofrecer, setOfrecer] = useState(false);
 
   useEffect(() => {
     const v = leer(llave);
     if (v !== 'listo') setOfrecer(Number(v || 0) < OFRECIDAS);
-    const abrir = () => { setPaso(0); setAbierto(true); };
-    window.addEventListener('brasas:recorrido', abrir);
-    return () => window.removeEventListener('brasas:recorrido', abrir);
   }, [llave]);
 
-  // Ni la página del trabajador, ni la planilla del grupo, ni el
-  // presupuesto, ni la entrada: las cuatro las abre gente que no administra
-  // nada, y un recorrido por el panel sería ofrecerle una visita a una casa
-  // en la que no vive.
-  //
-  // **En el presupuesto es peor todavía**, y por eso vale tenerlo escrito:
-  // ese documento se imprime a PDF, así que la tira se iba impresa arriba
-  // de una cotización — un cartel del panel interno en la hoja que recibe
-  // el cliente.
+  // Ni la página del trabajador, ni la planilla del grupo, ni los documentos
+  // que se le mandan al cliente —se imprimen a PDF, y la tira saldría en la
+  // hoja—, ni la entrada, ni la propia ayuda.
   const fuera = ruta.startsWith('/mi/') || ruta.startsWith('/semana/')
-             || ruta.startsWith('/presupuesto/')
-             || ruta.startsWith('/contrato/')
-             || ruta === '/login'
-             // Sin sesión no hay rol, y sin rol no hay recorrido que armar.
-             || !rol;
-  // **La recepción ya no queda fuera** (2026-11-12): la anfitriona tiene su
-  // propio recorrido, de una pantalla, y antes no se le ofrecía ninguno.
-  if (fuera) return null;
-
-  const cerrarYa = () => {
-    anotar(llave, 'listo');
-    setOfrecer(false);
-    setAbierto(false);
-  };
-
-  const ahoraNo = () => {
-    anotar(llave, String(Number(leer(llave) || 0) + 1));
-    setOfrecer(false);
-  };
-
-  const p = RECORRIDO[paso];
-  const ultimo = paso === RECORRIDO.length - 1;
+             || ruta.startsWith('/presupuesto/') || ruta.startsWith('/contrato/')
+             || ruta === '/login' || ruta.startsWith('/ayuda') || !rol;
+  if (fuera || !ofrecer) return null;
 
   return (
-    <>
-      {ofrecer && !abierto && (
-        <div className="border-b border-oro/30 bg-oro/5">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4
-                          gap-y-2 px-5 py-2.5 text-sm">
-            <span>
-              <strong>¿Primera vez acá?</strong>{' '}
-              <span className="text-hueso/70">
-                Te muestro el panel en un minuto.
-              </span>
-            </span>
-            <span className="flex-1" />
-            <button onClick={() => { setPaso(0); setAbierto(true); }}
-              className="boton boton-relleno min-h-[40px]">
-              Ver cómo funciona
-            </button>
-            {/* **Un botón delineado, no texto suelto** (2026-11-12): medía
-                20px y no se veía apretable. Mismo alto que *Ver cómo
-                funciona*, que sigue siendo el único relleno. */}
-            <button onClick={ahoraNo}
-              className="boton min-h-[40px] text-hueso/70 hover:text-hueso">
-              Ahora no
-            </button>
-          </div>
-        </div>
-      )}
-
-      {abierto && p && (
-        <Dialogo titulo={p.titulo} onCerrar={cerrarYa}>
-          <div className="mt-3 space-y-3 text-sm leading-relaxed text-hueso/80">
-            {p.cuerpo.map((t, i) => <p key={i}>{t}</p>)}
-          </div>
-
-          {p.ir && (
-            <a href={p.ir.url}
-              className="mt-4 inline-block rounded border border-oro/50 px-3 py-1.5
-                         text-sm font-semibold text-oro hover:bg-oro/10">
-              {p.ir.texto} →
-            </a>
-          )}
-
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            {/* Los puntos dicen cuánto falta. Sin eso, "Siguiente" podría ser
-                el segundo de cuatro o el segundo de veinte, y la diferencia
-                es si alguien sigue o se sale. */}
-            <span className="flex gap-1.5" aria-label={`Paso ${paso + 1} de ${RECORRIDO.length}`}>
-              {RECORRIDO.map((_, i) => (
-                <span key={i} aria-hidden
-                  className={`h-2 w-2 rounded-full ${
-                    i === paso ? 'bg-oro' : 'bg-hueso/20'}`} />
-              ))}
-            </span>
-            <span className="flex-1" />
-            {paso > 0 && (
-              <button onClick={() => setPaso(paso - 1)}
-                className="boton">
-                Atrás
-              </button>
-            )}
-            <button onClick={() => (ultimo ? cerrarYa() : setPaso(paso + 1))}
-              className="boton boton-relleno min-h-[40px]">
-              {ultimo ? 'Listo' : 'Siguiente'}
-            </button>
-          </div>
-        </Dialogo>
-      )}
-    </>
+    <div className="border-b border-oro/30 bg-oro/5">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-sm">
+        <span>
+          <strong>¿Primera vez acá?</strong>{' '}
+          <span className="text-hueso/70">Cinco misiones cortas con tu panel de verdad.</span>
+        </span>
+        <span className="flex-1" />
+        <a href="/ayuda" onClick={() => anotar(llave, 'listo')} className="tecla boton boton-relleno min-h-[40px]">
+          ▶ Ver mis misiones
+        </a>
+        <button onClick={() => { anotar(llave, String(Number(leer(llave) || 0) + 1)); setOfrecer(false); }}
+          className="boton min-h-[40px] text-hueso/70 hover:text-hueso">
+          Ahora no
+        </button>
+      </div>
+    </div>
   );
 }

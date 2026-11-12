@@ -14,11 +14,12 @@
  */
 import { puedeVer, ROL, type Rol } from './auth.ts';
 import { PAGINAS } from './paginas.ts';
-import { AYUDAS, type Ayuda, type Paso } from './ayudas.ts';
-import { NOMBRE_ROL, RESUMEN_ROL } from './roles.ts';
+import { AYUDAS, type Ayuda } from './ayudas.ts';
 
 export interface PantallaDeAyuda {
   href: string;
+  /** Su llave en `AYUDAS`, para abrir el `?`. */
+  tema: string;
   /** Cómo se llama en el menú de esta cuenta. */
   texto: string;
   ayuda: Ayuda;
@@ -30,44 +31,11 @@ export function pantallasDe(rol: Rol, gerencia = false): PantallaDeAyuda[] {
     .filter((p) => puedeVer(rol, p.accion, gerencia) && AYUDAS[p.tema])
     .map((p) => ({
       href: p.href,
+      tema: p.tema,
       // El vendedor ve la pestaña de ventas como *Mi resumen* (igual que en `Nav`).
       texto: p.href === '/vendedores' && rol === ROL.vendedor ? 'Mi resumen' : p.texto,
       ayuda: AYUDAS[p.tema]
     }));
-}
-
-/**
- * El recorrido de bienvenida de esta cuenta: quién eres, un paso por cada
- * pantalla que abres, y dónde volver a encontrar todo esto.
- */
-export function recorridoDe(rol: Rol, gerencia = false, conComentar = false): Paso[] {
-  const pantallas = pantallasDe(rol, gerencia);
-  const nombre = NOMBRE_ROL[rol] ?? rol;
-  const cuantas = pantallas.length === 1
-    ? 'Es una sola pantalla y te la muestro en un minuto.'
-    : `Son ${pantallas.length} pantallas y te las muestro en un minuto. Puedes salir cuando quieras.`;
-  return [
-    {
-      titulo: `Tu panel, como ${nombre}`,
-      cuerpo: [RESUMEN_ROL[rol] ?? '', cuantas].filter(Boolean)
-    },
-    ...pantallas.map((p) => ({
-      titulo: p.ayuda.titulo,
-      cuerpo: p.ayuda.cuerpo.slice(0, 2),
-      ir: { texto: `Ir a ${p.texto}`, url: p.href }
-    })),
-    {
-      titulo: 'Y si algo no se entiende',
-      cuerpo: [
-        'Cada pantalla tiene un signo de interrogación al lado del título, con '
-        + 'una explicación corta de para qué sirve y cómo se usa.',
-        conComentar
-          ? 'Esta ayuda vive en el botón ❓ Ayuda de arriba. Y con 💬 Comentar '
-            + 'cuentas un error, una duda o algo que te falta para tu trabajo.'
-          : 'Esta ayuda vive en el botón ❓ Ayuda de arriba: vuelve cuando quieras.'
-      ]
-    }
-  ];
 }
 
 /**

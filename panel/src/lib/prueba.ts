@@ -4948,7 +4948,7 @@ console.log('\nGanar sin ningún respaldo');
 
 console.log('\nLa ayuda de cada rol');
 {
-  const { pantallasDe, recorridoDe, pantallaDeRuta } = await import('./ayudaRol.ts');
+  const { pantallasDe, pantallaDeRuta } = await import('./ayudaRol.ts');
   const { PAGINAS } = await import('./paginas.ts');
   const { AYUDAS } = await import('./ayudas.ts');
   const { ROL, puedeVer, ROLES_DE_CUENTA } = await import('./auth.ts');
@@ -4966,15 +4966,30 @@ console.log('\nLa ayuda de cada rol');
   ok(!ven.some((p) => p.href === '/turnos' || p.href === '/equipo')
      && ven.some((p) => p.texto === 'Mi resumen'),
      'el vendedor no recibe Turnos ni Equipo, y su pestaña de ventas se llama Mi resumen, como en su menú');
-  const r = recorridoDe(ROL.vendedor);
-  ok(r.length === ven.length + 2 && r[0].titulo.includes('Vendedor') && r.slice(1, -1).every((p) => p.ir),
-     'el recorrido es: quién eres, una pantalla por paso con su botón para ir, y dónde volver');
-  ok(recorridoDe(ROL.vendedor, false, true).at(-1)!.cuerpo.join(' ').includes('Comentar')
-     && !recorridoDe(ROL.vendedor, false, false).at(-1)!.cuerpo.join(' ').includes('Comentar'),
-     'el último paso nombra Comentar solo si está conectado');
   ok(pantallaDeRuta('/presupuestos') === 'Cotizaciones' && pantallaDeRuta('/') === 'Calendario'
      && pantallaDeRuta('/dia/2026-11-14') === 'Día 2026-11-14' && pantallaDeRuta('/ayuda') === 'Ayuda',
      'el comentario sabe en qué pantalla se escribió');
+}
+
+console.log('\nLas misiones de la ayuda');
+{
+  const { misionesDe, escenasDeLasMisiones } = await import('./misiones.ts');
+  const { PAGINAS } = await import('./paginas.ts');
+  const { ROL, puedeVer, ROLES_DE_CUENTA } = await import('./auth.ts');
+  const fs = await import('node:fs');
+  const medidas = JSON.parse(fs.readFileSync(new URL('../../public/ayuda/puntos.json', import.meta.url), 'utf8'));
+  ok(ROLES_DE_CUENTA.every((r) => { const m = misionesDe(r); return m.length === 5 && m[4].id === 'voz' && m.slice(0, 4).every((x) => x.escena); }),
+     'cada rol tiene cuatro misiones con captura y Tu voz como quinta');
+  ok(escenasDeLasMisiones().every((e) => medidas[e]
+       && fs.existsSync(new URL(`../../public/ayuda/${e}.jpg`, import.meta.url))),
+     'cada escena tiene su captura y sus puntos medidos (npm: pruebas/capturas-ayuda.mjs)');
+  ok(ROLES_DE_CUENTA.every((r) => misionesDe(r).every((m) => !m.escena || (medidas[m.escena]?.puntos.length === m.puntos?.length))),
+     'cada captura tiene tantos puntos medidos como textos: un punto sin explicación o un texto sin punto no pasa');
+  ok(ROLES_DE_CUENTA.every((r) => misionesDe(r).every((m) => !m.probar
+       || PAGINAS.some((p) => (p.href === '/' ? m.probar!.url === '/' : m.probar!.url.startsWith(p.href)) && puedeVer(r, p.accion)))),
+     'Pruébalo nunca manda a una pantalla que ese rol no abre');
+  ok(misionesDe(ROL.gerencia)[0].escena === 'ger-informe' && misionesDe(ROL.pagos)[0].escena === 'pag-informe',
+     'la gerencia general tiene sus propias capturas, con su menú');
 }
 
 console.log('\nLos comentarios del equipo');

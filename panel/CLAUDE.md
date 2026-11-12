@@ -5996,6 +5996,67 @@ pantallas** (`components/AyudaRol.tsx`, lógica pura en `lib/ayudaRol.ts`).
   panel ya sabe subir a Drive, es el paso siguiente), y el link personal del
   trabajador (`/mi/`) no tiene el botón, porque no tiene sesión.
 
+### Las misiones de la ayuda (2026-11-12, segunda vuelta)
+
+Lo pidió el cliente: la ayuda *"de forma lúdica en distintos pasos"*, con
+la regla PlayStation, **"con gráficas originales, no con gráficas que tú
+inventas"**, interactiva donde se pueda, y con **el formulario de
+comentarios al centro**: que cada rol entienda solo lo que puede hacer.
+
+- **Cinco misiones por rol** (`lib/misiones.ts`): cuatro con una **captura
+  real de su panel** y la quinta, **💬 Tu voz**, el formulario de
+  comentarios a página completa, con ejemplos de lo que más sirve y lo que
+  ya mandaste desde ahí. Cuáles son las cuatro lo aprobó el cliente
+  (anfitrión: recepción, llegó, qué cobrar, avisar; vendedor: calendario,
+  cotizar, ganar, Mi resumen; turno: el día, turnos, cerrar, recepción;
+  operaciones: el día, turnos, corregir, informe; pagos y gerencia: informe,
+  pagar, cobros, vendedores; administrador: cuentas, configuración,
+  bitácora, Ver como).
+- **La pantalla** (`MisionesAyuda.tsx`): cinco botones grandes con barra de
+  avance y 🏆 al terminar; la captura en un marco de teléfono con **puntos
+  numerados que se tocan** y, al lado, qué es cada uno (tocar un texto
+  ilumina su punto y al revés); *✓ Entendido, la siguiente* es el único
+  relleno; *▶ Pruébalo* abre la pantalla de verdad; *💬 ¿Esto no te sirve?
+  Cuéntalo* lleva a Tu voz con la misión anotada como pantalla. El avance se
+  recuerda **por rol en el navegador** (`brasas-misiones-<rol>`).
+- **Más PlayStation, el mismo día** (lo pidió el cliente: *"más en partes,
+  más en secciones y más claro diferenciado las etapas"*). **Un mapa de
+  niveles** arriba —cinco casillas unidas por una línea; hecha en verde
+  rellena con ✓, la actual dorada y más grande con *AQUÍ*, pendiente con
+  borde cortado, *Tu voz* rosada—, un **marcador** *2/5 hechas* con la barra
+  y el 🏆 apagado hasta terminar, y **cada misión en tres etapas con su
+  franja de color y su número**: **① Mira** (celeste, la captura), **②
+  Entiende** (ámbar, los puntos) y **③ Hazlo** (verde, los botones). *Tu voz*
+  va en rosado con *Cuéntalo*, *Lo que más sirve* y *Ya mandaste*. La página
+  tiene tres secciones con título propio: *Tus misiones*, *Consulta rápida* y
+  *Tu rol*.
+- **Las capturas se sacan, no se dibujan**: `pruebas/capturas-ayuda.mjs`
+  entra con una sesión de cada rol, hace los clics de cada escena, guarda
+  `public/ayuda/<escena>.jpg` y **mide dónde quedó cada punto** —el borde
+  izquierdo del botón o texto real, para no taparlo— en
+  `public/ayuda/puntos.json`. Si cambia una pantalla, se corre de nuevo
+  (`… capturas-ayuda.mjs <escena>`) y los puntos caen solos. **Siempre contra
+  un panel con datos de ejemplo**, nunca con clientes de verdad: las fotos
+  quedan en el repo. Se sacaron con una copia local cuyo `sheets()` leía una
+  planilla falsa en un JSON; esa copia no está en el repo.
+- **Las pruebas fijan** que cada rol tenga cuatro misiones con captura y Tu
+  voz, que cada escena tenga su foto, **tantos puntos medidos como textos**,
+  y que *Pruébalo* nunca mande a una pantalla que ese rol no abre.
+- **La gerencia general tiene sus propias capturas** (`ger-…`), con su menú,
+  y las misiones de quien paga.
+- **El recorrido de bienvenida pasó a ser las misiones**: la tira *¿Primera
+  vez acá?* lleva a `/ayuda`, y el `?` del calendario también. Se sacó el
+  recorrido de texto (`recorridoDe()`): dos recorridos habrían enseñado dos
+  versiones del mismo panel.
+- **El formulario se separó** en `FormularioComentario.tsx`, el mismo en la
+  ventana de 💬 Comentar y en Tu voz, y **guarda lo escrito sin mandar en la
+  pestaña** (`sessionStorage`) por si se cierra la ventana sin querer.
+- **Debajo de las misiones queda la consulta rápida**: cada pantalla con su
+  `?` e *Ir →*, y *Tu cuenta puede / No es de tu rol*, que invita a contar en
+  Tu voz si algo de esa lista hace falta.
+- **Pesan 2 MB** las 28 capturas (JPEG a 1,5×, unos 70 KB cada una) y se
+  cargan una a la vez, la de la misión abierta.
+
 ### La página quedaba trabada al cerrar dos ventanas (2026-10-30)
 
 Lo reportó el cliente, y el síntoma es tan raro que vale tenerlo escrito

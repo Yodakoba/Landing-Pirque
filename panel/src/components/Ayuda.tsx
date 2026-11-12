@@ -85,7 +85,7 @@ export default function Ayuda({ tema, onRecorrido }: {
               <button type="button"
                 onClick={() => { setAbierta(false); onRecorrido(); }}
                 className="boton hover:text-oro">
-                Ver el recorrido de nuevo
+                ▶ Ver mis misiones
               </button>
             )}
             <span className="flex-1" />

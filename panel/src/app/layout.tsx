@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} gerencia={sesion?.gerencia === true}
           rolReal={sesion?.rolReal ?? ''} verComoHasta={sesion?.rolReal ? sesion.expira : 0}
           conComentar={conComentar} />
-        <Recorrido rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true} conComentar={conComentar} />
+        <Recorrido rol={sesion?.rol ?? ''} />
         {/* El rol y la vista gerencia, para que cada pantalla sepa qué se
             mira y qué se toca (ver `usarSoloMira()`). */}
         <SesionCliente rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true}>

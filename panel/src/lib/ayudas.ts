@@ -368,8 +368,7 @@ export interface Paso {
   ir?: { texto: string; url: string };
 }
 
-// El recorrido de bienvenida ya no es una lista fija: se arma por rol en
-// `lib/ayudaRol.ts` (`recorridoDe()`), con las pantallas que abre la cuenta.
+// El recorrido de bienvenida son las misiones de `/ayuda` (`lib/misiones.ts`).
 
 
 /**
