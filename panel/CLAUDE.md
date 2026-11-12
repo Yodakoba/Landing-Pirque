@@ -1909,6 +1909,47 @@ vendedor"*, y fijó la parte del vendedor: **50%**. Código en
   cuando el token es de un socio**, para no cargar las cotizaciones en cada
   visita de un trabajador. El informe, la misma tanda de antes.
 
+### `/vendedores` con la regla PlayStation (2026-11-12)
+
+Lo pidió el cliente: *"funcionalmente parece bien… pero bajo perspectiva de
+diseño, y flujo y simplificación, de vista, no estamos cumpliendo con
+nuestra regla de PlayStation"*. La prueba automática no marcaba nada
+—tamaños y letra cumplían—; lo que fallaba era el flujo, y se midió: en
+celular eran **4,4 pantallas**, la ficha con sus 17 campos siempre abierta
+desde la pantalla 2,6, ningún botón relleno, cinco azulejos con dos
+repetidos, cuatro listas apiladas y el mes partido en dos líneas. Quedó en
+**2,2 pantallas** (1,6 para el vendedor; 1,3 en computador), con un solo
+relleno y ningún campo a la vista:
+
+1. **Quién**: el nombre grande y una pastilla *👤 Vendedor* (borde lleno) o
+   *🤝 Socio comercial* (borde cortado); al lado, los dos botones con
+   buscador.
+2. **Cuándo**: *Mes / Semana* y una sola barra ◀ periodo ▶.
+3. **Cuánto**: tres azulejos —*Le toca* con su desglose en una línea
+   (*comisiones $X + fijo $Y*), *Pagado* y *Falta*—.
+4. **El hito**, el único relleno: **💸 Pagarle $X →**, que abre
+   `/informe?pagar=<nombre>&desde=…&hasta=…`: el informe parte en ese
+   rango, en la sección de vendedores y **con la ventana de pago de siempre
+   ya abierta en esa persona**. Así el pago se registra con la lógica del
+   informe y no con una copia. Sin nada por pagar dice *✓ Al día*, sin
+   botón. El vendedor no lo ve.
+5. **El detalle en tres pestañas grandes**: *💰 Suma*, *📅 Viene* (ganadas
+   que falta que el cliente pague, y en curso) y *💸 Pagos*, con cuántas hay
+   en cada una. Una lista a la vista.
+6. **Cómo se le paga**: el trato en una frase y *Cambiar el trato*, que
+   abre una ventana con las tres etapas en filas de **− y +** (`Paso`: el
+   campo se sigue pudiendo escribir, con coma), el bono, la parte con socio,
+   el monto por evento, el sueldo fijo y la base; en un socio, también su
+   nombre y *Desactivar*, que se confirman. **La transferencia** es una
+   línea con su pastilla (*✓ BancoEstado · Cuenta RUT · ···5678* o *⚠ falta
+   …*) y su propia ventana. **El link del socio**, otra línea. Todo se
+   guarda solo, como antes.
+
+- **Ojo con `.boton`**: está definida en `globals.css` después de las
+  utilidades de Tailwind, así que **le gana a `min-h-[44px]` y a
+  `text-[15px]`** —el *Pagarle* salía de 36px aunque pedía 56—. En un
+  botón con `.boton`, el alto y la letra van con `!` (`!min-h-[44px]`).
+
 ### Los buscadores se cierran con un clic afuera (2026-11-12)
 
 Lo pidió el cliente: *"que con un clic afuera de la búsqueda desaparezca el
