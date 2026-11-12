@@ -6019,6 +6019,17 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
   relleno; *▶ Pruébalo* abre la pantalla de verdad; *💬 ¿Esto no te sirve?
   Cuéntalo* lleva a Tu voz con la misión anotada como pantalla. El avance se
   recuerda **por rol en el navegador** (`brasas-misiones-<rol>`).
+- **Más PlayStation, el mismo día** (lo pidió el cliente: *"más en partes,
+  más en secciones y más claro diferenciado las etapas"*). **Un mapa de
+  niveles** arriba —cinco casillas unidas por una línea; hecha en verde
+  rellena con ✓, la actual dorada y más grande con *AQUÍ*, pendiente con
+  borde cortado, *Tu voz* rosada—, un **marcador** *2/5 hechas* con la barra
+  y el 🏆 apagado hasta terminar, y **cada misión en tres etapas con su
+  franja de color y su número**: **① Mira** (celeste, la captura), **②
+  Entiende** (ámbar, los puntos) y **③ Hazlo** (verde, los botones). *Tu voz*
+  va en rosado con *Cuéntalo*, *Lo que más sirve* y *Ya mandaste*. La página
+  tiene tres secciones con título propio: *Tus misiones*, *Consulta rápida* y
+  *Tu rol*.
 - **Las capturas se sacan, no se dibujan**: `pruebas/capturas-ayuda.mjs`
   entra con una sesión de cada rol, hace los clics de cada escena, guarda
   `public/ayuda/<escena>.jpg` y **mide dónde quedó cada punto** —el borde
