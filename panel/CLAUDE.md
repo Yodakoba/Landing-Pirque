@@ -1994,10 +1994,37 @@ relleno y ningún campo a la vista:
   opción A del socio"*). Se descartaron la B —el vendedor cobra además el
   50% de lo que gana el socio: $450.000 en el ejemplo— y la C —una sola
   comisión, la del socio, repartida entre los dos: $300.000—.
-- **Ojo con `.boton`**: está definida en `globals.css` después de las
-  utilidades de Tailwind, así que **le gana a `min-h-[44px]` y a
-  `text-[15px]`** —el *Pagarle* salía de 36px aunque pedía 56—. En un
-  botón con `.boton`, el alto y la letra van con `!` (`!min-h-[44px]`).
+- ~~**Ojo con `.boton`**: le gana a `min-h-[44px]` y a `text-[15px]`, así
+  que van con `!`~~ — **arreglado de raíz el mismo día**: ver "`.boton`
+  pasó a la capa de componentes". Los `!` de `ResumenVendedor.tsx` ya no
+  hacen falta, pero tampoco molestan.
+
+### `.boton` pasó a la capa de componentes (2026-11-12)
+
+Lo pidió el cliente después de ver que en `/vendedores` el *Pagarle* salía
+de 36px aunque pedía 56: *"revisa los otros botones del panel con el
+problema de `.boton`"*. **El problema era de todo el panel**: `.boton`,
+`.boton-relleno`, `.boton-angosto` y `.boton-hito` estaban en `globals.css`
+**después de `@tailwind utilities`**, con la misma especificidad que una
+utilidad, así que ganaban siempre. Un inventario en los `.tsx` contó **152
+`min-h-…`, 37 colores de texto, 29 tamaños de letra y 12 colores de borde**
+escritos en botones y que no se aplicaban: botones que pedían 44 o 48px se
+quedaban en 36, los de color salían grises y **el estado "elegido" perdía
+su borde dorado**, que es justamente la forma que lo distingue.
+
+- **El arreglo es uno**: las cuatro reglas van ahora en `@layer
+  components`, así que la utilidad que se le pone a un botón le gana. No
+  hubo que tocar ningún componente.
+- **Medido antes y después**, con Playwright y datos de prueba, en 258
+  botones de ocho vistas (`/vendedores`, `/informe` con la ventana de pago,
+  los pasos 2 a 5 de la cotización, `/presupuestos` y la portada): **127
+  cambian, todos hacia lo que estaba escrito** —117 suben de alto, 23
+  recuperan su letra, 23 su borde y 8 su color— y **ninguno queda bajo la
+  regla** (36px y 13px). `revisarPlayStation()` a 393 y 1280px sin
+  hallazgos ni página corrida de lado.
+- **Se revisó primero lo que podía despertar para mal**: ningún botón con
+  `.boton` trae `text-xs`, letra bajo 13px ni alto bajo 36px, y ningún
+  `.boton-relleno` trae un fondo o un color propio que le ganara al dorado.
 
 ### Los buscadores se cierran con un clic afuera (2026-11-12)
 

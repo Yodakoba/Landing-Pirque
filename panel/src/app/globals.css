@@ -227,8 +227,16 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
  * como botón se ve como botón.
  *
  * `.boton-relleno` es el dorado: **uno por pantalla**, el que dice a qué
- * se vino. Dos rellenos en la misma vista es no tener ninguno.
+ * se vino. Dos rellenos en la misma vista es no tener ninguno. *
+ * **Va en `@layer components`** (2026-11-12, lo encontró el cliente
+ * mirando /vendedores): suelta, después de `@tailwind utilities`, le ganaba a
+ * toda utilidad con la misma especificidad, y **152 `min-h-[44px]`, 37
+ * colores de texto, 29 tamaños de letra y 12 bordes** escritos en botones
+ * del panel no se aplicaban: los botones se quedaban en 36px, grises y sin
+ * el borde de "elegido". En la capa de componentes, la utilidad que se le
+ * pone a un botón le gana, que es lo que uno espera al escribirla.
  */
+@layer components {
 .boton {
   display: inline-flex;
   align-items: center;
@@ -245,6 +253,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   color: rgb(var(--hueso) / .8);
 }
 .boton:hover { border-color: rgb(var(--oro)); color: rgb(var(--oro)); }
+}
 
 /**
  * El mismo botón, con menos aire a los lados.
@@ -260,7 +269,9 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
  * en la tarjeta por lo mismo que `.boton`: que ninguna pantalla se invente
  * su propia medida.
  */
+@layer components {
 .boton-angosto { padding-left: .5rem; padding-right: .5rem; }
+}
 
 /*
  * **El pie de la tarjeta del calendario** (2026-11-12, lo reclamó el
@@ -286,6 +297,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   .pie-botones > * { width: 100%; }
 }
 
+@layer components {
 .boton-relleno {
   background: rgb(var(--oro));
   border-color: rgb(var(--oro));
@@ -293,6 +305,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   font-weight: 600;
 }
 .boton-relleno:hover { background: rgb(var(--oro)); color: rgb(var(--tinta)); filter: brightness(1.08); }
+}
 
 /**
  * **El hito: lo que cierra una etapa** (2026-11-11, regla del cliente para
@@ -308,6 +321,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
  * Se suma a `.boton` (y al relleno o al color que corresponda): solo cambia
  * el tamaño, no el color, para que un hito rojo —cancelar— siga siendo rojo.
  */
+@layer components {
 .boton-hito {
   min-height: 52px;
   padding: .625rem 1.25rem;
@@ -316,6 +330,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   border-width: 2px;
   border-radius: .75rem;
   justify-content: center;
+}
 }
 
 /* ---------- El presupuesto impreso ---------- */
