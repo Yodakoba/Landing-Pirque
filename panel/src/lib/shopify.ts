@@ -323,7 +323,7 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
  */
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
   const { asistencia, creada, notaPago, eventoCRM, anotadaPor, llegaron, avisoRecepcion, abonado, liberada,
-          personasReales, menuReal, descuento, rectificacion, aprobacion, ...resto } = r;
+          personasReales, menuReal, descuento, rectificacion, aprobacion, liberacion, ...resto } = r;
   return resto;
 }
 

@@ -11,6 +11,7 @@
 import type { Reserva } from '@/lib/tipos';
 import { ESTADO_PAGO, TIPO_PAGO, esManual } from '@/lib/columnas';
 import { liberaCupo, pagoEnEspanol } from '@/lib/pagos';
+import { liberadaPorExclusivo } from '@/lib/exclusivo';
 
 const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
@@ -46,7 +47,9 @@ export default function PastillaPago({ r, deCotizacion = false, sinOrigen = fals
       <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-2.5 py-0.5
                         text-[14px] font-bold ${clase}`}>
         <span aria-hidden>{icono}</span>
-        {cayo ? 'Se cayó por cupo' : pagoEnEspanol(e) || 'Por pagar'}
+        {/* Por un evento exclusivo (2026-11-12) dice eso, no "por cupo". */}
+        {cayo ? (liberadaPorExclusivo(r.liberada) ? 'Liberada: evento exclusivo' : 'Se cayó por cupo')
+          : pagoEnEspanol(e) || 'Por pagar'}
         {e === ESTADO_PAGO.abonado && (r.abonado ?? 0) > 0 && (
           <span className="font-semibold">· {pesos(r.abonado ?? 0)}</span>
         )}

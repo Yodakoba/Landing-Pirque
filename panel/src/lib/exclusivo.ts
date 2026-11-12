@@ -77,3 +77,70 @@ export function mensajeLiberacion(nombre: string, diaEnPalabras: string): string
     + 'Te ofrecemos dos opciones: la devolución completa de lo que pagaste, o cambiar tu reserva a otra fecha '
     + 'y te esperamos con un pisco sour de regalo. ¿Cuál prefieres?';
 }
+
+/* ---------- Liberar el día (segunda entrega, 2026-11-12) ---------- */
+
+/**
+ * **Cómo va cada reserva del día que se libera**: se le avisa, y después se
+ * cancela con su devolución o se cambia de fecha. Va en la columna `Evento
+ * exclusivo` de `Reservas`; lo que de verdad le quita el lugar es
+ * `Se cayó por cupo` (`liberada`), igual que al soltar por cupo.
+ */
+export const LIBERACION = {
+  avisada: 'Avisada',
+  cancelada: 'Cancelada',
+  devuelta: 'Devuelta',
+  reagendada: 'Reagendada'
+} as const;
+export type EstadoLiberacion = '' | keyof typeof LIBERACION;
+
+/** Lo que se guarda: *"Reagendada · Felipe · 2026-11-12 10:05 · al 2026-11-28"*. */
+export function marcaLiberacion(estado: keyof typeof LIBERACION, quien: string, cuando: string, nota = ''): string {
+  const limpia = String(nota ?? '').replace(/\s+/g, ' ').trim();
+  return [LIBERACION[estado], quien || 'alguien', cuando, limpia].filter(Boolean).join(' · ');
+}
+
+/** Lee la marca de `Evento exclusivo`. */
+export function liberacionDe(marca: string | undefined): {
+  estado: EstadoLiberacion; quien: string; cuando: string; nota: string;
+} {
+  const [cabeza = '', quien = '', cuando = '', ...resto] = String(marca ?? '').split(' · ').map((x) => x.trim());
+  const estado = (Object.keys(LIBERACION) as (keyof typeof LIBERACION)[])
+    .find((k) => LIBERACION[k] === cabeza) ?? '';
+  return { estado, quien, cuando, nota: resto.join(' · ') };
+}
+
+/** El motivo que va en `Se cayó por cupo`: así la pastilla dice por qué ya no viene. */
+export const MOTIVO_EXCLUSIVO = 'Evento exclusivo';
+export const motivoLiberada = (accion: 'cancelada' | 'reagendada', nueva = '') =>
+  accion === 'cancelada' ? `${MOTIVO_EXCLUSIVO}: cancelada, devolución completa`
+    : `${MOTIVO_EXCLUSIVO}: reagendada al ${nueva}`;
+/** Si una reserva dejó su lugar por un evento exclusivo (y no por cupo). */
+export const liberadaPorExclusivo = (liberada: string | undefined) =>
+  String(liberada ?? '').includes(`${MOTIVO_EXCLUSIVO}:`);
+
+/**
+ * **Cuánto hay que devolverle** a una reserva que se cancela: lo pagado
+ * entero —el cliente lo pidió así: *devolución completa*—, o lo abonado.
+ * Una por pagar no puso plata y no tiene devolución.
+ */
+export function montoADevolver(r: { estadoPago: string; monto: number | null; abonado?: number | null }): number {
+  const e = String(r.estadoPago ?? '').trim().toLowerCase();
+  if (e === 'paid') return Math.max(0, Number(r.monto) || 0);
+  if (e === 'partially_paid') return Math.max(0, Number(r.abonado) || 0);
+  return 0;
+}
+
+/** De Shopify: el id es el número del pedido. La devolución se hace allá. */
+export const esDeShopify = (id: string) => /^\d+$/.test(String(id ?? ''));
+
+/**
+ * **La nota de la reserva nueva al cambiarla de fecha**: de dónde viene, el
+ * pisco sour de regalo —para que el equipo lo vea ese día— y, si venía de
+ * Shopify, el pedido donde está el pago.
+ */
+export function notaReagendada(r: { id: string; fecha: string; notaPago: string }): string {
+  return [`Reagendada desde el ${r.fecha} por un evento exclusivo`, '🎁 pisco sour de regalo',
+    esDeShopify(r.id) ? `pedido Shopify ${r.id}` : '', String(r.notaPago ?? '').trim()]
+    .filter(Boolean).join(' · ');
+}

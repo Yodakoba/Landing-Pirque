@@ -124,7 +124,8 @@ import { ASISTENCIA } from './columnas.ts';
 import { lineaDeSemana, listaDeDias, MAX_AVISOS } from './semana.ts';
 import { faltantesDe, textoFaltantes, diasQueNoSuman } from './equipo.ts';
 import { enCorto } from './fechas.ts';
-import { tieneArriendo, esExclusivo, marcaExclusividad, exclusividadDe, plazoParaLiberar, mensajeLiberacion } from './exclusivo.ts';
+import { tieneArriendo, esExclusivo, marcaExclusividad, exclusividadDe, plazoParaLiberar, mensajeLiberacion,
+  marcaLiberacion, liberacionDe, motivoLiberada, liberadaPorExclusivo, montoADevolver, esDeShopify, notaReagendada } from './exclusivo.ts';
 import { firmaDe, personasPorDia, diferencias, siguienteIntervalo, REVISAR_CADA,
          REVISAR_COMO_MAXIMO } from './cambios.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
@@ -245,7 +246,7 @@ const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
                'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
                'Llegaron','Aviso recepción','Abonado','Se cayó por cupo',
-               'Personas reales','Menú real','Descuento','Rectificación','Aprobación'];
+               'Personas reales','Menú real','Descuento','Rectificación','Aprobación','Evento exclusivo'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -2273,6 +2274,23 @@ ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encarga
      'a la bandeja llega solo el pedido vigente de una exclusiva: ni la no exclusiva ni la ya aprobada');
   ok(pend[0].reservas === 2 && pend[0].personas === 10 && pend[0].enPlazo && pend[0].faltan === 9,
      'cuenta las reservas que ocupan lugar ese día, sin las canceladas, y el plazo');
+
+  // Liberar el día, reserva por reserva (segunda entrega).
+  const lb = liberacionDe(marcaLiberacion('reagendada', 'Felipe', '2026-11-12 10:05', 'al 2026-11-28'));
+  ok(lb.estado === 'reagendada' && lb.quien === 'Felipe' && lb.nota === 'al 2026-11-28'
+     && liberacionDe('').estado === '' && liberacionDe('Otra cosa · x').estado === '',
+     'el estado de cada reserva que se libera se guarda y se lee igual; lo desconocido no es un estado');
+  ok(liberadaPorExclusivo(`2026-11-12 · Felipe · ${motivoLiberada('cancelada')}`)
+     && !liberadaPorExclusivo('2026-11-12 · Felipe · El día se llenó con reservas pagadas'),
+     'una reserva liberada por el evento exclusivo se distingue de una que se cayó por cupo');
+  ok(montoADevolver({ estadoPago: 'paid', monto: 88000 }) === 88000
+     && montoADevolver({ estadoPago: 'partially_paid', monto: 88000, abonado: 30000 }) === 30000
+     && montoADevolver({ estadoPago: 'pending', monto: 88000 }) === 0,
+     'se devuelve todo lo pagado, o lo abonado; una por pagar no tiene devolución');
+  ok(esDeShopify('6512345678') && !esDeShopify('MANUAL-1731'), 'una de Shopify se reembolsa allá');
+  const nota = notaReagendada({ id: '6512345678', fecha: '2026-11-21', notaPago: '' });
+  ok(nota.includes('2026-11-21') && nota.includes('pisco sour') && nota.includes('pedido Shopify 6512345678'),
+     'la reserva nueva dice de dónde viene, el regalo y el pedido donde está el pago');
 }
 
 /* ---------- el rol de vendedor (2026-11-05) ---------- */

@@ -953,9 +953,9 @@ export default function CotizacionDialogo({
         <p className="mt-3 rounded-lg border-2 border-verde-fuerte/70 bg-verde/10 px-3 py-2">
           <strong className="text-verde-texto">✓ {decisionExcl.quien} aprobó liberar el día</strong>
           {decisionExcl.nota ? ` · ${decisionExcl.nota}` : ''}. El día ya no se vende. Falta avisarles a esas
-          reservas y cancelarlas o cambiarlas de fecha desde{' '}
-          <a href={`/dia/${fechaReal}`} className="font-semibold text-oro underline">la página del día</a>;
-          con el día libre, se puede ganar.
+          reservas y cancelarlas o cambiarlas de fecha: el plan está en{' '}
+          <a href={`/dia/${fechaReal}#liberar`} className="font-semibold text-oro underline">la página del día</a>.
+          Con el día libre, se puede ganar.
         </p>
       )}
       {decisionExcl.estado === 'rechazada' && (

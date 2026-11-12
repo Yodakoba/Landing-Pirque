@@ -128,6 +128,7 @@ export async function editarReserva(fila: number, cambios: Partial<Reserva>): Pr
     }
   }
   if (cambios.aprobacion !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.aprobacion);
+  if (cambios.liberacion !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.liberacion);
   const previa = filas[fila - 1];
   if (!previa) throw new Error(`La fila ${fila} ya no existe en la planilla.`);
   await escribirFila(HOJA_RESERVAS, fila, filaReserva(enc, cambios, previa));
