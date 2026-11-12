@@ -4,7 +4,7 @@ import { leerTrabajadores, guardarTrabajadores, leerTurnos, anotar } from '@/lib
 import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
-import { ROL } from '@/lib/auth';
+import { puede, type Rol } from '@/lib/auth';
 import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
 
@@ -53,7 +53,8 @@ export const POST = conLecturas([], async function POST(req: Request) {
       });
     }
 
-    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    // Sueldos y cuenta: quien tenga `sueldos` (admin, pagos, gerencia), no solo el admin (2026-11-12).
+    const esAdmin = puede((await quienEs(req)).rol as Rol, 'sueldos');
     const nuevo: Trabajador = {
       nombre,
       telefono: telefonoNormal(b?.telefono),
@@ -126,11 +127,25 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
       );
     }
 
-    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    // Sueldos y cuenta: quien tenga `sueldos` (admin, pagos, gerencia), no
+    // solo el admin. Con el autoguardado (2026-11-12) esto pasó a ser el
+    // camino de todos los días, y quien paga perdía sus cambios callado.
+    const esAdmin = puede((await quienEs(req)).rol as Rol, 'sueldos');
+    // **Renombrar es aparte y se confirma** (`nuevoNombre`, 2026-11-12): el
+    // nombre es la identidad de la ficha, y sus turnos guardados siguen con
+    // el nombre anterior. La pantalla lo pregunta antes.
+    const nuevoNombre = String(b?.nuevoNombre ?? '').trim();
+    if (b?.nuevoNombre !== undefined) {
+      if (!nuevoNombre) return NextResponse.json({ error: 'El nombre no puede quedar vacío.' }, { status: 400 });
+      if (normalizar(nuevoNombre) !== normalizar(antes.nombre)
+          && gente.some((t) => normalizar(t.nombre) === normalizar(nuevoNombre))) {
+        return NextResponse.json({ error: `Ya hay alguien llamado ${nuevoNombre} en el equipo.` }, { status: 409 });
+      }
+    }
     const nueva: Trabajador = {
       // El nombre se conserva como está escrito en la planilla: un cambio de
-      // mayúsculas no puede desenganchar sus turnos.
-      nombre: antes.nombre,
+      // mayúsculas no puede desenganchar sus turnos. Solo `nuevoNombre` lo cambia.
+      nombre: nuevoNombre || antes.nombre,
       // **Lo que no venga en el cuerpo se conserva**, que es lo que un PATCH
       // significa. Antes el teléfono y el puesto se escribían siempre, así
       // que una llamada que solo quisiera desactivar a alguien le habría
@@ -160,8 +175,9 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
     await guardarTrabajadores(
       gente.map((t) => (normalizar(t.nombre) === normalizar(nombre) ? nueva : t))
     );
-    await anotar({ ...(await quienEs(req)), accion: 'Editó la ficha de un trabajador',
-      detalle: nueva.nombre });
+    await anotar({ ...(await quienEs(req)),
+      accion: nueva.nombre !== antes.nombre ? 'Renombró a un trabajador' : 'Editó la ficha de un trabajador',
+      detalle: nueva.nombre !== antes.nombre ? `${antes.nombre} → ${nueva.nombre}` : nueva.nombre });
 
     return NextResponse.json({
       trabajador: esAdmin ? { ...nueva, token: '' }

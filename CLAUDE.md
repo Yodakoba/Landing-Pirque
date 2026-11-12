@@ -36,8 +36,18 @@ más abajo; esto es la lista para revisar.
   distingue por forma y no solo por color, un solo botón relleno por vista,
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
-  desplegables, una frase que dice qué pasa al seguir. Lo que es un valor
-  se guarda solo; lo que declara algo se aprieta y pregunta antes.
+  desplegables, una frase que dice qué pasa al seguir.
+- **Autoguardado por defecto** (regla del cliente, 2026-11-12). Todo lo
+  que se escribe se guarda solo, con el estado a la vista (*Guardando… /
+  ✓ Guardado*, y *Reintentar* en rojo si falla). **Se confirma a mano
+  solo** lo que: (1) mueve plata —pagos, cobros, devoluciones—; (2) toma o
+  libera cupo —ganar, cancelar, soltar, ampliar, abrir o cerrar un día—;
+  (3) cierra o corrige un día; (4) aprueba o rechaza algo; (5) le llega al
+  cliente —mandar la cotización o el contrato—; (6) borra, desactiva o saca
+  a alguien; (7) toca cuentas, roles o links; (8) cambia el nombre de algo
+  que otros usan —un producto, una persona, un puesto— o la Configuración,
+  que afecta al sitio público. Lo manual pregunta con una ventana que dice
+  qué va a pasar; si pide motivo, queda en la bitácora.
 - **Las lecturas de Google son un presupuesto**: 60 por minuto para todo el
   panel. Nada nuevo lee la planilla por su cuenta: se suma a la tanda que la
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
