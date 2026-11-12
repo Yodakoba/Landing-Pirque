@@ -117,6 +117,7 @@ import { createHmac } from 'node:crypto';
 import { estaCerrado, esExclusiva, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
 import { lineaDeSemana, listaDeDias, MAX_AVISOS } from './semana.ts';
+import { faltantesDe, textoFaltantes } from './equipo.ts';
 import { firmaDe, personasPorDia, diferencias, siguienteIntervalo, REVISAR_CADA,
          REVISAR_COMO_MAXIMO } from './cambios.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
@@ -382,6 +383,14 @@ ok(paraElSitio(ocu)[0].pocos === true,
      'la sincronizacion con Shopify no pisa "Se cayo por cupo"');
   ok(filaReserva(['ID Orden', 'Se cayó por cupo'], { liberada: 'x' })[1] === 'x',
      'y se escribe en su columna');
+}
+
+/* ---------- qué puestos faltan, con nombre (2026-11-12) ---------- */
+{
+  const f = faltantesDe([{ puesto: 'Garzón', faltan: 2 }, { puesto: 'Barman', faltan: 0 }, { puesto: 'Runner', faltan: 1 }]);
+  ok(f.length === 2 && textoFaltantes(f) === '2 × Garzón, Runner',
+     'lo que falta se dice con los puestos: varios con número, uno sin número');
+  ok(textoFaltantes([]) === '', 'sin faltantes no hay texto');
 }
 
 /* ---------- la pantalla al día (2026-11-12): firma, diferencias e intervalo ---------- */

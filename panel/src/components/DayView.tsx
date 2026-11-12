@@ -33,7 +33,7 @@ import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
-         type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
+         faltantesDe, textoFaltantes, type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { extrasDelDia, costoExtrasDelDia, costoDeExtra,
          type Colaborador, type Extra } from '@/lib/extras';
 
@@ -521,7 +521,9 @@ export default function DayView(
             </ul>
           )}
           <span className="flex-1" />
-          {faltan > 0 && <Pendiente>Faltan {faltan}</Pendiente>}
+          {faltan > 0 && (
+            <Pendiente>{faltan === 1 ? 'Falta' : 'Faltan'} {faltan}: {textoFaltantes(faltantesDe(plan))}</Pendiente>
+          )}
           {/* **Es un botón, no un enlace de texto en oro** (2026-11-01). Es
               la acción del bloque y estaba escrita igual que un rótulo:
               20px de alto, sin borde ni relleno, flotando en el borde
