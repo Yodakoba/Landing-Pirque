@@ -2200,11 +2200,14 @@ ok(!puede(ROL.encargado, 'pagar'),
 
 ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
 
-// **El encargado lo ve desde el 2026-11-01**, por decisión del cliente y
-// declaradamente provisoria. La prueba lo fija igual: si mañana se le quita,
-// que sea porque alguien lo decidió y vino a cambiar esta línea.
-ok(puede(ROL.encargado, 'informe'),
-   'y el encargado también, por ahora: lo liberó el cliente hasta definir la lista fina');
+// **Se afinó el 2026-11-12** (lo decidió el cliente): el encargado ya no ve
+// el informe; el gerente lo ve y marca la boleta, pero no paga ni copia
+// cuentas.
+ok(!puede(ROL.encargado, 'informe'), 'el encargado ya no ve el informe');
+ok(puede(ROL.gerente, 'informe') && puede(ROL.gerente, 'boleta') && !puede(ROL.gerente, 'pagar'),
+   'el gerente ve el informe y marca la boleta, pero no registra pagos');
+ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encargado, 'boleta'),
+   'quien paga hace todo; el encargado no marca boletas');
 
 
 /* ---------- el rol de vendedor (2026-11-05) ---------- */

@@ -35,6 +35,7 @@ export const PALABRAS: Record<Accion, string> = {
   rectificar: 'Rectificar una reserva el día del servicio (personas, menús, descuento)',
   aprobar: 'Aprobar descuentos sobre el estándar',
   cupo: 'Subir el cupo de un día y aprobar los pedidos de más cupo',
+  boleta: 'Marcar en el informe que llegó la boleta',
   configurar: 'Cambiar precios, productos y Configuración',
   bitacora: 'Ver la bitácora de quién hizo qué',
   usuarios: 'Crear cuentas y cambiar roles',

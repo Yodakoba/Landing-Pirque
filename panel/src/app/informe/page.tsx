@@ -19,9 +19,9 @@ export default async function Pagina() {
       <div className="rounded border border-hueso/20 bg-panel p-4">
         <p className="font-semibold text-hueso/85">Esta parte no es tuya.</p>
         <p className="mt-1 text-sm text-hueso/70">
-          El informe del equipo lo ven el administrador, el encargado y quien
-          hace los pagos. Los montos de un día se ven al abrir ese día en
-          Turnos.
+          El informe del equipo lo ven quien hace los pagos, el gerente de
+          operaciones y el administrador. Los montos de un día se ven al abrir
+          ese día en Turnos.
         </p>
       </div>
     );

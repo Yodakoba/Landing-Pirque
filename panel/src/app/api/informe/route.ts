@@ -50,16 +50,23 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
       leerTurnos(), leerExtras(), leerTrabajadores(), leerColaboradores(),
       leerPagosEquipo(), leerBoletas()
     ]);
+    const { rol } = await quienEs(req);
+    const puedePagar = puede(rol, 'pagar');
+    // **Los datos de la transferencia, solo a quien paga** (2026-11-12): el
+    // gerente ve el informe pero no copia cuentas. Se recortan acá, no en
+    // la pantalla, para que tampoco salgan en la planilla que se descarga.
     const cuentas: Record<string, Banco> = {};
-    for (const p of [...gente, ...colaboradores]) {
-      cuentas[normalizar(p.nombre)] = p.banco;
+    if (puedePagar) {
+      for (const p of [...gente, ...colaboradores]) {
+        cuentas[normalizar(p.nombre)] = p.banco;
+      }
     }
     // Si esta cuenta puede registrar pagos. Se resuelve en el servidor y
     // no en la pantalla: el botón se esconde por comodidad, pero lo que de
     // verdad cierra la puerta es el `exigir('pagar')` del POST.
     return NextResponse.json({
-      turnos, extras, cuentas, pagos, boletas,
-      puedePagar: puede((await quienEs(req)).rol, 'pagar')
+      turnos, extras, cuentas, pagos, boletas, puedePagar,
+      puedeBoleta: puede(rol, 'boleta')
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
