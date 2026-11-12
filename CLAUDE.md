@@ -1262,6 +1262,16 @@ avisarle al cliente.
     escrito (`mensajeCaida()`, un solo lugar para cambiarlo). El vendedor
     suelta solo las suyas. **Una de una cotización no se suelta**: se
     cancela desde la cotización, que calcula la devolución.
+- **El vendedor no decide: avisa** (2026-11-12, lo pidió el cliente). Sin
+  el permiso `dias` no ve *Ampliar el cupo*; en su lugar, un recuadro
+  *🙋 Esto lo decide la administración* con tres pasos —avísale, espera su
+  respuesta, si te piden soltar una tuya suéltala— y **📋 Copiar el aviso**,
+  un texto listo para WhatsApp con el día, el exceso y sus reservas en
+  riesgo (`avisoParaAdministracion()`). **Antes de soltar, la ventana le
+  pregunta** *✋ ¿La administración te dijo que la sueltes?*: el botón
+  *Sí, soltar* queda apagado hasta que conteste que sí, y *Todavía no*
+  copia el aviso. **Mías / Todas** filtra la lista; aparece solo cuando hay
+  reservas que la cuenta no puede tocar, y el vendedor parte en *Mías*.
 - **La columna `Se cayó por cupo`, y por qué no es un estado del pago.** El
   estado lo reescribe la sincronización con Shopify en cada pasada: una
   reserva de Shopify marcada cancelada en el panel volvería a *por pagar* y
