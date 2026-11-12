@@ -769,6 +769,13 @@ export default function InformeEquipo() {
   const [abierta, setAbierta] = useState<string | null>(null);
   /** El filtro de arriba de la lista: todos, o solo a quien le falta pago. */
   const [soloPorPagar, setSoloPorPagar] = useState(false);
+  /**
+   * **Qué sección se ve** (2026-11-12, lo pidió el cliente: *"tres botones
+   * grandes para filtrar qué estoy viendo: trabajadores, extras o
+   * vendedores"*). Vacío es las tres. Se suma al filtro de *Por pagar* y al
+   * buscador; los totales de abajo siguen siendo los del periodo entero.
+   */
+  const [seccion, setSeccion] = useState<'' | 'equipo' | 'extras' | 'vendedores'>('');
   /** Lo escrito en el buscador de nombre. */
   const [busca, setBusca] = useState('');
   // Qué "todos pagados" se está confirmando.
@@ -893,14 +900,17 @@ export default function InformeEquipo() {
     pagoDeFila(nombre, tot, prop).falta > 0;
   const seVe = (nombre: string, tot: number, prop: number) =>
     (!q || llano(nombre).includes(q)) && (!soloPorPagar || sePorPagar(nombre, tot, prop));
-  const visiblesEquipo = lineas.filter((l) => seVe(l.trabajador, l.total, l.propina));
-  const visiblesExtras = lineasExtras.filter((l) => seVe(l.colaborador, l.total, 0));
-  const visiblesVendedores = lineasVendedores.filter((l) => seVe(l.nombre, l.total, 0));
-  const cuantosTodos = lineas.length + lineasExtras.length + lineasVendedores.length;
+  const visiblesEquipo = seccion && seccion !== 'equipo' ? [] : lineas.filter((l) => seVe(l.trabajador, l.total, l.propina));
+  const visiblesExtras = seccion && seccion !== 'extras' ? [] : lineasExtras.filter((l) => seVe(l.colaborador, l.total, 0));
+  const visiblesVendedores = seccion && seccion !== 'vendedores' ? [] : lineasVendedores.filter((l) => seVe(l.nombre, l.total, 0));
+  // Los contadores de *Todos / Por pagar* cuentan la sección que se ve.
+  const en = (x: 'equipo' | 'extras' | 'vendedores') => !seccion || seccion === x;
+  const cuantosTodos = (en('equipo') ? lineas.length : 0) + (en('extras') ? lineasExtras.length : 0)
+    + (en('vendedores') ? lineasVendedores.length : 0);
   const cuantosPorPagar =
-    lineas.filter((l) => sePorPagar(l.trabajador, l.total, l.propina)).length
-    + lineasExtras.filter((l) => sePorPagar(l.colaborador, l.total, 0)).length
-    + lineasVendedores.filter((l) => sePorPagar(l.nombre, l.total, 0)).length;
+    (en('equipo') ? lineas.filter((l) => sePorPagar(l.trabajador, l.total, l.propina)).length : 0)
+    + (en('extras') ? lineasExtras.filter((l) => sePorPagar(l.colaborador, l.total, 0)).length : 0)
+    + (en('vendedores') ? lineasVendedores.filter((l) => sePorPagar(l.nombre, l.total, 0)).length : 0);
 
   const sumaDe = (nombres: { nombre: string; tot: number; prop: number }[]) =>
     nombres.reduce((s, x) => {
@@ -1534,6 +1544,41 @@ export default function InformeEquipo() {
             </p>
           )}
 
+          {/* **Las tres secciones, tres botones grandes** (2026-11-12): cada
+              uno dice cuántos son y cuánto hay que transferirles. Apretar el
+              elegido vuelve a mostrar las tres. Vendedores aparece solo para
+              quien los ve. */}
+          <div role="group" aria-label="Qué sección ver"
+            className={`mb-3 grid grid-cols-1 gap-2 ${vendedores.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+            {([
+              { id: 'equipo', icono: '🧑‍🍳', nombre: 'Trabajadores', n: lineas.length, suma: sumaEquipo },
+              { id: 'extras', icono: '🐴', nombre: 'Extras', n: lineasExtras.length, suma: sumaExtras },
+              ...(vendedores.length > 0
+                ? [{ id: 'vendedores', icono: '💼', nombre: 'Vendedores', n: lineasVendedores.length, suma: sumaVendedores }] : [])
+            ] as const).map((x) => {
+              const elegida = seccion === x.id;
+              return (
+                <button key={x.id} type="button" aria-pressed={elegida}
+                  onClick={() => { setSeccion(elegida ? '' : x.id as 'equipo' | 'extras' | 'vendedores'); setAbierta(null); }}
+                  className={`tecla flex min-h-[64px] flex-col items-start justify-center rounded-xl border-2 px-4 py-2
+                              text-left ${elegida ? 'border-oro bg-oro/15' : seccion ? 'border-hueso/15 opacity-70 hover:opacity-100'
+                              : 'border-hueso/25 hover:border-oro/60'}`}>
+                  <span className="text-[17px] font-bold">{elegida ? '✓ ' : ''}<span aria-hidden>{x.icono}</span> {x.nombre}</span>
+                  <span className="text-[14px] text-hueso/75">
+                    {x.n} {x.n === 1 ? 'persona' : 'personas'} · {enPesos(x.suma.aTransferir)}
+                    {x.suma.falta > 0 && <> · <b className="text-ambar-texto">falta {enPesos(x.suma.falta)}</b></>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {seccion && (
+            <p className="mb-3 text-[14px] text-hueso/75">
+              Viendo solo {seccion === 'equipo' ? 'trabajadores' : seccion}.{' '}
+              <button type="button" className="boton min-h-[36px] align-middle" onClick={() => setSeccion('')}>Ver las tres</button>
+            </p>
+          )}
+
           {/* **El filtro, justo arriba de la lista.** Dos botones —*Todos* y
               *Por pagar*, con cuántos hay en cada uno— y el buscador de nombre.
               Filtran las dos listas, equipo y actividades extras; los totales
@@ -1567,13 +1612,13 @@ export default function InformeEquipo() {
             </p>
           )}
 
-          {(visiblesEquipo.length > 0 || (!q && !soloPorPagar)) && (
+          {(visiblesEquipo.length > 0 || (!q && !soloPorPagar && (!seccion || seccion === 'equipo'))) && (
           <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
             Equipo del restaurante
           </h2>
           )}
-          {lineas.length === 0 ? (
-            <p className="mb-8 text-sm text-hueso/60">Sin turnos anotados en este periodo.</p>
+          {lineas.length === 0 && (!seccion || seccion === 'equipo') ? (
+            <p className="mb-8 text-[14px] text-hueso/60">Sin turnos anotados en este periodo.</p>
           ) : visiblesEquipo.length === 0 ? null : (
             <>
               <ul className="space-y-2">

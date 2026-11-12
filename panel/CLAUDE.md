@@ -1797,6 +1797,14 @@ transferir y *ver cada venta →* a `/vendedores`.
   el sueldo fijo, con el pago solo en la primera fila.
 - **`desglosePago()` cuenta la Comisión como la parte que no es propina**,
   igual que el sueldo y el servicio.
+- **Tres botones grandes arriba de las listas** (2026-11-12, lo pidió el
+  cliente: *"tres botones grandes para filtrar qué estoy viendo:
+  trabajadores, extras o vendedores"*): cada uno con cuántas personas, cuánto
+  hay que transferirles y lo que falta. Apretar uno deja solo esa sección;
+  apretarlo de nuevo —o *Ver las tres*— vuelve a todas. Se suma a *Todos /
+  Por pagar* y al buscador, cuyos contadores cuentan la sección que se ve;
+  los totales de abajo siguen siendo los del periodo entero. *Vendedores*
+  aparece solo para quien los ve.
 - **El encargado de operaciones no los ve en el informe**: el permiso es
   `vendedores` (quien paga y más arriba, lo dijo el cliente). `/api/informe`
   ni siquiera le manda las ventas.
