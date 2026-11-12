@@ -52,8 +52,8 @@ import {
   ESTADO_PRESUPUESTO
 } from './presupuestos.ts';
 import { conCliente } from './cotizar.ts';
-import { HOJA_VENDEDORES, ENCABEZADO_VENDEDORES, leerVendedoresDe, filaVendedor,
-         type FichaVendedor } from './vendedores.ts';
+import { HOJA_VENDEDORES, ENCABEZADO_VENDEDORES, leerVendedoresDe, filaVendedor, fichaDe, baseDeVenta,
+         comisionDe, marcaComision, pagadaEl, type FichaVendedor } from './vendedores.ts';
 import { HOJA_COBROS, ENCABEZADO_COBROS, leerCobrosDe, filaCobro, cobrosDe, estadoCobros,
          type Cobro } from './cobros.ts';
 import { liberaCupo, pagoPorCobros } from './pagos.ts';
@@ -761,6 +761,33 @@ export async function guardarVendedor(f: FichaVendedor): Promise<void> {
   const ya = leerVendedoresDe(filas).find((v) => normalizar(v.usuario) === normalizar(f.usuario));
   if (ya) await escribirFila(HOJA_VENDEDORES, ya.fila, filaVendedor(f, enc));
   else await agregarFila(HOJA_VENDEDORES, filaVendedor(f, enc));
+}
+
+/**
+ * **Congela la comisión del vendedor** cuando el cliente terminó de pagar
+ * (2026-11-12, modelo A): la escribe en `Comisión vendedor` con cómo se
+ * calculó, y desde ahí no se recalcula aunque cambie la ficha o un producto.
+ * Se llama después de anotar un cobro y al ganar.
+ *
+ * **Nunca lanza**: lo que la llama ya guardó un cobro o una reserva, y un
+ * error acá haría reintentar —y duplicar— lo que sí quedó. Mientras no se
+ * congele, la comisión se calcula igual al leer.
+ */
+export async function congelarComision(idPresupuesto: string): Promise<void> {
+  try {
+    const [presupuestos, lineas, cobros, usuarios, fichas, menus] = await Promise.all([
+      leerPresupuestos(), leerLineasPresupuesto(), leerCobros(), leerUsuarios(), leerVendedores(), leerMenus()
+    ]);
+    const p = presupuestos.find((x) => x.id === idPresupuesto);
+    if (!p || !p.idReserva || p.comisionVendedor) return;
+    const u = usuarios.find((x) => x.rol === 'vendedor' && normalizar(x.usuario) === normalizar(p.creadoPor));
+    if (!u) return;
+    const b = baseDeVenta(p, lineas, menus);
+    if (!pagadaEl(b.total, cobrosDe(cobros, p.id))) return;
+    const c = comisionDe(fichaDe(fichas, u.usuario, u.nombre), b);
+    const { fila: _f, ...resto } = p;
+    await guardarPresupuesto({ ...resto, comisionVendedor: marcaComision(c) });
+  } catch { /* se calcula al leer; se congela en el próximo cobro */ }
 }
 
 /* ---------- Presupuestos ---------- */

@@ -1745,6 +1745,40 @@ gerencia y el administrador eligen a cualquiera con un botón por vendedor.
 **Editar la ficha pide además `pagar`.** La cuenta bancaria la ven quien
 paga y el propio vendedor.
 
+### La comisión por etapas y el bono premium (modelo A, 2026-11-12)
+
+Lo pidió el cliente: *"orientarse a la base del socio comercial… con un
+extra bonus en escala a lo más valioso de los productos… una fórmula
+simple"*. De tres modelos propuestos eligió este:
+
+> **comisión = % de la etapa × total del evento + puntos de bono × líneas
+> de productos con *Bono vendedor* + monto por evento**
+
+- **Tres etapas por personas del evento**, como los socios comerciales: la
+  1 desde la primera persona (es el viejo *Comisión %*), la 2 y la 3 desde
+  donde diga la ficha —55 y 77 de partida, los cortes de los socios
+  (`CORTES_SOCIOS`)—. Rige la más alta que alcance y tenga % puesto
+  (`etapaDe()`). Columnas nuevas en `Vendedores`: `Etapa 2 desde`, `Etapa 2 %`,
+  `Etapa 3 desde`, `Etapa 3 %`, `Bono premium (puntos)`.
+- **El bono premium**: los puntos de la ficha suman **solo sobre las líneas
+  de los productos marcados *★ Bono vendedor*** —un interruptor nuevo en
+  *Productos*, columna `Bono vendedor` de `Menús`; el cliente dijo que solo
+  los dos de arriba, A Brasas y Sommelier—. Es el empuje: vender el menú
+  caro paga más total y además el bono.
+- **Va en %, así que un descuento le baja la comisión**: lo cuida de
+  regalar precio. Las personas son las de las líneas de menú; sin líneas,
+  los invitados (`baseDeVenta()`).
+- **Se congela cuando el cliente termina de pagar** (`congelarComision()`):
+  queda en la columna `Comisión vendedor` de la cotización, con cómo se
+  calculó, y desde ahí no cambia aunque se edite la ficha o un producto.
+  Se llama al anotar un cobro y al ganar; **nunca lanza**, para no hacer
+  repetir un cobro que ya quedó. Una alternativa nace sin ella.
+- **Cada venta dice cómo se calculó**: *"60 personas → etapa 2, 3% =
+  $171.000 + bono Sommelier 2% = $114.000"*, en *Mi resumen* (con *fija*
+  si ya se congeló), en lo que viene y en las planillas del informe.
+- **Lecturas**: anotar un cobro precarga ahora cuentas, fichas y productos
+  con la cotización, así que congelar no cuesta una lectura más.
+
 ### Los vendedores en el informe (segunda entrega, 2026-11-12)
 
 Quien paga, la gerencia y el administrador ven en `/informe` un bloque

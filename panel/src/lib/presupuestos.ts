@@ -186,7 +186,9 @@ export const COL_PRESUPUESTOS = {
    */
   exclusivo: 'Exclusivo',
   exclusividad: 'Exclusividad',
-  diaPausado: 'Día pausado'
+  diaPausado: 'Día pausado',
+  /** La comisión del vendedor, congelada cuando el cliente terminó de pagar (`lib/vendedores.ts`). */
+  comisionVendedor: 'Comisión vendedor'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -343,6 +345,8 @@ export interface Presupuesto {
   exclusivo?: string;
   exclusividad?: string;
   diaPausado?: string;
+  /** La comisión congelada del vendedor: *"285000 · cómo se calculó"*. */
+  comisionVendedor?: string;
   /** Días antes del evento para el saldo, o `null` si rige Configuración. */
   saldoDias: number | null;
   /** El valor de la UF fijado en esta cotización, o 0 si no tiene. */
@@ -938,6 +942,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       exclusivo: en(f, i.exclusivo).trim().toLowerCase().replace(/^si$/, 'sí'),
       exclusividad: en(f, i.exclusividad).trim(),
       diaPausado: en(f, i.diaPausado).trim(),
+      comisionVendedor: en(f, i.comisionVendedor).trim(),
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       uf: aPrecio(en(f, i.uf)),
       fechaUF: en(f, i.fechaUF).slice(0, 10),
@@ -1009,6 +1014,7 @@ export function filaPresupuesto(
   poner(i.exclusivo, p.exclusivo ?? '');
   poner(i.exclusividad, p.exclusividad ?? '');
   poner(i.diaPausado, p.diaPausado ?? '');
+  poner(i.comisionVendedor, p.comisionVendedor ?? '');
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   poner(i.uf, p.uf ? String(p.uf) : '');
   poner(i.fechaUF, p.uf ? p.fechaUF : '');

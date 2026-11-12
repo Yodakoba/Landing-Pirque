@@ -43,7 +43,10 @@ export const COL_MENUS = {
   iva: 'IVA',
   moneda: 'Moneda',
   // 2026-11-10. En blanco es sí: los productos de antes siguen activos.
-  activo: 'Activo'
+  activo: 'Activo',
+  // 2026-11-12. Los que suman el bono del vendedor (`lib/vendedores.ts`).
+  // En blanco es no.
+  bonoVendedor: 'Bono vendedor'
 } as const;
 
 /**
@@ -116,6 +119,13 @@ export interface Menu {
    * personas pasarían a cero al editarla.
    */
   activo: boolean;
+  /**
+   * **Si suma el bono del vendedor** (2026-11-12, lo pidió el cliente: los
+   * menús más valiosos —A Brasas y Sommelier— empujan la venta). Las líneas
+   * de estos productos ganan los puntos de bono de la ficha del vendedor,
+   * encima del % de su etapa. Ver `comisionDe()`.
+   */
+  bonoVendedor: boolean;
 }
 
 /**
@@ -132,7 +142,7 @@ export function nuevoProducto(p: Partial<Menu> & { nombre: string }): Menu {
     nombre, precioEnLinea: 0, precioEnLocal: 0,
     tipo: TIPO_PRODUCTO.menu, sitioPublico: true, cotizacion: false,
     cobro: COBRO.porPersona, precioCotizacion: 0,
-    iva: IVA_PRECIO.incluido, moneda: MONEDA.pesos, activo: true,
+    iva: IVA_PRECIO.incluido, moneda: MONEDA.pesos, activo: true, bonoVendedor: false,
     ...resto
   };
 }
@@ -225,7 +235,8 @@ export function leerMenusDe(filas: string[][]): Menu[] {
       precioCotizacion: aPrecio(f[7]),
       iva: unoDe(f[8], Object.values(IVA_PRECIO), base.iva),
       moneda: unoDe(f[9], Object.values(MONEDA), base.moneda),
-      activo: blanco(10) ? base.activo : esSiCelda(f[10])
+      activo: blanco(10) ? base.activo : esSiCelda(f[10]),
+      bonoVendedor: blanco(11) ? base.bonoVendedor : esSiCelda(f[11])
     });
   }
   return salida;
@@ -242,7 +253,7 @@ export function aFilasMenus(menus: Menu[]): string[][] {
     ...menus.map((m) => [
       m.nombre, monto(m.precioEnLinea), monto(m.precioEnLocal),
       m.tipo, siNo(m.sitioPublico), siNo(m.cotizacion), m.cobro,
-      monto(m.precioCotizacion), m.iva, m.moneda, siNo(m.activo)
+      monto(m.precioCotizacion), m.iva, m.moneda, siNo(m.activo), m.bonoVendedor ? 'sí' : ''
     ])
   ];
 }
@@ -374,6 +385,7 @@ export function limpiarProducto(m: Partial<Record<keyof Menu, unknown>>): Menu {
     precioCotizacion: aPrecio(m?.precioCotizacion),
     iva: unoDe(m?.iva, Object.values(IVA_PRECIO), base.iva),
     moneda: unoDe(m?.moneda, Object.values(MONEDA), base.moneda),
-    activo: typeof m?.activo === 'boolean' ? m.activo : base.activo
+    activo: typeof m?.activo === 'boolean' ? m.activo : base.activo,
+    bonoVendedor: typeof m?.bonoVendedor === 'boolean' ? m.bonoVendedor : base.bonoVendedor
   };
 }

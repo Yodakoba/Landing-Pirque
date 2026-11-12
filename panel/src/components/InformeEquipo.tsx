@@ -1258,7 +1258,7 @@ export default function InformeEquipo() {
       lineasVendedores.flatMap((l) => {
         const partes: { fecha: string; que: string; modalidad: string; monto: number; motivo: string }[] = [
           ...l.ventas.map((v) => ({ fecha: v.pagadaEl, que: `Venta: ${v.cliente} (Cotización N° ${v.folio})`,
-            modalidad: 'Comisión', monto: v.comision, motivo: `pagó todo ${v.pagadaEl}` })),
+            modalidad: 'Comisión', monto: v.comision, motivo: [v.detalle, `pagó todo ${v.pagadaEl}`].filter(Boolean).join(' · ') })),
           ...(l.sueldoFijo ? [{ fecha: hasta, que: 'Sueldo fijo', modalidad: 'Fijo', monto: l.sueldoFijo,
             motivo: `${l.mesesFijo} ${l.mesesFijo === 1 ? 'mes' : 'meses'}` }] : [])
         ];
