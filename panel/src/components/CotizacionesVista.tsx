@@ -181,9 +181,12 @@ export default function CotizacionesVista() {
     const p = id ? datos.presupuestos.find((x) => x.id === id) : undefined;
     // `?cliente=<id>`: cotizarle a un cliente desde su ficha.
     const cliente = q.get('cliente');
+    // `?cotizar=<fecha>`: cotizar ese día, desde la página del día (2026-11-12).
+    const cotizar = q.get('cotizar') ?? '';
     if (p) setAbierta({ p });
     else if (cliente) setAbierta({ p: null, cliente });
-    if (p || cliente) window.history.replaceState(null, '', '/presupuestos');
+    else if (esFecha(cotizar)) setAbierta({ p: null, fecha: cotizar });
+    if (p || cliente || esFecha(cotizar)) window.history.replaceState(null, '', '/presupuestos');
   }, [datos]);
 
   const porDia = useMemo(() => {

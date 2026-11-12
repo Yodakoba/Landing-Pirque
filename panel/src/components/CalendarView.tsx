@@ -336,11 +336,22 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
           primero. Una reserva que llega por teléfono se anota sin saber
           todavía de qué día es: la fecha se elige en el formulario. */}
       <div className="mb-6 flex flex-wrap gap-3">
-        {puede(rol as Rol, 'reservas') && (
+        {puede(rol as Rol, 'anotar') ? (
           <button onClick={() => setCreando(true)}
             className="boton boton-relleno min-h-[48px] text-[15px]">
             Agregar reserva
           </button>
+        ) : puede(rol as Rol, 'presupuestos') && (
+          // **El vendedor no anota directo** (2026-11-12, lo pidió el
+          // cliente): su reserva pasa por Cotizaciones y nace al ganarla.
+          <span className="flex flex-wrap items-center gap-3">
+            <a href="/presupuestos" className="tecla boton boton-relleno min-h-[48px] text-[15px]">
+              + Cotizar una reserva
+            </a>
+            <span className="text-[14px] text-hueso/75">
+              Tus reservas nacen de una cotización ganada.
+            </span>
+          </span>
         )}
         {conDias && (
           <button onClick={() => setAgregandoFecha(true)}

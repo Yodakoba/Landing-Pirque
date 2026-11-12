@@ -160,6 +160,8 @@ export default function DayView(
   // Anotar, editar y borrar reservas. Con vista gerencia, un rol sin
   // `reservas` mira el día sin esos botones.
   const conReservas = puede(rol as Rol, 'reservas');
+  // Anotar una nueva: el vendedor no, va por Cotizaciones (2026-11-12).
+  const conAnotar = puede(rol as Rol, 'anotar');
   // Llevar el día —pedir cupo, soltar, avisar—, no editar la fecha (2026-11-12).
   const conDias = puede(rol as Rol, 'operarDia');
   const [todas, setTodas] = useState<Reserva[] | null>(null);
@@ -747,7 +749,7 @@ export default function DayView(
           suyo es gente que viene y que el panel todavía no cuenta, y el
           botón lo pasa a reserva. Ver `EventosCRM.tsx`. */}
       <BloqueCRM e={delSocio}
-                 onAnotar={conReservas ? (ev) => { setEditando(null); setCreando(false);
+                 onAnotar={conAnotar ? (ev) => { setEditando(null); setCreando(false);
                                      setAnotandoCRM(ev); } : undefined} />
 
       {/* **Lo cotizado para este día, en su propio bloque y en rosado**
@@ -912,12 +914,17 @@ export default function DayView(
         </button>
         <span className="flex-1" />
         <button onClick={exportar} className="boton">Exportar CSV</button>
-        {conReservas && (
+        {conAnotar ? (
           <button onClick={() => { setEditando(null); setCreando(true); }}
             disabled={diaCerrado && !puedeCorregir}
             className="boton boton-relleno">
             Agregar reserva
           </button>
+        ) : conReservas && conPresupuestos && (
+          // El vendedor cotiza este día; la reserva nace al ganarla.
+          <a href={`/presupuestos?cotizar=${fecha}`} className="tecla boton boton-relleno">
+            + Cotizar este día
+          </a>
         )}
       </div>
 

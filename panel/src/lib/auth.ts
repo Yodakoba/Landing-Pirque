@@ -220,6 +220,14 @@ export const PERMISOS = {
    */
   reservas: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
   /**
+   * **Anotar una reserva nueva directo en el calendario** (2026-11-12).
+   * **El vendedor no lo tiene** (lo pidió el cliente): una reserva suya
+   * pasa por Cotizaciones —cómo se paga, el anticipo, el contrato o sin
+   * contrato—, y al ganarla nace la reserva. Las que ya son suyas las
+   * sigue editando con `reservas`.
+   */
+  anotar: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia],
+  /**
    * Agregar, abrir, cerrar y editar días del calendario.
    *
    * **El encargado de turno dejó de tenerlo el 2026-11-12** (lo pidió el

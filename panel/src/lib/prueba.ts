@@ -4658,6 +4658,9 @@ console.log('\nEl cupo al ganar una cotización');
 console.log('\nEl rol de anfitrión');
 ok((Object.keys(PERMISOS) as Accion[]).filter((x) => puede(ROL.anfitrion, x)).join() === 'asistencia',
    'la anfitriona tiene un solo permiso: marcar la asistencia');
+ok(puede(ROL.vendedor, 'reservas') && !puede(ROL.vendedor, 'anotar') && puede(ROL.vendedor, 'presupuestos')
+   && puede(ROL.encargado, 'anotar'),
+   'el vendedor edita sus reservas pero no anota una directo: va por Cotizaciones (2026-11-12)');
 ok(!puede(ROL.anfitrion, 'ver') && !puede(ROL.anfitrion, 'reservas'),
    'no ve el calendario ni edita reservas');
 ok(!puede(ROL.vendedor, 'asistencia'), 'el vendedor no marca asistencia: marcar no es vender');
