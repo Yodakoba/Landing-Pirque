@@ -333,11 +333,14 @@ export const PERMISOS = {
   informe: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**
    * **Decidir si se libera un día para un evento exclusivo** (2026-11-12, lo
-   * decidió el cliente): el encargado de pagos, la gerencia general y el
-   * administrador. Incluye *dejar de vender el día* mientras se decide. El
-   * encargado de operaciones no decide: avisa. Ver `lib/exclusivo.ts`.
+   * decidió el cliente): el encargado de operaciones, el de pagos, la
+   * gerencia general y el administrador. Incluye *dejar de vender el día*
+   * mientras se decide, y cancelar o cambiar de fecha las reservas al
+   * liberarlo. **El de operaciones entró el mismo día** (lo corrigió el
+   * cliente: *"lo aclaraste con la gerencia en algún momento puede ser, pero
+   * él al final lo tiene que gestionar"*). Ver `lib/exclusivo.ts`.
    */
-  exclusividad: [ROL.admin, ROL.gerencia, ROL.pagos],
+  exclusividad: [ROL.admin, ROL.operaciones, ROL.gerencia, ROL.pagos],
   /** Marcar que llegó la boleta de alguien en el informe (2026-11-12). */
   boleta: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**

@@ -547,7 +547,7 @@ export default function DayView(
             {!aprobada && pedida && (
               <p className="mb-4 rounded-xl border-2 border-dashed border-morado-fuerte/60 bg-morado/[0.06] px-3 py-2 text-[15px]">
                 🟣 <b>{exclusividadDe(pedida.exclusividad).quien}</b> pidió liberar este día para un evento exclusivo
-                ({pedida.cliente || 'sin nombre'}). Espera la decisión del encargado de pagos o la gerencia.
+                ({pedida.cliente || 'sin nombre'}). Espera la decisión del encargado de operaciones, el de pagos o la gerencia.
               </p>
             )}
             <BloqueLiberar fecha={fecha} reservas={delDia} cotizacion={aprobada} deCotizacion={deCotizacionIds}

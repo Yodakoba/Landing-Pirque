@@ -2276,6 +2276,9 @@ ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encarga
      'cuenta las reservas que ocupan lugar ese día, sin las canceladas, y el plazo');
 
   // Liberar el día, reserva por reserva (segunda entrega).
+  ok(puede(ROL.operaciones, 'exclusividad') && puede(ROL.pagos, 'exclusividad') && puede(ROL.gerencia, 'exclusividad')
+     && !puede(ROL.encargado, 'exclusividad') && !puede(ROL.vendedor, 'exclusividad'),
+     'deciden el encargado de operaciones, el de pagos y la gerencia; el de turno y el vendedor piden');
   const lb = liberacionDe(marcaLiberacion('reagendada', 'Felipe', '2026-11-12 10:05', 'al 2026-11-28'));
   ok(lb.estado === 'reagendada' && lb.quien === 'Felipe' && lb.nota === 'al 2026-11-28'
      && liberacionDe('').estado === '' && liberacionDe('Otra cosa · x').estado === '',
