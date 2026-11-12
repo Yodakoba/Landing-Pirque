@@ -25,6 +25,8 @@ import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import PastillaPago from './PastillaPago';
 import RectificarReserva from './RectificarReserva';
+import BandejaAprobaciones from './BandejaAprobaciones';
+import { pendientesDeAprobar } from '@/lib/aprobaciones';
 import { avisar } from './AvisoFlotante';
 import { estaRectificada, personasEfectivas, menuEfectivo, porAprobar, rechazado,
          resumenRectificacion } from '@/lib/rectificacion';
@@ -853,21 +855,13 @@ export default function DayView(
         </p>
       )}
 
-      {/* **Descuentos por aprobar** (2026-11-12): para quien puede aprobarlos,
-          arriba de la lista. Cada uno abre su reserva. */}
-      {puedeAprobarDescuentos && porAprobarHoy.length > 0 && (
-        <div className="mt-6 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3">
-          <p className="text-[16px] font-bold text-ambar-texto">
-            ⏳ {porAprobarHoy.length === 1 ? 'Un descuento por aprobar' : `${porAprobarHoy.length} descuentos por aprobar`}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {porAprobarHoy.map((r) => (
-              <button key={r.fila} type="button" className="boton min-h-[44px]"
-                onClick={() => { setFiltro('todas'); setSoloMias(false); setReservaAbierta(r.id); }}>
-                {r.nombre || 'sin nombre'} · {r.descuento}% →
-              </button>
-            ))}
-          </div>
+      {/* **La bandeja de aprobaciones** (2026-11-12), la misma de la portada,
+          con lo de este día: se aprueba ahí mismo. */}
+      {puedeAprobarDescuentos && (
+        <div className="mt-6">
+          <BandejaAprobaciones pendientes={pendientesDeAprobar(porAprobarHoy)} onCambio={() => void cargar()}
+            verReserva={(p) => { setFiltro('todas'); setSoloMias(false);
+              const r = porAprobarHoy.find((x) => x.fila === p.fila); if (r) setReservaAbierta(r.id); }} />
         </div>
       )}
 

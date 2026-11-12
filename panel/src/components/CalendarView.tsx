@@ -28,8 +28,8 @@ import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from
 import { copiarConAviso } from './AvisoFlotante';
 import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
-import { estaRectificada, porAprobar } from '@/lib/rectificacion';
-import { ocupaLugar } from '@/lib/ocupacion';
+import { pendientesDeAprobar } from '@/lib/aprobaciones';
+import BandejaAprobaciones from './BandejaAprobaciones';
 import { usarAlDia, BarraAlDia, horaDe } from './AlDia';
 import { diferencias, MARCA_DURA } from '@/lib/cambios';
 
@@ -247,17 +247,13 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     [dias, reservas, rol, usuario]);
 
   /**
-   * **Descuentos por aprobar** (2026-11-12): para el gerente, quien paga y el
-   * administrador, arriba de la portada. Cada uno lleva a su día.
+   * **La bandeja de aprobaciones** (2026-11-12): lo que el gerente, quien
+   * paga o el administrador tienen que aprobar, arriba de todo. Sale de las
+   * reservas ya cargadas: no cuesta una lectura más.
    */
-  const porAprobarDias = useMemo(() => {
-    if (!puede(rol as Rol, 'aprobar')) return [];
-    const m = new Map<string, number>();
-    for (const x of reservas) {
-      if (ocupaLugar(x) && estaRectificada(x) && porAprobar(x)) m.set(x.fecha, (m.get(x.fecha) ?? 0) + 1);
-    }
-    return [...m].sort(([a], [b]) => a.localeCompare(b));
-  }, [reservas, rol]);
+  const pendientes = useMemo(
+    () => puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [],
+    [reservas, rol]);
 
   const avisosHoy = useMemo(() => {
     if (!puede(rol as Rol, 'asistencia')) return null;
@@ -300,18 +296,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
       </h1>
       <BarraAlDia {...alDia} />
       <AvisoSobrecupo dias={sobrecupo} />
-      {porAprobarDias.length > 0 && (
-        <div className="mb-4 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3">
-          <p className="text-[16px] font-bold text-ambar-texto">⏳ Descuentos por aprobar</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {porAprobarDias.map(([fecha, n]) => (
-              <a key={fecha} href={`/dia/${fecha}`} className="tecla boton min-h-[44px]">
-                <span className="first-letter:uppercase">{enPalabras(fecha)}</span> · {n} →
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+      <BandejaAprobaciones pendientes={pendientes} onCambio={() => void cargar()} />
       {avisosHoy && (
         <a href={`/dia/${avisosHoy.fecha}`}
           className="tecla mb-4 flex flex-wrap items-center gap-3 rounded-xl border-2 border-ambar/60

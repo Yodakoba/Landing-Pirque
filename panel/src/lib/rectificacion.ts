@@ -204,3 +204,13 @@ export function resumenRectificacion(r: Pick<Reserva, 'personas' | 'menu'> & Rec
   if (d > 0) partes.push(`−${d}%${porAprobar(r) ? ' por aprobar' : rechazado(r) ? ' rechazado' : ''}`);
   return partes.join(' · ') || 'sin cambios de números';
 }
+
+/**
+ * Las partes de la marca de `Rectificación`: *"2026-11-14 14:03 · Carla ·
+ * Llegaron menos · llegaron cuatro de seis"*. El comentario puede traer su
+ * propio `·`, así que todo lo que sigue al motivo es comentario.
+ */
+export function partesRectificacion(marca: string): { cuando: string; quien: string; motivo: string; comentario: string } {
+  const [cuando = '', quien = '', motivo = '', ...resto] = String(marca ?? '').split(' · ').map((s) => s.trim());
+  return { cuando, quien, motivo, comentario: resto.join(' · ') };
+}

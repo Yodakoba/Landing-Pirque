@@ -36,7 +36,9 @@ import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto, puedeVer, NO_SE_LEE_CON_GERENCIA } from './auth.ts';
 import { comoIngresar } from './fudo.ts';
 import { personasEfectivas, menuEfectivo, descuentoVigente, necesitaAprobacion, erroresRectificacion,
-         avisosRectificacion, esCambioGrande, resumenRectificacion, personasDelMenu, POR_APROBAR } from './rectificacion.ts';
+         avisosRectificacion, esCambioGrande, resumenRectificacion, personasDelMenu, POR_APROBAR,
+         partesRectificacion } from './rectificacion.ts';
+import { pendientesDeAprobar } from './aprobaciones.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          faltaParaFactura, type Cliente } from './clientes.ts';
@@ -426,6 +428,24 @@ ok(paraElSitio(ocu)[0].pocos === true,
   ok(esCambioGrande(base, { personas: 12, descuento: 0 }, [5, 10, 15]) && esCambioGrande(base, { personas: 6, descuento: 20 }, [5, 10, 15])
      && !esCambioGrande(base, { personas: 4, descuento: 10 }, [5, 10, 15]), 'cambio grande: más de 5 personas o más del tope');
   ok(resumenRectificacion(rect) === '6 → 4 pers. · menú cambiado · −10%', 'la línea corta de una rectificada');
+
+  // La bandeja de aprobaciones (2026-11-12).
+  const partes = partesRectificacion('2026-11-14 14:03 · Fran · Cortesía · cliente habitual · cumpleaños');
+  ok(partes.quien === 'Fran' && partes.motivo === 'Cortesía' && partes.comentario === 'cliente habitual · cumpleaños',
+     'la marca se parte en cuándo, quién, motivo y comentario, aunque el comentario traiga su propio punto');
+  const pide = (fila: number, fecha: string, extra = {}) =>
+    ({ ...rect, fila, fecha, descuento: 25, aprobacion: POR_APROBAR,
+       rectificacion: '2026-11-14 14:03 · Fran · Cortesía · cliente habitual', ...extra });
+  const bandeja = pendientesDeAprobar([
+    pide(5, '2026-11-15'), pide(6, '2026-11-14'),
+    pide(7, '2026-11-14', { aprobacion: 'Aprobado · Felipe · hoy' }),
+    pide(8, '2026-11-14', { estadoPago: 'cancelled' }),
+    { ...rect, fila: 9 }
+  ] as never);
+  ok(bandeja.length === 2 && bandeja[0].fila === 6 && bandeja[1].fila === 5,
+     'la bandeja trae solo lo por aprobar de reservas vivas, el día más antiguo primero');
+  ok(bandeja[0].pide === 'Fran' && bandeja[0].porcentaje === 25 && bandeja[0].personas === 4,
+     'y dice quién lo pidió, cuánto y para cuánta gente');
 
   // La caja de Fudo usa lo rectificado.
   const carta = [{ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
