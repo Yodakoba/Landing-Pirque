@@ -1454,6 +1454,10 @@ Contrato**, y cada uno de los dos últimos termina en su propio próximo paso.
   En la bitácora, *Marcó ganada* lleva *sin pago ni contrato: sujeta a
   espacio*. **El contrato firmado sin pago respalda el ganar pero no da
   preferencia**: la preferencia sigue siendo de la plata.
+  **Decisión abierta** (2026-11-12): si un contrato firmado sin pago
+  debería darle preferencia a la reserva. Es una decisión comercial que la
+  gerencia todavía tiene que conversar; hasta que la tome, queda como está
+  —sujeta a espacio hasta el primer pago— y no se cambia sin que lo diga.
 - **Los botones de mandar no se repiten**: antes de mandarla —la cotización
   o el contrato— están grandes en el próximo paso; después quedan en la
   sección como *Mandar de nuevo*. Lo mismo el subir firmado.
