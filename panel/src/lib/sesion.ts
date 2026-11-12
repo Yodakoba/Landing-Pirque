@@ -67,7 +67,7 @@ export const DURACION_VER_COMO = 60 * 60;
  * cerrada: un `como` que no esté acá se ignora y la sesión queda como
  * administrador, en vez de quedar con un rol inventado.
  */
-export const ROLES_VER_COMO = ['encargado', 'pagos', 'vendedor', 'anfitrion'] as const;
+export const ROLES_VER_COMO = ['gerente', 'encargado', 'pagos', 'vendedor', 'anfitrion'] as const;
 
 export const COOKIE_SESION = 'sesion';
 

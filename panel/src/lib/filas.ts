@@ -52,6 +52,11 @@ export function filaReserva(
   poner(i.eventoCRM, r.eventoCRM);
   poner(i.anotadaPor, r.anotadaPor);
   poner(i.liberada, r.liberada);
+  poner(i.personasReales, r.personasReales === undefined ? undefined : r.personasReales === null ? '' : r.personasReales);
+  poner(i.menuReal, r.menuReal);
+  poner(i.descuento, r.descuento === undefined ? undefined : r.descuento === null ? '' : r.descuento);
+  poner(i.rectificacion, r.rectificacion);
+  poner(i.aprobacion, r.aprobacion);
   return fila;
 }
 
@@ -171,6 +176,11 @@ export function leerReservasDe(filas: string[][]): Reserva[] {
       eventoCRM: String(en(f, i.eventoCRM)),
       anotadaPor: String(en(f, i.anotadaPor)),
       liberada: String(en(f, i.liberada)),
+      personasReales: String(en(f, i.personasReales)).trim() === '' ? null : num(en(f, i.personasReales)),
+      menuReal: String(en(f, i.menuReal)),
+      descuento: String(en(f, i.descuento)).trim() === '' ? null : num(en(f, i.descuento)),
+      rectificacion: String(en(f, i.rectificacion)),
+      aprobacion: String(en(f, i.aprobacion)),
       fila: n + 1                            // 1-based, y la 1 es el encabezado
     };
     salida.push(reserva);

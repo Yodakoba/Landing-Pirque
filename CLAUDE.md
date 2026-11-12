@@ -5641,6 +5641,74 @@ administrador; abre una ventana con un botón grande por rol y su frase de
 - Con "ver como vendedor", "lo suyo" son las reservas y cotizaciones que
   anotó el propio administrador.
 
+### Rectificar una reserva el día del servicio (2026-11-12)
+
+Lo pidió el cliente: *"puede pasar que una reserva viene con 2 personas
+menos… o 2 personas más… el encargado debería tener la posibilidad de
+rectificar esta reserva para que después cuadre con lo que se ingresa a
+Fudo… que tenga que documentar estos cambios obligatoriamente"*. Lógica en
+`lib/rectificacion.ts` (pura, con pruebas), rutas `/api/reservas/rectificar`
+(POST rectifica, DELETE deshace) y `/api/reservas/aprobar`, ventana
+`RectificarReserva.tsx`.
+
+- **Editar y rectificar son dos cosas.** Editar es cambiar lo pactado, y lo
+  hace quien la anotó. Rectificar es anotar lo que pasó en la mesa —cuántos
+  llegaron, qué menús, un descuento— **desde la apertura del día**
+  (`yaAbrio()`, la misma hora de la recepción) y sobre **cualquier reserva**
+  del día, con el permiso `rectificar` (administrador, gerente, encargado y
+  quien paga). Un día cerrado se rectifica como corrección.
+- **El encargado ya no edita la reserva que anotó otra persona**
+  (`puedeTocarReserva()`): la suya y las sin dueño —Shopify, las de antes—
+  sí. La de otro vendedor la rectifica desde la apertura, y antes la
+  pantalla dice *"Se rectifica desde las 13:00 del día"*.
+- **Se guarda aparte** —`Personas reales`, `Menú real`, `Descuento`,
+  `Rectificación`, `Aprobación`, al final de `Reservas`, se agregan solas—.
+  Shopify (`camposDeShopify()`) y la cotización no las tocan; si pisaran
+  las columnas de la reserva, la rectificación se borraría sola.
+- **Cambia los números del día** (lo decidió el cliente): la ocupación usa
+  `personasEfectivas()` y lo que hay que preparar `menuEfectivo()`, a través
+  de `ocupacionDe()` y `menusDe()`. La reserva original se sigue viendo
+  (*reservó ~~6~~*, *Reservó: 6 × Tradiciones*).
+- **La caja de Fudo usa lo rectificado** (`comoIngresar()`): los menús
+  servidos a precio del local, lo acordado por persona si es de una
+  cotización, el descuento con su monto, y si ya pagó, cuántos cobrar aparte
+  o que lo pagado de más no se devuelve desde acá.
+- **La ventana son cuatro preguntas con botones**: ¿cuántos llegaron? (con
+  *Usar lo de la recepción*), ¿qué se sirvió? (− y + por menú, y una línea
+  verde o ámbar si calzan con las personas), ¿hubo descuento? (los estándar
+  de Configuración u *Otro*), y **¿por qué?** —motivo y un comentario de al
+  menos 10 letras, obligatorios—. Abajo, *Así queda en Fudo*, con la misma
+  función que el servidor. Los avisos: pagó y llegaron menos (no se devuelve
+  desde acá), pagó y llegaron más (cobrarlos aparte), viene de una
+  cotización (el contrato no cambia), se pasa del cupo, descuento por
+  aprobar. **Un cambio grande** —más de 5 personas o un descuento sobre el
+  tope estándar— pide una segunda confirmación.
+- **Los descuentos: el encargado da los estándar** (5, 10, 15 de
+  Configuración); cualquier otro queda **por aprobar** (`aprobar`: gerente,
+  quien paga y administrador). Mientras tanto no cuenta y Fudo dice que no
+  se ingrese. Quien puede aprobar, al rectificar, lo deja aprobado.
+- **Dónde se ve**: en la línea cerrada ✎ (o ⏳ si hay descuento por
+  aprobar); abierta, una tarjeta con qué cambió, quién, cuándo y por qué,
+  *Aprobar N% / Rechazar* para quien aprueba, y *Deshacer la
+  rectificación* (quien la hizo o quien aprueba, con motivo). Arriba de la
+  lista del día y de la portada, *⏳ Descuentos por aprobar* para quien
+  aprueba. Todo queda en la bitácora.
+- **Lo que falta**: listar las rectificadas en la confirmación de cerrar el
+  día, para revisarlas contra Fudo antes de cerrar.
+
+**Y el filtro 👤 Mías** (2026-11-12, lo pidió el cliente) junto a *Todas ·
+Pagadas · Abonadas · Sin pagar*: de un toque, solo las que anotó o vendió
+esta cuenta (`esSuya()` con `Anotada por` y el vendedor de la cotización).
+
+### El gerente de operaciones (2026-11-12)
+
+El administrador del restaurante, sobre el encargado (lo pidió el cliente).
+**Puede todo lo del encargado, más aprobar descuentos (`aprobar`) y
+corregir un día cerrado (`corregir`)**, y edita cualquier reserva. No ve
+sueldos, configuración ni cuentas del panel: eso sigue siendo de quien paga
+y del administrador, que en el panel es la cuenta técnica que puede todo.
+Se elige en *Cuentas* y está en *Ver como…*.
+
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
 Seis roles —el sexto, **anfitrión**, el 2026-11-11: ver "El rol de

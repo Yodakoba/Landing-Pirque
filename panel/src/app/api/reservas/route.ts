@@ -17,6 +17,8 @@ import { ASISTENCIA, ESTADO_PAGO } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
 import { guardaDelDia } from '@/lib/guardaCierre';
 import { firmaDe } from '@/lib/cambios';
+import { yaAbrio } from '@/lib/cierres';
+import { ahoraEnChile } from '@/lib/bitacora';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
@@ -48,8 +50,16 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
     // Los días van en la misma tanda de lecturas: sirven para la firma
     // (ver `lib/cambios.ts`) sin costar una consulta más.
     const fechas = await leerFechas();
+    let apertura = '';
+    let abierto = false;
+    let descuentos: number[] = [];
     if (esFecha(pedido)) {
       const cfg = await leerConfig();
+      // **Desde cuándo se rectifica** (2026-11-12): la hora de apertura del
+      // día y si ya llegó, con la hora de Chile del servidor.
+      apertura = fechas.find((x) => x.fecha === pedido)?.apertura || cfg.horaApertura;
+      abierto = yaAbrio(pedido, apertura, ahoraEnChile());
+      descuentos = cfg.descuentos;
       const f = fechas.find((x) => x.fecha === pedido);
       if (f) {
         const o = ocupacionDe(reservas, f, cfg.cortes);
@@ -60,7 +70,7 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
     }
     return NextResponse.json({
       reservas: reservas.map((r) => ({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) })),
-      menus, dia, capacidadMaxima, firma: firmaDe(reservas, fechas),
+      menus, dia, capacidadMaxima, firma: firmaDe(reservas, fechas), apertura, abierto, descuentos,
       // Qué reservas vienen de una cotización: esas no se sueltan acá, se
       // cancelan desde su cotización.
       deCotizacion: Object.fromEntries(deCot),

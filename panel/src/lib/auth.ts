@@ -66,6 +66,15 @@ export const ROL = {
   /** El día a día: reservas, días, asistencia, equipo. */
   encargado: 'encargado',
   /**
+   * **Gerente de operaciones: el administrador del restaurante**
+   * (2026-11-12, lo pidió el cliente). Está sobre el encargado: puede todo lo
+   * suyo y además **aprueba los descuentos sobre el estándar** y **corrige un
+   * día cerrado**. No ve sueldos, configuración ni cuentas del panel: eso
+   * sigue siendo de quien paga y del administrador, que acá es la cuenta
+   * técnica que puede todo.
+   */
+  gerente: 'gerente',
+  /**
    * Quien hace los pagos: **el encargado, más la plata.**
    *
    * Nació el 2026-10-22 como una cuenta mínima —una sola acción, leer el
@@ -182,7 +191,7 @@ export const PERMISOS = {
    * calendario" y "ve los teléfonos del equipo y lo que cobra cada jinete".
    * Cada una de esas cuatro pide ahora el permiso de su propia pantalla.
    */
-  ver: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
+  ver: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos, ROL.vendedor],
   /**
    * **Marcar si una reserva vino o no** (2026-11-11), y nada más de la
    * reserva. Existe aparte de `reservas` por la anfitriona: ella marca a los
@@ -190,7 +199,7 @@ export const PERMISOS = {
    * deja pasar con este permiso solo un cambio que sea únicamente la
    * asistencia. El vendedor no lo tiene: marcar no es vender.
    */
-  asistencia: [ROL.admin, ROL.encargado, ROL.pagos, ROL.anfitrion],
+  asistencia: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos, ROL.anfitrion],
   /**
    * Anotar, editar y borrar reservas.
    *
@@ -198,11 +207,11 @@ export const PERMISOS = {
    * `puedeTocarReserva()`: el permiso dice que puede anotar y borrar
    * reservas; sobre cuáles es otra pregunta, y se contesta aparte.
    */
-  reservas: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
+  reservas: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos, ROL.vendedor],
   /** Abrir, cerrar y editar días. */
-  dias: [ROL.admin, ROL.encargado, ROL.pagos],
+  dias: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
   /** Asignar turnos y administrar la lista de trabajadores. */
-  equipo: [ROL.admin, ROL.encargado, ROL.pagos],
+  equipo: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
   /**
    * Contratar actividades extras y anotar sus montos.
    *
@@ -211,7 +220,7 @@ export const PERMISOS = {
    * pasar lista. Lo que el encargado no ve son los montos habituales ni las
    * cuentas bancarias de las fichas, que se filtran en la respuesta.
    */
-  extras: [ROL.admin, ROL.encargado, ROL.pagos],
+  extras: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
   /**
    * Ver y editar **los montos habituales y la cuenta bancaria** de una
    * ficha: la modalidad, la jornada, el valor hora, si entra en la propina
@@ -262,7 +271,7 @@ export const PERMISOS = {
    * alguien la vuelva a encender. Lo primero es seguir trabajando; lo
    * segundo es cerrar una puerta del panel.
    */
-  planilla: [ROL.admin, ROL.encargado, ROL.pagos],
+  planilla: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
   /**
    * Crear, editar y mandar presupuestos.
    *
@@ -279,7 +288,7 @@ export const PERMISOS = {
   // **El vendedor cotiza desde el 2026-11-10** (Fase 2 de las cotizaciones):
   // es su trabajo. **Ve todas, edita solo las suyas** —lo decidió el
   // cliente—, igual que con las reservas: ver `puedeTocarPresupuesto()`.
-  presupuestos: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
+  presupuestos: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos, ROL.vendedor],
   /**
    * **Las fichas de clientes** (2026-11-10): verlas, crearlas y editarlas.
    *
@@ -288,7 +297,7 @@ export const PERMISOS = {
    * suyo de oficio: nombres y contactos de quienes cotizan, no plata ni
    * equipo. Borrar una ficha con cotizaciones lo impide la ruta.
    */
-  clientes: [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor],
+  clientes: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos, ROL.vendedor],
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
@@ -311,7 +320,7 @@ export const PERMISOS = {
    * administrador y de quien paga. Al abrir el informe se abren también
    * esos. Es lo que hay que decidir cuando se afine la lista.
    */
-  informe: [ROL.admin, ROL.encargado, ROL.pagos],
+  informe: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
   /**
    * Registrar que a alguien ya se le pagó, entero o en parte.
    *
@@ -337,7 +346,7 @@ export const PERMISOS = {
    * manos sea tocar esta línea. Lo que viene después de cerrar —corregir
    * con motivo— sigue siendo solo de quien paga: ver `corregir`.
    */
-  cerrar: [ROL.admin, ROL.encargado, ROL.pagos],
+  cerrar: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
   /**
    * **Corregir un día ya cerrado**: el equipo, las reservas o las
    * actividades extras de ese día (2026-11-03, lo decidió el cliente).
@@ -348,9 +357,22 @@ export const PERMISOS = {
    * Si el encargado se equivocó, le pide la corrección al administrador o a
    * quien paga. Cada corrección lleva motivo: ver `corregirDiaCerrado()`.
    */
-  corregir: [ROL.admin, ROL.pagos],
+  corregir: [ROL.admin, ROL.gerente, ROL.pagos],
   /** Precios, menús y configuración del negocio. */
   configurar: [ROL.admin, ROL.pagos],
+  /**
+   * **Rectificar una reserva el día del servicio** (2026-11-12, lo pidió el
+   * cliente): anotar lo que de verdad pasó en la mesa —cuántos llegaron,
+   * qué menús, un descuento— con un motivo obligatorio, para que el panel
+   * cuadre con Fudo. Solo desde la apertura del día. Ver `rectificacion.ts`.
+   */
+  rectificar: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
+  /**
+   * **Aprobar un descuento sobre el estándar** (2026-11-12). El encargado da
+   * los descuentos de Configuración; uno mayor queda por aprobar hasta que
+   * lo confirme el gerente, quien paga o el administrador.
+   */
+  aprobar: [ROL.admin, ROL.gerente, ROL.pagos],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
   mantencion: [ROL.admin]
 } as const;
@@ -418,6 +440,11 @@ export function puedeTocarReserva(
   rol: Rol, usuario: string, anotadaPor: string
 ): boolean {
   if (!puede(rol, 'reservas')) return false;
+  // **El encargado tampoco toca la de otro** (2026-11-12, lo pidió el
+  // cliente): quien la anotó es quien habla con el cliente. La de otro la
+  // rectifica desde la apertura del día (`rectificar`). Una sin dueño —las de
+  // Shopify y las de antes— la sigue editando como siempre.
+  if (rol === ROL.encargado) return !String(anotadaPor ?? '').trim() || mismoUsuario(usuario, anotadaPor);
   if (rol !== ROL.vendedor) return true;
   return mismoUsuario(usuario, anotadaPor);
 }
@@ -480,7 +507,7 @@ export function credencialesDelEntorno(env: Record<string, string | undefined>):
  * El trabajador no está: él entra por su link personal, no por acá. Una
  * cuenta con rol `trabajador` sería una puerta que no lleva a ninguna parte.
  */
-export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.encargado, ROL.pagos, ROL.vendedor, ROL.anfitrion];
+export const ROLES_DE_CUENTA: Rol[] = [ROL.admin, ROL.gerente, ROL.encargado, ROL.pagos, ROL.vendedor, ROL.anfitrion];
 
 export function esRolDeCuenta(v: unknown): v is Rol {
   return ROLES_DE_CUENTA.includes(

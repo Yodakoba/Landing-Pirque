@@ -24,12 +24,16 @@ import { ocupaLugar, faltaCobrar, estaAbonada, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import PastillaPago from './PastillaPago';
+import RectificarReserva from './RectificarReserva';
+import { avisar } from './AvisoFlotante';
+import { estaRectificada, personasEfectivas, menuEfectivo, porAprobar, rechazado,
+         resumenRectificacion } from '@/lib/rectificacion';
 import BloqueSobrecupo, { AvisarCaida, type CupoDelDia } from './BloqueSobrecupo';
 import IngresoFudo from './IngresoFudo';
 import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
 import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
-import { puede, puedeVer, puedeTocarReserva, type Rol } from '@/lib/auth';
+import { puede, puedeVer, puedeTocarReserva, esSuya, type Rol } from '@/lib/auth';
 import EquipoDialogo from './EquipoDialogo';
 import ExtrasDialogo from './ExtrasDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
@@ -95,9 +99,9 @@ function RotuloBloque({ children }: { children: React.ReactNode }) {
 const AZULEJO = 'flex min-w-0 flex-col justify-between gap-1 rounded-xl border-2 border-hueso/15 bg-tinta/40 p-3';
 const ROTULO_AZULEJO = 'text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
 
-/** "3 × Tradiciones, 2 × Niños" → una línea por menú. */
+/** "3 × Tradiciones + 2 × Niños" → una línea por menú. */
 function lineasDeMenu(menu: string): string[] {
-  const partes = String(menu ?? '').split(/\s*[,·]\s*/).map((x) => x.trim()).filter(Boolean);
+  const partes = String(menu ?? '').split(/\s*[+,·]\s*/).map((x) => x.trim()).filter(Boolean);
   return partes.length ? partes : ['—'];
 }
 
@@ -161,6 +165,13 @@ export default function DayView(
   /** La reserva abierta en la lista del día (una a la vez); vacío, ninguna. */
   const [reservaAbierta, setReservaAbierta] = useState('');
   /** Quién vendió y qué número tiene la cotización de cada reserva (por id de reserva). */
+  /** La reserva que se está rectificando (2026-11-12), o `null`. */
+  const [rectificando, setRectificando] = useState<Reserva | null>(null);
+  /** Desde qué hora se rectifica, si ya llegó, y los descuentos estándar. */
+  const [infoDia, setInfoDia] = useState<{ apertura: string; abierto: boolean; descuentos: number[] }>(
+    { apertura: '', abierto: false, descuentos: [5, 10, 15] });
+  /** **Mías** (2026-11-12, lo pidió el cliente): solo las que anotó o vendió esta cuenta. */
+  const [soloMias, setSoloMias] = useState(false);
   const [origen, setOrigen] = useState<{ vendedor: Record<string, string>; folio: Record<string, string> }>(
     { vendedor: {}, folio: {} });
   const [error, setError] = useState('');
@@ -227,6 +238,8 @@ export default function DayView(
         if (d.capacidadMaxima) setCapacidadMaxima(d.capacidadMaxima);
         if (d.deCotizacion) setDeCotizacionIds(d.deCotizacion);
         setOrigen({ vendedor: d.vendedorDe ?? {}, folio: d.folioDeReserva ?? {} });
+        setInfoDia({ apertura: d.apertura ?? '', abierto: !!d.abierto,
+                     descuentos: Array.isArray(d.descuentos) && d.descuentos.length ? d.descuentos : [5, 10, 15] });
       })
       .catch((e) => setError(String(e)));
 
@@ -310,15 +323,18 @@ export default function DayView(
     [todas, fecha]
   );
 
+  /** Si la anotó o la vendió esta cuenta. */
+  const esMia = (r: Reserva) => esSuya(usuario, r.anotadaPor) || esSuya(usuario, origen.vendedor[r.id] ?? '');
   const visibles = useMemo(() => delDia.filter((r) => {
+    if (soloMias && !esMia(r)) return false;
     if (filtro === 'abonadas') return estaAbonada(r);
     if (filtro === 'sinPagar') return faltaCobrar(r) && !estaAbonada(r);
     if (filtro === 'pagadas') return ocupaLugar(r) && !faltaCobrar(r);
     return true;
-  }), [delDia, filtro]);
+  }), [delDia, filtro, soloMias, origen, usuario]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const personas = visibles.filter(ocupaLugar)
-    .reduce((s, r) => s + (Number(r.personas) || 0), 0);
+    .reduce((s, r) => s + personasEfectivas(r), 0);
   const noShows = visibles.filter((r) => r.asistencia === ASISTENCIA.noVino).length;
 
   // Lo que mira la cocina: cuántos de cada menú hay que preparar ese día.
@@ -371,6 +387,32 @@ export default function DayView(
     const a = document.createElement('a');
     a.href = url; a.download = `reservas-${fecha}.csv`; a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** Aprobar o rechazar un descuento sobre el estándar (gerente, quien paga, administrador). */
+  async function aprobarDescuento(r: Reserva, aprobar: boolean) {
+    const res = await fetch('/api/reservas/aprobar', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fila: r.fila, aprobar })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) { avisar(d.error || 'No se pudo guardar.', 'atencion'); return; }
+    avisar(aprobar ? `Descuento de ${r.descuento}% aprobado` : 'Descuento rechazado', aprobar ? 'ok' : 'atencion');
+    void cargar();
+  }
+
+  /** Deshacer una rectificación, con su motivo. */
+  async function deshacerRectificacion(r: Reserva) {
+    const motivo = prompt(`¿Por qué deshaces la rectificación de ${r.nombre || 'esta reserva'}?\n\nQueda anotado con tu nombre.`);
+    if (motivo === null) return;
+    const res = await fetch('/api/reservas/rectificar', {
+      method: 'DELETE', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fila: r.fila, motivo })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) { avisar(d.error || 'No se pudo deshacer.', 'atencion'); return; }
+    avisar('Rectificación deshecha');
+    void cargar();
   }
 
   async function borrar(r: Reserva) {
@@ -429,7 +471,11 @@ export default function DayView(
   const sinPagar = cuentan.filter((r) => faltaCobrar(r) && !estaAbonada(r));
   const pagadas = cuentan.filter((r) => !faltaCobrar(r));
   const liberadas = visibles.filter((r) => !ocupaLugar(r));
-  const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + (Number(r.personas) || 0), 0);
+  const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + personasEfectivas(r), 0);
+  const cuantasMias = delDia.filter(esMia).length;
+  const puedeAprobarDescuentos = puede(rol as Rol, 'aprobar');
+  const puedeRectificar = puede(rol as Rol, 'rectificar');
+  const porAprobarHoy = delDia.filter((r) => ocupaLugar(r) && estaRectificada(r) && porAprobar(r));
   const cuantas = (rs: Reserva[]) => `${rs.length} reserva${rs.length === 1 ? '' : 's'}`;
 
   return (
@@ -807,6 +853,24 @@ export default function DayView(
         </p>
       )}
 
+      {/* **Descuentos por aprobar** (2026-11-12): para quien puede aprobarlos,
+          arriba de la lista. Cada uno abre su reserva. */}
+      {puedeAprobarDescuentos && porAprobarHoy.length > 0 && (
+        <div className="mt-6 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3">
+          <p className="text-[16px] font-bold text-ambar-texto">
+            ⏳ {porAprobarHoy.length === 1 ? 'Un descuento por aprobar' : `${porAprobarHoy.length} descuentos por aprobar`}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {porAprobarHoy.map((r) => (
+              <button key={r.fila} type="button" className="boton min-h-[44px]"
+                onClick={() => { setFiltro('todas'); setSoloMias(false); setReservaAbierta(r.id); }}>
+                {r.nombre || 'sin nombre'} · {r.descuento}% →
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* El filtro: **el elegido va pintado**, no solo con el borde de otro
           color, así se reconoce sin distinguir el dorado del gris. No va
           relleno entero a propósito: el único relleno de esta pantalla es
@@ -820,6 +884,12 @@ export default function DayView(
             {{ todas: 'Todas', pagadas: 'Pagadas', abonadas: 'Abonadas', sinPagar: 'Sin pagar' }[f]}
           </button>
         ))}
+        {/* **Mías** (2026-11-12, lo pidió el cliente): de un toque, solo las
+            que anotó o vendió esta cuenta. Se suma al filtro del pago. */}
+        <button onClick={() => setSoloMias((v) => !v)} aria-pressed={soloMias}
+          className={`boton rounded-full ${soloMias ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
+          👤 Mías ({cuantasMias})
+        </button>
         <span className="flex-1" />
         <button onClick={exportar} className="boton">Exportar CSV</button>
         {conReservas && (
@@ -897,11 +967,18 @@ export default function DayView(
                     <span title="Pedido repetido en la planilla" className="shrink-0 text-[15px] font-bold
                       text-ambar-texto">⚠</span>
                   )}
+                  {estaRectificada(r) && (
+                    <span title={porAprobar(r) ? 'Rectificada · descuento por aprobar' : 'Rectificada'}
+                      className={`shrink-0 rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${porAprobar(r)
+                        ? 'border-ambar-fuerte/60 bg-ambar/10 text-ambar-texto' : 'border-cielo-fuerte/50 bg-cielo/10 text-cielo-texto'}`}>
+                      {porAprobar(r) ? '⏳' : '✎'}
+                    </span>
+                  )}
                   <span title={pago.palabra} aria-label={pago.palabra}
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2
                                 text-[14px] font-bold ${pago.clase}`}>{pago.icono}</span>
                   <span className="w-[4.5rem] shrink-0 text-right text-[18px] font-bold tabular-nums">
-                    {r.personas}
+                    {personasEfectivas(r)}
                     <span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
                   </span>
                 </button>
@@ -915,15 +992,18 @@ export default function DayView(
                         grande arriba y qué es debajo. */}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <div className={`${AZULEJO} order-1`}>
-                        <span className="text-[30px] font-bold leading-none tabular-nums">{r.personas}</span>
+                        <span className="text-[30px] font-bold leading-none tabular-nums">{personasEfectivas(r)}</span>
                         <span className={ROTULO_AZULEJO}>personas</span>
+                        {personasEfectivas(r) !== r.personas && (
+                          <span className="text-[13px] text-hueso/65">reservó <s>{r.personas}</s></span>
+                        )}
                         {r.llegaron != null && r.llegaron !== r.personas && (
                           <span className="mt-1 text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</span>
                         )}
                       </div>
                       <div className={`${AZULEJO} order-3 col-span-2 sm:order-2 sm:col-span-1`}>
                         <span className="space-y-0.5 text-[16px] font-bold leading-snug">
-                          {lineasDeMenu(r.menu).map((m) => <span key={m} className="block">{m}</span>)}
+                          {lineasDeMenu(menuEfectivo(r)).map((m) => <span key={m} className="block">{m}</span>)}
                         </span>
                         <span className={ROTULO_AZULEJO}>menú</span>
                       </div>
@@ -949,6 +1029,45 @@ export default function DayView(
                     {/* **Cómo ingresarla en Fudo, a todo el ancho**: es lo que
                         se viene a mirar al abrir la mesa. */}
                     {ocupaLugar(r) && <IngresoFudo ingreso={r.ingreso} />}
+
+                    {/* **La rectificación del día** (2026-11-12): qué cambió,
+                        quién, cuándo y por qué; el descuento por aprobar con
+                        sus dos botones para quien puede aprobar. */}
+                    {estaRectificada(r) && (
+                      <div className={`rounded-xl border-2 p-3 ${porAprobar(r)
+                        ? 'border-ambar-fuerte/60 bg-ambar/10' : 'border-cielo-fuerte/50 bg-cielo/5'}`}>
+                        <p className="text-[15px] font-bold">✎ Rectificada · {resumenRectificacion(r)}</p>
+                        <p className="mt-0.5 text-[14px] text-hueso/80">{r.rectificacion}</p>
+                        {menuEfectivo(r) !== r.menu && (
+                          <p className="text-[13px] text-hueso/65">Reservó: {r.menu}</p>
+                        )}
+                        {porAprobar(r) && (
+                          <p className="mt-1 text-[14px] font-semibold text-ambar-texto">
+                            ⏳ El descuento de {r.descuento}% está por aprobar: en Fudo no se ingresa todavía.
+                          </p>
+                        )}
+                        {!porAprobar(r) && r.aprobacion && (
+                          <p className={`mt-1 text-[13px] font-semibold ${rechazado(r) ? 'text-rojo-texto' : 'text-verde-texto'}`}>
+                            {rechazado(r) ? '✕' : '✓'} Descuento {r.aprobacion}
+                          </p>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {porAprobar(r) && puedeAprobarDescuentos && (
+                            <>
+                              <button type="button" className="boton min-h-[44px] !border-verde-fuerte bg-verde/10 font-bold text-verde-texto"
+                                onClick={() => void aprobarDescuento(r, true)}>✓ Aprobar {r.descuento}%</button>
+                              <button type="button" className="boton min-h-[44px] !border-rojo-fuerte/60 text-rojo-texto"
+                                onClick={() => void aprobarDescuento(r, false)}>✕ Rechazar</button>
+                            </>
+                          )}
+                          {(puedeAprobarDescuentos || esSuya(usuario, String(r.rectificacion).split(' · ')[1] ?? '')) && (
+                            <button type="button" className="boton min-h-[44px]" onClick={() => void deshacerRectificacion(r)}>
+                              Deshacer la rectificación
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {repetida && (
                       <p className="rounded-lg border-2 border-ambar/60 bg-ambar/10 px-3 py-2 text-[14px]
                                     font-semibold text-ambar-texto">
@@ -1034,10 +1153,26 @@ export default function DayView(
                               Borrar
                             </button>
                           </>
-                        ) : (
+                        ) : !puedeRectificar ? (
                           <span className="text-[14px] text-hueso/65">
                             {!conReservas ? '' : 'No la anotaste tú: pídeselo a quien la anotó.'}
                           </span>
+                        ) : null}
+                        {/* **Rectificar** (2026-11-12): desde la apertura del
+                            día, cualquier reserva. Antes, la de otro la cambia
+                            quien la anotó, y se dice desde qué hora. */}
+                        {puedeRectificar && ocupaLugar(r) && (
+                          infoDia.abierto && (!diaCerrado || puedeCorregir) ? (
+                            <button type="button" onClick={() => setRectificando(r)}
+                              className={`boton min-h-[44px] ${!mia && !idCotizacion ? 'boton-relleno' : '!border-oro text-oro'}`}>
+                              ✎ {estaRectificada(r) ? 'Rectificar de nuevo' : 'Rectificar'}
+                            </button>
+                          ) : !mia && !idCotizacion ? (
+                            <span className="text-[14px] text-hueso/70">
+                              Se rectifica desde las <strong>{infoDia.apertura || 'la apertura'}</strong> del día.
+                              Antes la cambia quien la anotó.
+                            </span>
+                          ) : null
                         )}
                       </div>
                     </div>
@@ -1047,6 +1182,15 @@ export default function DayView(
             );
           })}
         </ul>
+      )}
+
+      {rectificando && (
+        <RectificarReserva r={rectificando} catalogo={catalogo} descuentos={infoDia.descuentos}
+          puedeAprobar={puedeAprobarDescuentos}
+          deCotizacion={!!(deCotizacionIds[rectificando.id] || cotizado?.presupuestos.some((p) => p.idReserva === rectificando.id))}
+          quedan={cupoDia ? cupoDia.capacidad - cupoDia.tomadas : null}
+          onCerrar={() => setRectificando(null)}
+          onListo={() => { setRectificando(null); void cargar(); }} />
       )}
 
       {(creando || editando || anotandoCRM) && (

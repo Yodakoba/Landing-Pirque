@@ -8,6 +8,7 @@ import { liberaCupo } from './pagos.ts';
 import { SIN_POSIBLES, type Posibles } from './presupuestos.ts';
 import type { Fecha } from './fechas.ts';
 import { POR_DEFECTO } from './config.ts';
+import { personasEfectivas } from './rectificacion.ts';
 
 /**
  * Los cortes del semáforo, como fracción de la capacidad.
@@ -135,7 +136,9 @@ export function ocupacionDe(
   let porPagar = 0;
   let abonadas = 0;
   for (const r of delDia) {
-    const n = Number(r.personas) || 0;
+    // **Lo rectificado cambia los números del día** (2026-11-12, lo decidió
+    // el cliente): si llegaron 4 y no 6, el día cuenta 4.
+    const n = personasEfectivas(r);
     if (faltaCobrar(r)) porPagar += n;
     else pagadas += n;
     if (estaAbonada(r)) abonadas += n;

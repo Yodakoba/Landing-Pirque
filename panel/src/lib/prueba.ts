@@ -35,6 +35,8 @@ import { idDeDrive } from './config.ts';
 import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto, puedeVer, NO_SE_LEE_CON_GERENCIA } from './auth.ts';
 import { comoIngresar } from './fudo.ts';
+import { personasEfectivas, menuEfectivo, descuentoVigente, necesitaAprobacion, erroresRectificacion,
+         avisosRectificacion, esCambioGrande, resumenRectificacion, personasDelMenu, POR_APROBAR } from './rectificacion.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          faltaParaFactura, type Cliente } from './clientes.ts';
@@ -237,7 +239,8 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
                'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
-               'Llegaron','Aviso recepción','Abonado','Se cayó por cupo'];
+               'Llegaron','Aviso recepción','Abonado','Se cayó por cupo',
+               'Personas reales','Menú real','Descuento','Rectificación','Aprobación'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -383,6 +386,61 @@ ok(paraElSitio(ocu)[0].pocos === true,
      'la sincronizacion con Shopify no pisa "Se cayo por cupo"');
   ok(filaReserva(['ID Orden', 'Se cayó por cupo'], { liberada: 'x' })[1] === 'x',
      'y se escribe en su columna');
+}
+
+/* ---------- rectificar una reserva el día del servicio (2026-11-12) ---------- */
+{
+  const marca = '2026-11-14 14:03 · Carla · Llegaron menos · llegaron cuatro de seis';
+  const base = r({ personas: 6, menu: '6 × Tradiciones', estadoPago: 'pending' });
+  const rect = { ...base, personasReales: 4, menuReal: '3 × Tradiciones + 1 × Niños', descuento: 10, rectificacion: marca, aprobacion: '' };
+  ok(personasEfectivas(base) === 6 && personasEfectivas(rect) === 4, 'lo rectificado manda en las personas');
+  ok(menuEfectivo(rect) === '3 × Tradiciones + 1 × Niños' && menuEfectivo(base) === '6 × Tradiciones',
+     'y en los menús; sin rectificar, lo reservado');
+  ok(personasEfectivas({ ...base, personasReales: 4 }) === 6,
+     'personas reales sin marca de rectificación no cuentan: sin motivo no hay rectificación');
+  ok(ocupacionDe([rect], dia({})).tomadas === 4, 'lo rectificado cambia los números del día');
+  ok(menusDe([rect]).some((m) => m.menu === 'Niños' && m.cantidad === 1), 'y lo que hay que preparar');
+
+  ok(descuentoVigente(rect) === 10, 'un descuento estándar vale al tiro');
+  ok(descuentoVigente({ ...rect, descuento: 25, aprobacion: POR_APROBAR }) === 0,
+     'uno por aprobar no cuenta todavía');
+  ok(descuentoVigente({ ...rect, descuento: 25, aprobacion: 'Rechazado · Felipe · hoy' }) === 0, 'ni uno rechazado');
+  ok(descuentoVigente({ ...rect, descuento: 25, aprobacion: 'Aprobado · Felipe · hoy' }) === 25, 'uno aprobado sí');
+  ok(!necesitaAprobacion(10, [5, 10, 15]) && necesitaAprobacion(7, [5, 10, 15]) && necesitaAprobacion(25, [5, 10, 15]),
+     'solo los estándar no piden aprobación, aunque sean más chicos');
+
+  ok(personasDelMenu('3 × Tradiciones + 1 × Niños') === 4, 'cuenta las personas de un menú');
+  const bien = { personas: 4, menu: '3 × Tradiciones + 1 × Niños', descuento: 10, motivo: 'Llegaron menos', comentario: 'llegaron cuatro de seis' };
+  ok(erroresRectificacion(bien).length === 0, 'una rectificación completa se puede guardar');
+  ok(erroresRectificacion({ ...bien, comentario: 'menos' }).length === 1, 'sin un comentario de verdad, no');
+  ok(erroresRectificacion({ ...bien, motivo: '' }).length === 1, 'sin motivo, no');
+  ok(erroresRectificacion({ ...bien, personas: 5 }).some((e) => e.includes('suman 4')),
+     'si los menús no calzan con las personas, no');
+
+  const av = avisosRectificacion(base, { personas: 4, descuento: 0 },
+    { pagada: true, deCotizacion: false, estandar: [5, 10, 15], puedeAprobar: false });
+  ok(av.some((a) => a.texto.includes('no se devuelve')), 'pagada y llegaron menos: avisa que no se devuelve desde acá');
+  ok(avisosRectificacion(base, { personas: 6, descuento: 25 },
+    { pagada: false, deCotizacion: false, estandar: [5, 10, 15], puedeAprobar: false })
+    .some((a) => a.texto.includes('queda por aprobar')), 'un descuento no estándar avisa que queda por aprobar');
+  ok(esCambioGrande(base, { personas: 12, descuento: 0 }, [5, 10, 15]) && esCambioGrande(base, { personas: 6, descuento: 20 }, [5, 10, 15])
+     && !esCambioGrande(base, { personas: 4, descuento: 10 }, [5, 10, 15]), 'cambio grande: más de 5 personas o más del tope');
+  ok(resumenRectificacion(rect) === '6 → 4 pers. · menú cambiado · −10%', 'la línea corta de una rectificada');
+
+  // La caja de Fudo usa lo rectificado.
+  const carta = [{ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },
+                 { nombre: 'Niños', precioEnLinea: 19000, precioEnLocal: 24000 }] as never;
+  const ing = comoIngresar({ ...rect, id: 'MANUAL-1', tipoPago: '' }, carta);
+  ok(!!ing && ing.lineas.includes('Total a cobrar: $153.900'),
+     'Fudo: 3 Tradiciones y 1 Niños al precio del local, menos el 10% (171.000 → 153.900)');
+  const pend = comoIngresar({ ...rect, id: 'MANUAL-1', tipoPago: '', descuento: 25, aprobacion: POR_APROBAR }, carta);
+  ok(!!pend && pend.lineas.includes('Total a cobrar: $171.000') && pend.lineas.some((l) => l.includes('por aprobar')),
+     'Fudo: un descuento por aprobar no se descuenta y lo dice');
+  const pagada = comoIngresar({ ...rect, id: 'MANUAL-1', tipoPago: '', estadoPago: 'paid', personasReales: 8,
+                                menuReal: '8 × Tradiciones', descuento: null }, carta);
+  ok(!!pagada && pagada.lineas.some((l) => l.includes('Llegaron 2 más')), 'Fudo: pagada y llegaron más, los cobra aparte');
+  const cot = comoIngresar({ ...rect, id: 'MANUAL-2', tipoPago: '', monto: 600000, menuReal: '4 × Tradiciones', descuento: null }, carta, true);
+  ok(!!cot && cot.lineas.includes('Total a cobrar: $400.000'), 'Fudo: de una cotización, lo acordado por persona × las que llegaron');
 }
 
 /* ---------- qué puestos faltan, con nombre (2026-11-12) ---------- */
@@ -2153,12 +2211,17 @@ ok(!puedeTocarReserva(ROL.vendedor, 'ana', ''),
 ok(!puedeTocarReserva(ROL.vendedor, '', ''),
    'y un usuario vacío no se empareja con una fila vacía: eso las abriría todas');
 
-// Para los tres roles de siempre no cambió nada, y eso también se fija: el
-// límite es del vendedor, no una regla nueva para todos.
-for (const r of [ROL.admin, ROL.encargado, ROL.pagos]) {
+// El administrador, quien paga y el gerente tocan cualquier reserva.
+for (const r of [ROL.admin, ROL.gerente, ROL.pagos]) {
   ok(puedeTocarReserva(r, 'quien sea', 'otro') && puedeTocarReserva(r, 'x', ''),
      `${r} sigue pudiendo tocar cualquier reserva, con dueño o sin él`);
 }
+// **El encargado, la suya y las sin dueño** (2026-11-12, lo pidió el cliente):
+// la de otro la rectifica desde la apertura del día, no la edita.
+ok(puedeTocarReserva(ROL.encargado, 'Carla', 'carla') && puedeTocarReserva(ROL.encargado, 'Carla', ''),
+   'el encargado edita la que anotó él y las de Shopify (sin dueño)');
+ok(!puedeTocarReserva(ROL.encargado, 'Carla', 'Verónica'),
+   'el encargado no edita la reserva que anotó otra persona');
 ok(!puedeTocarReserva(ROL.trabajador, 'ana', 'ana'),
    'y quien no tiene el permiso de reservas no toca ni la que lleve su nombre');
 

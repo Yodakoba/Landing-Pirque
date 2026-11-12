@@ -32,6 +32,8 @@ export const PALABRAS: Record<Accion, string> = {
   links: 'Crear y copiar los links personales',
   puestos: 'Editar los puestos del equipo',
   corregir: 'Corregir un día ya cerrado',
+  rectificar: 'Rectificar una reserva el día del servicio (personas, menús, descuento)',
+  aprobar: 'Aprobar descuentos sobre el estándar',
   configurar: 'Cambiar precios, productos y Configuración',
   bitacora: 'Ver la bitácora de quién hizo qué',
   usuarios: 'Crear cuentas y cambiar roles',
@@ -41,6 +43,7 @@ export const PALABRAS: Record<Accion, string> = {
 /** El nombre del rol tal como se lee en pantalla. */
 export const NOMBRE_ROL: Record<string, string> = {
   [ROL.admin]: 'Administrador',
+  [ROL.gerente]: 'Gerente de operaciones',
   [ROL.encargado]: 'Encargado',
   [ROL.pagos]: 'Pagos',
   [ROL.vendedor]: 'Vendedor',
@@ -53,6 +56,7 @@ export const NOMBRE_ROL: Record<string, string> = {
  */
 export const RESUMEN_ROL: Record<string, string> = {
   [ROL.admin]: 'Puede todo, incluidas las cuentas del panel.',
+  [ROL.gerente]: 'Lo del encargado, más aprobar descuentos y corregir días cerrados. Sin plata ni configuración.',
   [ROL.encargado]: 'El día a día: reservas, días, equipo y cotizaciones. Sin plata ni configuración.',
   [ROL.pagos]: 'Lo del encargado, más la plata y la configuración. No toca cuentas.',
   [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',
@@ -75,6 +79,7 @@ export function resumenRol(rol: Rol): { puede: string[]; noPuede: string[] } {
     if (rol === ROL.vendedor && (a === 'reservas' || a === 'presupuestos')) {
       frase += ' — solo las suyas';
     }
+    if (rol === ROL.encargado && a === 'reservas') frase += ' — las que anotó él y las de Shopify';
     (puede(rol, a) ? si : no).push(frase);
   }
   return { puede: si, noPuede: no };

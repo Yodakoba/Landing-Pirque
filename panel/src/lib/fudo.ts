@@ -22,6 +22,8 @@ import { ESTADO_PAGO, TIPO_PAGO, esManual } from './columnas.ts';
 import { liberaCupo } from './pagos.ts';
 import { desglosarMenu } from './shopify.ts';
 import type { Menu } from './menus.ts';
+import { estaRectificada, personasEfectivas, menuEfectivo, descuentoVigente, porAprobar, rechazado,
+         type Rectificacion } from './rectificacion.ts';
 
 export interface Ingreso {
   /** verde ya pagó · ámbar se cobra · cielo abonó una parte · rojo ojo. */
@@ -40,13 +42,28 @@ const enCarta = (nombre: string, menus: Menu[]) =>
   menus.find((m) => comparable(m.nombre) === comparable(nombre));
 
 export function comoIngresar(
-  r: Pick<Reserva, 'id' | 'menu' | 'tipoPago' | 'estadoPago' | 'monto'> & { abonado?: number | null },
+  r: Pick<Reserva, 'id' | 'menu' | 'tipoPago' | 'estadoPago' | 'monto'>
+    & { abonado?: number | null; personas?: number } & Rectificacion,
   menus: Menu[],
   deCotizacion = false
 ): Ingreso | null {
   if (liberaCupo(r.estadoPago)) return null;
   const estado = String(r.estadoPago || '').trim().toLowerCase();
-  const platos = desglosarMenu(r.menu, menus);
+  // **Lo rectificado manda** (2026-11-12): los menús que de verdad se
+  // sirvieron, las personas que llegaron y el descuento ya aprobado.
+  const rectificada = estaRectificada(r);
+  const platos = desglosarMenu(menuEfectivo(r), menus);
+  const reservadas = Number(r.personas) || 0;
+  const reales = personasEfectivas({ personas: reservadas, ...r });
+  const dif = rectificada ? reales - reservadas : 0;
+  const desc = descuentoVigente(r);
+  const pedido = Number(r.descuento) || 0;
+  const notasRect: string[] = !rectificada ? [] : [
+    ...(dif !== 0 ? [`✎ Rectificada: ${reservadas} → ${reales} personas`] : []),
+    ...(porAprobar(r) && pedido > 0 ? [`Descuento de ${pedido}% por aprobar: no lo ingreses todavía.`] : []),
+    ...(rechazado(r) && pedido > 0 ? [`El descuento de ${pedido}% no fue aprobado.`] : [])
+  ];
+  const conDescuento = (total: number) => desc > 0 ? Math.round(total * (1 - desc / 100)) : total;
   const deShopify = !deCotizacion && !esManual(r.id);
   const directo = deShopify && r.tipoPago === TIPO_PAGO.directo;
 
@@ -56,6 +73,10 @@ export function comoIngresar(
       titulo: 'Ya pagó · ingrésalo como pago directo',
       lineas: [
         ...platos.map((p) => `${p.cantidad} × ${p.menu} · pago directo`),
+        ...notasRect,
+        ...(dif > 0 ? [`Llegaron ${dif} más de lo pagado: cóbralos aparte a precio del local.`] : []),
+        ...(dif < 0 ? [`Llegaron ${-dif} menos: lo pagado no se devuelve desde acá, avísale a quien paga.`] : []),
+        ...(desc > 0 ? [`Descuento −${desc}% sobre lo que se cobre aparte.`] : []),
         'No se le cobra el menú: lo que consuma aparte, sí.'
       ]
     };
@@ -77,12 +98,19 @@ export function comoIngresar(
   });
   const todosConPrecio = conPrecio.length > 0 && conPrecio.every((p) => p.precio > 0);
   const deCarta = conPrecio.reduce((n, p) => n + p.cantidad * p.precio, 0);
+  // De una cotización, si cambió la gente se cobra lo acordado por persona.
+  const porPersona = deCotizacion && reservadas > 0 && (r.monto ?? 0) > 0 ? (r.monto ?? 0) / reservadas : 0;
   const lineasMenu = deCotizacion
-    ? platos.map((p) => `${p.cantidad} × ${p.menu}`)
+    ? [...platos.map((p) => `${p.cantidad} × ${p.menu}`),
+       ...(dif !== 0 && porPersona > 0 ? [`Acordado por persona: ${pesos(porPersona)} × ${reales}`] : [])]
     : conPrecio.map((p) => p.precio > 0
       ? `${p.cantidad} × ${p.menu} a ${pesos(p.precio)} · sin descuento`
       : `${p.cantidad} × ${p.menu} · sin precio en Productos`);
-  const total = deCotizacion ? (r.monto ?? 0) : todosConPrecio ? deCarta : (r.monto ?? 0);
+  const bruto = deCotizacion
+    ? (dif !== 0 && porPersona > 0 ? Math.round(porPersona * reales) : (r.monto ?? 0))
+    : todosConPrecio ? deCarta : (r.monto ?? 0);
+  const total = conDescuento(bruto);
+  const lineaDescuento = desc > 0 && bruto > 0 ? [`Descuento −${desc}%: −${pesos(bruto - total)}`] : [];
 
   if (estado === ESTADO_PAGO.abonado) {
     const abonado = r.abonado ?? 0;
@@ -92,6 +120,8 @@ export function comoIngresar(
       titulo: abonado > 0 ? `Abonó ${pesos(abonado)} · cobra el resto` : 'Abonó una parte · cobra el resto',
       lineas: [
         ...lineasMenu,
+        ...notasRect,
+        ...lineaDescuento,
         resto > 0 ? `Falta por cobrar: ${pesos(resto)}` : 'Pregúntale al jefe de turno cuánto falta.'
       ]
     };
@@ -104,6 +134,8 @@ export function comoIngresar(
       : 'Por pagar · cobra el precio sin descuento',
     lineas: [
       ...lineasMenu,
+      ...notasRect,
+      ...lineaDescuento,
       ...(total > 0 ? [`Total a cobrar: ${pesos(total)}`] : []),
       ...(deCotizacion ? ['Es lo acordado en la cotización, no el precio de la carta.'] : [])
     ]
