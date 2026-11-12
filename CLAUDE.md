@@ -6940,6 +6940,20 @@ reserva y quién la vendió**, para saber con quién hablar al planificar.
   cotización: `/api/reservas` lo manda en `vendedorDe` junto con
   `folioDeReserva`, de la misma tanda de lecturas, así que lo ve también
   quien no puede leer las cotizaciones.
+- **Abierta, la reserva sigue la regla PlayStation** (rehecha el mismo día:
+  el cliente mandó una captura de la versión en columnas, *"eso no quedó
+  bonito"*). Cuatro azulejos con la forma de los de arriba de la página
+  —personas en grande, menú una línea por plato, pago y asistencia—, la
+  caja de **Fudo a todo el ancho**, el **contacto como botones** (📞 llamar,
+  💬 WhatsApp, ✉ correo) y un pie con **quién la vendió o la anotó** a la
+  izquierda y **la acción en dorado** a la derecha (*Abrir la cotización N°
+  … →* o *✎ Editar*). En el teléfono van personas y pago arriba y menú y
+  asistencia a todo el ancho. La línea cerrada suma **un ícono del pago**
+  (✓ · ½ · ○ · ✕) junto a las personas, y al abrirla se tiñe de dorado; el
+  anillo azul del navegador se cambió por `focus-visible`.
+- **El número de la cotización ya no se repite cuatro veces**: lo dice la
+  línea y el botón. `PastillaPago` acepta `sinOrigen`, y la nota *"De la
+  cotización N° …"* no se muestra en una reserva de cotización.
 - **De qué cotización viene una reserva lo dice el servidor**
   (`deCotizacion`), no solo la lista de cotizaciones de la pantalla: si esa
   lista no llegaba, la reserva de una cotización se veía *Anotada a mano* y

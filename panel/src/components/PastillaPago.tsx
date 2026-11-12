@@ -20,9 +20,11 @@ export function origenDe(r: Pick<Reserva, 'id' | 'tipoPago'>, deCotizacion = fal
   return r.tipoPago ? `Shopify · ${r.tipoPago}` : 'Shopify';
 }
 
-export default function PastillaPago({ r, deCotizacion = false }: {
+export default function PastillaPago({ r, deCotizacion = false, sinOrigen = false }: {
   r: Pick<Reserva, 'id' | 'tipoPago' | 'estadoPago' | 'notaPago'> & { abonado?: number | null; liberada?: string };
   deCotizacion?: boolean;
+  /** Sin la línea de origen, cuando ya la dice lo que rodea a la pastilla. */
+  sinOrigen?: boolean;
 }) {
   const e = String(r.estadoPago || '').trim().toLowerCase();
   // Se cayó por cupo (2026-11-12): libera el lugar aunque el estado del pago
@@ -36,9 +38,11 @@ export default function PastillaPago({ r, deCotizacion = false }: {
   const directo = !deCotizacion && !esManual(r.id) && r.tipoPago === TIPO_PAGO.directo;
   return (
     <div className="space-y-1">
-      <p className={`text-[13px] font-semibold ${directo ? 'text-verde-texto' : 'text-hueso/70'}`}>
-        {origenDe(r, deCotizacion)}
-      </p>
+      {!sinOrigen && (
+        <p className={`text-[13px] font-semibold ${directo ? 'text-verde-texto' : 'text-hueso/70'}`}>
+          {origenDe(r, deCotizacion)}
+        </p>
+      )}
       <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-2.5 py-0.5
                         text-[14px] font-bold ${clase}`}>
         <span aria-hidden>{icono}</span>
