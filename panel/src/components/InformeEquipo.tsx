@@ -71,7 +71,7 @@ const TINTE = {
 } as const;
 const tinteDe = (c: string) => (c === CONCEPTO.propina ? TINTE.propina : TINTE.sueldo);
 
-type Tipo = 'mes' | 'semana' | 'rango';
+type Tipo = 'dia' | 'semana' | 'mes' | 'rango';
 
 /** Quien vino todos los días: nada fuera. */
 const SIN_FUERA = { sinMarcar: [] as string[], noVino: [] as string[] };
@@ -775,6 +775,8 @@ export default function InformeEquipo() {
   // periodo con nombre, que es justamente la gracia.
   const [desdeLibre, setDesdeLibre] = useState(hoy().slice(0, 7) + '-01');
   const [hastaLibre, setHastaLibre] = useState(hoy());
+  /** **Por día** (2026-11-12, lo pidió el cliente): una fecha y nada más. */
+  const [diaElegido, setDiaElegido] = useState(hoy());
 
   useEffect(() => {
     // `/api/informe` y no `/api/equipo`: quien hace los pagos no tiene por
@@ -806,7 +808,9 @@ export default function InformeEquipo() {
     return [...new Set([...actuales, ...conTurnos])].sort().reverse();
   }, [turnos, tipo]);
 
-  const { desde, hasta } = tipo === 'rango'
+  const { desde, hasta } = tipo === 'dia'
+    ? { desde: diaElegido, hasta: diaElegido }
+    : tipo === 'rango'
     // Al revés también vale: si alguien pone las fechas en el orden
     // contrario, se ordenan en vez de devolver un informe vacío que parece
     // que no hubo turnos.
@@ -1325,6 +1329,7 @@ export default function InformeEquipo() {
     a.download = `${cual === 'completa' ? 'pago' : cual}-${
       tipo === 'mes' ? periodo
       : tipo === 'semana' ? `semana-${periodo}`
+      : tipo === 'dia' ? `dia-${diaElegido}`
       : `${desde}-a-${hasta}`}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -1343,17 +1348,31 @@ export default function InformeEquipo() {
       </h1>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="flex gap-2">
-          {(['semana', 'mes', 'rango'] as Tipo[]).map((t) => (
-            <button key={t} onClick={() => cambiarTipo(t)}
-              className={`rounded border px-3 py-1.5 text-sm ${
-                tipo === t ? 'border-oro text-oro' : 'border-hueso/20 text-hueso/70'}`}>
-              {t === 'rango' ? 'Otro rango' : `Por ${t}`}
+        {/* **Día, semana, mes u otro rango** (el día, 2026-11-12). Botones
+            de 44px con el elegido teñido de dorado, como los filtros del
+            resto del panel. */}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Periodo">
+          {(['dia', 'semana', 'mes', 'rango'] as Tipo[]).map((t) => (
+            <button key={t} type="button" onClick={() => cambiarTipo(t)} aria-pressed={tipo === t}
+              className={`boton min-h-[44px] ${tipo === t ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
+              {t === 'rango' ? 'Otro rango' : t === 'dia' ? 'Por día' : `Por ${t}`}
             </button>
           ))}
         </div>
 
-        {tipo === 'rango' ? (
+        {tipo === 'dia' ? (
+          <span className="flex flex-wrap items-center gap-2">
+            <button type="button" className="boton min-h-[44px] min-w-[44px]" aria-label="Día anterior"
+              onClick={() => setDiaElegido(sumarDias(diaElegido, -1))}>◀</button>
+            <input type="date" value={diaElegido} aria-label="Día"
+              onChange={(e) => e.target.value && setDiaElegido(e.target.value)}
+              className="min-h-[44px] rounded-lg border border-hueso/20 bg-tinta px-3 text-[15px]
+                         focus:border-oro focus:outline-none" />
+            <button type="button" className="boton min-h-[44px] min-w-[44px]" aria-label="Día siguiente"
+              onClick={() => setDiaElegido(sumarDias(diaElegido, 1))}>▶</button>
+            <span className="w-full text-[14px] text-hueso/70 first-letter:uppercase sm:w-auto">{enPalabras(diaElegido)}</span>
+          </span>
+        ) : tipo === 'rango' ? (
           <span className="flex flex-wrap items-center gap-2 text-sm">
             <input type="date" value={desdeLibre} aria-label="Desde"
               onChange={(e) => setDesdeLibre(e.target.value)}

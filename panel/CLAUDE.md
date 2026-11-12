@@ -4223,6 +4223,15 @@ porque es justamente lo que no tiene nombre: una quincena, un fin de semana
 largo, lo que quedó pendiente de pagar. Si las fechas vienen al revés **se
 ordenan**, en vez de devolver un informe vacío que parece que no hubo turnos.
 
+**Y por día** (2026-11-12, lo pidió el cliente): *Por día · Por semana · Por
+mes · Otro rango*, cuatro botones de 44px con el elegido teñido de dorado.
+Por día es **una fecha y nada más** —el campo de fecha con ◀ ▶ para pasar al
+día anterior o al siguiente, y el día en palabras al lado— y por dentro es
+el mismo rango, con desde y hasta iguales. Parte en hoy; la descarga se
+llama `…-dia-AAAA-MM-DD.csv`. **Ojo con los pagos**: un pago anotado para la
+semana no aparece al mirar uno de sus días (`cuentaEnPeriodo()` pide que
+quepa entero), igual que pasa con un rango de tres días.
+
 **Muestra a quien no vino y a quien quedó sin marcar, con total cero.** Una
 persona que desaparece del informe se lee como que no trabajó, y lo que pudo
 pasar es que nadie cerró ese día. Por eso además hay un aviso arriba cuando
