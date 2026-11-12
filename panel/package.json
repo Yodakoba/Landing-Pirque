@@ -8,7 +8,9 @@
     "start": "next start",
     "prueba": "node --experimental-strip-types src/lib/prueba.ts",
     "tipos": "tsc --noEmit",
-    "revisar": "npm run tipos && npm run prueba"
+    "revisar": "npm run tipos && npm run prueba && npm run lecturas && npm run letra-chica",
+    "lecturas": "node --no-warnings --experimental-strip-types --import ./pruebas/lecturas/registrar.mjs pruebas/lecturas/presupuesto.mjs",
+    "letra-chica": "node pruebas/letra-chica.mjs"
   },
   "dependencies": {
     "googleapis": "144.0.0",
