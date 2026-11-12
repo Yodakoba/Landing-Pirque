@@ -30,7 +30,8 @@ const TOPE = {
   'informe': 1,
   'recepcion': 1,                  // la anfitriona, cada minuto
   'publico/fechas': 1,             // el sitio público: lo llama cada visitante
-  'usuarios': 1
+  'usuarios': 1,
+  'vendedores': 1                  // el resumen del equipo de ventas (2026-11-12)
 };
 
 const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));

@@ -364,6 +364,14 @@ export const PERMISOS = {
    * él al final lo tiene que gestionar"*). Ver `lib/exclusivo.ts`.
    */
   exclusividad: [ROL.admin, ROL.operaciones, ROL.gerencia, ROL.pagos],
+  /**
+   * **El resumen del equipo de ventas** (2026-11-12, lo pidió el cliente):
+   * lo vendido, la comisión y lo pagado de cada vendedor. **El vendedor ve
+   * solo el suyo** —en su pestaña *Mi resumen*—; quien paga, la gerencia y
+   * el administrador ven el de todos y editan cómo se le paga a cada uno
+   * (eso último pide además `pagar`). Ver `lib/vendedores.ts`.
+   */
+  vendedores: [ROL.admin, ROL.pagos, ROL.gerencia, ROL.vendedor],
   /** Marcar que llegó la boleta de alguien en el informe (2026-11-12). */
   boleta: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**

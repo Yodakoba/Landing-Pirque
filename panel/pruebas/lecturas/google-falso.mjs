@@ -7,7 +7,7 @@ export const lecturas = globalThis.__glecturas ??= [];
 export const escrituras = globalThis.__gescrituras ??= [];
 const TODAS = ['Reservas', 'Fechas Hábiles', 'Config', 'Menús', 'Presupuestos', 'Presupuesto Líneas',
   'Clientes', 'Cobros', 'Puestos', 'Trabajadores', 'Turnos', 'Cierres', 'Actividades',
-  'Colaboradores', 'Pagos', 'Boletas', 'Usuarios', 'Bitácora'];
+  'Colaboradores', 'Pagos', 'Boletas', 'Usuarios', 'Bitácora', 'Vendedores'];
 const nombre = (r) => r.replace(/^'/, '').replace(/'(!.*)?$/, '').split("'!")[0].split('!')[0];
 const hoja = (r) => { const n = nombre(r); if (!store.has(n)) store.set(n, []); return store.get(n); };
 const filaDe = (r) => { const m = r.match(/!A?(\d+)/); return m ? +m[1] : 1; };

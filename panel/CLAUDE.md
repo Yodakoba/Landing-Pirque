@@ -1694,6 +1694,64 @@ estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
    recién cuando haya una sola entrada para las dos (la del gerente
    general). Ver "Rol para lo que se hace, alcance para dónde".
 
+## El equipo de ventas: el resumen del vendedor (2026-11-12)
+
+Lo pidió el cliente: *"el vendedor necesita tener un resumen al estilo del
+trabajador, mismo con filtros… y en el informe… lo mismo que para los
+trabajadores y los extras, para gestionar los pagos"*. **No va por link
+personal**: es una pestaña del panel. Código en `lib/vendedores.ts` (puro,
+con pruebas), `/api/vendedores` y `ResumenVendedor.tsx`. Esta es la primera
+entrega; **el informe —pagos, boletas y planillas de vendedores— es la
+segunda**.
+
+**Cómo se le paga lo decidió el cliente, y es flexible y por vendedor**:
+
+- **Tres componentes, cualquiera o todos**: un **% de comisión**, un
+  **monto por evento ganado** y un **sueldo fijo al mes**. Se escriben en su
+  ficha, pestaña nueva **`Vendedores`** de la planilla (por nombre de
+  columna; nace con la primera ficha que alguien guarda), junto a su cuenta
+  bancaria. **No hay botón de agregar**: los vendedores son las cuentas con
+  rol Vendedor de *Cuentas*, y su ficha nace la primera vez que se escribe.
+- **La comisión se gana cuando el cliente pagó todo**: cuenta en el periodo
+  del cobro que completó el total (`pagadaEl()`). Una devolución que lo baja
+  la deja pendiente de nuevo. **Una cancelada no deja comisión.**
+- **El % va sobre el total con IVA**, editable por vendedor a *Neto*
+  (`Base comisión`).
+- **El sueldo fijo cuenta el último día de cada mes**
+  (`finesDeMesEntre()`): un periodo que incluye ese día lo suma. Así una
+  semana no lo parte y un rango de dos meses suma los dos, sin prorratear.
+- **Las ventas son las cotizaciones ganadas que creó esa cuenta**
+  (`Creado por`). Desde el 2026-11-12 el vendedor no anota reservas directo,
+  así que todo lo suyo pasa por ahí.
+
+**La pantalla** (`/vendedores`; para el vendedor la pestaña se llama **Mi
+resumen**):
+
+- **Mes o semana con flechas sin tope**, como el link del trabajador; parte
+  en el mes en curso, porque el sueldo fijo es mensual.
+- Azulejos: **Te toca** (comisiones + fijo del periodo), **Pagado**,
+  **Falta**, **Comisiones** y **Sueldo fijo**.
+- Cuatro listas: **ventas que suman** (pagadas en el periodo, con su
+  comisión), **ganadas que el cliente todavía no termina de pagar** (con la
+  comisión que viene), **en curso** (mandadas o en negociación, una por
+  cotización, con la comisión posible) y **lo que se le pagó** (los pagos de
+  la pestaña `Pagos` con el concepto nuevo **Comisión**, a su nombre).
+- **Cómo se le paga**: el vendedor lo lee en una frase; quien paga lo
+  escribe ahí mismo y **se guarda solo** (`usarGuardadoPorFicha`), con cada
+  cambio en la bitácora.
+
+**Quién ve qué** (permiso nuevo **`vendedores`**): el vendedor, **solo lo
+suyo** —la ruta lo fuerza aunque pida otro usuario—; quien paga, la
+gerencia y el administrador eligen a cualquiera con un botón por vendedor.
+**Editar la ficha pide además `pagar`.** La cuenta bancaria la ven quien
+paga y el propio vendedor.
+
+**Lecturas de Google**: una tanda (cuentas, fichas, cotizaciones, líneas,
+cobros, pagos y clientes). **Mientras la pestaña `Vendedores` no exista**,
+cada visita gasta una más —el panel vuelve a mirar la lista de pestañas
+antes de darla por inexistente—; deja de pasar con la primera ficha
+guardada.
+
 ## El CRM del socio (2026-11-02)
 
 > **Apagada desde el 2026-11-10** (lo decidió el cliente: las cotizaciones

@@ -19,7 +19,7 @@
  * del texto. Quien no distinga el dorado del hueso igual ve cuál es.
  */
 import { usePathname } from 'next/navigation';
-import { puedeVer, type Rol, type Accion } from '@/lib/auth';
+import { ROL, puedeVer, type Rol, type Accion } from '@/lib/auth';
 
 /**
  * Cada página con el permiso que de verdad la abre.
@@ -47,6 +47,8 @@ export const PAGINAS: { href: string; texto: string; accion: Accion }[] = [
   { href: '/menus', texto: 'Productos', accion: 'configurar' },
   { href: '/config', texto: 'Configuración', accion: 'configurar' },
   { href: '/informe', texto: 'Informe', accion: 'informe' },
+  // El equipo de ventas (2026-11-12): el vendedor la ve como *Mi resumen*.
+  { href: '/vendedores', texto: 'Vendedores', accion: 'vendedores' },
   { href: '/usuarios', texto: 'Cuentas', accion: 'usuarios' },
   { href: '/bitacora', texto: 'Bitácora', accion: 'bitacora' }
 ];
@@ -67,7 +69,8 @@ export default function Nav({ rol, gerencia = false }: { rol: string; gerencia?:
     <nav className="flex flex-wrap gap-2">
       {/* Con vista gerencia aparecen también las que solo se miran. */}
       {PAGINAS.filter((p) => puedeVer(rol as Rol, p.accion, gerencia))
-              .map(({ href, texto }) => {
+              .map(({ href, texto: rotulo }) => {
+        const texto = href === '/vendedores' && rol === ROL.vendedor ? 'Mi resumen' : rotulo;
         // La raíz calza exacto; las demás también con lo que cuelgue de
         // ellas. /dia/2026-11-14 no es ninguna de las tres, así que ahí no
         // se marca nada, que es correcto: no es una página del menú.
