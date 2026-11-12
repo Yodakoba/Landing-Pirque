@@ -4851,5 +4851,58 @@ console.log('\nEl link personal de los extras');
      'una planilla vieja, sin la columna, se lee sin link');
 }
 
+console.log('\nLos socios comerciales (primera entrega)');
+{
+  const { fichaSocio, fichaVacia, nuevoIdSocio, etapaDe, comisionDe, ventasDe, leerVendedoresDe, filaVendedor,
+          ENCABEZADO_VENDEDORES, CON_SOCIO_DEFECTO, esVentaDe } = await import('./vendedores.ts');
+  const s1 = fichaSocio('S-0001', 'Turismo Maipo');
+  ok(s1.tipo === 'socio' && s1.etapa1Desde === 22 && s1.comisionPct === 5 && s1.etapa2Desde === 55 && s1.etapa2Pct === 10
+     && s1.etapa3Desde === 77 && s1.etapa3Pct === 15 && s1.base === 'neto' && s1.sueldoFijo === 0 && s1.activo,
+     'el socio nace con el trato del landing: 5% desde 22, 10% desde 55, 15% desde 77, sobre el neto');
+  ok(nuevoIdSocio([]) === 'S-0001' && nuevoIdSocio([{ usuario: 'carla' }, { usuario: 'S-0007' }, { usuario: 's-0002' }]) === 'S-0008',
+     'el id del socio sigue al más alto, y no choca con los usuarios de los vendedores');
+  ok(etapaDe(s1, 15).etapa === 0 && etapaDe(s1, 15).pct === 0 && etapaDe(s1, 22).pct === 5
+     && etapaDe(s1, 60).pct === 10 && etapaDe(s1, 80).pct === 15,
+     'bajo el "desde" de la etapa 1 no hay comisión; desde ahí, la etapa que alcance');
+  ok(etapaDe(fichaVacia('x'), 1).etapa === 1, 'un vendedor sin "desde" en la etapa 1 cobra desde la primera persona');
+  const sinBono = { total: 0, neto: 0, productos: [] as string[] };
+  const v60 = { total: 1190000, neto: 1000000, personas: 60, premium: sinBono };
+  ok(comisionDe(s1, v60).monto === 100000 && comisionDe(s1, v60, true).monto === 100000,
+     'el socio cobra su comisión entera, venga como venga: 60 personas, 10% del neto');
+  const chica = comisionDe(s1, { ...v60, personas: 15 });
+  ok(chica.monto === 0 && chica.detalle.includes('bajo el mínimo de 22'), 'y un grupo chico dice por qué no deja comisión');
+  const vend = { ...fichaVacia('carla', 'Carla'), comisionPct: 4 };
+  ok(vend.conSocio === CON_SOCIO_DEFECTO && CON_SOCIO_DEFECTO === 50, 'el vendedor parte cobrando el 50% de lo suyo cuando hay socio');
+  const conS = comisionDe(vend, v60, true);
+  ok(comisionDe(vend, v60).monto === 40000 && conS.monto === 20000 && conS.detalle.includes('con socio, 50%'),
+     'con socio, el vendedor cobra la mitad de su comisión, y lo dice');
+  ok(comisionDe({ ...vend, conSocio: 100 }, v60, true).monto === 40000 && comisionDe({ ...vend, conSocio: 0 }, v60, true).monto === 0,
+     'su parte es editable: 100 es toda, 0 es nada');
+  const ida = leerVendedoresDe([ENCABEZADO_VENDEDORES, filaVendedor({ ...s1, activo: false }, ENCABEZADO_VENDEDORES),
+    filaVendedor({ ...vend, conSocio: 30, etapa1Desde: 10 }, ENCABEZADO_VENDEDORES)]);
+  ok(ida[0].tipo === 'socio' && !ida[0].activo && ida[0].etapa1Desde === 22 && ida[0].nombre === 'Turismo Maipo'
+     && ida[1].tipo === 'vendedor' && ida[1].activo && ida[1].conSocio === 30 && ida[1].etapa1Desde === 10,
+     'las dos fichas se escriben y se leen igual: tipo, activo, "desde" de la etapa 1 y la parte con socio');
+  const vieja = leerVendedoresDe([['Usuario', 'Nombre', 'Comisión %'], ['carla', 'Carla', '3']])[0];
+  ok(vieja.tipo === 'vendedor' && vieja.activo && vieja.conSocio === 50 && vieja.etapa1Desde === 0,
+     'una planilla sin las columnas nuevas se lee como vendedor activo, desde la primera persona y con 50% con socio');
+  const pres = [
+    { id: 'A', fecha: '2026-12-05', cliente: 'Andes', estado: 'Ganada', idReserva: 'R1', creadoPor: 'carla', descuento: 0, grupo: '', socio: 'S-0001' },
+    { id: 'B', fecha: '2026-12-12', cliente: 'Maipo', estado: 'Ganada', idReserva: 'R2', creadoPor: 'carla', descuento: 0, grupo: '', socio: '' },
+    { id: 'C', fecha: '2026-12-19', cliente: 'Otra', estado: 'Ganada', idReserva: 'R3', creadoPor: 'felipe', descuento: 0, grupo: '', socio: 'S-0001',
+      comisionVendedor: '999 · congelada de felipe' }
+  ] as never;
+  const li = (p: string) => ({ presupuesto: p, concepto: 'Tradiciones', cantidad: 60, precio: 19833, personas: 60, descuento: 0, ivaIncluido: true });
+  const lineas = [li('A'), li('B'), li('C')] as never;
+  const delSocio = ventasDe('S-0001', pres, lineas, [], s1);
+  ok(delSocio.map((v) => v.id).join() === 'C,A' && delSocio.every((v) => v.comision > 0 && v.comision !== 999),
+     'las ventas del socio son las que lo nombran, de cualquier vendedor; la comisión congelada del vendedor no es la suya');
+  const deCarla = ventasDe('carla', pres, lineas, [], vend);
+  ok(Math.abs(deCarla.find((v) => v.id === 'A')!.comision * 2 - deCarla.find((v) => v.id === 'B')!.comision) <= 1,
+     'la venta de Carla con socio le deja la mitad que la directa');
+  ok(esVentaDe('S-0001', 'socio')({ creadoPor: 'S-0001', socio: '' }) === false && esVentaDe('', 'socio')({ creadoPor: '', socio: '' }) === false,
+     'un socio no "crea" ventas, y un id vacío no calza con las ventas sin socio');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);
