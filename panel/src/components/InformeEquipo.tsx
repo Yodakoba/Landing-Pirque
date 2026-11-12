@@ -37,6 +37,7 @@ import {
   pagoDe, esContratado, type Turno
 } from '@/lib/equipo';
 import { informeDeExtras, costoDeExtra, type Extra } from '@/lib/extras';
+import { resumenDelPeriodo, type Venta, type FichaVendedor } from '@/lib/vendedores';
 import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, enPalabras, enCorto, sumarDias, semanaDe, hoy } from '@/lib/fechas';
@@ -696,6 +697,9 @@ function ConfirmarTodos({ cual, periodo, entran, fuera, total, onGuardar, onCanc
               {o.concepto === CONCEPTO.servicio && (
                 <span className="text-[13px] text-hueso/60"> · servicio</span>
               )}
+              {o.concepto === CONCEPTO.comision && (
+                <span className="text-[13px] text-hueso/60"> · comisión</span>
+              )}
             </span>
             <strong className="shrink-0 tabular-nums">{enPesos(o.parte.falta)}</strong>
           </li>
@@ -736,6 +740,12 @@ export default function InformeEquipo() {
   // paga hace un solo pago a la semana, pero un jinete no cobra una jornada
   // ni recibe propina, así que sumarlos en una sola lista sería mentir.
   const [extras, setExtras] = useState<Extra[]>([]);
+  /** El equipo de ventas (2026-11-12): solo llega para quien paga, la gerencia y el administrador. */
+  const [vendedores, setVendedores] = useState<{
+    nombre: string; usuario: string;
+    ficha: Pick<FichaVendedor, 'sueldoFijo' | 'comisionPct' | 'montoEvento' | 'base'>;
+    ventas: (Venta & { folio: string })[];
+  }[]>([]);
   const [cuentas, setCuentas] = useState<Record<string, Banco>>({});
   // Los pagos ya registrados. El "check" de cada fila **se deduce de
   // sumarlos**, no es un campo guardado que pueda decir otra cosa que la
@@ -787,6 +797,7 @@ export default function InformeEquipo() {
         if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
         setTurnos(d.turnos ?? []);
         setExtras(d.extras ?? []);
+        setVendedores(d.vendedores ?? []);
         setCuentas(d.cuentas ?? {});
         setPagos(d.pagos ?? []);
         setBoletas(d.boletas ?? []);
@@ -830,6 +841,20 @@ export default function InformeEquipo() {
     () => informeDeExtras(extras, desde, hasta, new Map(Object.entries(cuentas))),
     [extras, desde, hasta, cuentas]
   );
+  /**
+   * **Los vendedores en el periodo** (2026-11-12): la comisión de lo que el
+   * cliente terminó de pagar y el sueldo fijo de los meses que cierran
+   * adentro (`resumenDelPeriodo()`, la misma cuenta que ve el vendedor en
+   * *Mi resumen*). Aparece quien suma algo o tiene un pago en el periodo.
+   */
+  const lineasVendedores = useMemo(() => vendedores.map((v) => {
+    const r = resumenDelPeriodo(v.ficha, v.ventas, desde, hasta);
+    return { nombre: v.nombre, usuario: v.usuario, total: r.total, comisiones: r.comisiones,
+             sueldoFijo: r.sueldoFijo, mesesFijo: r.mesesFijo,
+             ventas: r.cuentan as (Venta & { folio: string })[] };
+  }).filter((l) => l.total > 0 || pagosEnPeriodo(pagos, l.nombre, desde, hasta).length > 0),
+  [vendedores, desde, hasta, pagos]);
+  const totalVendedores = lineasVendedores.reduce((s, l) => s + l.total, 0);
   const total = lineas.reduce((s, l) => s + l.total, 0);
   const propina = lineas.reduce((s, l) => s + l.propina, 0);
   const sinMarcar = lineas.reduce((s, l) => s + l.sinMarcar, 0);
@@ -870,10 +895,12 @@ export default function InformeEquipo() {
     (!q || llano(nombre).includes(q)) && (!soloPorPagar || sePorPagar(nombre, tot, prop));
   const visiblesEquipo = lineas.filter((l) => seVe(l.trabajador, l.total, l.propina));
   const visiblesExtras = lineasExtras.filter((l) => seVe(l.colaborador, l.total, 0));
-  const cuantosTodos = lineas.length + lineasExtras.length;
+  const visiblesVendedores = lineasVendedores.filter((l) => seVe(l.nombre, l.total, 0));
+  const cuantosTodos = lineas.length + lineasExtras.length + lineasVendedores.length;
   const cuantosPorPagar =
     lineas.filter((l) => sePorPagar(l.trabajador, l.total, l.propina)).length
-    + lineasExtras.filter((l) => sePorPagar(l.colaborador, l.total, 0)).length;
+    + lineasExtras.filter((l) => sePorPagar(l.colaborador, l.total, 0)).length
+    + lineasVendedores.filter((l) => sePorPagar(l.nombre, l.total, 0)).length;
 
   const sumaDe = (nombres: { nombre: string; tot: number; prop: number }[]) =>
     nombres.reduce((s, x) => {
@@ -891,6 +918,7 @@ export default function InformeEquipo() {
   const sumaExtras = sumaDe(
     lineasExtras.map((l) => ({ nombre: l.colaborador, tot: l.total, prop: 0 }))
   );
+  const sumaVendedores = sumaDe(lineasVendedores.map((l) => ({ nombre: l.nombre, tot: l.total, prop: 0 })));
 
   /**
    * Registra uno o dos pagos —*Los dos* son dos filas, una por concepto,
@@ -1030,7 +1058,10 @@ export default function InformeEquipo() {
       ...lineas.map((l) => ({ nombre: l.trabajador,
         partes: partesDe(l.trabajador, l.total, l.propina, false) })),
       ...(cual === 'sueldos' ? lineasExtras.map((l) => ({ nombre: l.colaborador,
-        partes: partesDe(l.colaborador, l.total, 0, true) })) : [])
+        partes: partesDe(l.colaborador, l.total, 0, true) })) : []),
+      // Los vendedores van con los sueldos: su pago es la comisión (2026-11-12).
+      ...(cual === 'sueldos' ? lineasVendedores.map((l) => ({ nombre: l.nombre,
+        partes: partesDe(l.nombre, l.total, 0, false, true) })) : [])
     ];
     const entran: { nombre: string; o: Opcion }[] = [];
     const fuera: string[] = [];
@@ -1099,8 +1130,9 @@ export default function InformeEquipo() {
   }
 
   /** Las partes que se le pagan a alguien: sueldo y propina, o el servicio. */
-  const partesDe = (nombre: string, tot: number, prop: number, extra: boolean): Opcion[] => {
+  const partesDe = (nombre: string, tot: number, prop: number, extra: boolean, vendedor = false): Opcion[] => {
     const d = desglosePago(pagos, nombre, desde, hasta, tot, prop);
+    if (vendedor) return [{ concepto: CONCEPTO.comision, parte: d.sueldo }];
     if (extra) return [{ concepto: CONCEPTO.servicio, parte: d.sueldo }];
     const salida: Opcion[] = [{ concepto: CONCEPTO.sueldo, parte: d.sueldo }];
     // Sin propina en el periodo no hay bloque de propina: un "$0 sin pagar"
@@ -1117,7 +1149,8 @@ export default function InformeEquipo() {
   // bajarla de nuevo.
   const sinCuenta = [
     ...lineas.map((l) => l.trabajador),
-    ...lineasExtras.map((l) => l.colaborador)
+    ...lineasExtras.map((l) => l.colaborador),
+    ...lineasVendedores.map((l) => l.nombre)
   ].filter((n) => !sePuedeTransferir(cuentaDe(n)));
 
   const comoSeLlama = (p: string) => p.length === 7
@@ -1216,6 +1249,27 @@ export default function InformeEquipo() {
       return [p.debe, p.pagado, p.falta];
     };
 
+    /**
+     * **Las filas de los vendedores** (2026-11-12): una por venta que suma en
+     * el periodo y una por el sueldo fijo, con el pago solo en la primera.
+     * `fin` son las columnas del pago y la boleta de cada planilla.
+     */
+    const filasVendedores = (fin: (nombre: string, total: number, primera: boolean) => unknown[], conPropina: boolean) =>
+      lineasVendedores.flatMap((l) => {
+        const partes: { fecha: string; que: string; modalidad: string; monto: number; motivo: string }[] = [
+          ...l.ventas.map((v) => ({ fecha: v.pagadaEl, que: `Venta: ${v.cliente} (Cotización N° ${v.folio})`,
+            modalidad: 'Comisión', monto: v.comision, motivo: `pagó todo ${v.pagadaEl}` })),
+          ...(l.sueldoFijo ? [{ fecha: hasta, que: 'Sueldo fijo', modalidad: 'Fijo', monto: l.sueldoFijo,
+            motivo: `${l.mesesFijo} ${l.mesesFijo === 1 ? 'mes' : 'meses'}` }] : [])
+        ];
+        if (!partes.length) partes.push({ fecha: '', que: 'Sin ventas pagadas en el periodo', modalidad: '', monto: 0, motivo: '' });
+        return partes.map((x, i) => [
+          'Vendedor', l.nombre, x.fecha, x.que, x.modalidad, '', x.monto || '', '', '', '', x.motivo, x.monto,
+          ...(conPropina ? [''] : []),
+          ...fin(l.nombre, l.total, i === 0), ...columnasBanco(l.nombre)
+        ]);
+      });
+
     let csv: string;
     let filas = 0;
     if (cual === 'sueldos') {
@@ -1242,10 +1296,14 @@ export default function InformeEquipo() {
           ...columnasBanco(e.colaborador)
         ];
       });
-      filas = deEquipo.length + deExtras.length;
+      const deVendedores = filasVendedores((nombre, tot, primera) => [
+        ...parteEnFila(nombre, tot, 0, 'sueldo', primera),
+        primera ? boletaEnPlanilla(pideBoleta('vendedor', false), boletaRecibida(nombre)) : ''
+      ], false);
+      filas = deEquipo.length + deExtras.length + deVendedores.length;
       csv = aCSV(['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
         'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo', 'Total',
-        'Sueldo del periodo', 'Pagado', 'Falta', 'Boleta', ...banco], [...deEquipo, ...deExtras]);
+        'Sueldo del periodo', 'Pagado', 'Falta', 'Boleta', ...banco], [...deEquipo, ...deExtras, ...deVendedores]);
     } else if (cual === 'propinas') {
       const conPropina = delPeriodo.filter((t) => (t.propina || 0) > 0);
       const deEquipo = conPropina.map((t, i) => {
@@ -1314,10 +1372,12 @@ export default function InformeEquipo() {
               pideBoleta('extra', false)
             ),
             ...columnasBanco(e.colaborador)
-          ])
+          ]),
+          ...filasVendedores((nombre, tot, primera) =>
+            columnasPago(nombre, tot, 0, primera, pideBoleta('vendedor', false)), true)
         ]
       );
-      filas = delPeriodo.length + extrasDelPeriodo.length;
+      filas = delPeriodo.length + extrasDelPeriodo.length + lineasVendedores.length;
     }
     if (!filas) {
       avisar(cual === 'propinas' ? 'No hay propinas anotadas en este periodo.' : 'No hay nada que descargar en este periodo.', 'atencion');
@@ -1404,13 +1464,13 @@ export default function InformeEquipo() {
           {([['sueldos', 'Solo sueldos', TINTE.sueldo], ['propinas', 'Solo propinas', TINTE.propina]] as const)
             .map(([cual, texto, t]) => (
               <button key={cual} type="button" onClick={() => exportar(cual)}
-                disabled={lineas.length === 0 && lineasExtras.length === 0}
+                disabled={lineas.length === 0 && lineasExtras.length === 0 && lineasVendedores.length === 0}
                 className={`boton min-h-[44px] border-2 font-semibold ${t.caja} ${t.texto} disabled:opacity-40`}>
                 <span aria-hidden className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${t.punto}`} />{texto}
               </button>
             ))}
           <button type="button" onClick={() => exportar('completa')}
-            disabled={lineas.length === 0 && lineasExtras.length === 0}
+            disabled={lineas.length === 0 && lineasExtras.length === 0 && lineasVendedores.length === 0}
             className="boton min-h-[44px] border-2 font-semibold disabled:opacity-40">
             Completa
           </button>
@@ -1453,7 +1513,7 @@ export default function InformeEquipo() {
         </div>
       )}
 
-      {lineas.length === 0 && lineasExtras.length === 0 ? (
+      {lineas.length === 0 && lineasExtras.length === 0 && lineasVendedores.length === 0 ? (
         <p className="text-sm text-hueso/50">
           No hay turnos ni actividades extras anotados entre el {desde} y el{' '}
           {hasta}.
@@ -1499,7 +1559,7 @@ export default function InformeEquipo() {
               className="min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
                          text-[15px] focus:border-oro focus:outline-none sm:w-72" />
           </div>
-          {visiblesEquipo.length === 0 && visiblesExtras.length === 0 && (
+          {visiblesEquipo.length === 0 && visiblesExtras.length === 0 && visiblesVendedores.length === 0 && (
             <p className="mb-8 rounded-xl border-2 border-hueso/15 px-4 py-3 text-[15px] text-hueso/70">
               {soloPorPagar && !q
                 ? <>✓ A nadie le falta pago en este periodo.</>
@@ -1644,6 +1704,64 @@ export default function InformeEquipo() {
             </>
           )}
 
+          {/* **El equipo de ventas** (2026-11-12): su comisión y su sueldo fijo,
+              con los mismos pagos, boleta y cuenta que el equipo y los extras.
+              El detalle de cada venta está en *Vendedores*. */}
+          {visiblesVendedores.length > 0 && (
+            <>
+              <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
+                Vendedores
+              </h2>
+              <ul className="space-y-2">
+                {visiblesVendedores.map((l) => {
+                  const pago = pagoDeFila(l.nombre, l.total, 0);
+                  const clave = 'v-' + l.nombre;
+                  return (
+                    <LineaPersona key={clave}
+                      nombre={l.nombre}
+                      detalle={`${l.ventas.length} ${l.ventas.length === 1 ? 'venta pagada' : 'ventas pagadas'}`
+                        + (l.mesesFijo ? ` · sueldo fijo de ${l.mesesFijo} ${l.mesesFijo === 1 ? 'mes' : 'meses'}` : '')}
+                      cuentan={l.ventas.length}
+                      fuera={SIN_FUERA}
+                      marcarEn={`/vendedores`} palabraSinMarcar="sin pagar"
+                      aTransferir={pago.aTransferir} estado={pago.estado}
+                      partes={partesDe(l.nombre, l.total, 0, false, true)}
+                      datos={[
+                        { que: 'Comisiones', valor: l.comisiones ? enPesos(l.comisiones) : '—' },
+                        { que: 'Sueldo fijo', valor: l.sueldoFijo ? enPesos(l.sueldoFijo) : '—' },
+                        { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' }
+                      ]}
+                      sinCuenta={!sePuedeTransferir(cuentaDe(l.nombre))}
+                      boleta={pideBoleta('vendedor', false) ? boletaRecibida(l.nombre) : null}
+                      puedePagar={puedePagar}
+                      puedeBoleta={puedeBoleta}
+                      abierta={abierta === clave}
+                      onAbrir={() => setAbierta((a) => a === clave ? null : clave)}
+                      onCopiar={(o) => copiarTransferencia(l.nombre, o)}
+                      onBoleta={(r) => void cambiarBoleta(l.nombre, r)}
+                      anotados={pagosEnPeriodo(pagos, l.nombre, desde, hasta).length}
+                      onVerPagos={() => setViendoPagos(l.nombre)}
+                      onPagar={(concepto) => setPagando({
+                        quien: l.nombre,
+                        opciones: partesDe(l.nombre, l.total, 0, false, true),
+                        inicial: concepto, modo: 'parte',
+                        boletaPendiente: !boletaRecibida(l.nombre)
+                      })}
+                      onPagarCompleto={(o) => pagarCompleto(l.nombre, o, !boletaRecibida(l.nombre))} />
+                  );
+                })}
+              </ul>
+              <p className="mb-8 mt-2 px-1 text-[14px] text-hueso/70">
+                {lineasVendedores.length} {lineasVendedores.length === 1 ? 'vendedor' : 'vendedores'}
+                {' · '}total <strong className="text-oro">{enPesos(totalVendedores)}</strong>
+                {sumaVendedores.falta > 0 && (
+                  <> · <strong className="text-ambar-texto">falta {enPesos(sumaVendedores.falta)}</strong></>
+                )}
+                {' · '}<a href="/vendedores" className="font-semibold text-oro hover:underline">ver cada venta →</a>
+              </p>
+            </>
+          )}
+
           {/* **Dos números y no uno**, porque son dos preguntas distintas y
               hasta ahora solo estaba la primera:
 
@@ -1662,11 +1780,12 @@ export default function InformeEquipo() {
                 Costo del periodo
               </p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-oro">
-                {enPesos(total + totalExtras)}
+                {enPesos(total + totalExtras + totalVendedores)}
               </p>
               <p className="mt-1 text-[13px] text-hueso/60">
                 Equipo {enPesos(total)}
                 {' · '}Extras {enPesos(totalExtras)}
+                {lineasVendedores.length > 0 && <>{' · '}Vendedores {enPesos(totalVendedores)}</>}
                 {propina > 0 && <> · propina {enPesos(propina)}, que va aparte</>}
               </p>
             </div>
@@ -1675,14 +1794,14 @@ export default function InformeEquipo() {
                 A transferir
               </p>
               <p className="mt-1 text-2xl font-bold tabular-nums">
-                {enPesos(sumaEquipo.aTransferir + sumaExtras.aTransferir)}
+                {enPesos(sumaEquipo.aTransferir + sumaExtras.aTransferir + sumaVendedores.aTransferir)}
               </p>
               <p className="mt-1 text-[13px] text-hueso/60">
-                Pagado {enPesos(sumaEquipo.pagado + sumaExtras.pagado)}
+                Pagado {enPesos(sumaEquipo.pagado + sumaExtras.pagado + sumaVendedores.pagado)}
                 {' · '}
-                {sumaEquipo.falta + sumaExtras.falta > 0 ? (
+                {sumaEquipo.falta + sumaExtras.falta + sumaVendedores.falta > 0 ? (
                   <strong className="text-ambar-texto">
-                    falta {enPesos(sumaEquipo.falta + sumaExtras.falta)}
+                    falta {enPesos(sumaEquipo.falta + sumaExtras.falta + sumaVendedores.falta)}
                   </strong>
                 ) : (
                   <strong className="text-verde-texto">✓ todo pagado</strong>
@@ -1695,8 +1814,9 @@ export default function InformeEquipo() {
             <p className="mb-6 max-w-2xl text-[13px] text-ambar-texto/80">
               Sin datos para transferir: {sinCuenta.join(' · ')}. La planilla
               sale igual, con esas columnas a medias; se completa en{' '}
-              <a href="/equipo" className="hover:underline">equipo</a> o en{' '}
-              <a href="/extras" className="hover:underline">actividades extras</a>.
+              <a href="/equipo" className="hover:underline">equipo</a>, en{' '}
+              <a href="/extras" className="hover:underline">actividades extras</a>
+              {lineasVendedores.length > 0 && <> o en <a href="/vendedores" className="hover:underline">vendedores</a></>}.
             </p>
           )}
 

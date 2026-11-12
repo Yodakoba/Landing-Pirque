@@ -4800,6 +4800,13 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
   const leida = leerVendedoresDe([ENCABEZADO_VENDEDORES, fila])[0];
   ok(leida.usuario === 'carla' && leida.comisionPct === 2.5 && leida.sueldoFijo === 400000 && leida.base === 'total',
      'la ficha se escribe y se lee igual, con el % con coma');
+  // En el informe (segunda entrega): el pago con concepto Comisión cubre su parte, y el vendedor pide boleta.
+  const { desglosePago: dp, CONCEPTO: CO, pideBoleta: pb, conceptoDe: cd } = await import('./remuneraciones.ts');
+  const pagoV = [{ id: 'p', fecha: '2026-11-30', quien: 'Carla', desde: '2026-11-01', hasta: '2026-11-30',
+    monto: 469500, nota: '', registradoPor: 'x', concepto: CO.comision, fila: 2 }];
+  ok(dp(pagoV as never, 'Carla', '2026-11-01', '2026-11-30', 469500, 0).total.falta === 0
+     && cd('comision') === CO.comision && pb('vendedor', false),
+     'un pago de comisión salda al vendedor en el informe, y su pago pide boleta como el de un extra');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

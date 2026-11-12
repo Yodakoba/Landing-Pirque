@@ -1700,9 +1700,8 @@ Lo pidió el cliente: *"el vendedor necesita tener un resumen al estilo del
 trabajador, mismo con filtros… y en el informe… lo mismo que para los
 trabajadores y los extras, para gestionar los pagos"*. **No va por link
 personal**: es una pestaña del panel. Código en `lib/vendedores.ts` (puro,
-con pruebas), `/api/vendedores` y `ResumenVendedor.tsx`. Esta es la primera
-entrega; **el informe —pagos, boletas y planillas de vendedores— es la
-segunda**.
+con pruebas), `/api/vendedores` y `ResumenVendedor.tsx`. El informe —pagos,
+boletas y planillas de vendedores— vino en la segunda entrega, más abajo.
 
 **Cómo se le paga lo decidió el cliente, y es flexible y por vendedor**:
 
@@ -1745,6 +1744,29 @@ suyo** —la ruta lo fuerza aunque pida otro usuario—; quien paga, la
 gerencia y el administrador eligen a cualquiera con un botón por vendedor.
 **Editar la ficha pide además `pagar`.** La cuenta bancaria la ven quien
 paga y el propio vendedor.
+
+### Los vendedores en el informe (segunda entrega, 2026-11-12)
+
+Quien paga, la gerencia y el administrador ven en `/informe` un bloque
+**Vendedores**, debajo del equipo y los extras, **con lo mismo que ellos**:
+lo que le toca a cada uno en el periodo (comisiones de lo pagado + sueldo
+fijo de los meses que cierran adentro, `resumenDelPeriodo()`), su pastilla
+de pago, *Registrar pago* con el concepto **Comisión**, la boleta
+(`pideBoleta('vendedor')`: sí, como un extra), copiar los datos para
+transferir y *ver cada venta →* a `/vendedores`.
+
+- **Entran en todo lo que ya sumaba**: *Por pagar* y el buscador, el costo
+  del periodo (*Vendedores $X*), *A transferir*, la transferencia masiva y
+  *Todos pagados* de **sueldos** (su comisión va con los sueldos, nunca con
+  las propinas), y las planillas *Solo sueldos* y *Completa*: **una fila por
+  venta que suma** (*Venta: cliente (Cotización N° …)*, la comisión) y una por
+  el sueldo fijo, con el pago solo en la primera fila.
+- **`desglosePago()` cuenta la Comisión como la parte que no es propina**,
+  igual que el sueldo y el servicio.
+- **El encargado de operaciones no los ve en el informe**: el permiso es
+  `vendedores` (quien paga y más arriba, lo dijo el cliente). `/api/informe`
+  ni siquiera le manda las ventas.
+- **Lecturas**: la misma tanda del informe, con seis pestañas más.
 
 **Lecturas de Google**: una tanda (cuentas, fichas, cotizaciones, líneas,
 cobros, pagos y clientes). **Mientras la pestaña `Vendedores` no exista**,

@@ -12,6 +12,15 @@ import { pagoDelCuerpo } from '@/lib/remuneraciones';
 import { puede } from '@/lib/auth';
 import { enPesos } from '@/lib/ocupacion';
 import type { Banco } from '@/lib/banco';
+import { HOJA_USUARIOS } from '@/lib/usuarios';
+import { HOJA_PRESUPUESTOS, HOJA_LINEAS, folioDe } from '@/lib/presupuestos';
+import { HOJA_COBROS } from '@/lib/cobros';
+import { HOJA_CLIENTES } from '@/lib/clientes';
+import { HOJA_VENDEDORES, fichaDe, ventasDe } from '@/lib/vendedores';
+import { leerUsuarios, leerVendedores, leerPresupuestos, leerLineasPresupuesto, leerCobros,
+         leerClientes } from '@/lib/datos';
+import { conCliente } from '@/lib/cotizar';
+import { ROL } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +51,8 @@ export const dynamic = 'force-dynamic';
  *
  * Es una ruta de solo lectura: el informe no escribe nada.
  */
-export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_PAGOS, HOJA_BOLETAS], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_PAGOS, HOJA_BOLETAS,
+  HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_COBROS, HOJA_CLIENTES], async function GET(req: Request) {
   const no = await exigirVer(req, 'informe');
   if (no) return no;
   try {
@@ -52,6 +62,30 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
     ]);
     const { rol } = await quienEs(req);
     const puedePagar = puede(rol, 'pagar');
+    // **El equipo de ventas** (2026-11-12): solo para quien ve a los
+    // vendedores (quien paga, la gerencia y el administrador). Viajan sus
+    // ventas y su forma de pago; el periodo lo calcula la pantalla con
+    // `resumenDelPeriodo()`, igual que los turnos.
+    let vendedores: { nombre: string; usuario: string; ficha: object; ventas: object[] }[] = [];
+    const fichasV = puede(rol, 'vendedores') ? await leerVendedores() : [];
+    if (puede(rol, 'vendedores')) {
+      const [usuarios, presupuestos, lineas, cobros, clientes] = await Promise.all([
+        leerUsuarios(), leerPresupuestos(), leerLineasPresupuesto(), leerCobros(), leerClientes()
+      ]);
+      const conNombre = presupuestos.map((p) => conCliente(p, clientes));
+      vendedores = usuarios
+        .filter((u) => u.rol === ROL.vendedor
+          && (u.activo || fichasV.some((f) => normalizar(f.usuario) === normalizar(u.usuario))))
+        .map((u) => {
+          const f = fichaDe(fichasV, u.usuario, u.nombre);
+          const nombre = f.nombre || u.nombre || u.usuario;
+          return {
+            nombre, usuario: u.usuario,
+            ficha: { sueldoFijo: f.sueldoFijo, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
+            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }))
+          };
+        });
+    }
     // **Los datos de la transferencia, solo a quien paga** (2026-11-12): el
     // gerente ve el informe pero no copia cuentas. Se recortan acá, no en
     // la pantalla, para que tampoco salgan en la planilla que se descarga.
@@ -60,12 +94,15 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
       for (const p of [...gente, ...colaboradores]) {
         cuentas[normalizar(p.nombre)] = p.banco;
       }
+      for (const v of vendedores) {
+        cuentas[normalizar(v.nombre)] = fichaDe(fichasV, v.usuario, v.nombre).banco;
+      }
     }
     // Si esta cuenta puede registrar pagos. Se resuelve en el servidor y
     // no en la pantalla: el botón se esconde por comodidad, pero lo que de
     // verdad cierra la puerta es el `exigir('pagar')` del POST.
     return NextResponse.json({
-      turnos, extras, cuentas, pagos, boletas, puedePagar,
+      turnos, extras, cuentas, pagos, boletas, puedePagar, vendedores,
       puedeBoleta: puede(rol, 'boleta')
     });
   } catch (e) {

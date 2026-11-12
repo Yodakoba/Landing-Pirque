@@ -344,8 +344,10 @@ export function desglosePago(
   sueldo: number, propina: number
 ): { sueldo: Parte; propina: Parte; total: Parte } {
   const suyos = pagosEnPeriodo(pagos, quien, desde, hasta);
+  // El "sueldo" es lo que no es propina: el sueldo del equipo, el servicio
+  // de un extra o la comisión de un vendedor (2026-11-12).
   const deSueldo = suyos.filter((p) => p.concepto === CONCEPTO.sueldo
-    || p.concepto === CONCEPTO.servicio).reduce((s, p) => s + p.monto, 0);
+    || p.concepto === CONCEPTO.servicio || p.concepto === CONCEPTO.comision).reduce((s, p) => s + p.monto, 0);
   const dePropina = suyos.filter((p) => p.concepto === CONCEPTO.propina)
     .reduce((s, p) => s + p.monto, 0);
   const sinConcepto = suyos.filter((p) => !p.concepto).reduce((s, p) => s + p.monto, 0);
@@ -388,8 +390,8 @@ export function desglosePago(
  * Va en una sola función porque la preguntan la pantalla y el CSV, y dos
  * copias de la misma condición es lo que se desalinea cuando cambie.
  */
-export const pideBoleta = (tipo: 'equipo' | 'extra', contratado: boolean) =>
-  tipo === 'extra' || !contratado;
+export const pideBoleta = (tipo: 'equipo' | 'extra' | 'vendedor', contratado: boolean) =>
+  tipo === 'extra' || tipo === 'vendedor' || !contratado;
 
 export const HOJA_BOLETAS = 'Boletas';
 
