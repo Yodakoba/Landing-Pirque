@@ -61,6 +61,13 @@ export interface Config {
    */
   grupoGrande: number;
   /**
+   * **La capacidad máxima del recinto** (2026-11-12, la fijó el cliente en
+   * 900). Es el tope de *Ampliar el cupo* cuando un pago entró sobre
+   * reservas sin pagar: el cupo de un día se puede subir para que quepan
+   * todos, pero nunca por encima de esto.
+   */
+  capacidadMaxima: number;
+  /**
    * Los descuentos que se ofrecen en una cotización con un botón
    * (2026-11-10, lo fijó el cliente en 5, 10 y 15%). Sirven por línea y
    * sobre el total. Viven acá para cambiarlos sin redesplegar.
@@ -149,6 +156,7 @@ export const POR_DEFECTO: Config = {
   tokenPlanilla: '',
   vigenciaPresupuesto: 15,
   grupoGrande: 30,
+  capacidadMaxima: 900,
   descuentos: [5, 10, 15],
   // Los de la cotización del CRM, que es lo que los clientes ya recibían.
   anticipoPct: 30,
@@ -176,6 +184,7 @@ export const CLAVES = {
   tokenPlanilla: 'token_planilla',
   vigenciaPresupuesto: 'vigencia_presupuesto',
   grupoGrande: 'grupo_grande',
+  capacidadMaxima: 'capacidad_maxima',
   descuentos: 'descuentos',
   anticipoPct: 'anticipo_porcentaje',
   saldoDias: 'saldo_dias_antes',
@@ -314,6 +323,7 @@ export function leerConfigDe(filas: string[][]): Config {
     // En cero no se avisa: alguien que no quiere el aviso tiene que poder
     // apagarlo sin que vuelva solo a 30.
     grupoGrande: numero(v(CLAVES.grupoGrande), POR_DEFECTO.grupoGrande, 0, 100000),
+    capacidadMaxima: numero(v(CLAVES.capacidadMaxima), POR_DEFECTO.capacidadMaxima, 1, 100000),
     descuentos: aDescuentos(v(CLAVES.descuentos)) ?? POR_DEFECTO.descuentos,
     // En cero no hay anticipo: es un valor que alguien puede querer.
     anticipoPct: numero(v(CLAVES.anticipoPct), POR_DEFECTO.anticipoPct, 0, 100),
@@ -353,6 +363,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.tokenPlanilla, c.tokenPlanilla],
     [CLAVES.vigenciaPresupuesto, String(c.vigenciaPresupuesto)],
     [CLAVES.grupoGrande, String(c.grupoGrande)],
+    [CLAVES.capacidadMaxima, String(c.capacidadMaxima)],
     [CLAVES.descuentos, c.descuentos.join(', ')],
     [CLAVES.anticipoPct, String(c.anticipoPct)],
     [CLAVES.saldoDias, String(c.saldoDias)],

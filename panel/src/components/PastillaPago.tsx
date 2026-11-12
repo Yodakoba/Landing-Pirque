@@ -21,11 +21,14 @@ export function origenDe(r: Pick<Reserva, 'id' | 'tipoPago'>, deCotizacion = fal
 }
 
 export default function PastillaPago({ r, deCotizacion = false }: {
-  r: Pick<Reserva, 'id' | 'tipoPago' | 'estadoPago' | 'notaPago'> & { abonado?: number | null };
+  r: Pick<Reserva, 'id' | 'tipoPago' | 'estadoPago' | 'notaPago'> & { abonado?: number | null; liberada?: string };
   deCotizacion?: boolean;
 }) {
   const e = String(r.estadoPago || '').trim().toLowerCase();
-  const libera = liberaCupo(e);
+  // Se cayó por cupo (2026-11-12): libera el lugar aunque el estado del pago
+  // siga diciendo *por pagar*, y se dice con esas palabras.
+  const cayo = !!String(r.liberada ?? '').trim();
+  const libera = cayo || liberaCupo(e);
   const [icono, clase] = libera ? ['✕', 'border-rojo-fuerte/60 bg-rojo/10 text-rojo-texto']
     : e === ESTADO_PAGO.pagado ? ['✓', 'border-verde-fuerte/60 bg-verde/10 text-verde-texto']
     : e === ESTADO_PAGO.abonado ? ['½', 'border-cielo-fuerte/60 bg-cielo/10 text-cielo-texto']
@@ -39,11 +42,12 @@ export default function PastillaPago({ r, deCotizacion = false }: {
       <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-2.5 py-0.5
                         text-[14px] font-bold ${clase}`}>
         <span aria-hidden>{icono}</span>
-        {pagoEnEspanol(e) || 'Por pagar'}
+        {cayo ? 'Se cayó por cupo' : pagoEnEspanol(e) || 'Por pagar'}
         {e === ESTADO_PAGO.abonado && (r.abonado ?? 0) > 0 && (
           <span className="font-semibold">· {pesos(r.abonado ?? 0)}</span>
         )}
       </span>
+      {cayo && <p className="text-[13px] text-rojo-texto">{r.liberada}</p>}
       {r.notaPago && <p className="text-[13px] text-hueso/65">{r.notaPago}</p>}
     </div>
   );

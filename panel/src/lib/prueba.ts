@@ -7,7 +7,9 @@
  * lugar, el escape del CSV y el calce de los encabezados de la planilla.
  */
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, faltaCobrar,
-         enPesos, CORTES } from './ocupacion.ts';
+         enPesos, CORTES, tienePrioridad } from './ocupacion.ts';
+import { enRiesgo, sugerirSoltar, cupoAmpliado, marcaLiberada, mensajeCaida,
+         diasConSobrecupo } from './sobrecupo.ts';
 import { pagoEnEspanol, pagoConGlosa, ESTADOS_QUE_LIBERAN, pagoPorCobros,
          ESTADOS_QUE_VIENEN } from './pagos.ts';
 import { aCSV } from './csv.ts';
@@ -232,7 +234,7 @@ ok(normalizar('  ID   Orden ') === 'id orden', 'y espacios de sobra');
 const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
                'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
-               'Llegaron','Aviso recepción','Abonado'];
+               'Llegaron','Aviso recepción','Abonado','Se cayó por cupo'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -314,10 +316,11 @@ ok(pub.length === 2, 'el dia LLENO y el CERRADO no se mandan: el sitio solo dibu
 ok(pub.every((f) => f.fecha !== '2026-11-15'), 'el lleno no va como "quedan 0", va ausente');
 ok(pub.every((f) => f.fecha !== '2026-11-22'), 'y el cerrado tampoco aparece');
 
-// LA prueba de esta frontera: tres campos y nada mas.
+// LA prueba de esta frontera: cuatro campos y nada mas. El cuarto,
+// quedanPagando, es del 2026-11-12 (quien paga tiene preferencia).
 const llaves = Object.keys(pub[0]).sort().join(',');
-ok(llaves === 'fecha,pocos,quedan',
-   `al sitio van exactamente fecha, quedan y pocos — y fueron: ${llaves}`);
+ok(llaves === 'fecha,pocos,quedan,quedanPagando',
+   `al sitio van exactamente fecha, quedan, pocos y quedanPagando — y fueron: ${llaves}`);
 ok(!('capacidad' in pub[0]) && !('tomadas' in pub[0]) && !('online' in pub[0]) &&
    !('local' in pub[0]) && !('notas' in pub[0]) && !('semaforo' in pub[0]),
    'NO se filtra el tamano del local, cuanta gente reservo, cuanto pago ni las notas internas');
@@ -329,6 +332,90 @@ ok(vacio.quedan === 60 && vacio.pocos === false, 'y con el dia entero libre, no'
 ok(paraElSitio(ocu, 0).every((f) => !f.pocos), 'el umbral manda: en cero, nunca hay "pocos"');
 ok(paraElSitio(ocu)[0].pocos === true,
    'sin umbral explicito se usa el de config.ts, que son los 10 del backend viejo');
+
+/* ---------- quien paga tiene preferencia (2026-11-12) ---------- */
+{
+  // 60 de cupo: 50 sin pagar y 5 pagadas. Para solo reservar quedan 5; para
+  // pagar quedan 55, porque una reserva sin pagar no le quita el lugar a
+  // quien paga.
+  const d = ocupacionDe([
+    r({ id: 'a', personas: 50, estadoPago: 'pending' }),
+    r({ id: 'b', personas: 5 })
+  ], dia({}));
+  ok(d.quedan === 5 && d.quedanPagando === 55 && d.sobrecupo === 0,
+     'sin pagar: quedan 5 para solo reservar y 55 para pagar');
+  const s = paraElSitio([d], 10)[0];
+  ok(s.quedan === 5 && s.quedanPagando === 55 && s.pocos === false,
+     'el sitio recibe los dos numeros, y "pocos" mira lo que se puede comprar');
+
+  // Una abonada tiene prioridad igual que una pagada.
+  const ab = ocupacionDe([r({ personas: 40, estadoPago: 'partially_paid' })], dia({}));
+  ok(ab.quedanPagando === 20, 'una abonada ya puso plata: le quita el lugar a quien paga');
+
+  // Lleno de reservas sin pagar: para solo reservar no queda nada, pero se
+  // sigue ofreciendo a quien paga.
+  const llenoSinPagar = ocupacionDe([r({ personas: 60, estadoPago: 'pending' })], dia({}));
+  const alSitio = paraElSitio([llenoSinPagar], 10);
+  ok(alSitio.length === 1 && alSitio[0].quedan === 0 && alSitio[0].quedanPagando === 60,
+     'un dia lleno de reservas sin pagar se sigue ofreciendo para pagar ahora');
+
+  // Un pago entro encima: 60 sin pagar + 12 pagadas en 60 de cupo.
+  const sobre = ocupacionDe([
+    r({ id: 'p1', personas: 50, estadoPago: 'pending', creada: '2026-11-01T10:00' }),
+    r({ id: 'p2', personas: 10, estadoPago: 'pending', creada: '2026-11-03T10:00' }),
+    r({ id: 'ok', personas: 12, creada: '2026-11-05T10:00' })
+  ], dia({}));
+  ok(sobre.sobrecupo === 12 && sobre.quedan === 0 && sobre.quedanPagando === 48,
+     'un pago sobre reservas sin pagar deja 12 de sobrecupo');
+  ok(ocupacionDe([r({ personas: 10 })], dia({ capacidad: 0 })).sobrecupo === 0,
+     'un dia sin cupo (fuera del calendario) no es sobrecupo: no hay cupo que pasar');
+  ok(ocupacionDe([r({ personas: 90 })], dia({ estado: 'Cerrada' })).sobrecupo === 0,
+     'un dia cerrado con gente se avisa aparte, no como sobrecupo');
+
+  // Una que se cayo por cupo deja de ocupar lugar, aunque Shopify diga por pagar.
+  const soltada = r({ personas: 50, estadoPago: 'pending', liberada: '2026-11-12 14:03 · Felipe · sin cupo' });
+  ok(!ocupaLugar(soltada) && !faltaCobrar(soltada) && !tienePrioridad(soltada),
+     'una reserva que se cayo por cupo no ocupa lugar ni hay que cobrarle');
+  ok(!('liberada' in camposDeShopify(r({ liberada: 'x' }))),
+     'la sincronizacion con Shopify no pisa "Se cayo por cupo"');
+  ok(filaReserva(['ID Orden', 'Se cayó por cupo'], { liberada: 'x' })[1] === 'x',
+     'y se escribe en su columna');
+}
+
+/* ---------- el sobrecupo: quien esta en riesgo y que hacer ---------- */
+{
+  const rs = [
+    r({ id: 'vieja', personas: 50, estadoPago: 'pending', creada: '2026-11-01T10:00', anotadaPor: 'Vero' }),
+    r({ id: 'nueva', personas: 10, estadoPago: 'pending', creada: '2026-11-03T10:00' }),
+    r({ id: 'abono', personas: 20, estadoPago: 'partially_paid', creada: '2026-11-04T10:00' }),
+    r({ id: 'paga', personas: 12, creada: '2026-11-05T10:00' })
+  ];
+  const riesgo = enRiesgo(rs, '2026-11-14');
+  ok(riesgo.map((x) => x.id).join(',') === 'nueva,vieja',
+     'en riesgo van solo las sin pagar, la mas nueva primero; la abonada y la pagada no');
+  ok([...sugerirSoltar(riesgo, 8)].join(',') === 'nueva',
+     'para 8 de exceso basta soltar la mas nueva (10)');
+  ok([...sugerirSoltar(riesgo, 12)].join(',') === 'nueva,vieja',
+     'para 12 hay que soltar las dos');
+  ok(sugerirSoltar(riesgo, 0).size === 0, 'sin exceso no se sugiere nada');
+  ok(cupoAmpliado(92, 900).cupo === 92 && cupoAmpliado(92, 900).alcanza,
+     'ampliar sube el cupo justo a lo tomado');
+  ok(cupoAmpliado(950, 900).cupo === 900 && !cupoAmpliado(950, 900).alcanza,
+     'nunca por encima de la capacidad maxima, y dice que no alcanza');
+  ok(marcaLiberada('2026-11-12 14:03', 'Felipe', '  sin   cupo ') === '2026-11-12 14:03 · Felipe · sin cupo',
+     'la marca dice cuando, quien y por que');
+  ok(mensajeCaida('Ana Soto', 'sábado 14 de noviembre').startsWith('Hola Ana, ')
+     && mensajeCaida('', 'sábado 14 de noviembre').startsWith('Hola, '),
+     'el mensaje saluda por el nombre de pila, o sin nombre');
+  const dias = [{ fecha: '2026-11-14', sobrecupo: 12, capacidad: 80, tomadas: 92 },
+                { fecha: '2026-11-15', sobrecupo: 0, capacidad: 80, tomadas: 10 }];
+  ok(diasConSobrecupo(dias, rs).length === 1, 'solo los dias que se pasaron del cupo');
+  ok(diasConSobrecupo(dias, rs, ROL.vendedor, 'Vero').length === 1,
+     'el vendedor ve el dia cuando una reserva en riesgo es suya');
+  ok(diasConSobrecupo(dias, rs, ROL.vendedor, 'Hugo').length === 0,
+     'y no lo ve si ninguna es suya');
+  ok(diasConSobrecupo(dias, rs, ROL.encargado, 'Carla').length === 1, 'el encargado los ve todos');
+}
 
 /* ---------- "hoy" es hoy en Chile, no donde corra el codigo ---------- */
 // 02:00 UTC del 21 son las 23:00 del 20 en Santiago. Con la zona del
@@ -1056,8 +1143,8 @@ ok(enPesos(0) === '$0', 'y el cero tambien se escribe');
 
 // El sitio NO puede enterarse de la plata.
 const conDinero = paraElSitio([conPlata]);
-ok(Object.keys(conDinero[0]).sort().join(',') === 'fecha,pocos,quedan',
-   'agregar plata a la ocupacion NO la filtra al sitio: siguen siendo tres campos');
+ok(Object.keys(conDinero[0]).sort().join(',') === 'fecha,pocos,quedan,quedanPagando',
+   'agregar plata a la ocupacion NO la filtra al sitio: siguen siendo cuatro campos');
 
 /* ---------- el evento del calendario, portado del Apps Script ---------- */
 // El id sale del pedido, asi NO hace falta guardarlo en la planilla. Shopify
@@ -2414,8 +2501,8 @@ console.log('\nPresupuestos: la capa que no toca el cupo');
 
   // Y lo mismo del otro lado de la frontera: al sitio no se filtra.
   const alSitio = paraElSitio([conPre], 10);
-  ok(Object.keys(alSitio[0]).sort().join(',') === 'fecha,pocos,quedan',
-     'al sitio siguen yendo tres campos: lo cotizado no cruza esa frontera');
+  ok(Object.keys(alSitio[0]).sort().join(',') === 'fecha,pocos,quedan,quedanPagando',
+     'al sitio siguen yendo cuatro campos: lo cotizado no cruza esa frontera');
   ok(alSitio[0].quedan === 50,
      'y el sitio sigue ofreciendo 50 lugares, no 20');
 
@@ -3529,7 +3616,7 @@ console.log('\nEventos del CRM');
 // ---------- La línea de la semana (2026-11-05) ----------
 {
   const dia = (fecha: string, p: Record<string, unknown> = {}) => ({
-    fecha, capacidad: 120, tomadas: 0, quedan: 120, pagadas: 0, porPagar: 0, abonadas: 0, porCobrar: 0,
+    fecha, capacidad: 120, tomadas: 0, quedan: 120, pagadas: 0, porPagar: 0, abonadas: 0, quedanPagando: 120, sobrecupo: 0, porCobrar: 0,
     sinMonto: 0, privada: false, exclusiva: false, presupuestos: 0, presupuestadas: 0,
     semaforo: 'verde', bloqueada: false, notas: '', ...p
   }) as Ocupacion;
@@ -3582,6 +3669,11 @@ console.log('\nEventos del CRM');
   ok(lineaDeSemana({ dias: [dia(sab, { quedan: 0, semaforo: 'rojo', tomadas: 120 })],
        reservas: [], grupoGrande: 30 }).avisos[0]?.texto === 'Sáb lleno',
      'un día sin lugares dice lleno, no casi lleno');
+  const sobre = lineaDeSemana({ dias: [dia(sab, { quedan: 0, semaforo: 'rojo', tomadas: 132, sobrecupo: 12 })],
+       reservas: [], grupoGrande: 30 });
+  ok(sobre.avisos.map((a) => a.texto).join(' | ') === 'Sobrecupo el sáb: 12 personas de más'
+       && sobre.avisos[0].tono === 'rojo',
+     'un día con sobrecupo lo dice en rojo, y no además "lleno"');
 
   ok(leerConfigDe([['Clave', 'Valor']]).grupoGrande === 30, 'grupo grande parte en 30');
   ok(leerConfigDe([['Clave', 'Valor'], ['grupo_grande', '0']]).grupoGrande === 0,

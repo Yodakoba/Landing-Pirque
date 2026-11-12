@@ -74,9 +74,19 @@ export function lineaDeSemana(entrada: {
       + `${n === 1 ? 'persona' : 'personas'}` });
   }
 
+  // 1b. Sobrecupo (2026-11-12): un pago entró sobre reservas sin pagar y
+  //     hay que decidir si se amplía el cupo o se suelta a alguien. Ese día
+  //     ya no se dice "lleno": sería decir lo mismo dos veces, más suave.
+  const sobre = dias.filter((d) => (d.sobrecupo ?? 0) > 0);
+  if (sobre.length) {
+    const n = sobre.reduce((s, d) => s + d.sobrecupo, 0);
+    avisos.push({ tono: 'rojo', texto: `Sobrecupo el ${listaDeDias(sobre.map((d) => d.fecha))}: `
+      + `${n} ${n === 1 ? 'persona' : 'personas'} de más` });
+  }
+
   // 2. Lleno o casi lleno. Los dos van en la misma pastilla si los hay: un
   //    día lleno es lo mismo que uno casi lleno, más urgente.
-  const abiertos = dias.filter((d) => !d.bloqueada && d.capacidad > 0);
+  const abiertos = dias.filter((d) => !d.bloqueada && d.capacidad > 0 && !((d.sobrecupo ?? 0) > 0));
   const llenos = abiertos.filter((d) => d.quedan <= 0);
   const casi = abiertos.filter((d) => d.quedan > 0 && d.semaforo === 'rojo');
   if (llenos.length) {

@@ -22,8 +22,17 @@ import { POR_DEFECTO } from './config.ts';
 
 export interface FechaPublica {
   fecha: string;
+  /** Lo que queda para quien **solo reserva**: descuenta todo lo tomado. */
   quedan: number;
   pocos: boolean;
+  /**
+   * Lo que queda para quien **paga ahora** (2026-11-12): una reserva sin
+   * pagar no le quita el lugar a quien paga. Es el cuarto campo del
+   * contrato con el sitio, y el único que se agregó: `reserva.js` lo usa
+   * para *Pagar ahora* y, si un backend no lo manda, usa `quedan` —o sea
+   * que el sitio sigue andando igual con uno que no lo conozca—.
+   */
+  quedanPagando: number;
 }
 
 /**
@@ -47,11 +56,17 @@ export function paraElSitio(
     // significaría que cualquiera puede comprar un lugar en el evento de
     // otro.
     if (d.privada) continue;
-    if (d.quedan <= 0) continue;
+    // Se ofrece mientras alguien pueda **pagar** un lugar, aunque para
+    // solo reservar ya no quede ninguno: quien paga tiene preferencia.
+    const pagando = Math.max(d.quedanPagando ?? d.quedan, d.quedan);
+    if (pagando <= 0) continue;
     salida.push({
       fecha: d.fecha,
       quedan: d.quedan,
-      pocos: d.quedan <= umbral
+      // "Pocos" mira lo que se puede comprar: es lo que el sitio ofrece
+      // como mejor caso, y lo que apura a quien duda.
+      pocos: pagando <= umbral,
+      quedanPagando: pagando
     });
   }
   return salida;

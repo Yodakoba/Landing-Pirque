@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
-import { HOJA_RESERVAS } from '@/lib/columnas';
+import { HOJA_RESERVAS, HOJA_FECHAS } from '@/lib/columnas';
+import { HOJA_CONFIG } from '@/lib/config';
+import { ocupacionDe } from '@/lib/ocupacion';
+import { esFecha } from '@/lib/fechas';
 import { HOJA_MENUS } from '@/lib/menus';
 import { HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
-import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasDeCotizaciones } from '@/lib/datos';
+import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasDeCotizaciones,
+         leerFechas, leerConfig } from '@/lib/datos';
 import { comoIngresar } from '@/lib/fudo';
 import { ASISTENCIA, ESTADO_PAGO } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
@@ -14,7 +18,7 @@ import { guardaDelDia } from '@/lib/guardaCierre';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
-export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HOJA_FECHAS, HOJA_CONFIG], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
@@ -25,9 +29,28 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS], a
     ]);
     // **Cómo ingresarla en Fudo**, armado acá (2026-11-11): la misma
     // instrucción en la página del día, en /turnos y en la recepción.
+    // **Con `?dia=AAAA-MM-DD`, el cupo de ese día** (2026-11-12): lo pide la
+    // página del día para el bloque de sobrecupo. Viene en la misma tanda de
+    // lecturas, así que no cuesta una consulta más a Google.
+    const pedido = new URL(req.url).searchParams.get('dia') ?? '';
+    let dia = null;
+    let capacidadMaxima: number | undefined;
+    if (esFecha(pedido)) {
+      const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
+      const f = fechas.find((x) => x.fecha === pedido);
+      if (f) {
+        const o = ocupacionDe(reservas, f, cfg.cortes);
+        dia = { fecha: pedido, capacidad: o.capacidad, tomadas: o.tomadas, sobrecupo: o.sobrecupo,
+                quedanPagando: o.quedanPagando };
+      }
+      capacidadMaxima = cfg.capacidadMaxima;
+    }
     return NextResponse.json({
       reservas: reservas.map((r) => ({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) })),
-      menus
+      menus, dia, capacidadMaxima,
+      // Qué reservas vienen de una cotización: esas no se sueltan acá, se
+      // cancelan desde su cotización.
+      deCotizacion: Object.fromEntries(deCot)
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

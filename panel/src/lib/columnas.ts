@@ -78,7 +78,19 @@ export const COL_RESERVAS = {
    * y las que ya estaban en la planilla son de antes de que esto existiera.
    * Ninguna es de ningún vendedor. Ver `puedeTocarReserva()`.
    */
-  anotadaPor: 'Anotada por'
+  anotadaPor: 'Anotada por',
+  /**
+   * **Se cayó por cupo** (2026-11-12): una reserva sin pagar que se soltó
+   * porque un pago llenó el día. Guarda cuándo, quién y por qué; vacía es
+   * que sigue en pie. Se agrega sola la primera vez que se suelta una.
+   *
+   * **Es una columna propia y no un estado del pago**, a propósito: el
+   * estado lo reescribe la sincronización con Shopify en cada pasada, y una
+   * reserva de Shopify que allá sigue *por pagar* volvería a tomar su lugar
+   * sin que nadie se entere. Esta columna Shopify no la toca
+   * (`camposDeShopify()`), y `ocupaLugar()` la respeta.
+   */
+  liberada: 'Se cayó por cupo'
 } as const;
 
 export const COL_FECHAS = {

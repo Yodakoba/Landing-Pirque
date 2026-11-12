@@ -569,7 +569,14 @@ que devuelve JSON. Y de esa respuesta consume **tres campos y nada más**:
 
 ```
 { fecha, quedan, pocos }     más un campo `error` si algo falló
+                             y, desde el 2026-11-12, `quedanPagando` (opcional)
 ```
+
+**El cuarto campo, `quedanPagando`, es lo único que se le agregó**: lo que
+queda para quien **paga ahora**, que puede ser más que `quedan` porque una
+reserva sin pagar no le quita el lugar a quien paga (ver "Quien paga tiene
+preferencia"). Es opcional a propósito: si un backend no lo manda,
+`reserva.js` usa `quedan` y el sitio se comporta como antes.
 
 Eso significa que **cambiar de backend es cambiar esa URL** —más permitir
 CORS en el nuevo endpoint—, sin tocar una línea del sitio. Conviene no
@@ -1207,6 +1214,65 @@ sitio:**
 - ~~Qué versión de la Storefront API usar~~ — **resuelto el 2026-10-22**: la
   `2026-10` responde, devuelve las seis variantes y crea carritos. Ya no es
   una pregunta abierta.
+
+### Quien paga tiene preferencia: el sobrecupo (2026-11-12)
+
+La regla es del cliente: **una reserva sin pagar queda sujeta a espacio**.
+Si un día se llena, quien paga —en línea, o con el anticipo de una
+cotización— tiene preferencia, y eso no puede chocar con un "no hay cupo"
+por culpa de reservas que no pusieron un peso. Cuando el pago entra encima,
+el día queda **por encima de su cupo** y alguien decide entre dos salidas:
+**ampliar el cupo** (y traer más equipo) o **soltar** la reserva sin pagar y
+avisarle al cliente.
+
+- **Quién tiene prioridad** (`tienePrioridad()` en `ocupacion.ts`): las
+  **pagadas y las abonadas** —una abonada ya puso plata—. Sin prioridad,
+  todas las demás que ocupan lugar, **vengan de donde vengan**: Shopify
+  *Solo reserva*, anotadas a mano por pagar y cotizaciones ganadas sin
+  anticipo. Lo decidió el cliente: la regla es sobre la plata.
+- **El sitio ofrece dos cupos**: `quedan` (todo lo tomado) para *Solo
+  reservar* y `quedanPagando` (capacidad menos pagadas y abonadas) para
+  *Pagar ahora*. Un día lleno de reservas sin pagar **se sigue ofreciendo**
+  para pagar, y *Solo reservar* se apaga con *"ya solo hay lugar pagando
+  ahora"*. Bajo los botones, el sitio dice que reservar sin pagar queda
+  sujeto a disponibilidad, en los tres idiomas.
+- **Una cotización con anticipo pagado se gana igual** aunque el día esté
+  lleno de reservas sin pagar: `/convertir` y la ventana cuentan solo las
+  que tienen prioridad cuando la cotización ya tiene cobros
+  (`cobrado.pagado > 0`). Sin cobros se sigue rechazando como antes.
+- **`sobrecupo`** en la ocupación: personas sobre el cupo. Solo en un día
+  con cupo y abierto —uno fuera del calendario tiene cupo 0, no "lleno"—.
+- **Dónde se avisa**: arriba de la portada y de Cotizaciones
+  (`AvisoSobrecupo`, rojo, con quién está en riesgo y *Decidir →*), en la
+  línea de la semana (*Sobrecupo el sáb: 12 personas de más*, que reemplaza
+  al "lleno") y en la tarjeta del día (*⚠ 12 sobre el cupo · Decidir*).
+  **El vendedor lo ve solo cuando la reserva en riesgo es suya**
+  (`diasConSobrecupo()`).
+- **Dónde se decide**: la página del día, bloque **Sobrecupo**
+  (`BloqueSobrecupo.tsx`). Lista las reservas sin pagar, las más nuevas
+  primero, y **sugiere** cuáles soltar hasta cubrir el exceso
+  (`sugerirSoltar()`); decide la persona.
+  - **Ampliar el cupo a N** (`/api/fechas/ampliar`, permiso `dias`): el
+    servidor calcula el cupo con lo tomado de ese momento, **nunca por
+    encima de la capacidad máxima del recinto** —`capacidad_maxima` en
+    Configuración, **900** según el cliente—. Si ni así caben, sube al
+    máximo y lo dice.
+  - **Soltar esta reserva** (`/api/reservas/soltar`, con motivo): la marca
+    *Se cayó por cupo* y abre el WhatsApp para el cliente con el mensaje ya
+    escrito (`mensajeCaida()`, un solo lugar para cambiarlo). El vendedor
+    suelta solo las suyas. **Una de una cotización no se suelta**: se
+    cancela desde la cotización, que calcula la devolución.
+- **La columna `Se cayó por cupo`, y por qué no es un estado del pago.** El
+  estado lo reescribe la sincronización con Shopify en cada pasada: una
+  reserva de Shopify marcada cancelada en el panel volvería a *por pagar* y
+  recuperaría su lugar sin que nadie se entere. Esta columna Shopify no la
+  toca (`camposDeShopify()`) y `ocupaLugar()` la respeta. **El pedido en
+  Shopify queda vivo**: hay que cancelarlo allá a mano —el panel lo
+  recuerda—, porque hacerlo desde el panel pide un permiso de escritura que
+  la app no tiene.
+- **Lo que queda abierto**: avisar fuera del panel (correo o WhatsApp
+  automático) cuando aparece un sobrecupo. Hoy se entera quien abre el
+  panel.
 
 ### Lo que este diseño no resuelve
 
