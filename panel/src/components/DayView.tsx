@@ -12,6 +12,7 @@ import { grupoDe, principalDe } from '@/lib/cotizar';
 import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
+import { enlaceWhatsApp } from '@/lib/contacto';
 import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
@@ -90,11 +91,28 @@ function RotuloBloque({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** El rótulo de cada dato dentro de una reserva abierta. */
-function Etiqueta({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1 text-[13px] font-semibold uppercase tracking-wide text-hueso/60">{children}</p>
-  );
+/** Un azulejo de la reserva abierta: el dato grande arriba y qué es debajo. */
+const AZULEJO = 'flex min-w-0 flex-col justify-between gap-1 rounded-xl border-2 border-hueso/15 bg-tinta/40 p-3';
+const ROTULO_AZULEJO = 'text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
+
+/** "3 × Tradiciones, 2 × Niños" → una línea por menú. */
+function lineasDeMenu(menu: string): string[] {
+  const partes = String(menu ?? '').split(/\s*[,·]\s*/).map((x) => x.trim()).filter(Boolean);
+  return partes.length ? partes : ['—'];
+}
+
+/** En la línea cerrada, el pago va como un ícono: ✓ pagada · ½ abonada · ○ por pagar · ✕ ya no viene. */
+function iconoPago(r: Reserva): { icono: string; palabra: string; clase: string } {
+  const e = String(r.estadoPago || '').trim().toLowerCase();
+  if (!ocupaLugar(r)) return { icono: '✕', palabra: 'Ya no viene', clase: 'border-rojo-fuerte/60 bg-rojo/10 text-rojo-texto' };
+  if (e === ESTADO_PAGO.pagado) return { icono: '✓', palabra: 'Pagada', clase: 'border-verde-fuerte/60 bg-verde/10 text-verde-texto' };
+  if (e === ESTADO_PAGO.abonado) return { icono: '½', palabra: 'Abonada', clase: 'border-cielo-fuerte/60 bg-cielo/10 text-cielo-texto' };
+  return { icono: '○', palabra: 'Por pagar', clase: 'border-ambar-fuerte/60 bg-ambar/10 text-ambar-texto' };
+}
+
+/** Una reserva de cotización no repite "De la cotización N° …": ya lo dice su línea. */
+function sinNotaDeCotizacion(r: Reserva, deCot: boolean): Reserva {
+  return deCot && /^del? (la )?(cotizaci|presupuesto)/i.test(String(r.notaPago ?? '')) ? { ...r, notaPago: '' } : r;
 }
 
 /** Un aviso corto en ámbar: pastilla con borde, para reconocerlo sin leerlo. */
@@ -845,23 +863,29 @@ export default function DayView(
             const folio = origen.folio[r.id] || (deCotizacion ? folioDe(deCotizacion) : '');
             const abierta = reservaAbierta === r.id;
             const libera = !ocupaLugar(r);
+            const pago = iconoPago(r);
             return (
-              <li key={r.fila} className={`rounded-xl border-2 ${
-                abierta ? 'border-oro/70 bg-panel' : 'border-hueso/15 bg-panel'} ${libera ? 'opacity-50' : ''}`}>
+              <li key={r.fila} className={`overflow-hidden rounded-2xl border-2 bg-panel transition-colors ${
+                abierta ? 'border-oro shadow-md' : 'border-hueso/15'} ${libera ? 'opacity-50' : ''}`}>
+                {/* La línea cerrada: quién, su número, cómo va el pago (solo
+                    el ícono) y cuánta gente. Lo que no puede quedar escondido
+                    —un aviso de la recepción, un pedido repetido— lleva su
+                    marca también acá. */}
                 <button type="button" aria-expanded={abierta}
                   onClick={() => setReservaAbierta(abierta ? '' : r.id)}
-                  className="tecla flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left
-                             hover:bg-hueso/5">
-                  <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full
-                                               border-2 text-[14px] font-bold ${abierta
+                  className={`tecla flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left
+                              focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro
+                              ${abierta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
+                  <span aria-hidden className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full
+                                               border-2 text-[15px] font-bold ${abierta
                     ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
                     {abierta ? '−' : '+'}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-[15px] font-semibold ${libera ? 'line-through' : ''}`}>
+                    <span className={`block truncate text-[16px] font-bold ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}
                     </span>
-                    <span className="block truncate text-[13px] text-hueso/60">
+                    <span className="block truncate text-[13px] text-hueso/65">
                       {idCotizacion ? `Cotización N° ${folio}` : r.id}
                     </span>
                   </span>
@@ -870,74 +894,75 @@ export default function DayView(
                       border-ambar/60 bg-ambar/10 px-2 py-0.5 text-[13px] font-semibold text-ambar-texto">📣</span>
                   )}
                   {repetida && (
-                    <span title="Pedido repetido en la planilla" className="shrink-0 text-[13px] font-semibold
+                    <span title="Pedido repetido en la planilla" className="shrink-0 text-[15px] font-bold
                       text-ambar-texto">⚠</span>
                   )}
-                  <span className="shrink-0 text-right text-[15px] font-bold tabular-nums">
+                  <span title={pago.palabra} aria-label={pago.palabra}
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2
+                                text-[14px] font-bold ${pago.clase}`}>{pago.icono}</span>
+                  <span className="w-[4.5rem] shrink-0 text-right text-[18px] font-bold tabular-nums">
                     {r.personas}
                     <span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
                   </span>
                 </button>
 
                 {abierta && (
-                  <div className="border-t border-hueso/10 px-3 pb-3 pt-2">
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <div>
-                        <Etiqueta>Contacto</Etiqueta>
-                        <div className="text-[14px] text-hueso/80">
-                          {r.telefono && <div>{r.telefono}</div>}
-                          {r.email && <div className="break-all text-[13px]">{r.email}</div>}
-                          {!r.telefono && !r.email && <span className="text-hueso/50">—</span>}
-                        </div>
-                      </div>
-                      <div>
-                        <Etiqueta>Menú</Etiqueta>
-                        <div className="text-[14px]">{r.menu || <span className="text-hueso/50">—</span>}</div>
-                        {/* Lo que anotó la anfitriona, si es distinto (2026-11-11). */}
+                  <div className="space-y-3 border-t-2 border-oro/30 p-3">
+                    {/* En el teléfono: personas y pago arriba, menú y asistencia
+                        a todo el ancho. **Cuatro azulejos, la misma forma que los de arriba de la
+                        página** (2026-11-12, lo pidió el cliente: la versión
+                        en columnas no seguía la regla PlayStation). El dato
+                        grande arriba y qué es debajo. */}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className={`${AZULEJO} order-1`}>
+                        <span className="text-[30px] font-bold leading-none tabular-nums">{r.personas}</span>
+                        <span className={ROTULO_AZULEJO}>personas</span>
                         {r.llegaron != null && r.llegaron !== r.personas && (
-                          <div className="text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</div>
+                          <span className="mt-1 text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</span>
                         )}
                       </div>
-                      <div>
-                        {/* **El pago, dicho igual en todas partes** (2026-11-11):
-                            de dónde viene y cómo va, y debajo cómo se ingresa
-                            en Fudo. Ver `PastillaPago` y `comoIngresar()`. */}
-                        <Etiqueta>Pago</Etiqueta>
-                        <PastillaPago r={r} deCotizacion={!!idCotizacion} />
-                        {ocupaLugar(r) && (
-                          <div className="mt-1.5"><IngresoFudo ingreso={r.ingreso} compacto /></div>
-                        )}
-                        {repetida && (
-                          <div className="mt-1 text-[13px] font-semibold text-ambar-texto"
-                            title={`El mismo ID Orden está en ${r.duplicadas} filas de la `
-                                 + 'planilla. El panel lo cuenta una sola vez; conviene '
-                                 + 'borrar la de más.'}>
-                            ⚠ {r.duplicadas} filas con este pedido
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        {/* **Acá se lee, no se marca** (2026-11-05): *Vino / No
-                            vino* vive solo en `/turnos`. */}
-                        <Etiqueta>Asistencia</Etiqueta>
-                        <span className={`inline-block whitespace-nowrap rounded-full border-2 px-2.5
-                                          py-0.5 text-[13px] font-semibold ${
-                          r.asistencia === VINO.si ? 'border-verde/50 text-verde-texto'
-                          : r.asistencia === VINO.no ? 'border-rojo/50 text-rojo-texto'
-                          : 'border-hueso/20 text-hueso/60'}`}>
-                          {r.asistencia === VINO.si ? '✓ vino'
-                            : r.asistencia === VINO.no ? '✕ no vino' : 'sin marcar'}
+                      <div className={`${AZULEJO} order-3 col-span-2 sm:order-2 sm:col-span-1`}>
+                        <span className="space-y-0.5 text-[16px] font-bold leading-snug">
+                          {lineasDeMenu(r.menu).map((m) => <span key={m} className="block">{m}</span>)}
                         </span>
+                        <span className={ROTULO_AZULEJO}>menú</span>
+                      </div>
+                      <div className={`${AZULEJO} order-2 sm:order-3`}>
+                        <PastillaPago r={sinNotaDeCotizacion(r, !!idCotizacion)} deCotizacion={!!idCotizacion}
+                          sinOrigen={!!idCotizacion} />
+                        <span className={ROTULO_AZULEJO}>pago</span>
+                      </div>
+                      <div className={`${AZULEJO} order-4 col-span-2 sm:col-span-1`}>
+                        <span className={`inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full
+                                          border-2 px-2.5 py-0.5 text-[14px] font-bold ${
+                          r.asistencia === VINO.si ? 'border-verde-fuerte/60 bg-verde/10 text-verde-texto'
+                          : r.asistencia === VINO.no ? 'border-rojo-fuerte/60 bg-rojo/10 text-rojo-texto'
+                          : 'border-hueso/25 text-hueso/70'}`}>
+                          {r.asistencia === VINO.si ? '✓ Vino'
+                            : r.asistencia === VINO.no ? '✕ No vino' : '○ Sin marcar'}
+                        </span>
+                        {/* Se lee, no se marca: *Vino / No vino* vive en /turnos. */}
+                        <span className={ROTULO_AZULEJO}>asistencia</span>
                       </div>
                     </div>
 
-                    {/* **El aviso de la recepción** (2026-11-11): lo que la
-                        anfitriona le dejó al jefe de turno, hasta que alguien
-                        lo resuelve. */}
+                    {/* **Cómo ingresarla en Fudo, a todo el ancho**: es lo que
+                        se viene a mirar al abrir la mesa. */}
+                    {ocupaLugar(r) && <IngresoFudo ingreso={r.ingreso} />}
+                    {repetida && (
+                      <p className="rounded-lg border-2 border-ambar/60 bg-ambar/10 px-3 py-2 text-[14px]
+                                    font-semibold text-ambar-texto">
+                        ⚠ Este pedido está {r.duplicadas} veces en la planilla. El panel lo cuenta una
+                        sola vez; conviene borrar la fila de más.
+                      </p>
+                    )}
+
+                    {/* **El aviso de la recepción** (2026-11-11), hasta que
+                        alguien lo resuelve. */}
                     {r.avisoRecepcion && (
-                      <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-2 text-[13px]">
-                        <p className="font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="rounded-xl border-2 border-ambar/60 bg-ambar/10 p-3">
+                        <p className="text-[15px] font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
                           {mia && !idCotizacion && (
                             <button type="button" className="boton" onClick={() => setEditando(r)}>
                               Editar la reserva
@@ -951,50 +976,70 @@ export default function DayView(
                       </div>
                     )}
 
-                    {/* Lo que se hace con ella. **La reserva de otro se ve y no
-                        se toca**: en vez de botones apagados va quién la anotó.
-                        **Quién la vendió va debajo del botón de la cotización**
-                        (2026-11-12, lo pidió el cliente): el encargado tiene que
-                        saber con quién hablar al planificar. */}
-                    <div className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5">
-                      {idCotizacion ? (
-                        <div className="text-right">
-                          <a href={`/presupuestos?abrir=${encodeURIComponent(idCotizacion)}`}
-                            className="tecla boton whitespace-nowrap">
-                            Cotización N° {folio}
+                    {/* **El contacto son botones**: llamar, WhatsApp y correo,
+                        con el dato a la vista. Es lo que se hace con él. */}
+                    {(r.telefono || r.email) && (
+                      <div className="flex flex-wrap gap-2">
+                        {r.telefono && (
+                          <a href={`tel:${String(r.telefono).replace(/\s+/g, '')}`} className="tecla boton min-h-[44px]">
+                            📞 {r.telefono}
                           </a>
-                          <div className="mt-1 text-[13px] text-hueso/70">
-                            vendió <strong className="text-hueso">
-                              {origen.vendedor[r.id] || deCotizacion?.creadoPor || 'sin vendedor'}</strong>
-                          </div>
-                        </div>
-                      ) : mia && r.liberada ? (
-                        // Se cayó por cupo: lo que queda es avisarle.
-                        <AvisarCaida r={r} />
-                      ) : mia ? (
-                        <div className="text-right">
-                          <div className="flex justify-end gap-2">
+                        )}
+                        {enlaceWhatsApp(r.telefono) && (
+                          <a href={enlaceWhatsApp(r.telefono)} target="_blank" rel="noopener noreferrer"
+                            className="tecla boton min-h-[44px] !border-verde-fuerte/60 text-verde-texto">
+                            💬 WhatsApp
+                          </a>
+                        )}
+                        {r.email && (
+                          <a href={`mailto:${r.email}`} className="tecla boton min-h-[44px] max-w-full truncate">
+                            ✉ {r.email}
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {/* **El pie: de quién es y qué se hace con ella.** A la
+                        izquierda quién la vendió o la anotó (2026-11-12, lo
+                        pidió el cliente: el encargado tiene que saber con
+                        quién hablar); a la derecha, la acción. La reserva de
+                        otro se ve y no se toca: en vez de botones apagados va
+                        a quién pedírselo. */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hueso/10 pt-3">
+                      <span className="text-[14px] text-hueso/75">
+                        {idCotizacion ? (
+                          <>🤝 Vendió <strong className="text-hueso">
+                            {origen.vendedor[r.id] || deCotizacion?.creadoPor || 'sin vendedor'}</strong></>
+                        ) : r.anotadaPor ? (
+                          <>✍ Anotó <strong className="text-hueso">{r.anotadaPor}</strong></>
+                        ) : /^\d+$/.test(r.id) ? <>🛒 Compró en Shopify</> : <>✍ Anotada a mano</>}
+                      </span>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {idCotizacion ? (
+                          <a href={`/presupuestos?abrir=${encodeURIComponent(idCotizacion)}`}
+                            className="tecla boton boton-relleno min-h-[44px] whitespace-nowrap">
+                            Abrir la cotización N° {folio} →
+                          </a>
+                        ) : mia && r.liberada ? (
+                          // Se cayó por cupo: lo que queda es avisarle.
+                          <AvisarCaida r={r} />
+                        ) : mia ? (
+                          <>
                             <button onClick={() => { setCreando(false); setEditando(r); }}
                               disabled={diaCerrado && !puedeCorregir}
-                              className="boton">Editar</button>
+                              className="boton boton-relleno min-h-[44px]">✎ Editar</button>
                             <button onClick={() => borrar(r)}
                               disabled={diaCerrado && !puedeCorregir}
-                              className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+                              className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto">
                               Borrar
                             </button>
-                          </div>
-                          {r.anotadaPor && (
-                            <div className="mt-1 text-[13px] text-hueso/70">
-                              anotó <strong className="text-hueso">{r.anotadaPor}</strong>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-[13px] text-hueso/60">
-                          {!conReservas ? (r.anotadaPor ? `La anotó ${r.anotadaPor}` : '')
-                            : r.anotadaPor ? `La anotó ${r.anotadaPor}` : 'No la anotaste tú'}
-                        </span>
-                      )}
+                          </>
+                        ) : (
+                          <span className="text-[14px] text-hueso/65">
+                            {!conReservas ? '' : 'No la anotaste tú: pídeselo a quien la anotó.'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
