@@ -10,6 +10,8 @@
  * justamente lo que muestra el calendario.
  */
 import { Fragment, useState } from 'react';
+import { limiteSinAprobar } from '@/lib/cupo';
+import { avisar } from './AvisoFlotante';
 import Dialogo from './Dialogo';
 import type { Ocupacion } from '@/lib/tipos';
 import { ESTADO_DIA } from '@/lib/columnas';
@@ -35,7 +37,7 @@ const PREPARACION = 'preparacion';
 
 export default function DiaEditor({
   dia, cupoNormal, apertura, fechasExistentes = [], onListo, onCancelar,
-  onPreparacion
+  onPreparacion, puedeSubirCupo = true
 }: {
   /** El día a editar, o `null` para agregar uno que todavía no existe. */
   dia: Ocupacion | null;
@@ -47,11 +49,18 @@ export default function DiaEditor({
   onCancelar: () => void;
   /** Llevar a planificar el equipo de esa fecha, sin tocar la planilla. */
   onPreparacion?: (fecha: string) => void;
+  /**
+   * Si esta cuenta sube el cupo sola (permiso `cupo`: gerente o más
+   * arriba). Si no, subirlo se **pide**: se guarda con el cupo de hoy y el
+   * pedido le llega al gerente a la bandeja (2026-11-12, `lib/cupo.ts`).
+   */
+  puedeSubirCupo?: boolean;
 }) {
   // Agregar una fecha y editar una existente son la misma ventana a
   // propósito: los campos son los mismos y la validación también. Lo único
   // que cambia es si la fecha se elige o viene dada.
   const nueva = dia === null;
+  const [motivoCupo, setMotivoCupo] = useState('');
 
   // Un día que todavía no está en la hoja viene con capacidad 0: se propone
   // el cupo normal, que es lo que se va a querer casi siempre.
@@ -80,6 +89,9 @@ export default function DiaEditor({
   // un atajo a eso sería explicar dos caminos para lo mismo.
   const ofrecePreparacion = nueva && !!onPreparacion;
   const esPreparacion = f.estado === PREPARACION;
+  /** Hasta dónde sube el cupo sin pedirlo (`lib/cupo.ts`). */
+  const limite = limiteSinAprobar(dia?.capacidad, cupoNormal);
+  const pideCupo = !puedeSubirCupo && !esPreparacion && Number(f.capacidad) > limite;
   /**
    * Privado y exclusivo son **una respuesta con una casilla**, no dos
    * respuestas a "qué día es".
@@ -105,10 +117,14 @@ export default function DiaEditor({
     if (esPreparacion) return onPreparacion!(f.fecha);
     setGuardando(true);
     setError('');
+    const capacidad = Number((cambios ?? f).capacidad ?? f.capacidad);
+    // Sin el permiso `cupo`, subirlo se pide: el día se guarda con el cupo
+    // de hoy y el pedido va aparte.
+    const pedir = !puedeSubirCupo && capacidad > limite;
     const cuerpo = {
       ...f, ...cambios,
       fecha: dia?.fecha ?? f.fecha,
-      capacidad: Number((cambios ?? f).capacidad ?? f.capacidad)
+      capacidad: pedir ? limite : capacidad
     };
     try {
       const r = await fetch('/api/fechas', {
@@ -116,7 +132,17 @@ export default function DiaEditor({
         body: JSON.stringify(cuerpo)
       });
       const d = await r.json();
-      if (d.error) setError(d.error); else onListo();
+      if (d.error) { setError(d.error); return; }
+      if (pedir) {
+        const p = await fetch('/api/fechas/cupo', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ fecha: cuerpo.fecha, accion: 'pedir', cupo: capacidad, motivo: motivoCupo })
+        });
+        const dp = await p.json().catch(() => ({}));
+        if (!p.ok || dp.error) { setError(dp.error || 'El día se guardó, pero no se pudo pedir el cupo.'); return; }
+        avisar(`Pedido al gerente: subir el cupo a ${capacidad}. Le llega a su bandeja.`);
+      }
+      onListo();
     } catch (e) {
       setError(String(e));
     } finally { setGuardando(false); }
@@ -202,6 +228,23 @@ export default function DiaEditor({
             Se puede guardar igual, pero el día va a quedar sobrevendido.
           </p>
         )}
+        {/* **Subir el cupo se pide** (2026-11-12): sin el permiso `cupo`, el
+            día se guarda con el de hoy y el pedido le llega al gerente. */}
+        {pideCupo && (
+          <div className="mt-3 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3">
+            <p className="text-[15px] font-bold text-ambar-texto">
+              🙋 Subir el cupo sobre {limite} lo aprueba el gerente de operaciones
+            </p>
+            <p className="mt-1 text-[14px] text-hueso/85">
+              Se guarda con {limite} y se le pide {Number(f.capacidad)}: le llega a su bandeja.
+            </p>
+            <label className="mt-2 block">
+              <span className="mb-1 block text-[13px] font-semibold text-hueso/70">¿Por qué? (lo ve el gerente)</span>
+              <input type="text" className={ENTRADA} value={motivoCupo} placeholder="Viene un grupo de la agencia…"
+                onChange={(e) => setMotivoCupo(e.target.value)} />
+            </label>
+          </div>
+        )}
         {error && <p className="mt-3 text-sm font-semibold text-rojo-texto">{error}</p>}
 
         {/* Tres estados y no un interruptor, porque son tres cosas
@@ -279,6 +322,7 @@ export default function DiaEditor({
             className="boton boton-relleno min-h-[48px] text-[15px] disabled:opacity-40">
             {guardando ? 'Guardando…'
               : esPreparacion ? 'Planificar el equipo'
+              : pideCupo ? `Guardar con ${limite} y pedir ${Number(f.capacidad)}`
               : nueva ? 'Agregar' : 'Guardar'}
           </button>
           <span className="flex-1" />

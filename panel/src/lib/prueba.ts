@@ -38,7 +38,8 @@ import { comoIngresar } from './fudo.ts';
 import { personasEfectivas, menuEfectivo, descuentoVigente, necesitaAprobacion, erroresRectificacion,
          avisosRectificacion, esCambioGrande, resumenRectificacion, personasDelMenu, POR_APROBAR,
          partesRectificacion } from './rectificacion.ts';
-import { pendientesDeAprobar } from './aprobaciones.ts';
+import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes } from './aprobaciones.ts';
+import { limiteSinAprobar, subeElCupo, marcaCupoPedido, cupoPedidoDe, cupoAlAprobar } from './cupo.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
          faltaParaFactura, type Cliente } from './clientes.ts';
@@ -446,6 +447,37 @@ ok(paraElSitio(ocu)[0].pocos === true,
      'la bandeja trae solo lo por aprobar de reservas vivas, el día más antiguo primero');
   ok(bandeja[0].pide === 'Fran' && bandeja[0].porcentaje === 25 && bandeja[0].personas === 4,
      'y dice quién lo pidió, cuánto y para cuánta gente');
+
+  // Subir el cupo es del gerente o más arriba (2026-11-12).
+  ok(!puede('encargado' as never, 'cupo') && puede('gerente' as never, 'cupo') && puede('pagos' as never, 'cupo')
+     && puede('admin' as never, 'cupo') && puede('encargado' as never, 'dias'),
+     'subir el cupo: gerente, pagos y admin; el encargado sigue abriendo y cerrando días');
+  ok(limiteSinAprobar(120, 60) === 120 && limiteSinAprobar(0, 60) === 60 && limiteSinAprobar(undefined, 60) === 60,
+     'sin aprobar se llega al cupo de hoy, o al de siempre si el día no tiene');
+  ok(!subeElCupo(120, 120, 60) && !subeElCupo(120, 80, 60) && subeElCupo(120, 121, 60) && subeElCupo(undefined, 61, 60),
+     'bajar o dejar igual no pide nada; subir sí');
+  const marcaCupo = marcaCupoPedido(140, 'Carla', '2026-11-12 10:05', ' viene  un grupo · de Andes ');
+  const leido = cupoPedidoDe(marcaCupo);
+  ok(!!leido && leido.cupo === 140 && leido.quien === 'Carla' && leido.cuando === '2026-11-12 10:05'
+     && leido.motivo === 'viene un grupo · de Andes', 'el pedido de cupo se guarda y se lee igual');
+  ok(cupoPedidoDe('') === null && cupoPedidoDe('cien · Carla') === null, 'una celda vacía o rara no es un pedido');
+  ok(cupoAlAprobar(140, 120, 900) === 140 && cupoAlAprobar(1000, 120, 900) === 900 && cupoAlAprobar(100, 120, 900) === 120,
+     'al aprobar: lo pedido, sin pasar del recinto ni bajar lo que hay');
+  const dia2 = (fecha: string, capacidad: number, cupoPedido = '') =>
+    ({ fecha, capacidad, apertura: '13:00', estado: 'Abierta', notas: '', fila: 2, cupoPedido });
+  const pedidos = pendientesDeCupo([dia2('2026-11-21', 120, marcaCupo), dia2('2026-11-22', 120), dia2('2026-11-28', 150, marcaCupo)],
+    { '2026-11-21': 60 });
+  ok(pedidos.length === 1 && pedidos[0].cupoPedido === 140 && pedidos[0].tomadas === 60 && pedidos[0].pide === 'Carla',
+     'la bandeja trae los pedidos de cupo; uno que ya se cumplió no');
+  const sobre = pendientesDeSobrecupo([{ fecha: '2026-11-14', capacidad: 120, tomadas: 132, sobrecupo: 12 },
+    { fecha: '2026-11-21', capacidad: 120, tomadas: 130, sobrecupo: 10 }, { fecha: '2026-11-15', capacidad: 120, tomadas: 90, sobrecupo: 0 }],
+    900, new Set(['2026-11-21']));
+  ok(sobre.length === 1 && sobre[0].ampliarA === 132 && sobre[0].alcanza,
+     'y los días sobre su cupo, salvo los que ya tienen un pedido de cupo');
+  ok(pendientesDeSobrecupo([{ fecha: '2026-11-14', capacidad: 120, tomadas: 1000, sobrecupo: 880 }], 900)[0].alcanza === false,
+     'si ni con el recinto completo caben, lo dice');
+  ok(juntarPendientes(sobre, pedidos, bandeja).map((p) => p.fecha).join() === '2026-11-14,2026-11-14,2026-11-15,2026-11-21',
+     'todo junto, el día más antiguo primero');
 
   // La caja de Fudo usa lo rectificado.
   const carta = [{ nombre: 'Tradiciones', precioEnLinea: 44000, precioEnLocal: 49000 },

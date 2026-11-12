@@ -21,7 +21,8 @@ export const dynamic = 'force-dynamic';
  * hasta ahí y lo dice: igual habrá que soltar a alguien.
  */
 export const POST = conLecturas([HOJA_FECHAS, HOJA_RESERVAS], async function POST(req: Request) {
-  const no = await exigir(req, 'dias');
+  // Subir el cupo es del gerente o más arriba (2026-11-12).
+  const no = await exigir(req, 'cupo');
   if (no) return no;
   try {
     const cuerpo = (await req.json().catch(() => ({}))) ?? {};

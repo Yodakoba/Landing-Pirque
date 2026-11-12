@@ -109,7 +109,9 @@ export const COL_FECHAS = {
   capacidad: 'Capacidad Máx',
   apertura: 'Hora Apertura',
   estado: 'Estado',
-  notas: 'Notas'
+  notas: 'Notas',
+  /** El pedido de subir el cupo, esperando al gerente (2026-11-12). Ver `lib/cupo.ts`. */
+  cupoPedido: 'Cupo pedido'
 } as const;
 
 /**

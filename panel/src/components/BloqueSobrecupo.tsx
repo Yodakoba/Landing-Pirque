@@ -26,12 +26,15 @@ import { puedeTocarReserva, type Rol } from '@/lib/auth';
 import { enPalabras } from '@/lib/fechas';
 import { enlaceWhatsApp } from '@/lib/contacto';
 import { folioDe } from '@/lib/presupuestos';
+import { cupoPedidoDe } from '@/lib/cupo';
 
 export interface CupoDelDia {
   fecha: string;
   capacidad: number;
   tomadas: number;
   sobrecupo: number;
+  /** El pedido de más cupo que espera al gerente, o vacío (`lib/cupo.ts`). */
+  cupoPedido?: string;
 }
 
 const MOTIVO = 'El día se llenó con reservas pagadas';
@@ -58,7 +61,7 @@ export function AvisarCaida({ r }: { r: Pick<Reserva, 'nombre' | 'telefono' | 'f
 }
 
 export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, usuario, conDias,
-  deCotizacion, onCambio }: {
+  conCupo = conDias, deCotizacion, onCambio }: {
   dia: CupoDelDia;
   reservas: Reserva[];
   capacidadMaxima: number;
@@ -66,6 +69,12 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
   usuario: string;
   /** Si esta cuenta puede cambiar el cupo de un día (permiso `dias`). */
   conDias: boolean;
+  /**
+   * Si esta cuenta sube el cupo (permiso `cupo`: gerente o más arriba,
+   * 2026-11-12). El encargado tiene `dias` pero no `cupo`: el ampliar lo
+   * **pide**, y le llega al gerente a la bandeja.
+   */
+  conCupo?: boolean;
   /** Qué reservas vienen de una cotización: id de reserva → id de cotización. */
   deCotizacion: Record<string, string>;
   onCambio: () => void;
@@ -88,7 +97,8 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
   const riesgo = enRiesgo(reservas, dia.fecha);
   const sugeridas = sugerirSoltar(riesgo, dia.sobrecupo);
   const ampliar = cupoAmpliado(dia.tomadas, capacidadMaxima);
-  const puedeAmpliar = conDias && ampliar.cupo > dia.capacidad;
+  const puedeAmpliar = conCupo && ampliar.cupo > dia.capacidad;
+  const pedido = cupoPedidoDe(dia.cupoPedido);
   const mias = riesgo.filter((r) => puedeTocarReserva(rol as Rol, usuario, r.anotadaPor));
   // El filtro aparece solo cuando hay reservas que esta cuenta no puede
   // tocar: para quien puede todas, "mías" y "todas" serían lo mismo.
@@ -110,6 +120,22 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
       avisar(d.alcanza
         ? `Cupo ampliado a ${d.cupo}: caben todos. Revisa el equipo del día.`
         : `Cupo en ${d.cupo}, el máximo del recinto: todavía sobran ${d.faltan}.`, d.alcanza ? 'ok' : 'atencion');
+      onCambio();
+    } finally { setOcupado(false); }
+  }
+
+  /** El encargado pide ampliar: le llega al gerente a la bandeja. */
+  async function pedirCupo() {
+    setOcupado(true); setError('');
+    try {
+      const r = await fetch('/api/fechas/cupo', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fecha: dia.fecha, accion: 'pedir', cupo: ampliar.cupo,
+          motivo: `Sobrecupo: ${dia.sobrecupo} ${dia.sobrecupo === 1 ? 'persona' : 'personas'} sobre el cupo` })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.error) { setError(d.error || 'No se pudo pedir el cupo.'); return; }
+      avisar(`Pedido al gerente: ampliar a ${ampliar.cupo}. Le llega a su bandeja.`);
       onCambio();
     } finally { setOcupado(false); }
   }
@@ -138,11 +164,33 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
       </h2>
       <p className="mt-1 text-[15px] text-hueso/85">
         Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia, así que ya
-        están adentro.{conDias && ' Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin '
-          + 'pagar y le avisas al cliente.'}
+        están adentro.{conCupo ? ' Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin '
+          + 'pagar y le avisas al cliente.'
+          : conDias ? ' Pídele al gerente ampliar el cupo, o suelta una reserva sin pagar y avísale al cliente.' : ''}
       </p>
 
-      {conDias && (
+      {/* **El encargado pide, el gerente amplía** (2026-11-12). */}
+      {conDias && !conCupo && ampliar.cupo > dia.capacidad && (
+        <div className="mt-3 rounded-xl border-2 border-oro/60 bg-oro/10 p-3">
+          {pedido ? (
+            <p className="text-[15px] font-semibold">
+              ⏳ Se pidió ampliar el cupo a {pedido.cupo}: esperando al gerente de operaciones.
+            </p>
+          ) : (
+            <>
+              <button type="button" disabled={ocupado} onClick={() => void pedirCupo()}
+                className="boton boton-relleno min-h-[48px] text-[15px]">
+                🙋 Pedir ampliar el cupo a {ampliar.cupo}
+              </button>
+              <p className="mt-1 text-[13px] text-hueso/75">
+                Ampliar el cupo lo aprueba el gerente de operaciones: le llega a su bandeja.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {conCupo && (
         <div className="mt-3 rounded-lg border border-hueso/15 bg-panel p-3">
           {puedeAmpliar ? (
             <>

@@ -94,7 +94,9 @@ avisarle al cliente.
   (`BloqueSobrecupo.tsx`). Lista las reservas sin pagar, las más nuevas
   primero, y **sugiere** cuáles soltar hasta cubrir el exceso
   (`sugerirSoltar()`); decide la persona.
-  - **Ampliar el cupo a N** (`/api/fechas/ampliar`, permiso `dias`): el
+  - **Ampliar el cupo a N** (`/api/fechas/ampliar`, permiso `cupo` desde
+    el 2026-11-12: gerente, quien paga y administrador; el encargado lo
+    **pide**, ver "Subir el cupo es del gerente"): el
     servidor calcula el cupo con lo tomado de ese momento, **nunca por
     encima de la capacidad máxima del recinto** —`capacidad_maxima` en
     Configuración, **900** según el cliente—. Si ni así caben, sube al
@@ -4575,6 +4577,49 @@ lo de ese día) va **🔔 Tienes N cosas que aprobar**, para quien tiene
   lista y su respuesta en la tarjeta.
 - **Es dentro del panel**: no manda WhatsApp ni correo. Se entera quien
   abre la portada.
+- **Trae tres tipos** desde el 2026-11-12: el descuento, **el pedido de más
+  cupo** del encargado (*Carla pide subir el cupo a **140***, con *✓ Subir a
+  140* y *✕ Rechazar*) y **el día sobre su cupo** (*Hay **12** personas sobre
+  el cupo*, con *✓ Ampliar a 132* y *Soltar una reserva →*, que lleva al
+  bloque del día). Ver la sección que sigue.
+
+### Subir el cupo es del gerente (2026-11-12)
+
+Lo pidió el cliente: *"el derecho de aumentar el cupo se saca del encargado
+y es el gerente de operaciones o más arriba quien puede aumentar el cupo. Y
+esto también se debería transformar en una notificación"*. Y aclaró: **para
+los demás roles los avisos de sobrecupo quedan como estaban**.
+
+- **Permiso `cupo`**: gerente, quien paga y administrador. El encargado
+  sigue con `dias` —abre, cierra, cambia la hora y **baja** el cupo—, pero
+  no lo sube. Lo comprueba el servidor: `/api/fechas` responde 403 si la
+  cuenta sin `cupo` deja el día sobre su cupo de hoy (o sobre el de siempre
+  si el día no tiene), y `/api/fechas/ampliar` pide `cupo`.
+  `limiteSinAprobar()` y `subeElCupo()` en `lib/cupo.ts`, con pruebas.
+- **El encargado lo pide**, por dos caminos:
+  - En *Editar* un día, si escribe más que el cupo de hoy, aparece
+    *🙋 Subir el cupo sobre 120 lo aprueba el gerente de operaciones* con un
+    *¿Por qué?*, y el botón dice **Guardar con 120 y pedir 140**: guarda el
+    día con el de hoy y deja el pedido.
+  - En el bloque de sobrecupo del día, *Ampliar el cupo* pasa a ser
+    **🙋 Pedir ampliar el cupo a 132**; ya pedido, dice *⏳ Se pidió ampliar
+    el cupo a 132: esperando al gerente*. Soltar una reserva sigue siendo
+    suyo.
+- **El pedido vive en el día**: columna `Cupo pedido` de `Fechas Hábiles`,
+  al final y se agrega sola (*"140 · Carla · 2026-11-12 10:05 · motivo"*).
+  `/api/fechas/cupo` lo pide (`dias`), lo aprueba o lo rechaza (`cupo`).
+  **Aprobar** sube a lo pedido sin pasar de la capacidad máxima del recinto
+  ni bajar lo que hay (`cupoAlAprobar()`), y vacía la columna; **rechazar**
+  solo la vacía. Todo queda en la bitácora.
+- **Al gerente le llega a la bandeja**, igual que un descuento, y también
+  **cada día sobre su cupo** con *Ampliar* de un toque. Un día que ya tiene
+  un pedido no se repite como sobrecupo: es la misma decisión. Para quien
+  tiene `cupo` el aviso rojo de sobrecupo de la portada se reemplaza por la
+  bandeja; **los demás roles lo siguen viendo igual**, y Cotizaciones, la
+  línea de la semana y la tarjeta del día no cambiaron.
+- **No cuesta lecturas**: los pedidos salen de `/api/fechas`, que la
+  portada ya pedía, y la firma de cambios ya cubre todas las columnas de
+  `Fechas Hábiles`, así que un pedido nuevo aparece en la próxima revisión.
 
 ### El gerente de operaciones (2026-11-12)
 
@@ -4596,6 +4641,7 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | Ver el calendario y las reservas | sí | sí | **sí** | **sí** | — |
 | Anotar reservas | sí | sí | **sí** | **solo las suyas** | — |
 | Abrir y editar días | sí | sí | **sí** | — | — |
+| **Subir el cupo de un día** (el encargado lo pide) | sí | **lo pide** | **sí** | — | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — | — |
 | Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — | — |
 | **Cerrar el día** (con la ventana de confirmación) | sí | sí | **sí** | — | — |
@@ -5745,6 +5791,16 @@ no había nada que pudiera achicarse.
 **La lección, que es la misma de `flex-wrap`:** estas propiedades no
 ordenan, solo deciden qué pasa cuando algo no cupo. Si una medida tiene que
 respetarse, hay que declararla.
+
+**Y volvió a pasar el 2026-11-12, con más gente** (lo reclamó el cliente
+con una captura: *Editar* chocando con el borde). Con *Equipo 18/23* los
+tres botones piden 277px y la tarjeta tiene 261 a 1280px de ancho —197
+a 1024—, así que `.boton-angosto` ya no alcanzaba. **Ahora el pie mira su
+propio ancho** (container query, `.pie-tarjeta` en `globals.css`): si no
+caben los tres en una línea, pasan a dos —*Reservas* y *Editar* arriba,
+*Equipo* a todo el ancho abajo—. Como todas las tarjetas de la grilla miden
+lo mismo, cambian todas juntas y siguen parejas. Medido a 1024, 1180, 1280,
+1440 y 393: ningún pie se sale y todos quedan a 17px del borde.
 
 #### El punto ámbar solo hablaba en un globito (2026-11-02)
 
