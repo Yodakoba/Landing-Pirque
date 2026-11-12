@@ -281,6 +281,8 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   .pie-botones { display: grid; grid-template-columns: 1fr 1fr; }
   .pie-botones > .pie-hueco { display: none; }
   .pie-botones > .pie-equipo { grid-column: 1 / -1; order: 3; }
+  /* Sin *Editar* (quien no edita fechas), *Reservas* va a todo el ancho. */
+  .pie-sin-editar { grid-template-columns: 1fr; }
   .pie-botones > * { width: 100%; }
 }
 

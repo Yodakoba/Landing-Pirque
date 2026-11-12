@@ -453,8 +453,8 @@ ok(paraElSitio(ocu)[0].pocos === true,
 
   // Subir el cupo es del gerente o más arriba (2026-11-12).
   ok(!puede('encargado' as never, 'cupo') && puede('gerente' as never, 'cupo') && puede('pagos' as never, 'cupo')
-     && puede('admin' as never, 'cupo') && puede('encargado' as never, 'dias'),
-     'subir el cupo: gerente, pagos y admin; el encargado sigue abriendo y cerrando días');
+     && puede('admin' as never, 'cupo') && puede('encargado' as never, 'operarDia'),
+     'subir el cupo: gerente, pagos y admin; el encargado lo pide');
   ok(limiteSinAprobar(120, 60) === 120 && limiteSinAprobar(0, 60) === 60 && limiteSinAprobar(undefined, 60) === 60,
      'sin aprobar se llega al cupo de hoy, o al de siempre si el día no tiene');
   ok(!subeElCupo(120, 120, 60) && !subeElCupo(120, 80, 60) && subeElCupo(120, 121, 60) && subeElCupo(undefined, 61, 60),
@@ -1779,9 +1779,9 @@ ok(credencialesDelEntorno({}).adminUsuario === undefined,
 ok(puede(ROL.admin, 'configurar') && puede(ROL.admin, 'puestos') &&
    puede(ROL.admin, 'links') && puede(ROL.admin, 'mantencion'),
    'el administrador puede todo lo reservado');
-ok(puede(ROL.encargado, 'reservas') && puede(ROL.encargado, 'dias') &&
+ok(puede(ROL.encargado, 'reservas') && !puede(ROL.encargado, 'dias') && puede(ROL.encargado, 'operarDia') &&
    puede(ROL.encargado, 'equipo') && puede(ROL.encargado, 'ver'),
-   'el encargado hace el día a día, incluida la lista de trabajadores');
+   'el encargado hace el día a día y anota reservas, pero no agrega ni edita fechas (2026-11-12)');
 ok(!puede(ROL.encargado, 'configurar') && !puede(ROL.encargado, 'puestos') &&
    !puede(ROL.encargado, 'links') && !puede(ROL.encargado, 'mantencion'),
    'pero no toca precios, puestos, links ni mantención');

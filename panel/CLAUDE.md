@@ -4890,7 +4890,7 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 |---|---|---|---|---|---|
 | Ver el calendario y las reservas | sí | sí | **sí** | **sí** | — |
 | Anotar reservas | sí | sí | **sí** | **solo las suyas** | — |
-| Abrir y editar días | sí | sí | **sí** | — | — |
+| Abrir, agregar y editar días | sí | **— (desde el 2026-11-12)** | **sí** | — | — |
 | **Subir el cupo de un día** (el encargado lo pide) | sí | **lo pide** | **sí** | — | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — | — |
 | Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — | — |
@@ -4910,6 +4910,18 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | **Marcar la boleta** (también el gerente) | sí | — | **sí** | — | — |
 | **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — | — |
 | Ver **sus propios** turnos | — | — | — | — | sí |
+
+**El encargado de turno no agrega ni edita fechas** (2026-11-12, lo pidió
+el cliente: *"puede agregar reserva, pero no puede agregar fecha ni
+editar"*). Se le sacó el permiso `dias`: en el calendario no ve *Agregar
+fecha* ni el *Editar/Abrir* de cada tarjeta —el pie queda con *Reservas* a
+todo el ancho y *Equipo* debajo—, y las rutas de las fechas le responden
+403. **Anotar una reserva sí**, aunque el día no esté en el calendario: eso
+lo abre como privado, que es efecto de la reserva y no editar el
+calendario. Lo que sí hace en el día quedó en un permiso propio,
+**`operarDia`**: pedir más cupo desde el bloque de sobrecupo, soltar una
+reserva por cupo y avisarle a una reserva cuando el día se libera para un
+evento exclusivo.
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente,
 y desde el 2026-11-12 llena la ficha completa, con sueldo y cuenta. Lo que

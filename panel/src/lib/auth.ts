@@ -219,8 +219,23 @@ export const PERMISOS = {
    * reservas; sobre cuáles es otra pregunta, y se contesta aparte.
    */
   reservas: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
-  /** Abrir, cerrar y editar días. */
-  dias: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia],
+  /**
+   * Agregar, abrir, cerrar y editar días del calendario.
+   *
+   * **El encargado de turno dejó de tenerlo el 2026-11-12** (lo pidió el
+   * cliente: *"no debería poder editar fechas… puede agregar reserva, pero
+   * no puede agregar fecha ni editar"*). Anotar una reserva en un día que no
+   * está sigue abriéndolo como privado: eso es efecto de la reserva, no
+   * editar el calendario. Lo que sí hace en el día va en `operarDia`.
+   */
+  dias: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
+  /**
+   * **Llevar el día** (2026-11-12): pedir más cupo, soltar una reserva por
+   * cupo sin pedir permiso y avisarle a una reserva cuando el día se libera
+   * para un evento exclusivo. Lo tenía el encargado de turno a través de
+   * `dias`; se separó cuando dejó de editar fechas.
+   */
+  operarDia: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /** Asignar turnos y administrar la lista de trabajadores. */
   equipo: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**
