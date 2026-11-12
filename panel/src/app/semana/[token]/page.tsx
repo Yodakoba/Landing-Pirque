@@ -145,7 +145,7 @@ export default async function Pagina({
                             se lee como un día flojo y no como un día de
                             montaje. */}
                         {preparando(f) ? (
-                          <span className="text-oro"> · preparación</span>
+                          <span className="text-cafe-texto"> · preparación</span>
                         ) : (
                           <>
                             {' · '}

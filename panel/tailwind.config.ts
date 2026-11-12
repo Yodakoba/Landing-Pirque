@@ -43,7 +43,8 @@ export default {
         // todavía no confirmado"— y no un color. El cliente lo pidió así
         // justamente para que no se confunda con nada que ya esté tomado.
         rosa: { DEFAULT: c('--rosa'), fuerte: c('--rosa-fuerte'), texto: c('--rosa-texto') },
-        morado: { DEFAULT: c('--morado'), fuerte: c('--morado-fuerte'), texto: c('--morado-texto') }
+        morado: { DEFAULT: c('--morado'), fuerte: c('--morado-fuerte'), texto: c('--morado-texto') },
+        cafe: { DEFAULT: c('--cafe'), fuerte: c('--cafe-fuerte'), texto: c('--cafe-texto') }
       }
     }
   },

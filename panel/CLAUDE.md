@@ -2276,11 +2276,18 @@ la ocupación y no mira los turnos— y además se comprobó a mano: con un
 martes planificado, el sitio sigue ofreciendo solo el sábado y el domingo.
 La pantalla lo dice igual, porque es la duda razonable al usarla.
 
+**Preparación va en café desde el 2026-11-12** (lo pidió el cliente): el
+punto 🟤, la palabra, la celda de `/turnos` y la planilla semanal. Antes iba
+en amarillo, **el mismo del semáforo "casi lleno"**, y un día de montaje no
+puede leerse como un día con poco cupo. Se probó rosado y el cliente lo
+descartó en el acto: el rosado ya significa *"cotizado, sin confirmar"*.
+`cafe` es un color con nombre propio en las dos paletas, como `morado`.
+
 Dónde aparece un día de preparación, y cómo:
 
 | | Qué muestra |
 |---|---|
-| `/turnos` | La celda en dorado, con **preparación** y cuánta gente hay asignada |
+| `/turnos` | La celda en **café** (antes dorado), con **preparación** y cuánta gente hay asignada |
 | Planilla semanal | La columna dice **preparación** en vez de "0 personas · 0 reservas", que se leería como un día flojo |
 | Link personal | "día de preparación, no abre al público", para que quien lo lee sepa si va a atender o a montar |
 | Calendario de la portada | **No aparece**, a propósito: ese día no recibe gente |

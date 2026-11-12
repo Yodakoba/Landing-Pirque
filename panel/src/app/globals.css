@@ -57,6 +57,10 @@
   --morado: 168 85 247;
   --morado-fuerte: 192 132 252;
   --morado-texto: 216 180 254;
+  /* Café: el día de **preparación** (2026-11-12). */
+  --cafe: 168 120 82;
+  --cafe-fuerte: 196 145 102;
+  --cafe-texto: 222 184 148;
 
   /* Cuánto se apaga un marcador de posición. Ver abajo. */
   --fantasma: 0.28;
@@ -95,6 +99,9 @@
   --morado: 147 51 234;
   --morado-fuerte: 126 34 206;
   --morado-texto: 107 33 168;
+  --cafe: 133 86 52;
+  --cafe-fuerte: 112 70 40;
+  --cafe-texto: 99 60 31;
 
   /* Sobre papel, el mismo 0,28 se perdía: un gris claro sobre blanco casi
      no se ve, y un marcador que no se ve no enseña el formato. */
