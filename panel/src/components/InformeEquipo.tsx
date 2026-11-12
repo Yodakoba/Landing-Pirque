@@ -39,9 +39,9 @@ import {
 import { informeDeExtras, costoDeExtra, type Extra } from '@/lib/extras';
 import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
-import { mesEnPalabras, rangoEnPalabras, enPalabras, sumarDias, semanaDe, hoy } from '@/lib/fechas';
+import { mesEnPalabras, rangoEnPalabras, enPalabras, enCorto, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
-import { totalAjustes, motivosDe } from '@/lib/equipo';
+import { totalAjustes, motivosDe, diasQueNoSuman } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
          type Banco } from '@/lib/banco';
 import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, boletaDe, pagosEnPeriodo,
@@ -72,6 +72,9 @@ const TINTE = {
 const tinteDe = (c: string) => (c === CONCEPTO.propina ? TINTE.propina : TINTE.sueldo);
 
 type Tipo = 'mes' | 'semana' | 'rango';
+
+/** Quien vino todos los días: nada fuera. */
+const SIN_FUERA = { sinMarcar: [] as string[], noVino: [] as string[] };
 
 /** Una de las partes que se pueden pagar: sueldo, propina o servicio. */
 interface Opcion { concepto: Concepto; parte: Parte }
@@ -267,7 +270,7 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
  * Van en su propia fila, debajo.
  */
 function LineaPersona({
-  nombre, detalle, aTransferir, estado, partes, datos, avisos, sinCuenta,
+  nombre, detalle, aTransferir, estado, partes, datos, cuentan, fuera, marcarEn, palabraSinMarcar, nota, sinCuenta,
   boleta, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta,
   anotados, onVerPagos
 }: {
@@ -277,8 +280,19 @@ function LineaPersona({
   estado: EstadoPago;
   partes: Opcion[];
   datos: Dato[];
-  /** "1 no vino", "2 sin marcar": lo que hace que el total esté incompleto. */
-  avisos: string[];
+  /** Cuántos días suman: los que vino (o se confirmaron). */
+  cuentan: number;
+  /**
+   * **Los días que no suman** (2026-11-12): sin marcar —no se sabe si vino,
+   * así que no se pagan todavía— y los que no vino.
+   */
+  fuera: { sinMarcar: string[]; noVino: string[] };
+  /** Dónde se marcan: `/turnos` o `/extras`; se abre en el día con `?dia=`. */
+  marcarEn: string;
+  /** *"sin marcar"* para el equipo, *"sin confirmar"* para una actividad extra. */
+  palabraSinMarcar: string;
+  /** Una línea más bajo lo que suma, como la de un contratado. */
+  nota?: string;
   sinCuenta: boolean;
   /** `null` si no aplica; si aplica, si ya llegó. */
   boleta: boolean | null;
@@ -320,8 +334,12 @@ function LineaPersona({
           y el monto, con su ancho natural; estirados a lo largo de 1.200px
           serían barras, no botones. */}
       <div className="md:flex md:items-center">
+      {/* El anillo del foco va **adentro** del botón (`ring-inset`) y solo con
+          el teclado: el de siempre del navegador se montaba sobre los botones
+          de copiar de al lado (2026-11-12). */}
       <button type="button" onClick={onAbrir} aria-expanded={abierta}
         className="tecla flex w-full items-start gap-3 rounded-2xl px-4 pb-2 pt-3 text-left
+                   focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro
                    md:order-1 md:min-w-0 md:flex-1 md:items-center md:pb-3">
         <span aria-hidden className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center
                                      rounded-full border-2 text-[15px] font-bold ${
@@ -332,9 +350,7 @@ function LineaPersona({
           <span className="block text-[17px] font-bold leading-tight">{nombre}</span>
           <span className="block text-[13px] text-hueso/65">
             {detalle}
-            {avisos.map((a) => (
-              <span key={a} className="text-ambar-texto"> · {a}</span>
-            ))}
+            {fuera.noVino.length > 0 && <> · {fuera.noVino.length} no vino</>}
           </span>
         </span>
         <span className="flex shrink-0 flex-col items-end gap-1 md:hidden">
@@ -390,18 +406,74 @@ function LineaPersona({
       </span>
       </div>
 
+      {/* **Los sin marcar, a la vista y con su camino** (2026-11-12, lo
+          pidió el cliente): no suman al total hasta que el encargado de turno
+          marque si vino, y el botón lleva al primero de esos días. Va fuera
+          del botón que abre la línea: un enlace dentro de un botón no es
+          HTML válido. */}
+      {!abierta && fuera.sinMarcar.length > 0 && (
+        <div className="px-4 pb-3">
+          <a href={`${marcarEn}?dia=${fuera.sinMarcar[0]}`}
+            className="tecla boton min-h-[40px] border-2 border-ambar/60 bg-ambar/10 font-semibold text-ambar-texto">
+            ⚠ {fuera.sinMarcar.length} {palabraSinMarcar}: no {fuera.sinMarcar.length === 1 ? 'suma' : 'suman'} · Marcar →
+          </a>
+        </div>
+      )}
+
       {abierta && (
         <div className="space-y-3 border-t-2 border-hueso/10 px-4 pb-4 pt-3">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[14px] sm:grid-cols-3 md:max-w-2xl">
-            {datos.map((d) => (
-              <div key={d.que} className="flex items-baseline justify-between gap-2">
-                <dt className="text-hueso/65">{d.que}</dt>
-                <dd className={`tabular-nums ${d.tono === 'rojo' ? 'text-rojo-texto'
-                  : d.tono === 'ambar' ? 'text-ambar-texto'
-                  : d.tono === 'fuerte' ? 'font-bold' : 'text-hueso/85'}`}>{d.valor}</dd>
+          {/* **Qué se paga, como un recibo** (2026-11-12): lo que suma con su
+              cuenta, y después lo que no suma y por qué. Antes era una grilla
+              de tres columnas donde los valores quedaban lejos de su nombre. */}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border-2 border-verde/40 bg-verde/[0.05] p-3">
+              <p className="text-[15px] font-bold text-verde-texto">
+                ✓ Suma: {cuentan} {cuentan === 1 ? 'día' : 'días'} que vino
+              </p>
+              <dl className="mt-2 space-y-1 text-[14px]">
+                {datos.map((d) => (
+                  <div key={d.que} className={`flex items-baseline justify-between gap-3 ${
+                    d.tono === 'fuerte' ? 'border-t border-hueso/15 pt-1' : ''}`}>
+                    <dt className="text-hueso/70">{d.que}</dt>
+                    <dd className={`tabular-nums ${d.tono === 'rojo' ? 'text-rojo-texto'
+                      : d.tono === 'ambar' ? 'text-ambar-texto'
+                      : d.tono === 'fuerte' ? 'font-bold' : 'text-hueso/90'}`}>{d.valor}</dd>
+                  </div>
+                ))}
+              </dl>
+              {nota && <p className="mt-2 text-[13px] text-hueso/70">{nota}</p>}
+            </div>
+            {(fuera.sinMarcar.length > 0 || fuera.noVino.length > 0) && (
+              <div className="space-y-3">
+                {fuera.sinMarcar.length > 0 && (
+                  <div className="rounded-xl border-2 border-ambar/60 bg-ambar/[0.07] p-3">
+                    <p className="text-[15px] font-bold text-ambar-texto">
+                      ○ Todavía no suma: {fuera.sinMarcar.length} {fuera.sinMarcar.length === 1 ? 'día' : 'días'} {palabraSinMarcar}
+                    </p>
+                    <p className="mt-1 text-[13px] text-hueso/75">
+                      Hasta que el encargado de turno marque si vino, esos días no se pagan. Márcalos y vuelve.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {fuera.sinMarcar.map((f) => (
+                        <a key={f} href={`${marcarEn}?dia=${f}`}
+                          className="tecla boton min-h-[40px] border-2 border-ambar/60 font-semibold">
+                          Marcar el {enCorto(f)} →
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {fuera.noVino.length > 0 && (
+                  <div className="rounded-xl border-2 border-hueso/15 p-3">
+                    <p className="text-[15px] font-bold text-hueso/80">
+                      ✕ No se paga: {fuera.noVino.length} {fuera.noVino.length === 1 ? 'día' : 'días'} que no vino
+                    </p>
+                    <p className="mt-1 text-[13px] text-hueso/70">{fuera.noVino.map(enCorto).join(' · ')}</p>
+                  </div>
+                )}
               </div>
-            ))}
-          </dl>
+            )}
+          </div>
 
           {boleta !== null && (
             puedeBoleta ? (
@@ -439,6 +511,11 @@ function LineaPersona({
                 {estadoPill(o.parte.estado, o.parte.falta)}
               </div>
               <p className="mt-1 text-[24px] font-bold tabular-nums">{enPesos(o.parte.debe)}</p>
+              {fuera.sinMarcar.length > 0 && (
+                <p className="text-[13px] font-semibold text-ambar-texto">
+                  Sin {fuera.sinMarcar.length === 1 ? 'el día' : `los ${fuera.sinMarcar.length} días`} {palabraSinMarcar}: si vino, después se le debe más.
+                </p>
+              )}
               {o.parte.pagado > 0 && o.parte.estado !== 'pagado' && (
                 <p className="text-[13px] text-hueso/65">Pagado {enPesos(o.parte.pagado)}</p>
               )}
@@ -740,6 +817,11 @@ export default function InformeEquipo() {
   const lineas = useMemo(
     () => informeDelPeriodo(turnos ?? [], desde, hasta), [turnos, desde, hasta]
   );
+  /** Los días que no suman, por persona: turnos y actividades extras. */
+  const fueraEquipo = useMemo(() => diasQueNoSuman(turnos ?? [], desde, hasta,
+    (t) => t.trabajador, (t) => t.asistencia), [turnos, desde, hasta]);
+  const fueraExtras = useMemo(() => diasQueNoSuman(extras, desde, hasta,
+    (e) => e.colaborador, (e) => e.estado), [extras, desde, hasta]);
   const lineasExtras = useMemo(
     () => informeDeExtras(extras, desde, hasta, new Map(Object.entries(cuentas))),
     [extras, desde, hasta, cuentas]
@@ -1423,11 +1505,13 @@ export default function InformeEquipo() {
                     <LineaPersona key={'e-' + l.trabajador}
                       nombre={l.trabajador}
                       detalle={`${esContratado(l.modalidad) ? 'Contratado' : 'Por turno'} · ${
-                        l.dias} ${l.dias === 1 ? 'día' : 'días'}`}
-                      avisos={[
-                        ...(l.noVino ? [`${l.noVino} no vino`] : []),
-                        ...(l.sinMarcar ? [`${l.sinMarcar} sin marcar`] : [])
-                      ]}
+                        l.dias} ${l.dias === 1 ? 'día' : 'días'} que vino`}
+                      cuentan={l.dias}
+                      fuera={fueraEquipo.get(normalizar(l.trabajador)) ?? SIN_FUERA}
+                      marcarEn="/turnos" palabraSinMarcar="sin marcar"
+                      nota={esContratado(l.modalidad)
+                        ? 'Contratado: sus jornadas van en su sueldo; acá suman solo horas extra y ajustes.'
+                        : 'La propina se paga aparte del sueldo: son dos transferencias.'}
                       aTransferir={pago.aTransferir} estado={pago.estado}
                       partes={partesDe(l.trabajador, l.total, l.propina, false)}
                       datos={[
@@ -1444,8 +1528,8 @@ export default function InformeEquipo() {
                             ? (l.ajustes < 0 ? '−' : '') + enPesos(Math.abs(l.ajustes))
                             : '—',
                           tono: l.ajustes < 0 ? 'rojo' : undefined },
-                        { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' },
-                        { que: 'Propina', valor: l.propina ? enPesos(l.propina) : '—' }
+                        { que: 'Sueldo', valor: enPesos(l.total), tono: 'fuerte' },
+                        { que: 'Propina (aparte)', valor: l.propina ? enPesos(l.propina) : '—' }
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.trabajador))}
                       boleta={aplica ? boletaRecibida(l.trabajador) : null}
@@ -1495,11 +1579,10 @@ export default function InformeEquipo() {
                     <LineaPersona key={'x-' + l.colaborador}
                       nombre={l.colaborador}
                       detalle={`${l.actividad || 'Actividad extra'} · ${l.dias} ${
-                        l.dias === 1 ? 'día' : 'días'}`}
-                      avisos={[
-                        ...(l.noVino ? [`${l.noVino} no vino`] : []),
-                        ...(l.sinConfirmar ? [`${l.sinConfirmar} sin confirmar`] : [])
-                      ]}
+                        l.dias === 1 ? 'día' : 'días'} que vino`}
+                      cuentan={l.dias}
+                      fuera={fueraExtras.get(normalizar(l.colaborador)) ?? SIN_FUERA}
+                      marcarEn="/extras" palabraSinMarcar="sin confirmar"
                       aTransferir={pago.aTransferir} estado={pago.estado}
                       partes={partesDe(l.colaborador, l.total, 0, true)}
                       datos={[
@@ -1509,7 +1592,7 @@ export default function InformeEquipo() {
                             ? (l.ajustes < 0 ? '−' : '') + enPesos(Math.abs(l.ajustes))
                             : '—',
                           tono: l.ajustes < 0 ? 'rojo' : undefined },
-                        { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' }
+                        { que: 'Servicio', valor: enPesos(l.total), tono: 'fuerte' }
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.colaborador))}
                       boleta={pideBoleta('extra', false) ? boletaRecibida(l.colaborador) : null}

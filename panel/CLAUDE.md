@@ -2886,6 +2886,34 @@ gritón"*. Son dos pagos y se veían iguales salvo por la palabra.
 - Dentro de un bloque, *Copiar datos de transferencia* va con fondo blanco
   (`bg-panel`) para despegarse del tinte.
 
+#### Lo que suma y lo que no, dicho en la línea (2026-11-12)
+
+Lo pidió el cliente mirando a alguien con *"3 días · 2 sin marcar"*: se leía
+como 3 días de los cuales 2 sin marcar, y en realidad eran **3 que vino y 2
+aparte que no suman**. El cálculo ya estaba bien —`informeDelPeriodo()`
+cuenta solo la asistencia marcada—; lo que fallaba era decirlo.
+
+- **Cerrada**, la línea dice *Por turno · 3 días que vino · 1 no vino*, y
+  si hay días sin marcar, un botón aparte: **⚠ 2 sin marcar: no suman ·
+  Marcar →**, que lleva a `/turnos?dia=<el primero>` (en una actividad
+  extra, *sin confirmar* y `/extras`). Va fuera del botón que abre la línea:
+  un enlace dentro de un botón no es HTML válido.
+- **`/turnos` y `/extras` aceptan `?dia=AAAA-MM-DD`**: abren ese mes y la
+  ventana de ese día, recién cuando llegan sus datos.
+- **Abierta, es un recibo**: **✓ Suma: N días que vino** con jornadas, horas
+  extra, ajustes, el **Sueldo** y la **Propina (aparte)**, y una línea que
+  dice qué es lo que se paga (la propina en otra transferencia; un
+  contratado, solo horas extra y ajustes). Al lado, **○ Todavía no suma**
+  con un *Marcar el sáb 7 nov →* por día, y **✕ No se paga** con los días
+  que no vino. Antes era una grilla de tres columnas con los valores lejos
+  de su nombre.
+- **Cada parte avisa bajo su monto** si hay días sin marcar: *"Sin los 2
+  días sin marcar: si vino, después se le debe más"*.
+- Los días salen de `diasQueNoSuman()` en `equipo.ts` (con pruebas), la
+  misma para turnos y actividades extras; la fecha corta, de `enCorto()`.
+- **El anillo azul del foco ya no se monta sobre los botones de copiar**:
+  va adentro del botón de la línea y solo con teclado (`focus-visible`).
+
 #### Filtrar: *Por pagar* y buscar por nombre (2026-11-05)
 
 Lo pidió el cliente: *"un botón por pagar, justo arriba de la lista… y el
