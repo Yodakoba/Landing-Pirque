@@ -17,7 +17,8 @@ import { PERMISOS, ROL, puede, type Accion, type Rol } from './auth.ts';
 /** Cómo se dice cada permiso, en el orden en que se lee la lista. */
 export const PALABRAS: Record<Accion, string> = {
   ver: 'Ver el calendario y las reservas',
-  reservas: 'Anotar, editar y borrar reservas',
+  reservas: 'Editar y borrar reservas',
+  anotar: 'Anotar una reserva nueva directo en el calendario',
   asistencia: 'Marcar si cada reserva vino o no',
   presupuestos: 'Cotizar: crear cotizaciones, marcarlas ganadas, cancelarlas',
   clientes: 'Ver y editar las fichas de clientes',
@@ -65,7 +66,7 @@ export const RESUMEN_ROL: Record<string, string> = {
   [ROL.operaciones]: 'Lo del encargado de turno, más aprobar descuentos, subir cupos, corregir días cerrados, decidir los eventos exclusivos y ver el informe. Sin pagos ni configuración.',
   [ROL.encargado]: 'El día a día: reservas, equipo —con la ficha completa, sueldos y cuenta— y cotizaciones. No agrega ni edita fechas. Sin el informe, pagos ni configuración.',
   [ROL.pagos]: 'Lo del encargado de turno, más la plata y la configuración. No toca cuentas.',
-  [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',
+  [ROL.vendedor]: 'Ve todo el calendario y cotiza; sus reservas nacen de una cotización ganada, y solo toca lo suyo.',
   [ROL.anfitrion]: 'Recibe a los clientes: ve las reservas del día y marca si vinieron.'
 };
 

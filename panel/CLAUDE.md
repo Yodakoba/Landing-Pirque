@@ -4889,7 +4889,8 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | | Administrador | Encargado | Pagos | Vendedor | Trabajador |
 |---|---|---|---|---|---|
 | Ver el calendario y las reservas | sí | sí | **sí** | **sí** | — |
-| Anotar reservas | sí | sí | **sí** | **solo las suyas** | — |
+| Anotar reservas nuevas (`anotar`) | sí | sí | **sí** | **— (por Cotizaciones, desde el 2026-11-12)** | — |
+| Editar y borrar reservas | sí | sí | **sí** | **solo las suyas** | — |
 | Abrir, agregar y editar días | sí | **— (desde el 2026-11-12)** | **sí** | — | — |
 | **Subir el cupo de un día** (el encargado lo pide) | sí | **lo pide** | **sí** | — | — |
 | Asignar turnos y editar la lista de trabajadores | sí | sí | **sí** | — | — |
@@ -4938,6 +4939,18 @@ puertas cerradas o le escondería las suyas. Al vendedor le aparece **una
 sola pastilla**, Calendario, sin que nadie lo haya escrito en ninguna parte.
 
 ### El rol de vendedor: ve todo, toca lo suyo (2026-11-05)
+
+> **Cambió el 2026-11-12: el vendedor ya no anota reservas directo** (lo
+> pidió el cliente: *"él tiene que tomar el camino por cotizaciones… puede
+> ver calendario, reservas, y sus reservas los puede editar, pero no puede
+> simplemente agregar reservas"*). Una reserva suya pasa por la cotización
+> —cómo se paga, el anticipo, con o sin contrato— y nace al ganarla. Es el
+> permiso nuevo **`anotar`**, que tienen todos menos él: el `POST` de
+> `/api/reservas` le responde 403 con *"se hacen por Cotizaciones"*, y donde
+> estaba *Agregar reserva* ve **+ Cotizar una reserva** en la portada y
+> **+ Cotizar este día** en la página del día, que abre la ventana de
+> cotizar con ese día puesto (`/presupuestos?cotizar=<fecha>`). Sus reservas
+> las sigue editando y borrando con `reservas`.
 
 Lo pidió el cliente, y la frase trae ya la regla entera:
 

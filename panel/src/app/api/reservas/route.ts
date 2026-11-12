@@ -7,6 +7,7 @@ import { esFecha } from '@/lib/fechas';
 import { HOJA_MENUS } from '@/lib/menus';
 import { HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
+import { ROL } from '@/lib/auth';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
 import { leerPresupuestos } from '@/lib/datos';
@@ -82,7 +83,15 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
 });
 
 export const POST = conLecturas([], async function POST(req: Request) {
-  const no = await exigir(req, 'reservas');
+  // **El vendedor no anota directo** (2026-11-12): sus reservas nacen de una
+  // cotización ganada. Ver `anotar` en `auth.ts`.
+  if ((await quienEs(req)).rol === ROL.vendedor) {
+    return NextResponse.json({
+      error: 'Las reservas nuevas del vendedor se hacen por Cotizaciones: cotiza el día y, al ganarla, la reserva nace sola.',
+      permiso: true
+    }, { status: 403 });
+  }
+  const no = await exigir(req, 'anotar');
   if (no) return no;
   try {
     const b = await req.json();
