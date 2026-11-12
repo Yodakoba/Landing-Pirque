@@ -1874,11 +1874,48 @@ vendedor"*, y fijó la parte del vendedor: **50%**. Código en
   vendedor: lo que suma en el periodo, lo que viene, lo que se le pagó (los
   pagos *Comisión* a su nombre).
 
-**Lo que queda para la segunda entrega**: congelar la comisión del socio
-cuando el cliente paga todo (hoy se calcula al leer, y la columna
-`Comisión vendedor` es solo del vendedor), los socios en el informe —su
-pago, su boleta y la planilla—, y su link personal para que vea su resumen
-sin cuenta.
+### Segunda entrega: congelar, informe y link personal (2026-11-12)
+
+- **La comisión del socio se congela**, como la del vendedor: cuando el
+  cliente termina de pagar, `congelarComision()` la escribe en la columna
+  nueva **`Comisión socio`** de `Presupuestos` —*"300000 · 60 personas →
+  etapa 2, 10% = …"*—, en la misma escritura que la del vendedor. Desde ahí
+  no cambia aunque se le renegocie el trato: un trato nuevo vale para lo
+  que se pague después. Lo explicó el ejemplo con que el cliente lo aprobó:
+  sin congelar, bajarle la etapa 2 de 10% a 8% en enero cambiaba la venta
+  de noviembre de $300.000 a $240.000. **Si se cambia el socio de una
+  cotización, su comisión congelada se borra** (era del otro) y se vuelve a
+  calcular para el nuevo. Una alternativa nace sin ella.
+- **Los socios en el informe**, en el bloque de vendedores, que pasa a
+  llamarse *Vendedores y socios* cuando hay alguno: lo que le toca en el
+  periodo, su pastilla de pago, *Registrar pago* con concepto Comisión, la
+  boleta, copiar la cuenta y la transferencia masiva. En la línea dice
+  *socio comercial*; en la planilla, la primera columna dice *Socio
+  comercial*. Sin sueldo fijo. *Sin pagar* lleva a su ficha
+  (`/vendedores?usuario=S-0001`, que ahora abre directo a quien se pide).
+- **El link personal del socio** (`/mi/<token>`, columna `Token de acceso`
+  de `Vendedores`, solo en socios): *🔗 Copiar link personal* lo crea la
+  primera vez; *Renovar* y *Quitar link* preguntan antes (regla 7). Permiso
+  `links`, ruta `/api/vendedores/link`; el token no baja a quien no lo
+  tiene. **Desactivar al socio apaga su link** (`socioPorToken()`).
+  La página (`mi/[token]/Socio.tsx`) es la del colaborador con lo de un
+  socio: su trato en una frase, *💰 Lo que gané* por mes con flechas
+  —lo ganado, lo pagado, lo que falta, evento por evento con cómo se
+  calculó y los pagos— y *📅 Lo que viene*, las ganadas que el cliente
+  todavía no termina de pagar con la comisión que traen. **No ve al
+  vendedor, ni los cobros, ni ventas ajenas.**
+- **Lecturas de Google**: la ficha del socio viaja en la tanda de siempre
+  de `/mi/` (se sumó `Vendedores`); **sus ventas, en una segunda tanda solo
+  cuando el token es de un socio**, para no cargar las cotizaciones en cada
+  visita de un trabajador. El informe, la misma tanda de antes.
+
+### Los buscadores se cierran con un clic afuera (2026-11-12)
+
+Lo pidió el cliente: *"que con un clic afuera de la búsqueda desaparezca el
+formulario abierto"*. `BuscarEnLista` ya no tiene botón *Cerrar*, y
+`BuscarPersona` (el *+ Agregar…* del equipo) también se cierra así —conserva
+*Listo* para quien agregó a varios—. Escuchan `pointerdown` en el
+documento, que cubre el mouse y el dedo; Escape sigue cerrando.
 
 **Lecturas de Google**: ninguna más. `Vendedores` se sumó a la tanda de
 `/api/presupuestos`; agregar un socio es la tanda de la ruta más la relectura

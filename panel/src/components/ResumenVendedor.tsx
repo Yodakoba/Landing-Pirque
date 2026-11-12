@@ -20,6 +20,7 @@
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import BuscarEnLista from './BuscarEnLista';
+import { avisar, copiarConAviso } from './AvisoFlotante';
 import DatosBancarios from './DatosBancarios';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { enPesos } from '@/lib/ocupacion';
@@ -36,7 +37,7 @@ interface Datos {
   desde: string; hasta: string; periodo: string; hoy: string;
   resumen: Omit<Resumen, 'cuentan'> & { cuentan: VentaConFolio[] }; pagado: number; falta: number; pagos: PagoEquipo[];
   porCobrar: VentaConFolio[]; enCurso: { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number; detalle: string }[];
-  puedeEditar: boolean; error?: string;
+  puedeEditar: boolean; puedeLinks?: boolean; error?: string;
 }
 
 const ENTRADA = 'min-h-[44px] w-full rounded border border-hueso/25 bg-tinta px-3 text-[16px] tabular-nums focus:border-oro focus:outline-none';
@@ -107,7 +108,12 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
       if (!p && d.periodo) setPeriodo(d.periodo);
     }).catch((e) => setError(String(e)));
   };
-  useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Se puede llegar directo a alguien: el informe enlaza `/vendedores?usuario=…`.
+  useEffect(() => {
+    const u = new URLSearchParams(window.location.search).get('usuario') ?? '';
+    if (u) setUsuario(u);
+    cargar(u);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fichas = usarGuardadoPorFicha<Partial<FichaVendedor>>(async (u, cambios) => {
     const r = await fetch('/api/vendedores', {
@@ -146,6 +152,25 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok || d.error) { setAviso(d.error || 'No se pudo guardar.'); return; }
+    cargar(datos.usuario, periodo);
+  };
+  /**
+   * **El link personal del socio** (2026-11-12, segunda entrega): *Copiar
+   * link personal* lo crea la primera vez; *Renovar* y *Quitar link*
+   * preguntan antes (regla 7: toca links).
+   */
+  const link = async (accion: 'crear' | 'renovar' | 'quitar') => {
+    if (accion === 'renovar' && !confirm(`¿Crear un link nuevo para ${datos.nombre}? El que tiene deja de servir al instante.`)) return;
+    if (accion === 'quitar' && !confirm(`¿Quitarle el acceso a ${datos.nombre}? Su link deja de servir al instante.`)) return;
+    const r = await fetch('/api/vendedores/link', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ usuario: datos.usuario, accion })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { avisar(d.error || 'No se pudo.', 'atencion'); return; }
+    if (ficha) setFicha({ ...ficha, token: d.token });
+    if (accion === 'quitar') avisar(`${datos.nombre} ya no tiene acceso.`);
+    else copiarConAviso(`${window.location.origin}/mi/${d.token}`, `Link de ${datos.nombre} copiado`, `Link de ${datos.nombre}:`);
     cargar(datos.usuario, periodo);
   };
   const crearSocio = async () => {
@@ -453,6 +478,28 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                           : `¿Activar a ${datos.nombre}? Vuelve a ofrecerse al cotizar.`)}>
                         {datos.ficha.activo ? 'Desactivar' : 'Activar'}</button>
                     </div>
+                  </div>
+                )}
+                {esSocio && datos.puedeLinks && (
+                  <div className="rounded-xl border-2 border-hueso/15 p-3">
+                    <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Link personal</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button type="button" className="boton min-h-[44px] border-oro text-oro"
+                        onClick={() => void link('crear')}>🔗 Copiar link personal</button>
+                      {ficha.token && (
+                        <>
+                          <button type="button" className="boton min-h-[44px]" onClick={() => void link('renovar')}
+                            title="Crea uno nuevo; el anterior deja de servir">Renovar</button>
+                          <button type="button" className="boton min-h-[44px] hover:border-rojo-fuerte hover:text-rojo-texto"
+                            onClick={() => void link('quitar')}>Quitar link</button>
+                        </>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[13px] text-hueso/70">
+                      {ficha.token ? 'Tiene link. ' : 'Todavía no tiene link: se crea al copiarlo. '}
+                      Abre sus ventas, su comisión y lo que se le pagó, sin contraseña. Mándaselo por WhatsApp.
+                      {!datos.ficha.activo && ' Desactivado, el link no abre.'}
+                    </p>
                   </div>
                 )}
                 <div>

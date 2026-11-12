@@ -745,6 +745,8 @@ export default function InformeEquipo() {
     nombre: string; usuario: string;
     ficha: Pick<FichaVendedor, 'sueldoFijo' | 'comisionPct' | 'montoEvento' | 'base'>;
     ventas: (Venta & { folio: string })[];
+    /** Vendedor con cuenta, o socio comercial (2026-11-12). */
+    tipo?: 'vendedor' | 'socio';
   }[]>([]);
   const [cuentas, setCuentas] = useState<Record<string, Banco>>({});
   // Los pagos ya registrados. El "check" de cada fila **se deduce de
@@ -856,12 +858,13 @@ export default function InformeEquipo() {
    */
   const lineasVendedores = useMemo(() => vendedores.map((v) => {
     const r = resumenDelPeriodo(v.ficha, v.ventas, desde, hasta);
-    return { nombre: v.nombre, usuario: v.usuario, total: r.total, comisiones: r.comisiones,
+    return { nombre: v.nombre, usuario: v.usuario, socio: v.tipo === 'socio', total: r.total, comisiones: r.comisiones,
              sueldoFijo: r.sueldoFijo, mesesFijo: r.mesesFijo,
              ventas: r.cuentan as (Venta & { folio: string })[] };
   }).filter((l) => l.total > 0 || pagosEnPeriodo(pagos, l.nombre, desde, hasta).length > 0),
   [vendedores, desde, hasta, pagos]);
   const totalVendedores = lineasVendedores.reduce((s, l) => s + l.total, 0);
+  const haySocios = vendedores.some((v) => v.tipo === 'socio');
   const total = lineas.reduce((s, l) => s + l.total, 0);
   const propina = lineas.reduce((s, l) => s + l.propina, 0);
   const sinMarcar = lineas.reduce((s, l) => s + l.sinMarcar, 0);
@@ -1274,7 +1277,7 @@ export default function InformeEquipo() {
         ];
         if (!partes.length) partes.push({ fecha: '', que: 'Sin ventas pagadas en el periodo', modalidad: '', monto: 0, motivo: '' });
         return partes.map((x, i) => [
-          'Vendedor', l.nombre, x.fecha, x.que, x.modalidad, '', x.monto || '', '', '', '', x.motivo, x.monto,
+          l.socio ? 'Socio comercial' : 'Vendedor', l.nombre, x.fecha, x.que, x.modalidad, '', x.monto || '', '', '', '', x.motivo, x.monto,
           ...(conPropina ? [''] : []),
           ...fin(l.nombre, l.total, i === 0), ...columnasBanco(l.nombre)
         ]);
@@ -1554,7 +1557,7 @@ export default function InformeEquipo() {
               { id: 'equipo', icono: '🧑‍🍳', nombre: 'Trabajadores', n: lineas.length, suma: sumaEquipo },
               { id: 'extras', icono: '🐴', nombre: 'Extras', n: lineasExtras.length, suma: sumaExtras },
               ...(vendedores.length > 0
-                ? [{ id: 'vendedores', icono: '💼', nombre: 'Vendedores', n: lineasVendedores.length, suma: sumaVendedores }] : [])
+                ? [{ id: 'vendedores', icono: '💼', nombre: haySocios ? 'Vendedores y socios' : 'Vendedores', n: lineasVendedores.length, suma: sumaVendedores }] : [])
             ] as const).map((x) => {
               const elegida = seccion === x.id;
               return (
@@ -1755,7 +1758,7 @@ export default function InformeEquipo() {
           {visiblesVendedores.length > 0 && (
             <>
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
-                Vendedores
+                {haySocios ? 'Vendedores y socios comerciales' : 'Vendedores'}
               </h2>
               <ul className="space-y-2">
                 {visiblesVendedores.map((l) => {
@@ -1764,16 +1767,16 @@ export default function InformeEquipo() {
                   return (
                     <LineaPersona key={clave}
                       nombre={l.nombre}
-                      detalle={`${l.ventas.length} ${l.ventas.length === 1 ? 'venta pagada' : 'ventas pagadas'}`
+                      detalle={(l.socio ? 'socio comercial · ' : '') + `${l.ventas.length} ${l.ventas.length === 1 ? 'venta pagada' : 'ventas pagadas'}`
                         + (l.mesesFijo ? ` · sueldo fijo de ${l.mesesFijo} ${l.mesesFijo === 1 ? 'mes' : 'meses'}` : '')}
                       cuentan={l.ventas.length}
                       fuera={SIN_FUERA}
-                      marcarEn={`/vendedores`} palabraSinMarcar="sin pagar"
+                      marcarEn={`/vendedores?usuario=${encodeURIComponent(l.usuario)}`} palabraSinMarcar="sin pagar"
                       aTransferir={pago.aTransferir} estado={pago.estado}
                       partes={partesDe(l.nombre, l.total, 0, false, true)}
                       datos={[
                         { que: 'Comisiones', valor: l.comisiones ? enPesos(l.comisiones) : '—' },
-                        { que: 'Sueldo fijo', valor: l.sueldoFijo ? enPesos(l.sueldoFijo) : '—' },
+                        ...(l.socio ? [] : [{ que: 'Sueldo fijo', valor: l.sueldoFijo ? enPesos(l.sueldoFijo) : '—' }]),
                         { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' }
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.nombre))}
@@ -1797,7 +1800,8 @@ export default function InformeEquipo() {
                 })}
               </ul>
               <p className="mb-8 mt-2 px-1 text-[14px] text-hueso/70">
-                {lineasVendedores.length} {lineasVendedores.length === 1 ? 'vendedor' : 'vendedores'}
+                {lineasVendedores.length} {haySocios ? (lineasVendedores.length === 1 ? 'persona' : 'personas')
+                  : lineasVendedores.length === 1 ? 'vendedor' : 'vendedores'}
                 {' · '}total <strong className="text-oro">{enPesos(totalVendedores)}</strong>
                 {sumaVendedores.falta > 0 && (
                   <> · <strong className="text-ambar-texto">falta {enPesos(sumaVendedores.falta)}</strong></>

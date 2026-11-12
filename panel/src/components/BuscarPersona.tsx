@@ -18,6 +18,8 @@
  * - **Elegir a alguien deja el buscador abierto y vacío**, igual que el
  *   desplegable volvía a "" después de elegir: se agrega a varios seguidos
  *   sin abrirlo cada vez. *Listo* o Escape lo cierran.
+ * - **Un clic afuera lo cierra** (2026-11-12, lo pidió el cliente), igual
+ *   que `BuscarEnLista`; *Listo* sigue para quien agregó a varios.
  * - **Enter agrega al primero de la lista**, que es justo el que se busca
  *   cuando el nombre ya quedó solo.
  * - Cada nombre es un botón de 44px, para el dedo.
@@ -25,7 +27,7 @@
  * Al nivel del módulo, como todo componente de este panel: declarado
  * adentro de otro, el campo perdería el foco a cada letra.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface Opcion { nombre: string; detalle?: string }
 
@@ -48,6 +50,15 @@ export default function BuscarPersona({ opciones, onElegir, etiqueta, ancho = 'w
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState('');
   useEffect(() => { if (abrir) setAbierto(true); }, [abrir]);
+  const caja = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const afuera = (e: PointerEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) { setAbierto(false); setTexto(''); }
+    };
+    document.addEventListener('pointerdown', afuera);
+    return () => document.removeEventListener('pointerdown', afuera);
+  }, [abierto]);
 
   if (opciones.length === 0) {
     return (
@@ -76,7 +87,7 @@ export default function BuscarPersona({ opciones, onElegir, etiqueta, ancho = 'w
   const elegir = (nombre: string) => { onElegir(nombre); setTexto(''); };
 
   return (
-    <div className={`${ancho} rounded-lg border-2 border-oro/70 bg-panel p-2`}>
+    <div ref={caja} className={`${ancho} rounded-lg border-2 border-oro/70 bg-panel p-2`}>
       <div className="flex items-center gap-2">
         <input type="search" autoFocus value={texto} placeholder="Escribe un nombre"
           aria-label={etiqueta}

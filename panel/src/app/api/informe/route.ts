@@ -68,7 +68,7 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
     // vendedores (quien paga, la gerencia y el administrador). Viajan sus
     // ventas y su forma de pago; el periodo lo calcula la pantalla con
     // `resumenDelPeriodo()`, igual que los turnos.
-    let vendedores: { nombre: string; usuario: string; ficha: object; ventas: object[] }[] = [];
+    let vendedores: { nombre: string; usuario: string; ficha: object; ventas: object[]; tipo: 'vendedor' | 'socio' }[] = [];
     const fichasV = puede(rol, 'vendedores') ? await leerVendedores() : [];
     if (puede(rol, 'vendedores')) {
       const [usuarios, presupuestos, lineas, cobros, clientes, menus] = await Promise.all([
@@ -84,9 +84,19 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
           return {
             nombre, usuario: u.usuario,
             ficha: { sueldoFijo: f.sueldoFijo, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
-            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f, menus).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }))
+            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f, menus).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) })),
+            tipo: 'vendedor'
           };
         });
+      // **Los socios comerciales** (2026-11-12, segunda entrega): en la misma
+      // lista, con su comisión congelada o calculada y sin sueldo fijo.
+      for (const f of fichasV.filter((x) => x.tipo === 'socio')) {
+        vendedores.push({
+          nombre: f.nombre || f.usuario, usuario: f.usuario, tipo: 'socio',
+          ficha: { sueldoFijo: 0, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
+          ventas: ventasDe(f.usuario, conNombre, lineas, cobros, f, menus).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }))
+        });
+      }
     }
     // **Los datos de la transferencia, solo a quien paga** (2026-11-12): el
     // gerente ve el informe pero no copia cuentas. Se recortan acá, no en
