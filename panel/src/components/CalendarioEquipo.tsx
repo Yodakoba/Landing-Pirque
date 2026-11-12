@@ -44,15 +44,16 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 /** Lunes primero, que es la convención chilena y la que ya usa el sitio. */
 const columna = (f: string) => (diaSemana(f) === 0 ? 6 : diaSemana(f) - 1);
 
-export default function CalendarioEquipo() {
-  const [mes, setMes] = useState(() => mesDe(hoy()));
+export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
+  const [mes, setMes] = useState(() => mesDe(dia ?? hoy()));
   const pronostico = usePronostico();
   const [equipo, setEquipo] = useState<{
     puestos: Puesto[]; trabajadores: Trabajador[]; turnos: Turno[];
     cierres: Cierre[]; extras: Extra[]; verSueldos: boolean; puedeCorregir: boolean; puedeCerrar: boolean;
   } | null>(null);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
-  const [planificando, setPlanificando] = useState<string | null>(null);
+  // Con `?dia=` se abre esa ventana apenas cargue el equipo.
+  const [planificando, setPlanificando] = useState<string | null>(dia ?? null);
   const [error, setError] = useState('');
 
   const cargarEquipo = () =>

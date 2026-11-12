@@ -122,7 +122,8 @@ import { createHmac } from 'node:crypto';
 import { estaCerrado, esExclusiva, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
 import { lineaDeSemana, listaDeDias, MAX_AVISOS } from './semana.ts';
-import { faltantesDe, textoFaltantes } from './equipo.ts';
+import { faltantesDe, textoFaltantes, diasQueNoSuman } from './equipo.ts';
+import { enCorto } from './fechas.ts';
 import { firmaDe, personasPorDia, diferencias, siguienteIntervalo, REVISAR_CADA,
          REVISAR_COMO_MAXIMO } from './cambios.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
@@ -2216,6 +2217,20 @@ ok(puede(ROL.operaciones, 'informe') && puede(ROL.operaciones, 'boleta') && !pue
 ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encargado, 'boleta'),
    'quien paga hace todo; el encargado no marca boletas');
 
+
+/* ---------- los días que no suman, en el informe (2026-11-12) ---------- */
+{
+  const tt = (fecha: string, trabajador: string, asistencia: string) =>
+    ({ fecha, trabajador, asistencia }) as { fecha: string; trabajador: string; asistencia: string };
+  const fuera = diasQueNoSuman([tt('2026-11-08', 'Felipe', ''), tt('2026-11-07', 'felipe ', ''), tt('2026-11-06', 'Felipe', 'No'),
+    tt('2026-11-05', 'Felipe', 'Sí'), tt('2026-10-30', 'Felipe', ''), tt('2026-11-07', 'Ana', 'Sí')],
+    '2026-11-02', '2026-11-08', (t) => t.trabajador, (t) => t.asistencia);
+  const f = fuera.get(normalizar('Felipe'));
+  ok(!!f && f.sinMarcar.join() === '2026-11-07,2026-11-08' && f.noVino.join() === '2026-11-06',
+     'los días que no suman: sin marcar y no vino, ordenados, solo del periodo');
+  ok(!fuera.has(normalizar('Ana')), 'quien vino todos los días no aparece');
+  ok(enCorto('2026-11-07') === 'sáb 7 nov', 'la fecha corta de una lista de días');
+}
 
 /* ---------- el rol de vendedor (2026-11-05) ---------- */
 // Lo pidió el cliente: *"el vendedor solo tiene que ver el calendario para

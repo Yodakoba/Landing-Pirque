@@ -123,6 +123,12 @@ export function enPalabras(f: Fecha): string {
   return `${DIAS[diaSemana(f)]} ${d} de ${MESES[m - 1]}`;
 }
 
+/** Corta, para una lista de días: *"sáb 7 nov"*. */
+export function enCorto(f: Fecha): string {
+  const [, m, d] = f.split('-').map(Number);
+  return `${DIAS[diaSemana(f)].slice(0, 3)} ${d} ${MESES[m - 1].slice(0, 3)}`;
+}
+
 const LARGO_DE_MES = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 /**

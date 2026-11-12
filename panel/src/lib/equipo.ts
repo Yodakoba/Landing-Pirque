@@ -961,6 +961,31 @@ export function informeDelPeriodo(
   );
 }
 
+/**
+ * **Los días que no suman, por persona** (2026-11-12, lo pidió el cliente):
+ * los sin marcar —todavía no se sabe si vino, así que no se pagan— y los que
+ * no vino. Sirve para turnos y para actividades extras: se le dice de dónde
+ * sacar el nombre y la asistencia. La llave es el nombre normalizado.
+ */
+export function diasQueNoSuman<T extends { fecha: Fecha }>(
+  lista: T[], desde: Fecha, hasta: Fecha,
+  quien: (t: T) => string, asistencia: (t: T) => string
+): Map<string, { sinMarcar: Fecha[]; noVino: Fecha[] }> {
+  const salida = new Map<string, { sinMarcar: Fecha[]; noVino: Fecha[] }>();
+  for (const t of lista) {
+    if (t.fecha < desde || t.fecha > hasta) continue;
+    const a = asistencia(t);
+    if (a === VINO.si) continue;
+    const clave = normalizar(quien(t));
+    if (!clave) continue;
+    const d = salida.get(clave) ?? { sinMarcar: [], noVino: [] };
+    (a === VINO.no ? d.noVino : d.sinMarcar).push(t.fecha);
+    salida.set(clave, d);
+  }
+  for (const d of salida.values()) { d.sinMarcar.sort(); d.noVino.sort(); }
+  return salida;
+}
+
 /** Los meses que tienen algún turno, del más nuevo al más viejo. */
 export function mesesConTurnos(turnos: Turno[]): string[] {
   return [...new Set(turnos.map((t) => t.fecha.slice(0, 7)))].sort().reverse();

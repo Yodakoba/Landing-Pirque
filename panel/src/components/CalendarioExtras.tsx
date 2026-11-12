@@ -48,8 +48,8 @@ const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-2 py-1 text-sm ' +
   'focus:border-oro focus:outline-none';
 
-export default function CalendarioExtras() {
-  const [mes, setMes] = useState(() => mesDe(hoy()));
+export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
+  const [mes, setMes] = useState(() => mesDe(dia ?? hoy()));
   const pronostico = usePronostico();
   const [colaboradores, setColaboradores] = useState<Colaborador[] | null>(null);
   const [extras, setExtras] = useState<Extra[]>([]);
@@ -64,7 +64,9 @@ export default function CalendarioExtras() {
   const [cierres, setCierres] = useState<Cierre[]>([]);
   const [puedeCorregir, setPuedeCorregir] = useState(false);
   const [ocupacion, setOcupacion] = useState<Ocupacion[]>([]);
-  const [editando, setEditando] = useState<string | null>(null);
+  // Con `?dia=` se abre esa ventana, pero recién cuando llegan los datos.
+  const [editando, setEditando] = useState<string | null>(dia ?? null);
+  const [listo, setListo] = useState(false);
   const [sucio, setSucio] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [sinPermiso, setSinPermiso] = useState(false);
@@ -75,6 +77,7 @@ export default function CalendarioExtras() {
       .then((d) => {
         if (d.error) { setSinPermiso(!!d.permiso); return setError(d.error); }
         setColaboradores(d.colaboradores ?? []);
+        setListo(true);
         setExtras(d.extras ?? []);
         setVerSueldos(!!d.verSueldos);
         setCierres(d.cierres ?? []);
@@ -458,7 +461,7 @@ export default function CalendarioExtras() {
 
       {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
-      {editando && (
+      {editando && listo && (
         <ExtrasDialogo
           fecha={editando}
           extras={extras}
