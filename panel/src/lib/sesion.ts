@@ -37,7 +37,22 @@ export interface Sesion {
   expira: number;
   /** Si la cuenta tiene vista gerencia: ve todo, edita lo de su rol. */
   gerencia?: boolean;
+  /**
+   * **Ver como** (2026-11-12, lo pidió el cliente): un administrador puede
+   * mirar el panel como lo ve otro rol. Entonces `rol` es **el rol que se
+   * está mirando** —y todo el panel obedece a ese: el menú, las pantallas,
+   * los permisos de cada ruta— y `rolReal` guarda que en verdad es un
+   * administrador, que es lo único que deja volver. Sin "ver como", vacío.
+   */
+  rolReal?: string;
 }
+
+/**
+ * Los roles que un administrador puede mirar con "ver como". Una lista
+ * cerrada: un `como` que no esté acá se ignora y la sesión queda como
+ * administrador, en vez de quedar con un rol inventado.
+ */
+export const ROLES_VER_COMO = ['encargado', 'pagos', 'vendedor', 'anfitrion'] as const;
 
 export const COOKIE_SESION = 'sesion';
 
@@ -81,15 +96,18 @@ function clave(secreto: string): Promise<CryptoKey> {
  * días.
  */
 export async function firmarSesion(
-  datos: { usuario: string; rol: string; gerencia?: boolean },
+  datos: { usuario: string; rol: string; gerencia?: boolean; como?: string },
   secreto: string,
   ahora = Math.floor(Date.now() / 1000),
   duracion = DURACION_SESION
 ): Promise<string> {
   const cuerpo: Sesion = {
     usuario: datos.usuario, rol: datos.rol, expira: ahora + duracion,
-    ...(datos.gerencia ? { gerencia: true } : {})
-  };
+    ...(datos.gerencia ? { gerencia: true } : {}),
+    // Solo un administrador puede firmar un "ver como"; la regla se vuelve
+    // a mirar al leer.
+    ...(datos.rol === 'admin' && datos.como ? { como: datos.como } : {})
+  } as Sesion & { como?: string };
   const payload = aBase64Url(new TextEncoder().encode(JSON.stringify(cuerpo)));
   const firma = await crypto.subtle.sign(
     'HMAC', await clave(secreto), new TextEncoder().encode(payload)
@@ -135,6 +153,15 @@ export async function leerSesion(
       gerencia: datos?.gerencia === true
     };
     if (!sesion.usuario || !sesion.rol) return null;
+    // "Ver como": la firma ya garantiza que lo escribió el servidor, y además
+    // solo vale sobre una sesión de administrador y hacia un rol conocido.
+    const como = String(datos?.como ?? '');
+    if (sesion.rol === 'admin' && (ROLES_VER_COMO as readonly string[]).includes(como)) {
+      sesion.rolReal = 'admin';
+      sesion.rol = como;
+      // Se mira el rol tal cual lo ve esa cuenta, sin el agregado gerencia.
+      sesion.gerencia = false;
+    }
     if (!Number.isFinite(sesion.expira) || sesion.expira <= ahora) return null;
     return sesion;
   } catch {

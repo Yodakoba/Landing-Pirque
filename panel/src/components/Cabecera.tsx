@@ -21,13 +21,16 @@
  * dónde estás** —la marca, el tema, la cuenta y salir—; abajo, **a dónde
  * puedes ir**. Son dos preguntas distintas y ahora se ven distintas.
  */
+import { BotonVerComo, FranjaVerComo } from './VerComo';
 import { usePathname } from 'next/navigation';
 import Nav, { PAGINAS } from './Nav';
 import { puede, puedeVer, type Rol } from '@/lib/auth';
 import BotonTema from './BotonTema';
 
-export default function Cabecera({ rol, usuario, gerencia = false }: {
+export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '' }: {
   rol: string; usuario: string; gerencia?: boolean;
+  /** 'admin' si es un administrador mirando como otro rol ("ver como"). */
+  rolReal?: string;
 }) {
   const ruta = usePathname();
   // **Vista gerencia** (2026-11-11): la página que se está mirando, y si se
@@ -68,6 +71,11 @@ export default function Cabecera({ rol, usuario, gerencia = false }: {
           </div>
         ) : (
           <>
+            {/* **Ver como** (2026-11-12): mientras el administrador mira como
+                otro rol, esta franja va arriba en todas las pantallas. Es la
+                puerta de vuelta, y tiene que estar aunque el menú de ese rol
+                sea una sola pastilla. */}
+            {rolReal && <FranjaVerComo rol={rol} />}
             {/* Fila 1: quién eres y dónde estás. */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <a href="/" className="text-base font-bold uppercase tracking-widest text-oro">
@@ -88,6 +96,7 @@ export default function Cabecera({ rol, usuario, gerencia = false }: {
                     <span className="rounded-full border-2 border-cielo-fuerte/60 bg-cielo/10 px-2.5 py-0.5
                                      text-[13px] font-semibold text-cielo-texto">👁 Vista gerencia</span>
                   )}
+                  {rol === 'admin' && !rolReal && <BotonVerComo />}
                   <button onClick={salir} className="tecla boton">Salir</button>
                 </>
               )}

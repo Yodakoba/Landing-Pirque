@@ -520,6 +520,8 @@ export async function anotar(a: {
   /** Quién lo hizo. Es el mismo campo que devuelve `quienEs()`, para que
       una ruta pueda escribir `{ ...quien, accion }` sin traducir nada. */
   usuario: string; rol: string; accion: string; detalle?: unknown;
+  /** Un administrador mirando como otro rol: la bitácora lo dice. */
+  rolReal?: string;
 }): Promise<void> {
   try {
     // **Sin leer la bitácora entera** (2026-11-12): antes cada acción del
@@ -535,7 +537,7 @@ export async function anotar(a: {
     await agregarFila(HOJA_BITACORA, filaBitacora({
       cuando: ahoraEnChile(),
       quien: a.usuario,
-      rol: a.rol,
+      rol: a.rolReal ? `${a.rolReal} (viendo como ${a.rol})` : a.rol,
       accion: a.accion,
       detalle: recortar(a.detalle)
     }));

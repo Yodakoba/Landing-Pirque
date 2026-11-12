@@ -5539,6 +5539,35 @@ gerencia** (columna `Vista gerencia` de `Usuarios`, al final; en blanco es
 - El servidor sigue siendo la protección: esto solo decide qué se dibuja.
 - Al administrador no le suma nada: ya ve todo, y no se guarda.
 
+### Ver como otro rol (2026-11-12)
+
+Lo pidió el cliente: el administrador puede mirar el panel **como lo ve otra
+cuenta** —encargado, pagos, vendedor o anfitrión— y volver cuando quiere.
+**👁 Ver como…** está en la barra, junto al nombre, solo para el
+administrador; abre una ventana con un botón grande por rol y su frase de
+`RESUMEN_ROL`.
+
+- **Va en la sesión firmada**, no en el navegador: `/api/sesion/ver-como`
+  firma de nuevo el token con `como`, y `leerSesion()` devuelve `rol` = el
+  rol que se mira y `rolReal` = `admin`. Así **todo obedece al rol mirado
+  sin tocar nada más**: el menú, el middleware (como anfitrión entra directo
+  a `/recepcion`), las pantallas y el permiso de cada ruta (como vendedor,
+  `/api/equipo` responde 403).
+- **Solo vale sobre una sesión de administrador y hacia un rol de la lista**
+  (`ROLES_VER_COMO`); cualquier otra cosa se ignora al leer. La ruta mira el
+  rol **real**, así que la vuelta siempre está abierta.
+- **Quita, no agrega**: se puede lo que ese rol puede. Lo que se haga queda
+  en la bitácora con el nombre del administrador y *"admin (viendo como
+  vendedor)"*; pasar a otro rol y volver también se anotan.
+- **Mientras mira, una franja dorada va arriba en todas las pantallas**
+  —*👁 Estás mirando el panel como Vendedor* con **↩ Volver a
+  administrador**—: es la única puerta de vuelta, y tiene que estar aunque
+  el menú de ese rol sea una sola pastilla.
+- **No alarga la sesión** (el token nuevo vence cuando vencía el anterior)
+  y no lleva vista gerencia: se ve el rol tal cual.
+- Con "ver como vendedor", "lo suyo" son las reservas y cotizaciones que
+  anotó el propio administrador.
+
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
 Seis roles —el sexto, **anfitrión**, el 2026-11-11: ver "El rol de
