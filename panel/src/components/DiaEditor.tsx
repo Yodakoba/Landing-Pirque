@@ -140,7 +140,7 @@ export default function DiaEditor({
         });
         const dp = await p.json().catch(() => ({}));
         if (!p.ok || dp.error) { setError(dp.error || 'El día se guardó, pero no se pudo pedir el cupo.'); return; }
-        avisar(`Pedido al gerente: subir el cupo a ${capacidad}. Le llega a su bandeja.`);
+        avisar(`Pedido al encargado de operaciones: subir el cupo a ${capacidad}. Le llega a su bandeja.`);
       }
       onListo();
     } catch (e) {
@@ -233,13 +233,13 @@ export default function DiaEditor({
         {pideCupo && (
           <div className="mt-3 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3">
             <p className="text-[15px] font-bold text-ambar-texto">
-              🙋 Subir el cupo sobre {limite} lo aprueba el gerente de operaciones
+              🙋 Subir el cupo sobre {limite} lo aprueba el encargado de operaciones
             </p>
             <p className="mt-1 text-[14px] text-hueso/85">
               Se guarda con {limite} y se le pide {Number(f.capacidad)}: le llega a su bandeja.
             </p>
             <label className="mt-2 block">
-              <span className="mb-1 block text-[13px] font-semibold text-hueso/70">¿Por qué? (lo ve el gerente)</span>
+              <span className="mb-1 block text-[13px] font-semibold text-hueso/70">¿Por qué? (lo ve el encargado de operaciones)</span>
               <input type="text" className={ENTRADA} value={motivoCupo} placeholder="Viene un grupo de la agencia…"
                 onChange={(e) => setMotivoCupo(e.target.value)} />
             </label>

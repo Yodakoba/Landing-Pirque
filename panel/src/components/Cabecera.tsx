@@ -25,6 +25,7 @@ import { BotonVerComo, FranjaVerComo } from './VerComo';
 import { usePathname } from 'next/navigation';
 import Nav, { PAGINAS } from './Nav';
 import { puede, puedeVer, type Rol } from '@/lib/auth';
+import { NOMBRE_ROL } from '@/lib/roles';
 import BotonTema from './BotonTema';
 
 export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '', verComoHasta = 0 }: {
@@ -92,7 +93,7 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '',
                       bitácora depende de que alguien se dé cuenta. */}
                   <span className="text-[13px] text-hueso/70">
                     {usuario}
-                    <span className="ml-1 text-hueso/50">· {rol}</span>
+                    <span className="ml-1 text-hueso/50">· {NOMBRE_ROL[rol] ?? rol}</span>
                   </span>
                   {gerencia && (
                     <span className="rounded-full border-2 border-cielo-fuerte/60 bg-cielo/10 px-2.5 py-0.5
@@ -110,7 +111,7 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '',
             {soloMira && (
               <p className="mt-3 rounded-xl border-2 border-cielo-fuerte/60 bg-cielo/10 px-3 py-2 text-[14px]">
                 <strong className="text-cielo-texto">👁 Vista gerencia: acá solo miras.</strong>{' '}
-                Tu rol ({rol}) no cambia esta pantalla; si algo hay que corregir, pídeselo a quien la tiene a cargo.
+                Tu rol ({NOMBRE_ROL[rol] ?? rol}) no cambia esta pantalla; si algo hay que corregir, pídeselo a quien la tiene a cargo.
               </p>
             )}
           </>

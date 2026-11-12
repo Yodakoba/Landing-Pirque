@@ -36,7 +36,7 @@ export const POST = conLecturas([], async function POST(req: Request) {
       if (subeElCupo(antes, Number(b.capacidad) || 0, cfg.cupoNormal)) {
         const limite = limiteSinAprobar(antes, cfg.cupoNormal);
         return NextResponse.json({
-          error: `Subir el cupo sobre ${limite} lo aprueba el gerente de operaciones: pídeselo.`, limite
+          error: `Subir el cupo sobre ${limite} lo aprueba el encargado de operaciones: pídeselo.`, limite
         }, { status: 403 });
       }
     }

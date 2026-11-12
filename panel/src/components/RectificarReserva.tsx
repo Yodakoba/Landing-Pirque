@@ -213,7 +213,7 @@ export default function RectificarReserva({
             </div>
             {quedaPorAprobar && (
               <p className="mt-2 text-[14px] font-semibold text-ambar-texto">
-                ⏳ No es estándar: queda por aprobar del gerente o quien paga.
+                ⏳ No es estándar: queda por aprobar del encargado de operaciones o quien paga.
               </p>
             )}
           </section>

@@ -114,7 +114,7 @@ export const DELETE = conLecturas([HOJA_RESERVAS], async function DELETE(req: Re
     const propia = autor.trim().toLowerCase() === quien.usuario.trim().toLowerCase();
     if (!propia && !puede(quien.rol as Rol, 'aprobar')) {
       return NextResponse.json({
-        error: `La rectificó ${autor || 'otra persona'}: la deshace esa persona, el gerente o quien paga.`, permiso: true
+        error: `La rectificó ${autor || 'otra persona'}: la deshace esa persona, el encargado de operaciones o quien paga.`, permiso: true
       }, { status: 403 });
     }
     const guarda = await guardaDelDia(req, [r.fecha], cuerpo.correccion ?? { motivo });

@@ -2200,11 +2200,18 @@ ok(!puede(ROL.encargado, 'pagar'),
 
 ok(puede(ROL.admin, 'informe'), 'el administrador lo sigue viendo');
 
+// **Gerencia general** (2026-11-12): por ahora puede exactamente lo mismo que
+// quien paga. Cuando se le definan derechos propios, esta prueba es la que
+// hay que venir a cambiar, a propósito.
+ok((Object.keys(PERMISOS) as Accion[]).every((a) => puede(ROL.gerencia, a) === puede(ROL.pagos, a)),
+   'la gerencia general puede, por ahora, lo mismo que quien paga');
+ok(ROLES_DE_CUENTA.includes(ROL.gerencia) && ROL.operaciones === 'gerente',
+   'la gerencia es un rol de cuenta, y el encargado de operaciones sigue guardado como "gerente"');
 // **Se afinó el 2026-11-12** (lo decidió el cliente): el encargado ya no ve
 // el informe; el gerente lo ve y marca la boleta, pero no paga ni copia
 // cuentas.
 ok(!puede(ROL.encargado, 'informe'), 'el encargado ya no ve el informe');
-ok(puede(ROL.gerente, 'informe') && puede(ROL.gerente, 'boleta') && !puede(ROL.gerente, 'pagar'),
+ok(puede(ROL.operaciones, 'informe') && puede(ROL.operaciones, 'boleta') && !puede(ROL.operaciones, 'pagar'),
    'el gerente ve el informe y marca la boleta, pero no registra pagos');
 ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encargado, 'boleta'),
    'quien paga hace todo; el encargado no marca boletas');
@@ -2267,7 +2274,7 @@ ok(!puedeTocarReserva(ROL.vendedor, '', ''),
    'y un usuario vacío no se empareja con una fila vacía: eso las abriría todas');
 
 // El administrador, quien paga y el gerente tocan cualquier reserva.
-for (const r of [ROL.admin, ROL.gerente, ROL.pagos]) {
+for (const r of [ROL.admin, ROL.operaciones, ROL.pagos]) {
   ok(puedeTocarReserva(r, 'quien sea', 'otro') && puedeTocarReserva(r, 'x', ''),
      `${r} sigue pudiendo tocar cualquier reserva, con dueño o sin él`);
 }

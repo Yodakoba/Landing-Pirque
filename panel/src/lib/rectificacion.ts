@@ -166,7 +166,7 @@ export function avisosRectificacion(
   if (necesitaAprobacion(p.descuento, extra.estandar)) {
     avisos.push(extra.puedeAprobar
       ? { tono: 'ambar', texto: `El ${p.descuento}% no es un descuento estándar: queda aprobado por ti.` }
-      : { tono: 'ambar', texto: `El ${p.descuento}% no es un descuento estándar: queda por aprobar. Hasta que lo apruebe el gerente o quien paga, en Fudo no se ingresa.` });
+      : { tono: 'ambar', texto: `El ${p.descuento}% no es un descuento estándar: queda por aprobar. Hasta que lo apruebe el encargado de operaciones o quien paga, en Fudo no se ingresa.` });
   }
   return avisos;
 }
