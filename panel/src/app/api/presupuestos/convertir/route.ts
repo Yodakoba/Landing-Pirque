@@ -4,7 +4,7 @@ import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
   crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
-  actualizarPagoDeReserva, abrirElDiaSiHaceFalta, dejarExclusivo, leerFechas, leerReservas, moverCobros
+  actualizarPagoDeReserva, congelarComision, abrirElDiaSiHaceFalta, dejarExclusivo, leerFechas, leerReservas, moverCobros
 } from '@/lib/datos';
 import { cupoParaGanar } from '@/lib/dias';
 import { ocupaLugar, tienePrioridad } from '@/lib/ocupacion';
@@ -206,8 +206,9 @@ export const POST = conLecturas([], async function POST(req: Request) {
     for (const otra of delGrupo) {
       if (otra !== p.id && cobrosGrupo.some((c) => c.presupuesto === otra)) await moverCobros(otra, p.id);
     }
-    // Si ya pagó todo, la reserva nace pagada.
+    // Si ya pagó todo, la reserva nace pagada, y la comisión del vendedor queda fija.
     await actualizarPagoDeReserva(p.id);
+    await congelarComision(p.id);
 
     await anotar({ ...quien,
       accion: 'Marcó ganada una cotización',

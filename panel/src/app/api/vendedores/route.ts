@@ -8,10 +8,11 @@ import { HOJA_PRESUPUESTOS, HOJA_LINEAS, ESTADO_PRESUPUESTO, estadoNormal, linea
 import { HOJA_COBROS } from '@/lib/cobros';
 import { HOJA_PAGOS, CONCEPTO, pagosEnPeriodo } from '@/lib/remuneraciones';
 import { HOJA_CLIENTES } from '@/lib/clientes';
+import { HOJA_MENUS } from '@/lib/menus';
 import { leerUsuarios, leerVendedores, guardarVendedor, leerPresupuestos, leerLineasPresupuesto,
-         leerCobros, leerPagosEquipo, leerClientes, anotar } from '@/lib/datos';
+         leerCobros, leerPagosEquipo, leerClientes, leerMenus, anotar } from '@/lib/datos';
 import { conCliente } from '@/lib/cotizar';
-import { HOJA_VENDEDORES, fichaDe, ventasDe, resumenDelPeriodo, porCobrar, comisionDe, porcentaje,
+import { HOJA_VENDEDORES, fichaDe, ventasDe, resumenDelPeriodo, porCobrar, comisionDe, porcentaje, baseDeVenta,
          tieneFormaDePago, BASE_COMISION, type FichaVendedor } from '@/lib/vendedores';
 import { bancoVacio } from '@/lib/banco';
 import { normalizar } from '@/lib/columnas';
@@ -30,15 +31,15 @@ export const dynamic = 'force-dynamic';
  * sus líneas, sus cobros, los pagos y los clientes para el nombre.
  */
 export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTOS, HOJA_LINEAS,
-  HOJA_COBROS, HOJA_PAGOS, HOJA_CLIENTES], async function GET(req: Request) {
+  HOJA_COBROS, HOJA_PAGOS, HOJA_CLIENTES, HOJA_MENUS], async function GET(req: Request) {
   const no = await exigirVer(req, 'vendedores');
   if (no) return no;
   try {
     const quien = await quienEs(req);
     const q = new URL(req.url).searchParams;
-    const [usuarios, fichas, presupuestos, lineas, cobros, pagos, clientes] = await Promise.all([
+    const [usuarios, fichas, presupuestos, lineas, cobros, pagos, clientes, menus] = await Promise.all([
       leerUsuarios(), leerVendedores(), leerPresupuestos(), leerLineasPresupuesto(), leerCobros(),
-      leerPagosEquipo(), leerClientes()
+      leerPagosEquipo(), leerClientes(), leerMenus()
     ]);
     const esVendedor = quien.rol === ROL.vendedor;
     // Los vendedores son las cuentas con ese rol; una desactivada sigue si tiene ficha.
@@ -59,7 +60,7 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
 
     const ficha = fichaDe(fichas, cuenta.usuario, cuenta.nombre);
     const conNombre = presupuestos.map((p) => conCliente(p, clientes));
-    const ventas = ventasDe(cuenta.usuario, conNombre, lineas, cobros, ficha)
+    const ventas = ventasDe(cuenta.usuario, conNombre, lineas, cobros, ficha, menus)
       .map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }));
     const resumen = resumenDelPeriodo(ficha, ventas, desde, hasta);
     // Lo que se le pagó: los pagos con concepto Comisión, a su nombre.
@@ -67,17 +68,18 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
     const pagado = suyos.reduce((n, p) => n + p.monto, 0);
 
     // **En curso**: lo mandado y sin ganar, una vez por cotización (la alternativa más cara).
-    const enCurso = new Map<string, { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number }>();
+    const enCurso = new Map<string, { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number; detalle: string }>();
     for (const p of conNombre) {
       if (normalizar(p.creadoPor) !== normalizar(cuenta.usuario) || p.idReserva) continue;
       const e = estadoNormal(p.estado);
       if (e !== ESTADO_PRESUPUESTO.enviado && e !== ESTADO_PRESUPUESTO.negociacion) continue;
-      const c = cuentasDe(lineasDe(lineas, p.id), p.descuento);
+      const b = baseDeVenta(p, lineas, menus);
       const grupo = p.grupo || p.id;
       const ya = enCurso.get(grupo);
-      if (ya && ya.total >= c.total) continue;
+      if (ya && ya.total >= b.total) continue;
+      const com = comisionDe(ficha, b);
       enCurso.set(grupo, { id: p.id, folio: folioDe({ id: grupo }), cliente: p.cliente || 'sin nombre', fecha: p.fecha || p.periodo,
-        estado: e, total: c.total, comision: comisionDe(ficha, c) });
+        estado: e, total: b.total, comision: com.monto, detalle: com.detalle });
     }
 
     // La cuenta bancaria la ven quien paga y el propio vendedor; nadie más.
@@ -118,15 +120,22 @@ export const PATCH = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES], async functio
       ...(c.sueldoFijo !== undefined ? { sueldoFijo: monto(c.sueldoFijo) } : {}),
       ...(c.comisionPct !== undefined ? { comisionPct: porcentaje(c.comisionPct) } : {}),
       ...(c.montoEvento !== undefined ? { montoEvento: monto(c.montoEvento) } : {}),
+      ...(c.etapa2Desde !== undefined ? { etapa2Desde: monto(c.etapa2Desde) || antes.etapa2Desde } : {}),
+      ...(c.etapa2Pct !== undefined ? { etapa2Pct: porcentaje(c.etapa2Pct) } : {}),
+      ...(c.etapa3Desde !== undefined ? { etapa3Desde: monto(c.etapa3Desde) || antes.etapa3Desde } : {}),
+      ...(c.etapa3Pct !== undefined ? { etapa3Pct: porcentaje(c.etapa3Pct) } : {}),
+      ...(c.bonoPuntos !== undefined ? { bonoPuntos: porcentaje(c.bonoPuntos) } : {}),
       ...(c.base !== undefined ? { base: c.base === 'neto' ? 'neto' : 'total' } : {}),
       ...(c.banco && typeof c.banco === 'object' ? { banco: { ...bancoVacio(), ...antes.banco, ...c.banco } } : {})
     };
     await guardarVendedor(nueva);
     const quien = await quienEs(req);
-    const dif = (['sueldoFijo', 'comisionPct', 'montoEvento', 'base'] as const)
+    const NOMBRES = { sueldoFijo: 'sueldo fijo', comisionPct: 'etapa 1 %', montoEvento: 'monto por evento', base: 'base',
+      etapa2Desde: 'etapa 2 desde', etapa2Pct: 'etapa 2 %', etapa3Desde: 'etapa 3 desde', etapa3Pct: 'etapa 3 %',
+      bonoPuntos: 'bono premium' } as const;
+    const dif = (Object.keys(NOMBRES) as (keyof typeof NOMBRES)[])
       .filter((k) => c[k] !== undefined && antes[k] !== nueva[k])
-      .map((k) => `${k === 'base' ? 'base' : k === 'comisionPct' ? 'comisión' : k === 'sueldoFijo' ? 'sueldo fijo' : 'monto por evento'}: `
-        + `${k === 'base' ? BASE_COMISION[antes.base] : antes[k]} → ${k === 'base' ? BASE_COMISION[nueva.base] : nueva[k]}`);
+      .map((k) => `${NOMBRES[k]}: ${k === 'base' ? BASE_COMISION[antes.base] : antes[k]} → ${k === 'base' ? BASE_COMISION[nueva.base] : nueva[k]}`);
     if (dif.length || c.banco) {
       await anotar({ ...quien, accion: 'Cambió la ficha de un vendedor',
         detalle: `${nueva.nombre} · ${[...dif, ...(c.banco ? ['cuenta bancaria'] : [])].join(' · ')}` });

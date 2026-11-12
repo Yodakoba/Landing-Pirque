@@ -210,6 +210,10 @@ export default function MenusEditor() {
                   <span className="rounded-full border border-verde/50 px-2 py-0.5 text-[13px]
                                    font-semibold text-verde-texto">sitio y reservas</span>
                 )}
+                {m.bonoVendedor && (
+                  <span className="rounded-full border border-oro/60 px-2 py-0.5 text-[13px]
+                                   font-semibold text-oro">★ bono vendedor</span>
+                )}
                 {m.cotizacion && (
                   <span className="rounded-full border border-rosa/50 px-2 py-0.5 text-[13px]
                                    font-semibold text-rosa-texto">
@@ -292,6 +296,13 @@ export default function MenusEditor() {
                     onCambio={(b) => cambiar(i, { cotizacion: b })}
                     texto="Se puede cotizar"
                     ayuda="Aparece al armar una cotización." />
+                  {/* **El bono del vendedor** (2026-11-12): lo marcan los
+                      menús más valiosos, que empujan la venta. Ver
+                      `lib/vendedores.ts`. */}
+                  <Interruptor encendido={m.bonoVendedor}
+                    onCambio={(b) => cambiar(i, { bonoVendedor: b })}
+                    texto="Suma el bono del vendedor"
+                    ayuda="Sus líneas ganan los puntos de bono de la ficha de cada vendedor." />
                 </div>
 
                 {m.sitioPublico && (

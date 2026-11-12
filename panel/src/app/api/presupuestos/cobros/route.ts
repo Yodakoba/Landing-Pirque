@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
-  leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar,
+  leerPresupuestos, leerCobros, anotarCobro, borrarCobro, actualizarPagoDeReserva, anotar, congelarComision,
   editarCobro
 } from '@/lib/datos';
 import { cobrosDe, limpiarCobro, nuevoIdCobro, CONCEPTO_COBRO } from '@/lib/cobros';
-import { folioDe } from '@/lib/presupuestos';
+import { folioDe, HOJA_PRESUPUESTOS, HOJA_LINEAS } from '@/lib/presupuestos';
+import { HOJA_USUARIOS } from '@/lib/usuarios';
+import { HOJA_VENDEDORES } from '@/lib/vendedores';
+import { HOJA_MENUS } from '@/lib/menus';
+import { HOJA_RESERVAS } from '@/lib/columnas';
 import { alternativasDe } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
 import { hoy } from '@/lib/fechas';
@@ -63,7 +67,10 @@ export const GET = conLecturas([], async function GET(req: Request) {
   }
 });
 
-export const POST = conLecturas([], async function POST(req: Request) {
+// Lo que piden la reserva y la comisión del vendedor va en la misma tanda
+// que la cotización: anotar un cobro no gasta una lectura más (2026-11-12).
+export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_RESERVAS, HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_MENUS],
+  async function POST(req: Request) {
   const no = await exigir(req, 'presupuestos');
   if (no) return no;
   try {
@@ -87,6 +94,8 @@ export const POST = conLecturas([], async function POST(req: Request) {
       comprobante: '', revisadoPor: '', revisado: ''
     });
     await actualizarPagoDeReserva(r.p.id);
+    // Si con este cobro el cliente terminó de pagar, la comisión del vendedor queda fija.
+    await congelarComision(r.p.id);
     await anotar({ ...r.quien, accion: 'Anotó un cobro',
       detalle: `${folioDe(r.p)} · ${limpio.cobro.concepto} · ${enPesos(limpio.cobro.monto)}`
         + (limpio.cobro.medio ? ` · ${limpio.cobro.medio}` : '') });

@@ -20,6 +20,8 @@ import { HOJA_VENDEDORES, fichaDe, ventasDe } from '@/lib/vendedores';
 import { leerUsuarios, leerVendedores, leerPresupuestos, leerLineasPresupuesto, leerCobros,
          leerClientes } from '@/lib/datos';
 import { conCliente } from '@/lib/cotizar';
+import { HOJA_MENUS } from '@/lib/menus';
+import { leerMenus } from '@/lib/datos';
 import { ROL } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -52,7 +54,7 @@ export const dynamic = 'force-dynamic';
  * Es una ruta de solo lectura: el informe no escribe nada.
  */
 export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_PAGOS, HOJA_BOLETAS,
-  HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_COBROS, HOJA_CLIENTES], async function GET(req: Request) {
+  HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_COBROS, HOJA_CLIENTES, HOJA_MENUS], async function GET(req: Request) {
   const no = await exigirVer(req, 'informe');
   if (no) return no;
   try {
@@ -69,8 +71,8 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
     let vendedores: { nombre: string; usuario: string; ficha: object; ventas: object[] }[] = [];
     const fichasV = puede(rol, 'vendedores') ? await leerVendedores() : [];
     if (puede(rol, 'vendedores')) {
-      const [usuarios, presupuestos, lineas, cobros, clientes] = await Promise.all([
-        leerUsuarios(), leerPresupuestos(), leerLineasPresupuesto(), leerCobros(), leerClientes()
+      const [usuarios, presupuestos, lineas, cobros, clientes, menus] = await Promise.all([
+        leerUsuarios(), leerPresupuestos(), leerLineasPresupuesto(), leerCobros(), leerClientes(), leerMenus()
       ]);
       const conNombre = presupuestos.map((p) => conCliente(p, clientes));
       vendedores = usuarios
@@ -82,7 +84,7 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
           return {
             nombre, usuario: u.usuario,
             ficha: { sueldoFijo: f.sueldoFijo, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
-            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }))
+            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f, menus).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }))
           };
         });
     }

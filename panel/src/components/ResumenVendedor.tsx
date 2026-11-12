@@ -29,7 +29,7 @@ interface Datos {
   usuario: string; nombre: string; ficha: FichaVendedor; formaDePago: boolean;
   desde: string; hasta: string; periodo: string; hoy: string;
   resumen: Omit<Resumen, 'cuentan'> & { cuentan: VentaConFolio[] }; pagado: number; falta: number; pagos: PagoEquipo[];
-  porCobrar: VentaConFolio[]; enCurso: { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number }[];
+  porCobrar: VentaConFolio[]; enCurso: { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number; detalle: string }[];
   puedeEditar: boolean; error?: string;
 }
 
@@ -58,8 +58,15 @@ function Azulejo({ que, monto, nota, color = 'text-hueso', grande = false }: {
 
 /** Cómo se le paga, en una frase: *"5% del total con IVA + $10.000 por evento + $400.000 al mes"*. */
 function formaEnPalabras(f: FichaVendedor): string {
+  const pct = (n: number) => `${String(n).replace('.', ',')}%`;
+  const etapas = [
+    f.comisionPct > 0 ? `${pct(f.comisionPct)}` : '',
+    f.etapa2Pct > 0 ? `${pct(f.etapa2Pct)} desde ${f.etapa2Desde} personas` : '',
+    f.etapa3Pct > 0 ? `${pct(f.etapa3Pct)} desde ${f.etapa3Desde}` : ''
+  ].filter(Boolean);
   const partes = [
-    f.comisionPct > 0 ? `${String(f.comisionPct).replace('.', ',')}% del ${f.base === 'neto' ? 'neto' : 'total con IVA'}` : '',
+    etapas.length ? `${etapas.join(', ')} del ${f.base === 'neto' ? 'neto' : 'total con IVA'}` : '',
+    f.bonoPuntos > 0 ? `${pct(f.bonoPuntos)} más en los menús con bono` : '',
     f.montoEvento > 0 ? `${enPesos(f.montoEvento)} por evento` : '',
     f.sueldoFijo > 0 ? `${enPesos(f.sueldoFijo)} fijos al mes` : ''
   ].filter(Boolean);
@@ -194,6 +201,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     <p className="text-hueso/80">Evento: <span className="inline-block first-letter:uppercase">{enPalabras(v.fechaEvento)}</span> · {enPesos(v.total)}</p>
                     <p className="text-hueso/80">Pagó todo el {enPalabras(v.pagadaEl)}</p>
                     <p className="mt-1 font-bold text-verde-texto">Comisión: {enPesos(v.comision)}</p>
+                    {v.detalle && <p className="text-[14px] text-hueso/75">{v.detalle}{v.congelada ? ' · fija' : ''}</p>}
                   </li>
                 ))}
               </ul>
@@ -213,6 +221,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     <p className="text-hueso/80">Evento: <span className="inline-block first-letter:uppercase">{enPalabras(v.fechaEvento)}</span></p>
                     <p className="text-hueso/80">Pagó {enPesos(Math.max(0, v.pagado))} de {enPesos(v.total)} · falta {enPesos(Math.max(0, v.total - v.pagado))}</p>
                     <p className="mt-1 font-semibold text-ambar-texto">Comisión que viene: {enPesos(v.comision)}</p>
+                    {v.detalle && <p className="text-[14px] text-hueso/75">{v.detalle}</p>}
                   </li>
                 ))}
               </ul>
@@ -231,6 +240,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     <p className="font-bold">{c.cliente} <span className="font-normal text-hueso/70">· Cotización N° {c.folio} · {c.estado}</span></p>
                     <p className="text-hueso/80">{esFecha(c.fecha) ? <span className="inline-block first-letter:uppercase">{enPalabras(c.fecha)}</span> : c.fecha || 'sin fecha'} · {enPesos(c.total)}</p>
                     <p className="mt-1 text-hueso/85">Comisión posible: <b>{enPesos(c.comision)}</b></p>
+                    {c.detalle && <p className="text-[14px] text-hueso/75">{c.detalle}</p>}
                   </li>
                 ))}
               </ul>
@@ -262,11 +272,45 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             <p className="mt-1 text-[15px]">{datos.formaDePago ? formaEnPalabras(datos.ficha) : 'Sin escribir todavía.'}</p>
             {datos.puedeEditar && ficha && (
               <div className="mt-3 space-y-4">
+                {/* **Tres etapas por personas, como los socios** (2026-11-12,
+                    modelo A). La 1 rige desde la primera persona; la 2 y la 3
+                    desde donde se escriba, 55 y 77 de partida. */}
+                <div>
+                  <p className="text-[14px] font-semibold">Comisión por etapas, según las personas del evento</p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    {([
+                      { n: 1, desde: null, pct: 'comisionPct' },
+                      { n: 2, desde: 'etapa2Desde', pct: 'etapa2Pct' },
+                      { n: 3, desde: 'etapa3Desde', pct: 'etapa3Pct' }
+                    ] as const).map((e) => (
+                      <div key={e.n} className="rounded-xl border-2 border-hueso/15 p-3">
+                        <p className="text-[13px] font-semibold uppercase tracking-widest text-oro">Etapa {e.n}</p>
+                        <div className="mt-1 grid grid-cols-2 gap-2">
+                          <label className="block text-[13px] font-semibold">
+                            Desde (personas)
+                            {e.desde ? (
+                              <input inputMode="numeric" className={ENTRADA} value={ficha[e.desde] || ''}
+                                onChange={(ev) => cambiar(e.desde!, Number(ev.target.value.replace(/[^\d]/g, '')) || 0)} />
+                            ) : <span className="flex min-h-[44px] items-center text-[16px]">1</span>}
+                          </label>
+                          <label className="block text-[13px] font-semibold">
+                            Comisión (%)
+                            <input inputMode="decimal" className={ENTRADA} value={ficha[e.pct] || ''} placeholder="0"
+                              onChange={(ev) => cambiar(e.pct, ev.target.value)} />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="block text-[14px] font-semibold">
-                    Comisión (%)
-                    <input inputMode="decimal" className={ENTRADA} value={ficha.comisionPct || ''} placeholder="0"
-                      onChange={(e) => cambiar('comisionPct', e.target.value)} />
+                    Bono menús premium (puntos)
+                    <input inputMode="decimal" className={ENTRADA} value={ficha.bonoPuntos || ''} placeholder="0"
+                      onChange={(e) => cambiar('bonoPuntos', e.target.value)} />
+                    <span className="mt-1 block text-[13px] font-normal text-hueso/70">
+                      Sobre las líneas de los productos con ★ <a href="/menus" className="text-oro underline">Bono vendedor</a>.
+                    </span>
                   </label>
                   <label className="block text-[14px] font-semibold">
                     Monto por evento ganado ($)

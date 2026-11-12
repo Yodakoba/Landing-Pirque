@@ -187,7 +187,7 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJ
         // Lo de la cancelación y del día es de la que se ganó, no de la copia.
         devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
         // El pedido de liberar el día es de la original (2026-11-12).
-        exclusividad: '', diaPausado: '',
+        exclusividad: '', diaPausado: '', comisionVendedor: '',
         // Una alternativa nace sin mandar: su vigencia corre cuando se mande.
         enviada: '', ultimoSeguimiento: '', validoHasta: '', contratoEnviado: '',
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
