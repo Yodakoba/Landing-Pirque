@@ -117,6 +117,8 @@ import { createHmac } from 'node:crypto';
 import { estaCerrado, esExclusiva, ESTADO_DIA } from './columnas.ts';
 import { ASISTENCIA } from './columnas.ts';
 import { lineaDeSemana, listaDeDias, MAX_AVISOS } from './semana.ts';
+import { firmaDe, personasPorDia, diferencias, siguienteIntervalo, REVISAR_CADA,
+         REVISAR_COMO_MAXIMO } from './cambios.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
          sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
          type Banco, rutValido, avisoRut } from './banco.ts';
@@ -380,6 +382,41 @@ ok(paraElSitio(ocu)[0].pocos === true,
      'la sincronizacion con Shopify no pisa "Se cayo por cupo"');
   ok(filaReserva(['ID Orden', 'Se cayó por cupo'], { liberada: 'x' })[1] === 'x',
      'y se escribe en su columna');
+}
+
+/* ---------- la pantalla al día (2026-11-12): firma, diferencias e intervalo ---------- */
+{
+  const base = [r({ id: 'a', fila: 2, personas: 4 }), r({ id: 'b', fila: 3, personas: 6 })];
+  const dias = [dia({ fila: 2 })];
+  const f0 = firmaDe(base, dias);
+  ok(f0 === firmaDe(base.map((x) => ({ ...x })), dias.map((x) => ({ ...x }))),
+     'la misma planilla da la misma firma');
+  ok(firmaDe([r({ id: 'a', fila: 5, personas: 4 }), r({ id: 'b', fila: 6, personas: 6 })], [dia({ fila: 9 })]) === f0,
+     'correr las filas no cambia la firma: es dónde está escrita, no qué dice');
+  ok(firmaDe([...base, r({ id: 'c', fila: 4, personas: 12 })], dias) !== f0,
+     'una reserva nueva (una compra de Shopify) cambia la firma');
+  ok(firmaDe([base[0], { ...base[1], estadoPago: 'pending' }], dias) !== f0,
+     'un cambio en el pago también cambia la firma');
+  ok(firmaDe(base, [dia({ fila: 2, capacidad: 999 })]) !== f0,
+     'ampliar el cupo de un día cambia la firma');
+
+  const antes = personasPorDia(base);
+  const despues = personasPorDia([...base, r({ id: 'c', personas: 12 }),
+    r({ id: 'x', personas: 50, estadoPago: 'cancelled' })]);
+  const fecha = base[0].fecha;
+  ok(antes[fecha] === 10 && despues[fecha] === 22,
+     'personas por día cuenta solo lo que ocupa lugar');
+  const d = diferencias(antes, despues);
+  ok(d[fecha] === 12 && Object.keys(d).length === 1, 'la diferencia dice +12 en ese día');
+  ok(diferencias({ '2026-11-14': 10 }, {})['2026-11-14'] === -10,
+     'un día que se vació aparece con su resta');
+  ok(Object.keys(diferencias(antes, antes)).length === 0, 'sin cambios de gente no hay nada que marcar');
+
+  ok(siguienteIntervalo(REVISAR_CADA, false) === REVISAR_CADA * 2
+     && siguienteIntervalo(REVISAR_COMO_MAXIMO, false) === REVISAR_COMO_MAXIMO,
+     'si Google pide calma se espera el doble, con techo');
+  ok(siguienteIntervalo(REVISAR_COMO_MAXIMO, true) === REVISAR_CADA,
+     'y al salir bien vuelve a los dos minutos');
 }
 
 /* ---------- el sobrecupo: quien esta en riesgo y que hacer ---------- */

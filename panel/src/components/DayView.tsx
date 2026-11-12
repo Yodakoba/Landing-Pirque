@@ -5,6 +5,7 @@
  * El CSV se arma en el navegador con la misma función que prueba prueba.ts:
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
+import { usarAlDia, BarraAlDia } from './AlDia';
 import { useEffect, useMemo, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
 import { grupoDe, principalDe } from '@/lib/cotizar';
@@ -182,12 +183,15 @@ export default function DayView(
     if (d.error) setError(d.error); else cargar();
   }
 
+  /** La firma de la última carga, para saber si hay cambios (ver `AlDia`). */
+  const [firma, setFirma] = useState('');
   const cargar = () =>
     fetch(`/api/reservas?dia=${fecha}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) return setError(d.error);
         setTodas(d.reservas);
+        if (d.firma) setFirma(d.firma);
         if (d.menus) setCatalogo(d.menus);
         setCupoDia(d.dia ?? null);
         if (d.capacidadMaxima) setCapacidadMaxima(d.capacidadMaxima);
@@ -259,6 +263,16 @@ export default function DayView(
     if (conExtras) cargarExtras();
     if (conPresupuestos) { cargarCotizado(); cargarCRM(); }
   }, []);
+  // **Al día solo** (2026-11-12): si cambian las reservas o los días, se
+  // recarga la página entera —reservas, equipo, extras y lo cotizado—, que
+  // es lo mismo que hace el botón. Ver `AlDia`.
+  const actualizarTodo = () => Promise.all([
+    cargar(),
+    conEquipo ? cargarEquipo() : null,
+    conExtras ? cargarExtras() : null,
+    conPresupuestos ? cargarCotizado() : null
+  ]);
+  const alDia = usarAlDia(firma, actualizarTodo);
 
   const delDia = useMemo(
     () => (todas ?? []).filter((r) => r.fecha === fecha),
@@ -394,6 +408,7 @@ export default function DayView(
         {enPalabras(fecha)}<Ayuda tema="dia" />
       </h1>
       <Clima c={pronostico.get(fecha)} grande />
+      <BarraAlDia {...alDia} />
       <p className="text-[15px] text-hueso/70">
         {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
         {noShows > 0 && (

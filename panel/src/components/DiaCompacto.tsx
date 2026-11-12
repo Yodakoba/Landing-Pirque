@@ -15,21 +15,25 @@
  * y la misma palabra bajo el punto (`PuntoDia`), para que un día se lea
  * igual en chico y en grande.
  */
+import { MarcaCambio } from './AlDia';
 import type { Ocupacion } from '@/lib/tipos';
 import { enPalabras } from '@/lib/fechas';
 import PuntoDia from './PuntoDia';
 import { COLOR_TARJETA, sinConfigurar } from './TarjetaDia';
 
-export default function DiaCompacto({ d, onAbrir }: {
+export default function DiaCompacto({ d, onAbrir, cambio }: {
   d: Ocupacion;
   onAbrir: () => void;
+  /** Si este día cambió de gente en la última actualización (ver `AlDia`). */
+  cambio?: { delta: number; desde: string };
 }) {
   const conCupo = !sinConfigurar(d) && d.capacidad > 0;
   return (
     <button type="button" onClick={onAbrir}
       title="Ampliar la semana"
-      className={`tecla flex w-full min-w-0 flex-col gap-1.5 rounded-xl border-2 px-3 py-2
+      className={`tecla relative flex w-full min-w-0 flex-col gap-1.5 rounded-xl border-2 px-3 py-2
                   text-left hover:border-oro/70 ${COLOR_TARJETA(d)}`}>
+      {cambio && <MarcaCambio {...cambio} />}
       {/* Arriba la fecha y el estado; abajo la barra y cuánta gente. En
           dos líneas para que la fecha no se corte en una columna angosta. */}
       <span className="flex w-full items-start justify-between gap-2">

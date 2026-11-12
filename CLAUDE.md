@@ -4418,6 +4418,42 @@ administrador). Si vuelve a aparecer con uso normal, lo siguiente es pedir
 más cupo para el proyecto `brasas-panel` en Google Cloud (Sheets API →
 Cuotas), que es gratis.
 
+### La pantalla se mantiene al día sola (2026-11-12)
+
+Lo pidió el cliente: la encargada abre el calendario a las 10, entra una
+compra por Shopify y su pantalla sigue con el número viejo hasta que alguien
+recarga. Va en el **calendario de la portada** y en la **página del día**
+(`components/AlDia.tsx`, lógica pura en `lib/cambios.ts`, con pruebas).
+
+- **Una revisión liviana cada dos minutos, solo con la pantalla a la
+  vista**: `/api/cambios` lee `Reservas` y `Fechas Hábiles` en una sola
+  tanda —**una lectura**— y devuelve una **firma** (`firmaDe()`, sin el
+  número de fila). `/api/ocupacion` y `/api/reservas` traen la misma firma
+  de lo que ya leyeron, sin costo extra. Si no calza, se recarga todo; si
+  calza, no se gasta nada más. Un teléfono en el bolsillo o una pestaña de
+  fondo no revisan. Al volver a la pestaña se revisa al tiro (si pasaron
+  30 s). Diez pantallas abiertas todo el día gastan unas 5 de las 60
+  lecturas por minuto.
+- **No recarga con una ventana abierta** (`[role="dialog"]`): la línea dice
+  *Hay cambios: se actualiza al cerrar la ventana* y recarga apenas se
+  cierra. Así nada se mueve bajo los dedos de quien anota una reserva.
+- **Los días que cambiaron de gente se marcan un minuto** en dorado, con
+  *+12 personas desde las 10:04* (`diferencias()`, `MarcaCambio`). Va en
+  posición absoluta: no cambia el alto de la tarjeta.
+- **Si Google pide calma (429), la próxima revisión espera el doble**, hasta
+  diez minutos (`siguienteIntervalo()`).
+- **↻ Actualizar** al lado de *Al día · actualizado a las 10:32*, para
+  cuando se quiera estar seguro.
+- **Lo que no detecta**: cambios en el equipo, los turnos o las
+  cotizaciones. Ahí queda el botón; si hace falta, se suma su pestaña a la
+  firma.
+
+**De paso, en Cotizaciones** (lo reclamó el cliente el mismo día): al marcar
+una ganada y cerrar la ventana, la tarjeta del día ya decía *2 ganadas* pero
+el cupo seguía viejo hasta recargar. La lista se recargaba y la ocupación
+—que es otra ruta— no. Ahora **se vuelve a pedir al cerrar una ventana que
+cambió algo**; abrir y cerrar solo para mirar no gasta una lectura.
+
 ### La planilla se comía los datos que parecen fórmula (2026-11-01)
 
 Lo pilló el cliente con una compra de prueba: la columna de contacto de la

@@ -16,7 +16,7 @@
  *   que no caben en ningún día.
  * - **Todas**: la lista entera, con filtro por estado y buscador.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
 import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
@@ -151,6 +151,16 @@ export default function CotizacionesVista() {
    * estado del día; nada de esta pantalla depende de ella.
    */
   const [ocupacion, setOcupacion] = useState<Map<string, Ocupacion>>(new Map());
+  /**
+   * **Se vuelve a pedir al cerrar una ventana que cambió algo** (2026-11-12,
+   * lo reclamó el cliente: marcaba una ganada, cerraba, y la tarjeta del día
+   * ya decía *2 ganadas* pero el cupo seguía con el número de antes hasta
+   * recargar la página). La lista de cotizaciones se recargaba; la
+   * ocupación, que es otra ruta, no. Solo si hubo cambios: abrir y cerrar
+   * para mirar no gasta una lectura.
+   */
+  const [versionOcupacion, setVersionOcupacion] = useState(0);
+  const huboCambios = useRef(false);
   useEffect(() => {
     if (!datos) return;
     const desde = semanaDe(datos.hoy);
@@ -159,7 +169,7 @@ export default function CotizacionesVista() {
       .then((d) => Array.isArray(d.ocupacion)
         && setOcupacion(new Map((d.ocupacion as Ocupacion[]).map((o) => [o.fecha, o]))))
       .catch(() => {});
-  }, [datos?.hoy, semanas]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [datos?.hoy, semanas, versionOcupacion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { void cargar(); }, []);
 
@@ -657,8 +667,11 @@ export default function CotizacionesVista() {
           fechaInicial={abierta.fecha}
           clienteInicial={abierta.cliente}
           datos={datos}
-          onCambio={() => void cargar()}
-          onCerrar={() => setAbierta(null)}
+          onCambio={() => { huboCambios.current = true; void cargar(); }}
+          onCerrar={() => {
+            setAbierta(null);
+            if (huboCambios.current) { huboCambios.current = false; setVersionOcupacion((v) => v + 1); }
+          }}
           pasoInicial={abierta.paso}
           alternativas={abierta.p ? alternativasDe(abierta.p, datos.presupuestos) : []}
           onAbrir={(id, paso) => void abrirOtra(id, paso)}
