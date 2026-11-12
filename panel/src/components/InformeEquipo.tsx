@@ -1083,7 +1083,22 @@ export default function InformeEquipo() {
             d.sueldo.pagado || '', d.propina.pagado || ''];
   };
 
-  function exportar() {
+  /**
+   * **Tres planillas: solo sueldos, solo propinas, o completa** (2026-11-12,
+   * lo pidió el cliente, sobre todo para quien paga). Son dos pagos —por ley
+   * van separados— y cada uno se revisa y se paga por su lado; la completa
+   * sigue siendo la de siempre.
+   *
+   * - **Sueldos**: el equipo y las actividades extras, sin la columna de
+   *   propina, y el pago de esa parte —lo que se debe, lo pagado, lo que
+   *   falta y la boleta—.
+   * - **Propinas**: solo los turnos con propina, sin jornada ni ajustes, y el
+   *   pago de la propina. Un jinete no entra en el reparto, así que no va.
+   *
+   * Las dos llevan los datos de la transferencia al final, igual que la
+   * completa, y el pago **solo en la primera fila de cada persona**.
+   */
+  function exportar(cual: 'completa' | 'sueldos' | 'propinas' = 'completa') {
     const delPeriodo = (turnos ?? [])
       .filter((t) => t.fecha >= desde && t.fecha <= hasta)
       .sort((a, b) => a.trabajador.localeCompare(b.trabajador)
@@ -1092,67 +1107,133 @@ export default function InformeEquipo() {
       .filter((e) => e.fecha >= desde && e.fecha <= hasta)
       .sort((a, b) => a.colaborador.localeCompare(b.colaborador)
         || a.fecha.localeCompare(b.fecha));
-    const csv = aCSV(
-      ['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
-       'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo',
-       'Total', 'Propina',
-       'A transferir', 'Pagado', 'Falta', 'Boleta', 'Pagado sueldo o servicio',
-       'Pagado propina',
-       'Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
-       'Correo del comprobante', 'Nota de pago'],
-      [
-        ...delPeriodo.map((t, i) => [
-          'Equipo',
-          t.trabajador, t.fecha, t.puesto, t.modalidad,
-          t.asistencia || 'sin marcar',
-          // Un contratado va en blanco, no en cero: cero se lee como "se le
-          // pagó cero", y lo que pasa es que esa columna no le aplica.
+    const lineaDe = (nombre: string) => lineas.find((l) => normalizar(l.trabajador) === normalizar(nombre));
+    const totalExtraDe = (nombre: string) =>
+      lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(nombre))?.total ?? 0;
+    const banco = ['Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
+                   'Correo del comprobante', 'Nota de pago'];
+    // La primera fila de cada persona: las filas vienen ordenadas por nombre.
+    const primeraDe = <T,>(lista: T[], i: number, nombre: (x: T) => string) =>
+      i === 0 || normalizar(nombre(lista[i - 1])) !== normalizar(nombre(lista[i]));
+    /** Lo debido, lo pagado y lo que falta de UNA parte, en la primera fila. */
+    const parteEnFila = (nombre: string, sueldo: number, propina: number, cualParte: 'sueldo' | 'propina', primera: boolean) => {
+      if (!primera) return ['', '', ''];
+      const p = desglosePago(pagos, nombre, desde, hasta, sueldo, propina)[cualParte];
+      return [p.debe, p.pagado, p.falta];
+    };
+
+    let csv: string;
+    let filas = 0;
+    if (cual === 'sueldos') {
+      const deEquipo = delPeriodo.map((t, i) => {
+        const l = lineaDe(t.trabajador);
+        const primera = primeraDe(delPeriodo, i, (x) => x.trabajador);
+        return [
+          'Equipo', t.trabajador, t.fecha, t.puesto, t.modalidad, t.asistencia || 'sin marcar',
           esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
           t.horasExtra || '', t.valorHora || '',
-          totalAjustes(t.ajustes) || '', motivosDe(t.ajustes),
-          pagoDe(t),
-          // Aparte del total, igual que en pantalla: la propina no es
-          // sueldo, y quien reciba esta planilla tiene que poder sumar una
-          // cosa sin arrastrar la otra.
-          t.propina || '',
-          ...columnasPago(
-            t.trabajador,
-            lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.total ?? 0,
-            lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.propina ?? 0,
-            // La primera fila de esa persona: las filas vienen ordenadas por
-            // nombre, así que es la que no tiene a nadie igual encima.
-            i === 0 || normalizar(delPeriodo[i - 1].trabajador) !== normalizar(t.trabajador),
-            pideBoleta('equipo', esContratado(
-              lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.modalidad ?? ''))
-          ),
+          totalAjustes(t.ajustes) || '', motivosDe(t.ajustes), pagoDe(t),
+          ...parteEnFila(t.trabajador, l?.total ?? 0, l?.propina ?? 0, 'sueldo', primera),
+          primera ? boletaEnPlanilla(pideBoleta('equipo', esContratado(l?.modalidad ?? '')), boletaRecibida(t.trabajador)) : '',
           ...columnasBanco(t.trabajador)
-        ]),
-        ...extrasDelPeriodo.map((e, i) => [
-          'Actividad extra',
-          e.colaborador, e.fecha, e.actividad,
-          // Modalidad, horas extra y valor hora no le aplican a un extra:
-          // van en blanco para que se note que no aplican.
-          '', e.estado || 'sin confirmar',
-          e.monto || '', '', '', e.ajuste || '', e.motivo,
-          costoDeExtra(e),
-          // Propina en blanco, a propósito: un jinete no entra en el
-          // reparto, y un cero se leería como que le tocó cero.
-          '',
-          ...columnasPago(
-            e.colaborador,
-            lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(e.colaborador))?.total ?? 0,
-            0,
-            i === 0 || normalizar(extrasDelPeriodo[i - 1].colaborador) !== normalizar(e.colaborador),
-            pideBoleta('extra', false)
-          ),
+        ];
+      });
+      const deExtras = extrasDelPeriodo.map((e, i) => {
+        const primera = primeraDe(extrasDelPeriodo, i, (x) => x.colaborador);
+        return [
+          'Actividad extra', e.colaborador, e.fecha, e.actividad, '', e.estado || 'sin confirmar',
+          e.monto || '', '', '', e.ajuste || '', e.motivo, costoDeExtra(e),
+          ...parteEnFila(e.colaborador, totalExtraDe(e.colaborador), 0, 'sueldo', primera),
+          primera ? boletaEnPlanilla(pideBoleta('extra', false), boletaRecibida(e.colaborador)) : '',
           ...columnasBanco(e.colaborador)
-        ])
-      ]
-    );
+        ];
+      });
+      filas = deEquipo.length + deExtras.length;
+      csv = aCSV(['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
+        'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo', 'Total',
+        'Sueldo del periodo', 'Pagado', 'Falta', 'Boleta', ...banco], [...deEquipo, ...deExtras]);
+    } else if (cual === 'propinas') {
+      const conPropina = delPeriodo.filter((t) => (t.propina || 0) > 0);
+      const deEquipo = conPropina.map((t, i) => {
+        const l = lineaDe(t.trabajador);
+        return [
+          t.trabajador, t.fecha, t.puesto, t.asistencia || 'sin marcar', t.propina,
+          ...parteEnFila(t.trabajador, l?.total ?? 0, l?.propina ?? 0, 'propina',
+            primeraDe(conPropina, i, (x) => x.trabajador)),
+          ...columnasBanco(t.trabajador)
+        ];
+      });
+      filas = deEquipo.length;
+      csv = aCSV(['Nombre', 'Fecha', 'Puesto', 'Vino', 'Propina del día',
+        'Propina del periodo', 'Pagado', 'Falta', ...banco], deEquipo);
+    } else {
+      csv = aCSV(
+        ['Tipo', 'Nombre', 'Fecha', 'Puesto o actividad', 'Modalidad', 'Vino',
+         'Jornada o monto', 'Horas extra', 'Valor hora', 'Ajuste', 'Motivo',
+         'Total', 'Propina',
+         'A transferir', 'Pagado', 'Falta', 'Boleta', 'Pagado sueldo o servicio',
+         'Pagado propina',
+         'Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
+         'Correo del comprobante', 'Nota de pago'],
+        [
+          ...delPeriodo.map((t, i) => [
+            'Equipo',
+            t.trabajador, t.fecha, t.puesto, t.modalidad,
+            t.asistencia || 'sin marcar',
+            // Un contratado va en blanco, no en cero: cero se lee como "se le
+            // pagó cero", y lo que pasa es que esa columna no le aplica.
+            esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
+            t.horasExtra || '', t.valorHora || '',
+            totalAjustes(t.ajustes) || '', motivosDe(t.ajustes),
+            pagoDe(t),
+            // Aparte del total, igual que en pantalla: la propina no es
+            // sueldo, y quien reciba esta planilla tiene que poder sumar una
+            // cosa sin arrastrar la otra.
+            t.propina || '',
+            ...columnasPago(
+              t.trabajador,
+              lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.total ?? 0,
+              lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.propina ?? 0,
+              // La primera fila de esa persona: las filas vienen ordenadas por
+              // nombre, así que es la que no tiene a nadie igual encima.
+              i === 0 || normalizar(delPeriodo[i - 1].trabajador) !== normalizar(t.trabajador),
+              pideBoleta('equipo', esContratado(
+                lineas.find((l) => normalizar(l.trabajador) === normalizar(t.trabajador))?.modalidad ?? ''))
+            ),
+            ...columnasBanco(t.trabajador)
+          ]),
+          ...extrasDelPeriodo.map((e, i) => [
+            'Actividad extra',
+            e.colaborador, e.fecha, e.actividad,
+            // Modalidad, horas extra y valor hora no le aplican a un extra:
+            // van en blanco para que se note que no aplican.
+            '', e.estado || 'sin confirmar',
+            e.monto || '', '', '', e.ajuste || '', e.motivo,
+            costoDeExtra(e),
+            // Propina en blanco, a propósito: un jinete no entra en el
+            // reparto, y un cero se leería como que le tocó cero.
+            '',
+            ...columnasPago(
+              e.colaborador,
+              lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(e.colaborador))?.total ?? 0,
+              0,
+              i === 0 || normalizar(extrasDelPeriodo[i - 1].colaborador) !== normalizar(e.colaborador),
+              pideBoleta('extra', false)
+            ),
+            ...columnasBanco(e.colaborador)
+          ])
+        ]
+      );
+      filas = delPeriodo.length + extrasDelPeriodo.length;
+    }
+    if (!filas) {
+      avisar(cual === 'propinas' ? 'No hay propinas anotadas en este periodo.' : 'No hay nada que descargar en este periodo.', 'atencion');
+      return;
+    }
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pago-${
+    a.download = `${cual === 'completa' ? 'pago' : cual}-${
       tipo === 'mes' ? periodo
       : tipo === 'semana' ? `semana-${periodo}`
       : `${desde}-a-${hasta}`}.csv`;
@@ -1206,11 +1287,26 @@ export default function InformeEquipo() {
           </select>
         )}
         <span className="flex-1" />
-        <button onClick={exportar}
-          disabled={lineas.length === 0 && lineasExtras.length === 0}
-          className="boton boton-relleno min-h-[44px] disabled:opacity-40">
-          Descargar planilla
-        </button>
+        {/* **Tres descargas** (2026-11-12): sueldos y propinas son dos pagos y
+            se revisan por separado; la completa trae las dos cosas. Con el
+            mismo tinte que el resto de esta pantalla: sueldo en celeste,
+            propina en dorado. */}
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Descargar planilla">
+          <span className="w-full text-[14px] font-semibold text-hueso/70 sm:w-auto">⬇ Descargar planilla:</span>
+          {([['sueldos', 'Solo sueldos', TINTE.sueldo], ['propinas', 'Solo propinas', TINTE.propina]] as const)
+            .map(([cual, texto, t]) => (
+              <button key={cual} type="button" onClick={() => exportar(cual)}
+                disabled={lineas.length === 0 && lineasExtras.length === 0}
+                className={`boton min-h-[44px] border-2 font-semibold ${t.caja} ${t.texto} disabled:opacity-40`}>
+                <span aria-hidden className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${t.punto}`} />{texto}
+              </button>
+            ))}
+          <button type="button" onClick={() => exportar('completa')}
+            disabled={lineas.length === 0 && lineasExtras.length === 0}
+            className="boton min-h-[44px] border-2 font-semibold disabled:opacity-40">
+            Completa
+          </button>
+        </div>
       </div>
 
       {sinMarcar > 0 && (
