@@ -380,7 +380,9 @@ export default function TarjetaDia({
           )}
           {d.notas && <p className="mt-2 text-[13px] text-hueso/70">{d.notas}</p>}
 
-          <div className={`mt-3 ${PIE}`}>
+          {/* `pie-tarjeta`: si los tres botones no caben en una línea, pasan
+              a dos (ver `globals.css`). */}
+          <div className={`mt-3 ${PIE} pie-tarjeta`}><div className="pie-botones">
             {/* "Ver reservas" y no "Ver quiénes vienen": con tres acciones
                 en el pie, el texto largo se partía en dos líneas en una
                 tarjeta de cuatro columnas. La fecha de arriba lleva al mismo
@@ -389,10 +391,10 @@ export default function TarjetaDia({
                className={`${BOTON} whitespace-nowrap`}>
               Reservas
             </a>
-            <span className="flex-1" />
+            <span className="pie-hueco" />
             {conEquipo && (
             <button onClick={() => setVolteada(true)} {...alFrente}
-              className={`${BOTON} whitespace-nowrap`}>
+              className={`${BOTON} pie-equipo whitespace-nowrap`}>
               Equipo
               {/* El número va acá para no tener que dar vuelta la tarjeta
                   solo para saber si hay alguien asignado.
@@ -430,7 +432,7 @@ export default function TarjetaDia({
                 {sinConfigurar(d) ? 'Abrir' : 'Editar'}
               </button>
             )}
-          </div>
+          </div></div>
         </div>
 
         {/* ---------- el dorso: el equipo ---------- */}

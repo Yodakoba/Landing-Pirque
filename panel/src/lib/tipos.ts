@@ -67,6 +67,8 @@ export interface FechaHabil {
   apertura: string;      // "13:00"
   estado: string;        // Abierta | Bloqueada
   notas: string;
+  /** El pedido de subir el cupo, o vacío. Ver `lib/cupo.ts`. */
+  cupoPedido?: string;
   fila: number;
 }
 

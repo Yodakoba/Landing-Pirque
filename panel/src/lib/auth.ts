@@ -373,6 +373,13 @@ export const PERMISOS = {
    * lo confirme el gerente, quien paga o el administrador.
    */
   aprobar: [ROL.admin, ROL.gerente, ROL.pagos],
+  /**
+   * **Subir el cupo de un día** (2026-11-12, lo pidió el cliente): el
+   * gerente de operaciones o más arriba. El encargado abre, cierra y baja
+   * cupos con `dias`, pero para subirlo lo pide, y le llega al gerente a la
+   * bandeja de aprobaciones. Ver `lib/cupo.ts`.
+   */
+  cupo: [ROL.admin, ROL.gerente, ROL.pagos],
   /** Consultar Shopify a mano y ver el diagnóstico de la planilla. */
   mantencion: [ROL.admin]
 } as const;

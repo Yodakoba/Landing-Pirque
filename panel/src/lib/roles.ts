@@ -34,6 +34,7 @@ export const PALABRAS: Record<Accion, string> = {
   corregir: 'Corregir un día ya cerrado',
   rectificar: 'Rectificar una reserva el día del servicio (personas, menús, descuento)',
   aprobar: 'Aprobar descuentos sobre el estándar',
+  cupo: 'Subir el cupo de un día y aprobar los pedidos de más cupo',
   configurar: 'Cambiar precios, productos y Configuración',
   bitacora: 'Ver la bitácora de quién hizo qué',
   usuarios: 'Crear cuentas y cambiar roles',
@@ -56,7 +57,7 @@ export const NOMBRE_ROL: Record<string, string> = {
  */
 export const RESUMEN_ROL: Record<string, string> = {
   [ROL.admin]: 'Puede todo, incluidas las cuentas del panel.',
-  [ROL.gerente]: 'Lo del encargado, más aprobar descuentos y corregir días cerrados. Sin plata ni configuración.',
+  [ROL.gerente]: 'Lo del encargado, más aprobar descuentos, subir cupos y corregir días cerrados. Sin plata ni configuración.',
   [ROL.encargado]: 'El día a día: reservas, días, equipo y cotizaciones. Sin plata ni configuración.',
   [ROL.pagos]: 'Lo del encargado, más la plata y la configuración. No toca cuentas.',
   [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',

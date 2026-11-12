@@ -75,6 +75,7 @@ export function filaFecha(
   poner(i.apertura, f.apertura);
   poner(i.estado, f.estado);
   poner(i.notas, f.notas);
+  poner(i.cupoPedido, f.cupoPedido);
   return fila;
 }
 

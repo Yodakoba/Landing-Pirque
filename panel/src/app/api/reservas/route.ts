@@ -64,7 +64,7 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
       if (f) {
         const o = ocupacionDe(reservas, f, cfg.cortes);
         dia = { fecha: pedido, capacidad: o.capacidad, tomadas: o.tomadas, sobrecupo: o.sobrecupo,
-                quedanPagando: o.quedanPagando };
+                quedanPagando: o.quedanPagando, cupoPedido: f.cupoPedido ?? '' };
       }
       capacidadMaxima = cfg.capacidadMaxima;
     }

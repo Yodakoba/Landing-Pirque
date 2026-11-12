@@ -10,7 +10,7 @@ import { CRM_APAGADO } from '@/lib/crm';
 import type { EventosDelDia } from '@/lib/crm';
 import Ayuda from './Ayuda';
 import { verRecorrido } from './Recorrido';
-import type { Ocupacion, Reserva } from '@/lib/tipos';
+import type { FechaHabil, Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
 import TarjetaDia from './TarjetaDia';
@@ -28,7 +28,7 @@ import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from
 import { copiarConAviso } from './AvisoFlotante';
 import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
-import { pendientesDeAprobar } from '@/lib/aprobaciones';
+import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes } from '@/lib/aprobaciones';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { usarAlDia, BarraAlDia, horaDe } from './AlDia';
 import { diferencias, MARCA_DURA } from '@/lib/cambios';
@@ -68,7 +68,8 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
   // null no alcanza para distinguir "ninguna" de "una nueva", así que la
   // intención va aparte.
   const [agregandoFecha, setAgregandoFecha] = useState(false);
-  const [fechasEnLaHoja, setFechasEnLaHoja] = useState<string[]>([]);
+  const [fechasHoja, setFechasHoja] = useState<FechaHabil[]>([]);
+  const fechasEnLaHoja = useMemo(() => fechasHoja.map((x) => x.fecha), [fechasHoja]);
   const [cfg, setCfg] = useState<Config>(POR_DEFECTO);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [menus, setMenus] = useState<Menu[]>(POR_DEFECTO_MENUS);
@@ -190,7 +191,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     // Solo para avisar si una fecha nueva ya estaba en la hoja.
     fetch('/api/fechas')
       .then((r) => r.json())
-      .then((d) => d.fechas && setFechasEnLaHoja(d.fechas.map((x: { fecha: string }) => x.fecha)))
+      .then((d) => d.fechas && setFechasHoja(d.fechas))
       .catch(() => {});
     fetch('/api/reservas')
       .then((r) => r.json())
@@ -251,9 +252,17 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
    * paga o el administrador tienen que aprobar, arriba de todo. Sale de las
    * reservas ya cargadas: no cuesta una lectura más.
    */
-  const pendientes = useMemo(
-    () => puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [],
-    [reservas, rol]);
+  const conCupo = puede(rol as Rol, 'cupo');
+  const pendientes = useMemo(() => {
+    const descuentos = puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [];
+    if (!conCupo) return descuentos;
+    // **Subir el cupo es del gerente o más arriba** (2026-11-12): los
+    // pedidos del encargado y los días sobre su cupo llegan acá.
+    const tomadas = Object.fromEntries((dias ?? []).map((d) => [d.fecha, d.tomadas]));
+    const pedidos = pendientesDeCupo(fechasHoja, tomadas);
+    const conPedido = new Set(pedidos.map((p) => p.fecha));
+    return juntarPendientes(descuentos, pedidos, pendientesDeSobrecupo(dias ?? [], cfg.capacidadMaxima, conPedido));
+  }, [reservas, rol, conCupo, fechasHoja, dias, cfg.capacidadMaxima]);
 
   const avisosHoy = useMemo(() => {
     if (!puede(rol as Rol, 'asistencia')) return null;
@@ -295,7 +304,9 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         <Ayuda tema="calendario" onRecorrido={verRecorrido} />
       </h1>
       <BarraAlDia {...alDia} />
-      <AvisoSobrecupo dias={sobrecupo} />
+      {/* Quien sube el cupo lo ve en la bandeja, con *Ampliar* de un toque;
+          los demás roles, el aviso de siempre. */}
+      {!conCupo && <AvisoSobrecupo dias={sobrecupo} />}
       <BandejaAprobaciones pendientes={pendientes} onCambio={() => void cargar()} />
       {avisosHoy && (
         <a href={`/dia/${avisosHoy.fecha}`}
@@ -360,6 +371,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         <DiaEditor
           dia={editando}
           cupoNormal={cfg.cupoNormal}
+          puedeSubirCupo={conCupo}
           apertura={cfg.horaApertura}
           fechasExistentes={fechasEnLaHoja}
           onListo={() => { setEditando(null); setAgregandoFecha(false); cargar(); }}

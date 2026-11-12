@@ -159,6 +159,7 @@ export async function leerFechas(fresca = false): Promise<FechaHabil[]> {
       // si eso es abierto o cerrado es estaCerrado(), en un solo lugar.
       estado: String(en(f, i.estado)),
       notas: String(en(f, i.notas)),
+      cupoPedido: String(en(f, i.cupoPedido)),
       fila: n + 1
     });
   }
@@ -167,7 +168,9 @@ export async function leerFechas(fresca = false): Promise<FechaHabil[]> {
 
 export async function guardarFecha(d: Omit<FechaHabil, 'fila'>): Promise<void> {
   const filas = await leerHoja(HOJA_FECHAS, true);
-  const enc = filas[0] ?? [];
+  let enc = filas[0] ?? [];
+  // `Cupo pedido` se agrega sola la primera vez que se escribe (2026-11-12).
+  if (d.cupoPedido !== undefined && enc.length) enc = await asegurarColumna(HOJA_FECHAS, enc, COL_FECHAS.cupoPedido);
   const i = indices(enc, COL_FECHAS);
   // Una fecha no puede estar dos veces: si ya está, se actualiza.
   const n = filas.findIndex((f, k) =>

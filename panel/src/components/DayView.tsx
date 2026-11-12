@@ -535,7 +535,8 @@ export default function DayView(
 
       {cupoDia && cupoDia.sobrecupo > 0 && todas && (
         <BloqueSobrecupo dia={cupoDia} reservas={todas} capacidadMaxima={capacidadMaxima}
-          rol={rol} usuario={usuario} conDias={conDias} deCotizacion={deCotizacionIds}
+          rol={rol} usuario={usuario} conDias={conDias} conCupo={puede(rol as Rol, 'cupo')}
+          deCotizacion={deCotizacionIds}
           onCambio={() => void cargar()} />
       )}
 
@@ -861,7 +862,7 @@ export default function DayView(
         <div className="mt-6">
           <BandejaAprobaciones pendientes={pendientesDeAprobar(porAprobarHoy)} onCambio={() => void cargar()}
             verReserva={(p) => { setFiltro('todas'); setSoloMias(false);
-              const r = porAprobarHoy.find((x) => x.fila === p.fila); if (r) setReservaAbierta(r.id); }} />
+              const r = p.tipo === 'descuento' && porAprobarHoy.find((x) => x.fila === p.fila); if (r) setReservaAbierta(r.id); }} />
         </div>
       )}
 
