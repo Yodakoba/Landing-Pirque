@@ -1732,6 +1732,25 @@ ok(await leerSesion(token, SECRETO_SESION, AHORA + DURACION_SESION + 1) === null
 ok(await leerSesion(token, SECRETO_SESION, AHORA + DURACION_SESION - 1) !== null,
    'y un segundo antes todavía vale');
 
+/* ---------- ver como (2026-11-12): el administrador mira como otro rol ---------- */
+{
+  const como = await leerSesion(await firmarSesion({ usuario: 'jefe', rol: ROL.admin, como: 'vendedor' },
+    SECRETO_SESION, AHORA), SECRETO_SESION, AHORA);
+  ok(como?.rol === 'vendedor' && como?.rolReal === 'admin' && como?.usuario === 'jefe',
+     'un administrador mirando como vendedor: el panel obedece al vendedor y recuerda que es admin');
+  const intruso = await leerSesion(await firmarSesion({ usuario: 'Vero', rol: ROL.vendedor, como: 'encargado' },
+    SECRETO_SESION, AHORA), SECRETO_SESION, AHORA);
+  ok(intruso?.rol === 'vendedor' && !intruso?.rolReal,
+     'una cuenta que no es admin no puede "ver como": sigue con su rol');
+  const inventado = await leerSesion(await firmarSesion({ usuario: 'jefe', rol: ROL.admin, como: 'dueño' },
+    SECRETO_SESION, AHORA), SECRETO_SESION, AHORA);
+  ok(inventado?.rol === 'admin' && !inventado?.rolReal, 'un rol inventado se ignora y queda como admin');
+  const conGerencia = await leerSesion(await firmarSesion({ usuario: 'jefe', rol: ROL.admin, como: 'pagos', gerencia: true },
+    SECRETO_SESION, AHORA), SECRETO_SESION, AHORA);
+  ok(conGerencia?.rol === 'pagos' && conGerencia?.gerencia === false,
+     'mirando como otro rol se ve ese rol tal cual, sin la vista gerencia');
+}
+
 const sinRol = await firmarSesion({ usuario: 'Ana', rol: '' }, SECRETO_SESION, AHORA);
 ok(await leerSesion(sinRol, SECRETO_SESION, AHORA) === null,
    'una sesión sin rol no sirve, aunque esté bien firmada');

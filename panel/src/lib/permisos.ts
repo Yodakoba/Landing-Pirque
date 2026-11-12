@@ -25,6 +25,8 @@ export interface Quien {
   rol: Rol;
   /** Vista gerencia: ve todo, edita lo de su rol. Ver `puedeVer()`. */
   gerencia?: boolean;
+  /** Si es un administrador mirando como otro rol ("ver como"), 'admin'. */
+  rolReal?: string;
 }
 
 export const NADIE: Quien = { usuario: '', rol: ROL.ninguno };
@@ -43,7 +45,8 @@ export async function quienEs(req: Request): Promise<Quien> {
   const token = cookieDe(req.headers.get('cookie'), COOKIE_SESION);
   const sesion = await leerSesion(token, secretoDeSesion(process.env));
   if (!sesion) return NADIE;
-  return { usuario: sesion.usuario, rol: sesion.rol as Rol, gerencia: sesion.gerencia === true };
+  return { usuario: sesion.usuario, rol: sesion.rol as Rol, gerencia: sesion.gerencia === true,
+           ...(sesion.rolReal ? { rolReal: sesion.rolReal } : {}) };
 }
 
 /**
