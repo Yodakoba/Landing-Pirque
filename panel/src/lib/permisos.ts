@@ -15,6 +15,7 @@
 import { NextResponse } from 'next/server';
 import { puede, puedeVer, ROL, type Rol, type Accion } from './auth.ts';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from './sesion.ts';
+import { NOMBRE_ROL } from './roles.ts';
 // Se vuelve a exportar porque media app la importa desde acá; vive en
 // sesion.ts para que las pruebas puedan cargarla sin arrastrar next/server.
 export { cookieDe };
@@ -65,8 +66,8 @@ export async function exigir(req: Request, accion: Accion): Promise<NextResponse
       error: rol === ROL.ninguno
         ? 'Tu sesión caducó o no estás identificado. Vuelve a entrar.'
         : gerencia
-          ? `Con vista gerencia ves esto, pero tu rol (${rol}) no lo puede cambiar.`
-          : `Tu cuenta (${rol}) no puede hacer esto. Pídeselo al administrador.`,
+          ? `Con vista gerencia ves esto, pero tu rol (${NOMBRE_ROL[rol] ?? rol}) no lo puede cambiar.`
+          : `Tu cuenta (${NOMBRE_ROL[rol] ?? rol}) no puede hacer esto. Pídeselo al administrador.`,
       // Para que la pantalla pueda decir "no tienes permiso" en vez de "no
       // se pudo leer la planilla", que manda a buscar el problema donde no
       // está.

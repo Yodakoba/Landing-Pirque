@@ -135,7 +135,7 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || d.error) { setError(d.error || 'No se pudo pedir el cupo.'); return; }
-      avisar(`Pedido al gerente: ampliar a ${ampliar.cupo}. Le llega a su bandeja.`);
+      avisar(`Pedido al encargado de operaciones: ampliar a ${ampliar.cupo}. Le llega a su bandeja.`);
       onCambio();
     } finally { setOcupado(false); }
   }
@@ -166,7 +166,7 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
         Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia, así que ya
         están adentro.{conCupo ? ' Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin '
           + 'pagar y le avisas al cliente.'
-          : conDias ? ' Pídele al gerente ampliar el cupo, o suelta una reserva sin pagar y avísale al cliente.' : ''}
+          : conDias ? ' Pídele al encargado de operaciones ampliar el cupo, o suelta una reserva sin pagar y avísale al cliente.' : ''}
       </p>
 
       {/* **El encargado pide, el gerente amplía** (2026-11-12). */}
@@ -174,7 +174,7 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
         <div className="mt-3 rounded-xl border-2 border-oro/60 bg-oro/10 p-3">
           {pedido ? (
             <p className="text-[15px] font-semibold">
-              ⏳ Se pidió ampliar el cupo a {pedido.cupo}: esperando al gerente de operaciones.
+              ⏳ Se pidió ampliar el cupo a {pedido.cupo}: esperando al encargado de operaciones.
             </p>
           ) : (
             <>
@@ -183,7 +183,7 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
                 🙋 Pedir ampliar el cupo a {ampliar.cupo}
               </button>
               <p className="mt-1 text-[13px] text-hueso/75">
-                Ampliar el cupo lo aprueba el gerente de operaciones: le llega a su bandeja.
+                Ampliar el cupo lo aprueba el encargado de operaciones: le llega a su bandeja.
               </p>
             </>
           )}

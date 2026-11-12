@@ -45,9 +45,10 @@ export const PALABRAS: Record<Accion, string> = {
 /** El nombre del rol tal como se lee en pantalla. */
 export const NOMBRE_ROL: Record<string, string> = {
   [ROL.admin]: 'Administrador',
-  [ROL.gerente]: 'Gerente de operaciones',
-  [ROL.encargado]: 'Encargado',
-  [ROL.pagos]: 'Pagos',
+  [ROL.gerencia]: 'Gerencia general',
+  [ROL.operaciones]: 'Encargado de operaciones',
+  [ROL.encargado]: 'Encargado de turno',
+  [ROL.pagos]: 'Encargado de pagos',
   [ROL.vendedor]: 'Vendedor',
   [ROL.anfitrion]: 'Anfitrión'
 };
@@ -58,9 +59,10 @@ export const NOMBRE_ROL: Record<string, string> = {
  */
 export const RESUMEN_ROL: Record<string, string> = {
   [ROL.admin]: 'Puede todo, incluidas las cuentas del panel.',
-  [ROL.gerente]: 'Lo del encargado, más aprobar descuentos, subir cupos y corregir días cerrados. Sin plata ni configuración.',
+  [ROL.gerencia]: 'Por ahora, lo mismo que el encargado de pagos. Sus derechos propios se definen después.',
+  [ROL.operaciones]: 'Lo del encargado de turno, más aprobar descuentos, subir cupos y corregir días cerrados. Sin plata ni configuración.',
   [ROL.encargado]: 'El día a día: reservas, días, equipo y cotizaciones. Sin plata ni configuración.',
-  [ROL.pagos]: 'Lo del encargado, más la plata y la configuración. No toca cuentas.',
+  [ROL.pagos]: 'Lo del encargado de turno, más la plata y la configuración. No toca cuentas.',
   [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',
   [ROL.anfitrion]: 'Recibe a los clientes: ve las reservas del día y marca si vinieron.'
 };

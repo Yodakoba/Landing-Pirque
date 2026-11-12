@@ -24,6 +24,7 @@ import { avisar } from './AvisoFlotante';
 import { NOMBRE_ROL, RESUMEN_ROL } from '@/lib/roles';
 
 const ROLES: { rol: string; icono: string }[] = [
+  { rol: 'gerencia', icono: '🏛' },
   { rol: 'gerente', icono: '🧭' },
   { rol: 'encargado', icono: '🧑‍🍳' },
   { rol: 'pagos', icono: '💰' },

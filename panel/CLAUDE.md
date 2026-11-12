@@ -4641,7 +4641,40 @@ los demás roles los avisos de sobrecupo quedan como estaban**.
   portada ya pedía, y la firma de cambios ya cubre todas las columnas de
   `Fechas Hábiles`, así que un pedido nuevo aparece en la próxima revisión.
 
-### El gerente de operaciones (2026-11-12)
+### Los nombres de los roles, y la gerencia general (2026-11-12)
+
+Lo pidió el cliente: que los nombres digan qué hace cada uno, y un rol más
+arriba, **Gerencia general**.
+
+| En pantalla | Guardado en `Usuarios` | Qué es |
+|---|---|---|
+| Administrador | `admin` | la cuenta técnica: puede todo |
+| **Gerencia general** | `gerencia` | **nuevo**: por ahora, lo mismo que el encargado de pagos |
+| **Encargado de operaciones** | `gerente` | antes "Gerente de operaciones" |
+| **Encargado de turno** | `encargado` | antes "Encargado" (el cliente dudó entre *de turno* y *de caja*) |
+| **Encargado de pagos** | `pagos` | antes "Pagos" |
+| Vendedor · Anfitrión | `vendedor` · `anfitrion` | sin cambios |
+
+- **Solo cambió el nombre que se ve** (`NOMBRE_ROL` en `roles.ts`). El valor
+  guardado de *Encargado de operaciones* **sigue siendo `gerente`**, porque
+  es lo que ya está escrito en la columna `Rol`; en el código la llave es
+  `ROL.operaciones`. Cambiar el valor dejaría sin rol a quien ya lo tiene.
+- **La cabecera y los mensajes de permiso dicen el nombre**, no el valor
+  guardado: *"jefe · Encargado de operaciones"*, *"Tu cuenta (Encargado de
+  turno) no puede hacer esto"*.
+- **Gerencia general nace igual a quien paga**: en `PERMISOS` va en cada
+  lista donde está `pagos`, y una prueba fija que hoy pueden exactamente lo
+  mismo. **El cliente va a definir un par de derechos y vistas distintas**;
+  cuando lo haga, se cambia esa prueba a propósito. Está en *Cuentas* para
+  asignarlo y en *Ver como…* (🏛).
+- **Y debería reemplazar a la *vista gerencia***, el agregado de cuenta de
+  más abajo: el cliente lo dijo así, *"en verdad tiene que ser un rol
+  gerencia general y ella tiene distintas vistas, distintos derechos"*.
+  **Todavía no se sacó**: las cuentas que la tienen marcada siguen igual
+  hasta que se definan los derechos de la gerencia y se decida a qué rol
+  pasan.
+
+### El gerente de operaciones (2026-11-12) — hoy *Encargado de operaciones*
 
 El administrador del restaurante, sobre el encargado (lo pidió el cliente).
 **Puede todo lo del encargado, más aprobar descuentos (`aprobar`) y
