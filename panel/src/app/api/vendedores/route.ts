@@ -125,7 +125,7 @@ export const PATCH = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES], async functio
       ...(c.etapa3Desde !== undefined ? { etapa3Desde: monto(c.etapa3Desde) || antes.etapa3Desde } : {}),
       ...(c.etapa3Pct !== undefined ? { etapa3Pct: porcentaje(c.etapa3Pct) } : {}),
       ...(c.bonoPuntos !== undefined ? { bonoPuntos: porcentaje(c.bonoPuntos) } : {}),
-      ...(c.base !== undefined ? { base: c.base === 'neto' ? 'neto' : 'total' } : {}),
+      ...(c.base !== undefined ? { base: c.base === 'total' ? 'total' : 'neto' } : {}),
       ...(c.banco && typeof c.banco === 'object' ? { banco: { ...bancoVacio(), ...antes.banco, ...c.banco } } : {})
     };
     await guardarVendedor(nueva);

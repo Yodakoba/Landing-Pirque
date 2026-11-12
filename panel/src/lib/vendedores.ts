@@ -17,8 +17,8 @@
  *   (los menús más valiosos), para empujar la venta.
  * - **La comisión se gana cuando el cliente pagó todo**: cuenta en el
  *   periodo del cobro que completó el total. Una cancelada no deja comisión.
- * - **Sobre el total con IVA**, editable por vendedor (`Base comisión`:
- *   *Total con IVA* o *Neto*).
+ * - **Sobre el neto** (desde el 2026-11-12; antes total con IVA), editable
+ *   por vendedor (`Base comisión`: *Neto* o *Total con IVA*).
  * - **El sueldo fijo cuenta el último día de cada mes**: un periodo que
  *   incluye ese día lo suma. Así una semana no lo parte y un rango de dos
  *   meses suma los dos, sin prorratear nada.
@@ -84,7 +84,7 @@ export const CORTES_SOCIOS = { etapa2: 55, etapa3: 77 } as const;
 export const fichaVacia = (usuario: string, nombre = ''): FichaVendedor => ({
   usuario, nombre, sueldoFijo: 0, comisionPct: 0,
   etapa2Desde: CORTES_SOCIOS.etapa2, etapa2Pct: 0, etapa3Desde: CORTES_SOCIOS.etapa3, etapa3Pct: 0, bonoPuntos: 0,
-  montoEvento: 0, base: 'total', banco: bancoVacio(), fila: 0
+  montoEvento: 0, base: 'neto', banco: bancoVacio(), fila: 0
 });
 
 const entero = (v: unknown) => {
@@ -96,7 +96,13 @@ export function porcentaje(v: unknown): number {
   const n = Number(String(v ?? '').replace('%', '').replace(',', '.').trim());
   return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n * 100) / 100)) : 0;
 }
-const baseDe = (v: unknown): BaseComision => (/neto/i.test(String(v ?? '')) ? 'neto' : 'total');
+/**
+ * **La comisión va sobre el neto por defecto** (2026-11-12, lo fijó el
+ * cliente: *"tanto en socios comerciales como en los vendedores, la
+ * comisión tenemos que calcularla sobre el neto"*). En blanco es neto; solo
+ * una ficha que diga *Total con IVA* lo usa —sigue siendo editable—.
+ */
+const baseDe = (v: unknown): BaseComision => (/total/i.test(String(v ?? '')) ? 'total' : 'neto');
 
 export function leerVendedoresDe(filas: string[][]): FichaVendedor[] {
   if (filas.length < 2) return [];

@@ -1714,8 +1714,11 @@ boletas y planillas de vendedores— vino en la segunda entrega, más abajo.
 - **La comisión se gana cuando el cliente pagó todo**: cuenta en el periodo
   del cobro que completó el total (`pagadaEl()`). Una devolución que lo baja
   la deja pendiente de nuevo. **Una cancelada no deja comisión.**
-- **El % va sobre el total con IVA**, editable por vendedor a *Neto*
-  (`Base comisión`).
+- **El % va sobre el neto** (cambió el 2026-11-12, lo fijó el cliente:
+  *"tanto en socios comerciales como en los vendedores, la comisión tenemos
+  que calcularla sobre el neto"*; antes era el total con IVA). Sigue
+  editable por vendedor (`Base comisión`); **una celda en blanco es neto**,
+  así que solo una ficha guardada con *Total con IVA* lo usa.
 - **El sueldo fijo cuenta el último día de cada mes**
   (`finesDeMesEntre()`): un periodo que incluye ese día lo suma. Así una
   semana no lo parte y un rango de dos meses suma los dos, sin prorratear.

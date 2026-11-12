@@ -326,7 +326,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                 <div>
                   <p className="text-[14px] font-semibold">El % se calcula sobre</p>
                   <div className="mt-1 flex flex-wrap gap-2">
-                    {(['total', 'neto'] as const).map((b) => (
+                    {(['neto', 'total'] as const).map((b) => (
                       <button key={b} type="button" aria-pressed={ficha.base === b} onClick={() => cambiar('base', b)}
                         className={`boton min-h-[44px] ${ficha.base === b ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
                         {ficha.base === b ? '✓ ' : ''}{BASE_COMISION[b]}
