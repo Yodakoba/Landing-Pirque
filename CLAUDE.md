@@ -5700,6 +5700,30 @@ Fudo… que tenga que documentar estos cambios obligatoriamente"*. Lógica en
 Pagadas · Abonadas · Sin pagar*: de un toque, solo las que anotó o vendió
 esta cuenta (`esSuya()` con `Anotada por` y el vendedor de la cotización).
 
+### La bandeja de aprobaciones (2026-11-12)
+
+Lo pidió el cliente: que al gerente de operaciones, apenas entra, le salga
+*"hey, tienes que aprobar el descuento extra que pidió la Fran"*, y que
+aprobarlo sea simple. **Arriba de la portada** (y de la página del día, con
+lo de ese día) va **🔔 Tienes N cosas que aprobar**, para quien tiene
+`aprobar`: gerente, quien paga y administrador.
+
+- **Una tarjeta por cosa**: *Fran pide un **25%** de descuento*, para quién,
+  cuánta gente, qué día y a qué hora lo pidió, y el motivo con el
+  comentario. Debajo, **✓ Aprobar 25%** (verde, un toque) y **✕ Rechazar**,
+  que pregunta antes —*"Se cobra sin descuento, y avísale a Fran"*—, y
+  *Ver el día →*. Lo aprobado sale de la bandeja en el acto.
+- **No cuesta una lectura**: sale de las reservas que la portada ya cargó
+  (`pendientesDeAprobar()` en `lib/aprobaciones.ts`, con pruebas), el día
+  más antiguo primero. Quién pidió sale de la marca de la rectificación
+  (`partesRectificacion()`).
+- **Está armada para crecer**: cada cosa es un `Pendiente` con su `tipo`, y
+  la tarjeta (`BandejaAprobaciones.tsx`) dibuja cualquiera igual. Un tipo
+  nuevo —lo que se vaya sumando por aprobar— es agregar sus pendientes a esa
+  lista y su respuesta en la tarjeta.
+- **Es dentro del panel**: no manda WhatsApp ni correo. Se entera quien
+  abre la portada.
+
 ### El gerente de operaciones (2026-11-12)
 
 El administrador del restaurante, sobre el encargado (lo pidió el cliente).
