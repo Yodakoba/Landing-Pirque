@@ -37,7 +37,11 @@ type Estado = 'preparacion' | 'cerrado' | 'exclusivo' | 'privado' | 'sinCupo' | 
  * texto, que es el que está pensado para leerse.
  */
 const PALABRA: Record<Estado, { texto: string; clase: string; punto?: string }> = {
-  preparacion: { texto: 'preparación', clase: 'text-oro', punto: '🟡' },
+  // **Preparación va en café** (2026-11-12, lo pidió el cliente): el
+  // amarillo era el mismo del semáforo "casi lleno", y un día de montaje no
+  // puede leerse como un día con poco cupo. Café y no rosado, porque el
+  // rosado ya dice "cotizado".
+  preparacion: { texto: 'preparación', clase: 'text-cafe-texto', punto: '🟤' },
   cerrado: { texto: 'cerrado', clase: 'text-rojo-texto' },
   // **Exclusivo va en morado** (2026-11-12, lo pidió el cliente). Antes iba
   // en el mismo azul que el privado, distinguido solo por la palabra; ahora
@@ -69,7 +73,7 @@ export function partesDelDia(d: Ocupacion | undefined, preparacion = false) {
   const estado = estadoDia(d, preparacion);
   if (!estado) return null;
   const { texto, clase, punto } = PALABRA[estado];
-  return { texto, clase, punto: punto ?? (d ? PUNTO_TARJETA(d) : '🟡') };
+  return { texto, clase, punto: punto ?? (d ? PUNTO_TARJETA(d) : '🟤') };
 }
 
 export default function PuntoDia({ d, preparacion = false }: {
@@ -83,7 +87,7 @@ export default function PuntoDia({ d, preparacion = false }: {
   // decir de él, y una palabra ahí sería ruido en todas las celdas vacías.
   if (!estado) return null;
   const { texto, clase, punto } = PALABRA[estado];
-  return <PuntoYPalabra punto={punto ?? (d ? PUNTO_TARJETA(d) : '🟡')} texto={texto} clase={clase} />;
+  return <PuntoYPalabra punto={punto ?? (d ? PUNTO_TARJETA(d) : '🟤')} texto={texto} clase={clase} />;
 }
 
 /**

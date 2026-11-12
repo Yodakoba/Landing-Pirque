@@ -246,7 +246,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                           text-left align-top
                           text-[13px] leading-snug transition
                           hover:border-oro disabled:opacity-40
-                          ${preparando ? 'border-oro/40 bg-oro/5'
+                          ${preparando ? 'border-cafe/50 bg-cafe/[0.06]'
                              : oc ? COLOR_TARJETA(oc)
                                   : 'border-hueso/10 bg-panel'}
                           ${esHoy ? 'ring-1 ring-oro' : ''}`}>
