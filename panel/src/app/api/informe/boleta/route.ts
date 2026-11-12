@@ -15,7 +15,8 @@ export const dynamic = 'force-dynamic';
  * bitácora con nombre y hora. El encargado ve el informe, pero no marca.
  */
 export const POST = conLecturas([], async function POST(req: Request) {
-  const no = await exigir(req, 'pagar');
+  // El gerente también la marca (2026-11-12): permiso `boleta`.
+  const no = await exigir(req, 'boleta');
   if (no) return no;
   try {
     const c = (await req.json()) as Record<string, unknown>;

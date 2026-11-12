@@ -303,24 +303,18 @@ export const PERMISOS = {
   /** Leer la bitácora. */
   bitacora: [ROL.admin, ROL.pagos],
   /**
-   * El informe del mes: cuánto se le pagó a cada persona.
+   * El informe del equipo: cuánto se le debe y se le pagó a cada persona.
    *
-   * **El encargado también lo ve desde el 2026-11-01**, y es una decisión
-   * del cliente tomada a propósito como provisoria: *"por ahora libéralo
-   * para encargado también… luego se define más especificado cuál rol tiene
-   * qué derechos de ver"*. O sea que esta línea está para volver a mirarse,
-   * no para quedarse.
-   *
-   * El argumento que tenía antes sigue en pie y conviene no perderlo: el
-   * encargado necesita **el día que tiene delante** para cerrar un turno, no
-   * el historial de sueldos de todo el equipo. Y hay una consecuencia
-   * concreta que no es obvia, porque no está en esta tabla: `/api/informe`
-   * devuelve de cada ficha **los datos de la transferencia** —RUT, banco,
-   * número de cuenta—, que en todo el resto del panel son solo del
-   * administrador y de quien paga. Al abrir el informe se abren también
-   * esos. Es lo que hay que decidir cuando se afine la lista.
+   * **Se afinó el 2026-11-12** (lo decidió el cliente): el encargado dejó de
+   * verlo —lo había liberado el 2026-11-01 como provisorio—, y lo ve el
+   * gerente de operaciones, **solo para mirar y marcar la boleta**
+   * (`boleta`). Registrar pagos y los datos de la transferencia siguen
+   * siendo de `pagar`: `/api/informe` ni siquiera le manda las cuentas
+   * bancarias a quien no paga.
    */
-  informe: [ROL.admin, ROL.encargado, ROL.gerente, ROL.pagos],
+  informe: [ROL.admin, ROL.gerente, ROL.pagos],
+  /** Marcar que llegó la boleta de alguien en el informe (2026-11-12). */
+  boleta: [ROL.admin, ROL.gerente, ROL.pagos],
   /**
    * Registrar que a alguien ya se le pagó, entero o en parte.
    *

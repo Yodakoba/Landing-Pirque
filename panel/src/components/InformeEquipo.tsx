@@ -268,7 +268,7 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
  */
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, avisos, sinCuenta,
-  boleta, puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta,
+  boleta, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta,
   anotados, onVerPagos
 }: {
   nombre: string;
@@ -283,6 +283,8 @@ function LineaPersona({
   /** `null` si no aplica; si aplica, si ya llegó. */
   boleta: boolean | null;
   puedePagar: boolean;
+  /** Si marca la boleta: quien paga y también el gerente (2026-11-12). */
+  puedeBoleta?: boolean;
   abierta: boolean;
   onAbrir: () => void;
   onCopiar: (o: Opcion) => void;
@@ -402,7 +404,7 @@ function LineaPersona({
           </dl>
 
           {boleta !== null && (
-            puedePagar ? (
+            puedeBoleta ? (
               <div className="flex items-center gap-1">
               <button type="button" aria-pressed={boleta} onClick={() => onBoleta(!boleta)}
                 className={`tecla flex min-h-[48px] w-full items-center gap-3 rounded-xl border-2
@@ -663,6 +665,7 @@ export default function InformeEquipo() {
   // plata. Ver `remuneraciones.ts`.
   const [pagos, setPagos] = useState<PagoEquipo[]>([]);
   const [puedePagar, setPuedePagar] = useState(false);
+  const [puedeBoleta, setPuedeBoleta] = useState(false);
   // Las boletas marcadas. Igual que los pagos, el check se deduce de que
   // exista la fila: si no está, no llegó.
   const [boletas, setBoletas] = useState<Boleta[]>([]);
@@ -709,6 +712,7 @@ export default function InformeEquipo() {
         setPagos(d.pagos ?? []);
         setBoletas(d.boletas ?? []);
         setPuedePagar(!!d.puedePagar);
+        setPuedeBoleta(!!d.puedeBoleta);
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -1057,7 +1061,11 @@ export default function InformeEquipo() {
    * exactamente el trabajo que esto viene a evitar.
    */
   /** Las siete columnas del pago, en el orden del encabezado. */
+  // **Solo para quien paga** (2026-11-12): sin las cuentas, las columnas
+  // del banco no van —ni el encabezado—, así que el gerente baja la
+  // planilla sin datos de transferencia.
   const columnasBanco = (nombre: string) => {
+    if (!puedePagar) return [];
     const b = cuentaDe(nombre);
     return [titularDe(b, nombre), rutLimpio(b.rut), b.banco, b.tipo,
             b.numero, b.correo, b.nota];
@@ -1110,7 +1118,7 @@ export default function InformeEquipo() {
     const lineaDe = (nombre: string) => lineas.find((l) => normalizar(l.trabajador) === normalizar(nombre));
     const totalExtraDe = (nombre: string) =>
       lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(nombre))?.total ?? 0;
-    const banco = ['Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
+    const banco = !puedePagar ? [] : ['Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
                    'Correo del comprobante', 'Nota de pago'];
     // La primera fila de cada persona: las filas vienen ordenadas por nombre.
     const primeraDe = <T,>(lista: T[], i: number, nombre: (x: T) => string) =>
@@ -1173,8 +1181,7 @@ export default function InformeEquipo() {
          'Total', 'Propina',
          'A transferir', 'Pagado', 'Falta', 'Boleta', 'Pagado sueldo o servicio',
          'Pagado propina',
-         'Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
-         'Correo del comprobante', 'Nota de pago'],
+         ...banco],
         [
           ...delPeriodo.map((t, i) => [
             'Equipo',
@@ -1443,6 +1450,7 @@ export default function InformeEquipo() {
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.trabajador))}
                       boleta={aplica ? boletaRecibida(l.trabajador) : null}
                       puedePagar={puedePagar}
+                      puedeBoleta={puedeBoleta}
                       abierta={abierta === 'e-' + l.trabajador}
                       onAbrir={() => setAbierta((a) => a === 'e-' + l.trabajador ? null : 'e-' + l.trabajador)}
                       onCopiar={(o) => copiarTransferencia(l.trabajador, o)}
@@ -1506,6 +1514,7 @@ export default function InformeEquipo() {
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.colaborador))}
                       boleta={pideBoleta('extra', false) ? boletaRecibida(l.colaborador) : null}
                       puedePagar={puedePagar}
+                      puedeBoleta={puedeBoleta}
                       abierta={abierta === 'x-' + l.colaborador}
                       onAbrir={() => setAbierta((a) => a === 'x-' + l.colaborador ? null : 'x-' + l.colaborador)}
                       onCopiar={(o) => copiarTransferencia(l.colaborador, o)}
@@ -1580,7 +1589,7 @@ export default function InformeEquipo() {
             </div>
           </div>
 
-          {sinCuenta.length > 0 && (
+          {puedePagar && sinCuenta.length > 0 && (
             <p className="mb-6 max-w-2xl text-[13px] text-ambar-texto/80">
               Sin datos para transferir: {sinCuenta.join(' · ')}. La planilla
               sale igual, con esas columnas a medias; se completa en{' '}
@@ -1600,10 +1609,10 @@ export default function InformeEquipo() {
           </p>
           <p className="mt-3 max-w-2xl text-[13px] text-hueso/50">
             <strong>La planilla que se descarga trae las dos cosas juntas</strong>,
-            día por día, con el motivo de cada ajuste y los datos de la
+            día por día, con el motivo de cada ajuste{puedePagar ? <> y los datos de la
             transferencia de cada uno —titular, RUT, banco, tipo, número y
             correo, un campo por columna—: es un solo pago a la semana, se
-            pega en la carga del banco, y cada fila dice si es equipo o
+            pega en la carga del banco,</> : ','} y cada fila dice si es equipo o
             actividad extra.
           </p>
         </>

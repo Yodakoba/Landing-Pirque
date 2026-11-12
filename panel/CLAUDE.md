@@ -4215,7 +4215,27 @@ Esa pregunta se contestó el **2026-10-22**: sí es otra persona, así que
 existe el rol **pagos** — que desde el 2026-11-01 **no es una cuenta más
 chica que la del encargado, sino la misma más la plata**. Ver abajo.
 
-#### El encargado ve el informe, por ahora (2026-11-01)
+#### El informe se afinó: el gerente mira, quien paga paga (2026-11-12)
+
+Lo decidió el cliente, y cierra lo que la sección de abajo dejó abierta:
+**el encargado ya no ve el informe**; **el gerente de operaciones sí, pero
+no registra pagos ni copia datos de transferencia: solo marca la boleta
+recibida**; quien paga y el administrador hacen todo.
+
+- **`informe`**: administrador, gerente y quien paga. **`boleta`** (nuevo):
+  los mismos tres, y es lo que pide `/api/informe/boleta`. **`pagar`** sigue
+  siendo de administrador y quien paga.
+- **Las cuentas bancarias solo viajan a quien paga**: `/api/informe` las
+  recorta en el servidor, así que al gerente no le llegan ni a la pantalla
+  ni a la planilla que descarga, que sale **sin las columnas del banco**.
+  Es lo que la sección de abajo proponía hacer cuando se afinara la lista.
+- En pantalla el gerente ve las líneas, el detalle y el estado de cada
+  pago, y el botón **Falta la boleta / Boleta recibida**; no ve *Copiar*,
+  *Pagado completo*, *Pago parcial* ni la transferencia masiva.
+- Comprobado con Playwright como gerente y como encargado: el encargado ve
+  *"Esta parte no es tuya"* y el menú ya no le ofrece Informe.
+
+#### El encargado ve el informe, por ahora (2026-11-01) — reemplazado el 2026-11-12
 
 Lo liberó el cliente en medio de una reunión, y dejó dicho que es un
 intertanto: *"por ahora libéralo para encargado también… luego se define más
@@ -4656,7 +4676,8 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | **Mandar la planilla semanal**, crear y renovar su link | sí | **sí** | **sí** | — | — |
 | **La bitácora** | sí | — | **sí** | — | — |
 | Cuentas del panel y sus contraseñas | sí | — | — | — | — |
-| **El informe del equipo** | sí | **sí (por ahora)** | **sí** | — | — |
+| **El informe del equipo** (el gerente también: mira y marca boletas) | sí | **— (desde el 2026-11-12)** | **sí** | — | — |
+| **Marcar la boleta** (también el gerente) | sí | — | **sí** | — | — |
 | **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — | — |
 | Ver **sus propios** turnos | — | — | — | — | sí |
 
