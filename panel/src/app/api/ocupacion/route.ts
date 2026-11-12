@@ -8,6 +8,7 @@ import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias } from '@/lib/d
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasAbiertosEntre, hoy, sumarDias, esFecha } from '@/lib/fechas';
 import type { FechaHabil } from '@/lib/tipos';
+import { firmaDe } from '@/lib/cambios';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,7 +108,10 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PR
       // una conversación abierta con un cliente.
       .filter((o) => !o.bloqueada || o.tomadas > 0 || o.presupuestos > 0);
 
-    return NextResponse.json({ ocupacion, config: cfg });
+    // La firma de lo que se leyó (2026-11-12): con ella la pantalla sabe, al
+    // revisar `/api/cambios`, si lo que tiene sigue al día. Sale de las
+    // mismas lecturas, así que no cuesta nada más.
+    return NextResponse.json({ ocupacion, config: cfg, firma: firmaDe(reservas, fechas) });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

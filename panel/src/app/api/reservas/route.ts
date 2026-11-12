@@ -15,6 +15,7 @@ import { comoIngresar } from '@/lib/fudo';
 import { ASISTENCIA, ESTADO_PAGO } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
 import { guardaDelDia } from '@/lib/guardaCierre';
+import { firmaDe } from '@/lib/cambios';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
@@ -35,8 +36,11 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
     const pedido = new URL(req.url).searchParams.get('dia') ?? '';
     let dia = null;
     let capacidadMaxima: number | undefined;
+    // Los días van en la misma tanda de lecturas: sirven para la firma
+    // (ver `lib/cambios.ts`) sin costar una consulta más.
+    const fechas = await leerFechas();
     if (esFecha(pedido)) {
-      const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
+      const cfg = await leerConfig();
       const f = fechas.find((x) => x.fecha === pedido);
       if (f) {
         const o = ocupacionDe(reservas, f, cfg.cortes);
@@ -47,7 +51,7 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
     }
     return NextResponse.json({
       reservas: reservas.map((r) => ({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) })),
-      menus, dia, capacidadMaxima,
+      menus, dia, capacidadMaxima, firma: firmaDe(reservas, fechas),
       // Qué reservas vienen de una cotización: esas no se sueltan acá, se
       // cancelan desde su cotización.
       deCotizacion: Object.fromEntries(deCot)

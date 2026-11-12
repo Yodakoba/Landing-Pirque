@@ -28,6 +28,7 @@
  *   el teclado. `backface-visibility` oculta el dibujo pero deja los enlaces
  *   alcanzables, así que sin esto se podría tabular hacia botones invisibles.
  */
+import { MarcaCambio } from './AlDia';
 import { useState } from 'react';
 import { LineaCRM } from './EventosCRM';
 import type { EventosDelDia } from '@/lib/crm';
@@ -139,9 +140,11 @@ const BOTON = 'tecla boton boton-angosto';
 
 export default function TarjetaDia({
   d, resumen, clima, delSocio, conEquipo = true, conDias = true,
-  onEditar, onPlanificar
+  onEditar, onPlanificar, cambio
 }: {
   d: Ocupacion;
+  /** Si este día cambió de gente en la última actualización (ver `AlDia`). */
+  cambio?: { delta: number; desde: string };
   /**
    * Si esta cuenta puede ver y planificar el equipo.
    *
@@ -189,7 +192,8 @@ export default function TarjetaDia({
        la separación con la tarjeta de al lado. Con la guarda, lo que no
        quepa queda como problema DENTRO de su propio borde, donde se ve, y
        no ensuciando la grilla entera. */
-    <div className="h-full min-w-0 [perspective:1200px]">
+    <div className="relative h-full min-w-0 [perspective:1200px]">
+      {cambio && <MarcaCambio {...cambio} />}
       <div
         className="grid h-full min-w-0 grid-cols-1 transition-transform duration-500
                    [transform-style:preserve-3d]"

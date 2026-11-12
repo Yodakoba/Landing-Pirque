@@ -5,7 +5,7 @@
  * El desglose online / en el local no es decoración: dice cuánta plata está
  * cobrada y cuánta hay que cobrar el mismo día.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
 import type { EventosDelDia } from '@/lib/crm';
 import Ayuda from './Ayuda';
@@ -28,6 +28,8 @@ import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from
 import { copiarConAviso } from './AvisoFlotante';
 import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
+import { usarAlDia, BarraAlDia, horaDe } from './AlDia';
+import { diferencias, MARCA_DURA } from '@/lib/cambios';
 
 /** El color de cada aviso de la línea de la semana: el mismo significado que en el resto del panel. */
 const TONO: Record<Tono, string> = {
@@ -144,14 +146,34 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     }
   }
 
+  /** La firma de la última carga: con ella `usarAlDia` sabe si hay cambios. */
+  const [firma, setFirma] = useState('');
+  /**
+   * **Los días que cambiaron de gente en la última actualización**, con
+   * cuánto y desde qué hora (2026-11-12). Se marcan en dorado un minuto:
+   * un número que cambia callado se puede pasar de largo.
+   */
+  const [marcas, setMarcas] = useState<{ delta: Record<string, number>; desde: string }>(
+    { delta: {}, desde: '' });
+  const anteriores = useRef<{ dias: Ocupacion[]; cuando: number } | null>(null);
+
   const cargar = () => {
     // Sin parámetro: la ventana la decide dias_a_futuro de la planilla.
-    fetch('/api/ocupacion')
+    const ocupacion = fetch('/api/ocupacion')
       .then((r) => r.json())
       .then((d) => {
         if (d.error) return setError(d.error);
+        // Si había una carga antes, se compara: qué días ganaron o perdieron gente.
+        const antes = anteriores.current;
+        if (antes) {
+          const tomadas = (ds: Ocupacion[]) => Object.fromEntries(ds.map((x) => [x.fecha, x.tomadas]));
+          const delta = diferencias(tomadas(antes.dias), tomadas(d.ocupacion ?? []));
+          if (Object.keys(delta).length) setMarcas({ delta, desde: horaDe(antes.cuando) });
+        }
+        anteriores.current = { dias: d.ocupacion ?? [], cuando: Date.now() };
         setDias(d.ocupacion);
         if (d.config) setCfg(d.config);
+        if (d.firma) setFirma(d.firma);
       })
       .catch((e) => setError(String(e)));
     // Solo para los nombres de menú del formulario manual; si falla, el
@@ -190,8 +212,16 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         })
         .catch(() => {});
     }
+    return ocupacion;
   };
-  useEffect(cargar, []);
+  useEffect(() => { void cargar(); }, []);
+  const alDia = usarAlDia(firma, cargar);
+  // La marca dorada dura un minuto.
+  useEffect(() => {
+    if (!Object.keys(marcas.delta).length) return;
+    const t = setTimeout(() => setMarcas({ delta: {}, desde: '' }), MARCA_DURA);
+    return () => clearTimeout(t);
+  }, [marcas]);
 
   /**
    * **Los avisos de la recepción de hoy** (2026-11-11): lo que la anfitriona
@@ -246,6 +276,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
             o sea donde vuelve quien se perdió. */}
         <Ayuda tema="calendario" onRecorrido={verRecorrido} />
       </h1>
+      <BarraAlDia {...alDia} />
       <AvisoSobrecupo dias={sobrecupo} />
       {avisosHoy && (
         <a href={`/dia/${avisosHoy.fecha}`}
@@ -449,7 +480,8 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
             {chica ? (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {deLaSemana.map((d) => (
-                  <DiaCompacto key={d.fecha} d={d} onAbrir={alternar} />
+                  <DiaCompacto key={d.fecha} d={d} onAbrir={alternar}
+                    cambio={marcas.delta[d.fecha] ? { delta: marcas.delta[d.fecha], desde: marcas.desde } : undefined} />
                 ))}
               </div>
             ) : (
@@ -458,6 +490,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
                 delSocio={delSocio[d.fecha]}
                 conEquipo={conEquipo} conDias={conDias}
+                cambio={marcas.delta[d.fecha] ? { delta: marcas.delta[d.fecha], desde: marcas.desde } : undefined}
                 resumen={equipo
                   ? resumenEquipo(equipo.turnos, equipo.puestos, d.fecha, d.tomadas)
                   : null}
