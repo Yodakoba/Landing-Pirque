@@ -5857,6 +5857,26 @@ debajo, un botón de 44px por nombre.
   frena. El buscador marca el Escape con `preventDefault` y `Dialogo` ignora
   un evento ya usado (`defaultPrevented`).
 
+### Buscador arriba de la lista de `/equipo` (2026-11-12)
+
+Lo pidió el cliente: *"debería haber un formulario de búsqueda arriba de
+toda la lista"*. Un campo **Buscar por nombre, puesto o teléfono** entre el
+título *Trabajadores* y *Mostrar desactivados*.
+
+- **Mismo criterio que `BuscarPersona` y el buscador del informe**: sin
+  tildes ni mayúsculas (`normalizar()`), "perez" encuentra a José Pérez y
+  "cocina" a todo el puesto. **El teléfono también se busca por dígitos
+  solos** (desde 3), para que "12345678" encuentre `+56 9 1234 5678`.
+- **Filtra lo que se dibuja, no lo que se guarda.** Igual que los
+  desactivados, se salta dentro del `map` y no con un `filter` previo: el
+  índice `i` de cada ficha tiene que seguir siendo su posición real.
+- **La ficha abierta no se esconde aunque deje de calzar**: cambiarle el
+  nombre o el puesto a medio escribir la haría desaparecer.
+- **Respeta *Mostrar desactivados***. Si no calza nadie visible pero sí un
+  desactivado, lo dice: *"Nadie calza con… Hay 1 desactivado que calza:
+  muéstralos con el botón de arriba"*, en vez de una lista vacía.
+- **Cero lecturas nuevas**: filtra lo que `/api/equipo` ya trajo.
+
 ### Vino / No vino se marca solo en `/turnos` (2026-11-05)
 
 Lo pidió el cliente: *"saca la opción vino o no vino de la parte del
