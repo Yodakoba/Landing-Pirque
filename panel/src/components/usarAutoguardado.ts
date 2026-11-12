@@ -39,8 +39,14 @@
  * ajustes de personas que ya están en la lista: ahí el botón no decidía
  * nada, solo se podía olvidar.
  *
- * **Se aprieta Guardar cuando lo que se edita es la lista misma** —`/equipo`,
- * `/extras` en su parte de fichas, `/menus`, `/configuración`, `/usuarios`—.
+ * > **Cambió el 2026-11-12** (regla del cliente: autoguardado por defecto):
+ * > las fichas de `/equipo`, `/extras` y `/clientes` se guardan solas, de a
+ * > una, con `usarGuardadoPorFicha()`; solo su **nombre** se confirma. Lo
+ * > que sigue vale para las que quedan con botón: `/menus`,
+ * > `/configuración`, `/usuarios` y los puestos.
+ *
+ * **Se aprieta Guardar cuando lo que se edita es la lista misma** —`/menus`,
+ * `/configuración`, `/usuarios`—.
  * Ahí el nombre **es** la identidad de la fila y la pantalla reescribe la
  * pestaña entera: guardar a mitad de palabra, mientras alguien borra un
  * nombre para reescribirlo, mandaría una fila sin nombre, el servidor la

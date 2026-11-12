@@ -17,8 +17,18 @@ revisan antes de cada cambio en esta carpeta.
   distingue por forma y no solo por color, un solo botón relleno por vista,
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
-  desplegables, una frase que dice qué pasa al seguir. Lo que es un valor
-  se guarda solo; lo que declara algo se aprieta y pregunta antes.
+  desplegables, una frase que dice qué pasa al seguir.
+- **Autoguardado por defecto** (regla del cliente, 2026-11-12). Todo lo
+  que se escribe se guarda solo, con el estado a la vista (*Guardando… /
+  ✓ Guardado*, y *Reintentar* en rojo si falla). **Se confirma a mano
+  solo** lo que: (1) mueve plata —pagos, cobros, devoluciones—; (2) toma o
+  libera cupo —ganar, cancelar, soltar, ampliar, abrir o cerrar un día—;
+  (3) cierra o corrige un día; (4) aprueba o rechaza algo; (5) le llega al
+  cliente —mandar la cotización o el contrato—; (6) borra, desactiva o saca
+  a alguien; (7) toca cuentas, roles o links; (8) cambia el nombre de algo
+  que otros usan —un producto, una persona, un puesto— o la Configuración,
+  que afecta al sitio público. Lo manual pregunta con una ventana que dice
+  qué va a pasar; si pide motivo, queda en la bitácora.
 - **Las lecturas de Google son un presupuesto**: 60 por minuto para todo el
   panel. Nada nuevo lee la planilla por su cuenta: se suma a la tanda que la
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
@@ -51,6 +61,41 @@ primera vez que se probó encontró lo que ya se sabía de la entrada (letra de
   Mide **GET**; una escritura nueva se mide igual, llamando la ruta en un
   script con los mismos ganchos.
 - **El color y el contraste siguen siendo del ojo**: eso no lo mide nada.
+
+## Autoguardado por defecto, y las fichas (2026-11-12)
+
+La regla del bloque de arriba, aplicada de una vez a las tres listas de
+fichas que todavía tenían botón *Guardar*: **Equipo, Extras y Clientes**.
+
+- **Cada ficha se guarda sola y de a una**, por su propia ruta y con solo
+  el campo que se tocó: `PATCH /api/equipo/trabajador`,
+  `PATCH /api/extras/colaborador` y `PATCH /api/clientes`. Antes Equipo y
+  Extras reescribían la lista entera con un botón al pie. El mecanismo es
+  `usarGuardadoPorFicha()` (espera un segundo a que dejen de escribir, junta
+  los campos, nunca manda dos guardados de la misma ficha a la vez y se
+  lleva lo pendiente al cambiar de página), y cada ficha muestra su
+  *Guardando… / ✓ Guardado* donde estaba el botón.
+- **El nombre se confirma**: se escribe, aparece *Cambiaste el nombre ·
+  Guardar el nombre · Deshacer*, y pregunta antes —en Equipo y Extras
+  avisa que los turnos o días guardados siguen con el nombre anterior; en
+  Clientes, que se corrige en sus cotizaciones y reservas—. Va por
+  `nuevoNombre` en el `PATCH`, que rechaza un nombre vacío o repetido.
+- **Agregar pide el nombre y crea la ficha en el acto** (`POST`), y la abre
+  para completarla; lo demás se guarda solo.
+- **Desactivar, activar y quitar preguntan y se guardan en el acto**, como
+  antes en Equipo; en Extras desactivar dejó de ser un cambio pendiente.
+- **Los puestos siguen con botón**: es la lista misma, en su ventana, y el
+  `PUT` de `/api/equipo` ahora manda solo los puestos.
+- **De paso**: el `PATCH` y el `POST` de trabajadores y colaboradores
+  aceptaban sueldos y cuenta solo del **administrador** (`rol === admin`),
+  aunque `sueldos` también lo tienen quien paga y la gerencia general: con
+  el autoguardado sus cambios se habrían perdido callados. Ahora mira
+  `puede(rol, 'sueldos')`. Y el de colaboradores pasó a ser **parcial de
+  verdad**: lo que no viene se conserva.
+- **Clientes reescribe las reservas de sus ganadas solo si cambió lo que la
+  reserva copia** (nombre, teléfono, correo): una nota escrita no puede
+  reescribir reservas en cada pausa.
+- `AvisoGuardado` pasó de 12 a 13px, ahora que reemplaza al botón.
 
 ## Las reservas en el panel
 

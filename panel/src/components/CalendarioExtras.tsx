@@ -17,7 +17,9 @@
  * para un día sin reservas es justo el error que esto tiene que hacer
  * evidente.
  */
-import BotonGuardar from './BotonGuardar';
+import AvisoGuardado from './AvisoGuardado';
+import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
+import { avisar } from './AvisoFlotante';
 import MostrarDesactivados from './MostrarDesactivados';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
@@ -67,7 +69,10 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
   // Con `?dia=` se abre esa ventana, pero recién cuando llegan los datos.
   const [editando, setEditando] = useState<string | null>(dia ?? null);
   const [listo, setListo] = useState(false);
-  const [sucio, setSucio] = useState(false);
+  /** El nombre escrito y todavía no confirmado, por ficha (2026-11-12). */
+  const [nombreEscrito, setNombreEscrito] = useState<Record<number, string>>({});
+  /** El nombre de la ficha nueva que se está por agregar, o `null`. */
+  const [nuevoNombre, setNuevoNombre] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [sinPermiso, setSinPermiso] = useState(false);
   const [error, setError] = useState('');
@@ -82,7 +87,6 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
         setVerSueldos(!!d.verSueldos);
         setCierres(d.cierres ?? []);
         setPuedeCorregir(!!d.puedeCorregir);
-        setSucio(false);
       })
       .catch((e) => setError(String(e)));
 
@@ -111,38 +115,132 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
   const totalDelMes = delMes.reduce((s, e) => s + costoDeExtra(e), 0);
   const conActividades = dias.filter((f) => extrasDelDia(extras, f).length > 0);
 
-  async function guardarFichas() {
+  /**
+   * **Cada ficha se guarda sola** (2026-11-12, regla del cliente:
+   * autoguardado por defecto): actividad, teléfono, monto y cuenta van por
+   * `PATCH /api/extras/colaborador` con solo lo que se tocó. El nombre,
+   * desactivar y quitar se confirman a mano.
+   */
+  const fichas = usarGuardadoPorFicha<Partial<Colaborador>>(async (nombre, cambios) => {
+    const r = await fetch('/api/extras/colaborador', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre, ...cambios })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) return d.error || 'No se pudo guardar.';
+  });
+
+  /** Quitar a quien no tiene días: pregunta, y guarda la lista sin esa ficha. */
+  async function quitar(i: number) {
+    const c = (colaboradores ?? [])[i];
+    if (!confirm(`¿Quitar a ${c.nombre || 'esta ficha'} de la lista? No tiene ningún día contratado.`)) return;
+    await fichas.forzar();
     setGuardando(true);
     try {
+      const resto = (colaboradores ?? []).filter((_, k) => k !== i);
       const r = await fetch('/api/extras', {
         method: 'PUT', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ colaboradores })
+        body: JSON.stringify({ colaboradores: resto })
       });
       const d = await r.json();
-      if (d.error) setError(d.error);
-      else { setColaboradores(d.colaboradores); setError(''); setSucio(false); }
+      if (d.error) return setError(d.error);
+      setColaboradores(d.colaboradores ?? resto);
+      avisar(`${c.nombre || 'La ficha'} se quitó de la lista`);
     } finally { setGuardando(false); }
   }
 
-  /** El guardado dentro de la ficha, igual que en Equipo y por lo mismo. */
-  const guardarEnTarjeta = sucio ? (
-    <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardarFichas} texto="Guardar cambios" />
-  ) : null;
+  /** Desactivar o activar: pregunta y se guarda en el acto. */
+  async function cambiarActivo(i: number, activo: boolean) {
+    const c = (colaboradores ?? [])[i];
+    if (!activo && !confirm(`¿Desactivar a ${c.nombre}? Sus días guardados se conservan; deja de ofrecerse al agendar.`)) return;
+    await fichas.forzar();
+    const r = await fetch('/api/extras/colaborador', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre: c.nombre, activo })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { avisar(d.error || 'No se pudo guardar.', 'atencion'); return; }
+    setColaboradores((lista) => (lista ?? []).map((x, k) => (k === i ? { ...x, activo } : x)));
+  }
+
+  /** Renombrar: pregunta, porque sus días guardados siguen con el nombre de antes. */
+  async function renombrar(i: number) {
+    const c = (colaboradores ?? [])[i];
+    const nuevo = (nombreEscrito[i] ?? '').trim();
+    if (!nuevo || nuevo === c.nombre) return;
+    const dias = extras.filter((e) => normalizar(e.colaborador) === normalizar(c.nombre)).length;
+    if (!confirm(`¿Cambiar el nombre de ${c.nombre} a ${nuevo}?`
+      + (dias > 0 ? `\n\nSus ${dias} días guardados siguen con el nombre ${c.nombre}.` : ''))) return;
+    await fichas.forzar();
+    const r = await fetch('/api/extras/colaborador', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre: c.nombre, nuevoNombre: nuevo })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { avisar(d.error || 'No se pudo cambiar el nombre.', 'atencion'); return; }
+    fichas.renombrar(c.nombre, nuevo);
+    setColaboradores((lista) => (lista ?? []).map((x, k) => (k === i ? { ...x, nombre: nuevo } : x)));
+    setNombreEscrito(({ [i]: _x, ...resto }) => resto);
+    avisar(`Ahora se llama ${nuevo}`);
+  }
+
+  /** Agregar: con su nombre, en el acto. Lo demás se guarda solo. */
+  async function agregar() {
+    const nombre = (nuevoNombre ?? '').trim();
+    if (!nombre) return;
+    setGuardando(true);
+    try {
+      const r = await fetch('/api/extras/colaborador', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nombre })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.error) { avisar(d.error || 'No se pudo agregar.', 'atencion'); return; }
+      if (d.yaExistia) { avisar(d.aviso || `${nombre} ya estaba en la lista.`, 'atencion'); setNuevoNombre(null); return; }
+      setColaboradores((lista) => [...(lista ?? []), d.colaborador]);
+      setNuevoNombre(null);
+      avisar(`${nombre} agregado`);
+    } finally { setGuardando(false); }
+  }
+
+  /** Lo que va en la esquina de la ficha: el nombre por confirmar y el estado. */
+  const guardarEnTarjeta = (i: number) => {
+    const c = (colaboradores ?? [])[i];
+    const { estado, error: falla } = fichas.estadoDe(c.nombre);
+    const escrito = nombreEscrito[i];
+    return (
+      <>
+        {escrito !== undefined && escrito.trim() !== c.nombre && (
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-ambar-texto">Cambiaste el nombre.</span>
+            <button type="button" className="boton boton-relleno" disabled={!escrito.trim()}
+              onClick={() => void renombrar(i)}>Guardar el nombre</button>
+            <button type="button" className="boton"
+              onClick={() => setNombreEscrito(({ [i]: _x, ...resto }) => resto)}>Deshacer</button>
+          </span>
+        )}
+        <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(c.nombre)} />
+      </>
+    );
+  };
 
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = (colaboradores ?? []).map((c) => ({ ...c }));
     copia[i].banco = banco;
-    setColaboradores(copia); setSucio(true);
+    setColaboradores(copia);
+    fichas.programar(copia[i].nombre, { banco });
   };
 
   const cambiar = (i: number, campo: keyof Colaborador, valor: string | boolean) => {
+    if (campo === 'nombre') { setNombreEscrito((e) => ({ ...e, [i]: String(valor) })); return; }
     const copia = (colaboradores ?? []).map((c) => ({ ...c }));
     if (campo === 'activo') copia[i].activo = Boolean(valor);
     else if (campo === 'monto') {
       const n = Number(String(valor).replace(/[^\d]/g, ''));
       copia[i].monto = Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
     } else copia[i][campo] = String(valor) as never;
-    setColaboradores(copia); setSucio(true);
+    setColaboradores(copia);
+    fichas.programar(copia[i].nombre, { [campo]: copia[i][campo] } as Partial<Colaborador>);
   };
 
   // Quién tiene días contratados y no está en la lista. Pasa al renombrar a
@@ -352,7 +450,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
               <div className="flex flex-wrap items-start gap-3">
                 <Campo etiqueta="Nombre" ancho="w-52">
-                  <input type="text" value={c.nombre} className={ENTRADA}
+                  <input type="text" value={nombreEscrito[i] ?? c.nombre} className={ENTRADA}
                     placeholder="Nombre o empresa"
                     aria-label={`Nombre del colaborador ${i + 1}`}
                     onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
@@ -383,24 +481,21 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                     en Equipo: borrar la ficha de alguien que ya vino dejaría
                     sus días con un nombre que no está en ninguna parte. */}
                 <div className="flex flex-wrap items-center gap-3 self-center pt-4">
-                  {guardarEnTarjeta}
+                  {guardarEnTarjeta(i)}
                   {!tieneDias ? (
                     <button
-                      onClick={() => {
-                        setColaboradores((colaboradores ?? []).filter((_, k) => k !== i));
-                        setSucio(true);
-                      }}
+                      onClick={() => void quitar(i)}
                       className="boton hover:border-rojo-fuerte hover:text-rojo-texto"
                       title="Todavía no tiene ningún día contratado">Quitar</button>
                   ) : c.activo ? (
                     <button
-                      onClick={() => cambiar(i, 'activo', false)}
+                      onClick={() => void cambiarActivo(i, false)}
                       className="boton"
                       title="Tiene días guardados, así que su ficha no se quita: se desactiva">
                       Desactivar
                     </button>
                   ) : (
-                    <button onClick={() => cambiar(i, 'activo', true)} className="boton">
+                    <button onClick={() => void cambiarActivo(i, true)} className="boton">
                       Activar
                     </button>
                   )}
@@ -442,20 +537,23 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       </datalist>
       {!soloMira && (
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => {
-            setColaboradores([...colaboradores, {
-              nombre: '', actividad: '', telefono: '', activo: true,
-              monto: 0, banco: bancoVacio()
-            }]);
-            setSucio(true);
-          }}
-          className="boton">
-          Agregar colaborador
-        </button>
+        {nuevoNombre === null ? (
+          <button type="button" onClick={() => setNuevoNombre('')} className="boton">
+            + Agregar colaborador
+          </button>
+        ) : (
+          <form className="flex flex-wrap items-center gap-2"
+            onSubmit={(e) => { e.preventDefault(); void agregar(); }}>
+            <input type="text" autoFocus value={nuevoNombre} placeholder="Nombre o empresa"
+              aria-label="Nombre del colaborador nuevo" className={`${ENTRADA} w-56`}
+              onChange={(e) => setNuevoNombre(e.target.value)} />
+            <button type="submit" className="boton boton-relleno"
+              disabled={!nuevoNombre.trim() || guardando}>{guardando ? 'Agregando…' : 'Agregar'}</button>
+            <button type="button" className="boton" onClick={() => setNuevoNombre(null)}>Cancelar</button>
+          </form>
+        )}
         <span className="flex-1" />
-        {sucio && <span className="text-xs text-hueso/50">Hay cambios sin guardar.</span>}
-        <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardarFichas} />
+        <span className="text-[13px] text-hueso/60">Los cambios de cada ficha se guardan solos.</span>
       </div>
       )}
 

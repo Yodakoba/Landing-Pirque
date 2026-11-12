@@ -4,7 +4,7 @@ import { leerColaboradores, guardarColaboradores, anotar } from '@/lib/datos';
 import { aEntero, esSi } from '@/lib/equipo';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
-import { ROL } from '@/lib/auth';
+import { puede, type Rol } from '@/lib/auth';
 import type { Colaborador } from '@/lib/extras';
 import { bancoVacio, limpiarBanco } from '@/lib/banco';
 import { telefonoNormal } from '@/lib/contacto';
@@ -46,7 +46,7 @@ export const POST = conLecturas([], async function POST(req: Request) {
       });
     }
 
-    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    const esAdmin = puede((await quienEs(req)).rol as Rol, 'sueldos');
     const nuevo: Colaborador = {
       nombre,
       actividad: String(b?.actividad ?? '').trim(),
@@ -111,24 +111,35 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
       );
     }
 
-    const esAdmin = (await quienEs(req)).rol === ROL.admin;
+    // Sueldos y cuenta: quien tenga `sueldos`, no solo el admin (2026-11-12).
+    const esAdmin = puede((await quienEs(req)).rol as Rol, 'sueldos');
+    // Renombrar es aparte y se confirma en la pantalla (`nuevoNombre`).
+    const nuevoNombre = String(b?.nuevoNombre ?? '').trim();
+    if (b?.nuevoNombre !== undefined) {
+      if (!nuevoNombre) return NextResponse.json({ error: 'El nombre no puede quedar vacío.' }, { status: 400 });
+      if (normalizar(nuevoNombre) !== normalizar(antes.nombre)
+          && gente.some((c) => normalizar(c.nombre) === normalizar(nuevoNombre))) {
+        return NextResponse.json({ error: `Ya hay alguien llamado ${nuevoNombre}.` }, { status: 409 });
+      }
+    }
+    // **Parcial de verdad** (2026-11-12): lo que no viene se conserva. El
+    // autoguardado manda solo el campo que se tocó.
     const nueva: Colaborador = {
-      // Se conserva el nombre tal como está escrito en la planilla, no el
-      // que vino: así un cambio de mayúsculas no desengancha sus días.
-      nombre: antes.nombre,
-      actividad: String(b?.actividad ?? '').trim(),
-      telefono: telefonoNormal(b?.telefono),
+      nombre: nuevoNombre || antes.nombre,
+      actividad: b?.actividad === undefined ? antes.actividad : String(b.actividad).trim(),
+      telefono: b?.telefono === undefined ? antes.telefono : telefonoNormal(b.telefono),
       activo: b?.activo === undefined ? antes.activo : esSi(b.activo),
       // Lo que el encargado no recibe, tampoco lo puede pisar.
-      monto: esAdmin ? aEntero(b?.monto) : antes.monto,
-      banco: esAdmin ? limpiarBanco(b?.banco) : antes.banco
+      monto: esAdmin && b?.monto !== undefined ? aEntero(b.monto) : antes.monto,
+      banco: esAdmin && b?.banco !== undefined ? limpiarBanco(b.banco) : antes.banco
     };
 
     await guardarColaboradores(
       gente.map((c) => (normalizar(c.nombre) === normalizar(nombre) ? nueva : c))
     );
-    await anotar({ ...(await quienEs(req)), accion: 'Editó la ficha de un colaborador',
-      detalle: nueva.nombre });
+    await anotar({ ...(await quienEs(req)),
+      accion: nueva.nombre !== antes.nombre ? 'Renombró a un colaborador' : 'Editó la ficha de un colaborador',
+      detalle: nueva.nombre !== antes.nombre ? `${antes.nombre} → ${nueva.nombre}` : nueva.nombre });
 
     return NextResponse.json({
       colaborador: esAdmin ? nueva : { ...nueva, banco: bancoVacio() }

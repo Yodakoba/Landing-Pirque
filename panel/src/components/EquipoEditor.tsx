@@ -15,6 +15,9 @@
  * que el panel diera consejos que nadie dio.
  */
 import BotonGuardar from './BotonGuardar';
+import AvisoGuardado from './AvisoGuardado';
+import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
+import { avisar } from './AvisoFlotante';
 import AyudaCorta from './AyudaCorta';
 import MostrarDesactivados from './MostrarDesactivados';
 import { Fragment, useEffect, useRef, useState } from 'react';
@@ -66,7 +69,15 @@ export default function EquipoEditor() {
   const [avisoLink, setAvisoLink] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
+  /** Solo para los **puestos** (la ventana): esa lista sigue con botón. */
   const [sucio, setSucio] = useState(false);
+  /**
+   * **El nombre se escribe aparte y se confirma** (2026-11-12): es la
+   * identidad de la ficha. Lo escrito y todavía no confirmado, por índice.
+   */
+  const [nombreEscrito, setNombreEscrito] = useState<Record<number, string>>({});
+  /** El nombre de la ficha nueva que se está por agregar, o `null`. */
+  const [nuevoNombre, setNuevoNombre] = useState<string | null>(null);
   /**
    * Qué ficha está abierta, o `null` si ninguna.
    *
@@ -127,8 +138,10 @@ export default function EquipoEditor() {
         // Los puestos solo viajan si quien guarda puede cambiarlos. Mandarlos
         // igual haría fallar la petición entera y se perderían también los
         // cambios de la lista de trabajadores, que sí puede hacer.
-        body: JSON.stringify(editarPuestos ? { puestos, trabajadores: gente }
-                                     : { trabajadores: gente })
+        // **Solo los puestos** (2026-11-12): las fichas se guardan solas, de
+        // a una, por `/api/equipo/trabajador`. Mandar la lista entera acá
+        // podría pisar un autoguardado que va en camino.
+        body: JSON.stringify({ puestos })
       });
       const d = await r.json();
       if (d.error) setError(d.error);
@@ -146,6 +159,23 @@ export default function EquipoEditor() {
       }
     } finally { setGuardando(false); }
   }
+
+  /**
+   * **Cada ficha se guarda sola** (2026-11-12, regla del cliente:
+   * autoguardado por defecto). Teléfono, puesto, pago y cuenta bancaria van
+   * por `PATCH /api/equipo/trabajador` con solo lo que se tocó. El nombre,
+   * desactivar, quitar y los links siguen confirmándose a mano.
+   */
+  const fichas = usarGuardadoPorFicha<Partial<Trabajador>>(async (nombre, cambios) => {
+    const r = await fetch('/api/equipo/trabajador', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre, ...cambios })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) return d.error || 'No se pudo guardar.';
+    comoEstaba.current = comoEstaba.current.map((t) =>
+      normalizar(t.nombre) === normalizar(nombre) ? { ...t, ...cambios } : t);
+  });
 
   if (error) return <Aviso error={error} />;
   if (!puestos) return <p className="text-hueso/50">Cargando…</p>;
@@ -165,6 +195,8 @@ export default function EquipoEditor() {
       return;
     }
     setAvisoLink('');
+    // Lo que esté en el reloj se manda antes: esta ruta reescribe la pestaña.
+    await fichas.forzar();
     const r = await fetch('/api/equipo/link', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ nombre, accion })
@@ -220,12 +252,7 @@ export default function EquipoEditor() {
    * Los dos hacen lo mismo porque **el panel guarda las dos listas juntas**,
    * en una sola petición: no son dos formularios, es uno con dos tablas.
    */
-  const botonGuardar = (
-    <>
-      {sucio && <span className="text-[13px] text-hueso/70">Hay cambios sin guardar.</span>}
-      <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} />
-    </>
-  );
+
 
   /**
    * **Qué cambió en esta ficha**, en palabras.
@@ -281,19 +308,73 @@ export default function EquipoEditor() {
    * persona es la línea de arriba, que nombra sus campos tocados.
    */
   const guardarEnTarjeta = (i: number) => {
-    if (!sucio) return null;
-    const dif = cambiosDe(i);
+    const t = gente[i];
+    const { estado, error: falla } = fichas.estadoDe(t.nombre);
+    const escrito = nombreEscrito[i];
+    const cambiaNombre = escrito !== undefined && escrito.trim() !== t.nombre;
     return (
       <>
-        {dif.length > 0 && (
-          <span className="text-[13px] text-ambar-texto">
-            Cambiaste {dif.join(', ')}.
+        {/* **El nombre se confirma** (2026-11-12): es lo único de la ficha
+            que no se guarda solo, porque sus turnos guardados siguen con el
+            nombre de antes. */}
+        {cambiaNombre && (
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-ambar-texto">Cambiaste el nombre.</span>
+            <button type="button" className="boton boton-relleno" disabled={!escrito.trim()}
+              onClick={() => void renombrar(i)}>Guardar el nombre</button>
+            <button type="button" className="boton"
+              onClick={() => setNombreEscrito(({ [i]: _x, ...resto }) => resto)}>Deshacer</button>
           </span>
         )}
-        <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} texto="Guardar cambios" />
+        <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(t.nombre)} />
       </>
     );
   };
+
+  /** Renombrar: pregunta, porque sus turnos siguen con el nombre de antes. */
+  async function renombrar(i: number) {
+    const t = gente[i];
+    const nuevo = (nombreEscrito[i] ?? '').trim();
+    if (!nuevo || nuevo === t.nombre) return;
+    const turnos = turnosDe.get(normalizar(t.nombre)) ?? 0;
+    if (!confirm(`¿Cambiar el nombre de ${t.nombre} a ${nuevo}?`
+      + (turnos > 0 ? `\n\nSus ${turnos} turnos guardados siguen con el nombre ${t.nombre}: quedarán sin ficha hasta corregirlos en la planilla.` : ''))) return;
+    await fichas.forzar();
+    const r = await fetch('/api/equipo/trabajador', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nombre: t.nombre, nuevoNombre: nuevo })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { avisar(d.error || 'No se pudo cambiar el nombre.', 'atencion'); return; }
+    fichas.renombrar(t.nombre, nuevo);
+    setGente((g) => g.map((x, k) => (k === i ? { ...x, nombre: nuevo } : x)));
+    comoEstaba.current = comoEstaba.current.map((x) =>
+      normalizar(x.nombre) === normalizar(t.nombre) ? { ...x, nombre: nuevo } : x);
+    setNombreEscrito(({ [i]: _x, ...resto }) => resto);
+    avisar(`Ahora se llama ${nuevo}`);
+  }
+
+  /** Agregar a alguien: con su nombre, en el acto. Lo demás se guarda solo. */
+  async function agregar() {
+    const nombre = (nuevoNombre ?? '').trim();
+    if (!nombre) return;
+    setGuardando(true);
+    try {
+      const r = await fetch('/api/equipo/trabajador', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nombre })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.error) { avisar(d.error || 'No se pudo agregar.', 'atencion'); return; }
+      if (d.yaExistia) { avisar(d.aviso, 'atencion'); setNuevoNombre(null); return; }
+      setGente((g) => [...g, d.trabajador]);
+      comoEstaba.current = [...comoEstaba.current, d.trabajador];
+      // La ficha nueva se abre sola, para completarla ahí mismo.
+      setAbierta(gente.length);
+      setNuevoNombre(null);
+      avisar(`${nombre} agregado al equipo`);
+    } finally { setGuardando(false); }
+  }
 
   /**
    * Dar de baja o volver a activar a alguien, **en el acto**.
@@ -312,6 +393,7 @@ export default function EquipoEditor() {
   async function cambiarActivo(i: number, activo: boolean) {
     const t = gente[i];
     setGuardando(true);
+    await fichas.forzar();
     try {
       const r = await fetch('/api/equipo/trabajador', {
         method: 'PATCH', headers: { 'content-type': 'application/json' },
@@ -355,10 +437,16 @@ export default function EquipoEditor() {
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = gente.map((t) => ({ ...t }));
     copia[i].banco = banco;
-    setGente(copia); setSucio(true);
+    setGente(copia);
+    fichas.programar(gente[i].nombre, { banco });
   };
 
   const cambiarPersona = (i: number, campo: keyof Trabajador, valor: string | boolean) => {
+    // El nombre no se guarda solo: queda escrito hasta que se confirme.
+    if (campo === 'nombre') {
+      setNombreEscrito((e) => ({ ...e, [i]: String(valor) }));
+      return;
+    }
     const copia = gente.map((t) => ({ ...t }));
     if (campo === 'activo') copia[i].activo = Boolean(valor);
     else if (campo === 'propina') copia[i].propina = Boolean(valor);
@@ -373,7 +461,11 @@ export default function EquipoEditor() {
     } else if (campo !== 'token' && campo !== 'banco') {
       copia[i][campo] = String(valor) as never;
     }
-    setGente(copia); setSucio(true);
+    setGente(copia);
+    // Solo lo que cambió viaja; un contratado lleva además su jornada en 0.
+    const cambio: Partial<Trabajador> = { [campo]: copia[i][campo] };
+    if (campo === 'modalidad') cambio.pagoJornada = copia[i].pagoJornada;
+    fichas.programar(gente[i].nombre, cambio);
   };
 
   return (
@@ -587,7 +679,7 @@ export default function EquipoEditor() {
                 {/* Quién es, y cómo se entra a su link. */}
                 <div className="flex flex-wrap items-start gap-3">
                   <Campo etiqueta="Nombre" ancho="w-56">
-                    <input type="text" value={t.nombre} className={ENTRADA}
+                    <input type="text" value={nombreEscrito[i] ?? t.nombre} className={ENTRADA}
                       placeholder="Nombre y apellido"
                       aria-label={`Nombre de la persona ${i + 1}`}
                       onChange={(e) => cambiarPersona(i, 'nombre', e.target.value)} />
@@ -667,9 +759,9 @@ export default function EquipoEditor() {
                         <span className="text-[13px] text-hueso/55">
                           Ponle nombre y guarda para poder crearle su link.
                         </span>
-                      ) : sucio ? (
+                      ) : nombreEscrito[i] !== undefined && nombreEscrito[i].trim() !== t.nombre ? (
                         <span className="text-[13px] text-ambar-texto/85">
-                          Guarda los cambios para administrar su link.
+                          Guarda el nombre para administrar su link.
                         </span>
                       ) : (
                         <>
@@ -796,23 +888,27 @@ export default function EquipoEditor() {
       </ul>
       {!soloMira && (
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => {
-            setGente([...gente, { nombre: '', telefono: '', puesto: '', activo: true,
-                                  token: '', modalidad: MODALIDAD.porTurno,
-                                  pagoJornada: 0, valorHora: 0, propina: true,
-                                  banco: bancoVacio() }]);
-            // La ficha nueva se abre sola: agregar a alguien y que aparezca
-            // una línea vacía que además hay que apretar sería pedir dos
-            // pasos para uno.
-            setAbierta(gente.length);
-            setSucio(true);
-          }}
-          className="boton">
-          Agregar trabajador
-        </button>
+        {/* **Agregar pide el nombre y crea la ficha en el acto** (2026-11-12):
+            lo demás se completa adentro y se guarda solo. */}
+        {nuevoNombre === null ? (
+          <button type="button" onClick={() => setNuevoNombre('')} className="boton">
+            + Agregar trabajador
+          </button>
+        ) : (
+          <form className="flex flex-wrap items-center gap-2"
+            onSubmit={(e) => { e.preventDefault(); void agregar(); }}>
+            <input type="text" autoFocus value={nuevoNombre} placeholder="Nombre y apellido"
+              aria-label="Nombre del trabajador nuevo" className={`${ENTRADA} w-56`}
+              onChange={(e) => setNuevoNombre(e.target.value)} />
+            <button type="submit" className="boton boton-relleno"
+              disabled={!nuevoNombre.trim() || guardando}>
+              {guardando ? 'Agregando…' : 'Agregar'}
+            </button>
+            <button type="button" className="boton" onClick={() => setNuevoNombre(null)}>Cancelar</button>
+          </form>
+        )}
         <span className="flex-1" />
-        {botonGuardar}
+        <span className="text-[13px] text-hueso/60">Los cambios de cada ficha se guardan solos.</span>
       </div>
       )}
 

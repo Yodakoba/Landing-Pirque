@@ -137,8 +137,15 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
     // **Las reservas de sus cotizaciones ganadas se corrigen solas**: llevan
     // el nombre y el contacto copiados para que la planilla se lea a mano, y
     // esa copia la escribe el sistema, no una persona.
-    for (const p of await leerPresupuestos()) {
-      if (p.idCliente === id && p.idReserva) await sincronizarReserva(p.id);
+    // **Solo si cambió lo que la reserva copia** —nombre, teléfono, correo—
+    // (2026-11-12): con el autoguardado, una nota escrita no puede reescribir
+    // las reservas en cada pausa.
+    const tocaReserva = ['nombre', 'telefono', 'correo'].some(
+      (k) => cuerpo?.[k] !== undefined && String(cuerpo[k]) !== String((previo as unknown as Record<string, unknown>)[k] ?? ''));
+    if (tocaReserva) {
+      for (const p of await leerPresupuestos()) {
+        if (p.idCliente === id && p.idReserva) await sincronizarReserva(p.id);
+      }
     }
     await anotar({ ...quien, accion: 'Editó un cliente', detalle: `${id} · ${datos.nombre}` });
     return NextResponse.json({

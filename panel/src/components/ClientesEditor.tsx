@@ -14,7 +14,8 @@
  * se edita es la identidad de alguien (ver "Lo que es un valor se guarda
  * solo" en CLAUDE.md).
  */
-import BotonGuardar from './BotonGuardar';
+import AvisoGuardado from './AvisoGuardado';
+import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import { usarSoloMira } from './SesionCliente';
@@ -93,6 +94,24 @@ export default function ClientesEditor() {
     () => (clientes ? [...buscarClientes(clientes, busqueda)].sort(porNombreCliente) : []),
     [clientes, busqueda]);
 
+  /**
+   * **La ficha se guarda sola** (2026-11-12, regla del cliente: autoguardado
+   * por defecto): empresa, RUT, domicilio, giro, teléfono, correo y notas.
+   * Solo el nombre se confirma con un botón.
+   */
+  const fichas = usarGuardadoPorFicha<Partial<DatosCliente>>(async (id, cambios) => {
+    const r = await fetch('/api/clientes', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, ...cambios })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) return d.error || 'No se pudo guardar.';
+    if (d.clientes) setClientes(d.clientes);
+    if (d.parecidos?.length) {
+      avisar(`Ojo: se parece a ${d.parecidos.map((x: Cliente) => x.nombre).join(', ')}`, 'atencion');
+    }
+  }, 1200);
+
   if (error) return <Aviso error={error} permiso={sinPermiso} />;
   if (!clientes) return <p className="text-hueso/50">Cargando…</p>;
 
@@ -122,23 +141,25 @@ export default function ClientesEditor() {
     } finally { setGuardando(false); }
   }
 
+
+  /** El nombre: el único campo de la ficha que se confirma. */
   async function guardar(c: Cliente) {
     if (!edicion) return;
     setGuardando(true); setAviso('');
     try {
       const r = await fetch('/api/clientes', {
         method: 'PATCH', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: c.id, ...edicion })
+        body: JSON.stringify({ id: c.id, nombre: edicion.nombre })
       });
       const d = await r.json();
       if (d.error) return setAviso(d.error);
       setClientes(d.clientes);
       const guardado = d.clientes.find((x: Cliente) => x.id === c.id);
-      if (guardado) setEdicion(datosDe(guardado));
+      if (guardado) setEdicion({ ...edicion, nombre: guardado.nombre });
       if (d.parecidos?.length) {
         avisar(`Guardado. Ojo: se parece a ${d.parecidos.map((x: Cliente) => x.nombre).join(', ')}`,
           'atencion');
-      } else avisar('Cambios guardados');
+      } else avisar(`Ahora se llama ${edicion.nombre}`);
     } finally { setGuardando(false); }
   }
 
@@ -308,8 +329,8 @@ export default function ClientesEditor() {
           {visibles.map((c) => {
             const n = cotizaciones[c.id] ?? 0;
             const abiertaEsta = abierta === c.id && edicion;
-            const cambios = abiertaEsta
-              ? CAMPOS.filter((k) => edicion![k] !== c[k]) : [];
+            const cambiaNombre = !!abiertaEsta && edicion!.nombre.trim() !== c.nombre;
+            const { estado, error: falla } = fichas.estadoDe(c.id);
             return (
               <li key={c.id} className="overflow-hidden rounded border border-hueso/15 bg-panel">
                 <div className="flex items-center gap-2 pr-2">
@@ -383,19 +404,28 @@ export default function ClientesEditor() {
                       )}
                     </div>
                     <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
-                    {formulario(edicion!, (k, v) => setEdicion({ ...edicion!, [k]: v }), c.nombre)}
+                    {formulario(edicion!, (k, v) => {
+                      setEdicion({ ...edicion!, [k]: v });
+                      // El nombre espera su botón; lo demás se guarda solo.
+                      if (k !== 'nombre') fichas.programar(c.id, { [k]: v });
+                    }, c.nombre)}
                     </fieldset>
                     {aviso && <p className="mt-3 text-[15px] text-rojo-texto">{aviso}</p>}
                     <div className="mt-4 flex flex-wrap items-center gap-3">
-                      {cambios.length > 0 && (
-                        <span className="text-[14px] text-hueso/70">
-                          Cambiaste {cambios.map((k) => NOMBRE_CAMPO[k]).join(', ')}.
-                        </span>
+                      {cambiaNombre && !soloMira && (
+                        <>
+                          <span className="text-[14px] text-ambar-texto">Cambiaste el nombre.</span>
+                          <button type="button" className="boton boton-relleno"
+                            disabled={!edicion!.nombre.trim() || guardando}
+                            onClick={() => {
+                              if (confirm(`¿Cambiar el nombre de ${c.nombre} a ${edicion!.nombre.trim()}? `
+                                + 'Se corrige también en sus cotizaciones y reservas.')) void guardar(c);
+                            }}>Guardar el nombre</button>
+                          <button type="button" className="boton"
+                            onClick={() => setEdicion({ ...edicion!, nombre: c.nombre })}>Deshacer</button>
+                        </>
                       )}
-                      {!soloMira && (
-                        <BotonGuardar sucio={cambios.length > 0} guardando={guardando}
-                          onClick={() => void guardar(c)} texto="Guardar cambios" />
-                      )}
+                      <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(c.id)} />
                       <span className="flex-1" />
                       <span className="text-[13px] text-hueso/60">
                         {c.id}{c.creadoPor && <> · creada por {c.creadoPor}</>}
