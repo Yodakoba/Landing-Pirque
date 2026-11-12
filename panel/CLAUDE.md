@@ -1439,6 +1439,21 @@ Contrato**, y cada uno de los dos últimos termina en su propio próximo paso.
   para qué día, y si no hay anticipo pagado ni contrato firmado lo dice en
   ámbar —*"¿Tienes un contrato firmado? Si es así, súbelo"*— con *Ir a subir
   el contrato* y *Sí, marcarla ganada igual*.
+- **Ganar sin un peso y sin contrato pregunta en serio** (2026-11-12, lo
+  reclamó el cliente: con anticipo 0 se ganaba sin preguntar nada). La
+  advertencia de arriba solo aparecía si la cotización pedía anticipo
+  (`cond.pct > 0`), así que *Sin anticipo* se la saltaba. Ahora, sin ningún
+  pago del evento y sin contrato firmado (`ganaSinRespaldo()` en
+  `cobros.ts`), la ventana dice **✋ ¿Por qué la marcas ganada sin
+  anticipo?** —*¿Tienes un contrato firmado? Súbelo antes*— con **📎 Sí, ir
+  a subir el contrato** y **No, marcarla ganada igual**, y avisa que la
+  reserva queda **sujeta a espacio**: nace *Por pagar* (`pagoPorCobros()`),
+  así que `tienePrioridad()` la trata igual que una de Shopify sin pago. Ya
+  ganada, el aviso de arriba de la ventana pasa de verde a ámbar cortado:
+  *⚠ Ganada sin pago ni contrato: sujeta a espacio*, hasta el primer pago.
+  En la bitácora, *Marcó ganada* lleva *sin pago ni contrato: sujeta a
+  espacio*. **El contrato firmado sin pago respalda el ganar pero no da
+  preferencia**: la preferencia sigue siendo de la plata.
 - **Los botones de mandar no se repiten**: antes de mandarla —la cotización
   o el contrato— están grandes en el próximo paso; después quedan en la
   sección como *Mandar de nuevo*. Lo mismo el subir firmado.

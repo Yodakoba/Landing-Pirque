@@ -4927,5 +4927,20 @@ console.log('\nLos socios comerciales (segunda entrega)');
   ok(sinCongelar[0].comision === 240000 && !sinCongelar[0].congelada, 'sin congelar, se calcula con el trato de hoy');
 }
 
+console.log('\nGanar sin ningún respaldo');
+{
+  const { ganaSinRespaldo } = await import('./cobros.ts');
+  const { pagoPorCobros } = await import('./pagos.ts');
+  const { ESTADO_PAGO } = await import('./columnas.ts');
+  const { tienePrioridad } = await import('./ocupacion.ts');
+  ok(ganaSinRespaldo(0, false) && !ganaSinRespaldo(1000, false) && !ganaSinRespaldo(0, true),
+     'sin un peso y sin contrato es ganar sin respaldo; un pago o el contrato firmado lo respaldan');
+  const nace = pagoPorCobros(500000, 0);
+  ok(nace.estado === ESTADO_PAGO.pendiente
+     && !tienePrioridad({ estadoPago: nace.estado, personas: 20, liberada: '' } as never)
+     && tienePrioridad({ estadoPago: pagoPorCobros(500000, 1000).estado, personas: 20, liberada: '' } as never),
+     'la reserva de una ganada sin pago nace Por pagar y no tiene preferencia, igual que una de Shopify sin pago; con el primer pago sí');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

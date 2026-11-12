@@ -350,3 +350,15 @@ export function diasEntre(a: Fecha, b: Fecha): number {
 export function puedeGanar(anticipoListo: boolean, contratoFirmado: boolean): boolean {
   return anticipoListo || contratoFirmado;
 }
+
+/**
+ * **Ganar sin ningún respaldo** (2026-11-12, lo reclamó el cliente: con
+ * *Sin anticipo* se ganaba sin preguntar nada, sin un peso y sin contrato).
+ * Sin ningún pago del evento y sin contrato firmado, la ventana de ganar
+ * pregunta *¿Por qué la marcas ganada sin anticipo? ¿Tienes un contrato
+ * firmado?*, y si se gana igual, la reserva queda **sujeta a espacio**:
+ * nace *Por pagar* (`pagoPorCobros()`), así que `tienePrioridad()` la trata
+ * igual que una de Shopify sin pago.
+ */
+export const ganaSinRespaldo = (pagado: number, contratoFirmado: boolean): boolean =>
+  !(pagado > 0) && !contratoFirmado;
