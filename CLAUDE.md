@@ -4070,6 +4070,26 @@ buscador.
 - Si no queda nadie, lo dice: *"✓ A nadie le falta pago en este periodo"*
   o *"Nadie calza con…"*, en vez de una pantalla en blanco.
 
+#### Tres descargas: solo sueldos, solo propinas, completa (2026-11-12)
+
+Lo pidió el cliente, sobre todo para quien paga: el botón *Descargar
+planilla* pasó a ser tres —**Solo sueldos** (celeste), **Solo propinas**
+(dorado) y **Completa**—, con el mismo tinte que el resto del informe. Son
+el detalle día por día; las planillas del banco de la transferencia masiva
+siguen aparte.
+
+- **Solo sueldos**: el equipo y las actividades extras, sin la columna de
+  propina, con *Sueldo del periodo · Pagado · Falta · Boleta* y los datos de
+  la transferencia.
+- **Solo propinas**: solo los turnos con propina —un jinete no entra en el
+  reparto—, sin jornada ni ajustes, con *Propina del día · Propina del
+  periodo · Pagado · Falta* y los datos de la transferencia.
+- **Completa**: la de siempre, las dos cosas juntas.
+- En las tres, **el pago va solo en la primera fila de cada persona**, por
+  lo mismo de siempre: la columna suma exactamente lo que hay que pagar.
+  Lo pagado de cada parte sale de `desglosePago()`, la misma cuenta de la
+  pantalla. Sin filas, avisa en vez de bajar un archivo vacío.
+
 #### El orden de los datos copiados todavía no está confirmado
 
 Hoy es **titular, RUT, banco, tipo, número, monto, correo, glosa**, y vive
