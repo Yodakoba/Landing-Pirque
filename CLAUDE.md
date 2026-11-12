@@ -4440,6 +4440,10 @@ recarga. Va en el **calendario de la portada** y en la **página del día**
 - **Los días que cambiaron de gente se marcan un minuto** en dorado, con
   *+12 personas desde las 10:04* (`diferencias()`, `MarcaCambio`). Va en
   posición absoluta: no cambia el alto de la tarjeta.
+  **Solo marca lo que viene de afuera**: la revisión automática o
+  ↻ Actualizar. La recarga que sigue a guardar algo en la misma pantalla
+  —anotar una reserva, editar un día— no marca nada (`cargar(marcar)`),
+  porque quien lo anotó ya lo sabe.
 - **Si Google pide calma (429), la próxima revisión espera el doble**, hasta
   diez minutos (`siguienteIntervalo()`).
 - **↻ Actualizar** al lado de *Al día · actualizado a las 10:32*, para
