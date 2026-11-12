@@ -101,7 +101,14 @@ export const COL_RESERVAS = {
   menuReal: 'Menú real',
   descuento: 'Descuento',
   rectificacion: 'Rectificación',
-  aprobacion: 'Aprobación'
+  aprobacion: 'Aprobación',
+  /**
+   * **Cómo va esta reserva cuando su día se libera para un evento
+   * exclusivo** (2026-11-12, `lib/exclusivo.ts`): *Avisada*, *Cancelada*,
+   * *Devuelta* o *Reagendada*, con quién y cuándo. Shopify no la toca
+   * (`camposDeShopify()`). Lo que libera el lugar sigue siendo `liberada`.
+   */
+  liberacion: 'Evento exclusivo'
 } as const;
 
 export const COL_FECHAS = {

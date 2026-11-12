@@ -1568,11 +1568,50 @@ nada**: se avisa y decide alguien de arriba. Código en `lib/exclusivo.ts`
 - **Los pedidos los arma `/api/ocupacion`** (`pendientesDeExclusivo()`),
   solo para quien tiene `exclusividad`, de la misma tanda de lecturas:
   `Clientes` se sumó a la precarga para el nombre. **Ninguna lectura más.**
-- **Aprobado, la ventana lo dice** y manda a la página del día a mover las
-  reservas. **El plan para liberar el día —el WhatsApp de disculpas a cada
-  reserva (`mensajeLiberacion()`: devolución completa u otra fecha con un
-  pisco sour de regalo), avisado, cambiada o cancelada, y el recordatorio
-  del reembolso en Shopify— es la segunda entrega**, todavía pendiente.
+- **Aprobado, la ventana lo dice** y manda al plan de la página del día
+  (`/dia/<fecha>#liberar`).
+
+#### Liberar el día, reserva por reserva (segunda entrega, 2026-11-12)
+
+En la página del día, con el pedido aprobado y la cotización sin ganar, un
+bloque morado **🟣 Liberando el día para un evento exclusivo**
+(`BloqueLiberar.tsx`, `/api/reservas/exclusivo`): cuántas reservas siguen
+en el día y cuántas están avisadas, y una tarjeta por reserva. Con el pedido
+todavía esperando, solo una línea que lo dice.
+
+- **Avisarle**: *💬 Avisarle por WhatsApp* abre el mensaje con disculpas y
+  las dos salidas (`mensajeLiberacion()`: devolución completa, u otra fecha
+  con un pisco sour de regalo), y *✓ Ya le avisé* lo deja escrito con quién
+  y cuándo. Lo hace quien maneja los días (`dias`: los encargados también).
+- **Lo que eligió**, solo con `exclusividad` y preguntando antes en la misma
+  tarjeta:
+  - **↺ Cambiar de fecha** **crea una reserva nueva** en el día elegido
+    —mismo nombre, gente, menú, monto y pago, del mismo dueño— con la nota
+    *"Reagendada desde el … por un evento exclusivo · 🎁 pisco sour de
+    regalo"* (y el pedido de Shopify, si venía de ahí), y después libera la
+    de este día. **No se le cambia la fecha a la misma fila** porque la de
+    una reserva de Shopify la reescribe la tienda en cada sincronización.
+    Reserva primero, como al ganar: si lo segundo falla, se ve doble. El
+    día nuevo tiene que estar abierto y no ser exclusivo.
+  - **✕ Cancelar y devolver $X**: deja su lugar y queda en **💸
+    Devoluciones por hacer** —todo lo pagado, o lo abonado
+    (`montoADevolver()`)— hasta que alguien marque *✓ Devolución hecha*.
+    Las de Shopify dicen el número del pedido y que el reembolso se hace
+    allá: **el panel no puede**, no tiene ese permiso.
+- **Qué libera el lugar es la misma columna de soltar por cupo**
+  (`Se cayó por cupo`), con el motivo *"Evento exclusivo: …"*; la pastilla
+  dice *Liberada: evento exclusivo*. El paso de cada reserva va en una
+  columna nueva de `Reservas`, **`Evento exclusivo`** (*Avisada · Cancelada
+  · Devuelta · Reagendada*, con quién y cuándo), que se agrega sola y que
+  Shopify no pisa (`camposDeShopify()`).
+- **Una reserva de otra cotización no se toca acá**: dice *Viene de una
+  cotización: se mueve desde ahí*, igual que al soltar por cupo.
+- **Con la última movida**, el bloque dice *✓ El día quedó libre* con
+  *Abrir la cotización N° …*: la alarma de la ventana desaparece sola y se
+  puede ganar, y el día queda exclusivo.
+- **Lecturas de Google**: avisar y cancelar, dos (la tanda de la ruta y la
+  relectura de `Reservas` al escribir); cambiar de fecha, tres (escribe dos
+  filas). Medido con el Google falso de `pruebas/lecturas/`.
 
 ### Cancelar una cotización ganada, y la devolución (2026-11-11)
 

@@ -37,6 +37,8 @@ import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
 import { puede, puedeVer, puedeTocarReserva, esSuya, type Rol } from '@/lib/auth';
 import EquipoDialogo from './EquipoDialogo';
+import BloqueLiberar from './BloqueLiberar';
+import { esExclusivo, exclusividadDe } from '@/lib/exclusivo';
 import ExtrasDialogo from './ExtrasDialogo';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { planDelDia, costoDelDia, propinaDelDia, pagoDe, VINO,
@@ -532,6 +534,28 @@ export default function DayView(
           </div>
         </>
       )}
+
+      {/* **El evento exclusivo** (2026-11-12): con el pedido de liberar el día
+          aprobado, el plan para avisar y mover a cada reserva. Con el pedido
+          esperando, solo una línea: lo decide la bandeja. */}
+      {(() => {
+        const excl = (cotizado?.presupuestos ?? []).filter((p) => p.fecha === fecha && esExclusivo(p.exclusivo) && !p.idReserva);
+        const aprobada = excl.find((p) => exclusividadDe(p.exclusividad).estado === 'aprobada');
+        const pedida = excl.find((p) => exclusividadDe(p.exclusividad).estado === 'pedida');
+        return (
+          <>
+            {!aprobada && pedida && (
+              <p className="mb-4 rounded-xl border-2 border-dashed border-morado-fuerte/60 bg-morado/[0.06] px-3 py-2 text-[15px]">
+                🟣 <b>{exclusividadDe(pedida.exclusividad).quien}</b> pidió liberar este día para un evento exclusivo
+                ({pedida.cliente || 'sin nombre'}). Espera la decisión del encargado de pagos o la gerencia.
+              </p>
+            )}
+            <BloqueLiberar fecha={fecha} reservas={delDia} cotizacion={aprobada} deCotizacion={deCotizacionIds}
+              puedeAvisar={conDias} puedeDecidir={puede(rol as Rol, 'exclusividad')}
+              onCambio={() => void actualizarTodo()} />
+          </>
+        );
+      })()}
 
       {cupoDia && cupoDia.sobrecupo > 0 && todas && (
         <BloqueSobrecupo dia={cupoDia} reservas={todas} capacidadMaxima={capacidadMaxima}

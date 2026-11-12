@@ -51,6 +51,8 @@ export interface Reserva {
   descuento?: number | null;
   rectificacion?: string;
   aprobacion?: string;
+  /** Si su día se liberó para un evento exclusivo: ver `COL_RESERVAS.liberacion`. */
+  liberacion?: string;
   fila: number;          // número de fila en la planilla, para poder editarla
   /**
    * Cuántas filas de la planilla traen este mismo `ID Orden`. Ausente o 1 es
