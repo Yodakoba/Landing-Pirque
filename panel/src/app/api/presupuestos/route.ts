@@ -184,6 +184,8 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJ
         contrato: '', contratoSubidoPor: '', contratoSubido: '',
         // Lo de la cancelación y del día es de la que se ganó, no de la copia.
         devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
+        // El pedido de liberar el día es de la original (2026-11-12).
+        exclusividad: '', diaPausado: '',
         // Una alternativa nace sin mandar: su vigencia corre cuando se mande.
         enviada: '', ultimoSeguimiento: '', validoHasta: '', contratoEnviado: '',
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
@@ -402,6 +404,11 @@ export const PATCH = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HO
         ? previo.anticipo : numeroONulo(cuerpo.anticipo, 100),
       anticipoMonto: cuerpo.anticipoMonto === undefined
         ? (previo.anticipoMonto ?? null) : montoONulo(cuerpo.anticipoMonto),
+      // **"¿El día es exclusivo?"** (2026-11-12): la respuesta sí viene del
+      // navegador; el pedido a la gerencia y el día pausado, nunca (los
+      // escribe `/api/presupuestos/exclusivo`, que se conservan del previo).
+      exclusivo: cuerpo.exclusivo === undefined ? (previo.exclusivo ?? '')
+        : (/^s[ií]$/i.test(String(cuerpo.exclusivo)) ? 'sí' : /^no$/i.test(String(cuerpo.exclusivo)) ? 'no' : ''),
       saldoDias: cuerpo.saldoDias === undefined
         ? previo.saldoDias : numeroONulo(cuerpo.saldoDias, 365),
       ...ufDelCuerpo(cuerpo, previo),

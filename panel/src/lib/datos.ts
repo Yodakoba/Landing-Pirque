@@ -14,7 +14,7 @@ import { leerHoja, agregarFila, agregarFilas, escribirFila, borrarFila, borrarFi
          esPestanaQueNoExiste } from './sheets.ts';
 import {
   HOJA_RESERVAS, HOJA_FECHAS, COL_RESERVAS, COL_FECHAS,
-  indices, faltantes, esManual
+  indices, faltantes, esManual, ESTADO_DIA, esExclusiva, esPrivada, estaCerrado
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
 import { diaParaReservaManual, queLeHizo, deshacerDia } from './dias.ts';
@@ -983,6 +983,45 @@ export async function devolverElDia(fecha: string, hizo: string, idReserva: stri
   } catch (e) {
     console.error('[cotizaciones] devolver el dia', fecha, e);
     return '';
+  }
+}
+
+/**
+ * **Deja el día privado exclusivo** al ganar una cotización exclusiva
+ * (2026-11-12). Devuelve cómo estaba antes —o lo que ya se había guardado al
+ * dejar de venderlo—, para volverlo atrás si se cancela. Si falla, la
+ * reserva ya está: el día se marca exclusivo a mano desde el calendario.
+ */
+export async function dejarExclusivo(fecha: string, yaPausado: string): Promise<string> {
+  try {
+    const dia = (await leerFechas(true)).find((f) => f.fecha === fecha);
+    if (!dia) return yaPausado;
+    if (esExclusiva(dia.estado)) return yaPausado;
+    const { fila: _f, ...sinFila } = dia;
+    await guardarFecha({ ...sinFila, estado: ESTADO_DIA.exclusiva });
+    return yaPausado || dia.estado || ESTADO_DIA.abierta;
+  } catch (e) {
+    console.error('[cotizaciones] dejar exclusivo', fecha, e);
+    return yaPausado;
+  }
+}
+
+/**
+ * **Devuelve el día a como estaba antes del evento exclusivo** al cancelar o
+ * deshacer la ganada (2026-11-12): solo si el día sigue existiendo, sigue
+ * privado y ya no le queda otra reserva que ocupe lugar.
+ */
+export async function devolverExclusivo(fecha: string, diaPausado: string, idReserva: string): Promise<void> {
+  try {
+    if (!diaPausado) return;
+    const [fechas, reservas] = await Promise.all([leerFechas(true), leerReservas()]);
+    const dia = fechas.find((f) => f.fecha === fecha);
+    if (!dia || !esPrivada(dia.estado) || estaCerrado(dia.estado)) return;
+    if (reservas.some((r) => r.fecha === fecha && r.id !== idReserva && ocupaLugar(r))) return;
+    const { fila: _f, ...sinFila } = dia;
+    await guardarFecha({ ...sinFila, estado: diaPausado });
+  } catch (e) {
+    console.error('[cotizaciones] devolver exclusivo', fecha, e);
   }
 }
 

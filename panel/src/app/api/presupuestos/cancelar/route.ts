@@ -3,7 +3,7 @@ import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerConfig, leerCobros, guardarPresupuesto, cancelarReservaDe, anotar,
-  devolverElDia
+  devolverElDia, devolverExclusivo
 } from '@/lib/datos';
 import { cobrosDe } from '@/lib/cobros';
 import { devolucionSugerida, tranquilidadDeCotizacion } from '@/lib/cancelacion';
@@ -107,10 +107,12 @@ export const POST = conLecturas([], async function POST(req: Request) {
     const { fila: _f, ...sinFila } = p;
     await guardarPresupuesto({
       ...sinFila, estado: ESTADO_PRESUPUESTO.cancelada, motivo, devolucion,
-      canceladaPor: quien.usuario, cancelada: ahoraEnChile()
+      canceladaPor: quien.usuario, cancelada: ahoraEnChile(), diaPausado: ''
     });
     // Si el día existía solo por esta cotización, vuelve a como estaba.
     const dia = await devolverElDia(p.fecha, p.diaAbierto, p.idReserva);
+    // Y si era exclusiva, el día vuelve a su estado de antes (2026-11-12).
+    await devolverExclusivo(p.fecha, p.diaPausado ?? '', p.idReserva);
     await anotar({ ...quien, accion: 'Canceló un evento',
       detalle: `${folioDe(p)} · ${p.fecha} · motivo: ${motivo}`
         + (devolucion ? ` · devolver ${enPesos(devolucion)}` : ' · sin devolución')

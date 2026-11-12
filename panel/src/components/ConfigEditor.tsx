@@ -225,6 +225,11 @@ export default function ConfigEditor() {
           'Cuántos días antes del evento pregunta si se ganó o se perdió. Cada cotización lo ' +
           'puede cambiar. En 0 no pregunta.',
           numerico('avisoEvento', config.avisoEvento, (n) => ({ avisoEvento: n }), { min: 0, max: 365, unidad: 'días antes' }))}
+        {campo('exclusivoDias', 'Evento exclusivo: liberar el día',
+          'Hasta cuántos días antes del evento se puede pedir liberar un día que ya tiene ' +
+          'reservas, para un evento exclusivo. Con menos, va como caso especial y quien ' +
+          'aprueba anota el motivo.',
+          numerico('exclusivoDias', config.exclusivoDias, (n) => ({ exclusivoDias: n }), { min: 0, max: 365, unidad: 'días antes' }))}
         {campo('driveComprobantes', 'Carpeta de comprobantes',
           'La unidad compartida de Google Drive donde se guardan los comprobantes y los ' +
           'contratos firmados. Pega el link de la unidad. La cuenta del panel tiene que ser ' +

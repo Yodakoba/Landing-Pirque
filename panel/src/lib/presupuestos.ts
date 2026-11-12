@@ -175,7 +175,18 @@ export const COL_PRESUPUESTOS = {
    * cliente: *"págame 500 más"*). Si está, manda sobre el `Anticipo %`. En
    * blanco rige el porcentaje.
    */
-  anticipoMonto: 'Anticipo monto'
+  anticipoMonto: 'Anticipo monto',
+  /**
+   * **Evento exclusivo** (2026-11-12, lo pidió el cliente). `Exclusivo`: la
+   * respuesta del vendedor a *"¿el día es exclusivo?"* cuando hay arriendo
+   * (`sí`, `no` o vacío). `Exclusividad`: si el día tenía otras reservas, el
+   * pedido de liberarlo y lo que decidió la gerencia
+   * (`marcaExclusividad()`). `Día pausado`: cómo estaba el día antes de
+   * dejar de venderlo, para devolverlo si se rechaza o se cancela.
+   */
+  exclusivo: 'Exclusivo',
+  exclusividad: 'Exclusividad',
+  diaPausado: 'Día pausado'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -328,6 +339,10 @@ export interface Presupuesto {
   anticipo: number | null;
   /** El anticipo en pesos acordado a mano, o `null`: rige el %. */
   anticipoMonto?: number | null;
+  /** `sí`, `no` o vacío: ver `COL_PRESUPUESTOS.exclusivo`. */
+  exclusivo?: string;
+  exclusividad?: string;
+  diaPausado?: string;
   /** Días antes del evento para el saldo, o `null` si rige Configuración. */
   saldoDias: number | null;
   /** El valor de la UF fijado en esta cotización, o 0 si no tiene. */
@@ -920,6 +935,9 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       documento: documentoDe(en(f, i.documento)),
       anticipo: numeroONulo(en(f, i.anticipo), 100),
       anticipoMonto: montoONulo(en(f, i.anticipoMonto)),
+      exclusivo: en(f, i.exclusivo).trim().toLowerCase().replace(/^si$/, 'sí'),
+      exclusividad: en(f, i.exclusividad).trim(),
+      diaPausado: en(f, i.diaPausado).trim(),
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       uf: aPrecio(en(f, i.uf)),
       fechaUF: en(f, i.fechaUF).slice(0, 10),
@@ -988,6 +1006,9 @@ export function filaPresupuesto(
   poner(i.documento, p.documento);
   poner(i.anticipo, p.anticipo === null ? '' : String(p.anticipo));
   poner(i.anticipoMonto, p.anticipoMonto ? String(p.anticipoMonto) : '');
+  poner(i.exclusivo, p.exclusivo ?? '');
+  poner(i.exclusividad, p.exclusividad ?? '');
+  poner(i.diaPausado, p.diaPausado ?? '');
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   poner(i.uf, p.uf ? String(p.uf) : '');
   poner(i.fechaUF, p.uf ? p.fechaUF : '');
