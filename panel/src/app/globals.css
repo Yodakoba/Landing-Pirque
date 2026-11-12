@@ -258,7 +258,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 /*
  * **El pie de la tarjeta del calendario** (2026-11-12, lo reclamó el
  * cliente: *Editar* quedaba chocando con el borde). Con *Equipo 18/23* los
- * tres botones piden unos 280px y la tarjeta tiene 261 a 1280px de ancho,
+ * tres botones piden unos 325px —con sus íconos— y la tarjeta tiene 261 a 1280px,
  * menos entre 1024 y 1180. Un botón no se achica (`nowrap`), así que se
  * salía por el borde.
  *
@@ -270,7 +270,7 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 .pie-tarjeta { container-type: inline-size; }
 .pie-botones { display: flex; align-items: center; gap: .5rem; width: 100%; }
 .pie-botones > .pie-hueco { flex: 1; }
-@container (max-width: 17.5rem) {
+@container (max-width: 21rem) {
   .pie-botones { display: grid; grid-template-columns: 1fr 1fr; }
   .pie-botones > .pie-hueco { display: none; }
   .pie-botones > .pie-equipo { grid-column: 1 / -1; order: 3; }
