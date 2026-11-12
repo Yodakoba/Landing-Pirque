@@ -36,6 +36,7 @@ export const PALABRAS: Record<Accion, string> = {
   aprobar: 'Aprobar descuentos sobre el estándar',
   cupo: 'Subir el cupo de un día y aprobar los pedidos de más cupo',
   boleta: 'Marcar en el informe que llegó la boleta',
+  exclusividad: 'Decidir si se libera un día para un evento exclusivo',
   configurar: 'Cambiar precios, productos y Configuración',
   bitacora: 'Ver la bitácora de quién hizo qué',
   usuarios: 'Crear cuentas y cambiar roles',

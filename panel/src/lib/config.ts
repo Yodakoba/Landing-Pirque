@@ -101,6 +101,12 @@ export interface Config {
   seguimientoDias: number;
   avisoEvento: number;
   /**
+   * **Días mínimos para liberar un día por un evento exclusivo** (2026-11-12,
+   * lo pidió el cliente). Con menos, pedirlo va como caso especial y quien
+   * aprueba anota el motivo.
+   */
+  exclusivoDias: number;
+  /**
    * La unidad compartida de Google Drive donde se guardan los comprobantes
    * de pago (2026-11-10). Es el ID que va después de `folders/`; vive acá y
    * no en el código porque Calicanto tendrá la suya. En blanco, no se puede
@@ -167,6 +173,7 @@ export const POR_DEFECTO: Config = {
   reembolsoPct: 20,
   seguimientoDias: 5,
   avisoEvento: 14,
+  exclusivoDias: 7,
   driveComprobantes: '',
   empresa: EMPRESA_VACIA
 };
@@ -193,6 +200,7 @@ export const CLAVES = {
   reembolsoPct: 'contrato_reembolso',
   seguimientoDias: 'seguimiento_dias',
   avisoEvento: 'seguimiento_antes_evento',
+  exclusivoDias: 'exclusivo_dias_minimos',
   driveComprobantes: 'drive_comprobantes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
@@ -333,6 +341,7 @@ export function leerConfigDe(filas: string[][]): Config {
     reembolsoPct: numero(v(CLAVES.reembolsoPct), POR_DEFECTO.reembolsoPct, 0, 100),
     seguimientoDias: numero(v(CLAVES.seguimientoDias), POR_DEFECTO.seguimientoDias, 0, 365),
     avisoEvento: numero(v(CLAVES.avisoEvento), POR_DEFECTO.avisoEvento, 0, 365),
+    exclusivoDias: numero(v(CLAVES.exclusivoDias), POR_DEFECTO.exclusivoDias, 0, 365),
     driveComprobantes: idDeDrive(v(CLAVES.driveComprobantes)),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
@@ -372,6 +381,7 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.reembolsoPct, String(c.reembolsoPct)],
     [CLAVES.seguimientoDias, String(c.seguimientoDias)],
     [CLAVES.avisoEvento, String(c.avisoEvento)],
+    [CLAVES.exclusivoDias, String(c.exclusivoDias)],
     [CLAVES.driveComprobantes, c.driveComprobantes],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],

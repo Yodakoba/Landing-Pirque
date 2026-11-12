@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { exclusividadDe } from '@/lib/exclusivo';
 import { conLecturas } from '@/lib/sheets';
 import { exigir, quienEs } from '@/lib/permisos';
 import {
-  leerPresupuestos, guardarPresupuesto, borrarReservaDe, moverCobros, devolverElDia, anotar
+  leerPresupuestos, guardarPresupuesto, borrarReservaDe, moverCobros, devolverElDia, devolverExclusivo, anotar
 } from '@/lib/datos';
 import { alternativasDe, grupoSinGanar, letraDe } from '@/lib/cotizar';
 import { folioDe, estadoNormal, ESTADO_PRESUPUESTO, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
@@ -70,6 +71,9 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS], async function POST(req: Re
 
     const borrada = await borrarReservaDe(p.idReserva);
     const dia = await devolverElDia(p.fecha, p.diaAbierto, p.idReserva);
+    // Exclusiva: si la gerencia ya aprobó liberar el día, sigue sin venderse;
+    // si no, vuelve a su estado de antes (2026-11-12).
+    if (exclusividadDe(p.exclusividad).estado !== 'aprobada') await devolverExclusivo(p.fecha, p.diaPausado ?? '', p.idReserva);
     const nuevos = new Map(grupoSinGanar(p, lista).map((x) => [x.id, x.estado]));
     for (const a of alts) {
       const estado = nuevos.get(a.id);

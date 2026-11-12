@@ -17,6 +17,8 @@ import { ocupaLugar } from './ocupacion.ts';
 import { estaRectificada, porAprobar, personasEfectivas, partesRectificacion } from './rectificacion.ts';
 import { cupoPedidoDe } from './cupo.ts';
 import { cupoAmpliado } from './sobrecupo.ts';
+import type { Presupuesto } from './presupuestos.ts';
+import { esExclusivo, exclusividadDe, plazoParaLiberar } from './exclusivo.ts';
 
 /** Lo que tienen todas las cosas por aprobar. */
 interface Base {
@@ -61,8 +63,29 @@ export interface PendienteSobrecupo extends Base {
   alcanza: boolean;
 }
 
+/**
+ * **Un pedido de liberar un día para un evento exclusivo** (2026-11-12,
+ * `lib/exclusivo.ts`). Lo decide quien tiene `exclusividad`.
+ */
+export interface PendienteExclusivo extends Base {
+  tipo: 'exclusivo';
+  /** La cotización: es lo que pide `/api/presupuestos/exclusivo`. */
+  id: string;
+  folio: string;
+  cliente: string;
+  invitados: number;
+  /** Las otras reservas de ese día, y su gente: lo que habría que mover. */
+  reservas: number;
+  personas: number;
+  faltan: number;
+  enPlazo: boolean;
+  diasMinimos: number;
+  /** Si el día ya dejó de venderse por este pedido. */
+  pausado: boolean;
+}
+
 /** Lo que se aprueba. Un tipo nuevo se suma a esta unión. */
-export type Pendiente = PendienteDescuento | PendienteCupo | PendienteSobrecupo;
+export type Pendiente = PendienteDescuento | PendienteCupo | PendienteSobrecupo | PendienteExclusivo;
 
 const porFecha = (a: Pendiente, b: Pendiente) => a.fecha.localeCompare(b.fecha) || a.cuando.localeCompare(b.cuando);
 
@@ -116,6 +139,31 @@ export function pendientesDeSobrecupo(
     });
   }
   return lista;
+}
+
+/**
+ * Los pedidos de liberar un día. `folio` arma el número de la cotización
+ * (el del grupo), para no importar acá la lógica de alternativas.
+ */
+export function pendientesDeExclusivo(
+  presupuestos: Pick<Presupuesto, 'id' | 'fecha' | 'cliente' | 'invitados' | 'exclusivo' | 'exclusividad' | 'diaPausado' | 'idReserva'>[],
+  reservas: Reserva[], hoy: string, diasMinimos: number, folio: (id: string) => string = (id) => id
+): PendienteExclusivo[] {
+  const lista: PendienteExclusivo[] = [];
+  for (const p of presupuestos) {
+    const d = exclusividadDe(p.exclusividad);
+    if (d.estado !== 'pedida' || !esExclusivo(p.exclusivo) || !p.fecha) continue;
+    const otras = reservas.filter((r) => r.fecha === p.fecha && ocupaLugar(r) && r.id !== p.idReserva);
+    const plazo = plazoParaLiberar(p.fecha, hoy, diasMinimos);
+    lista.push({
+      tipo: 'exclusivo', clave: `exclusivo-${p.id}`, fecha: p.fecha, pide: d.quien || 'alguien', cuando: d.cuando,
+      motivo: '', comentario: '', id: p.id, folio: folio(p.id), cliente: p.cliente || 'sin nombre',
+      invitados: Number(p.invitados) || 0, reservas: otras.length,
+      personas: otras.reduce((n, r) => n + (Number(r.personas) || 0), 0),
+      faltan: plazo.faltan, enPlazo: plazo.enPlazo, diasMinimos, pausado: !!p.diaPausado
+    });
+  }
+  return lista.sort(porFecha) as PendienteExclusivo[];
 }
 
 /** Todo junto, del día más antiguo al más nuevo. */

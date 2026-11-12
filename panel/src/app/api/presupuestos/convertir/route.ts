@@ -4,7 +4,7 @@ import { exigir, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto,
   crearReserva, leerMenus, leerClientes, anotar, leerConfig, leerCobros,
-  actualizarPagoDeReserva, abrirElDiaSiHaceFalta, leerFechas, leerReservas, moverCobros
+  actualizarPagoDeReserva, abrirElDiaSiHaceFalta, dejarExclusivo, leerFechas, leerReservas, moverCobros
 } from '@/lib/datos';
 import { cupoParaGanar } from '@/lib/dias';
 import { ocupaLugar, tienePrioridad } from '@/lib/ocupacion';
@@ -13,6 +13,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { conCliente, otrasAlternativas, alternativasDe } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { esFecha } from '@/lib/fechas';
+import { esExclusivo } from '@/lib/exclusivo';
 import {
   lineasDe, reservaDesdePresupuesto, folioDe, estadoVisible, totalDe,
   ESTADO_PRESUPUESTO
@@ -162,18 +163,37 @@ export const POST = conLecturas([], async function POST(req: Request) {
       }, { status: 409 });
     }
 
+    // **Exclusiva con el día ocupado no se gana** (2026-11-12, lo decidió el
+    // cliente): liberar el día —mover o cancelar a los otros— lo decide la
+    // gerencia caso a caso (`/api/presupuestos/exclusivo`).
+    if (esExclusivo(original.exclusivo)) {
+      const otras = reservas.filter((x) => x.fecha === p.fecha && ocupaLugar(x) && x.id !== aMedias?.id);
+      if (otras.length) {
+        const personas = otras.reduce((n, x) => n + (x.personas || 0), 0);
+        return NextResponse.json({
+          error: `Es un evento exclusivo y ese día todavía tiene ${otras.length} `
+            + `${otras.length === 1 ? 'reserva' : 'reservas'} (${personas} personas). `
+            + 'Para ganarla hay que liberar el día: pídeselo al encargado de pagos o a la gerencia.'
+        }, { status: 409 });
+      }
+    }
+
     const idReserva = aMedias ? aMedias.id : await crearReserva(nueva);
     // **Ganar abre el día**, igual que anotar una reserva a mano: si no
     // estaba en el calendario se crea privado con el cupo de siempre, y si
     // estaba cerrado se abre para nosotros. Sin esto el día quedaba "sin
     // cupo" con la gente de la cotización adentro.
     const diaAbierto = await abrirElDiaSiHaceFalta(p.fecha);
+    // Exclusiva: el día queda **privado exclusivo**, y se guarda cómo estaba
+    // para devolverlo si se cancela (`Día pausado`).
+    const diaPausado = esExclusivo(original.exclusivo)
+      ? await dejarExclusivo(p.fecha, original.diaPausado ?? '') : (original.diaPausado ?? '');
     // Y recién ahora el vínculo, que es lo que apaga el conteo de posibles.
     // Se guarda la cotización ORIGINAL, no la que tiene el cliente resuelto:
     // las columnas viejas de cliente siguen en blanco si tenía ficha.
     const { fila: _fila, ...sinFila } = original;
     await guardarPresupuesto({
-      ...sinFila, estado: ESTADO_PRESUPUESTO.aceptado, idReserva, diaAbierto
+      ...sinFila, estado: ESTADO_PRESUPUESTO.aceptado, idReserva, diaAbierto, diaPausado
     });
     // **Las otras alternativas del grupo pasan a "No elegida"** (lo decidió
     // el cliente): ya no son gente posible, porque el cliente eligió otra.

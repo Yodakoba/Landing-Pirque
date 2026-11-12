@@ -1528,6 +1528,52 @@ adentro no cabe.
   día que todavía no está en el calendario, tampoco cabe. Es lo que pide el
   mensaje: que la administración abra ese día con más cupo antes de ganar.
 
+### El evento exclusivo, y pedir liberar un día (2026-11-12)
+
+Lo pidió el cliente: una cotización con **arriendo** tiene que preguntar si
+el día es exclusivo —*"no obligarlo"*: con buena negociación puede venir
+otro grupo— y, si ese día ya tiene reservas de otros, **no se automatiza
+nada**: se avisa y decide alguien de arriba. Código en `lib/exclusivo.ts`
+(puro, con pruebas) y `/api/presupuestos/exclusivo`.
+
+- **La pregunta**: en el paso 3, si alguna línea es de tipo Arriendo
+  (`tieneArriendo()`), un bloque morado *🟣 ¿El día es exclusivo?* con
+  **Sí, exclusivo** y **No, puede venir otro grupo**. Se guarda solo, en la
+  columna `Exclusivo` de `Presupuestos` (`sí`, `no` o en blanco). Sin
+  contestar cuenta como no exclusivo.
+- **Ganada exclusiva deja el día exclusivo**: `/convertir` pone el día en
+  `Privada exclusiva` (`dejarExclusivo()` en `datos.ts`) y guarda cómo
+  estaba en `Día pausado`. Cancelarla o deshacerla lo devuelve
+  (`devolverExclusivo()`), solo si sigue privado y sin otra reserva.
+- **Si ese día ya tiene reservas de otros, no se gana**: `/convertir`
+  responde 409 y la ventana muestra la alarma morada *Es exclusivo, y ese
+  día ya hay N personas reservadas*, en el paso 3 y en lugar de *Marcar
+  ganada* (el hito dice *Falta liberar el día*). La regla de cupo no cambió:
+  si el grupo no cabe, se pide abrir cupo como siempre.
+- **El vendedor pide, no decide**: *🙋 Pedir a la gerencia liberar el día*
+  escribe `Exclusividad` = *Pedida · quién · cuándo · nota*. Le llega a la
+  **bandeja de aprobaciones** de quien tiene el permiso nuevo
+  **`exclusividad`**: el encargado de pagos, la gerencia general y el
+  administrador. El encargado de operaciones no decide: avisa.
+- **El plazo vive en Configuración** (`exclusivo_dias_minimos`, 7, en
+  *Cotizaciones*). Con menos días se puede pedir igual, como **caso
+  especial**, y aprobarlo pide motivo.
+- **En la bandeja**: quién pide, la cotización, cuántas reservas y personas
+  habría que mover, y el plazo. Tres botones: **⏸ Dejar de vender el día**
+  (pregunta; un día público pasa a privado mientras se decide, y se guarda
+  cómo estaba), **✓ Aprobar** (pregunta qué pasa; también deja de venderlo)
+  y **✕ Rechazar** (con motivo, que el vendedor ve en la cotización; si el
+  día estaba pausado por este pedido, vuelve a venderse). Todo queda en la
+  bitácora.
+- **Los pedidos los arma `/api/ocupacion`** (`pendientesDeExclusivo()`),
+  solo para quien tiene `exclusividad`, de la misma tanda de lecturas:
+  `Clientes` se sumó a la precarga para el nombre. **Ninguna lectura más.**
+- **Aprobado, la ventana lo dice** y manda a la página del día a mover las
+  reservas. **El plan para liberar el día —el WhatsApp de disculpas a cada
+  reserva (`mensajeLiberacion()`: devolución completa u otra fecha con un
+  pisco sour de regalo), avisado, cambiada o cancelada, y el recordatorio
+  del reembolso en Shopify— es la segunda entrega**, todavía pendiente.
+
 ### Cancelar una cotización ganada, y la devolución (2026-11-11)
 
 Lo pidió el cliente: *"puede pasar igual que la reserva se cae… cambiar el
