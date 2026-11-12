@@ -386,7 +386,7 @@ export default function TarjetaDia({
 
           {/* `pie-tarjeta`: si los tres botones no caben en una línea, pasan
               a dos (ver `globals.css`). */}
-          <div className={`mt-3 ${PIE} pie-tarjeta`}><div className="pie-botones">
+          <div className={`mt-3 ${PIE} pie-tarjeta`}><div className={`pie-botones${conDias ? '' : ' pie-sin-editar'}`}>
             {/* "Ver reservas" y no "Ver quiénes vienen": con tres acciones
                 en el pie, el texto largo se partía en dos líneas en una
                 tarjeta de cuatro columnas. La fecha de arriba lleva al mismo

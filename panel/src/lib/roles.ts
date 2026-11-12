@@ -21,7 +21,8 @@ export const PALABRAS: Record<Accion, string> = {
   asistencia: 'Marcar si cada reserva vino o no',
   presupuestos: 'Cotizar: crear cotizaciones, marcarlas ganadas, cancelarlas',
   clientes: 'Ver y editar las fichas de clientes',
-  dias: 'Abrir, cerrar y editar días del calendario',
+  dias: 'Agregar, abrir, cerrar y editar días del calendario',
+  operarDia: 'Llevar el día: pedir más cupo, soltar reservas por cupo y avisar a los clientes',
   equipo: 'Planificar el equipo y marcar quién vino',
   extras: 'Agendar actividades extras (jinetes, pintacaritas)',
   cerrar: 'Cerrar el día',
@@ -62,7 +63,7 @@ export const RESUMEN_ROL: Record<string, string> = {
   [ROL.admin]: 'Puede todo, incluidas las cuentas del panel.',
   [ROL.gerencia]: 'Por ahora, lo mismo que el encargado de pagos. Sus derechos propios se definen después.',
   [ROL.operaciones]: 'Lo del encargado de turno, más aprobar descuentos, subir cupos, corregir días cerrados, decidir los eventos exclusivos y ver el informe. Sin pagos ni configuración.',
-  [ROL.encargado]: 'El día a día: reservas, días, equipo —con la ficha completa, sueldos y cuenta— y cotizaciones. Sin el informe, pagos ni configuración.',
+  [ROL.encargado]: 'El día a día: reservas, equipo —con la ficha completa, sueldos y cuenta— y cotizaciones. No agrega ni edita fechas. Sin el informe, pagos ni configuración.',
   [ROL.pagos]: 'Lo del encargado de turno, más la plata y la configuración. No toca cuentas.',
   [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',
   [ROL.anfitrion]: 'Recibe a los clientes: ve las reservas del día y marca si vinieron.'

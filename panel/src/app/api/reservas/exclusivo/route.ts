@@ -30,7 +30,7 @@ type Accion = typeof ACCIONES[number];
  * (2026-11-12, segunda entrega; ver `lib/exclusivo.ts`). Solo en un día con
  * una cotización exclusiva cuyo pedido ya se **aprobó**.
  *
- * - `avisar` (permiso `dias`): quedó avisada. El WhatsApp lo abre la
+ * - `avisar` (permiso `operarDia`): quedó avisada. El WhatsApp lo abre la
  *   pantalla; esto deja escrito que se hizo, y quién.
  * - `cancelar` (`exclusividad`): deja su lugar (`Se cayó por cupo` con el
  *   motivo del evento exclusivo) y queda la devolución completa por hacer.
@@ -50,7 +50,7 @@ export const POST = conLecturas([HOJA_RESERVAS, HOJA_PRESUPUESTOS, HOJA_FECHAS, 
     const b = (await req.json().catch(() => ({}))) ?? {};
     const accion = String(b.accion ?? '') as Accion;
     if (!ACCIONES.includes(accion)) return NextResponse.json({ error: 'Acción desconocida.' }, { status: 400 });
-    const no = await exigir(req, accion === 'avisar' ? 'dias' : 'exclusividad');
+    const no = await exigir(req, accion === 'avisar' ? 'operarDia' : 'exclusividad');
     if (no) return no;
 
     const fila = Number(b.fila);

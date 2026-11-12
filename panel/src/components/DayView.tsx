@@ -160,7 +160,8 @@ export default function DayView(
   // Anotar, editar y borrar reservas. Con vista gerencia, un rol sin
   // `reservas` mira el día sin esos botones.
   const conReservas = puede(rol as Rol, 'reservas');
-  const conDias = puede(rol as Rol, 'dias');
+  // Llevar el día —pedir cupo, soltar, avisar—, no editar la fecha (2026-11-12).
+  const conDias = puede(rol as Rol, 'operarDia');
   const [todas, setTodas] = useState<Reserva[] | null>(null);
   /** El cupo de este día, para el bloque de sobrecupo (2026-11-12). */
   const [cupoDia, setCupoDia] = useState<CupoDelDia | null>(null);

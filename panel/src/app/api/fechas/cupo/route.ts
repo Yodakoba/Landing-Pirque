@@ -31,7 +31,7 @@ export const POST = conLecturas([HOJA_FECHAS, HOJA_CONFIG], async function POST(
     if (!['pedir', 'aprobar', 'rechazar'].includes(accion)) {
       return NextResponse.json({ error: 'Acción desconocida.' }, { status: 400 });
     }
-    const no = await exigir(req, accion === 'pedir' ? 'dias' : 'cupo');
+    const no = await exigir(req, accion === 'pedir' ? 'operarDia' : 'cupo');
     if (no) return no;
 
     const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
