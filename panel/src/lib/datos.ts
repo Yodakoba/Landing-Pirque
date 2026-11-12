@@ -52,6 +52,8 @@ import {
   ESTADO_PRESUPUESTO
 } from './presupuestos.ts';
 import { conCliente } from './cotizar.ts';
+import { HOJA_VENDEDORES, ENCABEZADO_VENDEDORES, leerVendedoresDe, filaVendedor,
+         type FichaVendedor } from './vendedores.ts';
 import { HOJA_COBROS, ENCABEZADO_COBROS, leerCobrosDe, filaCobro, cobrosDe, estadoCobros,
          type Cobro } from './cobros.ts';
 import { liberaCupo, pagoPorCobros } from './pagos.ts';
@@ -733,6 +735,32 @@ export async function marcarBoleta(
   } else if (suyas.length) {
     await borrarFilas(HOJA_BOLETAS, suyas.map((b) => b.fila));
   }
+}
+
+/* ---------- El equipo de ventas (2026-11-12) ---------- */
+
+/** Las fichas de los vendedores: cómo se le paga a cada uno y su cuenta. Ver `lib/vendedores.ts`. */
+export async function leerVendedores(): Promise<FichaVendedor[]> {
+  try {
+    return leerVendedoresDe(await leerHoja(HOJA_VENDEDORES));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/**
+ * Guarda la ficha de un vendedor: **la reescribe si ya tiene fila, y la crea
+ * si no** —la ficha nace la primera vez que alguien le escribe algo, sin un
+ * botón de *Agregar*: los vendedores son las cuentas con ese rol—.
+ */
+export async function guardarVendedor(f: FichaVendedor): Promise<void> {
+  const filas = await asegurarEncabezado(HOJA_VENDEDORES, ENCABEZADO_VENDEDORES);
+  let enc = filas[0] ?? ENCABEZADO_VENDEDORES;
+  for (const c of ENCABEZADO_VENDEDORES) enc = await asegurarColumna(HOJA_VENDEDORES, enc, c);
+  const ya = leerVendedoresDe(filas).find((v) => normalizar(v.usuario) === normalizar(f.usuario));
+  if (ya) await escribirFila(HOJA_VENDEDORES, ya.fila, filaVendedor(f, enc));
+  else await agregarFila(HOJA_VENDEDORES, filaVendedor(f, enc));
 }
 
 /* ---------- Presupuestos ---------- */

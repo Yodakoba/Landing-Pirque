@@ -80,7 +80,9 @@ export const COL_PAGOS = {
 export const CONCEPTO = {
   sueldo: 'Sueldo',
   propina: 'Propina',
-  servicio: 'Servicio'
+  servicio: 'Servicio',
+  /** Lo que se le paga a un vendedor: comisiones y sueldo fijo (2026-11-12, `lib/vendedores.ts`). */
+  comision: 'Comisión'
 } as const;
 export type Concepto = typeof CONCEPTO[keyof typeof CONCEPTO];
 
@@ -90,6 +92,7 @@ export function conceptoDe(v: unknown): Concepto | '' {
   if (n === normalizar(CONCEPTO.propina)) return CONCEPTO.propina;
   if (n === normalizar(CONCEPTO.sueldo)) return CONCEPTO.sueldo;
   if (n === normalizar(CONCEPTO.servicio)) return CONCEPTO.servicio;
+  if (n === normalizar(CONCEPTO.comision)) return CONCEPTO.comision;
   return '';
 }
 

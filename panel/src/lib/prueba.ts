@@ -2311,8 +2311,8 @@ ok(ROLES_DE_CUENTA.includes(ROL.vendedor), 'se le puede crear una cuenta');
 // línea a ponerlo, que es exactamente lo que se quiere de la cuenta más
 // acotada del panel.
 const deVendedor = todas.filter((a) => puede(ROL.vendedor, a)).sort();
-ok(deVendedor.join() === 'clientes,presupuestos,reservas,ver',
-   'cuatro permisos y ninguno más: el calendario, sus reservas, las fichas de clientes y cotizar');
+ok(deVendedor.join() === 'clientes,presupuestos,reservas,vendedores,ver',
+   'cinco permisos y ninguno más: el calendario, sus reservas, las fichas de clientes, cotizar y su resumen (2026-11-12)');
 ok(!puede(ROL.vendedor, 'dias'),
    'no abre ni cierra días: eso le cambiaría el cupo al sitio público');
 ok(!puede(ROL.vendedor, 'equipo') && !puede(ROL.vendedor, 'extras'),
@@ -4751,6 +4751,55 @@ console.log('\nVista gerencia');
      'lo que no se entiende se deja tal cual, sin inventar horas');
   ok(moverHora('23:30', 30) === '00:00' && moverHora('00:00', -30) === '23:30' && moverHora('13:00', 30) === '13:30',
      'las horas se corren de a media hora y dan la vuelta a medianoche');
+}
+
+console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
+{
+  const { fichaVacia, comisionDe, pagadaEl, ventasDe, resumenDelPeriodo, finesDeMesEntre, porcentaje,
+          leerVendedoresDe, filaVendedor, ENCABEZADO_VENDEDORES, porCobrar } = await import('./vendedores.ts');
+  ok(porcentaje('2,5') === 2.5 && porcentaje('3%') === 3 && porcentaje('150') === 100 && porcentaje('x') === 0,
+     'el % acepta coma decimal y se queda entre 0 y 100');
+  const ficha = { ...fichaVacia('carla', 'Carla'), comisionPct: 5, montoEvento: 10000, sueldoFijo: 400000 };
+  ok(comisionDe(ficha, { total: 1190000, neto: 1000000 }) === 69500
+     && comisionDe({ ...ficha, base: 'neto' }, { total: 1190000, neto: 1000000 }) === 60000,
+     'la comisión es el % sobre el total con IVA (o el neto, si así se eligió) más el monto por evento');
+  const c = (fecha: string, monto: number) => ({ fecha, monto, cuando: fecha });
+  ok(pagadaEl(100, [c('2026-11-01', 30), c('2026-11-20', 70)]) === '2026-11-20'
+     && pagadaEl(100, [c('2026-11-01', 30)]) === ''
+     && pagadaEl(100, [c('2026-11-01', 100), c('2026-11-05', -20)]) === '',
+     'la venta cuenta el día en que el cliente terminó de pagar; una devolución la deja pendiente de nuevo');
+  ok(finesDeMesEntre('2026-11-10', '2026-11-16').length === 0
+     && finesDeMesEntre('2026-11-01', '2026-11-30').join() === '2026-11-30'
+     && finesDeMesEntre('2026-01-15', '2026-03-31').join() === '2026-01-31,2026-02-28,2026-03-31',
+     'el sueldo fijo cuenta el último día de cada mes: una semana no lo parte');
+  const pres = [
+    { id: 'A', fecha: '2026-12-05', cliente: 'Andes', estado: 'Ganada', idReserva: 'R1', creadoPor: 'Carla', descuento: 0, grupo: '' },
+    { id: 'B', fecha: '2026-12-12', cliente: 'Maipo', estado: 'Ganada', idReserva: 'R2', creadoPor: 'carla', descuento: 0, grupo: '' },
+    { id: 'C', fecha: '2026-12-19', cliente: 'Otra', estado: 'Ganada', idReserva: 'R3', creadoPor: 'felipe', descuento: 0, grupo: '' },
+    { id: 'D', fecha: '2026-12-26', cliente: 'Cayó', estado: 'Cancelada', idReserva: 'R4', creadoPor: 'carla', descuento: 0, grupo: '' },
+    { id: 'E', fecha: '2027-01-09', cliente: 'Enviada', estado: 'Enviada', idReserva: '', creadoPor: 'carla', descuento: 0, grupo: '' }
+  ] as never;
+  const li = (p: string, precio: number) => ({ presupuesto: p, concepto: 'X', cantidad: 1, precio, personas: 1, descuento: 0, ivaIncluido: true });
+  const lineas = [li('A', 1190000), li('B', 595000), li('C', 100000), li('D', 500000), li('E', 100000)] as never;
+  const cobros = [
+    { presupuesto: 'A', fecha: '2026-11-03', monto: 357000, cuando: '1' }, { presupuesto: 'A', fecha: '2026-11-25', monto: 833000, cuando: '2' },
+    { presupuesto: 'B', fecha: '2026-11-04', monto: 178500, cuando: '3' },
+    { presupuesto: 'D', fecha: '2026-11-04', monto: 500000, cuando: '4' }
+  ] as never;
+  const ventas = ventasDe('Carla', pres, lineas, cobros, ficha);
+  ok(ventas.map((v) => v.id).sort().join() === 'A,B,D',
+     'son las ganadas de esa cuenta, sin distinguir mayúsculas; la de otro vendedor y la que solo se envió no');
+  const r = resumenDelPeriodo(ficha, ventas, '2026-11-01', '2026-11-30');
+  ok(r.cuentan.map((v) => v.id).join() === 'A' && r.comisiones === 69500 && r.sueldoFijo === 400000 && r.total === 469500,
+     'en noviembre cuenta solo la que el cliente terminó de pagar, más el sueldo fijo del mes');
+  ok(ventas.find((v) => v.id === 'D')!.comision === 0 && porCobrar(ventas).map((v) => v.id).join() === 'B',
+     'una cancelada no deja comisión aunque haya pagado; la que falta pagar queda por cobrar');
+  ok(resumenDelPeriodo(ficha, ventas, '2026-11-02', '2026-11-08').total === 0,
+     'una semana sin ventas pagadas ni fin de mes no suma nada');
+  const fila = filaVendedor({ ...ficha, comisionPct: 2.5 }, ENCABEZADO_VENDEDORES);
+  const leida = leerVendedoresDe([ENCABEZADO_VENDEDORES, fila])[0];
+  ok(leida.usuario === 'carla' && leida.comisionPct === 2.5 && leida.sueldoFijo === 400000 && leida.base === 'total',
+     'la ficha se escribe y se lee igual, con el % con coma');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
