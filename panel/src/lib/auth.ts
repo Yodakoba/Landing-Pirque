@@ -250,12 +250,14 @@ export const PERMISOS = {
    * plata y el otro una credencial, y algún día un rol puede necesitar lo
    * uno sin lo otro.
    *
-   * **El encargado de operaciones lo tiene desde el 2026-11-12** (lo pidió
-   * el cliente: *"debería poder ingresar el perfil completo del equipo y
-   * también de los extras"*). El encargado de turno sigue sin él. Los links
-   * no van con esto: siguen en `links`.
+   * **Los dos encargados lo tienen desde el 2026-11-12** (lo pidió el
+   * cliente: primero el de operaciones, *"debería poder ingresar el perfil
+   * completo del equipo y también de los extras"*, y el mismo día el de
+   * turno: *"tiene todo el sentido. Solo ella no puede ver el informe"*).
+   * Los links no van con esto: siguen en `links`. El informe tampoco: el de
+   * turno no lo ve.
    */
-  sueldos: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
+  sueldos: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
   puestos: [ROL.admin, ROL.pagos, ROL.gerencia],
   /**

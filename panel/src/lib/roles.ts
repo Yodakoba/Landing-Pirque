@@ -60,8 +60,8 @@ export const NOMBRE_ROL: Record<string, string> = {
 export const RESUMEN_ROL: Record<string, string> = {
   [ROL.admin]: 'Puede todo, incluidas las cuentas del panel.',
   [ROL.gerencia]: 'Por ahora, lo mismo que el encargado de pagos. Sus derechos propios se definen después.',
-  [ROL.operaciones]: 'Lo del encargado de turno, más aprobar descuentos, subir cupos, corregir días cerrados y la ficha completa del equipo y de los extras (sueldos y cuentas). Sin pagos ni configuración.',
-  [ROL.encargado]: 'El día a día: reservas, días, equipo y cotizaciones. Sin plata ni configuración.',
+  [ROL.operaciones]: 'Lo del encargado de turno, más aprobar descuentos, subir cupos, corregir días cerrados y ver el informe. Sin pagos ni configuración.',
+  [ROL.encargado]: 'El día a día: reservas, días, equipo —con la ficha completa, sueldos y cuenta— y cotizaciones. Sin el informe, pagos ni configuración.',
   [ROL.pagos]: 'Lo del encargado de turno, más la plata y la configuración. No toca cuentas.',
   [ROL.vendedor]: 'Ve todo el calendario; anota y cotiza, y solo toca lo suyo.',
   [ROL.anfitrion]: 'Recibe a los clientes: ve las reservas del día y marca si vinieron.'

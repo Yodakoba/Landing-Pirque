@@ -2192,8 +2192,10 @@ ok(puede(ROL.pagos, 'links') && puede(ROL.pagos, 'puestos')
 // separados igual, porque son cosas distintas: uno es plata y el otro una
 // credencial. La costura está para el día que un rol necesite lo uno sin lo
 // otro, que es exactamente lo que no se pudo hacer mientras eran `esAdmin`.
-ok(!puede(ROL.encargado, 'sueldos') && !puede(ROL.encargado, 'links'),
-   'el encargado no tiene ninguno de los dos: ni cuánto gana cada compañero ni su link');
+// **Y desde el 2026-11-12 la costura sirvió**: el encargado de turno llena
+// la ficha completa (`sueldos`) y sigue sin los links.
+ok(puede(ROL.encargado, 'sueldos') && !puede(ROL.encargado, 'links'),
+   'el encargado de turno llena la ficha completa, sueldos y cuenta, pero no maneja links');
 ok(puede(ROL.pagos, 'pagar'), 'quien paga puede registrar que pagó');
 ok(!puede(ROL.encargado, 'pagar'),
    'el encargado NO: ve el informe, pero declarar que una plata salió es otra cosa');
@@ -2212,8 +2214,9 @@ ok(ROLES_DE_CUENTA.includes(ROL.gerencia) && ROL.operaciones === 'gerente',
 // el informe; el gerente lo ve y marca la boleta, pero no paga ni copia
 // cuentas.
 ok(!puede(ROL.encargado, 'informe'), 'el encargado ya no ve el informe');
-ok(puede(ROL.operaciones, 'sueldos') && !puede(ROL.encargado, 'sueldos') && !puede(ROL.operaciones, 'links'),
-   'la ficha completa (sueldos y cuentas) la llena el encargado de operaciones, no el de turno; los links no van con eso');
+ok(puede(ROL.operaciones, 'sueldos') && puede(ROL.encargado, 'sueldos') && !puede(ROL.operaciones, 'links')
+   && !puede(ROL.encargado, 'informe'),
+   'la ficha completa la llenan los dos encargados; el de turno sigue sin ver el informe, y los links no van con eso');
 ok(puede(ROL.operaciones, 'informe') && puede(ROL.operaciones, 'boleta') && !puede(ROL.operaciones, 'pagar'),
    'el gerente ve el informe y marca la boleta, pero no registra pagos');
 ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encargado, 'boleta'),
@@ -4651,8 +4654,8 @@ console.log('\nVista gerencia');
 {
   ok(puedeVer(ROL.vendedor, 'informe', true) && !puede(ROL.vendedor, 'informe'),
      'un vendedor con vista gerencia VE el informe, pero su rol no lo cambia');
-  ok(puedeVer(ROL.encargado, 'sueldos', true) && !puede(ROL.encargado, 'sueldos'),
-     'el encargado con vista gerencia ve los sueldos de las fichas; guardarlos sigue pidiendo el rol');
+  ok(puedeVer(ROL.encargado, 'configurar', true) && !puede(ROL.encargado, 'configurar'),
+     'el encargado con vista gerencia ve la configuración; guardarla sigue pidiendo el rol');
   ok(!puedeVer(ROL.vendedor, 'informe', false), 'sin la vista gerencia, el vendedor no ve el informe');
   ok(NO_SE_LEE_CON_GERENCIA.every((a) => !puedeVer(ROL.encargado, a, true)),
      'ni con vista gerencia se ven las cuentas, la mantención ni los links personales');
