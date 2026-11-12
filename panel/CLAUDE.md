@@ -4829,8 +4829,14 @@ perfil completo… la encargada de turno de caja no"*). Tiene el permiso
 `/equipo` y en `/extras`, con el mismo autoguardado. **Registrar pagos sigue
 siendo de `pagar`**, y por eso en el informe sigue sin ver las cuentas para
 transferir. **Los links personales tampoco van con esto** (`links`): son
-una credencial, no un dato de la ficha. El encargado de turno sigue sin
-ver un sueldo.
+una credencial, no un dato de la ficha.
+
+**Y el encargado de turno también, el mismo día** (lo corrigió el cliente:
+*"la encargada de turno también debería poder ingresar la ficha completa
+del trabajador. Tiene todo el sentido. Solo ella no puede ver el
+informe"*). `sueldos` va con los dos encargados; el de turno sigue **sin el
+informe**, sin registrar pagos y sin links. Con eso ve también los montos
+del día en la ventana del equipo, que salen de la misma ficha.
 
 ### Quién puede hacer qué (2026-10-21; el cuarto rol el 2026-10-22, el quinto el 2026-11-05)
 
@@ -4849,7 +4855,7 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | **Cerrar el día** (con la ventana de confirmación) | sí | sí | **sí** | — | — |
 | Agendar actividades extras y confirmarlas | sí | sí | **sí** | — | — |
 | Crear y mandar presupuestos, y ver el CRM del socio | sí | sí | **sí** | — | — |
-| Montos habituales y cuentas bancarias de la ficha (también el encargado de operaciones, desde el 2026-11-12) | sí | — | **sí** | — | — |
+| Montos habituales y cuentas bancarias de la ficha (los dos encargados desde el 2026-11-12) | sí | **sí** | **sí** | — | — |
 | Puestos y su regla "uno cada N" | sí | — | **sí** | — | — |
 | Precios, menús y configuración | sí | — | **sí** | — | — |
 | **Links personales** | sí | — | **sí** | — | — |
@@ -4863,8 +4869,9 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | **Registrar que a alguien ya se le pagó** | sí | **—** | **sí** | — | — |
 | Ver **sus propios** turnos | — | — | — | — | sí |
 
-**El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente.
-Lo que no toca es la plata, la configuración y las credenciales.
+**El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente,
+y desde el 2026-11-12 llena la ficha completa, con sueldo y cuenta. Lo que
+no toca es el informe, los pagos, la configuración y las credenciales.
 
 **El trabajador no figura en ninguna fila de la tabla de permisos, y ese es
 el punto**: no hay una sola acción del panel que pueda ejecutar. Su acceso no
