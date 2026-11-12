@@ -54,7 +54,11 @@ export default function BotonTema() {
     <button onClick={cambiar} type="button"
       aria-pressed={claro}
       title={claro ? 'Cambiar al tema oscuro' : 'Cambiar al tema claro'}
-      className="tecla rounded-full border border-hueso/20 px-2.5 py-1 text-xs
+      /* **36px, no 26** (2026-11-12): era uno de los tres botones que la
+         revisión PlayStation marcaba bajo el piso. Redondo y del mismo
+         alto que lo que lo rodea, con el signo a 16px. */
+      className="tecla inline-flex h-9 w-9 shrink-0 items-center justify-center
+                 rounded-full border border-hueso/20 text-base
                  text-hueso/60 hover:border-oro hover:text-oro">
       <span aria-hidden>{claro ? '☾' : '☀'}</span>
       <span className="sr-only">

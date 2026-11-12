@@ -5877,6 +5877,20 @@ título *Trabajadores* y *Mostrar desactivados*.
   muéstralos con el botón de arriba"*, en vez de una lista vacía.
 - **Cero lecturas nuevas**: filtra lo que `/api/equipo` ya trajo.
 
+### Los tres botones chicos que quedaban (2026-11-12)
+
+`revisarPlayStation()` marcaba tres botones bajo el piso de 34px en todas
+las pantallas, y el cliente pidió agrandarlos:
+
+- **☾ / ☀ del tema** (`BotonTema`): de 26px a un círculo de **36px**, con el
+  signo a 16px.
+- **Ahora no** del recorrido de bienvenida (`Recorrido`): era texto suelto
+  de 20px. Pasa a **botón delineado de 40px**, del mismo alto que *Ver cómo
+  funciona*, que sigue siendo el único relleno.
+- **El `?` de ayuda** (`Ayuda`): de 30px a **36px**, con el signo a 16px.
+
+Con eso la pasada de Playwright a 393 y 1280px en `/equipo` queda limpia.
+
 ### Vino / No vino se marca solo en `/turnos` (2026-11-05)
 
 Lo pidió el cliente: *"saca la opción vino o no vino de la parte del
