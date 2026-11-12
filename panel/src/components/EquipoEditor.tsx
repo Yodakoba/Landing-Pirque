@@ -104,6 +104,12 @@ export default function EquipoEditor() {
    */
   const [verInactivos, setVerInactivos] = useState(false);
   /**
+   * Lo escrito en el buscador de arriba de la lista (2026-11-12, lo pidió el
+   * cliente). Solo filtra lo que se dibuja: no lee la planilla ni toca lo
+   * que se guarda.
+   */
+  const [busca, setBusca] = useState('');
+  /**
    * La lista tal como vino de la planilla, para poder decir **qué cambió**.
    * No es estado: no se dibuja, solo se compara.
    */
@@ -468,6 +474,15 @@ export default function EquipoEditor() {
     fichas.programar(gente[i].nombre, cambio);
   };
 
+  /** El buscador: nombre, puesto y teléfono, sin tildes ni mayúsculas. */
+  const q = normalizar(busca);
+  const qDigitos = busca.replace(/\D/g, '');
+  const calza = (t: Trabajador) => !q
+    || normalizar(`${t.nombre} ${t.puesto} ${t.telefono}`).includes(q)
+    || (qDigitos.length >= 3 && String(t.telefono).replace(/\D/g, '').includes(qDigitos));
+  const visiblesBusca = gente.filter((t) => (t.activo || verInactivos) && calza(t)).length;
+  const ocultosBusca = verInactivos ? 0 : gente.filter((t) => !t.activo && calza(t)).length;
+
   return (
     <section>
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
@@ -547,6 +562,19 @@ export default function EquipoEditor() {
           de hoy termina mezclado con el de hace dos años. El botón los
           trae de vuelta —desde el 2026-11-10 es un botón grande, `MostrarDesactivados`, y no una casilla—, y dice cuántos son para que nadie los dé por
           perdidos. */}
+      {/* **El buscador va arriba de toda la lista** (2026-11-12, lo pidió el
+          cliente). Mismo criterio que `BuscarPersona` y el del informe: sin
+          tildes ni mayúsculas, así que "perez" encuentra a José Pérez. Busca
+          en el nombre, el puesto y el teléfono —este último también por los
+          dígitos solos, para que "12345678" encuentre "+56 9 1234 5678"—.
+          Filtra lo que ya está cargado: no cuesta lecturas. */}
+      {gente.length > 0 && (
+        <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nombre, puesto o teléfono"
+          aria-label="Buscar trabajador"
+          className="mb-3 min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
+                     text-[15px] focus:border-oro focus:outline-none sm:max-w-md" />
+      )}
       <MostrarDesactivados cuantos={inactivos} visible={verInactivos}
         onCambio={(v) => { setVerInactivos(v); setAbierta(null); }} />
       {/* Si toda la página se mira, ya lo dice la barra de arriba; acá
@@ -582,6 +610,9 @@ export default function EquipoEditor() {
           // con un `filter` previo sobre el array original, esconder a uno le
           // cambiaría el índice a los de abajo.
           if (!t.activo && !verInactivos) return null;
+          // La ficha abierta no se esconde aunque deje de calzar: cambiarle el
+          // nombre o el puesto a medio escribir la haría desaparecer.
+          if (!calza(t) && abierta !== i) return null;
           const turnos = turnosDe.get(normalizar(t.nombre)) ?? 0;
           return (
             <li key={i}
@@ -880,6 +911,15 @@ export default function EquipoEditor() {
             </li>
           );
         })}
+        {q && visiblesBusca === 0 && (
+          <li className="rounded-xl border-2 border-hueso/15 px-4 py-3 text-[15px] text-hueso/70">
+            Nadie calza con “{busca.trim()}”.
+            {ocultosBusca > 0 && (
+              <> {ocultosBusca === 1 ? 'Hay 1 desactivado que calza' : `Hay ${ocultosBusca} desactivados que calzan`}:
+                muéstralos con el botón de arriba.</>
+            )}
+          </li>
+        )}
         {gente.length === 0 && (
           <li className="rounded border border-dashed border-hueso/15 p-6 text-sm text-hueso/50">
             Todavía no hay nadie. Apreta <strong>Agregar trabajador</strong>.
