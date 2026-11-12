@@ -78,7 +78,7 @@ const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 function palabraDelDia(estado: string | undefined): { punto: string; texto: string; clase: string } {
   if (estado === undefined) return { punto: '⚪', texto: 'sin abrir', clase: 'text-hueso/60' };
   if (estaCerrado(estado)) return { punto: '🔴', texto: 'cerrado', clase: 'text-rojo-texto' };
-  if (esExclusiva(estado)) return { punto: '🔵', texto: 'exclusivo', clase: 'text-cielo-texto' };
+  if (esExclusiva(estado)) return { punto: '🟣', texto: 'exclusivo', clase: 'text-morado-texto' };
   if (esPrivada(estado)) return { punto: '🔵', texto: 'privado', clase: 'text-cielo-texto' };
   return { punto: '🟢', texto: 'público', clase: 'text-hueso/65' };
 }

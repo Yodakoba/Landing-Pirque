@@ -288,7 +288,7 @@ export default function DiaEditor({
                 </label>
                 {valor === ESTADO_DIA.privada && esPrivado && (
                   <label className={'ml-7 flex cursor-pointer gap-3 rounded ' +
-                      'border border-cielo-fuerte/40 bg-cielo-fuerte/5 p-3'}>
+                      'border border-morado-fuerte/40 bg-morado-fuerte/5 p-3'}>
                     <input type="checkbox" className="mt-1" checked={esExclusivo}
                       onChange={(e) => setF({ ...f,
                         estado: e.target.checked ? ESTADO_DIA.exclusiva : ESTADO_DIA.privada })} />
