@@ -24,7 +24,7 @@
  * trabajó, y lo que puede haber pasado es que nadie cerró ese día; esas dos
  * columnas son lo que permite darse cuenta a tiempo.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 
 /** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
@@ -1155,6 +1155,36 @@ export default function InformeEquipo() {
   };
 
   const boletaRecibida = (nombre: string) => !!boletaDe(boletas, nombre, desde, hasta);
+
+  /**
+   * **Llegar a pagarle a alguien** (2026-11-12): `/vendedores` manda a
+   * `/informe?pagar=<nombre>&desde=…&hasta=…` desde su botón *Pagarle*. El
+   * informe abre en ese periodo, en la sección de vendedores, y con la misma
+   * ventana de pago de siempre ya puesta en esa persona: el pago se registra
+   * con la lógica de acá, no con una copia.
+   */
+  const porPagar = useRef<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const quien = q.get('pagar');
+    if (!quien) return;
+    porPagar.current = quien;
+    const d = q.get('desde') ?? '', h = q.get('hasta') ?? '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && /^\d{4}-\d{2}-\d{2}$/.test(h)) {
+      setTipo('rango'); setDesdeLibre(d); setHastaLibre(h);
+    }
+  }, []);
+  useEffect(() => {
+    const quien = porPagar.current;
+    if (!quien || !turnos) return;
+    const l = lineasVendedores.find((x) => x.nombre === quien);
+    if (!l) return;
+    porPagar.current = null;
+    setSeccion('vendedores');
+    const opciones = partesDe(l.nombre, l.total, 0, false, true);
+    setPagando({ quien: l.nombre, opciones, inicial: opciones[0].concepto, modo: 'parte',
+                 boletaPendiente: !boletaRecibida(l.nombre) });
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Quién aparece en el periodo y no se le puede transferir con lo que hay
   // anotado. Se avisa acá porque es el momento en que importa: descubrirlo
