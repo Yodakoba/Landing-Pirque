@@ -38,7 +38,7 @@ import { enPesos } from '@/lib/ocupacion';
 import DatosBancarios from './DatosBancarios';
 import { usarSoloMira } from './SesionCliente';
 import Campo from './Campo';
-import { bancoVacio, type Banco } from '@/lib/banco';
+import { bancoVacio, sePuedeTransferir, type Banco } from '@/lib/banco';
 import CampoTelefono from './CampoTelefono';
 import { diasDelMes, sumarMeses, mesDe, mesEnPalabras, diaSemana, hoy,
          enPalabras } from '@/lib/fechas';
@@ -62,6 +62,13 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
   const soloSueldos = usarSoloMira('sueldos');
   /** Si se muestran los colaboradores desactivados (`MostrarDesactivados`). */
   const [verInactivos, setVerInactivos] = useState(false);
+  /**
+   * **La ficha abierta y el buscador, igual que en Equipo** (2026-11-12, lo
+   * pidió el cliente: Extras *"a la misma altura"* que Equipo). Cerrada, una
+   * ficha es una línea; se abre de a una.
+   */
+  const [abierta, setAbierta] = useState<number | null>(null);
+  const [busca, setBusca] = useState('');
   // Los días cerrados se abren en solo lectura también acá: ver `corregirDiaCerrado()`.
   const [cierres, setCierres] = useState<Cierre[]>([]);
   const [puedeCorregir, setPuedeCorregir] = useState(false);
@@ -197,6 +204,8 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       const d = await r.json().catch(() => ({}));
       if (!r.ok || d.error) { avisar(d.error || 'No se pudo agregar.', 'atencion'); return; }
       if (d.yaExistia) { avisar(d.aviso || `${nombre} ya estaba en la lista.`, 'atencion'); setNuevoNombre(null); return; }
+      // La ficha nueva se abre sola, para completarla ahí mismo (como en Equipo).
+      setAbierta((colaboradores ?? []).length);
       setColaboradores((lista) => [...(lista ?? []), d.colaborador]);
       setNuevoNombre(null);
       avisar(`${nombre} agregado`);
@@ -223,6 +232,13 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       </>
     );
   };
+
+  /** El buscador: nombre, actividad y teléfono, sin tildes ni mayúsculas (como en Equipo). */
+  const qBusca = normalizar(busca);
+  const qDigitos = busca.replace(/\D/g, '');
+  const calza = (c: Colaborador) => !qBusca
+    || normalizar(`${c.nombre} ${c.actividad} ${c.telefono}`).includes(qBusca)
+    || (qDigitos.length >= 3 && String(c.telefono).replace(/\D/g, '').includes(qDigitos));
 
   const cambiarBanco = (i: number, banco: Banco) => {
     const copia = (colaboradores ?? []).map((c) => ({ ...c }));
@@ -281,7 +297,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           Mes siguiente ›
         </button>
         <span className="flex-1" />
-        <span className="text-xs text-hueso/50">
+        <span className="text-[13px] text-hueso/65">
           {conActividades.length} {conActividades.length === 1 ? 'día' : 'días'} con
           actividades
           {totalDelMes > 0 && (
@@ -298,8 +314,8 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           interno viene a evitar. Comprobado a 393px. */}
       <div className="relative overflow-x-auto pb-1">
        <div className="min-w-[640px]">
-        <div className="grid grid-cols-7 gap-1 text-center text-[11px]
-                        uppercase tracking-wide text-hueso/40">
+        <div className="grid grid-cols-7 gap-1 text-center text-[13px] font-semibold
+                        uppercase tracking-wide text-hueso/60">
           {DIAS.map((d) => <div key={d} className="pb-1">{d}</div>)}
         </div>
 
@@ -326,7 +342,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                 title={`${enPalabras(f)} · actividades extras`}
                 className={`flex min-h-[92px] flex-col items-stretch justify-start
                             overflow-hidden rounded border p-1.5
-                            text-left align-top text-[11px] leading-tight transition
+                            text-left align-top text-[13px] leading-tight transition
                             hover:border-oro
                             ${delDia.length > 0 ? 'border-oro/40 bg-oro/5'
                                : oc ? COLOR_TARJETA(oc)
@@ -372,7 +388,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
        </div>
       </div>
 
-      <p className="mt-4 max-w-2xl text-xs text-hueso/50">
+      <p className="mt-4 max-w-2xl text-[13px] text-hueso/65">
         <strong>Una actividad sin confirmar no suma</strong>, igual que un
         turno sin cerrar: agendar no es pagar. Los colores del día son
         los del calendario —cuánta gente viene, si está cerrado o es privado—
@@ -393,7 +409,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {huerfanos.map((n) => (
-              <li key={n} className="rounded bg-hueso/10 px-2 py-1 font-mono text-xs">
+              <li key={n} className="rounded bg-hueso/10 px-2 py-1 font-mono text-[13px]">
                 {n}
               </li>
             ))}
@@ -401,10 +417,10 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
         </div>
       )}
 
-      <h2 className="mb-3 mt-10 text-xs uppercase tracking-widest text-hueso/45">
+      <h2 className="mb-3 mt-10 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
         Quiénes hacen las actividades
       </h2>
-      <p className="mb-4 max-w-2xl text-sm text-hueso/60">
+      <p className="mb-4 max-w-2xl text-[14px] text-hueso/70">
         Se guardan como fichas porque se repiten: el mismo jinete vuelve el
         sábado siguiente. El <strong>monto habitual</strong> es el que se
         propone al agregarlo a un día y se puede corregir ahí; lo que se le
@@ -425,7 +441,17 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           guarda: `i` sigue siendo la fila real, y todo lo que edita una
           ficha la usa. Las sin nombre van al final, junto al botón de
           agregar. */}
-      <MostrarDesactivados visible={verInactivos} onCambio={setVerInactivos}
+      {/* **El buscador va arriba de la lista**, igual que en Equipo: nombre,
+          actividad y teléfono, sin tildes ni mayúsculas, y el teléfono también
+          por los dígitos solos. Filtra lo que ya está cargado. */}
+      {(colaboradores ?? []).length > 0 && (
+        <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nombre, actividad o teléfono"
+          aria-label="Buscar colaborador"
+          className="mb-3 min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
+                     text-[15px] focus:border-oro focus:outline-none sm:max-w-md" />
+      )}
+      <MostrarDesactivados visible={verInactivos} onCambio={(v) => { setVerInactivos(v); setAbierta(null); }}
         cuantos={(colaboradores ?? []).filter((c) => !c.activo).length} />
       <fieldset disabled={soloMira} className="m-0 mt-3 min-w-0 border-0 p-0">
       <ul className="space-y-3">
@@ -440,14 +466,66 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           // Escondidos dentro del map y no con un `filter` previo: `i` es la
           // fila real que se guarda (igual que en `/equipo`).
           if (!c.activo && !verInactivos) return null;
+          // La ficha abierta no se esconde aunque deje de calzar (como en Equipo).
+          if (!calza(c) && abierta !== i) return null;
           const tieneDias = extras.some(
             (e) => normalizar(e.colaborador) === normalizar(c.nombre));
+          const abiertaEsta = abierta === i;
           return (
             <li key={i}
-              className={`rounded border p-3 ${c.activo
+              className={`overflow-hidden rounded border ${c.activo
                 ? 'border-hueso/15 bg-panel'
                 : 'border-hueso/10 bg-transparent opacity-60'}`}>
 
+              {/* **Cerrada es una línea**, como la ficha de un trabajador:
+                  nombre, actividad, teléfono y lo que falta para pagarle. A la
+                  derecha, dar de baja. */}
+              <div className="flex items-center gap-2 pr-2">
+                <button type="button" aria-expanded={abiertaEsta}
+                  onClick={() => setAbierta(abiertaEsta ? null : i)}
+                  className="flex min-h-[44px] min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1
+                             px-3 py-2.5 text-left hover:bg-hueso/5">
+                  <span aria-hidden className="w-3 text-base leading-none text-hueso/40">
+                    {abiertaEsta ? '−' : '+'}
+                  </span>
+                  <span className="font-semibold">
+                    {c.nombre.trim() || <span className="text-hueso/40">Sin nombre</span>}
+                  </span>
+                  <span className="text-[13px] text-hueso/70">{c.actividad || 'sin actividad'}</span>
+                  <span className="text-[13px] text-hueso/60">{c.telefono}</span>
+                  {verSueldos && c.monto > 0 && (
+                    <span className="text-[13px] tabular-nums text-hueso/70">{enPesos(c.monto)}</span>
+                  )}
+                  {!c.activo && (
+                    <span className="rounded-full border border-hueso/25 px-2 py-0.5
+                                     text-[13px] font-semibold text-hueso/60">inactivo</span>
+                  )}
+                  {verSueldos && c.nombre.trim() && !sePuedeTransferir(c.banco) && (
+                    <span className="rounded-full border border-ambar/50 px-2 py-0.5
+                                     text-[13px] font-semibold text-ambar-texto">falta su cuenta</span>
+                  )}
+                </button>
+                {/* Quitar solo a quien no tiene días contratados, igual que
+                    en Equipo: borrar la ficha de alguien que ya vino dejaría
+                    sus días con un nombre que no está en ninguna parte. */}
+                {!soloMira && (!tieneDias ? (
+                  <button onClick={() => void quitar(i)}
+                    className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto"
+                    title="Todavía no tiene ningún día contratado">Quitar</button>
+                ) : c.activo ? (
+                  <button onClick={() => void cambiarActivo(i, false)}
+                    className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto"
+                    title="Tiene días guardados, así que su ficha no se quita: se desactiva">
+                    Desactivar
+                  </button>
+                ) : (
+                  <button onClick={() => void cambiarActivo(i, true)}
+                    className="boton shrink-0 border-oro/50 text-oro hover:bg-oro/10">Activar</button>
+                ))}
+              </div>
+
+              {abiertaEsta && (
+              <div className="border-t border-hueso/10 p-3">
               <div className="flex flex-wrap items-start gap-3">
                 <Campo etiqueta="Nombre" ancho="w-52">
                   <input type="text" value={nombreEscrito[i] ?? c.nombre} className={ENTRADA}
@@ -477,36 +555,16 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
                 <span className="flex-1" />
 
-                {/* Quitar solo a quien no tiene días contratados, igual que
-                    en Equipo: borrar la ficha de alguien que ya vino dejaría
-                    sus días con un nombre que no está en ninguna parte. */}
-                <div className="flex flex-wrap items-center gap-3 self-center pt-4">
+                <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-[13px]">
                   {guardarEnTarjeta(i)}
-                  {!tieneDias ? (
-                    <button
-                      onClick={() => void quitar(i)}
-                      className="boton hover:border-rojo-fuerte hover:text-rojo-texto"
-                      title="Todavía no tiene ningún día contratado">Quitar</button>
-                  ) : c.activo ? (
-                    <button
-                      onClick={() => void cambiarActivo(i, false)}
-                      className="boton"
-                      title="Tiene días guardados, así que su ficha no se quita: se desactiva">
-                      Desactivar
-                    </button>
-                  ) : (
-                    <button onClick={() => void cambiarActivo(i, true)} className="boton">
-                      Activar
-                    </button>
-                  )}
                 </div>
               </div>
 
               {verSueldos && (
                 <div className="mt-3 border-t border-hueso/10 pt-3">
                   <div className="flex flex-wrap items-start gap-3">
-                    <span className="w-28 pt-4 text-[10px] uppercase tracking-widest
-                                     text-hueso/35">Transferencia</span>
+                    <span className="w-36 pt-4 text-[13px] font-semibold uppercase tracking-widest
+                                     text-hueso/60">Transferencia</span>
                     <div className="min-w-[20rem] flex-1">
                       <fieldset disabled={soloSueldos} className="m-0 min-w-0 border-0 p-0">
                       <DatosBancarios
@@ -517,9 +575,16 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                   </div>
                 </div>
               )}
+              </div>
+              )}
             </li>
           );
         })}
+        {(colaboradores ?? []).length > 0 && busca.trim() && !(colaboradores ?? []).some((c) => (c.activo || verInactivos) && calza(c)) && (
+          <li className="rounded border border-dashed border-hueso/15 p-4 text-[15px] text-hueso/70">
+            Nadie calza con “{busca.trim()}”.
+          </li>
+        )}
         {(colaboradores ?? []).length === 0 && (
           <li className="rounded border border-dashed border-hueso/15 p-6 text-sm text-hueso/50">
             Todavía no hay nadie. Apreta <strong>Agregar colaborador</strong>, o
