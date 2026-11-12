@@ -393,13 +393,16 @@ export default function TarjetaDia({
                 lugar, así que el detalle no se pierde. */}
             <a href={`/dia/${d.fecha}`} {...alFrente}
                className={`${BOTON} whitespace-nowrap`}>
-              Reservas
+              {/* **Un ícono por botón** (2026-11-12, lo pidió el cliente: los
+                  tres se veían iguales). Se reconocen por forma sin leerlos. */}
+              <span aria-hidden>📋</span> Reservas
             </a>
             <span className="pie-hueco" />
             {conEquipo && (
             <button onClick={() => setVolteada(true)} {...alFrente}
-              className={`${BOTON} pie-equipo whitespace-nowrap`}>
-              Equipo
+              className={`${BOTON} pie-equipo whitespace-nowrap ${
+                resumen && resumen.faltan > 0 ? '!border-ambar/70' : ''}`}>
+              <span aria-hidden>🧑‍🍳</span> Equipo
               {/* El número va acá para no tener que dar vuelta la tarjeta
                   solo para saber si hay alguien asignado.
 
@@ -420,8 +423,10 @@ export default function TarjetaDia({
                    puesto, así que "4 / 5" se lee solo y no necesita ningún
                    globito. Va en ámbar porque falta alguien, y el dorso lo
                    dice con todas sus letras. */
-                <span className="ml-1.5 rounded bg-hueso/10 px-1.5 py-0.5 text-[13px]
-                                 font-bold tabular-nums text-hueso">
+                /* Sin la cajita gris (2026-11-12, lo pidió el cliente: no
+                   aportaba): el número en negrita ya pesa más que la palabra,
+                   y si falta gente el borde del botón va en ámbar. */
+                <span className="text-[14px] font-bold tabular-nums text-hueso">
                   {resumen.total}
                   {resumen.faltan > 0 && (
                     <span className="text-ambar-texto">/{resumen.total + resumen.faltan}</span>
@@ -433,7 +438,7 @@ export default function TarjetaDia({
             {conDias && (
               <button onClick={onEditar} {...alFrente}
                 className={`${BOTON} whitespace-nowrap`}>
-                {sinConfigurar(d) ? 'Abrir' : 'Editar'}
+                <span aria-hidden>✎</span> {sinConfigurar(d) ? 'Abrir' : 'Editar'}
               </button>
             )}
           </div></div>

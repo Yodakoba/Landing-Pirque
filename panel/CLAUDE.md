@@ -5897,6 +5897,14 @@ caben los tres en una línea, pasan a dos —*Reservas* y *Editar* arriba,
 lo mismo, cambian todas juntas y siguen parejas. Medido a 1024, 1180, 1280,
 1440 y 393: ningún pie se sale y todos quedan a 17px del borde.
 
+**Y cada botón con su ícono** (2026-11-12, lo pidió el cliente: los tres
+se veían iguales, y la cajita gris del número no aportaba): **📋 Reservas ·
+✎ Editar** arriba y **🧑‍🍳 Equipo 18/23** abajo. El número va sin fondo,
+en negrita; si falta gente, *"/23"* va en ámbar y el botón entero con borde
+ámbar, así que se nota sin leerlo. Con los íconos el pie pide unos 325px, y
+el corte a dos líneas pasó a `21rem`: en un teléfono (293px) también va en
+dos. Medido a 1024, 1180, 1280, 1440 y 393: ningún pie se sale.
+
 #### El punto ámbar solo hablaba en un globito (2026-11-02)
 
 En la misma captura, el lunes 2 mostraba `Equipo •` — un punto ámbar que
