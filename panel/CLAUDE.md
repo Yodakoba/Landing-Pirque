@@ -6449,6 +6449,24 @@ se ve el detalle: mínima, máxima y milímetros.
 
 ## Las actividades extras (2026-10-22)
 
+> **El link personal de los extras** (2026-11-12, lo pidió el cliente:
+> *"link personal para los extras, absolutamente corresponde"*). Igual que
+> el de un trabajador: en la ficha, **Copiar link personal** (lo crea la
+> primera vez), *Renovar* y *Quitar link*, con el permiso `links`
+> (`/api/extras/link`). El token va en una columna nueva al final de
+> `Colaboradores`, `Token de acceso`; **no se acepta del navegador** —el
+> `PUT` y el `PATCH` arrastran el guardado— y solo lo recibe quien
+> administra los links. **`/mi/<token>` abre la vista del colaborador**
+> (`Colaborador.tsx`) cuando el token no es de un trabajador
+> (`colaboradorPorToken()`, con las mismas reglas: vacío o desactivado no
+> abre nada): *💰 Lo que gané* —semana con flechas o mes, *Lo que ganaste*
+> (lo confirmado), *Te pagaron*, *Falta*, el aviso de días sin confirmar, día
+> por día con su monto y ajuste, y los pagos— y *📅 Lo que viene*, sus días
+> agendados. Las cuentas son las de `informeDeExtras()`, las mismas del
+> informe. **De paso, la página del link lee todo en una tanda**
+> (`conLecturas`): eran siete consultas a Google por visita; ahora es una,
+> con los extras incluidos.
+>
 > **A la altura de Equipo** (2026-11-12, lo pidió el cliente: Extras tiene
 > que cumplir *"los mismos requisitos como equipo… tanto de la user
 > interface como los datos"*). Las fichas de colaboradores son ahora **una
@@ -6458,10 +6476,8 @@ se ve el detalle: mínima, máxima y milímetros.
 > **el buscador arriba** (nombre, actividad o teléfono, también por los
 > dígitos), igual que `/equipo`; una ficha recién agregada se abre sola. Y
 > la letra pasó el piso de 13px: el calendario del mes, los rótulos y la
-> nota de abajo (`CalendarioExtras.tsx` quedó en 0 en `HABIA`). **Lo único
-> que un trabajador tiene y un colaborador no es el link personal**: queda
-> como decisión del cliente, si un jinete o una pintacaritas debería ver su
-> resumen igual que el equipo.
+> nota de abajo (`CalendarioExtras.tsx` quedó en 0 en `HABIA`). El link
+> personal, que era lo único que faltaba, llegó el mismo día (arriba).
 
 Lo que se contrata aparte del equipo y por día: **jinetes** —cada uno con su
 monto—, **pintacaritas**, el **castillo inflable**. Lo pidió el cliente con

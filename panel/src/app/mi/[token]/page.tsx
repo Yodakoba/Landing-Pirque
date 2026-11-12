@@ -62,7 +62,16 @@
  * hay que cocinar; quién lo pidió y cuánto pagó no es dato de un turno.
  */
 import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
-         leerMenus, leerPagosEquipo } from '@/lib/datos';
+         leerMenus, leerPagosEquipo, leerColaboradores, leerExtras } from '@/lib/datos';
+import { colaboradorPorToken } from '@/lib/extras';
+import VistaColaborador from './Colaborador';
+import { conLecturas } from '@/lib/sheets';
+import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
+import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
+import { HOJA_CONFIG } from '@/lib/config';
+import { HOJA_MENUS } from '@/lib/menus';
+import { HOJA_PAGOS } from '@/lib/remuneraciones';
+import { HOJA_COLABORADORES, HOJA_ACTIVIDADES } from '@/lib/extras';
 import { menusDe } from '@/lib/shopify';
 import { trabajadorPorToken, turnosDe, pagoDe, esContratado, esPreparacion,
          totalAjustes, informeDelPeriodo, rangoDelPeriodo, semanaPorDefecto,
@@ -346,7 +355,12 @@ export default async function Pagina({ params, searchParams }: {
   params: { token: string };
   searchParams: { p?: string; v?: string };
 }) {
-  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima] = await Promise.all([
+  // **Todo en una tanda** (2026-11-12): eran siete consultas a Google por
+  // visita, una por pestaña; ahora es una sola, con los extras incluidos.
+  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras] = await conLecturas(
+    [HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_FECHAS, HOJA_CONFIG, HOJA_RESERVAS, HOJA_MENUS, HOJA_PAGOS,
+     HOJA_COLABORADORES, HOJA_ACTIVIDADES],
+    async () => Promise.all([
     leerTrabajadores(), leerTurnos(),
     // Igual que las reservas: la hora de apertura y las notas del día son un
     // extra. `leerFechas()` no atrapa sus errores —las pantallas del panel
@@ -362,14 +376,18 @@ export default async function Pagina({ params, searchParams }: {
     // Y si no se pueden leer los pagos, lo peor que pasa es que se vea todo
     // sin pagar — que es exactamente lo que se ve cuando nadie ha pagado.
     leerPagosEquipo().catch(() => []),
-    pronostico()
-  ]);
+    pronostico(),
+    // **El link de un colaborador extra** (2026-11-12): si el token no es de
+    // un trabajador, se busca en las fichas de las actividades extras.
+    leerColaboradores().catch(() => []),
+    leerExtras().catch(() => [])
+  ]))();
 
   // La lista vacía no es "tu link no sirve": no existe el caso de un token
   // válido con la lista en cero. Es la planilla que no respondió, y decirle
   // a la persona que su link está malo la manda a pedir uno nuevo que
   // tampoco va a funcionar.
-  if (gente.length === 0) {
+  if (gente.length === 0 && colaboradores.length === 0) {
     return (
       <section className="mx-auto max-w-md text-center">
         <h1 className="text-lg font-bold uppercase tracking-wide">No se pudo cargar</h1>
@@ -382,6 +400,15 @@ export default async function Pagina({ params, searchParams }: {
   }
 
   const quien = trabajadorPorToken(gente, decodeURIComponent(params.token));
+  const colaborador = quien ? undefined : colaboradorPorToken(colaboradores, decodeURIComponent(params.token));
+  if (colaborador) {
+    const porDia = new Map(fechas.map((f) => [f.fecha, f]));
+    return (
+      <VistaColaborador quien={colaborador} extras={extras} pagos={pagos} token={params.token}
+        p={searchParams?.p} v={searchParams?.v}
+        apertura={(f) => porDia.get(f)?.apertura || cfg.horaApertura} />
+    );
+  }
 
   // **El mismo mensaje para un link inventado y para uno revocado.** Decir
   // "ese link ya no sirve" confirmaría que existió, y no le sirve de nada a

@@ -62,7 +62,9 @@ export const POST = conLecturas([], async function POST(req: Request) {
       // planilla del pago semanal aparecía sin cuentas. Lo pidió el cliente
       // así: que se pidan acá "y así todos los colaboradores están
       // completos directo".
-      banco: esAdmin ? limpiarBanco(b?.banco) : bancoVacio()
+      banco: esAdmin ? limpiarBanco(b?.banco) : bancoVacio(),
+      // El link se crea aparte, con `/api/extras/link` (permiso `links`).
+      token: ''
     };
 
     await guardarColaboradores([...gente, nuevo]);
@@ -131,7 +133,9 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
       activo: b?.activo === undefined ? antes.activo : esSi(b.activo),
       // Lo que el encargado no recibe, tampoco lo puede pisar.
       monto: esAdmin && b?.monto !== undefined ? aEntero(b.monto) : antes.monto,
-      banco: esAdmin && b?.banco !== undefined ? limpiarBanco(b.banco) : antes.banco
+      banco: esAdmin && b?.banco !== undefined ? limpiarBanco(b.banco) : antes.banco,
+      // El link no se toca desde acá: se administra en `/api/extras/link`.
+      token: antes.token
     };
 
     await guardarColaboradores(
@@ -142,7 +146,7 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
       detalle: nueva.nombre !== antes.nombre ? `${antes.nombre} → ${nueva.nombre}` : nueva.nombre });
 
     return NextResponse.json({
-      colaborador: esAdmin ? nueva : { ...nueva, banco: bancoVacio() }
+      colaborador: { ...(esAdmin ? nueva : { ...nueva, banco: bancoVacio() }), token: '' }
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

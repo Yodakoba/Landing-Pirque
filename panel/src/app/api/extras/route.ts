@@ -44,8 +44,12 @@ export const GET = conLecturas([HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_CIERR
     ]);
     const { rol, gerencia } = await quienEs(req);
     const verSueldos = puedeVer(rol, 'sueldos', gerencia);
+    // **El token lo recibe solo quien administra los links**, igual que en Equipo.
+    const verLinks = puede(rol, 'links');
+    const conLink = (lista: typeof colaboradores) => lista.map((c) => ({ ...c, token: verLinks ? c.token : '' }));
     return NextResponse.json({
-      colaboradores: verSueldos ? colaboradores : sinPlata(colaboradores),
+      colaboradores: conLink(verSueldos ? colaboradores : sinPlata(colaboradores)),
+      verLinks,
       extras, cierres,
       verSueldos,
       puedeCorregir: puede(rol, 'corregir')
@@ -94,16 +98,21 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
         // agregó. Misma regla que la celda en blanco de la planilla.
         activo: c?.activo === undefined ? true : esSi(c.activo),
         monto: verSueldos ? aEntero(c?.monto) : (antes?.monto ?? 0),
-        banco: verSueldos ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio())
+        banco: verSueldos ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio()),
+        // **El token no se acepta del navegador**: se arrastra el guardado.
+        // Lo administra `/api/extras/link` (2026-11-12).
+        token: antes?.token ?? ''
       });
     }
 
     await guardarColaboradores(limpia);
-    await anotar({ ...(await quienEs(req)), accion: 'Cambió la lista de colaboradores',
+    const quien = await quienEs(req);
+    await anotar({ ...quien, accion: 'Cambió la lista de colaboradores',
       detalle: `${limpia.length} en la lista · ` +
                `${limpia.filter((c) => c.activo).length} activos` });
     return NextResponse.json({
-      colaboradores: verSueldos ? limpia : sinPlata(limpia)
+      colaboradores: (verSueldos ? limpia : sinPlata(limpia))
+        .map((c) => ({ ...c, token: puede((quien).rol as Rol, 'links') ? c.token : '' }))
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

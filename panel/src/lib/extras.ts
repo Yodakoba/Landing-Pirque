@@ -47,7 +47,14 @@ export const COL_COLABORADORES = {
   // Lo mismo que en `Trabajadores`: la columna que era la cuenta en texto
   // libre se queda donde está y pasa a ser la nota.
   nota: 'Nota de pago',
-  ...COL_BANCO
+  ...COL_BANCO,
+  /**
+   * **El link personal del colaborador** (2026-11-12, lo pidió el cliente:
+   * *"link personal para los extras, absolutamente corresponde"*). Igual
+   * que el de un trabajador: abre `/mi/<token>` con sus días y su plata.
+   * Va al final: una planilla vieja se lee igual, sin link.
+   */
+  token: 'Token de acceso'
 } as const;
 
 /**
@@ -95,6 +102,8 @@ export interface Colaborador {
    * pendiente. No es un hecho del día, es un dato de la persona.
    */
   banco: Banco;
+  /** El token de su link personal; vacío si no tiene. Ver `COL_COLABORADORES.token`. */
+  token: string;
 }
 
 export interface Extra {
@@ -132,6 +141,22 @@ export function costoDeExtra(e: Pick<Extra, 'estado' | 'monto' | 'ajuste'>): num
 
 /* ---------- Las fichas ---------- */
 
+/**
+ * El colaborador de un link personal (2026-11-12). **Las mismas reglas que
+ * `trabajadorPorToken()`**: un token vacío no encuentra a nadie, uno de una
+ * ficha desactivada tampoco, y se recorre la lista entera.
+ */
+export function colaboradorPorToken(gente: Colaborador[], token: unknown): Colaborador | undefined {
+  const buscado = String(token ?? '').trim();
+  if (!buscado) return undefined;
+  let encontrado: Colaborador | undefined;
+  for (const c of gente) {
+    if (!c.token || !c.activo) continue;
+    if (c.token === buscado) encontrado = c;
+  }
+  return encontrado;
+}
+
 export function leerColaboradoresDe(filas: string[][]): Colaborador[] {
   const salida: Colaborador[] = [];
   const vistos = new Set<string>();
@@ -148,7 +173,8 @@ export function leerColaboradoresDe(filas: string[][]): Colaborador[] {
       // Las columnas pueden no existir todavía: una planilla escrita antes
       // de que hubiera datos bancarios se lee igual, con todo en blanco. La
       // nota es la 5, que era la cuenta en texto libre.
-      banco: leerBanco(filas[i] ?? [], 6, 5)
+      banco: leerBanco(filas[i] ?? [], 6, 5),
+      token: String(filas[i]?.[12] ?? '').trim()
     });
   }
   return salida;
@@ -162,7 +188,7 @@ export function aFilasColaboradores(gente: Colaborador[]): string[][] {
     ...gente.map((c) => [c.nombre, c.actividad, c.telefono,
                          c.activo ? 'Sí' : 'No',
                          c.monto > 0 ? String(c.monto) : '',
-                         c.banco.nota, ...filaBanco(c.banco)])
+                         c.banco.nota, ...filaBanco(c.banco), c.token ?? ''])
   ];
 }
 
