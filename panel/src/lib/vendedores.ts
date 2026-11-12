@@ -77,6 +77,14 @@ export const TIPO_FICHA = { vendedor: 'Vendedor', socio: 'Socio comercial' } as 
 export type TipoFicha = keyof typeof TIPO_FICHA;
 const tipoDe = (v: unknown): TipoFicha => (/socio/i.test(String(v ?? '')) ? 'socio' : 'vendedor');
 
+/**
+ * **Desde cuántas personas rige la etapa 1, de partida: 22** (2026-11-12, lo
+ * fijó el cliente: *"la etapa 1 estándar debería ser 22, como es en el socio
+ * comercial también"*). Vale para los dos tipos de ficha; una celda en
+ * blanco es 22, y 1 es desde la primera persona.
+ */
+export const ETAPA1_DESDE = 22;
+
 /** Cuánto de su comisión cobra el vendedor cuando la venta viene con un socio, de partida. */
 export const CON_SOCIO_DEFECTO = 50;
 export type BaseComision = keyof typeof BASE_COMISION;
@@ -116,7 +124,7 @@ export interface FichaVendedor {
 export const CORTES_SOCIOS = { etapa2: 55, etapa3: 77 } as const;
 
 export const fichaVacia = (usuario: string, nombre = ''): FichaVendedor => ({
-  usuario, nombre, tipo: 'vendedor', activo: true, etapa1Desde: 0, conSocio: CON_SOCIO_DEFECTO, token: '',
+  usuario, nombre, tipo: 'vendedor', activo: true, etapa1Desde: ETAPA1_DESDE, conSocio: CON_SOCIO_DEFECTO, token: '',
   sueldoFijo: 0, comisionPct: 0,
   etapa2Desde: CORTES_SOCIOS.etapa2, etapa2Pct: 0, etapa3Desde: CORTES_SOCIOS.etapa3, etapa3Pct: 0, bonoPuntos: 0,
   montoEvento: 0, base: 'neto', banco: bancoVacio(), fila: 0
@@ -169,7 +177,7 @@ export function leerVendedoresDe(filas: string[][]): FichaVendedor[] {
     nombre: en(f, i.nombre).trim(),
     tipo: tipoDe(en(f, i.tipoFicha)),
     activo: !/^no$/i.test(en(f, i.activo).trim()),
-    etapa1Desde: entero(en(f, i.etapa1Desde)),
+    etapa1Desde: entero(en(f, i.etapa1Desde)) || ETAPA1_DESDE,
     // En blanco es el de partida; un 0 escrito es 0 (no cobra con socio).
     conSocio: en(f, i.conSocio).trim() === '' ? CON_SOCIO_DEFECTO : porcentaje(en(f, i.conSocio)),
     token: en(f, i.token).trim(),
@@ -197,7 +205,7 @@ export function filaVendedor(v: FichaVendedor, enc: string[]): string[] {
   const poner = (k: number, x: unknown) => { if (k >= 0) fila[k] = String(x ?? ''); };
   poner(i.usuario, v.usuario); poner(i.nombre, v.nombre);
   poner(i.tipoFicha, TIPO_FICHA[v.tipo]); poner(i.activo, v.activo ? '' : 'no');
-  poner(i.etapa1Desde, v.etapa1Desde || '');
+  poner(i.etapa1Desde, Math.max(1, v.etapa1Desde || ETAPA1_DESDE));
   poner(i.token, v.tipo === 'socio' ? v.token : '');
   poner(i.conSocio, v.tipo === 'vendedor' ? String(v.conSocio).replace('.', ',') : '');
   poner(i.sueldoFijo, v.sueldoFijo || ''); poner(i.comisionPct, v.comisionPct ? String(v.comisionPct).replace('.', ',') : '');

@@ -29,6 +29,7 @@
  */
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
+import AyudaCorta from './AyudaCorta';
 import BuscarEnLista from './BuscarEnLista';
 import Dialogo from './Dialogo';
 import { avisar, copiarConAviso } from './AvisoFlotante';
@@ -64,12 +65,14 @@ function moverMes(mes: string, n: number): string {
   return `${a}-${String(m).padStart(2, '0')}`;
 }
 
-function Azulejo({ que, monto, nota, tono, grande = false }: {
-  que: string; monto: number; nota?: string; tono: string; grande?: boolean;
+function Azulejo({ que, monto, nota, tono, grande = false, ayuda }: {
+  que: string; monto: number; nota?: string; tono: string; grande?: boolean; ayuda?: string;
 }) {
   return (
     <div className={`min-w-0 rounded-xl border-2 p-3 ${tono} ${grande ? 'col-span-2 sm:col-span-1' : ''}`}>
-      <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/70">{que}</p>
+      <p className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-widest text-hueso/70">
+        {que}{ayuda && <AyudaCorta tema={ayuda} />}
+      </p>
       <p className={`mt-1 font-bold leading-none tabular-nums ${grande ? 'text-[32px]' : 'text-[24px]'}`}>{enPesos(monto)}</p>
       {nota && <p className="mt-1 text-[13px] text-hueso/75">{nota}</p>}
     </div>
@@ -362,13 +365,13 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
           {/* 3. Cuánto: tres azulejos; el desglose va en una línea. */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Azulejo grande que={tu ? 'Te toca' : 'Le toca'} monto={r.total} tono="border-oro/40 bg-oro/[0.07] text-oro"
+            <Azulejo grande ayuda="vendLeToca" que={tu ? 'Te toca' : 'Le toca'} monto={r.total} tono="border-oro/40 bg-oro/[0.07] text-oro"
               nota={r.sueldoFijo
                 ? `comisiones ${enPesos(r.comisiones)} + fijo ${enPesos(r.sueldoFijo)}`
                 : `${r.cuentan.length} ${r.cuentan.length === 1 ? 'venta pagada' : 'ventas pagadas'}`} />
-            <Azulejo que="Pagado" monto={datos.pagado} tono="border-verde-fuerte/40 bg-verde/[0.06] text-verde-texto"
+            <Azulejo ayuda="vendPagado" que="Pagado" monto={datos.pagado} tono="border-verde-fuerte/40 bg-verde/[0.06] text-verde-texto"
               nota={datos.pagos.length ? `${datos.pagos.length} ${datos.pagos.length === 1 ? 'pago' : 'pagos'}` : 'sin pagos'} />
-            <Azulejo que="Falta" monto={datos.falta}
+            <Azulejo ayuda="vendFalta" que="Falta" monto={datos.falta}
               tono={datos.falta > 0 ? 'border-ambar-fuerte/50 bg-ambar/[0.07] text-ambar-texto' : 'border-hueso/15 bg-panel text-hueso/80'} />
           </div>
 
@@ -457,7 +460,10 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
           {/* 6. Cómo se le paga: se lee en una frase; se cambia en su ventana. */}
           <section className="space-y-3 rounded-2xl border-2 border-hueso/15 bg-panel p-4">
             <div>
-              <h2 className="text-[13px] font-semibold uppercase tracking-widest text-hueso/65">{tu ? 'Cómo se te paga' : 'Cómo se le paga'}</h2>
+              <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-widest text-hueso/65">
+                {tu ? 'Cómo se te paga' : 'Cómo se le paga'}<AyudaCorta tema="vendEtapas" />
+                {!esSocio && (ficha ?? datos.ficha).conSocio < 100 && <AyudaCorta tema="vendConSocio" />}
+              </h2>
               <div className="mt-1 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <p className="min-w-0 flex-1 text-[16px] font-medium leading-snug">{datos.formaDePago ? tratoEnPalabras(ficha ?? datos.ficha) : 'Sin escribir todavía.'}</p>
                 {datos.puedeEditar && (
@@ -512,8 +518,8 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                 </div>
 
                 <div>
-                  <p className="text-[15px] font-bold">Comisión por personas del evento</p>
-                  <p className="text-[13px] text-hueso/70">Rige la etapa más alta que alcance. Bajo la etapa 1 no hay comisión.</p>
+                  <p className="flex items-center gap-1.5 text-[15px] font-bold">Comisión por personas del evento <AyudaCorta tema="vendEtapas" /></p>
+                  <p className="text-[13px] text-hueso/70">Rige la etapa más alta que alcance. Bajo la etapa 1 no hay comisión (de partida, 22 personas).</p>
                   <div className="mt-2 space-y-2">
                     {([
                       { n: 1, desde: 'etapa1Desde', pct: 'comisionPct' },
@@ -523,7 +529,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                       <div key={e.n} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border-2 border-hueso/15 p-2.5">
                         <span className="w-16 text-[13px] font-bold uppercase tracking-widest text-oro">Etapa {e.n}</span>
                         <Paso etiqueta={`Etapa ${e.n} desde`} valor={ficha[e.desde]} paso={1} sufijo="personas o más"
-                          vacio={e.n === 1 ? '1' : '0'} onCambio={(v) => cambiar(e.desde, Math.round(v))} />
+                          onCambio={(v) => cambiar(e.desde, Math.max(e.n === 1 ? 1 : 0, Math.round(v)))} />
                         <Paso etiqueta={`Etapa ${e.n} %`} valor={ficha[e.pct]} paso={0.5} sufijo="%" onCambio={(v) => cambiar(e.pct, v)} />
                       </div>
                     ))}
@@ -532,34 +538,37 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-[15px] font-bold">Bono en menús premium</p>
+                    <p className="flex items-center gap-1.5 text-[15px] font-bold">Bono en menús premium <AyudaCorta tema="vendBono" /></p>
                     <Paso etiqueta="Bono premium" valor={ficha.bonoPuntos} paso={0.5} sufijo="% más"
                       onCambio={(v) => cambiar('bonoPuntos', v)} />
                     <p className="mt-1 text-[13px] text-hueso/70">Sobre las líneas de los productos con ★ <a href="/menus" className="text-oro underline">Bono vendedor</a>.</p>
                   </div>
                   {!esSocio && (
                     <div>
-                      <p className="text-[15px] font-bold">Cuando la venta viene con un socio comercial</p>
+                      <p className="flex items-center gap-1.5 text-[15px] font-bold">¿Y si la venta viene con un socio comercial? <AyudaCorta tema="vendConSocio" /></p>
+                      <p className="mb-1 text-[13px] text-hueso/75">
+                        El socio cobra su comisión completa, aparte. El vendedor cobra este % de <b>su propia</b> comisión.
+                      </p>
                       <Paso etiqueta="Con socio cobra" valor={ficha.conSocio ?? CON_SOCIO_DEFECTO} paso={5} sufijo="% de su comisión"
                         onCambio={(v) => cambiar('conSocio', Math.min(100, v))} />
                     </div>
                   )}
                   <div className={`grid gap-3 ${esSocio ? '' : 'sm:grid-cols-2'}`}>
                     <label className="block text-[15px] font-bold">
-                      Monto por evento ganado ($)
+                      <span className="flex items-center gap-1.5">Monto por evento ganado ($) <AyudaCorta tema="vendMontoEvento" /></span>
                       <input inputMode="numeric" className={ENTRADA} value={ficha.montoEvento || ''} placeholder="0"
                         onChange={(e) => cambiar('montoEvento', Number(e.target.value.replace(/[^\d]/g, '')) || 0)} />
                     </label>
                     {!esSocio && (
                       <label className="block text-[15px] font-bold">
-                        Sueldo fijo al mes ($)
+                        <span className="flex items-center gap-1.5">Sueldo fijo al mes ($) <AyudaCorta tema="vendSueldoFijo" /></span>
                         <input inputMode="numeric" className={ENTRADA} value={ficha.sueldoFijo || ''} placeholder="0"
                           onChange={(e) => cambiar('sueldoFijo', Number(e.target.value.replace(/[^\d]/g, '')) || 0)} />
                       </label>
                     )}
                   </div>
                   <div>
-                    <p className="text-[15px] font-bold">El % se calcula sobre</p>
+                    <p className="flex items-center gap-1.5 text-[15px] font-bold">El % se calcula sobre <AyudaCorta tema="vendBase" /></p>
                     <div className="mt-1 flex flex-wrap gap-2">
                       {(['neto', 'total'] as const).map((b) => (
                         <button key={b} type="button" aria-pressed={ficha.base === b} onClick={() => cambiar('base', b)}

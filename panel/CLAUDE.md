@@ -1974,6 +1974,23 @@ relleno y ningún campo a la vista:
   (la barra mide 18rem y no todo el ancho). La página entera va con
   **`max-w-4xl`**, y en el computador *Pagarle* es del ancho de su texto,
   con su frase al lado: antes todo se estiraba a 1280px.
+- **La etapa 1 parte en 22 personas también para el vendedor** (2026-11-12,
+  lo fijó el cliente: *"la etapa 1 estándar debería ser 22, como es en el
+  socio comercial"*). `ETAPA1_DESDE` en `vendedores.ts`: una celda en blanco
+  es 22 —**también en las fichas de vendedor que ya existían**— y 1 es desde
+  la primera persona; ya no se guarda en blanco. Las comisiones congeladas
+  no cambian.
+- **Un `?` al lado de cada número y de cada campo del trato** (lo pidió el
+  cliente: *"no te olvides de los signos de interrogación y explicar bien
+  cómo se calcula qué número"*): *Le toca*, *Pagado*, *Falta*, las etapas,
+  el bono, la parte con socio, el monto por evento, el sueldo fijo y la base
+  (`AYUDAS_CORTAS` en `ayudas.ts`, temas `vend…`). **La parte con socio va
+  con un ejemplo en pesos**, porque es la que decide la gerencia: hoy son
+  **dos comisiones separadas** —el socio cobra la suya completa según su
+  trato y, aparte, el vendedor cobra el % de la suya (60 personas, neto
+  $3.000.000: socio $300.000 + vendedor $45.000 = $345.000)—; no es el 50%
+  de lo que gana el socio ni sale de su comisión. Si la gerencia elige otro
+  reparto, se cambia en `comisionDe()` y en ese texto.
 - **Ojo con `.boton`**: está definida en `globals.css` después de las
   utilidades de Tailwind, así que **le gana a `min-h-[44px]` y a
   `text-[15px]`** —el *Pagarle* salía de 36px aunque pedía 56—. En un

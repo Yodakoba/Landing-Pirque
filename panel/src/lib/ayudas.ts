@@ -558,6 +558,59 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Un pago anotado por error se deshace. Una devolución es un pago en negativo.'
     ]
   },
+  // **El resumen de vendedores y socios** (2026-11-12, lo pidió el cliente:
+  // *"no te olvides de los signos de interrogación y explicar bien cómo se
+  // calcula qué número"*).
+  vendLeToca: {
+    titulo: 'Le toca',
+    texto: [
+      'Las comisiones de las ventas que el cliente terminó de pagar dentro de este periodo, más el sueldo fijo si el último día de un mes cae adentro.',
+      'Una venta cuenta en el periodo en que el cliente completó el pago, no en el del evento. Una cancelada no deja comisión.'
+    ]
+  },
+  vendPagado: {
+    titulo: 'Pagado',
+    texto: ['Lo que se le registró en el informe con el concepto Comisión, dentro de este periodo.']
+  },
+  vendFalta: {
+    titulo: 'Falta',
+    texto: ['Le toca menos lo pagado. Es lo que paga el botón Pagarle.']
+  },
+  vendEtapas: {
+    titulo: 'Comisión por etapas',
+    texto: [
+      'El % depende de las personas del evento: rige la etapa más alta que alcance. Con 2% desde 22, 3% desde 55 y 4% desde 77, un evento de 60 personas paga el 3% y uno de 15 no paga comisión.',
+      'Bajo el "desde" de la etapa 1 no hay comisión; de partida es 22, y 1 es desde la primera persona. El % va sobre el neto de la venta (sin IVA), salvo que se elija el total.',
+      'Se congela cuando el cliente termina de pagar: cambiar el trato vale para lo que se pague después.'
+    ]
+  },
+  vendConSocio: {
+    titulo: 'Cuando la venta viene con un socio',
+    texto: [
+      'Son dos comisiones separadas. El socio cobra su propia comisión, completa, según su trato. Aparte, el vendedor cobra este % de su propia comisión.',
+      'Ejemplo: 60 personas, neto $3.000.000. El socio (10%) cobra $300.000. El vendedor (3%) cobraría $90.000; con socio al 50% cobra $45.000. En total se pagan $345.000.',
+      'No es el 50% de lo que gana el socio, ni sale de su comisión.'
+    ]
+  },
+  vendBono: {
+    titulo: 'Bono en menús premium',
+    texto: [
+      'Puntos que se suman al % de la etapa, solo sobre las líneas de los productos marcados ★ Bono vendedor en Productos.',
+      'Ejemplo: 2 puntos sobre $1.000.000 neto de Sommelier son $20.000 más.'
+    ]
+  },
+  vendMontoEvento: {
+    titulo: 'Monto por evento',
+    texto: ['Un monto fijo por cada venta ganada, además del %. Cuenta cuando el cliente termina de pagar.']
+  },
+  vendSueldoFijo: {
+    titulo: 'Sueldo fijo',
+    texto: ['Se suma una vez por mes, el último día del mes: un periodo que incluye ese día lo cuenta. Una semana que no lo incluye no suma fijo.']
+  },
+  vendBase: {
+    titulo: 'Neto o total',
+    texto: ['Sobre qué monto se calcula el %: el neto, sin IVA, que es el de partida, o el total con IVA.']
+  },
   marcarGanada: {
     titulo: 'Marcar ganada',
     texto: [
