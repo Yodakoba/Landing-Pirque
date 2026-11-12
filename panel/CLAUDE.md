@@ -1879,9 +1879,13 @@ en el salón y un recinto arrendado entero se escribían igual.
   `Privada`— y tampoco le quita lo exclusivo a uno que ya lo era: arrendar
   el recinto completo es una decisión comercial, no el efecto secundario de
   anotar una reserva de teléfono. Hay pruebas que fijan las dos cosas.
-- **En la tarjeta se distinguen por la palabra, no por el color**: los dos
-  van en azul, porque son el mismo tipo de día, y debajo del punto dice
-  *privado* o *exclusivo*. Es justamente para lo que `PuntoDia` existe.
+- ~~**En la tarjeta se distinguen por la palabra, no por el color**~~ —
+  **desde el 2026-11-12 el exclusivo va en morado** (lo pidió el cliente):
+  punto 🟣, borde y fondo de la tarjeta, la palabra *exclusivo* y la casilla
+  de *Editar*, en los calendarios y en Cotizaciones. El privado sigue en
+  azul. `morado` es un color con nombre propio en las dos paletas
+  (`--morado`, `-fuerte`, `-texto`, más oscuro de día), como `cielo` y
+  `rosa`: es un significado —"no cabe nadie más"—, no un adorno.
 - **El sitio público no cambia en nada**: un exclusivo es privado, así que
   `paraElSitio()` ya lo omitía. Hay una prueba que lo fija.
 

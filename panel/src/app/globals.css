@@ -53,6 +53,10 @@
   --rosa: 236 72 153;
   --rosa-fuerte: 244 114 182;
   --rosa-texto: 249 168 212;
+  /* Morado: el día **exclusivo**, el recinto arrendado completo (2026-11-12). */
+  --morado: 168 85 247;
+  --morado-fuerte: 192 132 252;
+  --morado-texto: 216 180 254;
 
   /* Cuánto se apaga un marcador de posición. Ver abajo. */
   --fantasma: 0.28;
@@ -87,6 +91,10 @@
   --rosa: 219 39 119;
   --rosa-fuerte: 190 24 93;
   --rosa-texto: 157 23 77;
+  /* De día el morado también se oscurece, para leerse sobre papel. */
+  --morado: 147 51 234;
+  --morado-fuerte: 126 34 206;
+  --morado-texto: 107 33 168;
 
   /* Sobre papel, el mismo 0,28 se perdía: un gris claro sobre blanco casi
      no se ve, y un marcador que no se ve no enseña el formato. */

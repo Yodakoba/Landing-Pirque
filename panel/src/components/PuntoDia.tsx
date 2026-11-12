@@ -39,10 +39,10 @@ type Estado = 'preparacion' | 'cerrado' | 'exclusivo' | 'privado' | 'sinCupo' | 
 const PALABRA: Record<Estado, { texto: string; clase: string; punto?: string }> = {
   preparacion: { texto: 'preparación', clase: 'text-oro', punto: '🟡' },
   cerrado: { texto: 'cerrado', clase: 'text-rojo-texto' },
-  // Las dos en el mismo azul y distinguidas por la palabra, que es para lo
-  // que este componente existe: son el mismo tipo de día —no se ofrece en el
-  // sitio— y lo que cambia es si le cabe alguien más.
-  exclusivo: { texto: 'exclusivo', clase: 'text-cielo-texto' },
+  // **Exclusivo va en morado** (2026-11-12, lo pidió el cliente). Antes iba
+  // en el mismo azul que el privado, distinguido solo por la palabra; ahora
+  // se ve de lejos que ese día no cabe nadie más.
+  exclusivo: { texto: 'exclusivo', clase: 'text-morado-texto' },
   privado: { texto: 'privado', clase: 'text-cielo-texto' },
   sinCupo: { texto: 'sin cupo', clase: 'text-hueso/60' },
   publico: { texto: 'público', clase: 'text-hueso/65' }

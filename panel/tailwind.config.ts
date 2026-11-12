@@ -42,7 +42,8 @@ export default {
         // misma razón que los otros cuatro: es un significado —"cotizado,
         // todavía no confirmado"— y no un color. El cliente lo pidió así
         // justamente para que no se confunda con nada que ya esté tomado.
-        rosa: { DEFAULT: c('--rosa'), fuerte: c('--rosa-fuerte'), texto: c('--rosa-texto') }
+        rosa: { DEFAULT: c('--rosa'), fuerte: c('--rosa-fuerte'), texto: c('--rosa-texto') },
+        morado: { DEFAULT: c('--morado'), fuerte: c('--morado-fuerte'), texto: c('--morado-texto') }
       }
     }
   },

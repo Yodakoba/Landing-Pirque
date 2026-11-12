@@ -68,6 +68,8 @@ export const sinConfigurar = (d: Ocupacion) =>
  *
  * - **verde / amarillo / rojo** — abierto al público, con su ocupación.
  * - **azul** — privado: recibe reservas pero no está en el sitio.
+ * - **morado** — exclusivo: el recinto arrendado completo (2026-11-12, lo
+ *   pidió el cliente; antes iba en el mismo azul que el privado).
  * - **rojo apagado** — cerrado.
  * - **gris** — sin configurar. No es lo mismo que cerrado, y confundirlos
  *   era justo el error: un día que nadie tocó salía pintado de rojo como
@@ -75,6 +77,7 @@ export const sinConfigurar = (d: Ocupacion) =>
  */
 export const COLOR_TARJETA = (d: Ocupacion) => {
   if (d.bloqueada) return 'border-rojo/60 bg-rojo/5';
+  if (d.exclusiva) return 'border-morado-fuerte/50 bg-morado-fuerte/5';
   if (d.privada) return 'border-cielo-fuerte/50 bg-cielo-fuerte/5';
   if (sinConfigurar(d)) return 'border-hueso/15 bg-panel';
   return COLOR[d.semaforo];
@@ -82,6 +85,7 @@ export const COLOR_TARJETA = (d: Ocupacion) => {
 
 export const PUNTO_TARJETA = (d: Ocupacion) => {
   if (d.bloqueada) return '🔴';
+  if (d.exclusiva) return '🟣';
   if (d.privada) return '🔵';
   if (sinConfigurar(d)) return '⚪';
   return PUNTO[d.semaforo];
