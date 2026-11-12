@@ -1964,6 +1964,16 @@ relleno y ningún campo a la vista:
    …*) y su propia ventana. **El link del socio**, otra línea. Todo se
    guarda solo, como antes.
 
+- **Segunda vuelta, el mismo día** (lo reclamó el cliente: *"no queda bien
+  indicado si se filtró por vendedores o socios… y en vista computador quedó
+  muy largo, muy protagonista el mes"*). Arriba, una fila **Ver** con los dos
+  grupos como un par: **el del grupo de la persona que se mira va con ✓ y
+  relleno suave**, y cualquiera abre su lista con buscador; en el celular
+  dicen *Vendedores 2* / *Socios 1* y en el computador *Socios comerciales*.
+  Debajo, **el nombre a la izquierda y el periodo compacto a la derecha**
+  (la barra mide 18rem y no todo el ancho). La página entera va con
+  **`max-w-4xl`**, y en el computador *Pagarle* es del ancho de su texto,
+  con su frase al lado: antes todo se estiraba a 1280px.
 - **Ojo con `.boton`**: está definida en `globals.css` después de las
   utilidades de Tailwind, así que **le gana a `min-h-[44px]` y a
   `text-[15px]`** —el *Pagarle* salía de 36px aunque pedía 56—. En un

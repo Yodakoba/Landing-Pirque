@@ -254,7 +254,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   const terminacion = banco.numero ? `···${banco.numero.replace(/\D/g, '').slice(-4)}` : '';
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-4xl space-y-5">
       <div>
         <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
         <p className="mt-1 text-[14px] text-hueso/70">La comisión cuenta cuando el cliente terminó de pagar.</p>
@@ -263,25 +263,28 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
       {/* 1. Quién. Para elegir a otro, dos botones con buscador (regla del cliente). */}
       {!esVendedor && (
         <div className="space-y-2">
+          {/* **Ver: el grupo que se está mirando queda marcado** (2026-11-12, lo
+              reclamó el cliente: filtraba bien pero no se veía en cuál). Los
+              dos botones son un par: el del grupo de la persona elegida va
+              con ✓ y relleno suave; apretar cualquiera abre su lista con
+              buscador. */}
           <div className="flex flex-wrap items-center gap-2">
-            {datos.usuario && (
-              <div className="mr-auto min-w-0">
-                <p className="truncate text-[22px] font-bold leading-tight">{datos.nombre}</p>
-                <span className={`mt-1 inline-flex items-center gap-1 rounded-full border-2 px-2.5 py-0.5 text-[13px] font-bold uppercase tracking-wider ${esSocio
-                  ? 'border-dashed border-cielo-fuerte/70 text-cielo-texto' : 'border-oro/60 text-oro'}`}>
-                  {esSocio ? '🤝 Socio comercial' : '👤 Vendedor'}{esSocio && !datos.ficha.activo ? ' · desactivado' : ''}
-                </span>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Elegir a quién ver">
-              {([['vendedores', '👤 Vendedores', datos.vendedores.length],
-                 ['socios', '🤝 Socios', datos.socios.length]] as const).map(([k, rotulo, n]) => (
-                <button key={k} type="button" aria-expanded={lista === k}
-                  onClick={() => { setLista(lista === k ? '' : k); setNuevoSocio(null); }}
-                  className={`boton !min-h-[44px] !text-[15px] text-[15px] ${lista === k ? 'border-oro text-oro' : ''}`}>
-                  {rotulo} ({n}) {lista === k ? '▴' : '▾'}
-                </button>
-              ))}
+            <span className="w-full text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:w-auto">Ver</span>
+            <div className="grid w-full grid-cols-2 gap-2 sm:w-auto" role="group" aria-label="Qué grupo ver">
+              {([['vendedores', '👤 Vendedores', '', datos.vendedores.length, !esSocio],
+                 ['socios', '🤝 Socios', ' comerciales', datos.socios.length, esSocio]] as const).map(([k, rotulo, resto, n, actual]) => {
+                const marcado = !!datos.usuario && actual;
+                return (
+                  <button key={k} type="button" aria-expanded={lista === k} aria-pressed={marcado}
+                    onClick={() => { setLista(lista === k ? '' : k); setNuevoSocio(null); }}
+                    className={`boton !min-h-[48px] !px-2 !text-[15px] border-2 ${marcado
+                      ? '!border-oro bg-oro/15 font-bold !text-oro' : lista === k ? '!border-oro' : ''}`}>
+                    {marcado ? '✓ ' : ''}{rotulo}<span className="hidden sm:inline">{resto}</span>
+                    <span className="rounded-full bg-hueso/10 px-1.5 text-[13px] tabular-nums">{n}</span>
+                    <span aria-hidden className="hidden sm:inline">{lista === k ? '▴' : '▾'}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           {lista === 'vendedores' && (
@@ -320,21 +323,34 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
       {datos.usuario && (
         <>
-          {/* 2. Cuándo: una sola barra, que en el celular no se parte. */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* 2. Quién y cuándo, en una fila: el nombre a la izquierda y el
+              periodo compacto a la derecha. En el computador la barra del mes
+              era de todo el ancho y se robaba la vista (lo reclamó el cliente). */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            {!esVendedor && (
+              <div className="min-w-0">
+                <p className="truncate text-[22px] font-bold leading-tight">{datos.nombre}</p>
+                <span className={`mt-1 inline-flex items-center gap-1 rounded-full border-2 px-2.5 py-0.5 text-[13px] font-bold uppercase tracking-wider ${esSocio
+                  ? 'border-dashed border-cielo-fuerte/70 text-cielo-texto' : 'border-oro/60 text-oro'}`}>
+                  {esSocio ? '🤝 Socio comercial' : '👤 Vendedor'}{esSocio && !datos.ficha.activo ? ' · desactivado' : ''}
+                </span>
+              </div>
+            )}
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <div className="flex gap-2" role="group" aria-label="Periodo">
               {([['Mes', true, datos.hoy.slice(0, 7)], ['Semana', false, semanaDe(datos.hoy)]] as const).map(([rotulo, mes, p]) => (
                 <button key={rotulo} type="button" aria-pressed={esMes === mes} onClick={() => irA(p)}
                   className={`boton !min-h-[44px] !text-[15px] ${esMes === mes ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>{rotulo}</button>
               ))}
             </div>
-            <div className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-xl border-2 border-oro/50 bg-oro/[0.06] p-1.5">
+            <div className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-xl border-2 border-oro/50 bg-oro/[0.06] p-1 sm:w-72 sm:flex-none">
               <button type="button" aria-label="Periodo anterior" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
                 onClick={() => irA(esMes ? moverMes(periodo, -1) : sumarDias(semanaDe(periodo), -7))}>◀</button>
               <span className="min-w-0 flex-1 truncate text-center text-[17px] font-bold first-letter:uppercase">{tituloPeriodo}</span>
               <button type="button" aria-label="Periodo siguiente" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
                 onClick={() => irA(esMes ? moverMes(periodo, 1) : sumarDias(semanaDe(periodo), 7))}>▶</button>
             </div>
+          </div>
           </div>
 
           {!datos.formaDePago && (
@@ -358,15 +374,15 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
           {/* 4. El hito: el único botón relleno de la vista. */}
           {datos.puedeEditar && !esVendedor && (datos.falta > 0 ? (
-            <div>
-              <a href={pagarEn} className="boton boton-relleno tecla flex !min-h-[56px] w-full items-center justify-center !text-[18px] !font-bold">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+              <a href={pagarEn} className="boton boton-relleno tecla flex !min-h-[56px] w-full items-center justify-center !px-8 !text-[18px] !font-bold sm:w-auto">
                 💸 Pagarle {enPesos(datos.falta)} →
               </a>
-              <p className="mt-1 text-center text-[13px] text-hueso/70">Abre el informe con la ventana de pago lista para {datos.nombre}.</p>
+              <p className="text-center text-[13px] text-hueso/70 sm:text-left">Abre el informe con la ventana de pago lista para {datos.nombre}.</p>
             </div>
           ) : r.total > 0 ? (
-            <p className="flex min-h-[48px] items-center justify-center rounded-xl border-2 border-verde-fuerte/60 bg-verde/10 text-[16px] font-bold text-verde-texto">
-              ✓ Al día: no se le debe nada de este periodo
+            <p className="flex min-h-[48px] items-center justify-center rounded-xl border-2 border-verde-fuerte/60 bg-verde/10 px-5 text-[16px] font-bold text-verde-texto sm:inline-flex">
+              ✓ Al día en este periodo
             </p>
           ) : null)}
 
