@@ -29,6 +29,11 @@ más abajo; esto es la lista para revisar.
   Chile, tuteo, sobrio.
 - Cada cambio deja escrito en este archivo —o en `panel/CLAUDE.md`— qué
   cambió y por qué.
+- **Mostrar sin preguntar** (regla del cliente, 2026-11-12): todo cambio
+  que se ve se manda con capturas —computador y celular, y el estado que
+  importa, como una pregunta antes de confirmar— en la misma pasada en que
+  se termina, sin esperar a que lo pida y sin preguntar si quiere verlo.
+  Pocas preguntas: se pregunta solo lo que de verdad decide el cliente.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px
