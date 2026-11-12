@@ -19,9 +19,9 @@
  */
 import { useState } from 'react';
 import Dialogo from './Dialogo';
-import { avisar } from './AvisoFlotante';
+import { avisar, copiarConAviso } from './AvisoFlotante';
 import type { Reserva } from '@/lib/tipos';
-import { enRiesgo, sugerirSoltar, cupoAmpliado, mensajeCaida } from '@/lib/sobrecupo';
+import { enRiesgo, sugerirSoltar, cupoAmpliado, mensajeCaida, avisoParaAdministracion } from '@/lib/sobrecupo';
 import { puedeTocarReserva, type Rol } from '@/lib/auth';
 import { enPalabras } from '@/lib/fechas';
 import { enlaceWhatsApp } from '@/lib/contacto';
@@ -76,11 +76,25 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
   const [error, setError] = useState('');
   /** La que se acaba de soltar: queda abierta la ventana para avisarle. */
   const [soltada, setSoltada] = useState<{ r: Reserva; deShopify: boolean } | null>(null);
+  /**
+   * **Mías / Todas** (2026-11-12, lo pidió el cliente pensando en el
+   * vendedor): quien no puede tocar todas parte viendo las suyas, que son
+   * las únicas que puede soltar; *Todas* muestra el día completo.
+   */
+  const [ver, setVer] = useState<'mias' | 'todas'>(conDias ? 'todas' : 'mias');
+  /** Quien no amplía el cupo confirma que la administración dio el visto bueno. */
+  const [vistoBueno, setVistoBueno] = useState(false);
 
   const riesgo = enRiesgo(reservas, dia.fecha);
   const sugeridas = sugerirSoltar(riesgo, dia.sobrecupo);
   const ampliar = cupoAmpliado(dia.tomadas, capacidadMaxima);
   const puedeAmpliar = conDias && ampliar.cupo > dia.capacidad;
+  const mias = riesgo.filter((r) => puedeTocarReserva(rol as Rol, usuario, r.anotadaPor));
+  // El filtro aparece solo cuando hay reservas que esta cuenta no puede
+  // tocar: para quien puede todas, "mías" y "todas" serían lo mismo.
+  const conFiltro = mias.length < riesgo.length;
+  const lista = conFiltro && ver === 'mias' ? mias : riesgo;
+  const aviso = avisoParaAdministracion(enPalabras(dia.fecha), dia.tomadas, dia.capacidad, mias);
 
   async function ampliarCupo() {
     if (!confirm(`¿Subir el cupo del ${enPalabras(dia.fecha)} de ${dia.capacidad} a ${ampliar.cupo}? `
@@ -124,8 +138,8 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
       </h2>
       <p className="mt-1 text-[15px] text-hueso/85">
         Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia, así que ya
-        están adentro. Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin pagar y le
-        avisas al cliente.
+        están adentro.{conDias && ' Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin '
+          + 'pagar y le avisas al cliente.'}
       </p>
 
       {conDias && (
@@ -152,14 +166,59 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
         </div>
       )}
 
+      {/* **Quien no puede ampliar el cupo —el vendedor— avisa** (2026-11-12,
+          lo pidió el cliente): ampliar es decisión de la administración, así
+          que en vez del botón van tres pasos cortos y el aviso listo para
+          pegar en WhatsApp. */}
+      {!conDias && (
+        <div className="mt-3 rounded-xl border-2 border-oro/60 bg-oro/10 p-3">
+          <p className="text-[16px] font-bold">🙋 Esto lo decide la administración</p>
+          <p className="mt-1 text-[14px] text-hueso/85">
+            Tú no amplías el cupo: avísale a la administración y espera qué decide.
+          </p>
+          <ol className="mt-3 space-y-2 text-[15px]">
+            <li className="flex flex-wrap items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oro font-bold text-tinta">1</span>
+              <span className="font-semibold">Avísale a la administración</span>
+              <button type="button" className="boton boton-relleno"
+                onClick={() => copiarConAviso(aviso, 'Aviso copiado: pégalo en WhatsApp a la administración',
+                  'Copia este aviso para la administración:')}>
+                📋 Copiar el aviso
+              </button>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-oro font-bold">2</span>
+              <span>Espera su respuesta: ampliar el cupo o soltar una reserva</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-oro font-bold">3</span>
+              <span>Si te piden soltar una tuya, suéltala acá abajo y avísale a tu cliente</span>
+            </li>
+          </ol>
+        </div>
+      )}
+
       <h3 className="mt-4 text-[13px] font-semibold uppercase tracking-wide text-hueso/60">
         Reservas sin pagar de este día
       </h3>
+      <div className={conFiltro ? 'mt-2 flex gap-2' : 'hidden'}>
+        {conFiltro && (['mias', 'todas'] as const).map((k) => (
+          <button key={k} type="button" onClick={() => setVer(k)} aria-pressed={ver === k}
+            className={`boton rounded-full ${ver === k ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
+            {k === 'mias' ? `Mías (${mias.length})` : `Todas (${riesgo.length})`}
+          </button>
+        ))}
+      </div>
       {riesgo.length === 0 && (
         <p className="mt-1 text-[14px] text-hueso/75">No quedan reservas sin pagar: solo queda ampliar el cupo.</p>
       )}
+      {riesgo.length > 0 && lista.length === 0 && (
+        <p className="mt-2 text-[15px] text-verde-texto">
+          ✓ No tienes reservas sin pagar este día: nada tuyo que soltar.
+        </p>
+      )}
       <ul className="mt-2 space-y-2">
-        {riesgo.map((r) => {
+        {lista.map((r) => {
           const cot = deCotizacion[r.id];
           const mia = puedeTocarReserva(rol as Rol, usuario, r.anotadaPor);
           return (
@@ -184,7 +243,7 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
                     Abrir la cotización para cancelarla
                   </a>
                 ) : mia ? (
-                  <button type="button" disabled={ocupado} onClick={() => { setSoltando(r); setMotivo(MOTIVO); setError(''); }}
+                  <button type="button" disabled={ocupado} onClick={() => { setSoltando(r); setMotivo(MOTIVO); setError(''); setVistoBueno(false); }}
                     className="boton border-rojo-fuerte/60 text-rojo-texto">
                     Soltar esta reserva
                   </button>
@@ -212,6 +271,26 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
               Es una reserva de Shopify: cancela también el pedido en la tienda, que el panel no lo hace solo.
             </p>
           )}
+          {/* Antes de soltar, quien no decide el cupo confirma que la
+              administración ya lo vio: soltar le quita la reserva a un
+              cliente, y esa decisión no es solo de quien la anotó. */}
+          {!conDias && (
+            <div className="mt-3 rounded-xl border-2 border-oro/60 bg-oro/10 p-3">
+              <p className="text-[16px] font-bold">✋ ¿La administración te dijo que la sueltes?</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={() => setVistoBueno(true)} aria-pressed={vistoBueno}
+                  className={`boton min-h-[44px] ${vistoBueno ? 'border-verde-fuerte bg-verde/15 font-semibold text-verde-texto' : ''}`}>
+                  ✓ Sí, me dijeron que la suelte
+                </button>
+                <button type="button"
+                  onClick={() => { setSoltando(null); copiarConAviso(aviso,
+                    'Aviso copiado: pégalo en WhatsApp a la administración', 'Copia este aviso para la administración:'); }}
+                  className="boton min-h-[44px]">
+                  Todavía no: copiar el aviso
+                </button>
+              </div>
+            </div>
+          )}
           <label className="mt-3 block">
             <span className="text-[13px] font-semibold uppercase tracking-wide text-hueso/60">Por qué</span>
             <input className="mt-1 w-full rounded border border-hueso/20 bg-tinta px-3 py-2 text-[15px]
@@ -221,8 +300,10 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
           {error && <p role="alert" className="mt-2 text-[15px] font-semibold text-rojo-texto">{error}</p>}
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button type="button" className="boton min-h-[48px]" onClick={() => setSoltando(null)}>Volver</button>
-            <button type="button" disabled={ocupado || !motivo.trim()} onClick={() => void soltar()}
-              className="boton boton-hito border-rojo-fuerte bg-rojo-fuerte text-white">
+            <button type="button" disabled={ocupado || !motivo.trim() || (!conDias && !vistoBueno)}
+              onClick={() => void soltar()}
+              className="boton boton-hito border-rojo-fuerte bg-rojo-fuerte text-white
+                         disabled:border-hueso/20 disabled:bg-hueso/15 disabled:text-hueso/60">
               {ocupado ? 'Soltando…' : 'Sí, soltar la reserva'}
             </button>
           </div>

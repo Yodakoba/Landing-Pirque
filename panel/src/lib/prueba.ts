@@ -9,7 +9,7 @@
 import { semaforo, ocupacionDe, ocupacionDeTodos, ocupaLugar, faltaCobrar,
          enPesos, CORTES, tienePrioridad } from './ocupacion.ts';
 import { enRiesgo, sugerirSoltar, cupoAmpliado, marcaLiberada, mensajeCaida,
-         diasConSobrecupo } from './sobrecupo.ts';
+         diasConSobrecupo, avisoParaAdministracion } from './sobrecupo.ts';
 import { pagoEnEspanol, pagoConGlosa, ESTADOS_QUE_LIBERAN, pagoPorCobros,
          ESTADOS_QUE_VIENEN } from './pagos.ts';
 import { aCSV } from './csv.ts';
@@ -415,6 +415,12 @@ ok(paraElSitio(ocu)[0].pocos === true,
   ok(diasConSobrecupo(dias, rs, ROL.vendedor, 'Hugo').length === 0,
      'y no lo ve si ninguna es suya');
   ok(diasConSobrecupo(dias, rs, ROL.encargado, 'Carla').length === 1, 'el encargado los ve todos');
+  ok(avisoParaAdministracion('sábado 14 de noviembre', 162, 150, [{ nombre: 'Empresa Grande', personas: 80 }])
+       === 'Hola, hay sobrecupo el sábado 14 de noviembre: 162 personas para 150 lugares (12 de más). '
+         + 'Mis reservas sin pagar ese día: Empresa Grande (80). ¿Ampliamos el cupo o suelto alguna?',
+     'el aviso del vendedor dice el día, el exceso y cuáles son suyas');
+  ok(!avisoParaAdministracion('sábado 14', 162, 150, []).includes('Mis reservas'),
+     'sin reservas suyas, no las nombra');
 }
 
 /* ---------- "hoy" es hoy en Chile, no donde corra el codigo ---------- */

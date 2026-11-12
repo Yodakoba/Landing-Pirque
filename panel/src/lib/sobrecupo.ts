@@ -109,3 +109,21 @@ export function diasConSobrecupo(
   }
   return salida;
 }
+
+/**
+ * **El aviso que el vendedor le manda a la administración** (2026-11-12):
+ * ampliar el cupo no es decisión suya, así que lo que le toca es avisar. El
+ * texto va listo para pegar en WhatsApp: qué día, cuánto se pasó y cuáles
+ * de las reservas en riesgo son suyas, para que la respuesta sea concreta.
+ */
+export function avisoParaAdministracion(
+  fechaEnPalabras: string, tomadas: number, capacidad: number,
+  mias: Pick<Reserva, 'nombre' | 'personas'>[]
+): string {
+  const exceso = Math.max(0, tomadas - capacidad);
+  const suyas = mias.length
+    ? ` Mis reservas sin pagar ese día: ${mias.map((r) => `${r.nombre || 'sin nombre'} (${r.personas})`).join(', ')}.`
+    : '';
+  return `Hola, hay sobrecupo el ${fechaEnPalabras}: ${tomadas} personas para ${capacidad} lugares `
+    + `(${exceso} de más).${suyas} ¿Ampliamos el cupo o suelto alguna?`;
+}
