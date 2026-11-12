@@ -1989,8 +1989,11 @@ relleno y ningún campo a la vista:
   **dos comisiones separadas** —el socio cobra la suya completa según su
   trato y, aparte, el vendedor cobra el % de la suya (60 personas, neto
   $3.000.000: socio $300.000 + vendedor $45.000 = $345.000)—; no es el 50%
-  de lo que gana el socio ni sale de su comisión. Si la gerencia elige otro
-  reparto, se cambia en `comisionDe()` y en ese texto.
+  de lo que gana el socio ni sale de su comisión. **Decidido el
+  2026-11-12: es la opción A** (lo confirmó el cliente: *"vamos con la
+  opción A del socio"*). Se descartaron la B —el vendedor cobra además el
+  50% de lo que gana el socio: $450.000 en el ejemplo— y la C —una sola
+  comisión, la del socio, repartida entre los dos: $300.000—.
 - **Ojo con `.boton`**: está definida en `globals.css` después de las
   utilidades de Tailwind, así que **le gana a `min-h-[44px]` y a
   `text-[15px]`** —el *Pagarle* salía de 36px aunque pedía 56—. En un
