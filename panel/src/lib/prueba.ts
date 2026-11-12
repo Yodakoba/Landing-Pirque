@@ -4904,5 +4904,28 @@ console.log('\nLos socios comerciales (primera entrega)');
      'un socio no "crea" ventas, y un id vacío no calza con las ventas sin socio');
 }
 
+console.log('\nLos socios comerciales (segunda entrega)');
+{
+  const { fichaSocio, socioPorToken, ventasDe, leerVendedoresDe, filaVendedor, ENCABEZADO_VENDEDORES,
+          fichaVacia } = await import('./vendedores.ts');
+  const s1 = { ...fichaSocio('S-0001', 'Turismo Maipo'), token: 'tok-1' };
+  const ida = leerVendedoresDe([ENCABEZADO_VENDEDORES, filaVendedor(s1, ENCABEZADO_VENDEDORES),
+    filaVendedor({ ...fichaVacia('carla'), token: 'no-va' }, ENCABEZADO_VENDEDORES)]);
+  ok(ida[0].token === 'tok-1' && ida[1].token === '', 'el link del socio se guarda y se lee; un vendedor no lleva token');
+  ok(socioPorToken(ida, 'tok-1')?.usuario === 'S-0001' && !socioPorToken(ida, '') && !socioPorToken(ida, 'otro')
+     && !socioPorToken([{ ...ida[0], activo: false }], 'tok-1'),
+     'el link abre al socio; vacío o inventado no abre nada, y desactivarlo apaga su link');
+  const pres = [
+    { id: 'A', fecha: '2026-12-05', cliente: 'Andes', estado: 'Ganada', idReserva: 'R1', creadoPor: 'carla', descuento: 0, grupo: '',
+      socio: 'S-0001', comisionSocio: '300000 · 60 personas → etapa 2, 10% = $300.000', comisionVendedor: '45000 · de Carla' }
+  ] as never;
+  const lineas = [{ presupuesto: 'A', concepto: 'Tradiciones', cantidad: 60, precio: 59500, personas: 60, descuento: 0, ivaIncluido: true }] as never;
+  const conTratoNuevo = { ...s1, etapa2Pct: 8 };
+  const v = ventasDe('S-0001', pres, lineas, [], conTratoNuevo);
+  ok(v[0].comision === 300000 && v[0].congelada, 'la comisión congelada del socio no cambia aunque se le baje el trato');
+  const sinCongelar = ventasDe('S-0001', [{ ...(pres as never[])[0] as object, comisionSocio: '' }] as never, lineas, [], conTratoNuevo);
+  ok(sinCongelar[0].comision === 240000 && !sinCongelar[0].congelada, 'sin congelar, se calcula con el trato de hoy');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

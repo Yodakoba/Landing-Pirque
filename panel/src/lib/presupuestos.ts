@@ -194,7 +194,14 @@ export const COL_PRESUPUESTOS = {
    * ficha en `Vendedores` (`S-0001`…), o vacío. Lo contesta quien cotiza
    * en el paso 2: *"¿Viene por un socio comercial?"*.
    */
-  socio: 'Socio comercial'
+  socio: 'Socio comercial',
+  /**
+   * **La comisión del socio, congelada** cuando el cliente terminó de pagar
+   * (2026-11-12, segunda entrega): *"300000 · 60 personas → etapa 2, 10% =
+   * …"*. Igual que `Comisión vendedor`: desde ahí no cambia aunque se edite
+   * su trato. La escribe `congelarComision()`, nunca el navegador.
+   */
+  comisionSocio: 'Comisión socio'
 } as const;
 
 /** Una fila por línea cotizada. También por nombre de columna. */
@@ -355,6 +362,8 @@ export interface Presupuesto {
   comisionVendedor?: string;
   /** El id del socio comercial que trajo la venta, o vacío. */
   socio?: string;
+  /** La comisión congelada del socio: *"300000 · cómo se calculó"*. */
+  comisionSocio?: string;
   /** Días antes del evento para el saldo, o `null` si rige Configuración. */
   saldoDias: number | null;
   /** El valor de la UF fijado en esta cotización, o 0 si no tiene. */
@@ -952,6 +961,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       diaPausado: en(f, i.diaPausado).trim(),
       comisionVendedor: en(f, i.comisionVendedor).trim(),
       socio: en(f, i.socio).trim(),
+      comisionSocio: en(f, i.comisionSocio).trim(),
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       uf: aPrecio(en(f, i.uf)),
       fechaUF: en(f, i.fechaUF).slice(0, 10),
@@ -1025,6 +1035,7 @@ export function filaPresupuesto(
   poner(i.diaPausado, p.diaPausado ?? '');
   poner(i.comisionVendedor, p.comisionVendedor ?? '');
   poner(i.socio, p.socio ?? '');
+  poner(i.comisionSocio, p.comisionSocio ?? '');
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   poner(i.uf, p.uf ? String(p.uf) : '');
   poner(i.fechaUF, p.uf ? p.fechaUF : '');

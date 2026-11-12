@@ -200,7 +200,7 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJ
         // Lo de la cancelación y del día es de la que se ganó, no de la copia.
         devolucion: 0, canceladaPor: '', cancelada: '', diaAbierto: '',
         // El pedido de liberar el día es de la original (2026-11-12).
-        exclusividad: '', diaPausado: '', comisionVendedor: '',
+        exclusividad: '', diaPausado: '', comisionVendedor: '', comisionSocio: '',
         // Una alternativa nace sin mandar: su vigencia corre cuando se mande.
         enviada: '', ultimoSeguimiento: '', validoHasta: '', contratoEnviado: '',
         // Quien la duplica es su dueño: un vendedor que arma la opción B de
@@ -414,6 +414,10 @@ export const PATCH = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HO
       invitados,
       tipoEvento: texto('tipoEvento', previo.tipoEvento),
       socio: cuerpo.socio === undefined ? (previo.socio ?? '') : socioDelCuerpo(cuerpo.socio),
+      // Si cambia el socio, su comisión congelada era del otro: se borra y
+      // se vuelve a calcular para el nuevo (y se congela en el próximo cobro).
+      comisionSocio: cuerpo.socio !== undefined && socioDelCuerpo(cuerpo.socio) !== (previo.socio ?? '')
+        ? '' : (previo.comisionSocio ?? ''),
       descuento: cuerpo.descuento === undefined ? previo.descuento : pct(cuerpo.descuento),
       motivo: texto('motivo', previo.motivo),
       documento: cuerpo.documento === undefined ? previo.documento : documentoDe(cuerpo.documento),

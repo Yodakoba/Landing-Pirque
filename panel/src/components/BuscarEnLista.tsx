@@ -10,10 +10,13 @@
  *
  * - Busca **sin tildes ni mayúsculas**, en el nombre y en el detalle.
  * - **Enter elige al primero**; Escape cierra sin cerrar la ventana de atrás.
+ * - **Un clic afuera lo cierra** (2026-11-12, lo pidió el cliente): no hay
+ *   botón *Cerrar*. Se escucha `pointerdown` en el documento, que cubre el
+ *   mouse y el dedo.
  * - Cada fila es un botón de 44px; la elegida va marcada con ✓.
  * - `pie`: lo que va debajo de la lista, como *+ Agregar socio comercial*.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface OpcionLista { id: string; nombre: string; detalle?: string }
 
@@ -31,19 +34,28 @@ export default function BuscarEnLista({ opciones, elegido = '', onElegir, onCerr
   pie?: React.ReactNode;
 }) {
   const [texto, setTexto] = useState('');
+  const caja = useRef<HTMLDivElement>(null);
+  const cerrar = useRef(onCerrar);
+  cerrar.current = onCerrar;
+  useEffect(() => {
+    const afuera = (e: PointerEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) cerrar.current();
+    };
+    document.addEventListener('pointerdown', afuera);
+    return () => document.removeEventListener('pointerdown', afuera);
+  }, []);
   const q = llano(texto);
   const calzan = q ? opciones.filter((o) => llano(`${o.nombre} ${o.detalle ?? ''}`).includes(q)) : opciones;
   return (
-    <div className="rounded-xl border-2 border-oro/70 bg-panel p-2">
-      <div className="flex items-center gap-2">
+    <div ref={caja} className="rounded-xl border-2 border-oro/70 bg-panel p-2">
+      <div>
         <input type="search" autoFocus value={texto} placeholder="Escribe un nombre" aria-label={etiqueta}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && calzan[0]) { e.preventDefault(); onElegir(calzan[0].id); }
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCerrar(); }
           }}
-          className="min-h-[44px] min-w-0 flex-1 rounded-lg border-2 border-hueso/20 bg-tinta px-3 text-[16px] focus:border-oro focus:outline-none" />
-        <button type="button" onClick={onCerrar} className="boton min-h-[44px] shrink-0">Cerrar</button>
+          className="min-h-[44px] w-full rounded-lg border-2 border-hueso/20 bg-tinta px-3 text-[16px] focus:border-oro focus:outline-none" />
       </div>
       <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
         {calzan.map((o) => (

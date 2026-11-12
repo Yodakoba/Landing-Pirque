@@ -60,6 +60,7 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
     const { desde, hasta } = esFecha(q.get('desde') ?? '') && esFecha(q.get('hasta') ?? '')
       ? { desde: q.get('desde')!, hasta: q.get('hasta')! } : rangoDelPeriodo(periodo);
     const puedeEditar = puede(quien.rol as Rol, 'pagar');
+    const puedeLinks = puede(quien.rol as Rol, 'links');
     if (!cuenta) {
       return NextResponse.json({ vendedores: esVendedor ? [] : lista, socios, usuario: '', desde, hasta, periodo, puedeEditar, hoy: hoy() });
     }
@@ -94,7 +95,9 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
     return NextResponse.json({
       vendedores: esVendedor ? [] : lista, socios,
       usuario: cuenta.usuario, nombre: ficha.nombre || cuenta.nombre, tipo: ficha.tipo,
-      ficha: { ...ficha, banco: verBanco ? ficha.banco : bancoVacio() },
+      // El token del link solo a quien maneja links (`links`), como en Extras.
+      ficha: { ...ficha, banco: verBanco ? ficha.banco : bancoVacio(), token: puedeLinks ? ficha.token : '' },
+      puedeLinks,
       formaDePago: tieneFormaDePago(ficha),
       desde, hasta, periodo, hoy: hoy(),
       resumen, pagado, falta: Math.max(0, resumen.total - pagado), pagos: suyos,

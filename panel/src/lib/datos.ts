@@ -779,15 +779,23 @@ export async function congelarComision(idPresupuesto: string): Promise<void> {
       leerPresupuestos(), leerLineasPresupuesto(), leerCobros(), leerUsuarios(), leerVendedores(), leerMenus()
     ]);
     const p = presupuestos.find((x) => x.id === idPresupuesto);
-    if (!p || !p.idReserva || p.comisionVendedor) return;
+    if (!p || !p.idReserva) return;
     const u = usuarios.find((x) => x.rol === 'vendedor' && normalizar(x.usuario) === normalizar(p.creadoPor));
-    if (!u) return;
+    // **El socio también congela la suya** (2026-11-12, segunda entrega), en
+    // su propia columna y en la misma escritura.
+    const s = p.socio ? fichas.find((f) => f.tipo === 'socio' && normalizar(f.usuario) === normalizar(p.socio ?? '')) : undefined;
+    const faltaVendedor = !!u && !p.comisionVendedor;
+    const faltaSocio = !!s && !p.comisionSocio;
+    if (!faltaVendedor && !faltaSocio) return;
     const b = baseDeVenta(p, lineas, menus);
     if (!pagadaEl(b.total, cobrosDe(cobros, p.id))) return;
-    // Con un socio, el vendedor congela su parte (`conSocio`).
-    const c = comisionDe(fichaDe(fichas, u.usuario, u.nombre), b, !!p.socio);
     const { fila: _f, ...resto } = p;
-    await guardarPresupuesto({ ...resto, comisionVendedor: marcaComision(c) });
+    await guardarPresupuesto({
+      ...resto,
+      // Con un socio, el vendedor congela su parte (`conSocio`).
+      ...(faltaVendedor ? { comisionVendedor: marcaComision(comisionDe(fichaDe(fichas, u!.usuario, u!.nombre), b, !!p.socio)) } : {}),
+      ...(faltaSocio ? { comisionSocio: marcaComision(comisionDe(s!, b)) } : {})
+    });
   } catch { /* se calcula al leer; se congela en el próximo cobro */ }
 }
 

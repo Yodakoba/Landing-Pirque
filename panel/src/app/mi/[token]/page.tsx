@@ -62,9 +62,16 @@
  * hay que cocinar; quién lo pidió y cuánto pagó no es dato de un turno.
  */
 import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
-         leerMenus, leerPagosEquipo, leerColaboradores, leerExtras } from '@/lib/datos';
+         leerMenus, leerPagosEquipo, leerColaboradores, leerExtras, leerVendedores,
+         leerPresupuestos, leerLineasPresupuesto, leerCobros, leerClientes } from '@/lib/datos';
 import { colaboradorPorToken } from '@/lib/extras';
 import VistaColaborador from './Colaborador';
+import VistaSocio from './Socio';
+import { HOJA_VENDEDORES, socioPorToken, ventasDe } from '@/lib/vendedores';
+import { HOJA_PRESUPUESTOS, HOJA_LINEAS, folioDe } from '@/lib/presupuestos';
+import { HOJA_COBROS } from '@/lib/cobros';
+import { HOJA_CLIENTES } from '@/lib/clientes';
+import { conCliente } from '@/lib/cotizar';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
 import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
@@ -357,9 +364,9 @@ export default async function Pagina({ params, searchParams }: {
 }) {
   // **Todo en una tanda** (2026-11-12): eran siete consultas a Google por
   // visita, una por pestaña; ahora es una sola, con los extras incluidos.
-  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras] = await conLecturas(
+  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras, fichasV] = await conLecturas(
     [HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_FECHAS, HOJA_CONFIG, HOJA_RESERVAS, HOJA_MENUS, HOJA_PAGOS,
-     HOJA_COLABORADORES, HOJA_ACTIVIDADES],
+     HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_VENDEDORES],
     async () => Promise.all([
     leerTrabajadores(), leerTurnos(),
     // Igual que las reservas: la hora de apertura y las notas del día son un
@@ -380,14 +387,17 @@ export default async function Pagina({ params, searchParams }: {
     // **El link de un colaborador extra** (2026-11-12): si el token no es de
     // un trabajador, se busca en las fichas de las actividades extras.
     leerColaboradores().catch(() => []),
-    leerExtras().catch(() => [])
+    leerExtras().catch(() => []),
+    // **El link de un socio comercial** (2026-11-12): su ficha viaja en la
+    // misma tanda; sus ventas, en una segunda, solo si el token es suyo.
+    leerVendedores().catch(() => [])
   ]))();
 
   // La lista vacía no es "tu link no sirve": no existe el caso de un token
   // válido con la lista en cero. Es la planilla que no respondió, y decirle
   // a la persona que su link está malo la manda a pedir uno nuevo que
   // tampoco va a funcionar.
-  if (gente.length === 0 && colaboradores.length === 0) {
+  if (gente.length === 0 && colaboradores.length === 0 && fichasV.length === 0) {
     return (
       <section className="mx-auto max-w-md text-center">
         <h1 className="text-lg font-bold uppercase tracking-wide">No se pudo cargar</h1>
@@ -408,6 +418,19 @@ export default async function Pagina({ params, searchParams }: {
         p={searchParams?.p} v={searchParams?.v}
         apertura={(f) => porDia.get(f)?.apertura || cfg.horaApertura} />
     );
+  }
+
+  const socio = quien || colaborador ? undefined : socioPorToken(fichasV, decodeURIComponent(params.token));
+  if (socio) {
+    // Una tanda más, solo para un socio: las cotizaciones que lo nombran.
+    const [presupuestos, lineas, cobros, clientes] = await conLecturas(
+      [HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_COBROS, HOJA_CLIENTES],
+      async () => Promise.all([leerPresupuestos(), leerLineasPresupuesto(), leerCobros(), leerClientes().catch(() => [])])
+    )();
+    const ventas = ventasDe(socio.usuario, presupuestos.map((x) => conCliente(x, clientes)), lineas, cobros, socio, catalogo)
+      .map((x) => ({ ...x, folio: folioDe({ id: x.grupo }) }));
+    return <VistaSocio socio={socio} ventas={ventas} pagos={pagos} token={params.token}
+      p={searchParams?.p} v={searchParams?.v} />;
   }
 
   // **El mismo mensaje para un link inventado y para uno revocado.** Decir

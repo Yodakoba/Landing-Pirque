@@ -57,6 +57,8 @@ export const COL_VENDEDORES = {
   conSocio: 'Con socio cobra %',
   /** `no` es desactivado. Solo los socios: un vendedor se desactiva en *Cuentas*. */
   activo: 'Activo',
+  /** El link personal del socio (`/mi/<token>`). Vacío: sin link. */
+  token: 'Token de acceso',
   ...COL_BANCO,
   nota: 'Nota de pago'
 } as const;
@@ -91,6 +93,8 @@ export interface FichaVendedor {
   etapa1Desde: number;
   /** Del vendedor: el % de su comisión que cobra cuando la venta viene con un socio. */
   conSocio: number;
+  /** El link personal de un socio (2026-11-12). El vendedor entra con su cuenta. */
+  token: string;
   sueldoFijo: number;
   /** En %, con decimales: 2,5 es 2,5%. Es la **etapa 1**: desde la primera persona. */
   comisionPct: number;
@@ -112,7 +116,7 @@ export interface FichaVendedor {
 export const CORTES_SOCIOS = { etapa2: 55, etapa3: 77 } as const;
 
 export const fichaVacia = (usuario: string, nombre = ''): FichaVendedor => ({
-  usuario, nombre, tipo: 'vendedor', activo: true, etapa1Desde: 0, conSocio: CON_SOCIO_DEFECTO,
+  usuario, nombre, tipo: 'vendedor', activo: true, etapa1Desde: 0, conSocio: CON_SOCIO_DEFECTO, token: '',
   sueldoFijo: 0, comisionPct: 0,
   etapa2Desde: CORTES_SOCIOS.etapa2, etapa2Pct: 0, etapa3Desde: CORTES_SOCIOS.etapa3, etapa3Pct: 0, bonoPuntos: 0,
   montoEvento: 0, base: 'neto', banco: bancoVacio(), fila: 0
@@ -168,6 +172,7 @@ export function leerVendedoresDe(filas: string[][]): FichaVendedor[] {
     etapa1Desde: entero(en(f, i.etapa1Desde)),
     // En blanco es el de partida; un 0 escrito es 0 (no cobra con socio).
     conSocio: en(f, i.conSocio).trim() === '' ? CON_SOCIO_DEFECTO : porcentaje(en(f, i.conSocio)),
+    token: en(f, i.token).trim(),
     sueldoFijo: entero(en(f, i.sueldoFijo)),
     comisionPct: porcentaje(en(f, i.comisionPct)),
     etapa2Desde: entero(en(f, i.etapa2Desde)) || CORTES_SOCIOS.etapa2,
@@ -193,6 +198,7 @@ export function filaVendedor(v: FichaVendedor, enc: string[]): string[] {
   poner(i.usuario, v.usuario); poner(i.nombre, v.nombre);
   poner(i.tipoFicha, TIPO_FICHA[v.tipo]); poner(i.activo, v.activo ? '' : 'no');
   poner(i.etapa1Desde, v.etapa1Desde || '');
+  poner(i.token, v.tipo === 'socio' ? v.token : '');
   poner(i.conSocio, v.tipo === 'vendedor' ? String(v.conSocio).replace('.', ',') : '');
   poner(i.sueldoFijo, v.sueldoFijo || ''); poner(i.comisionPct, v.comisionPct ? String(v.comisionPct).replace('.', ',') : '');
   poner(i.montoEvento, v.montoEvento || ''); poner(i.base, BASE_COMISION[v.base]);
@@ -209,6 +215,16 @@ export function filaVendedor(v: FichaVendedor, enc: string[]): string[] {
 /** La ficha de un usuario, o una vacía si nadie se la llenó todavía. */
 export function fichaDe(fichas: FichaVendedor[], usuario: string, nombre = ''): FichaVendedor {
   return fichas.find((f) => normalizar(f.usuario) === normalizar(usuario)) ?? fichaVacia(usuario, nombre);
+}
+
+/**
+ * **El socio de un link personal** (2026-11-12). Un token vacío no encuentra
+ * a nadie, y uno de un socio desactivado tampoco: desactivarlo apaga su link.
+ */
+export function socioPorToken(fichas: FichaVendedor[], token: string): FichaVendedor | undefined {
+  const t = String(token ?? '').trim();
+  if (!t) return undefined;
+  return fichas.find((f) => f.tipo === 'socio' && f.activo && f.token === t);
 }
 
 /** Si la ficha dice cómo se le paga: sin nada, el resumen no puede calcular plata. */
@@ -365,8 +381,8 @@ export function ventasDe(usuario: string, presupuestos: Presupuesto[], lineas: L
       const pagado = suyos.reduce((n, c) => n + c.monto, 0);
       // **La que ya quedó guardada al pagarse no se recalcula**: cambiar la
       // ficha vale para lo que se pague desde ese día.
-      // La congelada es la del vendedor: la del socio se congela en la segunda entrega.
-      const guardada = socio ? null : comisionCongelada(p.comisionVendedor);
+      // Cada uno tiene su columna congelada: la del vendedor y la del socio.
+      const guardada = comisionCongelada(socio ? p.comisionSocio : p.comisionVendedor);
       const c = guardada ?? comisionDe(ficha, b, !!p.socio);
       return {
         id: p.id, grupo: p.grupo || p.id, cliente: p.cliente || 'sin nombre', fechaEvento: p.fecha,
