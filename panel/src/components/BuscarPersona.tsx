@@ -25,7 +25,7 @@
  * Al nivel del módulo, como todo componente de este panel: declarado
  * adentro de otro, el campo perdería el foco a cada letra.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface Opcion { nombre: string; detalle?: string }
 
@@ -33,16 +33,21 @@ export interface Opcion { nombre: string; detalle?: string }
 const llano = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-export default function BuscarPersona({ opciones, onElegir, etiqueta, ancho = 'w-full' }: {
+export default function BuscarPersona({ opciones, onElegir, etiqueta, ancho = 'w-full', destacar = false, abrir = 0 }: {
   /** Las personas que se pueden agregar, ya ordenadas. */
   opciones: Opcion[];
   onElegir: (nombre: string) => void;
   /** Para los lectores de pantalla: "Agregar alguien a Garzón". */
   etiqueta: string;
   ancho?: string;
+  /** En ámbar: a este puesto le falta gente (2026-11-12). */
+  destacar?: boolean;
+  /** Cada vez que cambia, el buscador se abre: lo usa el aviso de lo que falta. */
+  abrir?: number;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState('');
+  useEffect(() => { if (abrir) setAbierto(true); }, [abrir]);
 
   if (opciones.length === 0) {
     return (
@@ -56,8 +61,8 @@ export default function BuscarPersona({ opciones, onElegir, etiqueta, ancho = 'w
     return (
       <button type="button" onClick={() => setAbierto(true)} aria-label={etiqueta}
         className={`tecla flex min-h-[40px] ${ancho} items-center rounded-lg border-2
-                    border-hueso/20 bg-tinta px-3 text-left text-[14px] font-semibold
-                    hover:border-oro`}>
+                    ${destacar ? 'border-ambar-fuerte/70 text-ambar-texto' : 'border-hueso/20'} bg-tinta px-3
+                    text-left text-[14px] font-semibold hover:border-oro`}>
         + Agregar…
       </button>
     );

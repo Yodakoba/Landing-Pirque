@@ -21,7 +21,7 @@ import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
 import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
-         repartirPropina, propinaDelDia, porNombre,
+         repartirPropina, propinaDelDia, porNombre, faltantesDe,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { faltaParaCerrar, type Cierre, yaLlego } from '@/lib/cierres';
 import { enPesos } from '@/lib/ocupacion';
@@ -210,6 +210,16 @@ export default function EquipoDialogo({
     [plan, puestos, fecha, personas]
   );
   const faltan = lineas.reduce((n, l) => n + l.faltan, 0);
+  /**
+   * **Ir al puesto que falta** (2026-11-12, lo pidió el cliente): cada puesto
+   * del aviso es un botón que baja hasta su caja y le abre el buscador.
+   */
+  const [abrirEn, setAbrirEn] = useState<{ puesto: string; n: number }>({ puesto: '', n: 0 });
+  const irAPuesto = (puesto: string) => {
+    setAbrirEn((a) => ({ puesto, n: a.n + 1 }));
+    document.getElementById(`puesto-${encodeURIComponent(puesto)}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   /** Los montos de una persona. Ninguno de estos admite negativos. */
   const cambiarMonto = (i: number, campo: 'pagoJornada' | 'horasExtra', valor: string) => {
@@ -525,7 +535,17 @@ export default function EquipoDialogo({
           : <>Todavía no hay nadie reservado este día.</>}
         {' '}
         {faltan > 0
-          ? <span className="text-ambar-texto">Faltan {faltan} según las reglas de cada puesto.</span>
+          ? <span className="text-ambar-texto">
+              <strong>{faltan === 1 ? 'Falta' : 'Faltan'} {faltan}:</strong>{' '}
+              {faltantesDe(lineas).map((f) => (
+                <button key={f.puesto} type="button" onClick={() => irAPuesto(f.puesto)}
+                  className="tecla mr-1.5 mt-1 inline-flex min-h-[34px] items-center rounded-full border-2
+                             border-ambar-fuerte/60 bg-ambar/10 px-2.5 text-[14px] font-semibold
+                             text-ambar-texto hover:bg-ambar/20">
+                  {f.cuantos > 1 ? `${f.cuantos} × ${f.puesto}` : f.puesto} →
+                </button>
+              ))}
+            </span>
           : <span className="text-hueso/50">
               Las sugerencias salen de la columna <em>uno cada N personas</em> de{' '}
               <a href="/equipo" className="text-oro hover:underline">Equipo</a>.
@@ -535,13 +555,27 @@ export default function EquipoDialogo({
 
       <div className="mt-5 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
         {lineas.map((l) => (
-          <div key={l.puesto} className="min-w-0 rounded-xl border border-hueso/15 p-2 sm:p-3">
+          /* **El puesto que no alcanza se ve desde lejos** (2026-11-12, lo
+             pidió el cliente): borde ámbar grueso, fondo ámbar suave, una
+             pastilla *Faltan N* y el *+ Agregar…* en ámbar. Los completos
+             quedan como estaban. */
+          <div key={l.puesto} id={`puesto-${encodeURIComponent(l.puesto)}`}
+            className={`min-w-0 scroll-mt-4 rounded-xl p-2 sm:p-3 ${l.faltan > 0
+              ? 'border-2 border-ambar-fuerte/70 bg-ambar/5' : 'border border-hueso/15'}`}>
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="px-1 text-[15px] font-semibold">{l.puesto}</h3>
-              <span className={`px-1 text-[13px] font-semibold tabular-nums ${
-                l.faltan > 0 ? 'text-ambar-texto' : 'text-hueso/60'}`}>
-                {l.asignados.length}
-                {l.sugeridos > 0 && <> / {l.sugeridos}</>}
+              <span className="flex shrink-0 items-center gap-1.5">
+                {l.faltan > 0 && (
+                  <span className="whitespace-nowrap rounded-full border-2 border-ambar-fuerte/60 bg-ambar/15
+                                   px-2 py-0.5 text-[13px] font-bold text-ambar-texto">
+                    {l.faltan === 1 ? 'Falta 1' : `Faltan ${l.faltan}`}
+                  </span>
+                )}
+                <span className={`px-1 text-[13px] font-semibold tabular-nums ${
+                  l.faltan > 0 ? 'text-ambar-texto' : 'text-hueso/60'}`}>
+                  {l.asignados.length}
+                  {l.sugeridos > 0 && <> / {l.sugeridos}</>}
+                </span>
               </span>
             </div>
 
@@ -771,6 +805,8 @@ export default function EquipoDialogo({
                 desplegable obliga a recorrerlas todas. Ver `BuscarPersona`. */}
             <div className="mt-2">
               <BuscarPersona etiqueta={`Agregar alguien a ${l.puesto}`}
+                destacar={l.faltan > 0}
+                abrir={abrirEn.puesto === l.puesto ? abrirEn.n : 0}
                 opciones={libres.map((t) => ({ nombre: t.nombre, detalle: t.puesto }))}
                 onElegir={(nombre) => {
                   const ficha = gente.find((t) => t.nombre === nombre);

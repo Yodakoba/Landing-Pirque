@@ -33,7 +33,7 @@ import { useState } from 'react';
 import { LineaCRM } from './EventosCRM';
 import type { EventosDelDia } from '@/lib/crm';
 import type { Ocupacion } from '@/lib/tipos';
-import type { ResumenEquipo } from '@/lib/equipo';
+import { textoFaltantes, type ResumenEquipo } from '@/lib/equipo';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras } from '@/lib/fechas';
 import PuntoDia from './PuntoDia';
@@ -515,7 +515,8 @@ export default function TarjetaDia({
 
           {resumen && resumen.faltan > 0 && (
             <p className="mt-3 text-[13px] font-medium text-ambar-texto">
-              Faltan {resumen.faltan} según las reglas de cada puesto.
+              {resumen.faltan === 1 ? 'Falta' : 'Faltan'} {resumen.faltan}:{' '}
+              {textoFaltantes(resumen.faltantes ?? [])}
             </p>
           )}
 

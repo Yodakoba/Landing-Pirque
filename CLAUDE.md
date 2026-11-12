@@ -3347,6 +3347,23 @@ asignó ese día**, así que un turno viejo sigue mostrándose con su nombre
 aunque el puesto se llame distinto hoy (`planDelDia()` los agrega al final
 de la lista, con el nombre tal como se escribió).
 
+### Lo que falta se dice con los puestos (2026-11-12)
+
+Lo pidió el cliente: *"Faltan 2 según las reglas de cada puesto"* no decía
+dónde. Ahora dice **qué puestos**: *Faltan 3: 2 × Garzón, Runner* —misma
+forma que la lista de puestos de la tarjeta, uno sin número y sin
+pluralizar el nombre, que lo escribe el cliente— en el dorso de la tarjeta,
+la ventana de planificar y la pastilla de la página del día
+(`faltantesDe()` y `textoFaltantes()` en `equipo.ts`, con pruebas). La
+celda de `/turnos` sigue con *faltan N*: no hay espacio.
+
+- **En la ventana de planificar cada puesto que falta es un botón**: baja
+  hasta su caja y le abre el buscador (`abrir` en `BuscarPersona`).
+- **La caja de un puesto incompleto se ve desde lejos**: borde ámbar grueso,
+  fondo ámbar suave, una pastilla *Faltan N* junto al *2 / 5* y el
+  *+ Agregar…* con borde ámbar (`destacar`). Los completos quedan como
+  estaban, y el orden sigue siendo el de *Administrar puestos*.
+
 ### Una persona ocupa un puesto, no dos
 
 Asignar a alguien a un segundo puesto el mismo día lo **mueve**, no lo

@@ -718,6 +718,8 @@ export interface ResumenEquipo {
   porPuesto: { puesto: string; cuantos: number }[];
   /** Cuántos faltan en total según las razones puestas. 0 = alcanza o sin reglas. */
   faltan: number;
+  /** **Qué puestos faltan** (2026-11-12): para decirlo con nombre y no "según las reglas". */
+  faltantes: { puesto: string; cuantos: number }[];
   /**
    * Lo que va a costar ese equipo, contando a quien todavía no está marcado.
    *
@@ -749,8 +751,26 @@ export function resumenEquipo(
       .filter((l) => l.asignados.length > 0)
       .map((l) => ({ puesto: l.puesto, cuantos: l.asignados.length })),
     faltan: plan.reduce((n, l) => n + l.faltan, 0),
+    faltantes: faltantesDe(plan),
     costo: costoPlanificado(turnos, fecha)
   };
+}
+
+/** Los puestos a los que les falta gente, en el orden del plan. */
+export function faltantesDe(
+  plan: { puesto: string; faltan: number }[]
+): { puesto: string; cuantos: number }[] {
+  return plan.filter((l) => l.faltan > 0).map((l) => ({ puesto: l.puesto, cuantos: l.faltan }));
+}
+
+/**
+ * **Qué falta, dicho con los puestos** (2026-11-12, lo pidió el cliente: en
+ * vez de *"faltan 2 según las reglas de cada puesto"*). Misma forma que la
+ * lista de puestos de la tarjeta: *"2 × Garzón, Runner"* —uno va sin número—.
+ * No se pluraliza el nombre porque lo escribe el cliente.
+ */
+export function textoFaltantes(f: { puesto: string; cuantos: number }[]): string {
+  return f.map((x) => (x.cuantos > 1 ? `${x.cuantos} × ${x.puesto}` : x.puesto)).join(', ');
 }
 
 /**
