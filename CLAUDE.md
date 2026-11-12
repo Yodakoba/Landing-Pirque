@@ -42,6 +42,12 @@ más abajo; esto es la lista para revisar.
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
   desplegables, una frase que dice qué pasa al seguir.
+- **Elegir de una lista que crece se hace con buscador** (regla del
+  cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
+  pocas; para personas o empresas —vendedores, socios, clientes— van **dos
+  botones**: el directo (*No, directo*) y otro que **abre la lista con
+  buscador** (*Por un socio comercial…*), con `BuscarEnLista`. Nunca un
+  botón por persona.
 - **Autoguardado por defecto** (regla del cliente, 2026-11-12). Todo lo
   que se escribe se guarda solo, con el estado a la vista (*Guardando… /
   ✓ Guardado*, y *Reintentar* en rojo si falla). **Se confirma a mano
