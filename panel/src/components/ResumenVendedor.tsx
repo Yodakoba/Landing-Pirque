@@ -10,6 +10,9 @@
  * - **Quien paga, la gerencia y el administrador** eligen al vendedor con un
  *   botón por cada uno y editan su forma de pago y su cuenta, que se guardan
  *   solas (`usarGuardadoPorFicha`).
+ * - **Los socios comerciales** (2026-11-12) van en la misma pantalla, con
+ *   un botón por socio y *+ Agregar socio comercial*: no tienen cuenta, así
+ *   que su ficha se crea acá. Mismo resumen, misma fórmula; sin sueldo fijo.
  * - **El periodo es un mes o una semana**, con flechas sin tope, igual que el
  *   link del trabajador. Parte en el mes en curso: el sueldo fijo es mensual.
  */
@@ -19,14 +22,15 @@ import DatosBancarios from './DatosBancarios';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, mesEnPalabras, rangoEnPalabras, semanaDe, sumarDias, esFecha } from '@/lib/fechas';
-import { BASE_COMISION, type FichaVendedor, type Venta, type ResumenVendedor as Resumen } from '@/lib/vendedores';
+import { BASE_COMISION, CON_SOCIO_DEFECTO, type FichaVendedor, type Venta, type ResumenVendedor as Resumen } from '@/lib/vendedores';
 import type { Banco } from '@/lib/banco';
 import type { PagoEquipo } from '@/lib/remuneraciones';
 
 type VentaConFolio = Venta & { folio: string };
 interface Datos {
   vendedores: { usuario: string; nombre: string; activo: boolean }[];
-  usuario: string; nombre: string; ficha: FichaVendedor; formaDePago: boolean;
+  socios: { usuario: string; nombre: string; activo: boolean }[];
+  usuario: string; nombre: string; tipo: 'vendedor' | 'socio'; ficha: FichaVendedor; formaDePago: boolean;
   desde: string; hasta: string; periodo: string; hoy: string;
   resumen: Omit<Resumen, 'cuentan'> & { cuentan: VentaConFolio[] }; pagado: number; falta: number; pagos: PagoEquipo[];
   porCobrar: VentaConFolio[]; enCurso: { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number; detalle: string }[];
@@ -60,7 +64,7 @@ function Azulejo({ que, monto, nota, color = 'text-hueso', grande = false }: {
 function formaEnPalabras(f: FichaVendedor): string {
   const pct = (n: number) => `${String(n).replace('.', ',')}%`;
   const etapas = [
-    f.comisionPct > 0 ? `${pct(f.comisionPct)}` : '',
+    f.comisionPct > 0 ? `${pct(f.comisionPct)}${f.etapa1Desde > 0 ? ` desde ${f.etapa1Desde} personas` : ''}` : '',
     f.etapa2Pct > 0 ? `${pct(f.etapa2Pct)} desde ${f.etapa2Desde} personas` : '',
     f.etapa3Pct > 0 ? `${pct(f.etapa3Pct)} desde ${f.etapa3Desde}` : ''
   ].filter(Boolean);
@@ -70,7 +74,9 @@ function formaEnPalabras(f: FichaVendedor): string {
     f.montoEvento > 0 ? `${enPesos(f.montoEvento)} por evento` : '',
     f.sueldoFijo > 0 ? `${enPesos(f.sueldoFijo)} fijos al mes` : ''
   ].filter(Boolean);
-  return partes.join(' + ');
+  const conSocio = f.tipo === 'vendedor' && partes.length && f.conSocio < 100
+    ? `. Si la venta viene con un socio comercial, el ${pct(f.conSocio)} de la comisión` : '';
+  return partes.join(' + ') + conSocio;
 }
 
 export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean }) {
@@ -80,6 +86,11 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   const [error, setError] = useState('');
   /** Lo escrito en la ficha, mientras se guarda solo. */
   const [ficha, setFicha] = useState<FichaVendedor | null>(null);
+  /** El nombre del socio nuevo, mientras se escribe; `null` es el botón cerrado. */
+  const [nuevoSocio, setNuevoSocio] = useState<string | null>(null);
+  /** El nombre de un socio escrito y sin confirmar. */
+  const [nombreEscrito, setNombreEscrito] = useState<string | null>(null);
+  const [aviso, setAviso] = useState('');
 
   const cargar = (u = usuario, p = periodo) => {
     const q = new URLSearchParams();
@@ -87,7 +98,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     if (p) q.set('p', p);
     fetch(`/api/vendedores?${q}`).then((r) => r.json()).then((d: Datos) => {
       if (d.error) { setError(d.error); return; }
-      setError(''); setDatos(d); setFicha(d.ficha ?? null);
+      setError(''); setDatos(d); setFicha(d.ficha ?? null); setNombreEscrito(null);
       if (!u && d.usuario) setUsuario(d.usuario);
       if (!p && d.periodo) setPeriodo(d.periodo);
     }).catch((e) => setError(String(e)));
@@ -119,41 +130,108 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   };
   const { estado, error: falla } = fichas.estadoDe(datos.usuario);
   const r = datos.resumen;
+  const esSocio = datos.tipo === 'socio';
+
+  /** Lo que se confirma a mano de un socio: el nombre, y desactivarlo o activarlo. */
+  const cambiarYa = async (cambios: Partial<FichaVendedor>, pregunta: string) => {
+    if (!confirm(pregunta)) return;
+    setAviso('');
+    const r = await fetch('/api/vendedores', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ usuario: datos.usuario, cambios })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { setAviso(d.error || 'No se pudo guardar.'); return; }
+    cargar(datos.usuario, periodo);
+  };
+  const crearSocio = async () => {
+    const nombre = (nuevoSocio ?? '').trim();
+    if (!nombre) return;
+    setAviso('');
+    const r = await fetch('/api/vendedores', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) { setAviso(d.error || 'No se pudo crear.'); return; }
+    setNuevoSocio(null);
+    elegir(d.ficha.usuario);
+  };
+  const botonDe = (v: { usuario: string; nombre: string; activo: boolean }) => (
+    <button key={v.usuario} type="button" aria-pressed={v.usuario === datos.usuario}
+      onClick={() => elegir(v.usuario)}
+      className={`boton min-h-[44px] rounded-full text-[15px] ${v.usuario === datos.usuario
+        ? 'border-oro bg-oro/15 font-semibold text-oro' : ''} ${v.activo ? '' : 'opacity-70'}`}>
+      {v.usuario === datos.usuario ? '✓ ' : ''}{v.nombre}{v.activo ? '' : ' (inactivo)'}
+    </button>
+  );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores'}</h1>
+        <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
         <p className="mt-1 text-[15px] text-hueso/75">
           {esVendedor
             ? 'Lo que vendiste, tu comisión y lo que te pagaron. La comisión cuenta cuando el cliente terminó de pagar.'
-            : 'Lo vendido, la comisión y lo pagado de cada vendedor. La comisión cuenta cuando el cliente terminó de pagar.'}
+            : 'Lo vendido, la comisión y lo pagado de cada vendedor y socio comercial. La comisión cuenta cuando el cliente terminó de pagar.'}
         </p>
       </div>
 
-      {/* Un botón por vendedor: se ven todos y se elige de un toque. */}
+      {/* Un botón por vendedor y uno por socio: se ven todos y se elige de un toque. */}
       {!esVendedor && (
-        datos.vendedores.length === 0 ? (
-          <p className="rounded-xl border-2 border-dashed border-hueso/25 p-4 text-[15px]">
-            Todavía no hay cuentas de vendedor. Se crean en <a href="/usuarios" className="font-semibold text-oro underline">Cuentas</a>,
-            con el rol Vendedor.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Vendedor">
-            {datos.vendedores.map((v) => (
-              <button key={v.usuario} type="button" aria-pressed={v.usuario === datos.usuario}
-                onClick={() => elegir(v.usuario)}
-                className={`boton min-h-[44px] rounded-full text-[15px] ${v.usuario === datos.usuario
-                  ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
-                {v.usuario === datos.usuario ? '✓ ' : ''}{v.nombre}{v.activo ? '' : ' (inactivo)'}
-              </button>
-            ))}
+        <div className="space-y-4">
+          <div>
+            <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-hueso/65">Vendedores</p>
+            {datos.vendedores.length === 0 ? (
+              <p className="rounded-xl border-2 border-dashed border-hueso/25 p-3 text-[15px]">
+                Todavía no hay cuentas de vendedor. Se crean en <a href="/usuarios" className="font-semibold text-oro underline">Cuentas</a>,
+                con el rol Vendedor.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Vendedor">
+                {datos.vendedores.map(botonDe)}
+              </div>
+            )}
           </div>
-        )
+          <div>
+            <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-hueso/65">Socios comerciales</p>
+            <p className="mb-2 text-[14px] text-hueso/70">
+              Agencias, choferes o municipalidades que traen clientes. No tienen cuenta: se eligen en la cotización.
+            </p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Socio comercial">
+              {datos.socios.map(botonDe)}
+              {datos.puedeEditar && nuevoSocio === null && (
+                <button type="button" className="boton min-h-[44px] rounded-full border-dashed text-[15px]"
+                  onClick={() => setNuevoSocio('')}>+ Agregar socio comercial</button>
+              )}
+            </div>
+            {nuevoSocio !== null && (
+              <form className="mt-2 flex flex-wrap items-end gap-2 rounded-xl border-2 border-oro/40 p-3"
+                onSubmit={(e) => { e.preventDefault(); void crearSocio(); }}>
+                <label className="block min-w-[14rem] flex-1 text-[14px] font-semibold">
+                  Nombre del socio
+                  <input autoFocus className={ENTRADA} value={nuevoSocio} placeholder="Ej.: Turismo Maipo"
+                    onChange={(e) => setNuevoSocio(e.target.value)} />
+                </label>
+                <button type="submit" className="boton boton-relleno min-h-[44px]" disabled={!nuevoSocio.trim()}>Crear el socio</button>
+                <button type="button" className="boton min-h-[44px]" onClick={() => setNuevoSocio(null)}>Cancelar</button>
+                <p className="w-full text-[13px] text-hueso/70">
+                  Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto. Se cambia en su ficha.
+                </p>
+              </form>
+            )}
+          </div>
+          {aviso && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px]">{aviso}</p>}
+        </div>
       )}
 
       {datos.usuario && (
         <>
+          {esSocio && (
+            <p className="text-[15px] text-hueso/80">
+              <b className="text-hueso">{datos.nombre}</b> · socio comercial{datos.ficha.activo ? '' : ' · desactivado'}.
+              Suman las cotizaciones que lo nombran en <i>¿Viene por un socio comercial?</i>
+            </p>
+          )}
           {/* El periodo: mes o semana, con flechas sin tope. */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-2" role="group" aria-label="Periodo">
@@ -184,8 +262,10 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
               nota={datos.pagos.length ? `${datos.pagos.length} ${datos.pagos.length === 1 ? 'pago' : 'pagos'}` : 'sin pagos todavía'} />
             <Azulejo que="Falta" monto={datos.falta} color={datos.falta > 0 ? 'text-ambar-texto' : 'text-hueso/70'} />
             <Azulejo que="Comisiones" monto={r.comisiones} nota="de las ventas pagadas" />
-            <Azulejo que="Sueldo fijo" monto={r.sueldoFijo}
-              nota={r.mesesFijo ? `${r.mesesFijo} ${r.mesesFijo === 1 ? 'mes' : 'meses'}` : 'cuenta el último día del mes'} />
+            {!esSocio && (
+              <Azulejo que="Sueldo fijo" monto={r.sueldoFijo}
+                nota={r.mesesFijo ? `${r.mesesFijo} ${r.mesesFijo === 1 ? 'mes' : 'meses'}` : 'cuenta el último día del mes'} />
+            )}
           </div>
 
           <section>
@@ -277,9 +357,10 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     desde donde se escriba, 55 y 77 de partida. */}
                 <div>
                   <p className="text-[14px] font-semibold">Comisión por etapas, según las personas del evento</p>
+                  <p className="text-[13px] text-hueso/70">Bajo el <i>desde</i> de la etapa 1 no hay comisión. En blanco, desde la primera persona.</p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     {([
-                      { n: 1, desde: null, pct: 'comisionPct' },
+                      { n: 1, desde: 'etapa1Desde', pct: 'comisionPct' },
                       { n: 2, desde: 'etapa2Desde', pct: 'etapa2Pct' },
                       { n: 3, desde: 'etapa3Desde', pct: 'etapa3Pct' }
                     ] as const).map((e) => (
@@ -288,10 +369,9 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                         <div className="mt-1 grid grid-cols-2 gap-2">
                           <label className="block text-[13px] font-semibold">
                             Desde (personas)
-                            {e.desde ? (
-                              <input inputMode="numeric" className={ENTRADA} value={ficha[e.desde] || ''}
-                                onChange={(ev) => cambiar(e.desde!, Number(ev.target.value.replace(/[^\d]/g, '')) || 0)} />
-                            ) : <span className="flex min-h-[44px] items-center text-[16px]">1</span>}
+                            <input inputMode="numeric" className={ENTRADA} value={ficha[e.desde] || ''}
+                              placeholder={e.n === 1 ? '1' : ''}
+                              onChange={(ev) => cambiar(e.desde, Number(ev.target.value.replace(/[^\d]/g, '')) || 0)} />
                           </label>
                           <label className="block text-[13px] font-semibold">
                             Comisión (%)
@@ -303,7 +383,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     ))}
                   </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className={`grid gap-3 ${esSocio ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
                   <label className="block text-[14px] font-semibold">
                     Bono menús premium (puntos)
                     <input inputMode="decimal" className={ENTRADA} value={ficha.bonoPuntos || ''} placeholder="0"
@@ -317,12 +397,26 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     <input inputMode="numeric" className={ENTRADA} value={ficha.montoEvento || ''} placeholder="0"
                       onChange={(e) => cambiar('montoEvento', Number(e.target.value.replace(/[^\d]/g, '')) || 0)} />
                   </label>
-                  <label className="block text-[14px] font-semibold">
-                    Sueldo fijo al mes ($)
-                    <input inputMode="numeric" className={ENTRADA} value={ficha.sueldoFijo || ''} placeholder="0"
-                      onChange={(e) => cambiar('sueldoFijo', Number(e.target.value.replace(/[^\d]/g, '')) || 0)} />
-                  </label>
+                  {!esSocio && (
+                    <label className="block text-[14px] font-semibold">
+                      Sueldo fijo al mes ($)
+                      <input inputMode="numeric" className={ENTRADA} value={ficha.sueldoFijo || ''} placeholder="0"
+                        onChange={(e) => cambiar('sueldoFijo', Number(e.target.value.replace(/[^\d]/g, '')) || 0)} />
+                    </label>
+                  )}
                 </div>
+                {/* **Con un socio, el vendedor cobra una parte** (2026-11-12,
+                    50% de partida, lo decidió el cliente). El socio cobra entero. */}
+                {!esSocio && (
+                  <label className="block max-w-md text-[14px] font-semibold">
+                    Cuando la venta viene con un socio comercial, cobra el (%) de su comisión
+                    <input inputMode="decimal" className={ENTRADA} value={String(ficha.conSocio ?? CON_SOCIO_DEFECTO)}
+                      onChange={(e) => cambiar('conSocio', e.target.value)} />
+                    <span className="mt-1 block text-[13px] font-normal text-hueso/70">
+                      El socio cobra su comisión entera; el vendedor, esta parte de la suya. 100 es toda.
+                    </span>
+                  </label>
+                )}
                 <div>
                   <p className="text-[14px] font-semibold">El % se calcula sobre</p>
                   <div className="mt-1 flex flex-wrap gap-2">
@@ -334,6 +428,35 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                     ))}
                   </div>
                 </div>
+                {esSocio && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-[14px] font-semibold">
+                        Nombre del socio
+                        <input className={ENTRADA} value={nombreEscrito ?? datos.nombre}
+                          onChange={(e) => setNombreEscrito(e.target.value)} />
+                      </label>
+                      {nombreEscrito !== null && nombreEscrito.trim() !== datos.nombre && (
+                        <p className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="text-[13px] text-ambar-texto">Cambiaste el nombre.</span>
+                          <button type="button" className="boton boton-relleno" disabled={!nombreEscrito.trim()}
+                            onClick={() => void cambiarYa({ nombre: nombreEscrito.trim() },
+                              `¿Cambiar el nombre de ${datos.nombre} a ${nombreEscrito.trim()}? Las cotizaciones que lo nombran lo mostrarán con el nombre nuevo.`)}>
+                            Guardar el nombre</button>
+                          <button type="button" className="boton" onClick={() => setNombreEscrito(null)}>Deshacer</button>
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[14px] font-semibold">{datos.ficha.activo ? 'Activo: se ofrece al cotizar' : 'Desactivado: no se ofrece al cotizar'}</p>
+                      <button type="button" className="boton mt-1 min-h-[44px]"
+                        onClick={() => void cambiarYa({ activo: !datos.ficha.activo }, datos.ficha.activo
+                          ? `¿Desactivar a ${datos.nombre}? Deja de ofrecerse al cotizar; sus ventas y su comisión se conservan.`
+                          : `¿Activar a ${datos.nombre}? Vuelve a ofrecerse al cotizar.`)}>
+                        {datos.ficha.activo ? 'Desactivar' : 'Activar'}</button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Transferencia</p>
                   <DatosBancarios banco={ficha.banco} nombre={datos.nombre}

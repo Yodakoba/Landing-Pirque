@@ -1819,6 +1819,58 @@ cada visita gasta una más —el panel vuelve a mirar la lista de pestañas
 antes de darla por inexistente—; deja de pasar con la primera ficha
 guardada.
 
+## Los socios comerciales (primera entrega, 2026-11-12)
+
+Lo pidió el cliente: *"hay que incluir el socio comercial en todo esto…
+puede venir como contacto de un vendedor o ser simplemente un contacto
+comercial que pasó por la gerencia… su trato editable y pasa a ser
+vendedor"*, y fijó la parte del vendedor: **50%**. Código en
+`lib/vendedores.ts`, `/api/vendedores` y `ResumenVendedor.tsx`.
+
+- **Una sola lista, dos tipos de ficha.** La pestaña `Vendedores` ganó
+  `Tipo` (*Vendedor* / *Socio comercial*; en blanco, vendedor), `Etapa 1
+  desde`, `Con socio cobra %` y `Activo`, al final y por nombre. **El socio
+  no tiene cuenta**: su ficha se crea en `/vendedores` con *+ Agregar socio
+  comercial* (pide el nombre, permiso `pagar`) y se identifica por un id,
+  `S-0001`…, en la columna `Usuario` (`nuevoIdSocio()`).
+- **Nace con el trato del landing**: 5% desde 22 personas, 10% desde 55 y
+  15% desde 77, sobre el neto (`fichaSocio()`, `TRATO_SOCIO`). Todo se edita
+  en su ficha y se guarda solo, como la del vendedor; no lleva sueldo fijo.
+- **La etapa 1 tiene su *desde***, para los dos tipos: bajo ese número no
+  hay comisión (`etapaDe()` devuelve la etapa 0, y la venta dice *"18
+  personas: bajo el mínimo de 22"*). En blanco, desde la primera persona,
+  que es lo que tenían los vendedores.
+- **El nombre y desactivar se confirman** (reglas 6 y 8): *Guardar el
+  nombre* / *Deshacer*, y *Desactivar* con su pregunta. Un desactivado deja
+  de ofrecerse al cotizar; sus ventas siguen.
+- **La pregunta en la cotización**: paso 2, *¿Viene por un socio
+  comercial?*, con *No, directo* y un botón por socio activo. Se guarda solo
+  en la columna nueva `Socio comercial` de `Presupuestos` (solo un id
+  `S-…` o vacío: `socioDelCuerpo()`), y una alternativa la copia.
+  `/api/presupuestos` manda la lista de socios —id, nombre y si está
+  activo, nada de su trato ni su cuenta—, así que el vendedor los ve al
+  cotizar aunque no vea sus fichas.
+- **El reparto ya rige**: con socio, **el socio cobra su comisión entera**
+  y **el vendedor cobra la parte de la suya que diga su ficha** —50% de
+  partida, editable; 100 es toda, 0 es nada— (`comisionDe(f, venta,
+  conSocio)`). La venta lo dice: *"… · con socio, 50% = $45.000"*. Vale en
+  *Mi resumen*, en lo que viene, en el informe y al congelar la comisión del
+  vendedor.
+- **Las ventas del socio son las cotizaciones que lo nombran**, de
+  cualquier vendedor (`esVentaDe()`), y su resumen es el mismo de un
+  vendedor: lo que suma en el periodo, lo que viene, lo que se le pagó (los
+  pagos *Comisión* a su nombre).
+
+**Lo que queda para la segunda entrega**: congelar la comisión del socio
+cuando el cliente paga todo (hoy se calcula al leer, y la columna
+`Comisión vendedor` es solo del vendedor), los socios en el informe —su
+pago, su boleta y la planilla—, y su link personal para que vea su resumen
+sin cuenta.
+
+**Lecturas de Google**: ninguna más. `Vendedores` se sumó a la tanda de
+`/api/presupuestos`; agregar un socio es la tanda de la ruta más la relectura
+al escribir, como guardar una ficha.
+
 ## El CRM del socio (2026-11-02)
 
 > **Apagada desde el 2026-11-10** (lo decidió el cliente: las cotizaciones

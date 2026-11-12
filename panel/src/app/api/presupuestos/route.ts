@@ -8,13 +8,14 @@ import { diasConSobrecupo } from '@/lib/sobrecupo';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_MENUS } from '@/lib/menus';
 import { HOJA_LINEAS, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
+import { HOJA_VENDEDORES } from '@/lib/vendedores';
 import { horarioDe, faltaDeEmpresa, normalizarHorario } from '@/lib/contrato';
 import { UF_MINIMA, UF_MAXIMA } from '@/lib/uf';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto, guardarLineas,
   borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar, leerCobros,
-  sincronizarReserva, leerReservas
+  sincronizarReserva, leerReservas, leerVendedores
 } from '@/lib/datos';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, estaMandada, aEntero, folioDe, estadoNormal, lineasDe,
@@ -39,14 +40,15 @@ export const dynamic = 'force-dynamic';
  * nombre y el contacto ya puestos. Las de antes de las fichas siguen
  * mostrando lo que tenían escrito.
  */
-export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS, HOJA_RESERVAS], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS, HOJA_RESERVAS, HOJA_VENDEDORES], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
     const quien = await quienEs(req);
-    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros, reservas] = await Promise.all([
+    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros, reservas, fichas] = await Promise.all([
       leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerConfig(),
-      leerClientes(), leerFechas(), leerCobros().catch(() => []), leerReservas().catch(() => [])
+      leerClientes(), leerFechas(), leerCobros().catch(() => []), leerReservas().catch(() => []),
+      leerVendedores().catch(() => [])
     ]);
     // **Los días que se pasaron del cupo** (2026-11-12): un pago entró sobre
     // reservas sin pagar. Va en la misma lectura —la tanda ya trae
@@ -60,6 +62,11 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
     return NextResponse.json({
       presupuestos: presupuestos.map((p) => conCliente(p, clientes)),
       lineas, menus, clientes,
+      // **Los socios comerciales**, para *"¿Viene por un socio comercial?"*:
+      // solo el id, el nombre y si está activo. Su trato y su cuenta, no.
+      socios: fichas.filter((f) => f.tipo === 'socio')
+        .map((f) => ({ id: f.usuario, nombre: f.nombre || f.usuario, activo: f.activo }))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
       // Lo justo para los avisos de la lista: de qué cotización, cuánto y si
       // ya se revisó.
       cobros: cobros.map((c) => ({ presupuesto: c.presupuesto, monto: c.monto,
@@ -113,6 +120,12 @@ function lineasDelCuerpo(crudo: unknown, id: string): LineaEntrante[] {
     };
   });
 }
+
+/** El id de un socio comercial (`S-0001`), o vacío: no se guarda otra cosa. */
+const socioDelCuerpo = (v: unknown) => {
+  const t = String(v ?? '').trim().toUpperCase();
+  return /^S-\d{1,6}$/.test(t) ? t : '';
+};
 
 /** La fecha o el periodo que llegan, comprobados. */
 function cuandoDelCuerpo(cuerpo: Record<string, unknown>, antes?: Presupuesto) {
@@ -237,6 +250,7 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJ
       idReserva: '',
       invitados,
       tipoEvento: String(cuerpo.tipoEvento ?? '').trim(),
+      socio: socioDelCuerpo(cuerpo.socio),
       grupo: '',
       descuento: pct(cuerpo.descuento),
       motivo: '',
@@ -399,6 +413,7 @@ export const PATCH = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HO
       estado,
       invitados,
       tipoEvento: texto('tipoEvento', previo.tipoEvento),
+      socio: cuerpo.socio === undefined ? (previo.socio ?? '') : socioDelCuerpo(cuerpo.socio),
       descuento: cuerpo.descuento === undefined ? previo.descuento : pct(cuerpo.descuento),
       motivo: texto('motivo', previo.motivo),
       documento: cuerpo.documento === undefined ? previo.documento : documentoDe(cuerpo.documento),

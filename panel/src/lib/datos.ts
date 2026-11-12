@@ -784,7 +784,8 @@ export async function congelarComision(idPresupuesto: string): Promise<void> {
     if (!u) return;
     const b = baseDeVenta(p, lineas, menus);
     if (!pagadaEl(b.total, cobrosDe(cobros, p.id))) return;
-    const c = comisionDe(fichaDe(fichas, u.usuario, u.nombre), b);
+    // Con un socio, el vendedor congela su parte (`conSocio`).
+    const c = comisionDe(fichaDe(fichas, u.usuario, u.nombre), b, !!p.socio);
     const { fila: _f, ...resto } = p;
     await guardarPresupuesto({ ...resto, comisionVendedor: marcaComision(c) });
   } catch { /* se calcula al leer; se congela en el próximo cobro */ }

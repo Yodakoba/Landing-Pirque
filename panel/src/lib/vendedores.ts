@@ -49,18 +49,48 @@ export const COL_VENDEDORES = {
   etapa3Desde: 'Etapa 3 desde',
   etapa3Pct: 'Etapa 3 %',
   bonoPuntos: 'Bono premium (puntos)',
+  /** `Vendedor` o `Socio comercial` (2026-11-12). En blanco, vendedor. */
+  tipoFicha: 'Tipo',
+  /** Desde cuántas personas rige la etapa 1. En blanco, desde la primera. */
+  etapa1Desde: 'Etapa 1 desde',
+  /** Del vendedor: qué % de su comisión cobra cuando la venta trae un socio. */
+  conSocio: 'Con socio cobra %',
+  /** `no` es desactivado. Solo los socios: un vendedor se desactiva en *Cuentas*. */
+  activo: 'Activo',
   ...COL_BANCO,
   nota: 'Nota de pago'
 } as const;
 export const ENCABEZADO_VENDEDORES = Object.values(COL_VENDEDORES);
 
 export const BASE_COMISION = { total: 'Total con IVA', neto: 'Neto' } as const;
+
+/**
+ * **Dos tipos de ficha en la misma lista** (2026-11-12, lo decidió el
+ * cliente): el vendedor, con cuenta en el panel, y el **socio comercial**
+ * —una agencia, un chofer, una municipalidad— que trae clientes y cobra su
+ * comisión, **sin cuenta**. La fórmula es la misma; cambian los números de
+ * partida y que el socio se elige en la cotización.
+ */
+export const TIPO_FICHA = { vendedor: 'Vendedor', socio: 'Socio comercial' } as const;
+export type TipoFicha = keyof typeof TIPO_FICHA;
+const tipoDe = (v: unknown): TipoFicha => (/socio/i.test(String(v ?? '')) ? 'socio' : 'vendedor');
+
+/** Cuánto de su comisión cobra el vendedor cuando la venta viene con un socio, de partida. */
+export const CON_SOCIO_DEFECTO = 50;
 export type BaseComision = keyof typeof BASE_COMISION;
 
 export interface FichaVendedor {
   /** El usuario de su cuenta: es lo que une la ficha con sus cotizaciones. */
   usuario: string;
   nombre: string;
+  /** Vendedor o socio comercial. El socio se identifica por su id (`S-0001`) en `usuario`. */
+  tipo: TipoFicha;
+  /** Un socio desactivado deja de ofrecerse en la cotización; sus ventas siguen. */
+  activo: boolean;
+  /** Desde cuántas personas rige la etapa 1: bajo eso no hay comisión. 0 es desde la primera. */
+  etapa1Desde: number;
+  /** Del vendedor: el % de su comisión que cobra cuando la venta viene con un socio. */
+  conSocio: number;
   sueldoFijo: number;
   /** En %, con decimales: 2,5 es 2,5%. Es la **etapa 1**: desde la primera persona. */
   comisionPct: number;
@@ -82,10 +112,32 @@ export interface FichaVendedor {
 export const CORTES_SOCIOS = { etapa2: 55, etapa3: 77 } as const;
 
 export const fichaVacia = (usuario: string, nombre = ''): FichaVendedor => ({
-  usuario, nombre, sueldoFijo: 0, comisionPct: 0,
+  usuario, nombre, tipo: 'vendedor', activo: true, etapa1Desde: 0, conSocio: CON_SOCIO_DEFECTO,
+  sueldoFijo: 0, comisionPct: 0,
   etapa2Desde: CORTES_SOCIOS.etapa2, etapa2Pct: 0, etapa3Desde: CORTES_SOCIOS.etapa3, etapa3Pct: 0, bonoPuntos: 0,
   montoEvento: 0, base: 'neto', banco: bancoVacio(), fila: 0
 });
+
+/**
+ * **El trato de partida de un socio comercial**: el del landing de socios
+ * —5% desde 22 personas, 10% desde 55, 15% desde 77—, sobre el neto. Todo
+ * editable en su ficha.
+ */
+export const TRATO_SOCIO = { desde: 22, pct: 5, etapa2Pct: 10, etapa3Pct: 15 } as const;
+
+export const fichaSocio = (id: string, nombre: string): FichaVendedor => ({
+  ...fichaVacia(id, nombre), tipo: 'socio', etapa1Desde: TRATO_SOCIO.desde, comisionPct: TRATO_SOCIO.pct,
+  etapa2Pct: TRATO_SOCIO.etapa2Pct, etapa3Pct: TRATO_SOCIO.etapa3Pct, conSocio: 100
+});
+
+/** El id del próximo socio: `S-0001`, `S-0002`… */
+export function nuevoIdSocio(fichas: Pick<FichaVendedor, 'usuario'>[]): string {
+  const n = fichas.reduce((m, f) => {
+    const x = /^S-(\d+)$/i.exec(f.usuario);
+    return x ? Math.max(m, Number(x[1])) : m;
+  }, 0);
+  return `S-${String(n + 1).padStart(4, '0')}`;
+}
 
 const entero = (v: unknown) => {
   const n = Number(String(v ?? '').replace(/[^\d]/g, ''));
@@ -111,6 +163,11 @@ export function leerVendedoresDe(filas: string[][]): FichaVendedor[] {
   return filas.slice(1).map((f, n) => ({
     usuario: en(f, i.usuario).trim(),
     nombre: en(f, i.nombre).trim(),
+    tipo: tipoDe(en(f, i.tipoFicha)),
+    activo: !/^no$/i.test(en(f, i.activo).trim()),
+    etapa1Desde: entero(en(f, i.etapa1Desde)),
+    // En blanco es el de partida; un 0 escrito es 0 (no cobra con socio).
+    conSocio: en(f, i.conSocio).trim() === '' ? CON_SOCIO_DEFECTO : porcentaje(en(f, i.conSocio)),
     sueldoFijo: entero(en(f, i.sueldoFijo)),
     comisionPct: porcentaje(en(f, i.comisionPct)),
     etapa2Desde: entero(en(f, i.etapa2Desde)) || CORTES_SOCIOS.etapa2,
@@ -134,6 +191,9 @@ export function filaVendedor(v: FichaVendedor, enc: string[]): string[] {
   const fila = enc.map(() => '');
   const poner = (k: number, x: unknown) => { if (k >= 0) fila[k] = String(x ?? ''); };
   poner(i.usuario, v.usuario); poner(i.nombre, v.nombre);
+  poner(i.tipoFicha, TIPO_FICHA[v.tipo]); poner(i.activo, v.activo ? '' : 'no');
+  poner(i.etapa1Desde, v.etapa1Desde || '');
+  poner(i.conSocio, v.tipo === 'vendedor' ? String(v.conSocio).replace('.', ',') : '');
   poner(i.sueldoFijo, v.sueldoFijo || ''); poner(i.comisionPct, v.comisionPct ? String(v.comisionPct).replace('.', ',') : '');
   poner(i.montoEvento, v.montoEvento || ''); poner(i.base, BASE_COMISION[v.base]);
   const pct = (n: number) => (n ? String(n).replace('.', ',') : '');
@@ -158,13 +218,20 @@ export const tieneFormaDePago = (f: Pick<FichaVendedor, 'sueldoFijo' | 'comision
   || (f.etapa2Pct ?? 0) > 0 || (f.etapa3Pct ?? 0) > 0 || (f.bonoPuntos ?? 0) > 0;
 
 export type ReglaComision = Pick<FichaVendedor, 'comisionPct' | 'etapa2Desde' | 'etapa2Pct' | 'etapa3Desde'
-  | 'etapa3Pct' | 'bonoPuntos' | 'montoEvento' | 'base'>;
+  | 'etapa3Pct' | 'bonoPuntos' | 'montoEvento' | 'base'> & Partial<Pick<FichaVendedor, 'etapa1Desde' | 'conSocio' | 'tipo'>>;
 
 /** La etapa que alcanza un evento por su gente: la más alta con % puesto. */
-export function etapaDe(f: Pick<FichaVendedor, 'comisionPct' | 'etapa2Desde' | 'etapa2Pct' | 'etapa3Desde' | 'etapa3Pct'>,
-  personas: number): { etapa: 1 | 2 | 3; pct: number } {
+/**
+ * La etapa que alcanza un evento por su gente: la más alta con % puesto.
+ * **Bajo el *desde* de la etapa 1 no hay etapa** (`etapa: 0`): un socio con
+ * trato desde 22 no cobra por un grupo de 15.
+ */
+export function etapaDe(f: Pick<FichaVendedor, 'comisionPct' | 'etapa2Desde' | 'etapa2Pct' | 'etapa3Desde' | 'etapa3Pct'>
+  & Partial<Pick<FichaVendedor, 'etapa1Desde'>>,
+  personas: number): { etapa: 0 | 1 | 2 | 3; pct: number } {
   if (f.etapa3Pct > 0 && personas >= f.etapa3Desde) return { etapa: 3, pct: f.etapa3Pct };
   if (f.etapa2Pct > 0 && personas >= f.etapa2Desde) return { etapa: 2, pct: f.etapa2Pct };
+  if ((f.etapa1Desde ?? 0) > 0 && personas < (f.etapa1Desde ?? 0)) return { etapa: 0, pct: 0 };
   return { etapa: 1, pct: f.comisionPct };
 }
 
@@ -210,18 +277,25 @@ const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
  * el monto por evento. Devuelve también **cómo se calculó**, en una frase
  * que ven el vendedor y quien paga.
  */
-export function comisionDe(f: ReglaComision, v: BaseVenta): { monto: number; detalle: string } {
+export function comisionDe(f: ReglaComision, v: BaseVenta, conSocio = false): { monto: number; detalle: string } {
   const base = f.base === 'neto' ? v.neto : v.total;
   const { etapa, pct } = etapaDe(f, v.personas);
   const porEtapa = Math.round(base * pct / 100);
   const basePremium = f.base === 'neto' ? v.premium.neto : v.premium.total;
   const porBono = f.bonoPuntos > 0 ? Math.round(basePremium * f.bonoPuntos / 100) : 0;
   const partes = [
-    pct > 0 ? `${v.personas} personas → etapa ${etapa}, ${pctTexto(pct)} = ${pesos(porEtapa)}` : '',
+    pct > 0 ? `${v.personas} personas → etapa ${etapa}, ${pctTexto(pct)} = ${pesos(porEtapa)}`
+      : etapa === 0 && f.comisionPct > 0 ? `${v.personas} personas: bajo el mínimo de ${f.etapa1Desde}` : '',
     porBono > 0 ? `bono ${v.premium.productos.join(' y ')} ${pctTexto(f.bonoPuntos)} = ${pesos(porBono)}` : '',
     f.montoEvento > 0 ? `${pesos(f.montoEvento)} por evento` : ''
   ].filter(Boolean);
-  return { monto: porEtapa + porBono + f.montoEvento, detalle: partes.join(' + ') };
+  const entero = porEtapa + porBono + f.montoEvento;
+  // **Con un socio, el vendedor cobra su parte** (2026-11-12, lo decidió el
+  // cliente: 50% de partida, editable por vendedor). El socio cobra entero.
+  const parte = conSocio && (f.tipo ?? 'vendedor') === 'vendedor' ? (f.conSocio ?? CON_SOCIO_DEFECTO) : 100;
+  if (parte >= 100 || entero === 0) return { monto: entero, detalle: partes.join(' + ') };
+  const monto = Math.round(entero * parte / 100);
+  return { monto, detalle: `${partes.join(' + ')} · con socio, ${pctTexto(parte)} = ${pesos(monto)}` };
 }
 
 /** Lo guardado en `Comisión vendedor`: *"285000 · 60 personas → etapa 2, 3% = …"*. */
@@ -269,11 +343,20 @@ export function pagadaEl(total: number, cobros: Pick<Cobro, 'fecha' | 'monto' | 
  * Las canceladas vienen marcadas y con comisión 0: una venta que se cayó no
  * deja comisión aunque el cliente hubiera pagado.
  */
+/**
+ * De quién es una venta: la del vendedor, la que **creó**; la del socio, la
+ * que lo **nombra** en `Socio comercial`.
+ */
+export const esVentaDe = (usuario: string, tipo: TipoFicha = 'vendedor') =>
+  (p: Pick<Presupuesto, 'creadoPor' | 'socio'>) =>
+    normalizar(tipo === 'socio' ? p.socio ?? '' : p.creadoPor) === normalizar(usuario) && !!usuario;
+
 export function ventasDe(usuario: string, presupuestos: Presupuesto[], lineas: LineaPresupuesto[],
   cobros: Cobro[], ficha: ReglaComision, menus: Pick<Menu, 'nombre' | 'bonoVendedor'>[] = []): Venta[] {
-  const yo = normalizar(usuario);
+  const suya = esVentaDe(usuario, ficha.tipo);
+  const socio = ficha.tipo === 'socio';
   return presupuestos
-    .filter((p) => normalizar(p.creadoPor) === yo && (!!p.idReserva
+    .filter((p) => suya(p) && (!!p.idReserva
       || estadoNormal(p.estado) === ESTADO_PRESUPUESTO.cancelada))
     .map((p) => {
       const b = baseDeVenta(p, lineas, menus);
@@ -282,8 +365,9 @@ export function ventasDe(usuario: string, presupuestos: Presupuesto[], lineas: L
       const pagado = suyos.reduce((n, c) => n + c.monto, 0);
       // **La que ya quedó guardada al pagarse no se recalcula**: cambiar la
       // ficha vale para lo que se pague desde ese día.
-      const guardada = comisionCongelada(p.comisionVendedor);
-      const c = guardada ?? comisionDe(ficha, b);
+      // La congelada es la del vendedor: la del socio se congela en la segunda entrega.
+      const guardada = socio ? null : comisionCongelada(p.comisionVendedor);
+      const c = guardada ?? comisionDe(ficha, b, !!p.socio);
       return {
         id: p.id, grupo: p.grupo || p.id, cliente: p.cliente || 'sin nombre', fechaEvento: p.fecha,
         total: b.total, neto: b.neto, pagado, personas: b.personas,

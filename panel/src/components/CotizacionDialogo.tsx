@@ -87,6 +87,8 @@ export interface DatosCotizar {
   hoy: string;
   usuario: string;
   rol: string;
+  /** Los socios comerciales, para *¿Viene por un socio comercial?* (2026-11-12). */
+  socios?: { id: string; nombre: string; activo: boolean }[];
 }
 
 /** El 4 se llamaba *Enviar* y ahí no se manda nada solo: tiene el documento,
@@ -214,6 +216,8 @@ export default function CotizacionDialogo({
   const [periodo, setPeriodo] = useState(p?.periodo ?? '');
   const [invitados, setInvitados] = useState(p?.invitados ?? 0);
   const [tipoEvento, setTipoEvento] = useState(p?.tipoEvento ?? '');
+  /** El socio comercial que trajo la venta: su id, o vacío (2026-11-12). */
+  const [socio, setSocio] = useState(p?.socio ?? '');
   const [notas, setNotas] = useState(p?.notas ?? '');
   const [estado, setEstado] = useState(
     p ? (estadoVisible(p, datos.hoy) === 'Vencida' ? p.estado : estadoVisible(p, datos.hoy))
@@ -371,7 +375,7 @@ export default function CotizacionDialogo({
     idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
     descuento, motivo, documento, anticipoTxt, anticipoMontoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
     horario, ley20393, acuerdos, fact: facturacion, cambiosTxt, cancelTxt, reembolsoTxt,
-    segTxt, avisoTxt, exclusivo
+    segTxt, avisoTxt, exclusivo, socio
   });
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -474,7 +478,7 @@ export default function CotizacionDialogo({
         anticipo: anticipoTxt, anticipoMonto: anticipoMontoTxt, saldoDias: saldoTxt,
         horario, ley20393, acuerdos,
         cambiosFecha: cambiosTxt, cancelacionDias: cancelTxt, reembolso: reembolsoTxt,
-        seguimientoDias: segTxt, avisoEvento: avisoTxt, exclusivo,
+        seguimientoDias: segTxt, avisoEvento: avisoTxt, exclusivo, socio,
         ...(uf ? { uf, fechaUF } : {}),
         estado: estadoForzado ?? estado,
         lineas: vistas
@@ -1424,6 +1428,38 @@ export default function CotizacionDialogo({
                 valor={tipoEvento} onElegir={setTipoEvento} />
             </div>
 
+            {/* **¿Viene por un socio comercial?** (2026-11-12, lo pidió el
+                cliente): una agencia, un chofer, una municipalidad. El socio
+                cobra su comisión y el vendedor la parte que diga su ficha.
+                Botones a la vista, no un desplegable; un desactivado se
+                muestra solo si ya era el elegido. */}
+            {(datos.socios ?? []).length > 0 && (
+              <div>
+                <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                  ¿Viene por un socio comercial?
+                </p>
+                <div role="radiogroup" aria-label="Socio comercial" className="flex flex-wrap gap-2">
+                  <button type="button" role="radio" aria-checked={!socio} onClick={() => setSocio('')}
+                    className={`boton min-h-[44px] ${!socio ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
+                    {!socio ? '✓ ' : ''}No, directo
+                  </button>
+                  {(datos.socios ?? []).filter((x) => x.activo || x.id === socio).map((x) => (
+                    <button key={x.id} type="button" role="radio" aria-checked={x.id === socio}
+                      onClick={() => setSocio(x.id === socio ? '' : x.id)}
+                      className={`boton min-h-[44px] ${x.id === socio ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
+                      {x.id === socio ? '✓ ' : ''}🤝 {x.nombre}{x.activo ? '' : ' (desactivado)'}
+                    </button>
+                  ))}
+                </div>
+                {socio && (
+                  <p className="mt-1 text-[13px] text-hueso/70">
+                    {(datos.socios ?? []).find((x) => x.id === socio)?.nombre ?? 'El socio'} cobra su comisión por esta venta,
+                    y quien la vende, la parte de la suya que diga su ficha.
+                  </p>
+                )}
+              </div>
+            )}
+
             <Campo etiqueta="Notas internas" ancho="w-full">
               <textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)}
                 placeholder="Lo que conviene recordar de esta conversación" className={ENTRADA} />
@@ -1728,7 +1764,7 @@ export default function CotizacionDialogo({
                 {fechaReal ? <span className="first-letter:uppercase inline-block">{enPalabras(fechaReal)}</span>
                   : periodo || 'Sin fecha'}
                 {invitados > 0 && <> · {invitados} invitados</>}
-                {tipoEvento && <> · {tipoEvento}</>}
+                {tipoEvento && <> · {tipoEvento}</>}{socio && <> · 🤝 {(datos.socios ?? []).find((x) => x.id === socio)?.nombre ?? socio}</>}
               </p>
               <p className="mt-1 text-[20px] font-bold text-oro">{enPesos(cuentas.total)}</p>
               {enElLink.length > 1 && !ganada && (
@@ -2172,7 +2208,7 @@ export default function CotizacionDialogo({
                 {fechaReal ? <span className="first-letter:uppercase inline-block">{enPalabras(fechaReal)}</span>
                   : periodo || 'Sin fecha'}
                 {invitados > 0 && <> · {invitados} invitados</>}
-                {tipoEvento && <> · {tipoEvento}</>}
+                {tipoEvento && <> · {tipoEvento}</>}{socio && <> · 🤝 {(datos.socios ?? []).find((x) => x.id === socio)?.nombre ?? socio}</>}
               </p>
               <p className="mt-1 text-[20px] font-bold text-oro">{enPesos(cuentas.total)}</p>
             </div>
