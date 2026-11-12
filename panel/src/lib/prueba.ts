@@ -4761,7 +4761,8 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
      'el % acepta coma decimal y se queda entre 0 y 100');
   ok(fichaVacia('x').base === 'neto' && leerVendedoresDe([ENCABEZADO_VENDEDORES, ['x']])[0].base === 'neto',
      'la comisión va sobre el neto por defecto, también en una ficha con la celda en blanco (2026-11-12)');
-  const ficha = { ...fichaVacia('carla', 'Carla'), comisionPct: 5, montoEvento: 10000, sueldoFijo: 400000, base: 'total' as const };
+  // Estas pruebas miran el %, no el mínimo: la etapa 1 parte en la primera persona.
+  const ficha = { ...fichaVacia('carla', 'Carla'), etapa1Desde: 1, comisionPct: 5, montoEvento: 10000, sueldoFijo: 400000, base: 'total' as const };
   const sinBono = { total: 0, neto: 0, productos: [] as string[] };
   ok(comisionDe(ficha, { total: 1190000, neto: 1000000, personas: 10, premium: sinBono }).monto === 69500
      && comisionDe({ ...ficha, base: 'neto' }, { total: 1190000, neto: 1000000, personas: 10, premium: sinBono }).monto === 60000,
@@ -4769,7 +4770,7 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
 
   // Modelo A (2026-11-12): tres etapas por personas, con los cortes de los socios, y bono en los menús de arriba.
   const { baseDeVenta, etapaDe, comisionCongelada, marcaComision } = await import('./vendedores.ts');
-  const a = { ...fichaVacia('diego'), comisionPct: 2, etapa2Pct: 3, etapa3Pct: 4, bonoPuntos: 2, base: 'total' as const };
+  const a = { ...fichaVacia('diego'), etapa1Desde: 1, comisionPct: 2, etapa2Pct: 3, etapa3Pct: 4, bonoPuntos: 2, base: 'total' as const };
   ok(a.etapa2Desde === 55 && a.etapa3Desde === 77, 'las etapas parten con los cortes de los socios: 55 y 77 personas');
   ok(etapaDe(a, 20).pct === 2 && etapaDe(a, 55).pct === 3 && etapaDe(a, 77).pct === 4
      && etapaDe({ ...a, etapa3Pct: 0 }, 90).pct === 3,
@@ -4864,7 +4865,10 @@ console.log('\nLos socios comerciales (primera entrega)');
   ok(etapaDe(s1, 15).etapa === 0 && etapaDe(s1, 15).pct === 0 && etapaDe(s1, 22).pct === 5
      && etapaDe(s1, 60).pct === 10 && etapaDe(s1, 80).pct === 15,
      'bajo el "desde" de la etapa 1 no hay comisión; desde ahí, la etapa que alcance');
-  ok(etapaDe(fichaVacia('x'), 1).etapa === 1, 'un vendedor sin "desde" en la etapa 1 cobra desde la primera persona');
+  const v0 = { ...fichaVacia('x'), comisionPct: 3 };
+  ok(v0.etapa1Desde === 22 && etapaDe(v0, 21).etapa === 0 && etapaDe(v0, 22).pct === 3
+     && etapaDe({ ...v0, etapa1Desde: 1 }, 1).etapa === 1,
+     'la etapa 1 parte en 22 personas también para el vendedor (2026-11-12); con 1, desde la primera persona');
   const sinBono = { total: 0, neto: 0, productos: [] as string[] };
   const v60 = { total: 1190000, neto: 1000000, personas: 60, premium: sinBono };
   ok(comisionDe(s1, v60).monto === 100000 && comisionDe(s1, v60, true).monto === 100000,
@@ -4884,8 +4888,8 @@ console.log('\nLos socios comerciales (primera entrega)');
      && ida[1].tipo === 'vendedor' && ida[1].activo && ida[1].conSocio === 30 && ida[1].etapa1Desde === 10,
      'las dos fichas se escriben y se leen igual: tipo, activo, "desde" de la etapa 1 y la parte con socio');
   const vieja = leerVendedoresDe([['Usuario', 'Nombre', 'Comisión %'], ['carla', 'Carla', '3']])[0];
-  ok(vieja.tipo === 'vendedor' && vieja.activo && vieja.conSocio === 50 && vieja.etapa1Desde === 0,
-     'una planilla sin las columnas nuevas se lee como vendedor activo, desde la primera persona y con 50% con socio');
+  ok(vieja.tipo === 'vendedor' && vieja.activo && vieja.conSocio === 50 && vieja.etapa1Desde === 22,
+     'una planilla sin las columnas nuevas se lee como vendedor activo, con la etapa 1 desde 22 y 50% con socio');
   const pres = [
     { id: 'A', fecha: '2026-12-05', cliente: 'Andes', estado: 'Ganada', idReserva: 'R1', creadoPor: 'carla', descuento: 0, grupo: '', socio: 'S-0001' },
     { id: 'B', fecha: '2026-12-12', cliente: 'Maipo', estado: 'Ganada', idReserva: 'R2', creadoPor: 'carla', descuento: 0, grupo: '', socio: '' },

@@ -142,7 +142,7 @@ export const PATCH = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES], async functio
     const nueva: FichaVendedor = {
       ...antes, usuario: cuenta.usuario, nombre,
       ...(socio && c.activo !== undefined ? { activo: c.activo !== false } : {}),
-      ...(c.etapa1Desde !== undefined ? { etapa1Desde: monto(c.etapa1Desde) } : {}),
+      ...(c.etapa1Desde !== undefined ? { etapa1Desde: Math.max(1, monto(c.etapa1Desde)) } : {}),
       ...(!socio && c.conSocio !== undefined ? { conSocio: porcentaje(c.conSocio) } : {}),
       ...(c.sueldoFijo !== undefined ? { sueldoFijo: monto(c.sueldoFijo) } : {}),
       ...(c.comisionPct !== undefined ? { comisionPct: porcentaje(c.comisionPct) } : {}),
