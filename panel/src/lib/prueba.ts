@@ -2212,6 +2212,8 @@ ok(ROLES_DE_CUENTA.includes(ROL.gerencia) && ROL.operaciones === 'gerente',
 // el informe; el gerente lo ve y marca la boleta, pero no paga ni copia
 // cuentas.
 ok(!puede(ROL.encargado, 'informe'), 'el encargado ya no ve el informe');
+ok(puede(ROL.operaciones, 'sueldos') && !puede(ROL.encargado, 'sueldos') && !puede(ROL.operaciones, 'links'),
+   'la ficha completa (sueldos y cuentas) la llena el encargado de operaciones, no el de turno; los links no van con eso');
 ok(puede(ROL.operaciones, 'informe') && puede(ROL.operaciones, 'boleta') && !puede(ROL.operaciones, 'pagar'),
    'el gerente ve el informe y marca la boleta, pero no registra pagos');
 ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encargado, 'boleta'),

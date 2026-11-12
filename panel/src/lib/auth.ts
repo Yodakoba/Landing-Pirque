@@ -249,8 +249,13 @@ export const PERMISOS = {
    * cliente terminó dando los dos—, pero siguen separados porque uno es
    * plata y el otro una credencial, y algún día un rol puede necesitar lo
    * uno sin lo otro.
+   *
+   * **El encargado de operaciones lo tiene desde el 2026-11-12** (lo pidió
+   * el cliente: *"debería poder ingresar el perfil completo del equipo y
+   * también de los extras"*). El encargado de turno sigue sin él. Los links
+   * no van con esto: siguen en `links`.
    */
-  sueldos: [ROL.admin, ROL.pagos, ROL.gerencia],
+  sueldos: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /** Cambiar los puestos y su regla de "uno cada N personas". */
   puestos: [ROL.admin, ROL.pagos, ROL.gerencia],
   /**
