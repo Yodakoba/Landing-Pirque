@@ -66,10 +66,11 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_FECHAS, HOJA_RESERVAS, 
       }
       if (!otras.length) return NextResponse.json({ error: 'Ese día no tiene otras reservas: no hay nada que liberar.' }, { status: 409 });
       const nota = plazo.enPlazo ? '' : `caso especial: faltan ${plazo.faltan} días`;
-      await guardarPresupuesto({ ...resto, exclusividad: marcaExclusividad('pedida', quien.usuario, ahoraEnChile(), nota) });
+      const marca = marcaExclusividad('pedida', quien.usuario, ahoraEnChile(), nota);
+      await guardarPresupuesto({ ...resto, exclusividad: marca });
       await anotar({ ...quien, accion: 'Pidió liberar un día para un evento exclusivo',
         detalle: `${folio} · ${p.fecha} · ${otras.length} reservas, ${personas} personas${nota ? ` · ${nota}` : ''}` });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, exclusividad: marca });
     }
 
     if (accion !== 'pausar' && actual.estado !== 'pedida') {

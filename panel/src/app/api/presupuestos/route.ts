@@ -74,6 +74,8 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       empresa: cfg.empresa.nombre,
       // Para avisar antes de ganar si el día ya no tiene cupo (`cupoParaGanar()`).
       cupoNormal: cfg.cupoNormal, horaApertura: cfg.horaApertura,
+      // El plazo para pedir liberar un día para un evento exclusivo.
+      exclusivoDias: cfg.exclusivoDias,
       // Para el contrato: el horario de siempre, y qué le falta a la empresa
       // en Configuración para que el contrato salga completo.
       contrato: {

@@ -54,6 +54,7 @@ import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { enlaceWhatsApp } from '@/lib/contacto';
 import { cupoParaGanar } from '@/lib/dias';
+import { tieneArriendo, esExclusivo, exclusividadDe, plazoParaLiberar } from '@/lib/exclusivo';
 import { usarSoloMira } from './SesionCliente';
 
 const ENTRADA =
@@ -77,6 +78,8 @@ export interface DatosCotizar {
   empresa?: string;
   /** El cupo de un día nuevo, para `cupoParaGanar()`. */
   cupoNormal?: number;
+  /** Con cuántos días de anticipación se puede pedir liberar un día (Configuración). */
+  exclusivoDias?: number;
   horaApertura?: string;
   /** Para el contrato: el horario de siempre y qué le falta a la empresa. */
   contrato?: { horario: string; faltaEmpresa: string[];
@@ -216,6 +219,14 @@ export default function CotizacionDialogo({
     p ? (estadoVisible(p, datos.hoy) === 'Vencida' ? p.estado : estadoVisible(p, datos.hoy))
       : ESTADO_PRESUPUESTO.borrador);
   const [motivo, setMotivo] = useState(p?.motivo ?? '');
+  /**
+   * **"¿El día es exclusivo?"** (2026-11-12, lo pidió el cliente): se
+   * pregunta cuando la cotización lleva arriendo, sin obligar. `'sí'`, `'no'`
+   * o `''` sin contestar. Se guarda solo, como el resto de la cotización.
+   */
+  const [exclusivo, setExclusivo] = useState(p?.exclusivo ?? '');
+  /** El pedido de liberar el día y su decisión: lo escribe el servidor. */
+  const [marcaExcl, setMarcaExcl] = useState(p?.exclusividad ?? '');
   const [descuento, setDescuento] = useState(p?.descuento ?? 0);
   /** `''` es por definir. Ver `DOCUMENTO`. */
   const [documento, setDocumento] = useState<Documento>(p?.documento ?? '');
@@ -360,7 +371,7 @@ export default function CotizacionDialogo({
     idCliente, fechaReal, periodo: sinFecha ? periodo : '', invitados, tipoEvento, notas,
     descuento, motivo, documento, anticipoTxt, anticipoMontoTxt, saldoTxt, uf, fechaUF, estado, lineas: vistas,
     horario, ley20393, acuerdos, fact: facturacion, cambiosTxt, cancelTxt, reembolsoTxt,
-    segTxt, avisoTxt
+    segTxt, avisoTxt, exclusivo
   });
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -463,7 +474,7 @@ export default function CotizacionDialogo({
         anticipo: anticipoTxt, anticipoMonto: anticipoMontoTxt, saldoDias: saldoTxt,
         horario, ley20393, acuerdos,
         cambiosFecha: cambiosTxt, cancelacionDias: cancelTxt, reembolso: reembolsoTxt,
-        seguimientoDias: segTxt, avisoEvento: avisoTxt,
+        seguimientoDias: segTxt, avisoEvento: avisoTxt, exclusivo,
         ...(uf ? { uf, fechaUF } : {}),
         estado: estadoForzado ?? estado,
         lineas: vistas
@@ -887,6 +898,88 @@ export default function CotizacionDialogo({
       </p>
     </div>
   ) : null;
+  /**
+   * **El evento exclusivo** (2026-11-12, lo pidió el cliente). Si la
+   * cotización es exclusiva y ese día ya tiene reservas de otros, **no se
+   * gana**: hay que liberar el día, y eso lo decide el encargado de pagos o
+   * la gerencia (`/api/presupuestos/exclusivo`). Nada se hace solo.
+   */
+  const conArriendo = tieneArriendo(vistas, datos.menus);
+  const esExcl = esExclusivo(exclusivo);
+  const otrasPersonas = tomadasDia?.todas ?? 0;
+  const choqueExclusivo = esExcl && !ganada && esFecha(fechaReal) && otrasPersonas > 0;
+  const decisionExcl = exclusividadDe(marcaExcl);
+  const diasExcl = datos.exclusivoDias ?? 7;
+  const plazoExcl = esFecha(fechaReal) ? plazoParaLiberar(fechaReal, datos.hoy, diasExcl) : null;
+  const [pidiendoExcl, setPidiendoExcl] = useState(false);
+  async function pedirLiberar() {
+    if (!p) return;
+    setPidiendoExcl(true);
+    try {
+      // Lo escrito se manda antes: el pedido exige que esté guardada como exclusiva.
+      if (autoActivo) await auto.forzar();
+      const r = await fetch('/api/presupuestos/exclusivo', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: p.id, accion: 'pedir' })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.error) { avisar(d.error || 'No se pudo mandar el pedido.', 'atencion'); return; }
+      if (d.exclusividad !== undefined) setMarcaExcl(d.exclusividad);
+      huboGuardado.current = true;
+      avisar('Pedido enviado: le llega a la gerencia en su bandeja');
+    } finally { setPidiendoExcl(false); }
+  }
+  const alarmaExclusivo = choqueExclusivo ? (
+    <div role="alert" className="rounded-xl border-2 border-morado-fuerte/70 bg-morado/10 p-4 text-[15px]">
+      <p className="text-[17px] font-bold text-morado-texto">
+        🟣 Es exclusivo, y ese día ya hay {otrasPersonas} {otrasPersonas === 1 ? 'persona reservada' : 'personas reservadas'}
+      </p>
+      <p className="mt-1 text-hueso/85">
+        Para ganarla hay que liberar el día: cancelar o cambiar de fecha esas reservas, con
+        disculpas a cada cliente. Eso no se hace solo: lo decide el encargado de pagos o la gerencia.
+      </p>
+      {plazoExcl && !plazoExcl.enPlazo && decisionExcl.estado !== 'aprobada' && (
+        <p className="mt-2 font-semibold text-ambar-texto">
+          Faltan {plazoExcl.faltan} {plazoExcl.faltan === 1 ? 'día' : 'días'}, menos de los {diasExcl} de
+          Configuración: va como caso especial.
+        </p>
+      )}
+      {decisionExcl.estado === 'pedida' && (
+        <p className="mt-3 rounded-lg border-2 border-dashed border-morado-fuerte/60 px-3 py-2 font-semibold">
+          ⏳ Pedido por {decisionExcl.quien} el {decisionExcl.cuando}. Esperando la decisión.
+        </p>
+      )}
+      {decisionExcl.estado === 'aprobada' && (
+        <p className="mt-3 rounded-lg border-2 border-verde-fuerte/70 bg-verde/10 px-3 py-2">
+          <strong className="text-verde-texto">✓ {decisionExcl.quien} aprobó liberar el día</strong>
+          {decisionExcl.nota ? ` · ${decisionExcl.nota}` : ''}. El día ya no se vende. Falta avisarles a esas
+          reservas y cancelarlas o cambiarlas de fecha desde{' '}
+          <a href={`/dia/${fechaReal}`} className="font-semibold text-oro underline">la página del día</a>;
+          con el día libre, se puede ganar.
+        </p>
+      )}
+      {decisionExcl.estado === 'rechazada' && (
+        <p className="mt-3 rounded-lg border-2 border-rojo-fuerte/70 bg-rojo/10 px-3 py-2">
+          <strong className="text-rojo-texto">✕ {decisionExcl.quien} no lo aprobó</strong>
+          {decisionExcl.nota ? `: ${decisionExcl.nota}` : ''}.
+        </p>
+      )}
+      {puedeEditar && decisionExcl.estado !== 'pedida' && decisionExcl.estado !== 'aprobada' && (
+        <button type="button" disabled={pidiendoExcl} onClick={() => void pedirLiberar()}
+          className="tecla mt-3 min-h-[52px] w-full rounded-xl border-2 border-morado-fuerte px-5 text-[16px]
+                     font-bold text-morado-texto hover:bg-morado/10 disabled:opacity-50">
+          {pidiendoExcl ? 'Mandando…' : decisionExcl.estado === 'rechazada'
+            ? '🙋 Pedirlo de nuevo' : '🙋 Pedir a la gerencia liberar el día'}
+        </button>
+      )}
+    </div>
+  ) : null;
+  /** Lo que impide ganar ahora: el día exclusivo con gente, o el cupo. */
+  const bloqueoGanar = choqueExclusivo || sinCupo;
+  const tituloBloqueo = choqueExclusivo ? 'Falta liberar el día' : 'No hay cupo para tomarla';
+  const bajadaBloqueo = choqueExclusivo
+    ? 'Mientras ese día tenga reservas de otros, no se puede ganar como exclusiva.'
+    : 'Mientras el día no tenga lugar, no se puede marcar ganada.';
   // **Las alternativas** (2026-11-10, rehechas el 2026-11-11): un número por
   // cotización —el del grupo— y una letra por alternativa. Se mandan juntas
   // en un solo link y, antes de ganar, se elige una.
@@ -936,7 +1029,7 @@ export default function CotizacionDialogo({
   // el cliente: estaba en la A, la marcó ganada y el cliente había elegido la
   // B). Cada botón dice la letra y el total: se elige cuál ganó, no se gana
   // "esta" sin mirar.
-  const botonGanar = sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar && porElegir ? (
+  const botonGanar = choqueExclusivo ? alarmaExclusivo : sinCupo ? avisoCupo : esFecha(fechaReal) && puedeEditar && porElegir ? (
     <div className="space-y-2">
       <p className="text-[15px] font-semibold">¿Con cuál alternativa se quedó el cliente?</p>
       <div className={`grid gap-2 ${vivas.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
@@ -1011,9 +1104,9 @@ export default function CotizacionDialogo({
         </Hito>
       )
     ) : anticipoPagado || (mandada && cond.pct === 0) || grupoListo ? (
-      <Hito tono={sinCupo ? 'ambar' : 'verde'}
-        titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
-        bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar}>
+      <Hito tono={bloqueoGanar ? 'ambar' : 'verde'}
+        titulo={bloqueoGanar ? tituloBloqueo : esFecha(fechaReal) ? 'Lista para ganar' : 'Falta el día del evento'}
+        bajada={bloqueoGanar ? bajadaBloqueo : bajadaGanar}>
         {botonGanar}
       </Hito>
     ) : !mandada ? (
@@ -1060,9 +1153,9 @@ export default function CotizacionDialogo({
         </Hito>
       )
     ) : !ganada ? (
-      <Hito tono={sinCupo ? 'ambar' : 'verde'}
-        titulo={sinCupo ? 'No hay cupo para tomarla' : esFecha(fechaReal) ? '✓ Contrato firmado · lista para ganar' : 'Falta el día del evento'}
-        bajada={sinCupo ? 'Mientras el día no tenga lugar, no se puede marcar ganada.' : bajadaGanar + (cobrado.faltaAnticipo > 0
+      <Hito tono={bloqueoGanar ? 'ambar' : 'verde'}
+        titulo={bloqueoGanar ? tituloBloqueo : esFecha(fechaReal) ? '✓ Contrato firmado · lista para ganar' : 'Falta el día del evento'}
+        bajada={bloqueoGanar ? bajadaBloqueo : bajadaGanar + (cobrado.faltaAnticipo > 0
           ? ` El anticipo (${enPesos(cobrado.faltaAnticipo)}) queda por cobrar.` : '')}>
         {botonGanar}
       </Hito>
@@ -1558,6 +1651,48 @@ export default function CotizacionDialogo({
                 </div>
               </dl>
             </div>
+
+            {/* **¿El día es exclusivo?** (2026-11-12, lo pidió el cliente):
+                con arriendo se pregunta, sin obligar —con buena negociación
+                puede venir otro grupo—. Exclusivo llega así al calendario al
+                ganarla. */}
+            {p && (conArriendo || esExcl) && (
+              <div className="rounded-xl border-2 border-morado-fuerte/60 bg-morado/[0.08] p-4">
+                <p className="text-[17px] font-bold text-morado-texto">🟣 ¿El día es exclusivo?</p>
+                <p className="mt-1 text-[14px] text-hueso/80">
+                  Lleva arriendo. Exclusivo: ese día no viene nadie más, y al ganarla deja de venderse.
+                  Si se negoció que pueda venir otro grupo, no lo es.
+                </p>
+                {ganada ? (
+                  <p className="mt-2 text-[15px] font-semibold">
+                    {esExcl ? '✓ Sí, exclusivo' : exclusivo === 'no' ? 'No: puede venir otro grupo' : 'Sin contestar'}
+                  </p>
+                ) : (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {([['sí', 'Sí, exclusivo'], ['no', 'No, puede venir otro grupo']] as const).map(([v, texto]) => {
+                      const marcado = v === 'sí' ? esExcl : exclusivo === 'no';
+                      return (
+                        <button key={v} type="button" aria-pressed={marcado} disabled={!puedeEditar}
+                          onClick={() => setExclusivo(marcado ? '' : v)}
+                          className={`tecla min-h-[48px] rounded-xl border-2 px-4 text-[16px] font-bold
+                                      disabled:cursor-not-allowed ${marcado
+                            ? 'border-morado-fuerte bg-morado-fuerte text-tinta'
+                            : 'border-hueso/30 text-hueso/85 hover:border-morado-fuerte/70'}`}>
+                          {marcado ? '✓ ' : ''}{texto}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {!exclusivo && !ganada && (
+                  <p className="mt-2 text-[14px] text-ambar-texto">Sin contestar cuenta como no exclusivo.</p>
+                )}
+                {esExcl && !ganada && !choqueExclusivo && esFecha(fechaReal) && tomadasDia !== null && (
+                  <p className="mt-2 text-[14px] text-verde-texto">✓ Ese día no tiene otras reservas.</p>
+                )}
+                {choqueExclusivo && <div className="mt-3">{alarmaExclusivo}</div>}
+              </div>
+            )}
 
             <div className="flex flex-wrap justify-end gap-2">
               {p && puedeEditar && (autoActivo

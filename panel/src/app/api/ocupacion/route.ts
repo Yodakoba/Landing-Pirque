@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
-import { HOJA_LINEAS, HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
-import { exigir, exigirVer } from '@/lib/permisos';
-import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias } from '@/lib/datos';
+import { HOJA_LINEAS, HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
+import { HOJA_CLIENTES } from '@/lib/clientes';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
+import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias, leerPresupuestos, leerClientes } from '@/lib/datos';
+import { puede, type Rol } from '@/lib/auth';
+import { pendientesDeExclusivo } from '@/lib/aprobaciones';
+import { conCliente, grupoDe } from '@/lib/cotizar';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasAbiertosEntre, hoy, sumarDias, esFecha } from '@/lib/fechas';
 import type { FechaHabil } from '@/lib/tipos';
@@ -45,7 +49,7 @@ export const dynamic = 'force-dynamic';
  * sin ocupación ningún día recibe público— y la tarjeta además decía 0
  * personas. Lo notó el cliente mirando octubre.
  */
-export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PRESUPUESTOS, HOJA_LINEAS], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_CLIENTES], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
@@ -111,7 +115,19 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PR
     // La firma de lo que se leyó (2026-11-12): con ella la pantalla sabe, al
     // revisar `/api/cambios`, si lo que tiene sigue al día. Sale de las
     // mismas lecturas, así que no cuesta nada más.
-    return NextResponse.json({ ocupacion, config: cfg, firma: firmaDe(reservas, fechas) });
+    // **Los pedidos de liberar un día para un evento exclusivo** (2026-11-12),
+    // para la bandeja de quien decide (`exclusividad`). Salen de la misma
+    // tanda: `Presupuestos` ya venía por lo cotizado, y `Clientes` se sumó a
+    // la precarga para el nombre. Ninguna lectura más.
+    const { rol } = await quienEs(req);
+    let exclusivos: ReturnType<typeof pendientesDeExclusivo> = [];
+    if (puede(rol as Rol, 'exclusividad')) {
+      const [pres, clientes] = await Promise.all([leerPresupuestos(), leerClientes()]);
+      const porId = new Map(pres.map((p) => [p.id, p]));
+      exclusivos = pendientesDeExclusivo(pres.map((p) => conCliente(p, clientes)), reservas, hoy(),
+        cfg.exclusivoDias, (id) => folioDe({ id: grupoDe(porId.get(id) ?? { id, grupo: '' }) }));
+    }
+    return NextResponse.json({ ocupacion, config: cfg, firma: firmaDe(reservas, fechas), exclusivos });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

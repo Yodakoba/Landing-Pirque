@@ -38,7 +38,7 @@ import { comoIngresar } from './fudo.ts';
 import { personasEfectivas, menuEfectivo, descuentoVigente, necesitaAprobacion, erroresRectificacion,
          avisosRectificacion, esCambioGrande, resumenRectificacion, personasDelMenu, POR_APROBAR,
          partesRectificacion } from './rectificacion.ts';
-import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes } from './aprobaciones.ts';
+import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes, pendientesDeExclusivo } from './aprobaciones.ts';
 import { limiteSinAprobar, subeElCupo, marcaCupoPedido, cupoPedidoDe, cupoAlAprobar } from './cupo.ts';
 import { leerClientesDe, filaCliente, limpiarCliente, faltaEnCliente, parecidos,
          nuevoIdCliente, buscarClientes, migrarAClientes, ENCABEZADO_CLIENTES,
@@ -2251,6 +2251,25 @@ ok(puede(ROL.pagos, 'boleta') && puede(ROL.pagos, 'pagar') && !puede(ROL.encarga
   ok(p1.faltan === 9 && p1.enPlazo && p2.faltan === 5 && !p2.enPlazo, 'con menos de 7 días, liberar el día es caso especial');
   ok(mensajeLiberacion('Ana Soto', 'sábado 14 de noviembre').includes('devolución completa')
      && mensajeLiberacion('Ana Soto', 'sábado 14').includes('pisco sour'), 'el mensaje ofrece devolución u otra fecha con regalo');
+
+  // La bandeja: solo lo pedido y exclusivo, con lo que habría que mover.
+  const res = [
+    { id: 'r1', fecha: '2026-11-21', personas: 4, estadoPago: 'paid' },
+    { id: 'r2', fecha: '2026-11-21', personas: 6, estadoPago: 'pending' },
+    { id: 'r3', fecha: '2026-11-21', personas: 9, estadoPago: 'cancelled' },
+    { id: 'r4', fecha: '2026-11-28', personas: 2, estadoPago: 'paid' }
+  ] as never;
+  const pres = [
+    { id: 'A', fecha: '2026-11-21', cliente: 'Empresa X', invitados: 80, exclusivo: 'sí', exclusividad: m, diaPausado: '', idReserva: '' },
+    { id: 'B', fecha: '2026-11-21', cliente: 'Otra', invitados: 10, exclusivo: 'no', exclusividad: m, diaPausado: '', idReserva: '' },
+    { id: 'C', fecha: '2026-11-28', cliente: 'Ya resuelta', invitados: 50, exclusivo: 'sí',
+      exclusividad: marcaExclusividad('aprobada', 'Felipe', 'x'), diaPausado: 'Abierta', idReserva: '' }
+  ];
+  const pend = pendientesDeExclusivo(pres, res, '2026-11-12', 7, (id) => `N${id}`);
+  ok(pend.length === 1 && pend[0].id === 'A' && pend[0].folio === 'NA',
+     'a la bandeja llega solo el pedido vigente de una exclusiva: ni la no exclusiva ni la ya aprobada');
+  ok(pend[0].reservas === 2 && pend[0].personas === 10 && pend[0].enPlazo && pend[0].faltan === 9,
+     'cuenta las reservas que ocupan lugar ese día, sin las canceladas, y el plazo');
 }
 
 /* ---------- el rol de vendedor (2026-11-05) ---------- */

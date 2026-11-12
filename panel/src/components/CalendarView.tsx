@@ -28,7 +28,7 @@ import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from
 import { copiarConAviso } from './AvisoFlotante';
 import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
-import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes } from '@/lib/aprobaciones';
+import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes, type PendienteExclusivo } from '@/lib/aprobaciones';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { usarAlDia, BarraAlDia, horaDe } from './AlDia';
 import { diferencias, MARCA_DURA } from '@/lib/cambios';
@@ -151,6 +151,8 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
 
   /** La firma de la última carga: con ella `usarAlDia` sabe si hay cambios. */
   const [firma, setFirma] = useState('');
+  /** Los pedidos de liberar un día para un evento exclusivo (`exclusividad`). */
+  const [exclusivos, setExclusivos] = useState<PendienteExclusivo[]>([]);
   /**
    * **Los días que cambiaron de gente en la última actualización**, con
    * cuánto y desde qué hora (2026-11-12). Se marcan en dorado un minuto:
@@ -184,6 +186,8 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         setDias(d.ocupacion);
         if (d.config) setCfg(d.config);
         if (d.firma) setFirma(d.firma);
+        // Los pedidos de liberar un día: vienen solo para quien decide.
+        setExclusivos(d.exclusivos ?? []);
       })
       .catch((e) => setError(String(e)));
     // Solo para los nombres de menú del formulario manual; si falla, el
@@ -254,7 +258,9 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
    */
   const conCupo = puede(rol as Rol, 'cupo');
   const pendientes = useMemo(() => {
-    const descuentos = puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [];
+    // **Los pedidos de evento exclusivo** (2026-11-12) los arma el servidor:
+    // solo vienen para quien tiene `exclusividad`.
+    const descuentos = juntarPendientes(puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [], exclusivos);
     if (!conCupo) return descuentos;
     // **Subir el cupo es del gerente o más arriba** (2026-11-12): los
     // pedidos del encargado y los días sobre su cupo llegan acá.
@@ -262,7 +268,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     const pedidos = pendientesDeCupo(fechasHoja, tomadas);
     const conPedido = new Set(pedidos.map((p) => p.fecha));
     return juntarPendientes(descuentos, pedidos, pendientesDeSobrecupo(dias ?? [], cfg.capacidadMaxima, conPedido));
-  }, [reservas, rol, conCupo, fechasHoja, dias, cfg.capacidadMaxima]);
+  }, [reservas, rol, conCupo, fechasHoja, dias, cfg.capacidadMaxima, exclusivos]);
 
   const avisosHoy = useMemo(() => {
     if (!puede(rol as Rol, 'asistencia')) return null;
