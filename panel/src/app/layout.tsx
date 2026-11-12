@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen">
         <Cabecera rol={sesion?.rol ?? ''} usuario={sesion?.usuario ?? ''} gerencia={sesion?.gerencia === true}
-          rolReal={sesion?.rolReal ?? ''} />
+          rolReal={sesion?.rolReal ?? ''} verComoHasta={sesion?.rolReal ? sesion.expira : 0} />
         <Recorrido />
         {/* El rol y la vista gerencia, para que cada pantalla sepa qué se
             mira y qué se toca (ver `usarSoloMira()`). */}

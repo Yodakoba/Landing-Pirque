@@ -9,6 +9,11 @@
  * franja va siempre, en todas las pantallas, porque es la única puerta de
  * vuelta: mirando como anfitrión, por ejemplo, el menú es una sola pastilla.
  *
+ * **Es para revisar, no para prestar el aparato** (2026-11-12): con la
+ * franja, cualquiera que tome el teléfono vuelve a administrador de un
+ * toque. Por eso la ventana lo dice antes de elegir, y la vista se cierra
+ * sola a la hora (`DURACION_VER_COMO`); la franja dice a qué hora.
+ *
  * El cambio lo hace `/api/sesion/ver-como`, que firma la sesión de nuevo, y
  * después la página se recarga desde la portada: así el menú, el middleware y
  * cada pantalla se arman con el rol nuevo, igual que al entrar.
@@ -47,6 +52,14 @@ export function BotonVerComo() {
             Mira el panel tal como lo ve esa cuenta: su menú, sus pantallas y sus botones. Vuelves con
             un toque a administrador.
           </p>
+          <div className="mt-3 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3 text-[14px] text-hueso/90">
+            <p className="font-bold text-ambar-texto">✋ Es para revisar, no para pasarle el aparato a alguien</p>
+            <p className="mt-1">
+              Desde esta vista cualquiera vuelve a administrador con un toque. Si la anfitriona o un
+              vendedor va a usar este teléfono, que entre con su propia cuenta.
+            </p>
+            <p className="mt-1">La vista se cierra sola en una hora, y para seguir hay que entrar de nuevo.</p>
+          </div>
           <div className="mt-4 grid gap-2">
             {ROLES.map(({ rol, icono }) => (
               <button key={rol} type="button" disabled={!!cambiando}
@@ -73,12 +86,16 @@ export function BotonVerComo() {
 }
 
 /** La franja que se queda arriba mientras el administrador mira como otro rol. */
-export function FranjaVerComo({ rol }: { rol: string }) {
+export function FranjaVerComo({ rol, hasta = 0 }: { rol: string; hasta?: number }) {
   const [volviendo, setVolviendo] = useState(false);
+  const hora = hasta > 0
+    ? new Date(hasta * 1000).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Santiago' })
+    : '';
   return (
     <div role="status" className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border-2 border-oro bg-oro/15 px-3 py-2">
       <span className="text-[15px]">
         👁 Estás mirando el panel como <strong>{NOMBRE_ROL[rol] ?? rol}</strong>: así lo ve esa cuenta.
+        {hora && <span className="block text-[14px] text-hueso/75">Esta vista se cierra a las {hora}; después hay que entrar de nuevo.</span>}
       </span>
       <button type="button" disabled={volviendo}
         onClick={() => { setVolviendo(true); void cambiar('admin').finally(() => setVolviendo(false)); }}
