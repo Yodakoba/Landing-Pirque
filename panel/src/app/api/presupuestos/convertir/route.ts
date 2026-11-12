@@ -8,7 +8,7 @@ import {
 } from '@/lib/datos';
 import { cupoParaGanar } from '@/lib/dias';
 import { ocupaLugar, tienePrioridad } from '@/lib/ocupacion';
-import { condicionesDe, estadoCobros, puedeGanar } from '@/lib/cobros';
+import { condicionesDe, estadoCobros, puedeGanar, ganaSinRespaldo } from '@/lib/cobros';
 import { enPesos } from '@/lib/ocupacion';
 import { conCliente, otrasAlternativas, alternativasDe } from '@/lib/cotizar';
 import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
@@ -212,7 +212,8 @@ export const POST = conLecturas([], async function POST(req: Request) {
 
     await anotar({ ...quien,
       accion: 'Marcó ganada una cotización',
-      detalle: `${folioDe(p)} · ${p.cliente} · ${p.fecha} · reserva ${idReserva}` });
+      detalle: `${folioDe(p)} · ${p.cliente} · ${p.fecha} · reserva ${idReserva}`
+        + (ganaSinRespaldo(cobrado.pagado, !!p.contrato) ? ' · sin pago ni contrato: sujeta a espacio' : '') });
     return NextResponse.json({ idReserva });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

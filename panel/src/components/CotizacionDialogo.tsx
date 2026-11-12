@@ -39,7 +39,7 @@ import {
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, COBRO, type Menu } from '@/lib/menus';
 import {
-  condicionesDe, estadoCobros, montoCobro, CONCEPTO_COBRO, type Cobro
+  condicionesDe, estadoCobros, montoCobro, CONCEPTO_COBRO, ganaSinRespaldo, type Cobro
 } from '@/lib/cobros';
 import { buscarClientes, porNombreCliente, faltaParaFactura, type Cliente } from '@/lib/clientes';
 import { puedeTocarPresupuesto, puede, type Rol } from '@/lib/auth';
@@ -1078,8 +1078,12 @@ export default function CotizacionDialogo({
     // Solo se muestra con la cotización ganada (2026-11-12, lo pidió el
     // cliente: que el paso diga qué falta para completar la reserva y no
     // vuelva a ofrecer ganarla).
-    <Hito tono="ambar" titulo={`✓ Ganada${firmado ? ' y firmada' : ''} · falta el saldo: ${enPesos(cobrado.falta)}`}
-      bajada={`Lo que falta para completar la reserva. Se paga ${cond.saldoHasta
+    <Hito tono="ambar" titulo={ganaSinRespaldo(cobrado.pagado, !!firmado)
+        ? `⚠ Ganada sin pago ni contrato · sujeta a espacio`
+        : `✓ Ganada${firmado ? ' y firmada' : ''} · falta el saldo: ${enPesos(cobrado.falta)}`}
+      bajada={ganaSinRespaldo(cobrado.pagado, !!firmado)
+        ? `Se trata como una reserva sin pago: si el día se llena con gente que pagó, esa gente tiene preferencia. Con el primer pago deja de estar sujeta a espacio. Falta ${enPesos(cobrado.falta)}.`
+        : `Lo que falta para completar la reserva. Se paga ${cond.saldoHasta
         ? `hasta el ${enPalabras(cond.saldoHasta)}` : `${cond.dias} días antes del evento`}; cuando pague, márcalo acá y la reserva queda Pagada.`}>
       {puedeEditar && (
         <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
@@ -1268,12 +1272,22 @@ export default function CotizacionDialogo({
           edita: lo que queda es la devolución, en el paso Condiciones.
         </p>
       )}
-      {ganada && !cancelada && (
+      {ganada && !cancelada && (ganaSinRespaldo(cobrado.pagado, !!firmado) ? (
+        // **Ganada sin un peso y sin contrato** (2026-11-12): se dice arriba,
+        // en todos los pasos, porque su reserva no tiene preferencia.
+        <div className="mb-3 rounded-lg border-2 border-dashed border-ambar-fuerte/70 bg-ambar/10 px-3 py-2 text-[15px]">
+          <p><strong className="text-ambar-texto">⚠ Ganada sin pago ni contrato: sujeta a espacio.</strong></p>
+          <p className="mt-0.5 text-hueso/85">
+            Su reserva se trata como una sin pago, igual que una de Shopify: si el día se llena con gente que pagó,
+            esa gente tiene preferencia. Con el primer pago deja de estar sujeta a espacio.
+          </p>
+        </div>
+      ) : (
         <p className="mb-3 rounded border border-verde-fuerte/60 bg-verde/10 px-3 py-2 text-[14px]">
           <strong className="text-verde-texto">Ganada.</strong> Tiene su reserva en el calendario.
           Si cambias algo acá, la reserva se actualiza sola.
         </p>
-      )}
+      ))}
 
       {/* Una cancelada se ve, no se edita: solo quedan sus pagos (paso 4),
           para anotar la devolución. */}
@@ -2532,7 +2546,13 @@ export default function CotizacionDialogo({
       {confirmandoGanar && p && (() => {
         const objetivo = alts.find((a) => a.id === confirmandoGanar) ?? p;
         const l = letraDe(objetivo, alternativas);
-        const sinRespaldo = !ganable(objetivo).ok || (objetivo.id === p.id && !anticipoPagado && !firmado
+        // **Sin un peso y sin contrato** (2026-11-12, lo reclamó el cliente:
+        // con *Sin anticipo* se ganaba sin preguntar). Lo pagado es del
+        // evento —todas las alternativas—; el contrato, de la que se gana.
+        const pagadoEvento = cobrosGrupo.reduce((n, c) => n + c.monto, 0);
+        const contratoDeEsta = objetivo.id === p.id ? !!firmado : !!objetivo.contrato;
+        const nada = ganaSinRespaldo(pagadoEvento, contratoDeEsta);
+        const sinRespaldo = nada || !ganable(objetivo).ok || (objetivo.id === p.id && !anticipoPagado && !firmado
           && cond.pct > 0);
         const otras = vivas.filter((a) => a.id !== objetivo.id);
         return (
@@ -2565,10 +2585,20 @@ export default function CotizacionDialogo({
             )}
             {sinRespaldo && (
               <div className="mt-3 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-3 text-[15px]">
-                <p className="font-bold text-ambar-texto">No tienes ningún anticipo ni contrato firmado.</p>
-                <p className="mt-1 text-hueso/85">
-                  ¿Tienes un contrato firmado? Si es así, súbelo al sistema antes de marcarla ganada.
+                <p className="text-[17px] font-bold text-ambar-texto">
+                  {nada ? '✋ ¿Por qué la marcas ganada sin anticipo?' : 'No tienes el anticipo pagado ni contrato firmado.'}
                 </p>
+                <p className="mt-1 text-hueso/85">
+                  {nada ? 'No hay ningún pago anotado ni contrato firmado. ' : ''}
+                  ¿Tienes un contrato firmado? Si es así, súbelo antes de marcarla ganada.
+                </p>
+                {nada && (
+                  <p className="mt-2 rounded-md border-2 border-dashed border-ambar-fuerte/70 p-2 text-hueso/90">
+                    Si la marcas igual, la reserva queda <strong>sujeta a espacio</strong>: se trata como si no
+                    hubiera pagado nada, igual que una reserva de Shopify sin pago. Si el día se llena con gente que
+                    pagó, esa gente tiene preferencia.
+                  </p>
+                )}
               </div>
             )}
             <div className="mt-5 flex flex-wrap justify-end gap-2">
@@ -2578,13 +2608,13 @@ export default function CotizacionDialogo({
               {sinRespaldo && (
                 <button type="button" className="boton min-h-[48px]"
                   onClick={() => { setConfirmandoGanar(''); setPaso(5); }}>
-                  📎 Ir a subir el contrato
+                  📎 Sí, ir a subir el contrato
                 </button>
               )}
               <button type="button" autoFocus disabled={guardando} onClick={() => void ganar(objetivo.id)}
                 className="tecla min-h-[52px] rounded-xl border-2 border-verde-fuerte bg-verde-fuerte px-6
                            text-[16px] font-bold text-tinta disabled:opacity-50">
-                {sinRespaldo ? 'Sí, marcarla ganada igual'
+                {sinRespaldo ? (nada ? 'No, marcarla ganada igual' : 'Sí, marcarla ganada igual')
                   : alts.length > 1 ? `✓ Sí, ganó la ${l}` : '✓ Sí, marcarla ganada'}
               </button>
             </div>
