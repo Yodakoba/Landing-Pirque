@@ -27,10 +27,12 @@ import Nav, { PAGINAS } from './Nav';
 import { puede, puedeVer, type Rol } from '@/lib/auth';
 import BotonTema from './BotonTema';
 
-export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '' }: {
+export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '', verComoHasta = 0 }: {
   rol: string; usuario: string; gerencia?: boolean;
   /** 'admin' si es un administrador mirando como otro rol ("ver como"). */
   rolReal?: string;
+  /** Cuándo se cierra la vista "ver como", en segundos desde epoch. */
+  verComoHasta?: number;
 }) {
   const ruta = usePathname();
   // **Vista gerencia** (2026-11-11): la página que se está mirando, y si se
@@ -75,7 +77,7 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '' 
                 otro rol, esta franja va arriba en todas las pantallas. Es la
                 puerta de vuelta, y tiene que estar aunque el menú de ese rol
                 sea una sola pastilla. */}
-            {rolReal && <FranjaVerComo rol={rol} />}
+            {rolReal && <FranjaVerComo rol={rol} hasta={verComoHasta} />}
             {/* Fila 1: quién eres y dónde estás. */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <a href="/" className="text-base font-bold uppercase tracking-widest text-oro">

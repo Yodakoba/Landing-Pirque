@@ -19,6 +19,10 @@ export const dynamic = 'force-dynamic';
  *   rol puede, nada más. Lo que se haga queda en la bitácora con el nombre
  *   del administrador y *"admin (viendo como vendedor)"*.
  * - **No alarga la sesión**: el token nuevo vence cuando vencía el anterior.
+ * - **Una vista dura como máximo una hora** (`DURACION_VER_COMO`, lo corta
+ *   `firmarSesion()`). Pasada la hora la cookie vence y hay que entrar de
+ *   nuevo, con contraseña. Al volver a administrador antes de la hora se
+ *   recupera el vencimiento que tenía la sesión de administrador.
  */
 export async function POST(req: Request) {
   const secreto = secretoDeSesion(process.env);
@@ -39,12 +43,14 @@ export async function POST(req: Request) {
   }
 
   const ahora = Math.floor(Date.now() / 1000);
-  const queda = Math.max(60, sesion.expira - ahora);
+  // Lo que le queda a la sesión de administrador, no a la vista de una hora.
+  const queda = Math.max(60, (sesion.expiraReal ?? sesion.expira) - ahora);
   const token = await firmarSesion({ usuario: sesion.usuario, rol: 'admin', como }, secreto, ahora, queda);
+  const vista = (await leerSesion(token, secreto, ahora))?.expira ?? ahora + queda;
   const res = NextResponse.json({ ok: true, rol: como || 'admin' });
   res.cookies.set(COOKIE_SESION, token, {
     httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production',
-    path: '/', maxAge: queda
+    path: '/', maxAge: vista - ahora
   });
   await anotar({ usuario: sesion.usuario, rol: 'admin',
     accion: como ? `Pasó a ver el panel como ${como}` : 'Volvió a ver el panel como administrador' });

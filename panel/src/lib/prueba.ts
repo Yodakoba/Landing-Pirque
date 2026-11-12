@@ -76,7 +76,7 @@ import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
          puedeTocarReserva,
          type Rol, type Accion } from './auth.ts';
 import { resumenRol, NOMBRE_ROL, RESUMEN_ROL } from './roles.ts';
-import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION } from './sesion.ts';
+import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION, DURACION_VER_COMO } from './sesion.ts';
 import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
          buscarUsuario, type Usuario } from './usuarios.ts';
 import { ahoraEnChile, filaBitacora, leerBitacoraDe, recortar,
@@ -1749,6 +1749,20 @@ ok(await leerSesion(token, SECRETO_SESION, AHORA + DURACION_SESION - 1) !== null
     SECRETO_SESION, AHORA), SECRETO_SESION, AHORA);
   ok(conGerencia?.rol === 'pagos' && conGerencia?.gerencia === false,
      'mirando como otro rol se ve ese rol tal cual, sin la vista gerencia');
+  // La vista dura como máximo una hora, y recuerda cuándo vencía la de admin.
+  const vista = await firmarSesion({ usuario: 'jefe', rol: ROL.admin, como: 'anfitrion' }, SECRETO_SESION, AHORA);
+  const leida = await leerSesion(vista, SECRETO_SESION, AHORA);
+  ok(leida?.expira === AHORA + DURACION_VER_COMO && leida?.expiraReal === AHORA + DURACION_SESION,
+     'un "ver como" vence a la hora y guarda cuándo vencía la sesión de administrador');
+  ok(await leerSesion(vista, SECRETO_SESION, AHORA + DURACION_VER_COMO + 1) === null,
+     'pasada la hora, la vista se cierra: hay que entrar de nuevo, no vuelve sola a admin');
+  const corta = await leerSesion(await firmarSesion({ usuario: 'jefe', rol: ROL.admin, como: 'vendedor' },
+    SECRETO_SESION, AHORA, 600), SECRETO_SESION, AHORA);
+  ok(corta?.expira === AHORA + 600, 'si a la sesión le quedaban 10 minutos, la vista no la alarga');
+  const normal = await leerSesion(await firmarSesion({ usuario: 'jefe', rol: ROL.admin }, SECRETO_SESION, AHORA),
+    SECRETO_SESION, AHORA);
+  ok(normal?.expira === AHORA + DURACION_SESION && normal?.expiraReal === undefined,
+     'sin "ver como", la sesión de administrador sigue durando lo de siempre');
 }
 
 const sinRol = await firmarSesion({ usuario: 'Ana', rol: '' }, SECRETO_SESION, AHORA);

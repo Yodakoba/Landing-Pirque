@@ -5565,6 +5565,22 @@ administrador; abre una ventana con un botón grande por rol y su frase de
   el menú de ese rol sea una sola pastilla.
 - **No alarga la sesión** (el token nuevo vence cuando vencía el anterior)
   y no lleva vista gerencia: se ve el rol tal cual.
+- **El riesgo es prestar el aparato** (lo revisó el cliente el mismo día).
+  Nadie puede subirse de rol con esto —el `como` va firmado y solo vale
+  sobre una sesión de administrador—, pero quien tome un teléfono que
+  quedó *viendo como anfitrión* vuelve a administrador con un toque y sin
+  contraseña, y lo que haga queda a nombre del administrador. Por eso:
+  - **Una vista dura como máximo una hora** (`DURACION_VER_COMO`, lo corta
+    `firmarSesion()`, así que no se puede pedir una más larga). Pasada la
+    hora la cookie vence y hay que **entrar de nuevo**: no vuelve sola a
+    administrador. La franja dice a qué hora se cierra. Volver antes
+    recupera el vencimiento que tenía la sesión de administrador (`vuelta`
+    en el token, `expiraReal` al leerlo).
+  - **La ventana lo dice antes de elegir**: *"Es para revisar, no para
+    pasarle el aparato a alguien"*; quien vaya a usar el teléfono entra con
+    su propia cuenta.
+  - **Pedir la contraseña para volver se evaluó y no se hizo**, por decisión
+    del cliente: dentro de esa hora el riesgo sigue abierto, a sabiendas.
 - Con "ver como vendedor", "lo suyo" son las reservas y cotizaciones que
   anotó el propio administrador.
 

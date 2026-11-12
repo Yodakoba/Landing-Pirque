@@ -45,7 +45,22 @@ export interface Sesion {
    * administrador, que es lo único que deja volver. Sin "ver como", vacío.
    */
   rolReal?: string;
+  /**
+   * Mientras se mira como otro rol, **cuándo vencía la sesión de
+   * administrador**: la vista dura como máximo una hora (`DURACION_VER_COMO`)
+   * y al volver se recupera el vencimiento de antes, ni más ni menos.
+   */
+  expiraReal?: number;
 }
+
+/**
+ * **Una vista "ver como" dura como máximo una hora** (2026-11-12, lo pidió el
+ * cliente). Pasada la hora la sesión se cierra y hay que entrar de nuevo: no
+ * vuelve sola a administrador. Así una tablet que quedó mirando como
+ * anfitrión —y que alguien más podría tomar— no queda abierta toda la
+ * semana con la puerta de vuelta a administrador a un toque.
+ */
+export const DURACION_VER_COMO = 60 * 60;
 
 /**
  * Los roles que un administrador puede mirar con "ver como". Una lista
@@ -101,13 +116,17 @@ export async function firmarSesion(
   ahora = Math.floor(Date.now() / 1000),
   duracion = DURACION_SESION
 ): Promise<string> {
-  const cuerpo: Sesion = {
-    usuario: datos.usuario, rol: datos.rol, expira: ahora + duracion,
+  // Solo un administrador puede firmar un "ver como"; la regla se vuelve a
+  // mirar al leer. Y la vista se corta a la hora **acá, al firmar**: así no
+  // hay forma de pedir un "ver como" más largo, venga de donde venga.
+  const como = datos.rol === 'admin' && datos.como ? datos.como : '';
+  const expira = ahora + duracion;
+  const cuerpo = {
+    usuario: datos.usuario, rol: datos.rol,
+    expira: como ? Math.min(expira, ahora + DURACION_VER_COMO) : expira,
     ...(datos.gerencia ? { gerencia: true } : {}),
-    // Solo un administrador puede firmar un "ver como"; la regla se vuelve
-    // a mirar al leer.
-    ...(datos.rol === 'admin' && datos.como ? { como: datos.como } : {})
-  } as Sesion & { como?: string };
+    ...(como ? { como, vuelta: expira } : {})
+  };
   const payload = aBase64Url(new TextEncoder().encode(JSON.stringify(cuerpo)));
   const firma = await crypto.subtle.sign(
     'HMAC', await clave(secreto), new TextEncoder().encode(payload)
@@ -159,6 +178,8 @@ export async function leerSesion(
     if (sesion.rol === 'admin' && (ROLES_VER_COMO as readonly string[]).includes(como)) {
       sesion.rolReal = 'admin';
       sesion.rol = como;
+      const vuelta = Number(datos?.vuelta);
+      sesion.expiraReal = Number.isFinite(vuelta) && vuelta > sesion.expira ? vuelta : sesion.expira;
       // Se mira el rol tal cual lo ve esa cuenta, sin el agregado gerencia.
       sesion.gerencia = false;
     }
