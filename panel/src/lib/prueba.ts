@@ -4759,7 +4759,9 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
           leerVendedoresDe, filaVendedor, ENCABEZADO_VENDEDORES, porCobrar } = await import('./vendedores.ts');
   ok(porcentaje('2,5') === 2.5 && porcentaje('3%') === 3 && porcentaje('150') === 100 && porcentaje('x') === 0,
      'el % acepta coma decimal y se queda entre 0 y 100');
-  const ficha = { ...fichaVacia('carla', 'Carla'), comisionPct: 5, montoEvento: 10000, sueldoFijo: 400000 };
+  ok(fichaVacia('x').base === 'neto' && leerVendedoresDe([ENCABEZADO_VENDEDORES, ['x']])[0].base === 'neto',
+     'la comisión va sobre el neto por defecto, también en una ficha con la celda en blanco (2026-11-12)');
+  const ficha = { ...fichaVacia('carla', 'Carla'), comisionPct: 5, montoEvento: 10000, sueldoFijo: 400000, base: 'total' as const };
   const sinBono = { total: 0, neto: 0, productos: [] as string[] };
   ok(comisionDe(ficha, { total: 1190000, neto: 1000000, personas: 10, premium: sinBono }).monto === 69500
      && comisionDe({ ...ficha, base: 'neto' }, { total: 1190000, neto: 1000000, personas: 10, premium: sinBono }).monto === 60000,
@@ -4767,7 +4769,7 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
 
   // Modelo A (2026-11-12): tres etapas por personas, con los cortes de los socios, y bono en los menús de arriba.
   const { baseDeVenta, etapaDe, comisionCongelada, marcaComision } = await import('./vendedores.ts');
-  const a = { ...fichaVacia('diego'), comisionPct: 2, etapa2Pct: 3, etapa3Pct: 4, bonoPuntos: 2 };
+  const a = { ...fichaVacia('diego'), comisionPct: 2, etapa2Pct: 3, etapa3Pct: 4, bonoPuntos: 2, base: 'total' as const };
   ok(a.etapa2Desde === 55 && a.etapa3Desde === 77, 'las etapas parten con los cortes de los socios: 55 y 77 personas');
   ok(etapaDe(a, 20).pct === 2 && etapaDe(a, 55).pct === 3 && etapaDe(a, 77).pct === 4
      && etapaDe({ ...a, etapa3Pct: 0 }, 90).pct === 3,
@@ -4780,6 +4782,9 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
   const com = (id: string) => comisionDe(a, baseDeVenta({ id, descuento: 0, invitados: 0 }, evA, menusA));
   ok(com('t').monto === 19600 && com('s').monto === 285000 && com('b').monto === 405000,
      'los ejemplos de la propuesta: 20 Tradiciones $19.600, 60 Sommelier $285.000, 90 A Brasas $405.000');
+  ok(comisionDe({ ...a, base: 'neto' }, baseDeVenta({ id: 's', descuento: 0, invitados: 0 }, evA, menusA)).monto
+       === Math.round(Math.round(5700000 / 1.19) * 0.03) + Math.round(Math.round(5700000 / 1.19) * 0.02),
+     'sobre el neto, el mismo Sommelier deja el 3% + 2% del neto');
   ok(com('s').detalle.includes('etapa 2') && com('s').detalle.includes('bono Sommelier'),
      'y cada una dice cómo se calculó');
   const conDesc = comisionDe(a, baseDeVenta({ id: 's', descuento: 10, invitados: 0 }, evA, menusA)).monto;
