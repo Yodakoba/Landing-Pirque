@@ -29,7 +29,7 @@ export const PALABRAS: Record<Accion, string> = {
   cerrar: 'Cerrar el día',
   planilla: 'Mandar la planilla semanal al grupo',
   informe: 'Ver el informe de lo que se paga al equipo',
-  pagar: 'Registrar pagos, revisar comprobantes y devoluciones',
+  pagar: 'Registrar pagos y confirmar la plata: comprobantes, pagos anotados, descuentos, cuentas y devoluciones',
   sueldos: 'Ver y editar sueldos y cuentas bancarias',
   links: 'Crear y copiar los links personales',
   puestos: 'Editar los puestos del equipo',

@@ -7,7 +7,8 @@ import { esFecha, hoy } from '@/lib/fechas';
 import { HOJA_MENUS } from '@/lib/menus';
 import { HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
-import { ROL, esSuya } from '@/lib/auth';
+import { marcasDePago } from '@/lib/plata';
+import { ROL, esSuya, puede, type Rol } from '@/lib/auth';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
 import { leerPresupuestos } from '@/lib/datos';
@@ -156,7 +157,14 @@ export const POST = conLecturas([], async function POST(req: Request) {
       // **El dueño sale de la sesión y NO del cuerpo**, igual que la
       // modalidad. Si se aceptara del navegador, un vendedor podría
       // adjudicarse la reserva de otro — y con eso, borrársela.
-      anotadaPor: quien.usuario
+      anotadaPor: quien.usuario,
+      // **La plata la confirma pagos** (2026-11-13, `plata.ts`): nacer
+      // Pagada o Abonada es anotar un pago, y le llega a la bandeja de pagos.
+      ...marcasDePago(null, {
+        estadoPago: b.estadoPago ?? '', notaPago: String(b.notaPago ?? '').trim(),
+        monto: b.monto == null || b.monto === '' ? null : Number(b.monto),
+        abonado: b.estadoPago === ESTADO_PAGO.abonado && Number(b.abonado) > 0 ? Math.round(Number(b.abonado)) : null
+      }, quien.usuario, ahoraEnChile(), puede(quien.rol as Rol, 'pagar'))
     });
     await abrirElDiaSiHaceFalta(b.fecha);
     // Un día abierto sin reservas no se le manda al socio; con esta pasa a

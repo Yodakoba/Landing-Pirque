@@ -103,6 +103,9 @@ export async function crearReserva(r: Omit<Reserva, 'id' | 'fila' | 'creada'>): 
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.llegaron);
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.avisoRecepcion);
   enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.abonado);
+  // La revisión de pagos (2026-11-13): solo si nace pagada o abonada.
+  if (r.pagoAnotado) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.pagoAnotado);
+  if (r.pagoRevisado) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.pagoRevisado);
   // MANUAL- para que no pueda chocar con un id de Shopify, que es numérico.
   const id = 'MANUAL-' + Date.now();
   await agregarFila(HOJA_RESERVAS, filaReserva(enc, {
@@ -131,6 +134,10 @@ export async function editarReserva(fila: number, cambios: Partial<Reserva>): Pr
   }
   if (cambios.aprobacion !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.aprobacion);
   if (cambios.liberacion !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS.liberacion);
+  // La revisión de pagos (2026-11-13, `plata.ts`).
+  for (const k of ['pagoAnotado', 'pagoRevisado', 'descuentoRevisado'] as const) {
+    if (cambios[k] !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS[k]);
+  }
   const previa = filas[fila - 1];
   if (!previa) throw new Error(`La fila ${fila} ya no existe en la planilla.`);
   await escribirFila(HOJA_RESERVAS, fila, filaReserva(enc, cambios, previa));

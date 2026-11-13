@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { cambiosDePlata, porConfirmarDespues } from '@/lib/plata';
+import { ahoraEnChile } from '@/lib/bitacora';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CIERRES } from '@/lib/cierres';
 import { HOJA_ACTIVIDADES, HOJA_COLABORADORES } from '@/lib/extras';
@@ -70,6 +72,8 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
   const no = await exigir(req, 'extras');
   if (no) return no;
   const verSueldos = puede((await quienEs(req)).rol as Rol, 'sueldos');
+  const yo = await quienEs(req);
+  const esPagos = puede(yo.rol as Rol, 'pagar');
   try {
     const cuerpo = await req.json();
     if (!Array.isArray(cuerpo?.colaboradores)) {
@@ -101,7 +105,12 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
         banco: verSueldos ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio()),
         // **El token no se acepta del navegador**: se arrastra el guardado.
         // Lo administra `/api/extras/link` (2026-11-12).
-        token: antes?.token ?? ''
+        token: antes?.token ?? '',
+        // **La plata la confirma pagos** (2026-11-13, `plata.ts`).
+        porConfirmar: porConfirmarDespues(antes?.porConfirmar ?? '',
+          cambiosDePlata(antes ?? null, { banco: verSueldos ? limpiarBanco(c?.banco) : (antes?.banco ?? bancoVacio()),
+            monto: verSueldos ? aEntero(c?.monto) : (antes?.monto ?? 0) }),
+          yo.usuario, ahoraEnChile(), esPagos)
       });
     }
 

@@ -4,6 +4,7 @@ import { HOJA_RESERVAS, HOJA_FECHAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
 import { exigir, quienEs } from '@/lib/permisos';
+import { firmaDescuento, marcaPlata } from '@/lib/plata';
 import { puede, type Rol } from '@/lib/auth';
 import { editarReserva, anotar, leerReservas, leerFechas, leerConfig } from '@/lib/datos';
 import { ocupaLugar } from '@/lib/ocupacion';
@@ -78,7 +79,13 @@ export const POST = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_P
       menuReal: pedido.menu,
       descuento,
       rectificacion: marcaRectificacion(ahora, quien.usuario, pedido.motivo, pedido.comentario),
-      aprobacion
+      aprobacion,
+      // **La plata la confirma pagos** (2026-11-13, `plata.ts`): un
+      // descuento que aplica pagos queda visto por pagos en el acto.
+      ...(descuento && aprobacion !== POR_APROBAR && puede(quien.rol as Rol, 'pagar')
+        ? { descuentoRevisado: marcaPlata(ahora, quien.usuario,
+            firmaDescuento({ descuento, rectificacion: marcaRectificacion(ahora, quien.usuario, pedido.motivo, pedido.comentario) })) }
+        : {})
     };
     await editarReserva(fila, cambios);
     await empujarDias([r.fecha]);

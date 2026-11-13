@@ -52,7 +52,11 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'tarjeta se da vuelta y muestra el resumen.',
       'Agregar reserva anota a alguien que llamó o escribió por WhatsApp.',
       'Enviar planilla semanal copia un link que se manda al grupo. Ese link '
-      + 'no muestra plata ni nombres de clientes.'
+      + 'no muestra plata ni nombres de clientes.',
+      'Si haces los pagos, arriba te llega lo que tienes que revisar: los '
+      + 'pagos que alguien anotó a mano, los descuentos ya aplicados y las '
+      + 'cuentas o tarifas que cambió otro. Ya rigen; los cierras con ✓ '
+      + 'Revisado, ✓ Visto o ✓ Confirmar.'
     ],
     ojo: 'Abrir un día acá lo pone en el sitio para recibir reservas. '
        + 'Planificar equipo, en cambio, no abre nada.'
@@ -75,7 +79,8 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'La columna Asistencia dice quién vino; se marca en Turnos.',
       'Editar abre la reserva para corregir un teléfono, un menú o el estado '
-      + 'del pago.',
+      + 'del pago. Marcarla Pagada o Abonada le avisa al encargado de pagos, '
+      + 'que la revisa.',
       'Equipo y cuentas del día abre la ventana donde se escriben los montos '
       + 'y la propina.'
     ],
@@ -124,6 +129,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Apreta la línea de una persona para ver y corregir su ficha.',
       'Desactivar la saca del planificador y le cierra su link, pero conserva '
       + 'todos sus turnos pasados.',
+      'Si cambias la cuenta bancaria o lo que se le paga a alguien y no haces '
+      + 'los pagos, queda por confirmar hasta que el encargado de pagos lo mire.',
       'Administrar puestos abre la lista de puestos, donde también se ordenan '
       + 'con las flechas.'
     ],
@@ -178,7 +185,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Apreta un día del mes para agendar a quien venga.',
       'Marca Vino o No vino cuando ya pasó el día.',
       'Abajo, la lista de colaboradores guarda a los que se repiten, con su '
-      + 'monto habitual y su cuenta.'
+      + 'monto habitual y su cuenta. Si cambias una cuenta o un monto y no '
+      + 'haces los pagos, queda por confirmar hasta que el encargado de pagos '
+      + 'lo mire.'
     ],
     ojo: 'Una actividad sin confirmar no suma: agendar no es pagar.'
   },
@@ -230,6 +239,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'está incompleto.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
       + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',
+      'Si una línea dice ⚠ Por confirmar, alguien que no hace los pagos cambió '
+      + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
+      + 'Confirmar.',
       'Aprieta la línea para abrirla. Si pagaste todo, aprieta Pagado '
       + 'completo; si fue una parte, Pago parcial. Ahí también marcas la '
       + 'boleta cuando llegue.',

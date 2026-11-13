@@ -19,6 +19,8 @@ import { cupoPedidoDe } from './cupo.ts';
 import { cupoAmpliado } from './sobrecupo.ts';
 import type { Presupuesto } from './presupuestos.ts';
 import { esExclusivo, exclusividadDe, plazoParaLiberar } from './exclusivo.ts';
+import { pagoPorRevisar, descuentoPorVer, partesMarca } from './plata.ts';
+import { ESTADO_PAGO } from './columnas.ts';
 
 /** Lo que tienen todas las cosas por aprobar. */
 interface Base {
@@ -84,8 +86,48 @@ export interface PendienteExclusivo extends Base {
   pausado: boolean;
 }
 
+/**
+ * **La plata la confirma pagos** (2026-11-13, `plata.ts`): un pago de
+ * reserva anotado a mano, que pagos todavía no revisó.
+ */
+export interface PendientePago extends Base {
+  tipo: 'pago';
+  fila: number;
+  nombre: string;
+  /** *Pagada* o *Abonada*. */
+  estado: 'Pagada' | 'Abonada';
+  monto: number | null;
+  abonado: number | null;
+  nota: string;
+}
+
+/** Un descuento ya aplicado —estándar o aprobado— que pagos todavía no vio. */
+export interface PendienteDescuentoVisto extends Base {
+  tipo: 'descuentoVisto';
+  fila: number;
+  nombre: string;
+  personas: number;
+  porcentaje: number;
+  /** Quién lo aprobó, si necesitó aprobación. */
+  aprobo: string;
+}
+
+/** La cuenta o la tarifa de alguien, cambiada por quien no es pagos. */
+export interface PendienteCuenta extends Base {
+  tipo: 'cuenta';
+  /** De qué lista es: decide la ruta y la pantalla de la ficha. */
+  de: 'trabajador' | 'colaborador';
+  nombre: string;
+  /** Qué cambió, en palabras: *cuenta bancaria, pago por jornada*. */
+  que: string;
+}
+
 /** Lo que se aprueba. Un tipo nuevo se suma a esta unión. */
-export type Pendiente = PendienteDescuento | PendienteCupo | PendienteSobrecupo | PendienteExclusivo;
+export type Pendiente = PendienteDescuento | PendienteCupo | PendienteSobrecupo | PendienteExclusivo
+  | PendientePago | PendienteDescuentoVisto | PendienteCuenta;
+
+/** Los tipos que le llegan solo a pagos: se marcan vistos, no se rechazan. */
+export const DE_PAGOS = new Set<Pendiente['tipo']>(['pago', 'descuentoVisto', 'cuenta']);
 
 const porFecha = (a: Pendiente, b: Pendiente) => a.fecha.localeCompare(b.fecha) || a.cuando.localeCompare(b.cuando);
 
@@ -164,6 +206,61 @@ export function pendientesDeExclusivo(
     });
   }
   return lista.sort(porFecha) as PendienteExclusivo[];
+}
+
+/**
+ * **Los pagos de reserva por revisar** (2026-11-13). `deCotizacion`: los ids
+ * de las reservas que salieron de una cotización, que se revisan por sus
+ * cobros.
+ */
+export function pendientesDePago(reservas: Reserva[], deCotizacion: Set<string> | Record<string, unknown> = new Set()): PendientePago[] {
+  const deCot = (id: string) => deCotizacion instanceof Set ? deCotizacion.has(id) : id in deCotizacion;
+  const lista: PendientePago[] = [];
+  for (const r of reservas) {
+    if (!pagoPorRevisar(r, deCot(r.id))) continue;
+    const m = partesMarca(r.pagoAnotado)!;
+    lista.push({
+      tipo: 'pago', clave: `pago-${r.fila}`, fila: r.fila, fecha: r.fecha, pide: m.quien || 'alguien',
+      cuando: m.cuando, motivo: '', comentario: '', nombre: r.nombre || 'sin nombre',
+      estado: r.estadoPago === ESTADO_PAGO.abonado ? 'Abonada' : 'Pagada',
+      monto: r.monto ?? null, abonado: r.abonado ?? null, nota: String(r.notaPago ?? '').trim()
+    });
+  }
+  return lista.sort(porFecha) as PendientePago[];
+}
+
+/** Los descuentos ya aplicados que pagos todavía no vio. */
+export function pendientesDeDescuentoVisto(reservas: Reserva[]): PendienteDescuentoVisto[] {
+  const lista: PendienteDescuentoVisto[] = [];
+  for (const r of reservas) {
+    if (!descuentoPorVer(r)) continue;
+    const p = partesRectificacion(r.rectificacion ?? '');
+    lista.push({
+      tipo: 'descuentoVisto', clave: `visto-${r.fila}`, fila: r.fila, fecha: r.fecha,
+      pide: p.quien || 'alguien', cuando: p.cuando, motivo: p.motivo, comentario: p.comentario,
+      nombre: r.nombre || 'sin nombre', personas: personasEfectivas(r), porcentaje: Number(r.descuento) || 0,
+      // *Aprobado · Verónica · 2026-11-14 14:03*: el del medio.
+      aprobo: /^Aprobado · /.test(String(r.aprobacion ?? '')) ? String(r.aprobacion).split(' · ')[1] ?? '' : ''
+    });
+  }
+  return lista.sort(porFecha) as PendienteDescuentoVisto[];
+}
+
+/**
+ * Las cuentas y tarifas por confirmar, de trabajadores y extras. La fecha es
+ * la del cambio: no hay un día del calendario detrás.
+ */
+export function pendientesDeCuenta(
+  trabajadores: { nombre: string; porConfirmar?: string; activo?: boolean }[],
+  colaboradores: { nombre: string; porConfirmar?: string; activo?: boolean }[]
+): PendienteCuenta[] {
+  const uno = (de: PendienteCuenta['de']) => (x: { nombre: string; porConfirmar?: string }): PendienteCuenta[] => {
+    const m = partesMarca(x.porConfirmar);
+    if (!m) return [];
+    return [{ tipo: 'cuenta', clave: `cuenta-${de}-${x.nombre}`, de, nombre: x.nombre, que: m.firma || 'datos de pago',
+      fecha: m.cuando.slice(0, 10), pide: m.quien || 'alguien', cuando: m.cuando, motivo: '', comentario: '' }];
+  };
+  return [...trabajadores.flatMap(uno('trabajador')), ...colaboradores.flatMap(uno('colaborador'))].sort(porFecha) as PendienteCuenta[];
 }
 
 /** Todo junto, del día más antiguo al más nuevo. */

@@ -12,15 +12,25 @@
  *   tiene `exclusividad`. Además de aprobar o rechazar, *Dejar de vender
  *   este día* mientras se decide. Aprobar fuera de plazo pide motivo.
  *
+ * - **Lo que revisa pagos** (2026-11-13, `plata.ts`; regla *"la plata la
+ *   cierra el encargado de pagos"*): un pago de reserva anotado a mano, un
+ *   descuento ya aplicado y una cuenta o tarifa cambiada por otro. Solo a
+ *   quien tiene `pagar`. No frenan nada —ya rigen—, así que no se rechazan:
+ *   **✓ Revisado**, **✓ Visto** o **✓ Confirmar**, y si algo está mal se
+ *   corrige en la reserva o en la ficha, que es donde está.
+ *
  * Dice quién pide qué en una frase, y debajo para qué día y por qué.
  * **Aprobar es un toque; rechazar pregunta**, porque deja a quien lo pidió
  * esperando una respuesta que hay que darle. Cualquier tipo nuevo de
  * `Pendiente` (`lib/aprobaciones.ts`) se dibuja en esta misma fila.
  */
 import { useState } from 'react';
-import type { Pendiente } from '@/lib/aprobaciones';
+import { DE_PAGOS, type Pendiente } from '@/lib/aprobaciones';
+import PastillaPago from './PastillaPago';
 import { enPalabras, hoy } from '@/lib/fechas';
 import { avisar } from './AvisoFlotante';
+
+const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
 /** Qué se le pide al servidor, y qué se le dice a quien aprueba. */
 function respuesta(p: Pendiente, aprobar: boolean, motivo = ''): { url: string; cuerpo: object; aviso: string } {
@@ -32,6 +42,18 @@ function respuesta(p: Pendiente, aprobar: boolean, motivo = ''): { url: string; 
   if (p.tipo === 'descuento') {
     return { url: '/api/reservas/aprobar', cuerpo: { fila: p.fila, aprobar },
       aviso: aprobar ? `Aprobado: ${p.porcentaje}% para ${p.nombre}` : `Rechazado: el ${p.porcentaje}% de ${p.nombre}` };
+  }
+  if (p.tipo === 'pago') {
+    return { url: '/api/reservas/revisar', cuerpo: { fila: p.fila, que: 'pago' },
+      aviso: `Revisado: el pago de ${p.nombre}` };
+  }
+  if (p.tipo === 'descuentoVisto') {
+    return { url: '/api/reservas/revisar', cuerpo: { fila: p.fila, que: 'descuento' },
+      aviso: `Visto: el ${p.porcentaje}% de ${p.nombre}` };
+  }
+  if (p.tipo === 'cuenta') {
+    return { url: '/api/equipo/confirmar', cuerpo: { de: p.de, nombre: p.nombre },
+      aviso: `Confirmado: ${p.que} de ${p.nombre}` };
   }
   if (p.tipo === 'cupo') {
     return { url: '/api/fechas/cupo', cuerpo: { fecha: p.fecha, accion: aprobar ? 'aprobar' : 'rechazar' },
@@ -105,6 +127,9 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
     if (p.tipo === 'descuento') return <><b>{p.pide}</b> pide <b className="text-ambar-texto">{p.porcentaje}%</b> de descuento · {p.nombre} · {dia}</>;
     if (p.tipo === 'cupo') return <><b>{p.pide}</b> pide subir el cupo a <b className="text-ambar-texto">{p.cupoPedido}</b> · {dia}</>;
     if (p.tipo === 'sobrecupo') return <>{dia}: <b className="text-rojo-texto">{p.exceso} {p.exceso === 1 ? 'persona' : 'personas'} sobre el cupo</b> ({p.tomadas} de {p.cupoActual})</>;
+    if (p.tipo === 'pago') return <><b>{p.pide}</b> anotó el pago de <b>{p.nombre}</b>{p.monto ? <> · {pesos(p.monto)}</> : null} · {dia}</>;
+    if (p.tipo === 'descuentoVisto') return <><b>{p.pide}</b> aplicó <b className="text-ambar-texto">{p.porcentaje}%</b> de descuento · {p.nombre} · {dia}{p.aprobo && <> · lo aprobó {p.aprobo}</>}</>;
+    if (p.tipo === 'cuenta') return <><b>{p.pide}</b> cambió <b className="text-ambar-texto">{p.que}</b> de <b>{p.nombre}</b> · {p.de === 'trabajador' ? 'equipo' : 'extras'}</>;
     return <><b>{p.pide}</b> pide liberar {dia} para un <b className="text-morado-texto">🟣 evento exclusivo</b> · {p.cliente}</>;
   };
 
@@ -116,7 +141,12 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
           explicación —el exclusivo, el motivo, el plazo— se abre en la fila. */}
       <h2 className="flex flex-wrap items-baseline gap-x-2 px-1 text-[15px] font-bold text-ambar-texto">
         <span aria-hidden>🔔</span>
-        {visibles.length === 1 ? '1 cosa que aprobar' : `${visibles.length} cosas que aprobar`}
+        {(() => {
+          // Lo de pagos se revisa, no se aprueba: el título dice lo que hay.
+          const revisar = visibles.filter((p) => DE_PAGOS.has(p.tipo)).length;
+          const verbo = revisar === visibles.length ? 'que revisar' : revisar ? 'que aprobar o revisar' : 'que aprobar';
+          return visibles.length === 1 ? `1 cosa ${verbo}` : `${visibles.length} cosas ${verbo}`;
+        })()}
         <span className="text-[13px] font-normal text-hueso/65"><span aria-hidden className="hidden sm:inline">· </span>mientras no respondas, no cambia nada</span>
       </h2>
 
@@ -131,13 +161,25 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
               {ocupado ? 'Guardando…'
                 : p.tipo === 'descuento' ? `✓ Aprobar ${p.porcentaje}%`
                 : p.tipo === 'cupo' ? `✓ Subir a ${p.cupoPedido}`
+                : p.tipo === 'pago' ? '✓ Revisado'
+                : p.tipo === 'descuentoVisto' ? '✓ Visto'
+                : p.tipo === 'cuenta' ? '✓ Confirmar'
                 : `✓ Ampliar a ${p.ampliarA}`}
             </button>
           ) : null;
           return (
             <li key={p.clave} className={`rounded-lg border bg-panel px-3 py-1.5 ${abierto ? 'border-oro/60' : 'border-hueso/15'}`}>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <p className="min-w-[14rem] flex-1 text-[15px] leading-snug">{frase(p)}</p>
+                <div className="min-w-[14rem] flex-1">
+                  <p className="text-[15px] leading-snug">{frase(p)}</p>
+                  {/* El pago con la misma pastilla de la reserva (`PastillaPago`). */}
+                  {p.tipo === 'pago' && (
+                    <div className="mt-1">
+                      <PastillaPago sinOrigen r={{ id: 'MANUAL', tipoPago: '', estadoPago: p.estado === 'Abonada' ? 'partially_paid' : 'paid',
+                        notaPago: p.nota, abonado: p.abonado }} />
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {principal}
                   {p.tipo === 'sobrecupo' && (
@@ -164,10 +206,13 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
                   <p className="text-[14px] text-hueso/80">
                     {p.tipo === 'descuento' && <>Para <b>{p.nombre}</b> · {p.personas} {p.personas === 1 ? 'persona' : 'personas'}</>}
                     {p.tipo === 'cupo' && <>Hoy es <b>{p.cupoActual}</b> · ya reservaron <b>{p.tomadas}</b></>}
+                    {p.tipo === 'pago' && <>Ya rige: la reserva cuenta como {p.estado.toLowerCase()}. Revísalo contra el banco o la caja; si algo no calza, corrígelo en la reserva</>}
+                    {p.tipo === 'descuentoVisto' && <>Para <b>{p.nombre}</b> · {p.personas} {p.personas === 1 ? 'persona' : 'personas'} · ya rige en lo que se cobra</>}
+                    {p.tipo === 'cuenta' && <>Ya rige. Antes de transferir, mira la ficha y confirma que los datos están bien</>}
                     {p.tipo === 'exclusivo' && <>Cotización N° {p.folio}{p.invitados > 0 && <> · {p.invitados} invitados</>} · ese día hay que mover{' '}
                       <b>{p.reservas} {p.reservas === 1 ? 'reserva' : 'reservas'}</b> · <b>{p.personas}</b> {p.personas === 1 ? 'persona' : 'personas'}</>}
-                    {p.cuando && <> · lo pidió a las {p.cuando.slice(11) || p.cuando}</>}
-                    {p.fecha === hoy() && <span className="ml-2 rounded-full border border-oro/60 px-2 text-[13px] font-semibold text-oro">hoy</span>}
+                    {p.cuando && <> · {DE_PAGOS.has(p.tipo) ? 'lo anotó' : 'lo pidió'} {p.tipo === 'cuenta' ? `el ${enPalabras(p.cuando.slice(0, 10))} a las` : 'a las'} {p.cuando.slice(11) || p.cuando}</>}
+                    {p.fecha === hoy() && p.tipo !== 'cuenta' && <span className="ml-2 rounded-full border border-oro/60 px-2 text-[13px] font-semibold text-oro">hoy</span>}
                   </p>
                   {(p.motivo || p.comentario) && (
                     <p className="rounded-lg border border-hueso/15 bg-hueso/[0.04] px-3 py-2 text-[14px]">
@@ -249,12 +294,17 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
                           className="boton min-h-[44px] !border-verde-fuerte bg-verde-fuerte !text-[15px] !font-bold text-tinta"
                           onClick={() => { setAprobando(p.clave); setRechazando(''); setMotivo(''); }}>✓ Aprobar</button>
                       )}
-                      <button type="button" disabled={ocupado}
-                        className="boton min-h-[44px] !border-rojo-fuerte/60 !text-[15px] !font-semibold text-rojo-texto"
-                        onClick={() => { setRechazando(p.clave); setAprobando(''); setMotivo(''); }}>
-                        ✕ Rechazar
-                      </button>
-                      {p.tipo === 'descuento' && verReserva
+                      {/* Lo de pagos ya rige: no se rechaza, se corrige donde está. */}
+                      {!DE_PAGOS.has(p.tipo) && (
+                        <button type="button" disabled={ocupado}
+                          className="boton min-h-[44px] !border-rojo-fuerte/60 !text-[15px] !font-semibold text-rojo-texto"
+                          onClick={() => { setRechazando(p.clave); setAprobando(''); setMotivo(''); }}>
+                          ✕ Rechazar
+                        </button>
+                      )}
+                      {p.tipo === 'cuenta'
+                        ? <a href={p.de === 'trabajador' ? '/equipo' : '/extras'} className="tecla boton min-h-[44px]">Ver la ficha →</a>
+                        : (p.tipo === 'descuento' || p.tipo === 'pago' || p.tipo === 'descuentoVisto') && verReserva
                         ? <button type="button" className="boton min-h-[44px]" onClick={() => verReserva(p)}>Ver la reserva →</button>
                         : <a href={`/dia/${p.fecha}`} className="tecla boton min-h-[44px]">Ver el día →</a>}
                     </div>

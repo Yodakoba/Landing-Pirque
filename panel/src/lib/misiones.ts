@@ -222,7 +222,7 @@ const PAGOS: Mision[] = [
   },
   {
     id: 'cobros', emoji: '🧾', titulo: 'La plata de los clientes', escena: 'pag-cobros',
-    intro: 'En cada cotización, el paso Envío lleva los pagos del cliente con su comprobante. Tú los revisas.',
+    intro: 'En cada cotización, el paso Envío lleva los pagos del cliente con su comprobante. Tú los revisas. Lo que anotan otros —pagos de reservas, descuentos, cuentas— te llega además a la bandeja de la portada.',
     puntos: [
       'El pago: las condiciones y lo que ya pagó el cliente.',
       'Anota lo que pagó: el anticipo, todo u otro monto, con su comprobante. Una devolución es un pago en negativo.',

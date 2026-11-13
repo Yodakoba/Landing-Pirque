@@ -41,7 +41,13 @@ export const COL_TRABAJADORES = {
   // escrito ahí no se pierde, pasa a leerse como lo que siempre fue, una
   // nota. Los datos de la transferencia van en los seis campos de después.
   nota: 'Nota de pago',
-  ...COL_BANCO
+  ...COL_BANCO,
+  /**
+   * **Lo que pagos todavía no confirmó** (2026-11-13, `plata.ts`): la cuenta
+   * o la tarifa que cambió alguien que no es pagos, con quién y cuándo. Va
+   * al final: una planilla vieja se lee igual, sin nada por confirmar.
+   */
+  porConfirmar: 'Por confirmar'
 } as const;
 
 /**
@@ -160,6 +166,8 @@ export interface Trabajador {
    * tenga.
    */
   token: string;
+  /** Lo que pagos todavía no confirmó: ver `COL_TRABAJADORES.porConfirmar` y `plata.ts`. */
+  porConfirmar: string;
 }
 
 /**
@@ -522,7 +530,8 @@ export function leerTrabajadoresDe(filas: string[][]): Trabajador[] {
       // Igual que el token: las columnas pueden no existir todavía y se leen
       // en blanco, sin romper una planilla escrita antes de que esto
       // existiera. La nota es la 9, que era la cuenta en texto libre.
-      banco: leerBanco(filas[i] ?? [], 10, 9)
+      banco: leerBanco(filas[i] ?? [], 10, 9),
+      porConfirmar: String(filas[i]?.[16] ?? '').trim()
     });
   }
   return salida;
@@ -535,7 +544,7 @@ export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
      COL_TRABAJADORES.modalidad,
      COL_TRABAJADORES.pagoJornada, COL_TRABAJADORES.valorHora,
      COL_TRABAJADORES.propina, COL_TRABAJADORES.nota,
-     ...Object.values(COL_BANCO)],
+     ...Object.values(COL_BANCO), COL_TRABAJADORES.porConfirmar],
     // Un monto en cero se escribe en blanco: en la planilla un "0" se lee
     // como "gana cero" y lo que queremos decir es "sin poner".
     ...gente.map((t) => [t.nombre, t.telefono, t.puesto,
@@ -543,7 +552,7 @@ export function aFilasTrabajadores(gente: Trabajador[]): string[][] {
                          t.pagoJornada > 0 ? String(t.pagoJornada) : '',
                          t.valorHora > 0 ? String(t.valorHora) : '',
                          t.propina ? 'Sí' : 'No', t.banco.nota,
-                         ...filaBanco(t.banco)])
+                         ...filaBanco(t.banco), t.porConfirmar ?? ''])
   ];
 }
 

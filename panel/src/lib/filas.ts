@@ -58,6 +58,9 @@ export function filaReserva(
   poner(i.rectificacion, r.rectificacion);
   poner(i.aprobacion, r.aprobacion);
   poner(i.liberacion, r.liberacion);
+  poner(i.pagoAnotado, r.pagoAnotado);
+  poner(i.pagoRevisado, r.pagoRevisado);
+  poner(i.descuentoRevisado, r.descuentoRevisado);
   return fila;
 }
 
@@ -184,6 +187,9 @@ export function leerReservasDe(filas: string[][]): Reserva[] {
       rectificacion: String(en(f, i.rectificacion)),
       aprobacion: String(en(f, i.aprobacion)),
       liberacion: String(en(f, i.liberacion)),
+      pagoAnotado: String(en(f, i.pagoAnotado)),
+      pagoRevisado: String(en(f, i.pagoRevisado)),
+      descuentoRevisado: String(en(f, i.descuentoRevisado)),
       fila: n + 1                            // 1-based, y la 1 es el encabezado
     };
     salida.push(reserva);

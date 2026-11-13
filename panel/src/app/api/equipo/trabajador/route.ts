@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { ahoraEnChile } from '@/lib/bitacora';
+import { cambiosDePlata, porConfirmarDespues } from '@/lib/plata';
 import { conLecturas } from '@/lib/sheets';
 import { leerTrabajadores, guardarTrabajadores, leerTurnos, anotar } from '@/lib/datos';
 import { aEntero, esContratado, esSi, MODALIDAD, type Trabajador } from '@/lib/equipo';
@@ -77,8 +79,16 @@ export const POST = conLecturas([], async function POST(req: Request) {
       banco: esAdmin ? limpiarBanco(b?.banco) : bancoVacio(),
       // Participa salvo que se diga lo contrario: es la regla del negocio.
       propina: b?.propina === undefined ? true : esSi(b.propina),
-      valorHora: esAdmin ? aEntero(b?.valorHora) : 0
+      valorHora: esAdmin ? aEntero(b?.valorHora) : 0,
+      porConfirmar: ''
     };
+    // **La plata la confirma pagos** (2026-11-13): una ficha nueva con cuenta
+    // o tarifa, hecha por quien no es pagos, nace por confirmar.
+    {
+      const q = await quienEs(req);
+      nuevo.porConfirmar = porConfirmarDespues('', cambiosDePlata(null, nuevo), q.usuario, ahoraEnChile(),
+        puede(q.rol as Rol, 'pagar'));
+    }
 
     await guardarTrabajadores([...gente, nuevo]);
     await anotar({ ...(await quienEs(req)), accion: 'Agregó un trabajador',
@@ -169,8 +179,15 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
         ? (b?.propina === undefined ? antes.propina : esSi(b.propina))
         : antes.propina,
       banco: esAdmin && b?.banco !== undefined
-        ? limpiarBanco(b.banco) : antes.banco
+        ? limpiarBanco(b.banco) : antes.banco,
+      porConfirmar: antes.porConfirmar ?? ''
     };
+    // **La plata la confirma pagos** (2026-11-13, `plata.ts`).
+    {
+      const q = await quienEs(req);
+      nueva.porConfirmar = porConfirmarDespues(nueva.porConfirmar, cambiosDePlata(antes, nueva), q.usuario,
+        ahoraEnChile(), puede(q.rol as Rol, 'pagar'));
+    }
 
     await guardarTrabajadores(
       gente.map((t) => (normalizar(t.nombre) === normalizar(nombre) ? nueva : t))

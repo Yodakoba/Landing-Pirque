@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { ESTADO_PAGO } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
+import { marcasDePago } from '@/lib/plata';
 import { puedeTocarReserva, puede, type Rol } from '@/lib/auth';
 import { editarReserva, borrarReserva, anotar, leerReservas,
          reservasDeCotizaciones, leerFechas, leerConfig } from '@/lib/datos';
@@ -89,7 +90,9 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
     // tocar una de un día cerrado, y se saca antes de escribir.
     // `anotadaPor` sale de la lista igual que `tipoPago`: quién anotó una
     // reserva es un hecho de cuando se anotó, no algo que se edite después.
+    // Las marcas de la plata (`plata.ts`) tampoco: las pone el servidor.
     const { tipoPago, id, creada, fila: _f, correccion, anotadaPor,
+            pagoAnotado: _pa, pagoRevisado: _pr, descuentoRevisado: _dr,
             ...cambios } = cuerpo;
     if (cambios.llegaron !== undefined) {
       const n = Number(cambios.llegaron);
@@ -178,6 +181,14 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
           error: 'Solo se anota la recepción de hoy. Para otro día, avísale al jefe de turno.', permiso: true
         }, { status: 403 });
       }
+    }
+    // **La plata la confirma pagos** (2026-11-13): un pago anotado a mano
+    // —Pagada o Abonada— queda a nombre de quien lo anota y le llega a la
+    // bandeja de pagos; si lo anota pagos, queda revisado. Las de Shopify
+    // las cobra la tienda y las de una cotización van por sus cobros.
+    if (antes && !/^\d+$/.test(String(antes.id ?? '').trim()) && !deCotizacion) {
+      Object.assign(cambios, marcasDePago(antes, cambios, quien0.usuario, ahoraEnChile(),
+        puede(quien0.rol as Rol, 'pagar')));
     }
     await editarReserva(fila, cambios);
     // Los dos días, el de antes y el de después. Si no se movió es el mismo y

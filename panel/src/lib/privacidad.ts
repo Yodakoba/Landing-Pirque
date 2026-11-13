@@ -63,7 +63,10 @@ export function recortarReserva<T extends Reserva>(r: T, alcance: Alcance, { hoy
   // El encargado ve la plata de cualquier día —cierra los días—; el
   // vendedor y los demás, solo la de lo suyo.
   if (alcance === 'desdeHoy') return sinContacto;
-  return { ...sinContacto, monto: null, notaPago: '', abonado: null, ingreso: null, descuento: null };
+  // Las marcas de la revisión de pagos (`plata.ts`) llevan una firma con el
+  // monto y la nota del pago: van con la plata.
+  return { ...sinContacto, monto: null, notaPago: '', abonado: null, ingreso: null, descuento: null,
+    pagoAnotado: '', pagoRevisado: '', descuentoRevisado: '' };
 }
 
 /**

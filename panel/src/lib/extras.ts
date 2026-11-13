@@ -54,7 +54,9 @@ export const COL_COLABORADORES = {
    * que el de un trabajador: abre `/mi/<token>` con sus días y su plata.
    * Va al final: una planilla vieja se lee igual, sin link.
    */
-  token: 'Token de acceso'
+  token: 'Token de acceso',
+  /** Lo que pagos todavía no confirmó (2026-11-13): ver `plata.ts`. */
+  porConfirmar: 'Por confirmar'
 } as const;
 
 /**
@@ -104,6 +106,8 @@ export interface Colaborador {
   banco: Banco;
   /** El token de su link personal; vacío si no tiene. Ver `COL_COLABORADORES.token`. */
   token: string;
+  /** Lo que pagos todavía no confirmó: ver `COL_COLABORADORES.porConfirmar` y `plata.ts`. */
+  porConfirmar: string;
 }
 
 export interface Extra {
@@ -174,7 +178,8 @@ export function leerColaboradoresDe(filas: string[][]): Colaborador[] {
       // de que hubiera datos bancarios se lee igual, con todo en blanco. La
       // nota es la 5, que era la cuenta en texto libre.
       banco: leerBanco(filas[i] ?? [], 6, 5),
-      token: String(filas[i]?.[12] ?? '').trim()
+      token: String(filas[i]?.[12] ?? '').trim(),
+      porConfirmar: String(filas[i]?.[13] ?? '').trim()
     });
   }
   return salida;
@@ -188,7 +193,7 @@ export function aFilasColaboradores(gente: Colaborador[]): string[][] {
     ...gente.map((c) => [c.nombre, c.actividad, c.telefono,
                          c.activo ? 'Sí' : 'No',
                          c.monto > 0 ? String(c.monto) : '',
-                         c.banco.nota, ...filaBanco(c.banco), c.token ?? ''])
+                         c.banco.nota, ...filaBanco(c.banco), c.token ?? '', c.porConfirmar ?? ''])
   ];
 }
 
