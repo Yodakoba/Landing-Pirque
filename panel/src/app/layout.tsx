@@ -54,7 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Recorrido rol={sesion?.rol ?? ''} />
         {/* El rol y la vista gerencia, para que cada pantalla sepa qué se
             mira y qué se toca (ver `usarSoloMira()`). */}
-        <SesionCliente rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true}>
+        <SesionCliente rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true} avisos={sesion?.avisos ?? []}>
           <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
         </SesionCliente>
         <AvisoFlotante />

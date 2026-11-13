@@ -13,12 +13,21 @@
 import { createContext, useContext } from 'react';
 import { puede, type Accion, type Rol } from '@/lib/auth';
 
-const Sesion = createContext<{ rol: string; gerencia: boolean }>({ rol: '', gerencia: false });
+const Sesion = createContext<{ rol: string; gerencia: boolean; avisos: string[] }>(
+  { rol: '', gerencia: false, avisos: [] });
 
-export function SesionCliente({ rol, gerencia, children }: {
-  rol: string; gerencia: boolean; children: React.ReactNode;
+export function SesionCliente({ rol, gerencia, avisos = [], children }: {
+  rol: string; gerencia: boolean;
+  /** Los avisos fijos que la cuenta cerró para siempre (2026-11-13). Ver `AvisoFijo`. */
+  avisos?: string[];
+  children: React.ReactNode;
 }) {
-  return <Sesion.Provider value={{ rol, gerencia }}>{children}</Sesion.Provider>;
+  return <Sesion.Provider value={{ rol, gerencia, avisos }}>{children}</Sesion.Provider>;
+}
+
+/** Los avisos fijos que esta cuenta ya cerró, sacados de la sesión. */
+export function usarAvisosDeLaSesion(): string[] {
+  return useContext(Sesion).avisos;
 }
 
 /**

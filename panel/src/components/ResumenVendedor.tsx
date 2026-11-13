@@ -27,6 +27,7 @@
  *    Todo se guarda solo (`usarGuardadoPorFicha`); el nombre y desactivar
  *    se confirman.
  */
+import AvisoFijo from './AvisoFijo';
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
@@ -260,7 +261,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     <div className="max-w-4xl space-y-5">
       <div>
         <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
-        <p className="mt-1 text-[14px] text-hueso/70">La comisión cuenta cuando el cliente terminó de pagar.</p>
+        <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar.</AvisoFijo>
       </div>
 
       {/* 1. Quién. Para elegir a otro, dos botones con buscador (regla del cliente). */}

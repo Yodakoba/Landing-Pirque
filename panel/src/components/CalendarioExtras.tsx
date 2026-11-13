@@ -17,6 +17,7 @@
  * para un día sin reservas es justo el error que esto tiene que hacer
  * evidente.
  */
+import AvisoFijo from './AvisoFijo';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { avisar, copiarConAviso } from './AvisoFlotante';
@@ -306,7 +307,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           Ver `BandaSeccion.tsx`. */}
       <BandaSeccion tono="anil" icono="🎠" seccion="Extras" titulo="Actividades extras"
         ayuda={<Ayuda tema="extras" />} />
-      <p className="mb-5 max-w-2xl text-[15px] text-hueso/70">
+      <AvisoFijo clave="extras-intro" className="mb-5 max-w-2xl">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
         castillo inflable. <strong>Apreta un día</strong> para agregar lo que
         venga, marcar si llegó y anotar cuánto se le paga. Va aparte del
@@ -314,7 +315,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
         se junta con él en el{' '}
         <a href="/informe" className="text-oro hover:underline">informe</a>,
         que es lo que descarga quien paga.
-      </p>
+      </AvisoFijo>
 
       {/* La caja del mes, con el tono de Extras, como la de Turnos. */}
       <div className={`rounded-lg border p-3 ${TONO.anil.caja}`}>
@@ -436,13 +437,13 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       </div>
       </div>
 
-      <p className="mt-4 max-w-2xl text-[13px] text-hueso/65">
+      <AvisoFijo clave="extras-sin-confirmar" className="mt-4 max-w-2xl">
         <strong>Una actividad sin confirmar no suma</strong>, igual que un
         turno sin cerrar: agendar no es pagar. Los colores del día son
         los del calendario —cuánta gente viene, si está cerrado o es privado—
         porque contratar un castillo para un día sin nadie es justo lo que
         conviene ver antes de hacerlo.
-      </p>
+      </AvisoFijo>
 
       {huerfanos.length > 0 && (
         <div className="mt-6 rounded border border-ambar/50 bg-ambar/5 p-4">
@@ -468,7 +469,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       <h2 className="mb-3 mt-10 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
         Quiénes hacen las actividades
       </h2>
-      <p className="mb-4 max-w-2xl text-[14px] text-hueso/70">
+      <AvisoFijo clave="extras-fichas" className="mb-4 max-w-2xl">
         Se guardan como fichas porque se repiten: el mismo jinete vuelve el
         sábado siguiente. El <strong>monto habitual</strong> es el que se
         propone al agregarlo a un día y se puede corregir ahí; lo que se le
@@ -477,7 +478,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
         {!verSueldos && (
           <> El monto y la cuenta bancaria los maneja el administrador.</>
         )}
-      </p>
+      </AvisoFijo>
 
       {/* **Una tarjeta por colaborador**, igual que en Equipo y por el
           mismo motivo: con los datos del banco en una segunda línea, una

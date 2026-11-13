@@ -16,6 +16,7 @@
  * tabla. Sin alias, lo único que mantiene alineados a Shopify, al sitio y al
  * panel es enterarse cuando dejan de estarlo. Ver src/lib/menus.ts.
  */
+import AvisoFijo from './AvisoFijo';
 import BotonGuardar from './BotonGuardar';
 import AyudaCorta from './AyudaCorta';
 import { useEffect, useMemo, useState } from 'react';
@@ -158,11 +159,11 @@ export default function MenusEditor() {
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
         Productos<Ayuda tema="menus" />
       </h1>
-      <p className="mb-6 max-w-2xl text-[15px] text-hueso/70">
+      <AvisoFijo clave="menus-intro" className="mb-6 max-w-2xl">
         Todo lo que se vende y se cotiza. <strong>El nombre de un menú tiene que
         ser exactamente el mismo acá y en Shopify</strong>: solo se perdonan
         mayúsculas, tildes y espacios de sobra.
-      </p>
+      </AvisoFijo>
 
       {sinRegistrar.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
@@ -387,14 +388,14 @@ export default function MenusEditor() {
       </div>
       )}
 
-      <p className="mt-6 max-w-2xl text-[14px] text-hueso/60">
+      <AvisoFijo clave="menus-desactivar" className="mt-6 max-w-2xl">
         <strong>Un producto que ya se vendió o se cotizó no se quita, se
         desactiva</strong>: deja de ofrecerse y todo lo anterior lo sigue
         encontrando. Solo se quita lo que nunca se usó.{' '}
         <strong>Ojo al renombrar en Shopify:</strong> los pedidos ya hechos
         guardan el nombre que tenían, así que sus reservas van a contarse
         aparte hasta que se corrijan esas filas en la planilla.
-      </p>
+      </AvisoFijo>
     </section>
   );
 }

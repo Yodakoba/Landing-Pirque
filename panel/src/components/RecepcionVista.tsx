@@ -19,6 +19,7 @@
  * Se vuelve a pedir cada minuto, por si el jefe de turno resolvió un aviso o
  * alguien marcó desde otro lado.
  */
+import AvisoFijo from './AvisoFijo';
 import IngresoFudo from './IngresoFudo';
 import { usarSoloMira } from './SesionCliente';
 import type { Ingreso } from '@/lib/fudo';
@@ -155,9 +156,9 @@ export default function RecepcionVista() {
 
       {/* Una sola vez y no en cada tarjeta: repetida era ruido. */}
       {!bloqueada && (
-        <p className="mt-1 text-[14px] text-hueso/65">
+        <AvisoFijo clave="recepcion-avisar" className="mt-1">
           Para cambiar personas, menús o el pago, usa <strong>📣 Avisar al jefe de turno</strong>.
-        </p>
+        </AvisoFijo>
       )}
 
       {cuentan.length === 0 && (

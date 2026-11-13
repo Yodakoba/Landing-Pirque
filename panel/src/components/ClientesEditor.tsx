@@ -14,6 +14,7 @@
  * se edita es la identidad de alguien (ver "Lo que es un valor se guarda
  * solo" en CLAUDE.md).
  */
+import AvisoFijo from './AvisoFijo';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { useEffect, useMemo, useState } from 'react';
@@ -241,9 +242,9 @@ export default function ClientesEditor() {
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
         Clientes<Ayuda tema="clientes" />
       </h1>
-      <p className="mb-5 max-w-2xl text-[15px] text-hueso/70">
+      <AvisoFijo clave="clientes-intro" className="mb-5 max-w-2xl">
         Una ficha por cliente. Se escribe una vez y la usan todas sus cotizaciones.
-      </p>
+      </AvisoFijo>
 
       {sinFicha > 0 && !soloMira && (
         <div className="mb-5 flex flex-wrap items-center gap-3 rounded border

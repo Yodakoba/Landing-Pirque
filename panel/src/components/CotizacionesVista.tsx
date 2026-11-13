@@ -42,7 +42,7 @@ import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
 import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
 import Pendientes, { FilaPendiente } from './Pendientes';
-import { usarAvisoCerrable } from './usarAvisoCerrable';
+import AvisoFijo from './AvisoFijo';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
@@ -116,8 +116,6 @@ export default function CotizacionesVista() {
     try { localStorage.setItem('blp-cotizaciones-de', v); } catch { /* da igual */ }
   }
   const [semanas, setSemanas] = useState(10);
-  /** La frase de la banda, que se cierra para siempre (2026-11-13). */
-  const avisoCupo = usarAvisoCerrable('cotizaciones-cupo', datos?.avisosLeidos);
   /** Qué día está abierto en el calendario, para ver sus cotizaciones. */
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   /** La ventana: una cotización existente, o una nueva (con fecha opcional). */
@@ -467,14 +465,15 @@ export default function CotizacionesVista() {
     <section>
       {/* La banda rosada de Cotizaciones: mismo formato que Reservas y Turnos,
           su propio tono. Ver `BandaSeccion.tsx`. */}
-      {/* **La frase se cierra para siempre** (2026-11-13, lo pidió el
-          cliente: le gusta que esté presente, pero ocupa mucho para estar
-          siempre). *✕ No mostrar más* la guarda en la cuenta; lo mismo
-          sigue explicado en el `?`. Ver `usarAvisoCerrable`. */}
       <BandaSeccion tono="rosa" icono="💼" seccion="Cotizaciones" titulo="Cotizaciones"
-        ayuda={<Ayuda tema="presupuestos" />} alCerrar={avisoCupo.cerrar}>
-        {!avisoCupo.leido && 'Lo cotizado no ocupa cupo: recién al marcarla ganada se vuelve reserva.'}
-      </BandaSeccion>
+        ayuda={<Ayuda tema="presupuestos" />} />
+      {/* **El aviso, en su cajita y con su ✕** (2026-11-13, lo pidió el
+          cliente: le gusta que esté presente, pero ocupa mucho para estar
+          siempre). Antes iba dentro de la banda, y al cerrarlo la banda
+          quedaba y parecía que no se había cerrado. Ver `AvisoFijo`. */}
+      <AvisoFijo clave="cotizaciones-cupo" delServidor={datos.avisosLeidos} className="-mt-2 mb-4">
+        Lo cotizado no ocupa cupo: recién al marcarla ganada se vuelve reserva.
+      </AvisoFijo>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {!soloMira && (

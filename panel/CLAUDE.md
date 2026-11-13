@@ -6203,41 +6203,80 @@ pendientes*):
   pagó y falta ganarla · 2 esperando · 1 vence pronto*, y ella *3 saldos ·
   1 esperando · 1 vence pronto*. Sumados dan lo que antes veían todos.
 
-### Un aviso que se cierra para siempre (2026-11-13)
+### Los avisos fijos se cierran para siempre (2026-11-13)
 
-Lo pidió el cliente sobre la frase de Cotizaciones —*"Lo cotizado no ocupa
-cupo: recién al marcarla ganada se vuelve reserva"*—: le gusta que esté
-presente, pero ocupa mucho para estar siempre. Pidió una ✕ *"que realmente
+Lo pidió el cliente primero sobre la frase de Cotizaciones —*"Lo cotizado no
+ocupa cupo: recién al marcarla ganada se vuelve reserva"*: le gusta que esté
+presente, pero ocupa mucho para estar siempre— con una ✕ *"que realmente
 funciona bien para que no vuelva este aviso después más, como muchas veces
-pasa en otros sitios"*.
+pasa en otros sitios"*. Y después: *"pon esa misma X en los otros avisos
+fijos del panel"*.
 
-- **Se guarda en la cuenta, no en el navegador**: columna nueva **`Avisos
-  leídos`** al final de `Usuarios` (la séptima, después de *Vista
-  gerencia*), con las claves separadas por coma. Por eso no vuelve en el
-  teléfono, en otro computador ni al borrar los datos del navegador, que es
-  lo que hace volver los avisos de otros sitios.
-- **`✕ No mostrar más`** al lado de la frase, en la banda
-  (`BandaSeccion`, prop `alCerrar`). Lo maneja `usarAvisoCerrable(clave,
-  avisosLeidos)`: oculta al tiro, lo anota también en el navegador
-  (`blp-aviso-leido:<clave>`) por si la planilla no responde, y llama a
-  **`POST /api/avisos`**, que lo escribe en la fila de **la persona de la
-  sesión** —también mirando *Ver como*: el que lo leyó es la persona, no el
-  rol—. Si no se pudo guardar en la cuenta, lo dice.
-- **Solo claves conocidas** (`AVISOS_CERRABLES` en `usuarios.ts`, hoy
-  `cotizaciones-cupo`): el navegador no puede llenar la celda con lo que
-  quiera, y una clave desconocida en la planilla se ignora al leer. Sumar
-  otro aviso cerrable es agregar su clave ahí y usar el mismo hook.
+**Un aviso fijo es un texto que explica la pantalla y no cambia con los
+datos.** Los avisos que dependen de los datos —sobrecupo, días por cerrar,
+*Tus pendientes*, avisos de la recepción, fichas sin turno— **no se
+cierran**: tienen que volver cada vez que haya algo.
+
+- **`AvisoFijo`** (`AvisoFijo.tsx`): el texto en **su propia cajita** —fondo
+  apenas marcado, borde fino— con **una ✕ redonda de 36px arriba a la
+  derecha**. Al apretarla desaparece **la cajita entera**.
+  **El primer corte salió mal, y vale saber por qué**: era un botón *✕ No
+  mostrar más* dentro de la banda rosada de Cotizaciones. Al cerrarlo se iba
+  la frase pero la banda —que es el título de la sección y se queda— seguía
+  ahí, y el cliente lo leyó como un aviso que no se cerró. Además el botón
+  con texto *"está bastante feo"*. Por eso el aviso va **fuera** de la banda.
+- **Se guarda en la cuenta**: columna **`Avisos leídos`** al final de
+  `Usuarios` (la séptima), con las claves separadas por coma. Por eso no
+  vuelve en el teléfono, en otro computador ni al borrar los datos del
+  navegador, que es lo que hace volver los avisos de otros sitios.
+- **Cada pantalla lo sabe por la sesión, sin leer la planilla**: al entrar,
+  la cookie firmada trae los avisos cerrados de la cuenta (`avisos` en
+  `Sesion`), el layout los pasa a `SesionCliente` y `usarAvisoCerrable()`
+  los mira ahí. **`POST /api/avisos`** anota la clave en la fila y **vuelve a
+  sellar la cookie** con la lista nueva (`resellarConAvisos()`, que no toca el
+  rol, la vista gerencia, el *Ver como* ni el vencimiento). *Ver como*
+  conserva la lista.
+- **La cuenta se busca por el nombre** (`cuentaDeSesion()`), porque la
+  sesión guarda el nombre de la persona (*"Ana Pérez"*), no su usuario. **El
+  primer corte la buscaba por usuario y en producción no la encontraba**: el
+  cierre quedaba solo en ese navegador. Hay una prueba que lo fija.
+- **Si la planilla no responde, la sesión igual lo recuerda** y la pantalla
+  avisa que no quedó en la cuenta. También queda en el navegador
+  (`blp-aviso-leido:<clave>`). La cuenta de emergencia del entorno no tiene
+  fila: le queda en la sesión.
+- **Solo claves conocidas** (`AVISOS_CERRABLES` en `lib/avisos.ts`, puro
+  para que lo use la cookie en Edge): el navegador no puede llenar la celda
+  con lo que quiera, y una clave desconocida se ignora al leer. **Sumar un
+  aviso fijo nuevo es agregar su clave ahí y envolver el texto en
+  `AvisoFijo`.**
 - **Guardar las cuentas no la borra**: el `PUT` de `/api/usuarios` conserva
   los avisos leídos de cada fila, igual que la huella de la contraseña.
-- **La cuenta de emergencia del entorno** (`PANEL_USUARIO`) no tiene fila:
-  ahí queda cerrado solo en ese navegador, y lo avisa.
-- **Lo que decía la frase sigue en el `?`** de la banda (*"Lo cotizado NO
-  ocupa cupo…"*), así que cerrarla no pierde la explicación.
-- **Lecturas de Google**: ninguna más al abrir Cotizaciones —`Usuarios` se
-  sumó a la tanda de `/api/presupuestos`—; cerrar el aviso gasta una lectura
-  y una escritura, una vez por persona. Medido con el Google falso.
-- Comprobado con Playwright a 393 y 1280: se cierra, no vuelve al recargar
-  ni en un navegador nuevo sin nada guardado, cuando la cuenta lo trae.
+
+**Los que tienen ✕** (25): Cotizaciones (lo cotizado no ocupa cupo) ·
+Equipo (qué se hace acá y el link personal; la propina; por turno y
+contratado; desactivar y no quitar) · Turnos (el mes completo; planificar un
+día cerrado; el día de preparación) · Extras (qué se contrata aparte; sin
+confirmar no suma; las fichas) · Informe (transferencia masiva; copiar el
+sueldo y la propina; el contratado y la propina; la planilla que se
+descarga) · Productos (el nombre igual que en Shopify; desactivar y no
+quitar) · Clientes · Configuración (se guarda solo; la clave del panel) ·
+Cuentas (una cuenta por persona; la puerta de emergencia) · Bitácora ·
+Vendedores (la comisión cuenta cuando el cliente terminó de pagar) ·
+Recepción (para cambiar algo, avisa al jefe de turno).
+
+**Se dejaron sin ✕, a propósito**: la línea de la portada *"Toca un día para
+ver quiénes vienen. N días, hasta… Cambiar el rango"*, porque trae el rango
+de hoy y el enlace para cambiarlo, y lo que explica cada pantalla en su `?`,
+que ya se abre solo cuando se pide.
+
+- **Lecturas de Google**: ninguna al abrir una pantalla —sale de la
+  sesión—; cerrar un aviso gasta una lectura y una escritura, una vez por
+  persona y por aviso.
+- Comprobado con Playwright a 393 y 1280 contra el servidor y la sesión de
+  verdad: la cajita se cierra entera, no vuelve al recargar, y **otro
+  navegador con la misma sesión y sin nada guardado tampoco la muestra**.
+  `revisarPlayStation()` sin hallazgos en Cotizaciones, Turnos, Extras y
+  Equipo.
 
 ### Las misiones de la ayuda (2026-11-12, segunda vuelta)
 
