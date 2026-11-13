@@ -40,6 +40,25 @@ revisan antes de cada cambio en esta carpeta.
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
 - **Los permisos los comprueba el servidor**; la pantalla solo deja de
   dibujar lo que la cuenta no puede.
+- **Coherencia: el mismo tipo de información, con el mismo formato y el
+  mismo peso en todo el panel** (regla del cliente, 2026-11-13; está también
+  en la raíz). Un mismo dato se muestra con **la misma pieza** en cada
+  pantalla y con la misma importancia; una pantalla puede variar el tamaño o
+  cuánto muestra según su espacio, **no el formato**. Antes de dibujar algo
+  se busca la pieza que ya lo muestra; si hay dos formas del mismo dato, se
+  unifican. **Las piezas compartidas, hoy**:
+
+  | Dato | Pieza |
+  |---|---|
+  | El título de una sección | `BandaSeccion` (con su tono) |
+  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` |
+  | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
+  | Lo cotizado y la gente posible, candidatos, ganadas, esperando | `Pastilla` / `PastillaCotizado` |
+  | Cómo va el pago de una reserva | `PastillaPago` |
+  | Lo de la cuenta y lo de todos | `BotonMias` / `BotonTodos` |
+  | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
+  | Guardar | `BotonGuardar` / `AvisoGuardado` |
+  | Elegir de una lista que crece | `BuscarEnLista` |
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
   lecturas y letra chica) y una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`.
@@ -6225,6 +6244,25 @@ tenía dos causas reales: *Calendario* se veía como una acción suelta, y
   semanas.
 - Adentro de *Buscar* sigue el filtro *Todas* de los estados: ahí no se
   confunde, porque va al lado de *Activas*, *Ganadas*…
+
+### Lo cotizado, en pastillas iguales en todo el panel (2026-11-13)
+
+Lo pidió el cliente mirando una tarjeta de Cotizaciones: *candidato* y
+*ganada* eran pastillas, y *"40 personas posibles, sin confirmar"* un texto
+suelto debajo —*"no cambiar entre medio de nuevo el estilo por realmente el
+mismo tipo de información"*—. Y de ahí salió la regla de coherencia de
+arriba. El mismo dato iba de tres formas: en la portada una pastilla
+cuadrada con un punto que decía *presupuesto*, en Cotizaciones ese texto
+rosado, en Turnos otra línea de texto.
+
+- **`Pastilla.tsx`**: `Pastilla` (*candidato*, *cotizado*, *ganada*,
+  *alerta*) y `PastillaCotizado` —*1 cotización · 18 posibles*, en rosado—.
+  **La forma dice qué tan firme es**: lo posible con solo borde, lo hecho
+  con borde y relleno suave, lo que espera con borde grueso.
+- **Las tres pantallas la usan**: la tarjeta de Cotizaciones (la gente
+  posible entra en la fila de pastillas), la de la portada (dice
+  *cotización* y no *presupuesto*, como la sección) y la celda de Turnos,
+  en su versión corta (*18 posibles*) porque la celda es angosta.
 
 ### El botón *Mías*, igual en todo el panel (2026-11-13)
 

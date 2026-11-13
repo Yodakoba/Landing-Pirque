@@ -34,6 +34,18 @@ más abajo; esto es la lista para revisar.
   importa, como una pregunta antes de confirmar— en la misma pasada en que
   se termina, sin esperar a que lo pida y sin preguntar si quiere verlo.
   Pocas preguntas: se pregunta solo lo que de verdad decide el cliente.
+- **Coherencia: el mismo tipo de información, con el mismo formato y el
+  mismo peso en todo el sitio** (regla del cliente, 2026-11-13: *"ya estoy
+  en el mismo mundo… me lo muestras un poco distinto, de tamaño, por la
+  información que muestra, pero el formato queda lo mismo"*). Un mismo dato
+  —lo cotizado, el estado del día, hoy, *Mías*, un aviso fijo, una fecha,
+  un precio— se muestra con **la misma pieza** (forma, color, palabra) en
+  cada pantalla, y con la misma importancia: lo que en una es pastilla no es
+  texto suelto en otra. Una pantalla puede variar el **tamaño** o cuánto
+  muestra según su espacio —una celda de Turnos no es una tarjeta de
+  Reservas—, **no el formato**. Antes de dibujar algo se busca la pieza que
+  ya lo muestra y se reutiliza; si aparecen dos formas del mismo dato, se
+  unifican en una. En el panel, la lista de piezas está en `panel/CLAUDE.md`.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px

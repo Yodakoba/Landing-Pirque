@@ -44,6 +44,7 @@ import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
 import Pendientes, { FilaPendiente } from './Pendientes';
 import AvisoFijo from './AvisoFijo';
 import { BotonMias, BotonTodos } from './BotonMias';
+import { Pastilla, PastillaCotizado } from './Pastilla';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
@@ -401,35 +402,20 @@ export default function CotizacionesVista() {
               <BarraDia d={occ} className="mt-2.5" />
             </span>
           )}
+          {/* **Todo lo cotizado en pastillas**, con la misma forma que la
+              portada y Turnos (`Pastilla.tsx`, 2026-11-13): la gente posible
+              va en su pastilla rosada, no como texto suelto debajo. */}
           <span className="flex flex-wrap gap-1.5">
             {candidatos > 0 && (
-              <span className="rounded-full border border-cielo/60 px-2 py-0.5 text-[13px] font-semibold text-cielo-texto">
-                {candidatos} candidato{candidatos === 1 ? '' : 's'}
-              </span>
+              <Pastilla tipo="candidato">{candidatos} candidato{candidatos === 1 ? '' : 's'}</Pastilla>
             )}
-            {activas > 0 && (
-              <span className="rounded-full border border-rosa/60 px-2 py-0.5 text-[13px] font-semibold text-rosa-texto">
-                {activas} cotizaci{activas === 1 ? 'ón' : 'ones'}
-              </span>
-            )}
-            {ganadas > 0 && (
-              <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2 py-0.5 text-[13px] font-semibold text-verde-texto">
-                ✓ {ganadas} ganada{ganadas === 1 ? '' : 's'}
-              </span>
-            )}
-            {porSeguirDia > 0 && (
-              <span className="rounded-full border-2 border-ambar-fuerte px-2 py-0.5 text-[13px] font-semibold text-ambar-texto">
-                ! esperando respuesta
-              </span>
-            )}
+            <PastillaCotizado cotizaciones={activas} posibles={posibles} />
+            {ganadas > 0 && <Pastilla tipo="ganada">✓ {ganadas} ganada{ganadas === 1 ? '' : 's'}</Pastilla>}
+            {porSeguirDia > 0 && <Pastilla tipo="alerta">! esperando respuesta</Pastilla>}
             {delDia.length === 0 && (
               <span className="text-[13px] text-hueso/55">nada cotizado</span>
             )}
           </span>
-          {posibles > 0 && (
-            <span className="text-[14px] text-rosa-texto"><strong>{posibles}</strong>
-              <span> personas posibles, sin confirmar</span></span>
-          )}
         </button>
         {!soloMira && (
           <div className="mt-auto border-t border-hueso/10 pt-3">

@@ -28,6 +28,7 @@ import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import FechaDia from './FechaDia';
+import { PastillaCotizado } from './Pastilla';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
@@ -304,10 +305,10 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                   que quizás haya que armar, y esta es la pantalla donde se
                   decide a quién se le avisa. */}
               {oc && oc.presupuestos > 0 && (
-                <span className="mt-1 block text-rosa-texto">
-                  {oc.presupuestadas > 0
-                    ? <><b className="font-bold">{oc.presupuestadas}</b> posibles</>
-                    : <>{oc.presupuestos} presup.</>}
+                <span className="mt-1 block">
+                  {/* La misma pastilla de la portada y Cotizaciones, corta
+                      para la celda (`Pastilla.tsx`, 2026-11-13). */}
+                  <PastillaCotizado cotizaciones={oc.presupuestos} posibles={oc.presupuestadas} corta />
                 </span>
               )}
 
