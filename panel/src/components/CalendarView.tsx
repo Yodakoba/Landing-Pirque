@@ -470,11 +470,11 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
             /* Separador sutil: una línea y el mes en chico. No un título
                grande, que competiría con el dato de cada día. */
             <div className={`mb-3 flex items-center gap-3 ${i > 0 ? 'mt-8' : ''}`}>
-              <h2 className="text-xs uppercase tracking-widest text-hueso/45">
+              <h2 className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
                 {mesEnPalabras(mes)}
               </h2>
               <span className="h-px flex-1 bg-hueso/10" />
-              <span className="text-xs text-hueso/35">
+              <span className="text-[13px] text-hueso/55">
                 {(dias ?? []).filter((d) => mesDe(d.fecha) === mes).length} días
               </span>
             </div>
@@ -495,7 +495,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
                 {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
               </strong>
               {esta && (
-                <span className="rounded bg-oro/15 px-1.5 py-0.5 text-[10px]
+                <span className="rounded bg-oro/15 px-1.5 py-0.5 text-[13px]
                                  font-semibold uppercase tracking-wide text-oro">
                   esta semana
                 </span>
@@ -520,7 +520,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               )}
               {conPlanilla && (
                 <button onClick={() => mandarPlanilla(semana)}
-                  className="text-xs text-hueso/45 hover:text-oro">
+                  className="boton boton-angosto text-hueso/70">
                   Enviar planilla semanal
                 </button>
               )}

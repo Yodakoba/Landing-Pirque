@@ -35,8 +35,8 @@ import type { EventosDelDia } from '@/lib/crm';
 import type { Ocupacion } from '@/lib/tipos';
 import { textoFaltantes, type ResumenEquipo } from '@/lib/equipo';
 import { enPesos } from '@/lib/ocupacion';
-import { enPalabras } from '@/lib/fechas';
 import PuntoDia from './PuntoDia';
+import FechaDia from './FechaDia';
 import Clima from './Clima';
 import type { Clima as DatoClima } from '@/lib/clima';
 
@@ -82,6 +82,25 @@ export const COLOR_TARJETA = (d: Ocupacion) => {
   if (sinConfigurar(d)) return 'border-hueso/15 bg-panel';
   return COLOR[d.semaforo];
 };
+
+/**
+ * La barra del cupo: pagadas (verde), abonadas (verde rayado) y sin pagar
+ * (ámbar). La misma en la tarjeta de Reservas y en la de Cotizaciones
+ * (2026-11-13), para que los dos calendarios se lean igual.
+ */
+export function BarraDia({ d, className = '' }: { d: Ocupacion; className?: string }) {
+  const abonadas = d.abonadas ?? 0;
+  const sinPagar = Math.max(0, d.porPagar - abonadas);
+  return (
+    <div className={`flex h-3 overflow-hidden rounded-full bg-hueso/15 ${className}`}
+         role="img"
+         aria-label={`${d.pagadas} pagadas, ${abonadas} abonadas, ${sinPagar} sin pagar, de ${d.capacidad} lugares`}>
+      <div className="bg-verde-fuerte" style={{ width: `${pct(d.pagadas, d.capacidad)}%` }} />
+      <div style={{ width: `${pct(abonadas, d.capacidad)}%`, backgroundImage: RAYAS }} />
+      <div className="bg-ambar-fuerte" style={{ width: `${pct(sinPagar, d.capacidad)}%` }} />
+    </div>
+  );
+}
 
 export const PUNTO_TARJETA = (d: Ocupacion) => {
   if (d.bloqueada) return '🔴';
@@ -210,10 +229,10 @@ export default function TarjetaDia({
             {/* **El pronóstico ya no va acá.** Estaba bajo la fecha a 10px,
                 donde no lo veía nadie; ahora es una pastilla al lado del
                 número, que es lo que se mira. Ver el bloque de abajo. */}
-            <a href={`/dia/${d.fecha}`} {...alFrente}
-               className="text-[15px] font-semibold leading-tight
-                          text-hueso/90 first-letter:uppercase hover:text-oro">
-              {enPalabras(d.fecha)}
+            {/* **La fecha como en Cotizaciones** (2026-11-13): *MIÉ 11*, el
+                número grande. El mes lo dice la caja de la semana. */}
+            <a href={`/dia/${d.fecha}`} {...alFrente} className="text-hueso hover:text-oro">
+              <FechaDia fecha={d.fecha} />
             </a>
             {/* El punto y, debajo, la palabra: público, privado, cerrado.
                 Antes eso era una línea más abajo del contenido, y una línea
@@ -266,15 +285,7 @@ export default function TarjetaDia({
                   antes iban en ámbar con las que no han pagado nada, y un
                   día con 80 personas abonadas se veía casi sin plata.
                   Ámbar: no han pagado nada. El resto es lo libre. */}
-              <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-hueso/15"
-                   role="img"
-                   aria-label={`${d.pagadas} pagadas, ${abonadas} abonadas, ${sinPagar} sin pagar, de ${d.capacidad} lugares`}>
-                <div className="bg-verde-fuerte"
-                     style={{ width: `${pct(d.pagadas, d.capacidad)}%` }} />
-                <div style={{ width: `${pct(abonadas, d.capacidad)}%`, backgroundImage: RAYAS }} />
-                <div className="bg-ambar-fuerte"
-                     style={{ width: `${pct(sinPagar, d.capacidad)}%` }} />
-              </div>
+              <BarraDia d={d} className="mt-4" />
 
               {/* **Las dos pastillas aparecen solo si hay alguien**
                   (2026-11-02, lo notó el cliente mirando un miércoles y un
@@ -451,10 +462,7 @@ export default function TarjetaDia({
             volteada ? '' : 'pointer-events-none'}`}
           aria-hidden={!volteada}>
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-[15px] font-semibold leading-tight text-hueso/90
-                           first-letter:uppercase">
-              {enPalabras(d.fecha)}
-            </h3>
+            <h3><FechaDia fecha={d.fecha} /></h3>
             {/* **Lo que va a costar ese equipo** (2026-11-01, lo pidió el
                 cliente: en el espacio libre de arriba a la derecha, al lado
                 de cuánta gente trabaja). Ocupa el aire que ya estaba ahí, así

@@ -17,7 +17,7 @@
  */
 import { MarcaCambio } from './AlDia';
 import type { Ocupacion } from '@/lib/tipos';
-import { enPalabras } from '@/lib/fechas';
+import FechaDia from './FechaDia';
 import PuntoDia from './PuntoDia';
 import { COLOR_TARJETA, sinConfigurar } from './TarjetaDia';
 
@@ -37,9 +37,7 @@ export default function DiaCompacto({ d, onAbrir, cambio }: {
       {/* Arriba la fecha y el estado; abajo la barra y cuánta gente. En
           dos líneas para que la fecha no se corte en una columna angosta. */}
       <span className="flex w-full items-start justify-between gap-2">
-        <span className="min-w-0 text-[15px] font-semibold leading-tight first-letter:uppercase">
-          {enPalabras(d.fecha)}
-        </span>
+        <FechaDia fecha={d.fecha} chica />
         <PuntoDia d={d} />
       </span>
       <span className="flex w-full items-center gap-3">

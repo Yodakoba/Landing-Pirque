@@ -27,7 +27,7 @@ import {
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
 import { normalizar, estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
-import { semanaDe, sumarDias, diaSemana, rangoEnPalabras, enPalabras, esFecha } from '@/lib/fechas';
+import { semanaDe, sumarDias, rangoEnPalabras, enPalabras, esFecha } from '@/lib/fechas';
 import { enPesos } from '@/lib/ocupacion';
 import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
 import { avisosDeCobro, porRevisar } from '@/lib/cobros';
@@ -36,6 +36,8 @@ import { puede, puedeTocarPresupuesto, esSuya, ROL, type Rol } from '@/lib/auth'
 import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
+import FechaDia from './FechaDia';
+import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
 import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
 
@@ -68,7 +70,6 @@ export function PastillaEstado({ estado }: { estado: string }) {
   );
 }
 
-const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 /**
  * Qué es ese día cuando no trae ocupación —uno cerrado sin reservas, o uno
@@ -348,19 +349,36 @@ export default function CotizacionesVista() {
     const occ = ocupacion.get(f);
     const abiertaEsta = diaAbierto === f;
     return (
-      <div key={f} className={`flex flex-col rounded border bg-panel ${abiertaEsta
-        ? 'border-oro ring-1 ring-oro' : 'border-hueso/15'}`}>
+      /* **El mismo marco que la tarjeta de Reservas** (2026-11-13, lo pidió
+         el cliente: que los dos calendarios *"se sientan iguales"*). Borde y
+         fondo según el estado del día (`COLOR_TARJETA`), la fecha *MIÉ 11*
+         (`FechaDia`), lo reservado en grande con la misma barra (`BarraDia`)
+         y el botón en un pie separado por una línea. Encima de eso, lo que es
+         propio de Cotizaciones: las pastillas de lo cotizado. */
+      <div key={f} className={`flex h-full min-w-0 flex-col rounded border p-4 ${occ ? COLOR_TARJETA(occ) : 'border-hueso/15 bg-panel'}
+        ${abiertaEsta ? 'ring-2 ring-oro' : ''}`}>
         <button type="button" onClick={() => setDiaAbierto(abiertaEsta ? null : f)}
           aria-expanded={abiertaEsta}
-          className="flex flex-1 flex-col items-start gap-2 p-3 text-left hover:bg-hueso/5">
+          className="tecla flex flex-1 flex-col items-stretch gap-3 rounded text-left">
           <span className="flex w-full items-start justify-between gap-2">
-            <span className="flex items-baseline gap-2">
-              <span className="text-[13px] font-semibold uppercase text-hueso/70">{DIAS[diaSemana(f)]}</span>
-              <span className="text-[26px] font-bold leading-none">{Number(f.slice(8))}</span>
-            </span>
+            <FechaDia fecha={f} />
             {/* El punto y su palabra debajo, como en los demás calendarios. */}
             {occ ? <PuntoDia d={occ} /> : <PuntoYPalabra {...palabra} />}
           </span>
+          {/* **Lo ya reservado**, como en Reservas: el número grande y la
+              barra. Para saber antes de cotizar si el día está tomado. */}
+          {occ && occ.capacidad > 0 && (
+            <span className="block">
+              <span className="block text-[26px] font-bold leading-none">
+                <span className={occ.quedan <= 0 ? 'text-rojo-texto' : ''}>{occ.tomadas}</span>
+                <span className="text-hueso/45">/{occ.capacidad}</span>
+                <span className="ml-1.5 text-[13px] font-medium text-hueso/70">
+                  reservadas{occ.quedan <= 0 ? ' · sin cupo' : ''}
+                </span>
+              </span>
+              <BarraDia d={occ} className="mt-2.5" />
+            </span>
+          )}
           <span className="flex flex-wrap gap-1.5">
             {candidatos > 0 && (
               <span className="rounded-full border border-cielo/60 px-2 py-0.5 text-[13px] font-semibold text-cielo-texto">
@@ -386,25 +404,13 @@ export default function CotizacionesVista() {
               <span className="text-[13px] text-hueso/55">nada cotizado</span>
             )}
           </span>
-          {/* **Lo ya reservado** (2026-11-11, lo pidió el cliente): la gente
-              que ese día ya ocupa cupo —reservas del sitio, a mano o de una
-              ganada—, para saber antes de cotizar si el día está tomado.
-              Misma forma que la tarjeta de la portada: "150/120". */}
-          {occ && occ.tomadas > 0 && (
-            <span className="text-[14px]">
-              <strong className={occ.quedan <= 0 ? 'text-rojo-texto' : ''}>
-                {occ.tomadas}{occ.capacidad > 0 ? `/${occ.capacidad}` : ''}
-              </strong>
-              <span className="text-hueso/70"> reservadas{occ.quedan <= 0 ? ' · sin cupo' : ''}</span>
-            </span>
-          )}
           {posibles > 0 && (
-            <span className="text-[14px]"><strong>{posibles}</strong>
-              <span className="text-hueso/70"> personas posibles</span></span>
+            <span className="text-[14px] text-rosa-texto"><strong>{posibles}</strong>
+              <span> personas posibles, sin confirmar</span></span>
           )}
         </button>
         {!soloMira && (
-          <div className="border-t border-hueso/10 p-2">
+          <div className="mt-auto border-t border-hueso/10 pt-3">
             <button type="button" onClick={() => setAbierta({ p: null, fecha: f })}
               className="boton w-full min-h-[44px]">+ Cotizar este día</button>
           </div>
@@ -602,13 +608,20 @@ export default function CotizacionesVista() {
             </p>
           )}
           {cajas.map((c) => (
-            <div key={c.lunes} className={`rounded border p-3 ${c.lunes === inicio
-              ? 'border-oro/60' : 'border-hueso/15'}`}>
-              <p className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-hueso/75">
-                {rangoEnPalabras(Array.from({ length: 7 }, (_, d) => sumarDias(c.lunes, d)))}
-                {c.lunes === inicio && <span className="ml-2 text-oro">esta semana</span>}
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            /* La caja de la semana, igual que en Reservas. */
+            <div key={c.lunes} className={`rounded-lg border p-3 ${c.lunes === inicio
+              ? 'border-oro/40 bg-oro/[0.03]' : 'border-hueso/15'}`}>
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hueso/10 pb-2">
+                <strong className="text-sm">
+                  {rangoEnPalabras(Array.from({ length: 7 }, (_, d) => sumarDias(c.lunes, d)))}
+                </strong>
+                {c.lunes === inicio && (
+                  <span className="rounded bg-oro/15 px-1.5 py-0.5 text-[13px] font-semibold uppercase tracking-wide text-oro">
+                    esta semana
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {c.dias.map(tarjeta)}
               </div>
               {franjaDelDia(c.dias)}
