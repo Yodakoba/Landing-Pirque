@@ -85,6 +85,14 @@ export default function MisionesAyuda({ rol, nombreRol, onContar }: {
   const llave = `brasas-misiones-${rol}`;
   const [hechas, setHechas] = useState<string[]>([]);
   const [actual, setActual] = useState(0);
+  /**
+   * **Terminadas: la misión se cierra y pregunta si quiere más ayuda**
+   * (2026-11-13, lo reclamó el cliente: en la última misión *✓ Entendido* no
+   * hacía nada visible —la marcaba hecha y se quedaba en la misma, con el
+   * marcador cambiando arriba, fuera de la vista—). Apretar una misión del
+   * mapa la vuelve a abrir.
+   */
+  const [fin, setFin] = useState(false);
 
   // El avance se lee después de dibujar: el servidor no tiene `localStorage`.
   useEffect(() => {
@@ -92,6 +100,8 @@ export default function MisionesAyuda({ rol, nombreRol, onContar }: {
     setHechas(h);
     const primera = misiones.findIndex((m) => !h.includes(m.id));
     setActual(primera < 0 ? 0 : primera);
+    // Quien ya las hizo todas vuelve a la pregunta, no a la misión 1.
+    if (misiones.length && primera < 0) setFin(true);
   }, [llave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!misiones.length) return null;
@@ -99,19 +109,26 @@ export default function MisionesAyuda({ rol, nombreRol, onContar }: {
   const cuantas = hechas.filter((h) => misiones.some((x) => x.id === h)).length;
   const todas = cuantas === misiones.length;
 
-  function completar(id: string) {
+  function completar(id: string): string[] {
     const h = hechas.includes(id) ? hechas : [...hechas, id];
     setHechas(h); anotar(llave, h);
+    return h;
   }
   function ir(i: number) {
-    setActual(i);
+    setActual(i); setFin(false);
     document.getElementById('mision')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function siguiente() {
-    completar(m.id);
-    const sig = misiones.findIndex((x, i) => i > actual && !hechas.includes(x.id) && x.id !== m.id);
-    ir(sig >= 0 ? sig : Math.min(actual + 1, misiones.length - 1));
+    const h = completar(m.id);
+    // La próxima sin hacer, primero hacia adelante y después desde el principio.
+    const pendiente = misiones.findIndex((x, i) => i > actual && !h.includes(x.id));
+    const otra = pendiente >= 0 ? pendiente : misiones.findIndex((x) => !h.includes(x.id));
+    if (otra >= 0) { ir(otra); return; }
+    // Todas hechas: se cierra la misión y aparece la pregunta.
+    setFin(true);
+    setTimeout(() => document.getElementById('mision')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
   }
+  const bajarA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
     <section className="space-y-6" aria-label="Misiones">
@@ -142,7 +159,8 @@ export default function MisionesAyuda({ rol, nombreRol, onContar }: {
         <ol className="relative grid gap-1.5 sm:gap-3" style={{ gridTemplateColumns: `repeat(${misiones.length}, minmax(0, 1fr))` }}>
           {misiones.map((x, i) => {
             const hecha = hechas.includes(x.id);
-            const aqui = i === actual;
+            // Con todas hechas no hay "aquí": las cuatro se ven verdes con su ✓.
+            const aqui = !fin && i === actual;
             return (
               <li key={x.id} className="flex flex-col items-center gap-1.5 text-center">
                 <button type="button" onClick={() => ir(i)} aria-current={aqui ? 'step' : undefined}
@@ -170,6 +188,35 @@ export default function MisionesAyuda({ rol, nombreRol, onContar }: {
         </ol>
       </nav>
 
+      {fin ? (
+        <article id="mision" aria-live="polite"
+          className="scroll-mt-4 rounded-2xl border-2 border-verde-fuerte/60 bg-verde/10 px-4 py-5 text-center sm:px-6">
+          <p className="text-[44px] leading-none" aria-hidden>🏆</p>
+          <h3 className="mt-2 text-[22px] font-black sm:text-[26px]">Terminaste tus misiones</h3>
+          <p className="mx-auto mt-1 max-w-xl text-[15px] text-hueso/80">
+            Ya conoces tu panel de {nombreRol}.
+          </p>
+          <p className="mt-5 text-[17px] font-bold">¿Quieres más ayuda?</p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={() => bajarA('tus-poderes')} className="boton min-h-[44px] text-[15px]">
+              ⚡ Lo que puede hacer tu rol
+            </button>
+            <button type="button" onClick={() => bajarA('consulta-rapida')} className="boton min-h-[44px] text-[15px]">
+              🔎 Cada pantalla, explicada
+            </button>
+            {onContar && (
+              <button type="button" onClick={() => onContar('Ayuda · Terminé las misiones')}
+                className="boton min-h-[44px] border-rosa-fuerte/60 text-[15px] text-rosa-texto">
+                💬 Cuéntame qué te falta
+              </button>
+            )}
+          </div>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-hueso/10 pt-4">
+            <a href="/" className="tecla boton boton-relleno min-h-[52px] px-6 text-[16px] font-bold">No, ir a mi panel →</a>
+            <button type="button" onClick={() => ir(0)} className="boton min-h-[44px]">↺ Repasar las misiones</button>
+          </div>
+        </article>
+      ) : (
       <article id="mision" className="scroll-mt-4 space-y-4">
         {/* La cabecera de la misión, como la pantalla de inicio de un nivel. */}
         <header className="rounded-2xl border-2 border-oro/50 bg-oro/10 px-4 py-4 sm:px-5">
@@ -183,8 +230,10 @@ export default function MisionesAyuda({ rol, nombreRol, onContar }: {
         </header>
 
         <MisionConCaptura key={m.id} m={m} onSiguiente={siguiente}
-          onContar={onContar ? () => onContar(`Ayuda · ${m.titulo}`) : undefined} ultima={actual === misiones.length - 1} />
+          onContar={onContar ? () => onContar(`Ayuda · ${m.titulo}`) : undefined}
+          ultima={misiones.every((x) => x.id === m.id || hechas.includes(x.id))} />
       </article>
+      )}
     </section>
   );
 }

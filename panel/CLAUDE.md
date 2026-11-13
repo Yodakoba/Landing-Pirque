@@ -6408,6 +6408,19 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
   va en rosado con *Cuéntalo*, *Lo que más sirve* y *Ya mandaste*. La página
   tiene tres secciones con título propio: *Tus misiones*, *Consulta rápida* y
   *Tu rol*.
+- **Al terminar, la misión se cierra y pregunta si quiere más ayuda**
+  (2026-11-13, lo reclamó el cliente haciendo el recorrido de encargado de
+  turno: *"aprieto entendido y no pasa nada"*). En la última misión,
+  *✓ Entendido* la marcaba hecha y se quedaba en la misma —solo cambiaba el
+  marcador, arriba y fuera de la vista—. Ahora, con todas hechas, la misión
+  da paso a **🏆 Terminaste tus misiones · ¿Quieres más ayuda?** con *⚡ Lo
+  que puede hacer tu rol* y *🔎 Cada pantalla, explicada* (bajan a esas
+  secciones), *💬 Cuéntame qué te falta* (abre Tu voz), y abajo **No, ir a
+  mi panel →** (el único relleno) y *↺ Repasar las misiones*. Las cuatro
+  quedan verdes en el mapa, sin *AQUÍ*; apretar una la vuelve a abrir.
+  Quien ya las terminó y vuelve a `/ayuda` cae en esa pregunta, no en la
+  misión 1. *Entendido* dice *la siguiente →* mientras quede alguna sin
+  hacer, en cualquier orden.
 - **Tu voz primero, y los poderes en vez de las listas** (2026-11-13, lo
   pidió el cliente: el formulario *"tiene que estar muy presente… en primer
   paso"*, y las listas *puede / no puede* eran *"muy Excel"*).
