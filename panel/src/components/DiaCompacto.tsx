@@ -17,7 +17,8 @@
  */
 import { MarcaCambio } from './AlDia';
 import type { Ocupacion } from '@/lib/tipos';
-import FechaDia from './FechaDia';
+import FechaDia, { MARCO_HOY } from './FechaDia';
+import { hoy } from '@/lib/fechas';
 import PuntoDia from './PuntoDia';
 import { COLOR_TARJETA, sinConfigurar } from './TarjetaDia';
 
@@ -32,7 +33,7 @@ export default function DiaCompacto({ d, onAbrir, cambio }: {
     <button type="button" onClick={onAbrir}
       title="Ampliar la semana"
       className={`tecla relative flex w-full min-w-0 flex-col gap-1.5 rounded-xl border-2 px-3 py-2
-                  text-left hover:border-oro/70 ${COLOR_TARJETA(d)}`}>
+                  text-left hover:border-oro/70 ${COLOR_TARJETA(d)} ${d.fecha === hoy() ? MARCO_HOY : ''}`}>
       {cambio && <MarcaCambio {...cambio} />}
       {/* Arriba la fecha y el estado; abajo la barra y cuánta gente. En
           dos líneas para que la fecha no se corte en una columna angosta. */}

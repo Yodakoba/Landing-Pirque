@@ -51,7 +51,7 @@ revisan antes de cada cambio en esta carpeta.
   | Dato | Pieza |
   |---|---|
   | El título de una sección | `BandaSeccion` (con su tono) |
-  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` |
+  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` (*HOY* relleno) y `MARCO_HOY` alrededor de la tarjeta o celda de hoy |
   | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
   | Lo cotizado (solo lo mandado) y la gente posible, ganadas, esperando, lo tuyo sin mandar | `Pastilla` / `PastillaCotizado` |
   | Cómo va el pago de una reserva | `PastillaPago` |
@@ -6280,6 +6280,17 @@ Cotizaciones quiere decir *día abierto*—, y Reservas no marcaba hoy. Ahora:
   caja que las otras. El tono sigue entero en la banda del título.
 - **El color queda para lo que significa algo**: el estado del día en la
   tarjeta y los avisos.
+- **Hoy, más marcado** (2026-11-13, segunda vuelta; lo pidió el cliente:
+  la pastilla *"está bien… pero ayuda mucho si está bien marcado el día
+  hoy"*, sobre todo en Turnos y Extras). La tarjeta o la celda de hoy lleva
+  **un borde grueso del color del texto** alrededor (`MARCO_HOY` en
+  `FechaDia.tsx`: `outline` de 3px, que no mueve nada de lugar y va encima
+  de las celdas vecinas), y la pastilla ***HOY*** va **rellena**
+  (`MarcaAhora relleno`); *ESTA SEMANA* sigue delineada. Igual en los
+  cuatro calendarios —las tarjetas de Reservas (las dos caras y la
+  compacta), Cotizaciones, y las celdas de Turnos y Extras—, al tamaño de
+  cada uno. **Neutro y no dorado**: en Cotizaciones el anillo dorado ya
+  dice *el día que abriste*, y los dos pueden estar a la vez.
 
 **Los pendientes son de cada cuenta** (`CotizacionesVista`, rótulo *Tus
 pendientes*):

@@ -26,14 +26,28 @@ import { diaSemana, enPalabras, hoy } from '@/lib/fechas';
  * de la semana. El color queda para lo que significa algo: el estado del día
  * y los avisos.
  */
-export function MarcaAhora({ children }: { children: ReactNode }) {
+export function MarcaAhora({ children, relleno = false }: { children: ReactNode;
+  /** *HOY* va relleno (2026-11-13): más fuerte que *ESTA SEMANA*, delineada. */
+  relleno?: boolean }) {
   return (
-    <span className="inline-block whitespace-nowrap rounded-full border-2 border-hueso/60 px-2 py-px
-                     text-[13px] font-bold uppercase leading-tight tracking-wide text-hueso">
+    <span className={`inline-block whitespace-nowrap rounded-full border-2 border-hueso/60 px-2 py-px
+                     text-[13px] font-bold uppercase leading-tight tracking-wide ${relleno
+                       ? '!border-hueso bg-hueso text-tinta' : 'text-hueso'}`}>
       {children}
     </span>
   );
 }
+
+/**
+ * **Hoy, bien marcado** (2026-11-13, lo pidió el cliente: la pastilla *HOY*
+ * estaba bien, *"pero ayuda mucho si está bien marcado el día hoy"*). Un
+ * borde grueso del color del texto alrededor de la tarjeta o la celda de
+ * hoy, **el mismo en los cuatro calendarios** (Reservas, Cotizaciones,
+ * Turnos y Extras). Neutro a propósito: el dorado ya quiere decir *el día
+ * que abriste*. Es `outline`, así que no mueve nada de lugar, y va encima
+ * de las celdas vecinas.
+ */
+export const MARCO_HOY = 'relative z-[1] outline outline-[3px] outline-offset-1 outline-hueso';
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -63,7 +77,7 @@ export default function FechaDia({ fecha, tamano = 'tarjeta', chica = false, con
       {conMes && (
         <span aria-hidden className="text-[13px] font-semibold opacity-75">{MESES[Number(fecha.slice(5, 7)) - 1]}</span>
       )}
-      {t !== 'aviso' && fecha === hoy() && <span className="self-center"><MarcaAhora>hoy</MarcaAhora></span>}
+      {t !== 'aviso' && fecha === hoy() && <span className="self-center"><MarcaAhora relleno>hoy</MarcaAhora></span>}
     </span>
   );
 }
