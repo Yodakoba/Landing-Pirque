@@ -7,7 +7,7 @@
  * PlayStation, más en partes, más en secciones y más claro diferenciado las
  * etapas"*):
  *
- * - **Arriba, un mapa de niveles**: las cinco misiones como casillas unidas
+ * - **Arriba, un mapa de niveles**: las cuatro misiones como casillas unidas
  *   por una línea. Cada estado se distingue **por forma**, no solo por color:
  *   hecha (verde, rellena, ✓), la actual (dorada, más grande, *Aquí estás*),
  *   pendiente (borde cortado).

@@ -57,7 +57,7 @@ export default function Recorrido({ rol }: { rol: string }) {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-sm">
         <span>
           <strong>¿Primera vez acá?</strong>{' '}
-          <span className="text-hueso/70">Cinco misiones cortas con tu panel de verdad.</span>
+          <span className="text-hueso/70">Cuatro misiones cortas con tu panel de verdad.</span>
         </span>
         <span className="flex-1" />
         <a href="/ayuda" onClick={() => anotar(llave, 'listo')} className="tecla boton boton-relleno min-h-[40px]">

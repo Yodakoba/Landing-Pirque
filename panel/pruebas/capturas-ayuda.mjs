@@ -37,7 +37,8 @@ const campo = (t) => (p) => p.getByPlaceholder(t).first();
 const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeout(900); };
 
 const abrirEnvio = (nombre) => [
-  clic(boton('Todas', 0)),
+  // *Todas* pasó a llamarse *🔎 Buscar* el 2026-11-13.
+  clic(boton(/Buscar/, 0)),
   clic(texto(nombre)),
   async (p) => { await p.waitForTimeout(1500); await boton(/Envío/)(p).click(); await p.waitForTimeout(900); }
 ];
