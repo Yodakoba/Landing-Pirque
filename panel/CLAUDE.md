@@ -59,9 +59,29 @@ revisan antes de cada cambio en esta carpeta.
   | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
   | Guardar | `BotonGuardar` / `AvisoGuardado` |
   | Elegir de una lista que crece | `BuscarEnLista` |
+- **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
+  en la raíz). Un cambio que altera algo que una ayuda describe la
+  actualiza **en el mismo PR**. Cuenta como ayuda:
+
+  | Ayuda | Dónde vive |
+  |---|---|
+  | El `?` de cada pantalla | `AYUDAS` en `lib/ayudas.ts` |
+  | El `?` chico al lado de un número o un campo | `AYUDAS_CORTAS` en `lib/ayudas.ts` |
+  | Los avisos fijos que explican una pantalla | `AvisoFijo` en cada pantalla |
+  | Las misiones: texto, **captura y puntos** | `lib/misiones.ts`, `public/ayuda/*.jpg` y `puntos.json` |
+  | Lo que puede hacer cada rol | `lib/poderes.ts`, `lib/roles.ts` |
+  | La consulta rápida (cada pantalla con su `?`) | `lib/ayudaRol.ts` |
+
+  **Las capturas se rehacen con `pruebas/capturas-ayuda.mjs`** contra la
+  planilla de ejemplo, nunca contra datos de verdad. Si una escena del
+  script ya no encuentra lo que busca, es que la ayuda quedó atrás: se
+  arregla el localizador y se vuelve a sacar la foto. **Única excepción**:
+  un arreglo urgente de algo roto en producción puede salir antes; la ayuda
+  va en el PR siguiente, el mismo día, y el PR del arreglo lo dice.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
-  lecturas y letra chica) y una pasada con Playwright a 393 y 1280px con
-  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`.
+  lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
+  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
+  pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
 
 ## Las pruebas que cuidan las reglas (2026-11-12)
 

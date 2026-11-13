@@ -46,6 +46,16 @@ más abajo; esto es la lista para revisar.
   Reservas—, **no el formato**. Antes de dibujar algo se busca la pieza que
   ya lo muestra y se reutiliza; si aparecen dos formas del mismo dato, se
   unifican en una. En el panel, la lista de piezas está en `panel/CLAUDE.md`.
+- **La ayuda siempre al día** (regla del cliente, 2026-11-13: *"siempre
+  mantener las ayudas al día de cualquier cambio, cueste lo que cueste…
+  gráficas hay que adaptar, lógicas"*). Un cambio que altera algo que una
+  ayuda describe **actualiza esa ayuda en el mismo PR**: el texto, la
+  captura y sus puntos, el orden de los pasos. Una ayuda desactualizada es
+  peor que ninguna, porque enseña algo que ya no existe. Vale para el sitio
+  y para el panel; en el panel, la lista de qué cuenta como ayuda y cómo se
+  rehacen las capturas está en `panel/CLAUDE.md`. **Única excepción**: un
+  arreglo urgente de algo roto en producción puede salir antes; la ayuda va
+  en el PR siguiente, el mismo día, y el PR del arreglo lo dice.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px
@@ -77,8 +87,9 @@ más abajo; esto es la lista para revisar.
 - **Los permisos los comprueba el servidor**; la pantalla solo deja de
   dibujar lo que la cuenta no puede.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
-  lecturas y letra chica) y una pasada con Playwright a 393 y 1280px con
-  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`.
+  lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
+  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
+  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR.
 
 **Sitio público y landings: elegante y sobrio**
 - Fotografía real como protagonista, Fraunces y Work Sans, negro y dorado
