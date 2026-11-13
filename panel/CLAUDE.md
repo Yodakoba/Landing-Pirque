@@ -142,6 +142,47 @@ fichas que todavía tenían botón *Guardar*: **Equipo, Extras y Clientes**.
   reescribir reservas en cada pausa.
 - `AvisoGuardado` pasó de 12 a 13px, ahora que reemplaza al botón.
 
+## El contacto de los clientes, por rol (2026-11-13)
+
+Lo pidió el cliente mirando los botones 📞 · 💬 · ✉ de una reserva: *"tienen
+que ser pensado individualizado, cada rol, cada persona, cada perfil tiene
+que tener su… piensa bien la seguridad"*. **Lo que había**: `/api/reservas`
+le mandaba a todo el que ve el calendario —vendedor incluido— **todas las
+reservas de todos los días con teléfono, correo, monto y nota de pago**, y la
+página del día le mostraba al vendedor el contacto de cualquier reserva, de
+Shopify o de otro vendedor. `/api/presupuestos` y `/api/clientes` le
+mandaban las fichas de todos los clientes, con RUT y domicilio. **Lo que no
+se manda no se puede filtrar**, así que el recorte lo hace el servidor
+(`lib/privacidad.ts`, puro y con pruebas):
+
+| Rol | Teléfono y correo de los clientes |
+|---|---|
+| Administrador, operaciones, pagos, gerencia, y *Vista gerencia* | todos |
+| Encargado de turno | las reservas **de hoy en adelante**; de las pasadas, tapado (la plata sí, porque cierra los días) |
+| Vendedor | **solo lo suyo**: las reservas que anotó o que salieron de una cotización suya, y los clientes que creó o a los que les cotizó. De lo demás, el nombre y el teléfono tapado (`···· 5678`), sin correo, RUT, domicilio ni notas; de las reservas ajenas tampoco el monto, la nota de pago ni cómo se ingresa en Fudo |
+| Anfitriona | ninguno, como antes (`/api/recepcion` nunca lo mandó) |
+
+- **Un rol que no se conoce cae en "nada"** (`alcanceDeContacto()`): un rol
+  nuevo ve de menos hasta que alguien decida, nunca de más.
+- **Lo tapado se marca** (`contactoTapado`) y la pantalla lo dice: *🔒 ···· 4540 ·
+  El contacto de esta reserva lo ven la administración y quien la atiende*,
+  sin 📞 ni 💬. En `/clientes` la ficha ajena no se edita ni se borra.
+- **Un contacto tapado nunca se escribe de vuelta**: el `PATCH` de una
+  reserva descarta el teléfono y el correo si la cuenta los recibió tapados,
+  y el de un cliente no guarda un teléfono con `····`. El vendedor no edita
+  ni borra la ficha de otro (403, en el servidor).
+- **Cotizarle a un cliente de otro lo vuelve suyo también**: es atenderlo, y
+  queda en la bitácora como toda cotización. Las cotizaciones de otros las
+  sigue viendo —es la regla del 2026-11-10: *"ve todas, edita las suyas"*—,
+  pero sin el contacto del cliente.
+- **Ver como** recorta como el rol que se mira: el administrador ve lo que
+  vería ese vendedor.
+- Probado contra el panel de ejemplo: el vendedor recibe contacto y monto
+  de 2 de 35 reservas (las suyas), el encargado no recibe el de las 14
+  pasadas, la administración las 35; de 6 clientes, el vendedor ve el
+  contacto de 4. **Lecturas de Google**: ninguna más en las pantallas; crear,
+  editar o borrar una ficha suma `Presupuestos` a su tanda.
+
 ## Las reservas en el panel
 
 Lo que sigue venía bajo "Reserva en línea" en la raíz: es cómo el panel

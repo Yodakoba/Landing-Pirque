@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CLIENTES } from '@/lib/clientes';
+import { alcanceDeContacto, recortarCliente, recortarContactoDeCotizacion, clientePropio } from '@/lib/privacidad';
 import { HOJA_COBROS } from '@/lib/cobros';
 import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
@@ -60,9 +61,15 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       quien.rol as Rol, quien.usuario)
       .map((d) => ({ fecha: d.fecha, exceso: d.exceso, capacidad: d.capacidad, tomadas: d.tomadas,
         riesgo: d.riesgo.map((r) => ({ nombre: r.nombre, personas: r.personas, anotadaPor: r.anotadaPor })) }));
+    // **El contacto, recortado por rol** (2026-11-13, `privacidad.ts`): el
+    // vendedor ve el teléfono, el correo, el RUT y el domicilio solo de sus
+    // clientes; de los demás, el nombre y el teléfono tapado.
+    const alcance = alcanceDeContacto(quien.rol, quien.gerencia);
+    const clientesVisibles = clientes.map((c) =>
+      recortarCliente(c, alcance, clientePropio(c, quien.usuario, presupuestos)));
     return NextResponse.json({
-      presupuestos: presupuestos.map((p) => conCliente(p, clientes)),
-      lineas, menus, clientes,
+      presupuestos: presupuestos.map((p) => recortarContactoDeCotizacion(conCliente(p, clientes), alcance, quien.usuario)),
+      lineas, menus, clientes: clientesVisibles,
       // **Los socios comerciales**, para *"¿Viene por un socio comercial?"*:
       // solo el id, el nombre y si está activo. Su trato y su cuenta, no.
       socios: fichas.filter((f) => f.tipo === 'socio')

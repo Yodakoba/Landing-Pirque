@@ -63,9 +63,13 @@ export const AYUDAS: Record<string, Ayuda> = {
     cuerpo: [
       'Todo lo de una fecha en una pantalla: quiénes reservaron, quién '
       + 'trabaja y qué actividades extras hay contratadas.',
-      'En la tabla de reservas, la columna Pago dice qué compró cada quien '
-      + 'y cómo va: Pagada, Por pagar, o una de las tres que liberan el '
-      + 'cupo (Cancelada, Reembolsada, Anulada).'
+      'En la lista de reservas, el círculo de cada una dice cómo va el pago; '
+      + 'ábrela con “+” para ver qué compró, cómo ingresarla en Fudo y su '
+      + 'contacto.',
+      'El teléfono y el correo de una reserva los ve quien la atiende: la '
+      + 'administración, el encargado de turno de hoy en adelante y el vendedor '
+      + 'solo en las suyas. Si te llega con 🔒 y tapado (···· 5678), pídeselo a '
+      + 'quien la anotó.'
     ],
     pasos: [
       'La columna Asistencia dice quién vino; se marca en Turnos.',
@@ -259,13 +263,17 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'falta para el contrato, su RUT y domicilio.',
       'Se escribe una vez: las cotizaciones apuntan a la ficha en vez de '
       + 'copiar los datos. Si corriges un teléfono acá, queda corregido para '
-      + 'todas sus cotizaciones.'
+      + 'todas sus cotizaciones.',
+      'Si eres vendedor, ves el contacto, el RUT y el domicilio de tus '
+      + 'clientes —los que creaste o a los que les cotizaste—. De los de otro '
+      + 'vendedor ves el nombre y el teléfono tapado, con 🔒, y no se editan.'
     ],
     pasos: [
       'Busca primero: por nombre, empresa, teléfono, correo o RUT.',
       'Si no está, aprieta “+ Nuevo cliente”. Si ya hay uno con ese teléfono, '
       + 'correo o RUT, el panel te pregunta si es el mismo.',
-      'Para cambiar algo, abre la ficha con “+”, corrige y aprieta “Guardar cambios”.'
+      'Para cambiar algo, abre la ficha con “+” y corrige: se guarda solo. El '
+      + 'nombre se confirma con su botón.'
     ],
     ojo: 'Una ficha con cotizaciones no se puede borrar.'
   },

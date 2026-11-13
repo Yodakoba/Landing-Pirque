@@ -61,6 +61,12 @@ export interface Reserva {
    * pantalla pueda decirlo. Ver su comentario.
    */
   duplicadas?: number;
+  /**
+   * El servidor tapó el contacto para esta cuenta (`recortarReserva()` en
+   * `privacidad.ts`): el teléfono viene como `···· 5678` y sin correo. La
+   * pantalla no ofrece llamar ni escribir.
+   */
+  contactoTapado?: boolean;
 }
 
 export interface FechaHabil {

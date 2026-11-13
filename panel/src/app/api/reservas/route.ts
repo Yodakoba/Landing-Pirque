@@ -3,11 +3,11 @@ import { conLecturas } from '@/lib/sheets';
 import { HOJA_RESERVAS, HOJA_FECHAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
 import { ocupacionDe } from '@/lib/ocupacion';
-import { esFecha } from '@/lib/fechas';
+import { esFecha, hoy } from '@/lib/fechas';
 import { HOJA_MENUS } from '@/lib/menus';
 import { HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
-import { ROL } from '@/lib/auth';
+import { ROL, esSuya } from '@/lib/auth';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
 import { leerPresupuestos } from '@/lib/datos';
@@ -16,6 +16,7 @@ import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasD
 import { comoIngresar } from '@/lib/fudo';
 import { ASISTENCIA, ESTADO_PAGO } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
+import { alcanceDeContacto, recortarReserva } from '@/lib/privacidad';
 import { guardaDelDia } from '@/lib/guardaCierre';
 import { firmaDe } from '@/lib/cambios';
 import { yaAbrio } from '@/lib/cierres';
@@ -69,8 +70,15 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
       }
       capacidadMaxima = cfg.capacidadMaxima;
     }
+    // **El contacto, recortado por rol** (2026-11-13, `privacidad.ts`): el
+    // vendedor recibe el teléfono, el correo y la plata solo de lo suyo; el
+    // encargado de turno, el contacto de hoy en adelante.
+    const quien = await quienEs(req);
+    const alcance = alcanceDeContacto(quien.rol, quien.gerencia);
+    const h = hoy();
     return NextResponse.json({
-      reservas: reservas.map((r) => ({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) })),
+      reservas: reservas.map((r) => recortarReserva({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) },
+        alcance, { hoy: h, propia: esSuya(quien.usuario, r.anotadaPor) || esSuya(quien.usuario, vendedorDe[r.id] ?? '') })),
       menus, dia, capacidadMaxima, firma: firmaDe(reservas, fechas), apertura, abierto, descuentos,
       // Qué reservas vienen de una cotización: esas no se sueltan acá, se
       // cancelan desde su cotización.

@@ -12,9 +12,34 @@ import { folioDe, estadoVisible, totalDe, lineasDe } from '@/lib/presupuestos';
 import { grupoDe } from '@/lib/cotizar';
 import { hoy } from '@/lib/fechas';
 import { puede } from '@/lib/auth';
+import type { Cliente } from '@/lib/clientes';
+import { alcanceDeContacto, recortarCliente, clientePropio, estaTapado } from '@/lib/privacidad';
 import { ahoraEnChile } from '@/lib/bitacora';
 
 export const dynamic = 'force-dynamic';
+
+type Quien = Awaited<ReturnType<typeof quienEs>>;
+
+/**
+ * **Las fichas tal como las puede ver esta cuenta** (2026-11-13,
+ * `privacidad.ts`): el vendedor recibe el contacto, el RUT y el domicilio
+ * solo de sus clientes; de los demás, el nombre, la empresa y el teléfono
+ * tapado. Toda respuesta que lleve fichas pasa por acá.
+ */
+async function paraLaCuenta(quien: Quien, clientes: Cliente[],
+  presupuestos?: { idCliente?: string; creadoPor: string }[]): Promise<Cliente[]> {
+  const alcance = alcanceDeContacto(quien.rol, quien.gerencia);
+  if (alcance === 'todo') return clientes;
+  const ps = presupuestos ?? await leerPresupuestos().catch(() => []);
+  return clientes.map((c) => recortarCliente(c, alcance, clientePropio(c, quien.usuario, ps)));
+}
+
+/** Si esta cuenta puede tocar esta ficha: el vendedor, solo las suyas. */
+async function esFichaAjena(quien: Quien, c: Cliente): Promise<boolean> {
+  if (alcanceDeContacto(quien.rol, quien.gerencia) !== 'propio') return false;
+  return !clientePropio(c, quien.usuario, await leerPresupuestos().catch(() => []));
+}
+const FICHA_AJENA = 'Esta ficha es de un cliente de otro vendedor: pídele el cambio a la administración.';
 
 /**
  * Las fichas de clientes, y cuántas cotizaciones tiene cada una.
@@ -59,7 +84,7 @@ export const GET = conLecturas([HOJA_CLIENTES, HOJA_PRESUPUESTOS, HOJA_LINEAS], 
       }
     }
     return NextResponse.json({
-      clientes,
+      clientes: await paraLaCuenta(quien, clientes, presupuestos),
       cotizaciones,
       historial,
       sinFicha: verPresupuestos ? presupuestos.filter((p) => !p.idCliente).length : 0
@@ -77,7 +102,7 @@ export const GET = conLecturas([HOJA_CLIENTES, HOJA_PRESUPUESTOS, HOJA_LINEAS], 
  * `forzar: true` —la persona ya vio las parecidas y dijo que no— se crea
  * igual. Es la regla que en el CRM del socio faltaba.
  */
-export const POST = conLecturas([], async function POST(req: Request) {
+export const POST = conLecturas([HOJA_PRESUPUESTOS], async function POST(req: Request) {
   const no = await exigir(req, 'clientes');
   if (no) return no;
   try {
@@ -100,11 +125,11 @@ export const POST = conLecturas([], async function POST(req: Request) {
     const lista = await leerClientes();
     const iguales = parecidos(datos, lista);
     if (iguales.length && !cuerpo?.forzar) {
-      return NextResponse.json({ parecidos: iguales });
+      return NextResponse.json({ parecidos: await paraLaCuenta(quien, iguales) });
     }
     const id = await crearCliente({ ...datos, creadoPor: quien.usuario, creado: ahoraEnChile() });
     await anotar({ ...quien, accion: 'Creó un cliente', detalle: `${id} · ${datos.nombre}` });
-    return NextResponse.json({ id, clientes: await leerClientes() });
+    return NextResponse.json({ id, clientes: await paraLaCuenta(quien, await leerClientes()) });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
@@ -114,7 +139,7 @@ export const POST = conLecturas([], async function POST(req: Request) {
  * Edita una ficha. Lo que no viene en el cuerpo se conserva, igual que el
  * `PATCH` de un trabajador. Avisa —sin bloquear— si quedó igual a otra.
  */
-export const PATCH = conLecturas([], async function PATCH(req: Request) {
+export const PATCH = conLecturas([HOJA_PRESUPUESTOS], async function PATCH(req: Request) {
   const no = await exigir(req, 'clientes');
   if (no) return no;
   try {
@@ -124,11 +149,14 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
     const lista = await leerClientes();
     const previo = lista.find((c) => c.id === id);
     if (!previo) return NextResponse.json({ error: 'Ese cliente no existe.' }, { status: 404 });
+    if (await esFichaAjena(quien, previo)) return NextResponse.json({ error: FICHA_AJENA }, { status: 403 });
 
     const mezcla: Record<string, unknown> = { ...previo };
     for (const k of ['nombre', 'empresa', 'rut', 'domicilio', 'giro', 'telefono', 'correo', 'notas']) {
       if (cuerpo?.[k] !== undefined) mezcla[k] = cuerpo[k];
     }
+    // Un teléfono tapado (`···· 5678`) nunca se guarda encima del de verdad.
+    if (estaTapado(mezcla.telefono)) mezcla.telefono = previo.telefono;
     const datos = limpiarCliente(mezcla);
     const falta = faltaEnCliente(datos);
     if (falta) return NextResponse.json({ error: falta }, { status: 400 });
@@ -149,8 +177,8 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
     }
     await anotar({ ...quien, accion: 'Editó un cliente', detalle: `${id} · ${datos.nombre}` });
     return NextResponse.json({
-      clientes: await leerClientes(),
-      parecidos: parecidos(datos, lista, id)
+      clientes: await paraLaCuenta(quien, await leerClientes()),
+      parecidos: await paraLaCuenta(quien, parecidos(datos, lista, id))
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
@@ -162,7 +190,7 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
  * solo en la pantalla: una cotización que apunta a una ficha borrada queda
  * sin cliente, que es justo lo que las fichas vinieron a evitar.
  */
-export const DELETE = conLecturas([], async function DELETE(req: Request) {
+export const DELETE = conLecturas([HOJA_PRESUPUESTOS], async function DELETE(req: Request) {
   const no = await exigir(req, 'clientes');
   if (no) return no;
   try {
@@ -171,6 +199,11 @@ export const DELETE = conLecturas([], async function DELETE(req: Request) {
     // Sin `catch`: si no se pueden leer los presupuestos, no se borra. Mejor
     // un error que borrar una ficha que sí tenía cotizaciones.
     const presupuestos = await leerPresupuestos();
+    const ficha = (await leerClientes()).find((c) => c.id === id);
+    if (ficha && alcanceDeContacto(quien.rol, quien.gerencia) === 'propio'
+        && !clientePropio(ficha, quien.usuario, presupuestos)) {
+      return NextResponse.json({ error: FICHA_AJENA }, { status: 403 });
+    }
     const suyos = presupuestos.filter((p) => p.idCliente === id).length;
     if (suyos) {
       return NextResponse.json({
@@ -181,7 +214,7 @@ export const DELETE = conLecturas([], async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Ese cliente no existe.' }, { status: 404 });
     }
     await anotar({ ...quien, accion: 'Borró un cliente', detalle: id });
-    return NextResponse.json({ clientes: await leerClientes() });
+    return NextResponse.json({ clientes: await paraLaCuenta(quien, await leerClientes(), presupuestos) });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

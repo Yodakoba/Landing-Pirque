@@ -11,6 +11,7 @@ import { guardaDelDia } from '@/lib/guardaCierre';
 import { yaLlego, yaAbrio } from '@/lib/cierres';
 import { ahoraEnChile } from '@/lib/bitacora';
 import { hoy } from '@/lib/fechas';
+import { alcanceDeContacto, recortarReserva, estaTapado } from '@/lib/privacidad';
 
 export const dynamic = 'force-dynamic';
 
@@ -118,6 +119,14 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
       : NextResponse.json({ error: 'Esa reserva ya no está.' }, { status: 404 }))
       : await duenaDeLaReserva(req, antes);
     if (ajena) return ajena;
+    // **Un contacto tapado no se escribe de vuelta** (2026-11-13): si esta
+    // cuenta recibió el teléfono como `···· 5678` y sin correo
+    // (`privacidad.ts`), guardar el formulario no puede pisar el de verdad.
+    const alcance = alcanceDeContacto(quien0.rol, quien0.gerencia);
+    if (antes && recortarReserva(antes, alcance, { hoy: hoy(), propia: true }).contactoTapado) {
+      delete cambios.telefono; delete cambios.email;
+    }
+    if (estaTapado(cambios.telefono)) delete cambios.telefono;
     // **Una reserva que nació de una cotización se edita desde la
     // cotización** (2026-11-10): la escribe el sistema, y una edición acá
     // se perdería la próxima vez que alguien toque la cotización. Lo que sí
