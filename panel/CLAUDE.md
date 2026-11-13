@@ -53,7 +53,7 @@ revisan antes de cada cambio en esta carpeta.
   | El título de una sección | `BandaSeccion` (con su tono) |
   | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` |
   | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
-  | Lo cotizado y la gente posible, candidatos, ganadas, esperando | `Pastilla` / `PastillaCotizado` |
+  | Lo cotizado (solo lo mandado) y la gente posible, ganadas, esperando, lo tuyo sin mandar | `Pastilla` / `PastillaCotizado` |
   | Cómo va el pago de una reserva | `PastillaPago` |
   | Lo de la cuenta y lo de todos | `BotonMias` / `BotonTodos` |
   | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
@@ -6263,6 +6263,16 @@ rosado, en Turnos otra línea de texto.
   posible entra en la fila de pastillas), la de la portada (dice
   *cotización* y no *presupuesto*, como la sección) y la celda de Turnos,
   en su versión corta (*18 posibles*) porque la celda es angosta.
+- **En Cotizaciones, la rosada cuenta solo lo mandado** (el mismo día, lo
+  pidió el cliente: *"un candidato y 40 posibles son lo mismo"* —la tarjeta
+  decía *1 candidato* y *40 posibles*, y las 40 eran del candidato—). Cuenta
+  solo *Enviada* y *En negociación* (`cuentaEnElCalendario()`), el mismo
+  criterio de la portada, así que los dos números calzan. **La pastilla
+  *candidato* se sacó**. Los candidatos y borradores **solo los ve quien los
+  creó**, en una pastilla de borde cortado y sin color —*✎ 2 tuyas sin
+  mandar*— para que se acuerde de recontactar; nadie más, tampoco el
+  administrador. La franja que se abre al apretar el día, *Sin fecha* y
+  *🔎 Buscar* siguen mostrándolas todas: ahí se trabaja con ellas.
 
 ### El botón *Mías*, igual en todo el panel (2026-11-13)
 

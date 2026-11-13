@@ -13,6 +13,10 @@
  * - *posible* —un candidato, lo cotizado—: solo el borde.
  * - *hecho* —una ganada—: el borde y un relleno suave.
  * - *alerta* —esperando respuesta—: borde grueso.
+ * - *propio* —tus candidatos y borradores sin mandar—: borde cortado.
+ *
+ * **La pastilla rosada cuenta solo lo mandado** (2026-11-13): un candidato
+ * o un borrador no es gente posible todavía. Ver `CotizacionesVista`.
  */
 import type { ReactNode } from 'react';
 
@@ -26,7 +30,13 @@ export const PASTILLA = {
   /** Una ganada: ya es reserva. */
   ganada: `${BASE} border border-verde-fuerte bg-verde/15 text-verde-texto`,
   /** Algo que espera a alguien. */
-  alerta: `${BASE} border-2 border-ambar-fuerte text-ambar-texto`
+  alerta: `${BASE} border-2 border-ambar-fuerte text-ambar-texto`,
+  /**
+   * Lo propio y todavía sin mandar —candidatos y borradores de esta cuenta—:
+   * borde cortado y sin color, porque no es gente que venga sino algo que
+   * hacer (2026-11-13). Solo lo ve quien lo creó.
+   */
+  propio: `${BASE} border border-dashed border-hueso/50 text-hueso/80`
 } as const;
 
 export function Pastilla({ tipo, children, title }: { tipo: keyof typeof PASTILLA; children: ReactNode; title?: string }) {

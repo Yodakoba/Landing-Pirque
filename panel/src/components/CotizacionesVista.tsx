@@ -5,8 +5,9 @@
  *
  * **Parte de un calendario**, con el formato del de la portada —semanas en
  * cajas, una tarjeta por día— y no el de `/turnos`. Cada tarjeta dice de un
- * vistazo cuántos candidatos y cuántas cotizaciones activas tiene ese día,
- * cuánta gente sumarían y si alguna ya se ganó, con un botón grande
+ * vistazo cuántas cotizaciones **mandadas** tiene ese día y cuánta gente
+ * sumarían, si alguna ya se ganó y —solo para quien los creó— cuántos
+ * candidatos y borradores suyos quedan sin mandar, con un botón grande
  * **Cotizar** que abre la ventana con la fecha puesta.
  *
  * Tres vistas, con botones arriba:
@@ -22,7 +23,7 @@ import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
 import CotizacionDialogo, { type DatosCotizar } from './CotizacionDialogo';
 import {
-  estadoVisible, folioDe, lineasDe, totalDe, gentePosible, cuentaComoPosible,
+  estadoVisible, folioDe, lineasDe, totalDe, gentePosible, cuentaComoPosible, cuentaEnElCalendario,
   porVencer, vencidoSinCerrar, diasParaVencer, ESTADO_PRESUPUESTO, seguimientoDe,
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
@@ -363,11 +364,20 @@ export default function CotizacionesVista() {
   const tarjeta = (f: string) => {
     const delDia = agrupar(porDia.get(f) ?? []);
     const vivas = delDia.filter((p) => cuentaComoPosible(p, hoy));
-    const candidatos = vivas.filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.candidato).length;
-    const activas = vivas.length - candidatos;
+    /**
+     * **Solo lo mandado cuenta como cotización y como gente posible**
+     * (2026-11-13, lo pidió el cliente: *"un candidato y 40 posibles son lo
+     * mismo"*, la tarjeta lo decía dos veces). Es el mismo criterio de la
+     * portada (`cuentaEnElCalendario()`): *Enviada* y *En negociación*. Los
+     * candidatos y borradores no se muestran a todos; **a quien los creó**
+     * le queda una marca suave, *✎ N tuyas sin mandar*, para recontactar.
+     */
+    const mandadas = vivas.filter((p) => cuentaEnElCalendario(p, hoy));
+    const sinMandarMias = vivas.filter((p) => !cuentaEnElCalendario(p, hoy) && esSuya(datos.usuario, p.creadoPor)).length;
     const ganadas = delDia.filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.aceptado).length;
     const porSeguirDia = delDia.filter((p) => seguirIds.has(grupoDe(p))).length;
-    const posibles = vivas.reduce((n, p) => n + gente(p), 0);
+    const posibles = mandadas.reduce((n, p) => n + gente(p), 0);
+    const nadaQueMostrar = !mandadas.length && !ganadas && !sinMandarMias && !porSeguirDia;
     const palabra = palabraDelDia(estadoDelDia.get(f));
     const occ = ocupacion.get(f);
     const abiertaEsta = diaAbierto === f;
@@ -406,13 +416,15 @@ export default function CotizacionesVista() {
               portada y Turnos (`Pastilla.tsx`, 2026-11-13): la gente posible
               va en su pastilla rosada, no como texto suelto debajo. */}
           <span className="flex flex-wrap gap-1.5">
-            {candidatos > 0 && (
-              <Pastilla tipo="candidato">{candidatos} candidato{candidatos === 1 ? '' : 's'}</Pastilla>
-            )}
-            <PastillaCotizado cotizaciones={activas} posibles={posibles} />
+            <PastillaCotizado cotizaciones={mandadas.length} posibles={posibles} />
             {ganadas > 0 && <Pastilla tipo="ganada">✓ {ganadas} ganada{ganadas === 1 ? '' : 's'}</Pastilla>}
             {porSeguirDia > 0 && <Pastilla tipo="alerta">! esperando respuesta</Pastilla>}
-            {delDia.length === 0 && (
+            {sinMandarMias > 0 && (
+              <Pastilla tipo="propio" title="Solo tú lo ves: candidatos y borradores tuyos para este día, todavía sin mandar">
+                ✎ {sinMandarMias} tuya{sinMandarMias === 1 ? '' : 's'} sin mandar
+              </Pastilla>
+            )}
+            {nadaQueMostrar && (
               <span className="text-[13px] text-hueso/55">nada cotizado</span>
             )}
           </span>
