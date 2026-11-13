@@ -24,6 +24,7 @@
  * pestaña y no tocan `Fechas Hábiles`, así que el sitio sigue sin ofrecer
  * ese día. Se dice en pantalla porque es la duda razonable al usarlo.
  */
+import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import FechaDia from './FechaDia';
@@ -130,18 +131,18 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           Cotizaciones, su propio tono. Ver `BandaSeccion.tsx`. */}
       <BandaSeccion tono="cielo" icono="👥" seccion="Turnos" titulo="Calendario del equipo"
         ayuda={<Ayuda tema="turnos" />} />
-      <p className="mb-5 max-w-2xl text-[15px] text-hueso/70">
+      <AvisoFijo clave="turnos-intro" className="mb-3 max-w-2xl">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,
         incluidos los que no reciben público: los de preparación, montaje o
         cierre. <strong>Apreta el día</strong> —el que sea— y asígnale equipo;
         ahí mismo se marca quién llegó.
-      </p>
-      <p className="mb-5 max-w-2xl text-sm text-hueso/60">
+      </AvisoFijo>
+      <AvisoFijo clave="turnos-cerrado" className="mb-5 max-w-2xl">
         Planificar un día cerrado <strong>no lo abre al público</strong>, así
         que un día de preparación no necesita nada más. Abrir un día para
         recibir reservas se sigue haciendo en el{' '}
         <a href="/" className="text-oro hover:underline">calendario</a>.
-      </p>
+      </AvisoFijo>
 
       {/* **Lo que falta por cerrar, arriba y no escondido en una celda.**
           Lo pidió el cliente así: una vez que el día pasó, el panel avisa
@@ -373,14 +374,14 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
       </div>
       </div>
 
-      <p className="mt-4 max-w-2xl text-[13px] text-hueso/60">
+      <AvisoFijo clave="turnos-preparacion" className="mt-4 max-w-2xl">
         <strong>Un día con equipo y sin público es un día de preparación</strong>,
         y así aparece acá y en la planilla semanal. No hay que marcarlo: se
         deduce de que el día no recibe gente y tiene a alguien asignado.
         Los colores son los del calendario — verde, amarillo y rojo según la
         ocupación, azul privado, rojo cerrado, gris sin configurar — y un día
         sin borde de color simplemente no abre.
-      </p>
+      </AvisoFijo>
 
       {planificando && equipo && (
         <EquipoDialogo

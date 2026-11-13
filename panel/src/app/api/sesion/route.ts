@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic';
 
 async function identificar(
   usuario: string, clave: string
-): Promise<{ usuario: string; rol: Rol; gerencia?: boolean } | null> {
+): Promise<{ usuario: string; rol: Rol; gerencia?: boolean; avisos?: string[] } | null> {
   const env = process.env;
 
   if (env.PANEL_USUARIO && env.PANEL_CLAVE &&
@@ -48,7 +48,9 @@ async function identificar(
     // la va a leer alguien, y "Ana Pérez" se entiende mejor que "aperez".
     // La vista gerencia viaja firmada en la sesión, como el rol: cambiarla
     // en /usuarios vale desde la próxima vez que esa persona entre.
-    return { usuario: cuenta.nombre, rol: cuenta.rol, gerencia: cuenta.gerencia };
+    // Y los avisos fijos que ya cerró (2026-11-13): viajan en la sesión para
+    // que ninguna pantalla tenga que leer la planilla para saberlos.
+    return { usuario: cuenta.nombre, rol: cuenta.rol, gerencia: cuenta.gerencia, avisos: cuenta.avisosLeidos };
   }
   return null;
 }

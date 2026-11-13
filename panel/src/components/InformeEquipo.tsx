@@ -24,6 +24,7 @@
  * trabajó, y lo que puede haber pasado es que nadie cerró ese día; esas dos
  * columnas son lo que permite darse cuenta a tiempo.
  */
+import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 
@@ -659,10 +660,10 @@ function TransferenciaMasiva({ sueldos, propinas, onDescargar, onMarcar }: {
       <p className="text-[13px] font-bold uppercase tracking-widest text-hueso/65">
         Transferencia masiva <AyudaCorta tema="transferenciaMasiva" />
       </p>
-      <p className="mb-3 mt-1 text-[14px] text-hueso/70">
+      <AvisoFijo clave="informe-masiva" className="mb-3 mt-1">
         Baja la planilla, súbela al banco, y cuando esté pagada marca todos
         pagados.
-      </p>
+      </AvisoFijo>
       <div className="grid gap-2">
         {fila('sueldos', sueldos)}
         {fila('propinas', propinas)}
@@ -1570,11 +1571,11 @@ export default function InformeEquipo() {
           )}
 
           {puedePagar && (
-            <p className="mb-4 max-w-2xl text-[14px] text-hueso/70">
+            <AvisoFijo clave="informe-copiar" className="mb-4 max-w-2xl">
               <strong>📋 Copia el sueldo y la propina</strong> de cada persona y
               pégalos en el banco: son dos transferencias. <strong>Aprieta la
               línea</strong> para registrar el pago o marcar la boleta.
-            </p>
+            </AvisoFijo>
           )}
 
           {/* **Las tres secciones, tres botones grandes** (2026-11-12): cada
@@ -1899,7 +1900,7 @@ export default function InformeEquipo() {
             </p>
           )}
 
-          <p className="mt-6 max-w-2xl text-[13px] text-hueso/50">
+          <AvisoFijo clave="informe-contratado" className="mt-6 max-w-2xl">
             <strong>Un contratado suma cero en jornadas</strong>, porque su
             sueldo no sale de acá; lo que aparece en su fila son horas extra y
             ajustes. <strong>La propina va aparte y no se suma al total</strong>:
@@ -1907,15 +1908,15 @@ export default function InformeEquipo() {
             imposible contestar cuánto costó el equipo. <strong>Las actividades
             extras no reciben propina</strong> y no cobran jornada: cobran lo
             acordado para ese día, y por eso van en su propia tabla.
-          </p>
-          <p className="mt-3 max-w-2xl text-[13px] text-hueso/50">
+          </AvisoFijo>
+          <AvisoFijo clave="informe-planilla" className="mt-3 max-w-2xl">
             <strong>La planilla que se descarga trae las dos cosas juntas</strong>,
             día por día, con el motivo de cada ajuste{puedePagar ? <> y los datos de la
             transferencia de cada uno —titular, RUT, banco, tipo, número y
             correo, un campo por columna—: es un solo pago a la semana, se
             pega en la carga del banco,</> : ','} y cada fila dice si es equipo o
             actividad extra.
-          </p>
+          </AvisoFijo>
         </>
       )}
 

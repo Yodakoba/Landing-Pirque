@@ -45,7 +45,8 @@ export async function POST(req: Request) {
   const ahora = Math.floor(Date.now() / 1000);
   // Lo que le queda a la sesión de administrador, no a la vista de una hora.
   const queda = Math.max(60, (sesion.expiraReal ?? sesion.expira) - ahora);
-  const token = await firmarSesion({ usuario: sesion.usuario, rol: 'admin', como }, secreto, ahora, queda);
+  const token = await firmarSesion({ usuario: sesion.usuario, rol: 'admin', como, avisos: sesion.avisos },
+    secreto, ahora, queda);
   const vista = (await leerSesion(token, secreto, ahora))?.expira ?? ahora + queda;
   const res = NextResponse.json({ ok: true, rol: como || 'admin' });
   res.cookies.set(COOKIE_SESION, token, {

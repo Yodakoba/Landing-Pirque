@@ -14,6 +14,7 @@
  * comensal se atiende bien es dato del negocio, y un número inventado haría
  * que el panel diera consejos que nadie dio.
  */
+import AvisoFijo from './AvisoFijo';
 import BotonGuardar from './BotonGuardar';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
@@ -498,17 +499,14 @@ export default function EquipoEditor() {
           hace acá, y que el link personal está dentro de cada ficha. El
           porqué largo del link vive en su `?`, que se pide; lo de los días
           cerrados, en la ayuda de `/turnos`. */}
-      <p className="mb-3 max-w-2xl text-sm text-hueso/70">
-        Acá puedes agregar y editar trabajadores.
-      </p>
-      {/* Solo para quien de verdad tiene ese bloque: el administrador y
-          quien paga (permiso `links`). Al encargado no se le muestra, porque
+      {/* Con su ✕ (2026-11-13): ver `AvisoFijo`. La segunda línea, solo para
+          quien de verdad tiene ese bloque: el administrador y quien paga
+          (permiso `links`). Al encargado no se le muestra, porque
           prometerle algo que no va a encontrar es peor que no decir nada. */}
-      {verLinks && (
-        <p className="mb-4 max-w-2xl text-sm text-hueso/70">
-          Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.
-        </p>
-      )}
+      <AvisoFijo clave="equipo-intro" className="mb-4 max-w-2xl">
+        Acá puedes agregar y editar trabajadores.
+        {verLinks && <> Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.</>}
+      </AvisoFijo>
       <p className="mb-6">
         <a href="/turnos" className="tecla boton">Ver el mes completo</a>
       </p>
@@ -953,21 +951,21 @@ export default function EquipoEditor() {
       )}
 
       {verSueldos && (
-        <p className="mt-4 max-w-2xl text-[13px] text-hueso/50">
+        <AvisoFijo clave="equipo-propina" className="mt-4 max-w-2xl">
           <strong>La propina se reparte en partes iguales</strong> entre
           quienes vinieron ese día y tienen esta casilla marcada. Desmarcarla
           deja a alguien en la planilla de trabajo pero fuera del reparto,
           que es la excepción que existe — por eso viene marcada por defecto.
-        </p>
+        </AvisoFijo>
       )}
       {verSueldos && (
-        <p className="mt-4 max-w-2xl text-[13px] text-hueso/70">
+        <AvisoFijo clave="equipo-contratado" className="mt-3 max-w-2xl">
           <strong>Por turno</strong> se le paga por jornada trabajada, y cada
           turno suma al costo del día. <strong>Contratado</strong> tiene
           sueldo, y ese sueldo no sale de acá: sus turnos no suman jornada,
           porque contarlos sería pagar dos veces lo mismo. A un contratado sí
           se le pueden anotar horas extra y ajustes, que se pagan aparte.
-        </p>
+        </AvisoFijo>
       )}
 
       {/* **Los puestos salen de la página y entran en una ventana**
@@ -990,13 +988,13 @@ export default function EquipoEditor() {
         </div>
       </div>
 
-      <p className="mt-6 max-w-2xl text-[13px] text-hueso/70">
+      <AvisoFijo clave="equipo-desactivar" className="mt-6 max-w-2xl">
         <strong>A quien ya trabajó se le desactiva, no se le quita.</strong>{' '}
         <em>Desactivar</em> lo saca del planificador y le cierra su link
         personal, pero conserva sus turnos, que son el registro de quién
         trabajó qué día. <em>Quitar</em> aparece solo mientras la persona no
         tenga ningún turno guardado — la fila escrita por error, básicamente.
-      </p>
+      </AvisoFijo>
 
       {verPuestos && (
         <Dialogo titulo="Puestos" ancho="max-w-3xl"

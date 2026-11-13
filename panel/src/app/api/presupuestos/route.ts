@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CLIENTES } from '@/lib/clientes';
 import { HOJA_COBROS } from '@/lib/cobros';
-import { HOJA_FECHAS, HOJA_RESERVAS, normalizar } from '@/lib/columnas';
+import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
 import { HOJA_CONFIG } from '@/lib/config';
@@ -17,7 +17,7 @@ import {
   borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar, leerCobros,
   sincronizarReserva, leerReservas, leerVendedores, leerUsuarios
 } from '@/lib/datos';
-import { HOJA_USUARIOS } from '@/lib/usuarios';
+import { HOJA_USUARIOS, cuentaDeSesion } from '@/lib/usuarios';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, estaMandada, aEntero, folioDe, estadoNormal, lineasDe,
   documentoDe, numeroONulo, montoONulo, type Presupuesto, type LineaEntrante
@@ -99,7 +99,7 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       rol: quien.rol,
       // **Los avisos que esta cuenta cerró para siempre** (2026-11-13): van
       // en la misma tanda de lecturas (`Usuarios` se sumó a la precarga).
-      avisosLeidos: cuentas.find((u) => normalizar(u.usuario) === normalizar(quien.usuario))?.avisosLeidos ?? [],
+      avisosLeidos: cuentaDeSesion(cuentas, quien.usuario)?.avisosLeidos ?? [],
       sobrecupo
     });
   } catch (e) {

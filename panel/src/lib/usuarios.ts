@@ -19,6 +19,10 @@ import { ROL, ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE,
 // acá, aunque vivan en auth.ts por el bundle del navegador.
 export { ROLES_DE_CUENTA, esRolDeCuenta, LARGO_MINIMO_CLAVE, ENCARGADO_COMPARTIDO };
 import { esSi } from './equipo.ts';
+// Los avisos que se cierran para siempre viven en `avisos.ts` (puro, para la
+// cookie de sesión); se vuelven a exportar acá por quien trabaje con cuentas.
+import { soloAvisosConocidos, type AvisoCerrable } from './avisos.ts';
+export { AVISOS_CERRABLES, esAvisoCerrable, soloAvisosConocidos, type AvisoCerrable } from './avisos.ts';
 
 export const HOJA_USUARIOS = 'Usuarios';
 
@@ -64,17 +68,9 @@ export interface Usuario {
    * datos del navegador. Una lista de claves (`AVISOS_CERRABLES`), separadas
    * por coma en la celda.
    */
-  avisosLeidos: string[];
+  avisosLeidos: AvisoCerrable[];
 }
 
-/**
- * Los avisos que se pueden cerrar para siempre. Una clave que no está acá no
- * se guarda: el navegador no puede llenar la celda con lo que quiera.
- */
-export const AVISOS_CERRABLES = ['cotizaciones-cupo'] as const;
-export type AvisoCerrable = typeof AVISOS_CERRABLES[number];
-export const esAvisoCerrable = (x: unknown): x is AvisoCerrable =>
-  (AVISOS_CERRABLES as readonly string[]).includes(String(x));
 
 /* ---------- La huella de la contraseña ---------- */
 
@@ -146,7 +142,7 @@ export function leerUsuariosDe(filas: string[][]): Usuario[] {
       // En blanco es NO, al revés que `Activo`: ver más es un permiso que
       // se da a propósito, no uno que se tiene por defecto.
       gerencia: String(filas[i]?.[5] ?? '').trim() !== '' && esSi(filas[i]?.[5]),
-      avisosLeidos: String(filas[i]?.[6] ?? '').split(',').map((x) => x.trim()).filter(esAvisoCerrable)
+      avisosLeidos: soloAvisosConocidos(filas[i]?.[6])
     });
   }
   return salida;
@@ -175,4 +171,19 @@ export function buscarUsuario(lista: Usuario[], usuario: unknown): Usuario | und
   const buscado = normalizar(String(usuario ?? ''));
   if (!buscado) return undefined;
   return lista.find((u) => u.activo && normalizar(u.usuario) === buscado);
+}
+
+/**
+ * **La cuenta de quien tiene la sesión.** La sesión guarda **el nombre** de
+ * la persona (*"Ana Pérez"*, ver `identificar()` en `/api/sesion`), no su
+ * nombre de usuario: buscarla solo por usuario no la encuentra. Se prueba
+ * primero por nombre y después por usuario, sin mayúsculas ni tildes.
+ *
+ * Lo cazó el cliente el 2026-11-13: el aviso de Cotizaciones se cerraba
+ * solo en su navegador porque la ruta no encontraba su cuenta.
+ */
+export function cuentaDeSesion(lista: Usuario[], quien: string): Usuario | undefined {
+  const x = normalizar(quien);
+  if (!x) return undefined;
+  return lista.find((u) => normalizar(u.nombre) === x) ?? lista.find((u) => normalizar(u.usuario) === x);
 }

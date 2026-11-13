@@ -81,9 +81,9 @@ import { credencialValida, iguales, rolDe, puede, credencialesDelEntorno,
          puedeTocarReserva,
          type Rol, type Accion } from './auth.ts';
 import { resumenRol, NOMBRE_ROL, RESUMEN_ROL } from './roles.ts';
-import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION, DURACION_VER_COMO } from './sesion.ts';
+import { firmarSesion, leerSesion, secretoDeSesion, DURACION_SESION, DURACION_VER_COMO, resellarConAvisos } from './sesion.ts';
 import { hashDeClave, claveCalza, leerUsuariosDe, aFilasUsuarios,
-         buscarUsuario, type Usuario } from './usuarios.ts';
+         buscarUsuario, cuentaDeSesion, type Usuario } from './usuarios.ts';
 import { ahoraEnChile, filaBitacora, leerBitacoraDe, recortar,
          ENCABEZADO_BITACORA } from './bitacora.ts';
 import { cookieDe } from './sesion.ts';
@@ -4747,6 +4747,30 @@ console.log('\nVista gerencia');
   ok(filasAvisos[0][6] === 'Avisos leídos' && filasAvisos[1][6] === 'cotizaciones-cupo'
      && leerUsuariosDe(filasAvisos)[0].avisosLeidos.join() === 'cotizaciones-cupo',
      'y se escriben en la columna siguiente, de ida y vuelta');
+  // **La cuenta se busca por el nombre**, que es lo que guarda la sesión: el
+  // primer corte la buscaba por usuario y en producción no la encontraba.
+  const porNombre = leerUsuariosDe([['Nombre','Usuario','Rol','Activo','Clave (huella)'],
+    ['Verónica Soto', 'vsoto', 'vendedor', 'Sí', 'x'], ['Ana', 'ana', 'encargado', 'Sí', 'x']]);
+  ok(cuentaDeSesion(porNombre, 'veronica soto')?.usuario === 'vsoto' && cuentaDeSesion(porNombre, 'ana')?.usuario === 'ana'
+     && !cuentaDeSesion(porNombre, '') && !cuentaDeSesion(porNombre, 'nadie'),
+     'la cuenta de la sesión se encuentra por su nombre (o su usuario), sin tildes ni mayúsculas');
+  // **Los avisos viajan en la sesión**, así ninguna pantalla lee la planilla.
+  const conAv = await firmarSesion({ usuario: 'Vero', rol: ROL.vendedor, avisos: ['turnos-intro', 'inventado'] }, SECRETO_SESION, AHORA);
+  ok((await leerSesion(conAv, SECRETO_SESION, AHORA))?.avisos?.join() === 'turnos-intro',
+     'los avisos cerrados viajan firmados en la sesión, y una clave desconocida no entra');
+  const resellada = await resellarConAvisos(conAv, SECRETO_SESION, ['turnos-intro', 'equipo-intro'], AHORA);
+  const tras = await leerSesion(resellada?.token, SECRETO_SESION, AHORA);
+  const antes = await leerSesion(conAv, SECRETO_SESION, AHORA);
+  ok(tras?.avisos?.join() === 'turnos-intro,equipo-intro' && tras?.rol === antes?.rol && tras?.expira === antes?.expira
+     && tras?.usuario === 'Vero',
+     'cerrar un aviso vuelve a sellar la sesión con la lista nueva, sin cambiar el rol ni el vencimiento');
+  const comoAdmin = await firmarSesion({ usuario: 'Felipe', rol: ROL.admin, como: 'vendedor' }, SECRETO_SESION, AHORA);
+  const comoTras = await leerSesion((await resellarConAvisos(comoAdmin, SECRETO_SESION, ['bitacora-intro'], AHORA))?.token,
+    SECRETO_SESION, AHORA);
+  ok(comoTras?.rol === 'vendedor' && comoTras?.rolReal === 'admin' && comoTras?.avisos?.join() === 'bitacora-intro',
+     'y mirando con Ver como, sigue siendo Ver como');
+  ok(await resellarConAvisos('basura.firma', SECRETO_SESION, ['bitacora-intro'], AHORA) === null,
+     'una sesión que no es válida no se vuelve a sellar');
 }
 
 {

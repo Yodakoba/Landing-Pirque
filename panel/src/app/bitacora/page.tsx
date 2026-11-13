@@ -11,6 +11,7 @@
  * atrás — con el buscador de Sheets, que para esto es mejor que cualquier
  * filtro que pudiéramos escribir acá.
  */
+import AvisoFijo from '@/components/AvisoFijo';
 import { headers } from 'next/headers';
 import Ayuda from '@/components/Ayuda';
 import { leerBitacora } from '@/lib/datos';
@@ -43,12 +44,12 @@ export default async function Pagina() {
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
         Bitácora<Ayuda tema="bitacora" />
       </h1>
-      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
+      <AvisoFijo clave="bitacora-intro" className="mb-6 max-w-2xl">
         Lo último que se hizo en el panel, de lo más reciente a lo más
         antiguo. Las horas son de Chile.{' '}
         <strong>Queda el rastro, no el valor anterior</strong>: esto sirve
         para saber a quién preguntarle, no para deshacer un cambio.
-      </p>
+      </AvisoFijo>
 
       {lineas.length === 0 ? (
         <p className="text-sm text-hueso/50">

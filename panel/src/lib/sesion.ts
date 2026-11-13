@@ -26,6 +26,8 @@
  */
 
 /** Siete días. Ver DESPLIEGUE.md: se eligió con el cliente el 2026-10-21. */
+import { soloAvisosConocidos } from './avisos.ts';
+
 export const DURACION_SESION = 7 * 24 * 60 * 60;
 
 export interface Sesion {
@@ -51,6 +53,13 @@ export interface Sesion {
    * y al volver se recupera el vencimiento de antes, ni más ni menos.
    */
   expiraReal?: number;
+  /**
+   * **Los avisos fijos que la persona cerró para siempre** (2026-11-13). Se
+   * cargan de su cuenta al entrar y se actualizan al cerrar uno
+   * (`/api/avisos` vuelve a sellar la cookie), así que cada pantalla los
+   * sabe **sin leer la planilla**. Ver `lib/avisos.ts`.
+   */
+  avisos?: string[];
 }
 
 /**
@@ -111,7 +120,7 @@ function clave(secreto: string): Promise<CryptoKey> {
  * días.
  */
 export async function firmarSesion(
-  datos: { usuario: string; rol: string; gerencia?: boolean; como?: string },
+  datos: { usuario: string; rol: string; gerencia?: boolean; como?: string; avisos?: readonly string[] },
   secreto: string,
   ahora = Math.floor(Date.now() / 1000),
   duracion = DURACION_SESION
@@ -125,8 +134,14 @@ export async function firmarSesion(
     usuario: datos.usuario, rol: datos.rol,
     expira: como ? Math.min(expira, ahora + DURACION_VER_COMO) : expira,
     ...(datos.gerencia ? { gerencia: true } : {}),
-    ...(como ? { como, vuelta: expira } : {})
+    ...(como ? { como, vuelta: expira } : {}),
+    ...(datos.avisos?.length ? { avisos: soloAvisosConocidos(datos.avisos) } : {})
   };
+  return sellar(cuerpo, secreto);
+}
+
+/** Firma un cuerpo de sesión tal cual: lo usan `firmarSesion` y `resellarConAvisos`. */
+async function sellar(cuerpo: object, secreto: string): Promise<string> {
   const payload = aBase64Url(new TextEncoder().encode(JSON.stringify(cuerpo)));
   const firma = await crypto.subtle.sign(
     'HMAC', await clave(secreto), new TextEncoder().encode(payload)
@@ -169,7 +184,8 @@ export async function leerSesion(
       usuario: String(datos?.usuario ?? ''),
       rol: String(datos?.rol ?? ''),
       expira: Number(datos?.expira ?? 0),
-      gerencia: datos?.gerencia === true
+      gerencia: datos?.gerencia === true,
+      avisos: soloAvisosConocidos(datos?.avisos ?? [])
     };
     if (!sesion.usuario || !sesion.rol) return null;
     // "Ver como": la firma ya garantiza que lo escribió el servidor, y además
@@ -189,6 +205,24 @@ export async function leerSesion(
     // base64 inválido, JSON roto, lo que sea: no es una sesión.
     return null;
   }
+}
+
+/**
+ * **La misma sesión con otra lista de avisos cerrados** (2026-11-13): al
+ * cerrar un aviso, `/api/avisos` vuelve a sellar la cookie con la lista
+ * nueva, sin tocar nada más —el rol, la vista gerencia, el *Ver como* y el
+ * vencimiento quedan como estaban—. `null` si el token no es válido.
+ */
+export async function resellarConAvisos(
+  token: unknown, secreto: string, avisos: readonly string[], ahora = Math.floor(Date.now() / 1000)
+): Promise<{ token: string; expira: number } | null> {
+  if (!(await leerSesion(token, secreto, ahora))) return null;
+  const texto = String(token);
+  const datos = JSON.parse(new TextDecoder().decode(deBase64Url(texto.slice(0, texto.indexOf('.')))));
+  const lista = soloAvisosConocidos(avisos);
+  const cuerpo = { ...datos, ...(lista.length ? { avisos: lista } : {}) };
+  if (!lista.length) delete cuerpo.avisos;
+  return { token: await sellar(cuerpo, secreto), expira: Number(datos.expira) };
 }
 
 /**

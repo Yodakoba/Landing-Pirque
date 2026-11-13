@@ -11,6 +11,7 @@
  * un capricho de la interfaz: separadas, guardar un cambio de nombre no
  * puede dejar a alguien sin poder entrar.
  */
+import AvisoFijo from './AvisoFijo';
 import BotonGuardar from './BotonGuardar';
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
@@ -99,17 +100,17 @@ export default function UsuariosEditor() {
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
         Cuentas<Ayuda tema="cuentas" />
       </h1>
-      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
+      <AvisoFijo clave="usuarios-intro" className="mb-3 max-w-2xl">
         Quién entra al panel y con qué permisos. <strong>Cada acción queda
         firmada con el nombre de esta lista</strong>, así que conviene una
         cuenta por persona y no una compartida — una línea de bitácora que
         diga "encargado" no sirve para preguntarle a nadie.
-      </p>
-      <p className="mb-6 max-w-2xl text-sm text-hueso/60">
+      </AvisoFijo>
+      <AvisoFijo clave="usuarios-emergencia" className="mb-6 max-w-2xl">
         <strong>Tu cuenta de administrador de Vercel sigue funcionando</strong>{' '}
         aunque esta lista quede vacía: es la puerta de emergencia para el día
         en que la planilla no responda.
-      </p>
+      </AvisoFijo>
 
       {aviso && (
         <p className="mb-5 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">

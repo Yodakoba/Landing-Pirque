@@ -9,6 +9,7 @@
  * ya corregidos y el formulario se redibuja con ellos. Si escribes un cupo en
  * cero, vas a ver que vuelve a 60: eso no es un error, es la validación.
  */
+import AvisoFijo from './AvisoFijo';
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
 import { usarSoloMira } from './SesionCliente';
@@ -302,11 +303,11 @@ export default function ConfigEditor() {
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
         Configuración<Ayuda tema="configuracion" />
       </h1>
-      <p className="mb-4 max-w-2xl text-[14px] text-hueso/70">
+      <AvisoFijo clave="config-intro" className="mb-4 max-w-2xl">
         Cada campo se guarda solo al salir de él. Estos valores viven en la pestaña{' '}
         <code className="text-hueso/80">Config</code> de la planilla, así que cambiarlos no
         necesita un despliegue.
-      </p>
+      </AvisoFijo>
 
       {/* El índice: un botón por sección, para no recorrer la página entera. */}
       <nav aria-label="Secciones" className="mb-6 flex flex-wrap gap-2">
@@ -332,11 +333,11 @@ export default function ConfigEditor() {
         ))}
       </div>
 
-      <p className="mt-6 max-w-2xl text-[13px] text-hueso/60">
+      <AvisoFijo clave="config-clave" className="mt-6 max-w-2xl">
         La clave del panel no se cambia acá: vive en Vercel como variable de
         entorno. Guardarla en la planilla sería dejar la contraseña del panel en
         un documento compartido.
-      </p>
+      </AvisoFijo>
     </section>
   );
 }
