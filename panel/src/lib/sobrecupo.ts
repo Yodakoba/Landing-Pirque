@@ -17,6 +17,7 @@
 import type { Reserva, Ocupacion } from './tipos.ts';
 import { ocupaLugar, tienePrioridad } from './ocupacion.ts';
 import { puedeTocarReserva, type Rol } from './auth.ts';
+import { saludoAlCliente } from './contacto.ts';
 
 /**
  * Las reservas de un día **que se pueden soltar**: ocupan lugar y no tienen
@@ -68,9 +69,10 @@ export function marcaLiberada(cuando: string, quien: string, motivo: string): st
  * cambiar el tono sin buscarlo en las pantallas. Sobrio, tuteo de Chile y
  * con la salida a mano: otra fecha, o pagar si vuelve a haber lugar.
  */
-export function mensajeCaida(nombre: string, fechaEnPalabras: string): string {
-  const quien = nombre.trim().split(/\s+/)[0] ?? '';
-  return `Hola${quien ? ` ${quien}` : ''}, te escribimos de Brasas de Lo Pirque. `
+export function mensajeCaida(nombre: string, fechaEnPalabras: string,
+  /** Quién lo manda y de qué empresa (2026-11-13): ver `saludoAlCliente()`. */
+  firma: { quien?: string; empresa?: string } = {}): string {
+  return `${saludoAlCliente(nombre, firma.quien, firma.empresa)}. `
     + `Tu reserva para el ${fechaEnPalabras} estaba sin pagar y, como ese día se llenó `
     + 'con reservas pagadas, no pudimos mantenerla. Lo sentimos mucho. '
     + 'Si quieres, te ayudamos a buscar otra fecha.';

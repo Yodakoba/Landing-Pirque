@@ -5117,5 +5117,25 @@ console.log('\nEl contacto de los clientes, por rol');
      'la cotización de otro vendedor llega sin el contacto del cliente');
 }
 
+console.log('\nWhatsApp al tiro y firmado');
+{
+  const { enlaceWhatsApp: wa, enlaceWhatsAppDirecto, saludoAlCliente, mensajeDeReserva } = await import('./contacto.ts');
+  const e = wa('+56 9 4009 6228', 'Hola, ¿cómo estás?');
+  ok(enlaceWhatsAppDirecto(e, true) === e
+     && enlaceWhatsAppDirecto(e, false) === 'https://web.whatsapp.com/send?phone=56940096228&text=' + encodeURIComponent('Hola, ¿cómo estás?')
+     && enlaceWhatsAppDirecto(wa('+56 9 4009 6228'), false) === 'https://web.whatsapp.com/send?phone=56940096228'
+     && enlaceWhatsAppDirecto('https://otra.cosa/x', false) === 'https://otra.cosa/x',
+     'en el celular va a wa.me (abre la app); en el computador, derecho al chat de WhatsApp Web con el mensaje');
+  ok(saludoAlCliente('Camila Rojas', 'Tomás Herrera', 'Brasas de Lo Pirque') === 'Hola Camila, te escribe Tomás de Brasas de Lo Pirque'
+     && saludoAlCliente('Camila Rojas', '', '') === 'Hola Camila, te escribimos de Brasas de Lo Pirque'
+     && saludoAlCliente('', 'Tomás', 'Calicanto') === 'Hola, te escribe Tomás de Calicanto',
+     'el saludo lo firma quien lo manda, con el nombre comercial (o el de esta planilla si está en blanco)');
+  ok(mensajeDeReserva('Camila Rojas', 'Tomás', '', 'sábado 14 de noviembre')
+       === 'Hola Camila, te escribe Tomás de Brasas de Lo Pirque por tu reserva del sábado 14 de noviembre.'
+     && mensajeCaida('Ana Soto', 'sábado 14', { quien: 'Tomás', empresa: '' }).startsWith('Hola Ana, te escribe Tomás de Brasas de Lo Pirque. ')
+     && mensajeLiberacion('Ana Soto', 'sábado 14', { quien: 'Tomás' }).startsWith('Hola Ana, te escribe Tomás de Brasas de Lo Pirque por tu reserva'),
+     'los mensajes de la reserva, del sobrecupo y de liberar el día van firmados');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

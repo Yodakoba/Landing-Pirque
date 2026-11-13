@@ -21,6 +21,7 @@ import type { Fecha } from './fechas.ts';
 import type { Menu } from './menus.ts';
 import { TIPO_PRODUCTO, canonizar } from './menus.ts';
 import { diasEntre } from './cobros.ts';
+import { saludoAlCliente } from './contacto.ts';
 
 export const EXCLUSIVIDAD = {
   pedida: 'Pedida',
@@ -70,9 +71,10 @@ export function plazoParaLiberar(fecha: Fecha, hoy: Fecha, diasMinimos: number):
  * disculpas, y dos salidas —devolución completa, u otra fecha con un pisco
  * sour de regalo—. Un solo lugar para cambiarlo.
  */
-export function mensajeLiberacion(nombre: string, diaEnPalabras: string): string {
-  const quien = String(nombre ?? '').trim().split(/\s+/)[0] || '';
-  return `Hola${quien ? ` ${quien}` : ''}, te escribimos de Brasas de Lo Pirque por tu reserva del ${diaEnPalabras}. `
+export function mensajeLiberacion(nombre: string, diaEnPalabras: string,
+  /** Quién lo manda y de qué empresa (2026-11-13): ver `saludoAlCliente()`. */
+  firma: { quien?: string; empresa?: string } = {}): string {
+  return `${saludoAlCliente(nombre, firma.quien, firma.empresa)} por tu reserva del ${diaEnPalabras}. `
     + 'Te pedimos disculpas: ese día el recinto quedó reservado para un evento privado y no vamos a poder recibirte. '
     + 'Te ofrecemos dos opciones: la devolución completa de lo que pagaste, o cambiar tu reserva a otra fecha '
     + 'y te esperamos con un pisco sour de regalo. ¿Cuál prefieres?';

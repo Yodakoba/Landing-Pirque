@@ -65,7 +65,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'trabaja y qué actividades extras hay contratadas.',
       'En la lista de reservas, el círculo de cada una dice cómo va el pago; '
       + 'ábrela con “+” para ver qué compró, cómo ingresarla en Fudo y su '
-      + 'contacto.',
+      + 'contacto. 💬 WhatsApp abre el chat directo, con el saludo ya escrito y '
+      + 'firmado por ti.',
       'El teléfono y el correo de una reserva los ve quien la atiende: la '
       + 'administración, el encargado de turno de hoy en adelante y el vendedor '
       + 'solo en las suyas. Si te llega con 🔒 y tapado (···· 5678), pídeselo a '
@@ -620,7 +621,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   seguimiento: {
     titulo: 'Seguimiento y envío',
     texto: [
-      'WhatsApp y Correo abren el mensaje con el link, listo para mandar. Al volver al panel te pregunta si la mandaste y la pasa a Enviada. Desde ahí corre la vigencia y aparece como posible en el calendario de reservas.',
+      'WhatsApp y Correo abren el mensaje con el link y tu nombre, listo para mandar: en el celular se abre la aplicación y en el computador WhatsApp Web, directo en el chat. Al volver al panel te pregunta si la mandaste y la pasa a Enviada. Desde ahí corre la vigencia y aparece como posible en el calendario de reservas.',
       'Después te recuerda preguntarle al cliente: arriba de Cotizaciones, en "Esperando respuesta".'
     ]
   },

@@ -26,6 +26,7 @@ import { enRiesgo, sugerirSoltar, cupoAmpliado, mensajeCaida, avisoParaAdministr
 import { puedeTocarReserva, type Rol } from '@/lib/auth';
 import { enPalabras } from '@/lib/fechas';
 import { enlaceWhatsApp } from '@/lib/contacto';
+import BotonWhatsApp, { usarFirmaWhatsApp } from './BotonWhatsApp';
 import { folioDe } from '@/lib/presupuestos';
 import { cupoPedidoDe } from '@/lib/cupo';
 
@@ -42,23 +43,12 @@ const MOTIVO = 'El día se llenó con reservas pagadas';
 
 /** El botón que abre WhatsApp con el aviso para el cliente, o nada si no hay teléfono. */
 export function AvisarCaida({ r }: { r: Pick<Reserva, 'nombre' | 'telefono' | 'fecha'> }) {
-  const href = enlaceWhatsApp(r.telefono, mensajeCaida(r.nombre, enPalabras(r.fecha)));
+  const firma = usarFirmaWhatsApp();
+  const href = enlaceWhatsApp(r.telefono, mensajeCaida(r.nombre, enPalabras(r.fecha), firma));
   if (!href) {
     return <span className="text-[13px] text-ambar-texto">Sin celular anotado: avísale por otro medio.</span>;
   }
-  return (
-    // Como `abrirFuera()` de la cotización: `window.open` y, si el navegador
-    // lo bloquea —no avisa—, en la misma pestaña.
-    <a href={href} target="_blank" rel="noopener noreferrer"
-      onClick={(e) => {
-        e.preventDefault();
-        const w = window.open(href, '_blank');
-        if (w) { try { w.opener = null; } catch { /* da igual */ } } else window.location.href = href;
-      }}
-      className="tecla boton border-verde-fuerte/60 text-verde-texto">
-      Avisarle por WhatsApp
-    </a>
-  );
+  return <BotonWhatsApp enlace={href}>💬 Avisarle por WhatsApp</BotonWhatsApp>;
 }
 
 export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, usuario, conDias,

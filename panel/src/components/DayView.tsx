@@ -12,7 +12,8 @@ import { grupoDe, principalDe } from '@/lib/cotizar';
 import Ayuda from './Ayuda';
 import type { Reserva } from '@/lib/tipos';
 import { TIPO_PAGO, ESTADO_PAGO, ASISTENCIA, esManual } from '@/lib/columnas';
-import { enlaceWhatsApp } from '@/lib/contacto';
+import { enlaceWhatsApp, mensajeDeReserva } from '@/lib/contacto';
+import BotonWhatsApp, { FirmaWhatsApp } from './BotonWhatsApp';
 import { pagoEnEspanol, liberaCupo } from '@/lib/pagos';
 import { menusDe, menusConocidos } from '@/lib/shopify';
 import { POR_DEFECTO_MENUS, paraReservar, type Menu } from '@/lib/menus';
@@ -170,6 +171,8 @@ export default function DayView(
   /** El cupo de este día, para el bloque de sobrecupo (2026-11-12). */
   const [cupoDia, setCupoDia] = useState<CupoDelDia | null>(null);
   const [capacidadMaxima, setCapacidadMaxima] = useState(900);
+  /** El nombre comercial, para firmar los WhatsApp (`saludoAlCliente()`). */
+  const [empresa, setEmpresa] = useState('');
   const [deCotizacionIds, setDeCotizacionIds] = useState<Record<string, string>>({});
   /** La reserva abierta en la lista del día (una a la vez); vacío, ninguna. */
   const [reservaAbierta, setReservaAbierta] = useState('');
@@ -259,6 +262,7 @@ export default function DayView(
         if (d.menus) setCatalogo(d.menus);
         setCupoDia(d.dia ?? null);
         if (d.capacidadMaxima) setCapacidadMaxima(d.capacidadMaxima);
+        setEmpresa(d.empresa ?? '');
         if (d.deCotizacion) setDeCotizacionIds(d.deCotizacion);
         setOrigen({ vendedor: d.vendedorDe ?? {}, folio: d.folioDeReserva ?? {} });
         setInfoDia({ apertura: d.apertura ?? '', abierto: !!d.abierto,
@@ -513,7 +517,7 @@ export default function DayView(
   const conAviso = delDia.filter((r) => (r.avisoRecepcion ?? '').trim());
 
   return (
-    <>
+    <FirmaWhatsApp value={{ quien: usuario, empresa }}>
       <a href="/" className="tecla boton">← Calendario</a>
       <h1 className="mt-3 text-xl font-bold uppercase tracking-wide">
         {enPalabras(fecha)}<Ayuda tema="dia" />
@@ -1187,12 +1191,11 @@ export default function DayView(
                             📞 {r.telefono}
                           </a>
                         )}
-                        {enlaceWhatsApp(r.telefono) && (
-                          <a href={enlaceWhatsApp(r.telefono)} target="_blank" rel="noopener noreferrer"
-                            className="tecla boton min-h-[44px] !border-verde-fuerte/60 text-verde-texto">
-                            💬 WhatsApp
-                          </a>
-                        )}
+                        {/* **Al tiro y firmado** (2026-11-13): el chat se abre
+                            directo, con *Hola Camila, te escribe Tomás de …
+                            por tu reserva del …* ya escrito. */}
+                        <BotonWhatsApp enlace={enlaceWhatsApp(r.telefono,
+                          mensajeDeReserva(r.nombre, usuario, empresa, enPalabras(r.fecha)))} />
                         {r.email && (
                           <a href={`mailto:${r.email}`} className="tecla boton min-h-[44px] max-w-full truncate">
                             ✉ {r.email}
@@ -1298,6 +1301,6 @@ export default function DayView(
           }}
         />
       )}
-    </>
+    </FirmaWhatsApp>
   );
 }

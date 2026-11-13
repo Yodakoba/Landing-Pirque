@@ -52,6 +52,9 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
     // Los días van en la misma tanda de lecturas: sirven para la firma
     // (ver `lib/cambios.ts`) sin costar una consulta más.
     const fechas = await leerFechas();
+    // El nombre comercial firma los mensajes de WhatsApp (2026-11-13). La
+    // configuración viene en la misma tanda de lecturas.
+    const empresa = (await leerConfig()).empresa.nombre;
     let apertura = '';
     let abierto = false;
     let descuentos: number[] = [];
@@ -83,7 +86,7 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
       // Qué reservas vienen de una cotización: esas no se sueltan acá, se
       // cancelan desde su cotización.
       deCotizacion: Object.fromEntries(deCot),
-      vendedorDe, folioDeReserva
+      vendedorDe, folioDeReserva, empresa
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
