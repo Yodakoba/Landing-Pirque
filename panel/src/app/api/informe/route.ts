@@ -84,7 +84,7 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
           return {
             nombre, usuario: u.usuario,
             ficha: { sueldoFijo: f.sueldoFijo, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
-            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f, menus).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) })),
+            ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f, menus, u.nombre).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) })),
             tipo: 'vendedor'
           };
         });

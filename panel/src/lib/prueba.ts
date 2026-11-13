@@ -4944,6 +4944,13 @@ console.log('\nLos socios comerciales (primera entrega)');
      'la venta de Carla con socio le deja la mitad que la directa');
   ok(esVentaDe('S-0001', 'socio')({ creadoPor: 'S-0001', socio: '' }) === false && esVentaDe('', 'socio')({ creadoPor: '', socio: '' }) === false,
      'un socio no "crea" ventas, y un id vacío no calza con las ventas sin socio');
+  // `Creado por` guarda el NOMBRE (lo que trae la sesión); la lista va por usuario.
+  const creada = { creadoPor: 'Daniela Rojas', socio: '' };
+  ok(esVentaDe('daniela', 'vendedor', 'Daniela Rojas')(creada) && esVentaDe('daniela', 'vendedor')(creada) === false,
+     'la venta de un vendedor calza por su nombre aunque su usuario sea otro');
+  ok(esVentaDe('', 'vendedor', '')({ creadoPor: '', socio: '' }) === false
+     && esVentaDe('S-0001', 'socio', 'Daniela Rojas')({ creadoPor: 'Daniela Rojas', socio: '' }) === false,
+     'un vendedor sin usuario ni nombre no calza con nada, y a un socio el nombre no le suma ventas creadas');
 }
 
 console.log('\nLos socios comerciales (segunda entrega)');

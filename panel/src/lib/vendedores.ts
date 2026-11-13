@@ -370,14 +370,25 @@ export function pagadaEl(total: number, cobros: Pick<Cobro, 'fecha' | 'monto' | 
 /**
  * De quién es una venta: la del vendedor, la que **creó**; la del socio, la
  * que lo **nombra** en `Socio comercial`.
+ *
+ * **El vendedor calza por su usuario o por su nombre** (2026-11-13).
+ * `Creado por` guarda lo que trae la sesión, que es el **nombre** de la
+ * persona (`/api/sesion`, por la bitácora), mientras la lista de vendedores
+ * y sus fichas van por **usuario**. Con un vendedor *Daniela Rojas* /
+ * `daniela`, quien paga la veía sin ventas y su comisión no se congelaba.
+ * Calzaba solo cuando los dos eran iguales, como en los datos de prueba.
  */
-export const esVentaDe = (usuario: string, tipo: TipoFicha = 'vendedor') =>
-  (p: Pick<Presupuesto, 'creadoPor' | 'socio'>) =>
-    normalizar(tipo === 'socio' ? p.socio ?? '' : p.creadoPor) === normalizar(usuario) && !!usuario;
+export const esVentaDe = (usuario: string, tipo: TipoFicha = 'vendedor', nombre = '') => {
+  const quien = (tipo === 'socio' ? [usuario] : [usuario, nombre]).map(normalizar).filter(Boolean);
+  return (p: Pick<Presupuesto, 'creadoPor' | 'socio'>) =>
+    quien.includes(normalizar(tipo === 'socio' ? p.socio ?? '' : p.creadoPor));
+};
 
 export function ventasDe(usuario: string, presupuestos: Presupuesto[], lineas: LineaPresupuesto[],
-  cobros: Cobro[], ficha: ReglaComision, menus: Pick<Menu, 'nombre' | 'bonoVendedor'>[] = []): Venta[] {
-  const suya = esVentaDe(usuario, ficha.tipo);
+  cobros: Cobro[], ficha: ReglaComision, menus: Pick<Menu, 'nombre' | 'bonoVendedor'>[] = [],
+  /** El nombre de la cuenta, que es lo que guarda `Creado por`. */
+  nombre = ''): Venta[] {
+  const suya = esVentaDe(usuario, ficha.tipo, nombre);
   const socio = ficha.tipo === 'socio';
   return presupuestos
     .filter((p) => suya(p) && (!!p.idReserva

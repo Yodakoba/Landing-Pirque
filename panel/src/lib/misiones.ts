@@ -119,7 +119,7 @@ const VENDEDOR: Mision[] = [
     puntos: [
       'Lo que te toca en el periodo. El ? explica cómo se calcula.',
       'Lo que ya se te pagó y lo que falta.',
-      'Lo que viene: ventas ganadas que el cliente todavía está pagando.'
+      'Lo que viene: las ganadas que el cliente todavía está pagando y las mandadas que siguen en curso.'
     ],
     probar: { texto: 'Abrir Mi resumen', url: '/vendedores' }
   }

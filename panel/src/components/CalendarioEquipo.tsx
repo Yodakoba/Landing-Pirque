@@ -160,8 +160,9 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           <p className="mt-1 text-sm text-hueso/70">
             Un día cerrado es uno donde alguien ya confirmó quién vino, anotó
             la propina y revisó los montos. Mientras no se cierre, el informe
-            de ese periodo está incompleto. Después de cerrarlo, solo quien
-            hace los pagos lo puede corregir.
+            de ese periodo está incompleto. Después de cerrarlo, solo el
+            encargado de operaciones, quien hace los pagos o la gerencia lo
+            puede corregir.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {porCerrar.map((f) => {

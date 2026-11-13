@@ -8,8 +8,11 @@
  * localizadores van en el mismo orden que los textos de `misiones.ts`, y la
  * prueba de lógica fija que calcen.
  *
- * Se corre contra un panel levantado **con datos de ejemplo** (nunca con
- * clientes de verdad: las fotos quedan en el repo) y con una sesión por rol:
+ * **Lo corriente es no llamarlo directo**: `pruebas/ejemplo/capturas.sh`
+ * arma el panel con la planilla de ejemplo, el reloj fijo y las sesiones, y
+ * lo corre. A mano, se corre contra un panel levantado **con datos de
+ * ejemplo** (nunca con clientes de verdad: las fotos quedan en el repo) y
+ * con una sesión por rol:
  *
  *   AYUDA_URL=http://localhost:3000 AYUDA_SESIONES=sesiones.json \
  *     node pruebas/capturas-ayuda.mjs [escena…]
@@ -18,6 +21,8 @@
  * `firmarSesion()` y el mismo `SESION_SECRETO` del panel levantado.
  */
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
@@ -135,6 +140,8 @@ for (const [nombre, e] of Object.entries(ESCENAS)) {
   await ctx.addCookies([{ name: 'sesion', value: SESIONES[e.rol], url: URL_PANEL }]);
   // Sin la tira de bienvenida: no es parte de la pantalla que se explica.
   await ctx.addInitScript((r) => { try { localStorage.setItem('brasas-recorrido-' + r, 'listo'); } catch {} }, e.rol);
+  // El reloj del navegador, a la misma hora que el servidor de ejemplo.
+  if (process.env.AYUDA_RELOJ) await ctx.clock.install({ time: new Date(process.env.AYUDA_RELOJ) });
   const p = await ctx.newPage();
   p.setDefaultTimeout(8000);
   try {
@@ -159,11 +166,11 @@ for (const [nombre, e] of Object.entries(ESCENAS)) {
   } catch (err) {
     fallos++;
     console.log(`  FALLA  ${nombre}: ${err.message.split('\n')[0]}`);
-    await p.screenshot({ path: `/tmp/falla-${nombre}.png` }).catch(() => {});
+    await p.screenshot({ path: path.join(os.tmpdir(), `falla-${nombre}.png`) }).catch(() => {});
   }
   await ctx.close();
 }
 await b.close();
 fs.writeFileSync(new URL('puntos.json', SALIDA), JSON.stringify(Object.fromEntries(Object.entries(puntos).sort()), null, 1) + '\n');
-console.log(fallos ? `\n${fallos} escenas fallaron (la foto de la pantalla quedó en /tmp/falla-<escena>.png)` : '\nTodas las escenas listas.');
+console.log(fallos ? `\n${fallos} escenas fallaron (la foto de la pantalla quedó en ${path.join(os.tmpdir(), 'falla-<escena>.png')})` : '\nTodas las escenas listas.');
 process.exit(fallos ? 1 : 0);

@@ -780,7 +780,11 @@ export async function congelarComision(idPresupuesto: string): Promise<void> {
     ]);
     const p = presupuestos.find((x) => x.id === idPresupuesto);
     if (!p || !p.idReserva) return;
-    const u = usuarios.find((x) => x.rol === 'vendedor' && normalizar(x.usuario) === normalizar(p.creadoPor));
+    // `Creado por` es el nombre de la persona (lo que trae la sesión); se
+    // busca por nombre y, para las viejas, por usuario.
+    const creo = normalizar(p.creadoPor);
+    const u = usuarios.find((x) => x.rol === 'vendedor' && !!creo && normalizar(x.nombre) === creo)
+      ?? usuarios.find((x) => x.rol === 'vendedor' && !!creo && normalizar(x.usuario) === creo);
     // **El socio también congela la suya** (2026-11-12, segunda entrega), en
     // su propia columna y en la misma escritura.
     const s = p.socio ? fichas.find((f) => f.tipo === 'socio' && normalizar(f.usuario) === normalizar(p.socio ?? '')) : undefined;
