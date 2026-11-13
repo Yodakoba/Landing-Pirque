@@ -71,14 +71,14 @@ export default function AyudaRol({ rol, gerencia, conComentar }: {
       <MisionesAyuda rol={rol} nombreRol={nombre}
         onContar={conComentar ? (pantalla) => pedir({ pantalla, tipo: '', texto: '' }) : undefined} />
 
-      <section className="space-y-4" aria-label="Tus poderes">
+      <section id="tus-poderes" className="scroll-mt-4 space-y-4" aria-label="Tus poderes">
         <Seccion icono="⚡" titulo="Tus poderes"
           que="Lo que tu rol desbloquea. Toca uno para ver qué es; si te falta uno para tu trabajo, pídelo." />
         <PoderesRol rol={rol}
           onPedir={conComentar ? (p) => pedir({ pantalla: 'Ayuda · Tus poderes', tipo: '🧩 Me falta', texto: pedidoDePoder(p) }) : undefined} />
       </section>
 
-      <section className="space-y-4" aria-label="Consulta rápida">
+      <section id="consulta-rapida" className="scroll-mt-4 space-y-4" aria-label="Consulta rápida">
         <Seccion icono="🔎" titulo="Consulta rápida" que="Cada pantalla que abres, con su explicación en el ?." />
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {pantallas.map((p) => (
