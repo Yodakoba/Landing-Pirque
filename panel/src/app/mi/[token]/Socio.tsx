@@ -119,12 +119,13 @@ export default function VistaSocio({ socio, ventas, pagos, token, p, v }: {
           </p>
         ) : (
           <>
-            <p className="mt-5 text-[15px] text-hueso/80">Eventos confirmados que el cliente todavía no termina de pagar. Tu comisión llega cuando pague todo.</p>
+            <p className="mt-5 text-[15px] text-hueso/80">Eventos confirmados que el cliente todavía no termina de pagar, o que pagaron y falta revisar. Tu comisión llega cuando pague todo y se revise.</p>
             <ul className="mt-3 space-y-3">
               {vienen.map((x) => (
                 <li key={x.id} className="rounded-2xl border-2 border-ambar-fuerte/50 bg-panel p-4 text-[15px]">
                   <p className="text-[17px] font-bold">{x.cliente}</p>
                   <p className="text-hueso/80 first-letter:uppercase">{enPalabras(x.fechaEvento)} · {cuenta(x.personas, 'persona', 'personas')}</p>
+                  {x.porRevisar && <p className="mt-1 text-[14px] font-semibold text-ambar-texto">Pagó todo · esperando revisión</p>}
                   <p className="mt-1">Comisión que viene: <b className="text-ambar-texto">{enPesos(x.comision)}</b></p>
                   {x.detalle && <p className="text-[13px] text-hueso/70">{x.detalle}</p>}
                 </li>
@@ -151,7 +152,7 @@ export default function VistaSocio({ socio, ventas, pagos, token, p, v }: {
           </div>
 
           <h3 className="mt-7 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Evento por evento</h3>
-          <p className="text-[13px] text-hueso/65">Cuentan en el mes en que el cliente terminó de pagar.</p>
+          <p className="text-[13px] text-hueso/65">Cuentan en el mes en que el cliente terminó de pagar y se revisó.</p>
           {r.cuentan.length === 0 ? (
             <p className="mt-2 text-[15px] text-hueso/70">Ninguno en este mes.</p>
           ) : (

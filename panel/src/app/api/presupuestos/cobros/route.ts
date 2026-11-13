@@ -155,6 +155,9 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
     const p = (await leerPresupuestos()).find((x) => x.id === c.presupuesto);
     await anotar({ ...quien, accion: revisado ? 'Revisó un cobro' : 'Quitó la revisión de un cobro',
       detalle: `${p ? folioDe(p) : c.presupuesto} · ${c.concepto} · ${enPesos(c.monto)}` });
+    // **La comisión se congela al revisar** (2026-11-13): desde hoy cuenta
+    // lo pagado y revisado, así que es este el momento en que se completa.
+    if (revisado) await congelarComision(c.presupuesto);
     // Lo que se acaba de escribir manda sobre lo que se relee: la pantalla
     // tiene que ver la revisión aunque la lectura llegue un instante tarde.
     const { fila: _f, ...escrito } = c;

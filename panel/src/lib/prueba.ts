@@ -246,7 +246,8 @@ const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Personas','Monto','Tipo Pago','Estado Pago Shopify','Creada',
                'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
                'Llegaron','Aviso recepción','Abonado','Se cayó por cupo',
-               'Personas reales','Menú real','Descuento','Rectificación','Aprobación','Evento exclusivo'];
+               'Personas reales','Menú real','Descuento','Rectificación','Aprobación','Evento exclusivo',
+               'Pago anotado','Pago revisado','Descuento revisado'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -1730,9 +1731,9 @@ ok(resumenEquipo(turnos, conRazon, '2026-12-25', 44).total === 0,
 /* ---------- quién quedó sin ficha ---------- */
 const equipo: Trabajador[] = [
   { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio(), porConfirmar: '' },
   { nombre: 'luis soto', telefono: '', puesto: 'Cocina', activo: true, token: '',
-    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() }
+    modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio(), porConfirmar: '' }
 ];
 const huerfanos = sinFicha(turnos, equipo);
 ok(huerfanos.length === 1 && huerfanos[0] === 'Pedro Díaz',
@@ -1815,9 +1816,9 @@ ok(t1.length >= 32, 'y son largos: 24 bytes en base64');
 ok(/^[A-Za-z0-9_-]+$/.test(t1), 'solo caracteres que sobreviven a una URL');
 
 const conAcceso: Trabajador[] = [
-  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
-  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() },
-  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio() }
+  { nombre: 'Ana Pérez', telefono: '', puesto: 'Garzón', activo: true, token: 'token-de-ana', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio(), porConfirmar: '' },
+  { nombre: 'Luis Soto', telefono: '', puesto: 'Cocina', activo: true, token: '', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio(), porConfirmar: '' },
+  { nombre: 'Pedro Díaz', telefono: '', puesto: 'Runner', activo: false, token: 'token-de-pedro', modalidad: MODALIDAD.porTurno, pagoJornada: 0, valorHora: 0, propina: true, banco: bancoVacio(), porConfirmar: '' }
 ];
 ok(trabajadorPorToken(conAcceso, 'token-de-ana')?.nombre === 'Ana Pérez',
    'el token encuentra a su dueño');
@@ -2440,7 +2441,7 @@ console.log('\nActividades extras');
 
 const co = (p: Partial<Colaborador>): Colaborador => ({
   nombre: 'Jinete', actividad: 'Show ecuestre', telefono: '', activo: true,
-  monto: 0, banco: bancoVacio(), token: '', ...p
+  monto: 0, banco: bancoVacio(), token: '', porConfirmar: '', ...p
 });
 const ex = (p: Partial<Extra>): Extra => ({
   fecha: '2026-11-14', colaborador: 'Jinete', actividad: 'Show ecuestre',
@@ -4850,7 +4851,8 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
   const li = (p: string, precio: number) => ({ presupuesto: p, concepto: 'X', cantidad: 1, precio, personas: 1, descuento: 0, ivaIncluido: true });
   const lineas = [li('A', 1190000), li('B', 595000), li('C', 100000), li('D', 500000), li('E', 100000)] as never;
   const cobros = [
-    { presupuesto: 'A', fecha: '2026-11-03', monto: 357000, cuando: '1' }, { presupuesto: 'A', fecha: '2026-11-25', monto: 833000, cuando: '2' },
+    { presupuesto: 'A', fecha: '2026-11-03', monto: 357000, cuando: '1', revisadoPor: 'Verónica', revisado: '2026-11-04 10:00' },
+    { presupuesto: 'A', fecha: '2026-11-25', monto: 833000, cuando: '2', revisadoPor: 'Verónica', revisado: '2026-11-25 18:00' },
     { presupuesto: 'B', fecha: '2026-11-04', monto: 178500, cuando: '3' },
     { presupuesto: 'D', fecha: '2026-11-04', monto: 500000, cuando: '4' }
   ] as never;
@@ -4864,6 +4866,17 @@ console.log('\nEl equipo de ventas: la ficha y la comisión del vendedor');
      'una cancelada no deja comisión aunque haya pagado; la que falta pagar queda por cobrar');
   ok(resumenDelPeriodo(ficha, ventas, '2026-11-02', '2026-11-08').total === 0,
      'una semana sin ventas pagadas ni fin de mes no suma nada');
+  // **La comisión cuenta con lo revisado por pagos** (2026-11-13).
+  const { confirmadaEl } = await import('./vendedores.ts');
+  const cobrosB = [{ presupuesto: 'B', fecha: '2026-11-04', monto: 595000, cuando: '3' }] as never;
+  const sinRevisar = ventasDe('Carla', pres, lineas, cobrosB, ficha).find((v) => v.id === 'B')!;
+  ok(sinRevisar.pagadaEl === '' && sinRevisar.porRevisar === true
+     && resumenDelPeriodo(ficha, [sinRevisar], '2026-11-01', '2026-11-30').comisiones === 0,
+     'pagó todo pero pagos no lo revisó: la comisión no suma todavía, y dice que espera la revisión');
+  ok(confirmadaEl(100, [{ fecha: '2026-11-20', monto: 100, cuando: 'a', revisadoPor: 'Verónica', revisado: '2026-12-02 09:00' }]) === '2026-12-02'
+     && confirmadaEl(100, [{ fecha: '2026-11-20', monto: 100, cuando: 'a', revisadoPor: 'Verónica', revisado: '2026-11-20 19:00' }]) === '2026-11-20'
+     && confirmadaEl(100, [{ fecha: '2026-11-20', monto: 100, cuando: 'a', revisadoPor: '', revisado: '' }]) === '',
+     'cuenta el día en que quedó pagada y revisada: si pagos revisa en diciembre, la comisión es de diciembre');
   const fila = filaVendedor({ ...ficha, comisionPct: 2.5 }, ENCABEZADO_VENDEDORES);
   const leida = leerVendedoresDe([ENCABEZADO_VENDEDORES, fila])[0];
   ok(leida.usuario === 'carla' && leida.comisionPct === 2.5 && leida.sueldoFijo === 400000 && leida.base === 'total',
@@ -5135,6 +5148,58 @@ console.log('\nWhatsApp al tiro y firmado');
      && mensajeCaida('Ana Soto', 'sábado 14', { quien: 'Tomás', empresa: '' }).startsWith('Hola Ana, te escribe Tomás de Brasas de Lo Pirque. ')
      && mensajeLiberacion('Ana Soto', 'sábado 14', { quien: 'Tomás' }).startsWith('Hola Ana, te escribe Tomás de Brasas de Lo Pirque por tu reserva'),
      'los mensajes de la reserva, del sobrecupo y de liberar el día van firmados');
+}
+
+console.log('\nLa plata la confirma pagos');
+{
+  const { marcaPlata, partesMarca, firmaPago, pagoPorRevisar, descuentoPorVer, firmaDescuento, cambiosDePlata,
+          porConfirmarDespues, marcasDePago } = await import('./plata.ts');
+  const { pendientesDePago, pendientesDeDescuentoVisto, pendientesDeCuenta, DE_PAGOS } = await import('./aprobaciones.ts');
+  const { bancoVacio: bv } = await import('./banco.ts');
+  const base = { fila: 5, id: 'MANUAL-1', fecha: '2026-11-14', nombre: 'Camila Rojas', email: '', telefono: '', menu: '',
+    personas: 4, monto: 176000, tipoPago: '', estadoPago: 'paid', notaPago: 'Transferencia 10/11', asistencia: '' } as unknown as Reserva;
+  const anotado = { ...base, pagoAnotado: marcaPlata('2026-11-13 10:00', 'Tomás') };
+  ok(partesMarca(marcaPlata('2026-11-13 10:00', 'Tomás', 'a|b'))?.firma === 'a|b'
+     && partesMarca(marcaPlata('2026-11-13 10:00', 'Tomás'))?.quien === 'Tomás' && partesMarca('') === null,
+     'la marca guarda cuándo, quién y qué se vio');
+  ok(pagoPorRevisar(anotado, false) && !pagoPorRevisar(base, false)
+     && !pagoPorRevisar({ ...anotado, id: '6123456789' }, false) && !pagoPorRevisar(anotado, true)
+     && !pagoPorRevisar({ ...anotado, estadoPago: 'pending' }, false),
+     'un pago anotado a mano queda por revisar; los de antes, los de Shopify, los de una cotización y los por pagar no');
+  const revisado = { ...anotado, pagoRevisado: marcaPlata('2026-11-13 11:00', 'Verónica', firmaPago(anotado)) };
+  ok(!pagoPorRevisar(revisado, false) && pagoPorRevisar({ ...revisado, monto: 200000 }, false)
+     && pagoPorRevisar({ ...revisado, notaPago: 'Efectivo' }, false),
+     'revisado sale de la bandeja; si después cambia el monto o la nota, vuelve');
+  const m1 = marcasDePago({ estadoPago: 'pending', monto: 176000, notaPago: '', abonado: null },
+    { estadoPago: 'paid', notaPago: 'Transferencia' }, 'Tomás', '2026-11-13 10:00', false);
+  const m2 = marcasDePago(null, { estadoPago: 'partially_paid', abonado: 50000, monto: 176000, notaPago: '' },
+    'Verónica', '2026-11-13 10:00', true);
+  ok(!!m1.pagoAnotado?.includes('Tomás') && !m1.pagoRevisado
+     && !!m2.pagoAnotado && partesMarca(m2.pagoRevisado)?.firma === firmaPago({ estadoPago: 'partially_paid', abonado: 50000, monto: 176000, notaPago: '' })
+     && Object.keys(marcasDePago(base, { asistencia: 'Vino' } as never, 'Tomás', 'x', false)).length === 0
+     && Object.keys(marcasDePago(base, { notaPago: 'Transferencia 10/11' }, 'Tomás', 'x', false)).length === 0
+     && Object.keys(marcasDePago(base, { estadoPago: 'cancelled' }, 'Tomás', 'x', false)).length === 0,
+     'anotar un pago lo marca a nombre de quien lo anota; si es pagos, queda revisado; sin cambios de pago, nada');
+  const pagos = pendientesDePago([anotado, revisado, { ...anotado, fila: 9, id: 'MANUAL-2' }], { 'MANUAL-2': 'P-1' });
+  ok(pagos.length === 1 && pagos[0].pide === 'Tomás' && pagos[0].estado === 'Pagada' && DE_PAGOS.has(pagos[0].tipo),
+     'la bandeja de pagos lista los pagos por revisar, sin los de una cotización');
+  const conDesc = { ...base, personasReales: 4, descuento: 10, rectificacion: '2026-11-14 18:00 · Tomás · Cortesía · Llegaron tarde', aprobacion: '' } as unknown as Reserva;
+  ok(descuentoPorVer(conDesc) && !descuentoPorVer({ ...conDesc, descuentoRevisado: marcaPlata('x', 'Verónica', firmaDescuento(conDesc)) })
+     && !descuentoPorVer({ ...conDesc, aprobacion: 'Por aprobar' } as Reserva)
+     && pendientesDeDescuentoVisto([conDesc]).length === 1,
+     'un descuento ya aplicado queda por ver hasta que pagos lo ve; uno por aprobar todavía no');
+  ok(cambiosDePlata(null, { banco: bv(), pagoJornada: 0 }).length === 0
+     && cambiosDePlata({ banco: bv(), pagoJornada: 40000 }, { banco: { ...bv(), numero: '123' }, pagoJornada: 45000 }).join() === 'cuenta bancaria,pago por jornada',
+     'qué cambió de la plata, en palabras');
+  const pc = porConfirmarDespues('', ['cuenta bancaria'], 'Tomás', '2026-11-13 10:00', false);
+  ok(partesMarca(pc)?.firma === 'cuenta bancaria'
+     && partesMarca(porConfirmarDespues(pc, ['pago por jornada', 'cuenta bancaria'], 'Ana', '2026-11-13 11:00', false))?.firma === 'cuenta bancaria, pago por jornada'
+     && porConfirmarDespues(pc, ['cuenta bancaria'], 'Verónica', 'x', true) === ''
+     && porConfirmarDespues(pc, [], 'Ana', 'x', false) === pc,
+     'una cuenta cambiada por otro queda por confirmar y se acumula; si la cambia pagos, queda confirmada');
+  const cuentas = pendientesDeCuenta([{ nombre: 'Ana Pérez', porConfirmar: pc }, { nombre: 'Luis', porConfirmar: '' }], []);
+  ok(cuentas.length === 1 && cuentas[0].de === 'trabajador' && cuentas[0].que === 'cuenta bancaria' && cuentas[0].fecha === '2026-11-13',
+     'la bandeja de pagos lista las cuentas por confirmar');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

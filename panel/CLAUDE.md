@@ -259,6 +259,65 @@ interno. Ahora cada link que se manda dice lo que es (`lib/vistaPrevia.ts`):
   el título nuevo aparece en los links nuevos, o en el mismo después de
   unos días.
 
+## La plata la confirma pagos (2026-11-13)
+
+La regla *"la plata la cierra el encargado de pagos"* (arriba), pasada por
+todo el panel. El cliente aprobó seis puntos el mismo día (*"punto 1, 2 y 3
+confirmado. Punto 4 confirmado. Punto 5, ok… Ok, punto 6. Ok. 7"*) y pidió
+que a pagos **le llegue una notificación con el mismo formato** que las
+aprobaciones entre el encargado de turno y el de operaciones. **Ningún
+permiso cambió**: `pagar` sigue siendo pagos, la gerencia general y el
+administrador. Lo que cambió es qué se le muestra a quién y qué queda a
+nombre de quién. Código en `lib/plata.ts` (puro, con pruebas).
+
+| Punto | Qué hace |
+|---|---|
+| 1. El estado *revisado* de un cobro | **Solo lo ve quien tiene `pagar`**. El vendedor sigue viendo sus cobros y sus montos, sin *sin revisar* ni *Revisado por* |
+| 2. Una reserva marcada **Pagada o Abonada a mano** | Queda a nombre de quien la marcó (`Pago anotado`) y le llega a la bandeja de pagos: **✓ Revisado** (`Pago revisado`) |
+| 3. *✓ Devolución hecha* al liberar un día | Solo `pagar`; los demás leen *"La da por hecha el encargado de pagos"*. La ruta lo exige |
+| 4. La comisión del vendedor y del socio | **Cuenta y se congela con los cobros que pagos revisó** (`confirmadaEl()`): el vendedor ve *pagó todo · esperando revisión de pagos*. Ganar sigue dependiendo del cobro anotado, no del revisado |
+| 5. La **cuenta bancaria o la tarifa** de un trabajador o un extra, cambiada por quien no es pagos | Queda *por confirmar* (columna `Por confirmar` de `Trabajadores` y `Colaboradores`), le llega a la bandeja de pagos (**✓ Confirmar**) y **el informe lo avisa arriba de la línea, antes de copiar los datos** |
+| 6. Un descuento de rectificación **ya aplicado** (estándar o aprobado) | Le llega a la bandeja de pagos: **✓ Visto** (`Descuento revisado`) |
+| 7. Las boletas | Siguen como estaban |
+
+- **Nada de esto frena a nadie**: lo anotado rige en el acto. La bandeja
+  es para que quede revisado a nombre de alguien, no una aprobación. Por eso
+  esos avisos **no tienen *Rechazar***: si algo no calza, se corrige en la
+  reserva o en la ficha, que es donde está.
+- **La firma de lo que se vio.** `Pago revisado` y `Descuento revisado`
+  guardan *cuándo · quién · lo que vio* (`firmaPago()`: estado, abono,
+  monto y nota; `firmaDescuento()`: el % y la rectificación). Si después
+  alguien cambia el pago o el descuento, la firma no calza y **vuelve a la
+  bandeja** solo, sin que nadie lo marque.
+- **Lo que anota pagos queda revisado al anotarlo**: marcar Pagada, aplicar
+  o aprobar un descuento, o cambiar una cuenta siendo pagos no le manda
+  nada a su propia bandeja.
+- **Solo lo de ahora en adelante**: un pago marcado antes de esto no tiene
+  `Pago anotado` y no llena la bandeja de golpe. Las de Shopify las cobra la
+  tienda y las de una cotización van por sus cobros, así que no entran.
+- **Las marcas no se aceptan del navegador** (el `PATCH` de una reserva las
+  descarta) y **van con la plata**: a quien la reserva le llega sin monto
+  (`privacidad.ts`) le llegan vacías, porque la firma trae el monto y la nota.
+- **La bandeja** es la misma (`BandejaAprobaciones`), con tres tipos nuevos
+  en `lib/aprobaciones.ts`: `pago`, `descuentoVisto` y `cuenta` (`DE_PAGOS`).
+  El título dice *que revisar* (o *que aprobar o revisar* si hay de los dos)
+  y la bajada, *ya rige*. El pago va con su `PastillaPago`. En la página del
+  día salen los de ese día, con *Ver la reserva →*.
+- **Rutas nuevas**: `POST /api/reservas/revisar` (`{fila, que: 'pago' |
+  'descuento'}`) y `POST /api/equipo/confirmar` (`{de: 'trabajador' |
+  'colaborador', nombre}`), las dos con `pagar` y a la bitácora.
+- **Lecturas de Google**: ninguna más en las pantallas. Los pagos y
+  descuentos salen de las reservas que la portada ya carga; las cuentas,
+  de `/api/ocupacion`, que sumó `Trabajadores` y `Colaboradores` a su tanda
+  (solo las arma para `pagar`). El informe ya leía las dos.
+- **Probado contra el panel de ejemplo**: el encargado marca Pagada una
+  reserva a mano, rectifica otra con 10% y cambia la cuenta de un
+  trabajador; a pagos le llegan los tres, al encargado y a operaciones
+  ninguno. *✓ Revisado*, *✓ Visto* y *✓ Confirmar* los sacan y quedan en la
+  bitácora a su nombre; si el encargado cambia después la nota del pago,
+  vuelve. El encargado recibe 403 en las dos rutas nuevas y en *Devolución
+  hecha*.
+
 ## Las reservas en el panel
 
 Lo que sigue venía bajo "Reserva en línea" en la raíz: es cómo el panel
@@ -1402,7 +1461,9 @@ no Vercel Blob**, porque el dominio `lopirque.cl` es Google Workspace.
   permiso **`pagar`** —administrador y quien paga—, no del vendedor: la
   gracia es que lo compruebe alguien distinto de quien lo anotó. Se ve por
   forma: *✓ Revisado por Felipe* relleno en verde, *sin revisar* con borde
-  ámbar. **Un cobro revisado solo lo deshace quien revisa.**
+  ámbar. **Un cobro revisado solo lo deshace quien revisa.** **Desde el
+  2026-11-13 ese estado lo ve solo quien revisa**: ver *La plata la confirma
+  pagos*.
 - **Aviso en `/presupuestos`**, solo para quien paga: *N cotizaciones con
   cobros por revisar*, con cuántos y cuánto.
 - Los errores de configuración se dicen con palabras (`errorDeDrive()`):
@@ -1783,7 +1844,8 @@ todavía esperando, solo una línea que lo dice.
     día nuevo tiene que estar abierto y no ser exclusivo.
   - **✕ Cancelar y devolver $X**: deja su lugar y queda en **💸
     Devoluciones por hacer** —todo lo pagado, o lo abonado
-    (`montoADevolver()`)— hasta que alguien marque *✓ Devolución hecha*.
+    (`montoADevolver()`)— hasta que pagos marque *✓ Devolución hecha* (desde
+    el 2026-11-13, solo `pagar`).
     Las de Shopify dicen el número del pedido y que el reembolso se hace
     allá: **el panel no puede**, no tiene ese permiso.
 - **Qué libera el lugar es la misma columna de soltar por cupo**
@@ -1896,8 +1958,9 @@ boletas y planillas de vendedores— vino en la segunda entrega, más abajo.
   columna; nace con la primera ficha que alguien guarda), junto a su cuenta
   bancaria. **No hay botón de agregar**: los vendedores son las cuentas con
   rol Vendedor de *Cuentas*, y su ficha nace la primera vez que se escribe.
-- **La comisión se gana cuando el cliente pagó todo**: cuenta en el periodo
-  del cobro que completó el total (`pagadaEl()`). Una devolución que lo baja
+- **La comisión se gana cuando el cliente pagó todo** y pagos revisó esos
+  cobros (desde el 2026-11-13, `confirmadaEl()`; ver *La plata la confirma
+  pagos*): cuenta en el periodo en que quedó revisado. Una devolución que lo baja
   la deja pendiente de nuevo. **Una cancelada no deja comisión.**
 - **El % va sobre el neto** (cambió el 2026-11-12, lo fijó el cliente:
   *"tanto en socios comerciales como en los vendedores, la comisión tenemos

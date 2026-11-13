@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { cambiosDePlata, porConfirmarDespues } from '@/lib/plata';
+import { ahoraEnChile } from '@/lib/bitacora';
 import { conLecturas } from '@/lib/sheets';
 import { leerColaboradores, guardarColaboradores, anotar } from '@/lib/datos';
 import { aEntero, esSi } from '@/lib/equipo';
@@ -64,8 +66,16 @@ export const POST = conLecturas([], async function POST(req: Request) {
       // completos directo".
       banco: esAdmin ? limpiarBanco(b?.banco) : bancoVacio(),
       // El link se crea aparte, con `/api/extras/link` (permiso `links`).
-      token: ''
+      token: '',
+      porConfirmar: ''
     };
+    // **La plata la confirma pagos** (2026-11-13, `plata.ts`): una ficha
+    // nueva con cuenta o monto, hecha por quien no es pagos, nace por confirmar.
+    {
+      const q = await quienEs(req);
+      nuevo.porConfirmar = porConfirmarDespues('', cambiosDePlata(null, nuevo), q.usuario, ahoraEnChile(),
+        puede(q.rol as Rol, 'pagar'));
+    }
 
     await guardarColaboradores([...gente, nuevo]);
     await anotar({ ...(await quienEs(req)), accion: 'Agregó un colaborador',
@@ -135,8 +145,15 @@ export const PATCH = conLecturas([], async function PATCH(req: Request) {
       monto: esAdmin && b?.monto !== undefined ? aEntero(b.monto) : antes.monto,
       banco: esAdmin && b?.banco !== undefined ? limpiarBanco(b.banco) : antes.banco,
       // El link no se toca desde acá: se administra en `/api/extras/link`.
-      token: antes.token
+      token: antes.token,
+      porConfirmar: antes.porConfirmar ?? ''
     };
+    // **La plata la confirma pagos** (2026-11-13, `plata.ts`).
+    {
+      const q = await quienEs(req);
+      nueva.porConfirmar = porConfirmarDespues(nueva.porConfirmar, cambiosDePlata(antes, nueva), q.usuario,
+        ahoraEnChile(), puede(q.rol as Rol, 'pagar'));
+    }
 
     await guardarColaboradores(
       gente.map((c) => (normalizar(c.nombre) === normalizar(nombre) ? nueva : c))

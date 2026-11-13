@@ -115,11 +115,11 @@ const VENDEDOR: Mision[] = [
   },
   {
     id: 'resumen', emoji: '💰', titulo: 'Mi resumen: lo que ganas', escena: 'ven-resumen',
-    intro: 'Tu comisión cuenta cuando el cliente termina de pagar. Aquí ves cuánto te toca y cuánto viene.',
+    intro: 'Tu comisión cuenta cuando el cliente termina de pagar y el encargado de pagos lo revisa. Aquí ves cuánto te toca y cuánto viene.',
     puntos: [
       'Lo que te toca en el periodo. El ? explica cómo se calcula.',
       'Lo que ya se te pagó y lo que falta.',
-      'Lo que viene: las ganadas que el cliente todavía está pagando y las mandadas que siguen en curso.'
+      'Lo que viene: las ganadas que el cliente todavía está pagando o que falta revisar, y las mandadas que siguen en curso.'
     ],
     probar: { texto: 'Abrir Mi resumen', url: '/vendedores' }
   }
@@ -222,7 +222,7 @@ const PAGOS: Mision[] = [
   },
   {
     id: 'cobros', emoji: '🧾', titulo: 'La plata de los clientes', escena: 'pag-cobros',
-    intro: 'En cada cotización, el paso Envío lleva los pagos del cliente con su comprobante. Tú los revisas.',
+    intro: 'En cada cotización, el paso Envío lleva los pagos del cliente con su comprobante. Tú los revisas. Lo que anotan otros —pagos de reservas, descuentos, cuentas— te llega además a la bandeja de la portada.',
     puntos: [
       'El pago: las condiciones y lo que ya pagó el cliente.',
       'Anota lo que pagó: el anticipo, todo u otro monto, con su comprobante. Una devolución es un pago en negativo.',

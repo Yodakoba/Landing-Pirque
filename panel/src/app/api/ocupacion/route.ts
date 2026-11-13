@@ -4,10 +4,13 @@ import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_LINEAS, HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
 import { HOJA_CLIENTES } from '@/lib/clientes';
+import { HOJA_TRABAJADORES } from '@/lib/equipo';
+import { HOJA_COLABORADORES } from '@/lib/extras';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
-import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias, leerPresupuestos, leerClientes } from '@/lib/datos';
+import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias, leerPresupuestos, leerClientes,
+  leerTrabajadores, leerColaboradores } from '@/lib/datos';
 import { puede, type Rol } from '@/lib/auth';
-import { pendientesDeExclusivo } from '@/lib/aprobaciones';
+import { pendientesDeExclusivo, pendientesDeCuenta } from '@/lib/aprobaciones';
 import { conCliente, grupoDe } from '@/lib/cotizar';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasAbiertosEntre, hoy, sumarDias, esFecha } from '@/lib/fechas';
@@ -49,7 +52,8 @@ export const dynamic = 'force-dynamic';
  * sin ocupación ningún día recibe público— y la tarjeta además decía 0
  * personas. Lo notó el cliente mirando octubre.
  */
-export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_CLIENTES], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_CLIENTES,
+  HOJA_TRABAJADORES, HOJA_COLABORADORES], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
@@ -127,7 +131,13 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PR
       exclusivos = pendientesDeExclusivo(pres.map((p) => conCliente(p, clientes)), reservas, hoy(),
         cfg.exclusivoDias, (id) => folioDe({ id: grupoDe(porId.get(id) ?? { id, grupo: '' }) }));
     }
-    return NextResponse.json({ ocupacion, config: cfg, firma: firmaDe(reservas, fechas), exclusivos });
+    // **Las cuentas y tarifas por confirmar** (2026-11-13, `plata.ts`), solo
+    // para pagos: las cambió alguien que no es pagos. `Trabajadores` y
+    // `Colaboradores` se sumaron a la precarga: ninguna lectura más.
+    const cuentas = puede(rol as Rol, 'pagar')
+      ? pendientesDeCuenta(await leerTrabajadores().catch(() => []), await leerColaboradores().catch(() => []))
+      : [];
+    return NextResponse.json({ ocupacion, config: cfg, firma: firmaDe(reservas, fechas), exclusivos, cuentas });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

@@ -274,7 +274,7 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, cuentan, fuera, marcarEn, palabraSinMarcar, nota, sinCuenta,
   boleta, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar, onPagarCompleto, onBoleta,
-  anotados, onVerPagos
+  anotados, onVerPagos, porConfirmar, onConfirmar
 }: {
   nombre: string;
   detalle: string;
@@ -312,11 +312,18 @@ function LineaPersona({
   /** Cuántos pagos tiene anotados en el periodo. */
   anotados: number;
   onVerPagos: () => void;
+  /**
+   * **Su cuenta o su tarifa, cambiada por quien no es pagos** (2026-11-13,
+   * `plata.ts`): se avisa antes de transferir, y pagos la confirma acá.
+   */
+  porConfirmar?: { que: string; quien: string; cuando: string } | null;
+  onConfirmar?: () => Promise<void>;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
   // Qué parte se está guardando con "Pagado completo": mientras tanto el
   // botón se apaga, para que dos toques seguidos no anoten dos pagos.
   const [enviando, setEnviando] = useState<Concepto | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
   const estadoPill = (e: EstadoPago, falta: number) => (
     <span className={`whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${
       e === 'pagado' ? 'border-verde/60 text-verde-texto'
@@ -335,6 +342,27 @@ function LineaPersona({
           pantalla ancha es una sola fila**: los botones van entre el nombre
           y el monto, con su ancho natural; estirados a lo largo de 1.200px
           serían barras, no botones. */}
+      {/* **Antes de transferir, lo que pagos no ha confirmado** (2026-11-13,
+          regla *"la plata la cierra el encargado de pagos"*): alguien que no
+          es pagos cambió su cuenta o su tarifa. Ya rige; se mira y se
+          confirma acá mismo o en la bandeja de la portada. Va arriba de la
+          línea, para leerlo antes de copiar los datos. */}
+      {puedePagar && porConfirmar && (
+        <div className="mx-4 mt-3 flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed
+                        border-ambar-fuerte/70 bg-ambar/10 px-3 py-2">
+          <p className="min-w-[12rem] flex-1 text-[14px] font-semibold text-ambar-texto">
+            ⚠ Por confirmar: {porConfirmar.que}
+            <span className="font-normal text-hueso/75"> · lo cambió {porConfirmar.quien}. Revísalo antes de transferir.</span>
+          </p>
+          {onConfirmar && (
+            <button type="button" disabled={confirmando}
+              onClick={async () => { setConfirmando(true); try { await onConfirmar(); } finally { setConfirmando(false); } }}
+              className="boton min-h-[44px] !border-verde-fuerte !text-[15px] !font-bold text-verde-texto">
+              {confirmando ? 'Guardando…' : '✓ Confirmar'}
+            </button>
+          )}
+        </div>
+      )}
       <div className="md:flex md:items-center">
       {/* El anillo del foco va **adentro** del botón (`ring-inset`) y solo con
           el teclado: el de siempre del navegador se montaba sobre los botones
@@ -750,6 +778,8 @@ export default function InformeEquipo() {
     tipo?: 'vendedor' | 'socio';
   }[]>([]);
   const [cuentas, setCuentas] = useState<Record<string, Banco>>({});
+  /** Cuentas y tarifas por confirmar, por nombre normalizado: solo a quien paga. */
+  const [porConfirmar, setPorConfirmar] = useState<Record<string, { que: string; quien: string; cuando: string; de: 'trabajador' | 'colaborador' }>>({});
   // Los pagos ya registrados. El "check" de cada fila **se deduce de
   // sumarlos**, no es un campo guardado que pueda decir otra cosa que la
   // plata. Ver `remuneraciones.ts`.
@@ -809,6 +839,7 @@ export default function InformeEquipo() {
         setExtras(d.extras ?? []);
         setVendedores(d.vendedores ?? []);
         setCuentas(d.cuentas ?? {});
+        setPorConfirmar(d.porConfirmar ?? {});
         setPagos(d.pagos ?? []);
         setBoletas(d.boletas ?? []);
         setPuedePagar(!!d.puedePagar);
@@ -873,6 +904,20 @@ export default function InformeEquipo() {
   const sinConfirmar = lineasExtras.reduce((s, l) => s + l.sinConfirmar, 0);
   const cuentaDe = (nombre: string): Banco =>
     cuentas[normalizar(nombre)] ?? bancoVacio();
+
+  /** Pagos confirma una cuenta o tarifa cambiada por otro (`/api/equipo/confirmar`). */
+  async function confirmarCuenta(nombre: string) {
+    const p = porConfirmar[normalizar(nombre)];
+    if (!p) return;
+    const res = await fetch('/api/equipo/confirmar', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ de: p.de, nombre })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) { avisar(d.error || 'No se pudo guardar.', 'atencion'); return; }
+    setPorConfirmar((x) => { const y = { ...x }; delete y[normalizar(nombre)]; return y; });
+    avisar(`Confirmado: ${p.que} de ${nombre}`);
+  }
 
   /**
    * Lo que falta saber de una persona para transferirle.
@@ -1690,6 +1735,8 @@ export default function InformeEquipo() {
                         { que: 'Propina (aparte)', valor: l.propina ? enPesos(l.propina) : '—' }
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.trabajador))}
+                      porConfirmar={porConfirmar[normalizar(l.trabajador)] ?? null}
+                      onConfirmar={() => confirmarCuenta(l.trabajador)}
                       boleta={aplica ? boletaRecibida(l.trabajador) : null}
                       puedePagar={puedePagar}
                       puedeBoleta={puedeBoleta}
@@ -1753,6 +1800,8 @@ export default function InformeEquipo() {
                         { que: 'Servicio', valor: enPesos(l.total), tono: 'fuerte' }
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.colaborador))}
+                      porConfirmar={porConfirmar[normalizar(l.colaborador)] ?? null}
+                      onConfirmar={() => confirmarCuenta(l.colaborador)}
                       boleta={pideBoleta('extra', false) ? boletaRecibida(l.colaborador) : null}
                       puedePagar={puedePagar}
                       puedeBoleta={puedeBoleta}

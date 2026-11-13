@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { ahoraEnChile } from '@/lib/bitacora';
+import { cambiosDePlata, porConfirmarDespues } from '@/lib/plata';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CIERRES } from '@/lib/cierres';
 import { HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
@@ -189,8 +191,20 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
           // borraría sin querer al guardar la lista.
           banco: verSueldos
             ? limpiarBanco(t?.banco)
-            : (previos.get(normalizar(nombre))?.banco ?? bancoVacio())
+            : (previos.get(normalizar(nombre))?.banco ?? bancoVacio()),
+          porConfirmar: previos.get(normalizar(nombre))?.porConfirmar ?? ''
         });
+      }
+      // **La plata la confirma pagos** (2026-11-13, `plata.ts`): si quien
+      // guarda no es pagos y cambió una cuenta o una tarifa, queda por
+      // confirmar con su nombre.
+      {
+        const q = await quienEs(req);
+        const esPagos = puede(q.rol as Rol, 'pagar');
+        for (const t of limpia) {
+          const antes = previos.get(normalizar(t.nombre)) ?? null;
+          t.porConfirmar = porConfirmarDespues(t.porConfirmar, cambiosDePlata(antes, t), q.usuario, ahoraEnChile(), esPagos);
+        }
       }
       await guardarTrabajadores(limpia);
       salida.trabajadores = recortada(limpia, verLinks, verSueldos);

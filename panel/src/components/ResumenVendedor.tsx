@@ -261,7 +261,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     <div className="max-w-4xl space-y-5">
       <div>
         <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
-        <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar.</AvisoFijo>
+        <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar y el encargado de pagos lo revisó.</AvisoFijo>
       </div>
 
       {/* 1. Quién. Para elegir a otro, dos botones con buscador (regla del cliente). */}
@@ -421,11 +421,11 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                 <div className="space-y-3">
                   {datos.porCobrar.length > 0 && (
                     <div>
-                      <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-ambar-texto">Ganadas · falta que el cliente pague</p>
+                      <p className="mb-1 text-[13px] font-semibold uppercase tracking-widest text-ambar-texto">Ganadas · falta que el cliente pague o que pagos lo revise</p>
                       <ul className="grid gap-2 lg:grid-cols-2">
                         {datos.porCobrar.map((v) => (
                           <TarjetaVenta key={v.id} cliente={v.cliente} folio={v.folio} fecha={v.fechaEvento} tono="border-ambar-fuerte/50"
-                            linea={`falta ${enPesos(Math.max(0, v.total - v.pagado))}`} rotulo="Comisión que viene"
+                            linea={v.porRevisar ? 'pagó todo · esperando revisión de pagos' : `falta ${enPesos(Math.max(0, v.total - v.pagado))}`} rotulo="Comisión que viene"
                             comision={v.comision} detalle={v.detalle} />
                         ))}
                       </ul>

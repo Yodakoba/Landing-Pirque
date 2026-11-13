@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { partesMarca } from '@/lib/plata';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
 import { HOJA_ACTIVIDADES, HOJA_COLABORADORES } from '@/lib/extras';
@@ -110,11 +111,22 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
         cuentas[normalizar(v.nombre)] = fichaDe(fichasV, v.usuario, v.nombre).banco;
       }
     }
+    // **Lo que pagos no ha confirmado** (2026-11-13, `plata.ts`): la cuenta
+    // o la tarifa que cambió otro. Solo a quien paga, como las cuentas.
+    const porConfirmar: Record<string, { que: string; quien: string; cuando: string; de: 'trabajador' | 'colaborador' }> = {};
+    if (puedePagar) {
+      for (const [lista, de] of [[gente, 'trabajador'], [colaboradores, 'colaborador']] as const) {
+        for (const p of lista) {
+          const m = partesMarca(p.porConfirmar);
+          if (m) porConfirmar[normalizar(p.nombre)] = { que: m.firma || 'datos de pago', quien: m.quien, cuando: m.cuando, de };
+        }
+      }
+    }
     // Si esta cuenta puede registrar pagos. Se resuelve en el servidor y
     // no en la pantalla: el botón se esconde por comodidad, pero lo que de
     // verdad cierra la puerta es el `exigir('pagar')` del POST.
     return NextResponse.json({
-      turnos, extras, cuentas, pagos, boletas, puedePagar, vendedores,
+      turnos, extras, cuentas, porConfirmar, pagos, boletas, puedePagar, vendedores,
       puedeBoleta: puede(rol, 'boleta')
     });
   } catch (e) {

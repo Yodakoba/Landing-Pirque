@@ -108,7 +108,16 @@ export const COL_RESERVAS = {
    * *Devuelta* o *Reagendada*, con quién y cuándo. Shopify no la toca
    * (`camposDeShopify()`). Lo que libera el lugar sigue siendo `liberada`.
    */
-  liberacion: 'Evento exclusivo'
+  liberacion: 'Evento exclusivo',
+  /**
+   * **La plata la cierra el encargado de pagos** (2026-11-13, `plata.ts`).
+   * Quién marcó el pago de una reserva a mano, quién de pagos lo revisó (con
+   * la firma de lo que vio) y quién de pagos vio un descuento aplicado.
+   * Shopify no las toca (`camposDeShopify()`). Se agregan solas.
+   */
+  pagoAnotado: 'Pago anotado',
+  pagoRevisado: 'Pago revisado',
+  descuentoRevisado: 'Descuento revisado'
 } as const;
 
 export const COL_FECHAS = {

@@ -29,7 +29,7 @@ import RectificarReserva from './RectificarReserva';
 import { partirAviso } from './AvisosRecepcion';
 import { BotonMias } from './BotonMias';
 import BandejaAprobaciones from './BandejaAprobaciones';
-import { pendientesDeAprobar } from '@/lib/aprobaciones';
+import { pendientesDeAprobar, pendientesDePago, pendientesDeDescuentoVisto, juntarPendientes } from '@/lib/aprobaciones';
 import { avisar } from './AvisoFlotante';
 import { estaRectificada, personasEfectivas, menuEfectivo, porAprobar, rechazado,
          resumenRectificacion } from '@/lib/rectificacion';
@@ -605,7 +605,7 @@ export default function DayView(
               </p>
             )}
             <BloqueLiberar fecha={fecha} reservas={delDia} cotizacion={aprobada} deCotizacion={deCotizacionIds}
-              puedeAvisar={conDias} puedeDecidir={puede(rol as Rol, 'exclusividad')}
+              puedeAvisar={conDias} puedeDecidir={puede(rol as Rol, 'exclusividad')} puedePagar={puede(rol as Rol, 'pagar')}
               onCambio={() => void actualizarTodo()} />
           </>
         );
@@ -936,11 +936,16 @@ export default function DayView(
 
       {/* **La bandeja de aprobaciones** (2026-11-12), la misma de la portada,
           con lo de este día: se aprueba ahí mismo. */}
-      {puedeAprobarDescuentos && (
+      {/* Y para pagos, los pagos anotados a mano y los descuentos de este
+          día que todavía no revisa (2026-11-13, `plata.ts`). */}
+      {(puedeAprobarDescuentos || puede(rol as Rol, 'pagar')) && (
         <div className="mt-6">
-          <BandejaAprobaciones pendientes={pendientesDeAprobar(porAprobarHoy)} onCambio={() => void cargar()}
+          <BandejaAprobaciones onCambio={() => void cargar()}
+            pendientes={juntarPendientes(puedeAprobarDescuentos ? pendientesDeAprobar(porAprobarHoy) : [],
+              puede(rol as Rol, 'pagar') ? pendientesDePago(delDia, deCotizacionIds) : [],
+              puede(rol as Rol, 'pagar') ? pendientesDeDescuentoVisto(delDia) : [])}
             verReserva={(p) => { setFiltro('todas'); setSoloMias(false);
-              const r = p.tipo === 'descuento' && porAprobarHoy.find((x) => x.fila === p.fila); if (r) setReservaAbierta(r.id); }} />
+              const r = 'fila' in p && delDia.find((x) => x.fila === p.fila); if (r) setReservaAbierta(r.id); }} />
         </div>
       )}
 

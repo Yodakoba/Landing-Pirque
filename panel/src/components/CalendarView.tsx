@@ -29,7 +29,8 @@ import { enPalabras, mesDe, mesEnPalabras, semanaDe, rangoEnPalabras, hoy } from
 import { copiarConAviso } from './AvisoFlotante';
 import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
-import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes, type PendienteExclusivo } from '@/lib/aprobaciones';
+import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes, pendientesDePago,
+  pendientesDeDescuentoVisto, type PendienteExclusivo, type PendienteCuenta } from '@/lib/aprobaciones';
 import AvisosRecepcion from './AvisosRecepcion';
 import { MarcaAhora } from './FechaDia';
 import BandejaAprobaciones from './BandejaAprobaciones';
@@ -156,6 +157,10 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
   const [firma, setFirma] = useState('');
   /** Los pedidos de liberar un día para un evento exclusivo (`exclusividad`). */
   const [exclusivos, setExclusivos] = useState<PendienteExclusivo[]>([]);
+  /** Las cuentas y tarifas que pagos tiene que confirmar: vienen solo para `pagar`. */
+  const [cuentas, setCuentas] = useState<PendienteCuenta[]>([]);
+  /** Qué reservas salieron de una cotización: su pago se revisa por sus cobros. */
+  const [deCotizacion, setDeCotizacion] = useState<Record<string, string>>({});
   /**
    * **Los días que cambiaron de gente en la última actualización**, con
    * cuánto y desde qué hora (2026-11-12). Se marcan en dorado un minuto:
@@ -191,6 +196,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         if (d.firma) setFirma(d.firma);
         // Los pedidos de liberar un día: vienen solo para quien decide.
         setExclusivos(d.exclusivos ?? []);
+        setCuentas(d.cuentas ?? []);
       })
       .catch((e) => setError(String(e)));
     // Solo para los nombres de menú del formulario manual; si falla, el
@@ -205,6 +211,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
       .then((d) => {
         if (d.reservas) setReservas(d.reservas);
         if (d.menus) setMenus(d.menus);
+        if (d.deCotizacion) setDeCotizacion(d.deCotizacion);
       })
       .catch(() => {});
     // **Las dos de abajo se piden solo si la cuenta puede leerlas.** No es
@@ -265,7 +272,12 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
   const pendientes = useMemo(() => {
     // **Los pedidos de evento exclusivo** (2026-11-12) los arma el servidor:
     // solo vienen para quien tiene `exclusividad`.
-    const descuentos = juntarPendientes(puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [], exclusivos);
+    // **La plata la confirma pagos** (2026-11-13, `plata.ts`): los pagos
+    // anotados a mano, los descuentos ya aplicados y las cuentas cambiadas
+    // le llegan solo a quien tiene `pagar`, en esta misma bandeja.
+    const dePagos = puede(rol as Rol, 'pagar')
+      ? juntarPendientes(pendientesDePago(reservas, deCotizacion), pendientesDeDescuentoVisto(reservas), cuentas) : [];
+    const descuentos = juntarPendientes(puede(rol as Rol, 'aprobar') ? pendientesDeAprobar(reservas) : [], exclusivos, dePagos);
     if (!conCupo) return descuentos;
     // **Subir el cupo es del gerente o más arriba** (2026-11-12): los
     // pedidos del encargado y los días sobre su cupo llegan acá.
@@ -273,7 +285,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     const pedidos = pendientesDeCupo(fechasHoja, tomadas);
     const conPedido = new Set(pedidos.map((p) => p.fecha));
     return juntarPendientes(descuentos, pedidos, pendientesDeSobrecupo(dias ?? [], cfg.capacidadMaxima, conPedido));
-  }, [reservas, rol, conCupo, fechasHoja, dias, cfg.capacidadMaxima, exclusivos]);
+  }, [reservas, rol, conCupo, fechasHoja, dias, cfg.capacidadMaxima, exclusivos, cuentas, deCotizacion]);
 
   /** Los avisos de la recepción sin resolver, de hoy y de antes (2026-11-13). */
   const conAvisos = puede(rol as Rol, 'asistencia');

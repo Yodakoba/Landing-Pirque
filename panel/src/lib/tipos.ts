@@ -53,6 +53,10 @@ export interface Reserva {
   aprobacion?: string;
   /** Si su día se liberó para un evento exclusivo: ver `COL_RESERVAS.liberacion`. */
   liberacion?: string;
+  /** Quién marcó el pago, quién de pagos lo revisó y quién vio el descuento: ver `plata.ts`. */
+  pagoAnotado?: string;
+  pagoRevisado?: string;
+  descuentoRevisado?: string;
   fila: number;          // número de fila en la planilla, para poder editarla
   /**
    * Cuántas filas de la planilla traen este mismo `ID Orden`. Ausente o 1 es
