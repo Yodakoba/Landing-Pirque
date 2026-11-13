@@ -6078,7 +6078,12 @@ propuestas juntas (*"sí, aplica todo junto"*):
 pendientes de cobro de Cotizaciones.)
 
 - **La banda de la sección es una línea** (`BandaSeccion.tsx`): ícono,
-  *SECCIÓN · Título*, el `?` a la derecha y la frase al lado. En celular el
+  *SECCIÓN · Título*, el `?` a la derecha y la frase al lado. **Desde la
+  tarde del 2026-11-13 ya no es una caja**: iba con fondo de color y borde
+  alrededor, y el cliente, después de cerrar el aviso de Cotizaciones, la
+  leyó como un aviso que no se cerraba (*"no desaparece esta franja de
+  aviso"*). Ahora es un título con **una línea del tono debajo**, sin fondo,
+  igual en Reservas, Cotizaciones, Turnos y Extras. En celular el
   título se parte adentro —dos líneas a lo más— y nunca se va debajo del
   ícono. Vale para Reservas, Cotizaciones y Turnos.
 - **Los pendientes de Cotizaciones son una fila de pastillas**
