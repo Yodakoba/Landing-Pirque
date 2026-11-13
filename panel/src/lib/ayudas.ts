@@ -686,7 +686,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Un día cerrado',
     texto: [
       'Ya no se edita: lo cerró alguien que revisó quién vino y cuánto se paga.',
-      'Si algo quedó mal, quien hace los pagos lo corrige con un motivo, o lo compensa con un ajuste en la semana siguiente.'
+      'Si algo quedó mal, el encargado de operaciones o quien hace los pagos lo corrige con un motivo, o lo compensa con un ajuste en la semana siguiente.'
     ]
   },
   propinaDia: {

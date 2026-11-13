@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { puede, ROL, type Rol } from '@/lib/auth';
-import { HOJA_USUARIOS } from '@/lib/usuarios';
+import { HOJA_USUARIOS, cuentaDeSesion } from '@/lib/usuarios';
 import { HOJA_PRESUPUESTOS, HOJA_LINEAS, ESTADO_PRESUPUESTO, estadoNormal, lineasDe, cuentasDe,
          folioDe } from '@/lib/presupuestos';
 import { HOJA_COBROS } from '@/lib/cobros';
@@ -53,7 +53,10 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
     const socios = esVendedor ? [] : fichas.filter((f) => f.tipo === 'socio')
       .map((f) => ({ usuario: f.usuario, nombre: f.nombre || f.usuario, activo: f.activo }))
       .sort((a, b) => Number(b.activo) - Number(a.activo) || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
-    const pedido = esVendedor ? quien.usuario : String(q.get('usuario') ?? '') || lista[0]?.usuario || socios[0]?.usuario || '';
+    // La sesión trae el NOMBRE de la persona; la lista va por usuario.
+    const propia = esVendedor ? cuentaDeSesion(usuarios, quien.usuario) : undefined;
+    const pedido = esVendedor ? propia?.usuario ?? quien.usuario
+      : String(q.get('usuario') ?? '') || lista[0]?.usuario || socios[0]?.usuario || '';
     const cuenta = [...lista, ...socios].find((v) => normalizar(v.usuario) === normalizar(pedido))
       ?? (esVendedor ? { usuario: quien.usuario, nombre: quien.usuario, activo: true } : undefined);
     const periodo = String(q.get('p') ?? '') || hoy().slice(0, 7);
@@ -67,7 +70,7 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
 
     const ficha = fichaDe(fichas, cuenta.usuario, cuenta.nombre);
     const conNombre = presupuestos.map((p) => conCliente(p, clientes));
-    const ventas = ventasDe(cuenta.usuario, conNombre, lineas, cobros, ficha, menus)
+    const ventas = ventasDe(cuenta.usuario, conNombre, lineas, cobros, ficha, menus, cuenta.nombre)
       .map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }));
     const resumen = resumenDelPeriodo(ficha, ventas, desde, hasta);
     // Lo que se le pagó: los pagos con concepto Comisión, a su nombre.
@@ -75,7 +78,7 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
     const pagado = suyos.reduce((n, p) => n + p.monto, 0);
 
     // **En curso**: lo mandado y sin ganar, una vez por cotización (la alternativa más cara).
-    const suya = esVentaDe(cuenta.usuario, ficha.tipo);
+    const suya = esVentaDe(cuenta.usuario, ficha.tipo, cuenta.nombre);
     const enCurso = new Map<string, { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number; detalle: string }>();
     for (const p of conNombre) {
       if (!suya(p) || p.idReserva) continue;

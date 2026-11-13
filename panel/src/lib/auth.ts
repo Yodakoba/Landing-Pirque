@@ -407,7 +407,7 @@ export const PERMISOS = {
    *
    * Es un permiso propio y no `equipo` para que el día que cambie de
    * manos sea tocar esta línea. Lo que viene después de cerrar —corregir
-   * con motivo— sigue siendo solo de quien paga: ver `corregir`.
+   * con motivo— es de alguien de arriba: ver `corregir`.
    */
   cerrar: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**
@@ -415,10 +415,12 @@ export const PERMISOS = {
    * actividades extras de ese día (2026-11-03, lo decidió el cliente).
    *
    * El encargado cierra el día (ver `cerrar`); corregirlo después **no**:
-   * desde ahí cualquier problema pasa por quien paga. Un día cerrado es lo que se paga, y cambiarlo cuando ya
-   * se revisó es justamente lo que tiene que pasar por alguien de arriba.
-   * Si el encargado se equivocó, le pide la corrección al administrador o a
-   * quien paga. Cada corrección lleva motivo: ver `corregirDiaCerrado()`.
+   * desde ahí cualquier problema pasa por alguien de arriba —el encargado de
+   * operaciones, quien paga, la gerencia o el administrador—. Un día cerrado
+   * es lo que se paga, y cambiarlo cuando ya se revisó es justamente lo que
+   * tiene que pasar por ellos. Si el encargado se equivocó, le pide la
+   * corrección al de operaciones o a quien paga. Cada corrección lleva
+   * motivo: ver `corregirDiaCerrado()`.
    */
   corregir: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /** Precios, menús y configuración del negocio. */

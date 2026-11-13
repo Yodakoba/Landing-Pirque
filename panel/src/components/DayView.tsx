@@ -925,8 +925,8 @@ export default function DayView(
             ? <>Puedes editar, borrar o anotar una reserva escribiendo el motivo;
                 <em> Vino / No vino</em> se corrige en{' '}
                 <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>
-            : <>Si hay que cambiar algo, pídeselo al administrador o a quien hace
-                los pagos.</>}
+            : <>Si hay que cambiar algo, pídeselo al encargado de operaciones o a
+                quien hace los pagos.</>}
         </p>
       )}
 

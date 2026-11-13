@@ -68,7 +68,8 @@ export default function ConfirmarCierre({ fecha, puntos, cerrando, onCerrar, onV
 
       <p className="mt-4 rounded-xl border-2 border-rojo/40 bg-rojo/5 px-3 py-2.5 text-[15px]">
         <strong>Después de cerrar ya no se puede cambiar nada.</strong> Si algo
-        quedó mal, solo quien hace los pagos lo puede corregir. Queda anotado
+        quedó mal, solo el encargado de operaciones, quien hace los pagos o la
+        gerencia lo puede corregir. Queda anotado
         que lo cerraste tú, con la hora.
       </p>
 

@@ -59,9 +59,29 @@ revisan antes de cada cambio en esta carpeta.
   | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
   | Guardar | `BotonGuardar` / `AvisoGuardado` |
   | Elegir de una lista que crece | `BuscarEnLista` |
+- **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
+  en la raíz). Un cambio que altera algo que una ayuda describe la
+  actualiza **en el mismo PR**. Cuenta como ayuda:
+
+  | Ayuda | Dónde vive |
+  |---|---|
+  | El `?` de cada pantalla | `AYUDAS` en `lib/ayudas.ts` |
+  | El `?` chico al lado de un número o un campo | `AYUDAS_CORTAS` en `lib/ayudas.ts` |
+  | Los avisos fijos que explican una pantalla | `AvisoFijo` en cada pantalla |
+  | Las misiones: texto, **captura y puntos** | `lib/misiones.ts`, `public/ayuda/*.jpg` y `puntos.json` |
+  | Lo que puede hacer cada rol | `lib/poderes.ts`, `lib/roles.ts` |
+  | La consulta rápida (cada pantalla con su `?`) | `lib/ayudaRol.ts` |
+
+  **Las capturas se rehacen con `pruebas/capturas-ayuda.mjs`** contra la
+  planilla de ejemplo, nunca contra datos de verdad. Si una escena del
+  script ya no encuentra lo que busca, es que la ayuda quedó atrás: se
+  arregla el localizador y se vuelve a sacar la foto. **Única excepción**:
+  un arreglo urgente de algo roto en producción puede salir antes; la ayuda
+  va en el PR siguiente, el mismo día, y el PR del arreglo lo dice.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
-  lecturas y letra chica) y una pasada con Playwright a 393 y 1280px con
-  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`.
+  lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
+  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
+  pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
 
 ## Las pruebas que cuidan las reglas (2026-11-12)
 
@@ -1773,6 +1793,17 @@ boletas y planillas de vendedores— vino en la segunda entrega, más abajo.
 - **Las ventas son las cotizaciones ganadas que creó esa cuenta**
   (`Creado por`). Desde el 2026-11-12 el vendedor no anota reservas directo,
   así que todo lo suyo pasa por ahí.
+- **`Creado por` guarda el nombre de la persona, no su usuario** (arreglado
+  el 2026-11-13). Es lo que trae la sesión —`/api/sesion` firma el nombre,
+  por la bitácora— mientras la lista de vendedores y sus fichas van por
+  usuario. Con una cuenta *Daniela Rojas* / `daniela`, **quien paga la veía
+  sin ventas** en `/vendedores` y en el informe, **ella veía su resumen sin
+  su trato** (la ficha se buscaba por el nombre) y **su comisión no se
+  congelaba**. Calzaba solo con nombre y usuario iguales, como en los datos
+  de prueba. Ahora `esVentaDe()` calza por los dos, `/api/vendedores` busca
+  la cuenta propia con `cuentaDeSesion()` y `congelarComision()` busca al
+  vendedor por nombre y después por usuario. Lo encontró la planilla de
+  ejemplo de las capturas, leyendo el código: no se vio en vivo.
 
 **La pantalla** (`/vendedores`; para el vendedor la pestaña se llama **Mi
 resumen**):
@@ -6428,12 +6459,11 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
   capturas cargan y *Pruébalo* abre pantallas que ese rol sí ve. De paso, la
   tira de bienvenida decía *Cinco misiones* y son cuatro desde que *Tu voz*
   salió de la lista.
-- **Las capturas de las misiones son del 2026-11-12** y quedaron atrás de
-  lo que cambió el 13 (el título de sección sin caja, las ✕ de los avisos,
-  *🔎 Buscar*, las pastillas, *Mías*, el encargado de turno sin
-  Cotizaciones ni Clientes). Volver a sacarlas pide armar otra vez la
-  planilla de ejemplo, que no está en el repo; `capturas-ayuda.mjs` ya busca
-  *🔎 Buscar* en vez de *Todas*.
+- ~~**Las capturas de las misiones son del 2026-11-12**~~ — **rehechas el
+  2026-11-13** con el panel de ese día (el título de sección sin caja, las ✕
+  de los avisos, *🔎 Buscar*, las pastillas, *Mías*, el encargado de turno
+  sin Cotizaciones ni Clientes), y revisadas una por una con sus puntos
+  dibujados. Ver *Rehacer las capturas es un comando* más abajo.
 - **Tu voz primero, y los poderes en vez de las listas** (2026-11-13, lo
   pidió el cliente: el formulario *"tiene que estar muy presente… en primer
   paso"*, y las listas *puede / no puede* eran *"muy Excel"*).
@@ -6476,10 +6506,34 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
   `public/ayuda/<escena>.jpg` y **mide dónde quedó cada punto** —el borde
   izquierdo del botón o texto real, para no taparlo— en
   `public/ayuda/puntos.json`. Si cambia una pantalla, se corre de nuevo
-  (`… capturas-ayuda.mjs <escena>`) y los puntos caen solos. **Siempre contra
-  un panel con datos de ejemplo**, nunca con clientes de verdad: las fotos
-  quedan en el repo. Se sacaron con una copia local cuyo `sheets()` leía una
-  planilla falsa en un JSON; esa copia no está en el repo.
+  y los puntos caen solos. **Siempre contra un panel con datos de ejemplo**,
+  nunca con clientes de verdad: las fotos quedan en el repo.
+- **Rehacer las capturas es un comando** (2026-11-13, para que la regla *la
+  ayuda siempre al día* no dependa de armar nada a mano):
+
+  ```
+  panel/pruebas/ejemplo/capturas.sh            # las 28
+  panel/pruebas/ejemplo/capturas.sh enc-dia    # solo esas escenas
+  python3 panel/pruebas/ejemplo/marcar.py /tmp/revision   # los puntos dibujados, para mirarlas
+  ```
+
+  Arma una **copia** del panel en una carpeta temporal —el del repo no se
+  toca— cuyo `sheets()` lee una planilla en un JSON (`sheets-falso.ts`), la
+  llena con datos inventados (`generar-planilla.mjs`: Familia Soto, Andrés
+  Pino de Empresa Andes SpA, correos `@ejemplo.cl`), firma una sesión por
+  rol (`sesiones.mjs`), la levanta en el 3125 y saca las fotos.
+  - **El reloj va fijo** en el viernes 13 de noviembre de 2026 a las 14:25
+    de Chile, en el servidor (`reloj.cjs`) y en el navegador
+    (`AYUDA_RELOJ`): así *hoy*, *esta semana* y los días por cerrar salen
+    igual en cada corrida. Se cambia con `AYUDA_RELOJ=…`.
+  - **Sin StrictMode en la copia**: en desarrollo el doble montaje abre una
+    ventana dos veces, dispara un autoguardado y mueve los datos entre
+    escenas. En producción no pasa.
+  - **Si cambió `sheets.ts`** y la copia no encuentra dónde enchufar la
+    planilla falsa, el script se detiene y lo dice.
+  - Sin red hacia `api.met.no`, las fotos salen sin la pastilla del clima.
+  - **Los vendedores del ejemplo** tienen nombre y usuario iguales salvo
+    mayúsculas (*Jorge* / `jorge`), y los demás con nombre completo.
 - **Las pruebas fijan** que cada rol tenga cuatro misiones con captura y Tu
   voz, que cada escena tenga su foto, **tantos puntos medidos como textos**,
   y que *Pruébalo* nunca mande a una pantalla que ese rol no abre.
