@@ -61,6 +61,13 @@
   --cafe: 168 120 82;
   --cafe-fuerte: 196 145 102;
   --cafe-texto: 222 184 148;
+  /* Añil: el tono de la sección **Extras** (2026-11-13), como el dorado de
+     Reservas, el rosado de Cotizaciones y el celeste de Turnos. Uno nuevo
+     porque los que quedaban ya significan algo: café es preparación, morado
+     exclusivo, verde pagado. */
+  --anil: 99 102 241;
+  --anil-fuerte: 129 140 248;
+  --anil-texto: 165 180 252;
 
   /* Cuánto se apaga un marcador de posición. Ver abajo. */
   --fantasma: 0.28;
@@ -102,6 +109,9 @@
   --cafe: 133 86 52;
   --cafe-fuerte: 112 70 40;
   --cafe-texto: 99 60 31;
+  --anil: 79 70 229;
+  --anil-fuerte: 67 56 202;
+  --anil-texto: 55 48 163;
 
   /* Sobre papel, el mismo 0,28 se perdía: un gris claro sobre blanco casi
      no se ve, y un marcador que no se ve no enseña el formato. */

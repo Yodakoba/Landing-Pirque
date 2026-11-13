@@ -27,7 +27,9 @@ import Ayuda from './Ayuda';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
-import PuntoDia from './PuntoDia';
+import { partesDelDia } from './PuntoDia';
+import FechaDia from './FechaDia';
+import BandaSeccion, { TONO } from './BandaSeccion';
 import Clima, { usePronostico } from './Clima';
 import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
          type Colaborador, type Extra } from '@/lib/extras';
@@ -296,10 +298,15 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Actividades extras<Ayuda tema="extras" />
-      </h1>
-      <p className="mb-5 max-w-2xl text-sm text-hueso/60">
+      {/* **La banda añil de Extras** (2026-11-13, lo pidió el cliente: el
+          calendario de Extras *"al mismo formato que los otros"*). Igual que
+          Reservas (dorado), Cotizaciones (rosado) y Turnos (celeste): la banda
+          de una línea, la caja del mes con su tono, la fecha con `FechaDia`,
+          el punto y la palabra del día, y la celda pintada por su estado.
+          Ver `BandaSeccion.tsx`. */}
+      <BandaSeccion tono="anil" icono="🎠" seccion="Extras" titulo="Actividades extras"
+        ayuda={<Ayuda tema="extras" />} />
+      <p className="mb-5 max-w-2xl text-[15px] text-hueso/70">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
         castillo inflable. <strong>Apreta un día</strong> para agregar lo que
         venga, marcar si llegó y anotar cuánto se le paga. Va aparte del
@@ -309,7 +316,9 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
         que es lo que descarga quien paga.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      {/* La caja del mes, con el tono de Extras, como la de Turnos. */}
+      <div className={`rounded-lg border p-3 ${TONO.anil.caja}`}>
+      <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-hueso/10 pb-3">
         <button onClick={() => setMes(sumarMeses(mes, -1))}
           className="boton">
           ‹ Mes anterior
@@ -326,7 +335,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           {conActividades.length} {conActividades.length === 1 ? 'día' : 'días'} con
           actividades
           {totalDelMes > 0 && (
-            <> · <strong className="tabular-nums text-oro">{enPesos(totalDelMes)}</strong>
+            <> · <strong className="tabular-nums text-anil-texto">{enPesos(totalDelMes)}</strong>
               {' '}en el mes</>
           )}
         </span>
@@ -336,9 +345,10 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           documento igual queda 95px más ancho que la pantalla, y en un
           teléfono **la página entera se corre de lado** —los títulos y los
           botones incluidos—, que es justo lo que este desplazamiento
-          interno viene a evitar. Comprobado a 393px. */}
+          interno viene a evitar. Comprobado a 393px. El ancho mínimo es el
+          de Turnos, para que la palabra del día no se corte. */}
       <div className="relative overflow-x-auto pb-1">
-       <div className="min-w-[640px]">
+       <div className="min-w-[840px]">
         <div className="grid grid-cols-7 gap-1 text-center text-[13px] font-semibold
                         uppercase tracking-wide text-hueso/60">
           {DIAS.map((d) => <div key={d} className="pb-1">{d}</div>)}
@@ -355,6 +365,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
             const costo = costoExtrasDelDia(extras, f);
             const sinConfirmar = delDia.filter((e) => !e.estado).length;
             const esHoy = f === hoy();
+            const estado = partesDelDia(oc);
             // **El contenido va pegado arriba, y eso hay que pedirlo.** Las celdas
             // de una fila se estiran todas a la más alta, y el contenido de un
             // `<button>` se centra en vertical por defecto —es comportamiento propio
@@ -362,48 +373,61 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
             // a media altura, distinto en cada celda según cuántas líneas trajera.
             // Con `flex-col` y `justify-start` queda siempre en la primera línea y
             // lo demás se va acumulando debajo.
+            //
+            // **La celda la pinta el estado del día**, como en Turnos: antes
+            // un día con actividades se pintaba dorado y perdía el color que
+            // dice si abre, que es justo lo que esta pantalla quiere mostrar.
             return (
               <button key={f} onClick={() => setEditando(f)}
                 title={`${enPalabras(f)} · actividades extras`}
-                className={`flex min-h-[92px] flex-col items-stretch justify-start
-                            overflow-hidden rounded border p-1.5
-                            text-left align-top text-[13px] leading-tight transition
+                className={`flex min-h-[104px] flex-col items-stretch justify-start
+                            overflow-hidden rounded border p-2
+                            text-left align-top text-[13px] leading-snug transition
                             hover:border-oro
-                            ${delDia.length > 0 ? 'border-oro/40 bg-oro/5'
-                               : oc ? COLOR_TARJETA(oc)
-                                    : 'border-hueso/10 bg-panel'}
+                            ${oc ? COLOR_TARJETA(oc) : 'border-hueso/10 bg-panel'}
                             ${esHoy ? 'ring-1 ring-oro' : ''}`}>
-                <span className="flex items-start justify-between">
-                  <span className="flex flex-col items-start gap-1">
-                    <span className={oc || delDia.length ? 'font-semibold' : 'text-hueso/45'}>
-                      {Number(f.slice(8, 10))}
-                    </span>
-                    <Clima c={pronostico.get(f)} />
-                  </span>
-                  <PuntoDia d={oc} />
+                {/* Las mismas tres líneas fijas de Turnos: la fecha y el punto,
+                    el pronóstico, y la palabra del estado con todo el ancho. */}
+                <span className="flex items-start justify-between gap-1">
+                  <FechaDia fecha={f} tamano="celda" apagada={!(oc || delDia.length)} />
+                  {estado && <span aria-hidden className="text-[14px] leading-none">{estado.punto}</span>}
                 </span>
-
-                {oc && !oc.bloqueada && (
-                  <span className="mt-1 block text-hueso/70">
-                    {oc.tomadas > 0
-                      ? <>{oc.tomadas} <span className="text-hueso/45">personas</span></>
-                      : <span className="text-hueso/35">sin reservas</span>}
+                {pronostico.get(f) && <span className="mt-1 block"><Clima c={pronostico.get(f)} /></span>}
+                {estado && (
+                  <span className={`mt-1 block whitespace-nowrap text-[13px] font-semibold uppercase tracking-wide ${estado.clase}`}>
+                    {estado.texto}
                   </span>
                 )}
 
+                {oc && !oc.bloqueada && (
+                  <span className="mt-1.5 block text-hueso/80">
+                    {oc.tomadas > 0
+                      ? <><b className="font-bold text-hueso">{oc.tomadas}</b> <span className="text-hueso/65">personas</span></>
+                      : <span className="text-hueso/55">sin reservas</span>}
+                  </span>
+                )}
+
+                {/* **Las actividades, en añil**: el tono de la sección, como
+                    *en el equipo* va en dorado en Turnos. */}
                 {delDia.length > 0 && (
-                  <span className="mt-1 block text-oro">
-                    {delDia.length} {delDia.length === 1 ? 'actividad' : 'actividades'}
+                  <span className="mt-1 block text-anil-texto">
+                    🎠 <b className="font-bold">{delDia.length}</b> {delDia.length === 1 ? 'actividad' : 'actividades'}
                     {costo > 0 && (
-                      <span className="block tabular-nums text-oro/80">
-                        {enPesos(costo)}
-                      </span>
+                      <span className="block tabular-nums">{enPesos(costo)}</span>
                     )}
                   </span>
                 )}
-                {sinConfirmar > 0 && (
-                  <span className="mt-0.5 block text-ambar-texto">
-                    {sinConfirmar} sin confirmar
+                {/* **Lo que falta marcar, solo en un día que ya pasó**: *sin
+                    confirmar* es que nadie dijo si vino, y en un día que no
+                    llega es lo normal. Va abajo, siempre en el mismo lugar, con
+                    borde y no relleno: como *! Sin cerrar* en Turnos. */}
+                {sinConfirmar > 0 && f < hoy() && (
+                  <span className="mt-auto block self-start pt-1.5">
+                    <span className="block max-w-full whitespace-nowrap rounded-full border-[1.5px]
+                                     border-ambar-fuerte bg-ambar/10 px-2 py-0.5 text-[13px]
+                                     font-bold text-ambar-texto">
+                      ! {sinConfirmar} sin confirmar
+                    </span>
                   </span>
                 )}
               </button>
@@ -411,6 +435,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           })}
         </div>
        </div>
+      </div>
       </div>
 
       <p className="mt-4 max-w-2xl text-[13px] text-hueso/65">

@@ -44,7 +44,9 @@ export default {
         // justamente para que no se confunda con nada que ya esté tomado.
         rosa: { DEFAULT: c('--rosa'), fuerte: c('--rosa-fuerte'), texto: c('--rosa-texto') },
         morado: { DEFAULT: c('--morado'), fuerte: c('--morado-fuerte'), texto: c('--morado-texto') },
-        cafe: { DEFAULT: c('--cafe'), fuerte: c('--cafe-fuerte'), texto: c('--cafe-texto') }
+        cafe: { DEFAULT: c('--cafe'), fuerte: c('--cafe-fuerte'), texto: c('--cafe-texto') },
+        // El tono de la sección Extras (2026-11-13). Ver `BandaSeccion.tsx`.
+        anil: { DEFAULT: c('--anil'), fuerte: c('--anil-fuerte'), texto: c('--anil-texto') }
       }
     }
   },

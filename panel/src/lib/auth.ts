@@ -329,7 +329,13 @@ export const PERMISOS = {
   // **El vendedor cotiza desde el 2026-11-10** (Fase 2 de las cotizaciones):
   // es su trabajo. **Ve todas, edita solo las suyas** —lo decidió el
   // cliente—, igual que con las reservas: ver `puedeTocarPresupuesto()`.
-  presupuestos: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
+  //
+  // **El encargado de turno dejó de tenerlo el 2026-11-13** (lo decidió el
+  // cliente: *"encargado de turno no ve cotizaciones"*). Ya no cotiza desde
+  // que vende el vendedor; en los calendarios sigue viendo cuánta gente
+  // podría venir (*18 posibles*, sin nombres ni montos), que le sirve para
+  // armar el equipo y sale de la ocupación, no de este permiso.
+  presupuestos: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
   /**
    * **Las fichas de clientes** (2026-11-10): verlas, crearlas y editarlas.
    *
@@ -338,7 +344,11 @@ export const PERMISOS = {
    * suyo de oficio: nombres y contactos de quienes cotizan, no plata ni
    * equipo. Borrar una ficha con cotizaciones lo impide la ruta.
    */
-  clientes: [ROL.admin, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
+  //
+  // **Tampoco el encargado de turno desde el 2026-11-13**: cada ficha muestra
+  // el historial de cotizaciones con sus totales, y por ahí las seguiría
+  // viendo.
+  clientes: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
   /** Las cuentas del panel y sus contraseñas. */
   usuarios: [ROL.admin],
   /** Leer la bitácora. */
