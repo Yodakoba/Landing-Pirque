@@ -50,7 +50,9 @@ PY
 # Sin StrictMode: el doble montaje de desarrollo dispara autoguardados al
 # abrir una ventana y mueve los datos (en producción no pasa).
 echo "export default { reactStrictMode: false };" > "$W/panel/next.config.mjs"
-printf 'GOOGLE_SHEET_ID=ejemplo\nPANEL_USUARIO=jefe\nPANEL_CLAVE=clave-de-prueba-1234\n' > "$W/panel/.env.local"
+# COMENTARIOS_SHEET_ID enciende el botón 💬 Coméntame de la cabecera, que
+# sale en las fotos; ninguna escena manda un comentario.
+printf 'GOOGLE_SHEET_ID=ejemplo\nCOMENTARIOS_SHEET_ID=ejemplo\nPANEL_USUARIO=jefe\nPANEL_CLAVE=clave-de-prueba-1234\n' > "$W/panel/.env.local"
 
 # 2. La planilla y una sesión por rol.
 cd "$PANEL"
