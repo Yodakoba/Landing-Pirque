@@ -54,6 +54,7 @@ revisan antes de cada cambio en esta carpeta.
   | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` (*HOY* relleno) y `MARCO_HOY` alrededor de la tarjeta o celda de hoy |
   | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
   | Lo cotizado (solo lo mandado) y la gente posible, ganadas, esperando, lo tuyo sin mandar | `Pastilla` / `PastillaCotizado` |
+  | En las celdas de Turnos y Extras: el equipo del día (👥, dorado) y las actividades y su costo (🎠, añil) | `Pastilla` tipo `equipo` / `extras` |
   | Cómo va el pago de una reserva | `PastillaPago` |
   | Lo de la cuenta y lo de todos | `BotonMias` / `BotonTodos` |
   | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
@@ -6341,6 +6342,15 @@ Cotizaciones quiere decir *día abierto*—, y Reservas no marcaba hoy. Ahora:
   caja que las otras. El tono sigue entero en la banda del título.
 - **El color queda para lo que significa algo**: el estado del día en la
   tarjeta y los avisos.
+- **Lo de cada sección, en pastilla** (2026-11-13, lo pidió el cliente: en
+  Extras *"los 40 mil… no deberían ser texto libre, sino también como un
+  botón, como en el otro calendario"*). En las celdas de Extras, **🎠 2** y
+  **$310.000** son dos pastillas añil (`Pastilla tipo="extras"`); en Turnos,
+  **👥 8 en el equipo** es una dorada (`tipo="equipo"`), que en el celular
+  dice solo **👥 8** porque la celda mide 117px. Van en dos pastillas y no
+  una porque juntas se partían en una burbuja en el celular. Mismo borde que
+  lo cotizado: es un dato del día, no algo hecho. El `?` de las dos pantallas
+  lo explica.
 - **Hoy, más marcado** (2026-11-13, segunda vuelta; lo pidió el cliente:
   la pastilla *"está bien… pero ayuda mucho si está bien marcado el día
   hoy"*, sobre todo en Turnos y Extras). La tarjeta o la celda de hoy lleva
