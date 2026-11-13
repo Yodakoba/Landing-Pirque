@@ -240,10 +240,12 @@ export default function ReservasDelDia({
                     </p>
                   )}
                   {r.avisoRecepcion && (
-                    <div className="mt-2 rounded-lg border-2 border-ambar/60 bg-ambar/10 p-2 text-[14px]">
-                      <p className="font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
+                    // Rojo suave, como en la portada y la página del día
+                    // (2026-11-13): ámbar en el panel es *falta cobrar*.
+                    <div className="mt-2 rounded-lg border-2 border-rojo-fuerte/50 bg-rojo/[0.08] p-2 text-[14px]">
+                      <p className="font-semibold text-rojo-texto">📣 Recepción: {r.avisoRecepcion}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <a href={`/dia/${fecha}`} className="tecla boton">Editar en la página del día</a>
+                        <a href={`/dia/${fecha}#reserva-${r.fila}`} className="tecla boton">Ir a la reserva →</a>
                         {modo === 'libre' && (
                           <button type="button" className="boton !border-verde-fuerte text-verde-texto"
                             onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
