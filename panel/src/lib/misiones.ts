@@ -115,11 +115,11 @@ const VENDEDOR: Mision[] = [
   },
   {
     id: 'resumen', emoji: '💰', titulo: 'Mi resumen: lo que ganas', escena: 'ven-resumen',
-    intro: 'Tu comisión cuenta cuando el cliente termina de pagar. Aquí ves cuánto te toca y cuánto viene.',
+    intro: 'Tu comisión cuenta cuando el cliente termina de pagar y el encargado de pagos lo revisa. Aquí ves cuánto te toca y cuánto viene.',
     puntos: [
       'Lo que te toca en el periodo. El ? explica cómo se calcula.',
       'Lo que ya se te pagó y lo que falta.',
-      'Lo que viene: las ganadas que el cliente todavía está pagando y las mandadas que siguen en curso.'
+      'Lo que viene: las ganadas que el cliente todavía está pagando o que falta revisar, y las mandadas que siguen en curso.'
     ],
     probar: { texto: 'Abrir Mi resumen', url: '/vendedores' }
   }

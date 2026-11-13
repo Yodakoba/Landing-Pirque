@@ -53,7 +53,7 @@ import {
 } from './presupuestos.ts';
 import { conCliente } from './cotizar.ts';
 import { HOJA_VENDEDORES, ENCABEZADO_VENDEDORES, leerVendedoresDe, filaVendedor, fichaDe, baseDeVenta,
-         comisionDe, marcaComision, pagadaEl, type FichaVendedor } from './vendedores.ts';
+         comisionDe, marcaComision, confirmadaEl, type FichaVendedor } from './vendedores.ts';
 import { HOJA_COBROS, ENCABEZADO_COBROS, leerCobrosDe, filaCobro, cobrosDe, estadoCobros,
          type Cobro } from './cobros.ts';
 import { liberaCupo, pagoPorCobros } from './pagos.ts';
@@ -792,7 +792,8 @@ export async function congelarComision(idPresupuesto: string): Promise<void> {
     const faltaSocio = !!s && !p.comisionSocio;
     if (!faltaVendedor && !faltaSocio) return;
     const b = baseDeVenta(p, lineas, menus);
-    if (!pagadaEl(b.total, cobrosDe(cobros, p.id))) return;
+    // Se congela recién con lo pagado **y revisado por pagos** (2026-11-13).
+    if (!confirmadaEl(b.total, cobrosDe(cobros, p.id))) return;
     const { fila: _f, ...resto } = p;
     await guardarPresupuesto({
       ...resto,

@@ -351,8 +351,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Por cada vendedor: lo que ganó en el periodo —comisiones de las '
       + 'cotizaciones que ganó y su sueldo fijo—, lo que ya se le pagó y lo que '
       + 'falta.',
-      'La comisión cuenta cuando el cliente terminó de pagar el evento. Una '
-      + 'cotización cancelada no deja comisión.'
+      'La comisión cuenta cuando el cliente terminó de pagar el evento y el '
+      + 'encargado de pagos revisó esos cobros. Una cotización cancelada no deja '
+      + 'comisión.'
     ],
     pasos: [
       'Elige mes o semana y muévete con las flechas.',
@@ -553,7 +554,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   vendLeToca: {
     titulo: 'Le toca',
     texto: [
-      'Las comisiones de las ventas que el cliente terminó de pagar dentro de este periodo, más el sueldo fijo si el último día de un mes cae adentro.',
+      'Las comisiones de las ventas que el cliente terminó de pagar —y pagos revisó— dentro de este periodo, más el sueldo fijo si el último día de un mes cae adentro.',
       'Una venta cuenta en el periodo en que el cliente completó el pago, no en el del evento. Una cancelada no deja comisión.'
     ]
   },
@@ -570,7 +571,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     texto: [
       'El % depende de las personas del evento: rige la etapa más alta que alcance. Con 2% desde 22, 3% desde 55 y 4% desde 77, un evento de 60 personas paga el 3% y uno de 15 no paga comisión.',
       'Bajo el "desde" de la etapa 1 no hay comisión; de partida es 22, y 1 es desde la primera persona. El % va sobre el neto de la venta (sin IVA), salvo que se elija el total.',
-      'Se congela cuando el cliente termina de pagar: cambiar el trato vale para lo que se pague después.'
+      'Se congela cuando el cliente termina de pagar y pagos lo revisa: cambiar el trato vale para lo que se pague después.'
     ]
   },
   vendConSocio: {
@@ -590,7 +591,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   },
   vendMontoEvento: {
     titulo: 'Monto por evento',
-    texto: ['Un monto fijo por cada venta ganada, además del %. Cuenta cuando el cliente termina de pagar.']
+    texto: ['Un monto fijo por cada venta ganada, además del %. Cuenta cuando el cliente termina de pagar y pagos lo revisa.']
   },
   vendSueldoFijo: {
     titulo: 'Sueldo fijo',

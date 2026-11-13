@@ -605,7 +605,7 @@ export default function DayView(
               </p>
             )}
             <BloqueLiberar fecha={fecha} reservas={delDia} cotizacion={aprobada} deCotizacion={deCotizacionIds}
-              puedeAvisar={conDias} puedeDecidir={puede(rol as Rol, 'exclusividad')}
+              puedeAvisar={conDias} puedeDecidir={puede(rol as Rol, 'exclusividad')} puedePagar={puede(rol as Rol, 'pagar')}
               onCambio={() => void actualizarTodo()} />
           </>
         );

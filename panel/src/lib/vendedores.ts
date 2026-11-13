@@ -280,6 +280,12 @@ export interface Venta {
   personas: number;
   /** Si ya quedó guardada al pagarse todo, y no se recalcula. */
   congelada: boolean;
+  /**
+   * **El cliente pagó todo pero pagos no lo revisó** (2026-11-13, regla del
+   * cliente: la plata la confirma el encargado de pagos). La comisión
+   * todavía no suma: viene, *esperando revisión de pagos*.
+   */
+  porRevisar?: boolean;
 }
 
 /** Lo que hace falta de una venta para calcular su comisión. */
@@ -363,6 +369,21 @@ export function pagadaEl(total: number, cobros: Pick<Cobro, 'fecha' | 'monto' | 
 }
 
 /**
+ * **Cuándo quedó pagada y confirmada** (2026-11-13): el día en que los cobros
+ * **revisados por pagos** llegaron al total, o el de la última revisión si
+ * fue después. Así una comisión cuenta en el periodo en que se confirmó, no
+ * en uno que quizás ya se pagó. Vacío si falta pagar o falta revisar.
+ */
+export function confirmadaEl(total: number,
+  cobros: Pick<Cobro, 'fecha' | 'monto' | 'cuando' | 'revisadoPor' | 'revisado'>[]): Fecha | '' {
+  const revisados = cobros.filter((c) => !!String(c.revisadoPor ?? '').trim());
+  const dia = pagadaEl(total, revisados);
+  if (!dia) return '';
+  const ultima = revisados.map((c) => String(c.revisado ?? '').slice(0, 10)).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort().pop() ?? '';
+  return ultima > dia ? ultima : dia;
+}
+
+/**
  * Las cotizaciones **ganadas** de un vendedor, con lo pagado y su comisión.
  * Las canceladas vienen marcadas y con comisión 0: una venta que se cayó no
  * deja comisión aunque el cliente hubiera pagado.
@@ -397,6 +418,10 @@ export function ventasDe(usuario: string, presupuestos: Presupuesto[], lineas: L
       const b = baseDeVenta(p, lineas, menus);
       const suyos = cobros.filter((c) => c.presupuesto === p.id);
       const cancelada = estadoNormal(p.estado) === ESTADO_PRESUPUESTO.cancelada;
+      // **Solo cuenta lo que pagos revisó** (2026-11-13): la comisión se gana
+      // cuando el cliente pagó todo y el encargado de pagos lo confirmó.
+      const pagadaRevisada = cancelada ? '' : confirmadaEl(b.total, suyos);
+      const pagadaAnotada = cancelada ? '' : pagadaEl(b.total, suyos);
       const pagado = suyos.reduce((n, c) => n + c.monto, 0);
       // **La que ya quedó guardada al pagarse no se recalcula**: cambiar la
       // ficha vale para lo que se pague desde ese día.
@@ -406,9 +431,9 @@ export function ventasDe(usuario: string, presupuestos: Presupuesto[], lineas: L
       return {
         id: p.id, grupo: p.grupo || p.id, cliente: p.cliente || 'sin nombre', fechaEvento: p.fecha,
         total: b.total, neto: b.neto, pagado, personas: b.personas,
-        pagadaEl: cancelada ? '' : pagadaEl(b.total, suyos),
+        pagadaEl: pagadaRevisada,
         cancelada, comision: cancelada ? 0 : c.monto, detalle: cancelada ? 'cancelada: sin comisión' : c.detalle,
-        congelada: !!guardada
+        congelada: !!guardada, porRevisar: !pagadaRevisada && !!pagadaAnotada
       } as Venta;
     })
     .sort((a, b) => (b.pagadaEl || b.fechaEvento).localeCompare(a.pagadaEl || a.fechaEvento));

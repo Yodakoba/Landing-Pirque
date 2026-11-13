@@ -1984,8 +1984,11 @@ export default function CotizacionDialogo({
                             <span className="text-hueso/70">{c.fecha}{c.medio && ` · ${c.medio}`}
                               {c.registradoPor && ` · ${c.registradoPor}`}</span>
                             {/* **La revisión**, por forma además de color:
-                                verde relleno revisado, ámbar con borde sin revisar. */}
-                            {c.revisadoPor ? (
+                                verde relleno revisado, ámbar con borde sin revisar.
+                                **Solo la ve quien paga** (2026-11-13, lo pidió el
+                                cliente): revisar es suyo; los demás anotan el
+                                cobro y suben el comprobante. */}
+                            {!puedePagar ? null : c.revisadoPor ? (
                               <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2 py-0.5
                                                text-[13px] font-semibold text-verde-texto">
                                 ✓ Revisado por {c.revisadoPor}

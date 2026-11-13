@@ -36,7 +36,7 @@ import {
 
 /** Abre WhatsApp como en la cotización: `window.open` y, si se bloquea, en la misma pestaña. */
 
-export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacion, puedeAvisar, puedeDecidir, onCambio }: {
+export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacion, puedeAvisar, puedeDecidir, puedePagar = false, onCambio }: {
   fecha: string;
   reservas: Reserva[];
   /** La cotización exclusiva aprobada de este día, si la hay. */
@@ -45,6 +45,12 @@ export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacio
   deCotizacion: Record<string, string>;
   puedeAvisar: boolean;
   puedeDecidir: boolean;
+  /**
+   * **Dar una devolución por hecha es de pagos** (2026-11-13, regla del
+   * cliente: la plata la cierra el encargado de pagos). Los demás ven la
+   * lista, sin el botón.
+   */
+  puedePagar?: boolean;
   onCambio: () => void;
 }) {
   const [guardando, setGuardando] = useState('');
@@ -230,7 +236,9 @@ export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacio
                       ? <> · reembólsalo en Shopify, pedido N° {r.id} (Pedidos → el pedido → Reembolsar)</>
                       : <> · {r.notaPago ? `pagó: ${r.notaPago}` : 'por transferencia'}</>}
                   </p>
-                  {puedeDecidir && (preguntando?.fila === r.fila && preguntando.que === 'devuelta' ? (
+                  {!puedePagar ? (
+                    <p className="mt-2 text-[14px] text-hueso/70">La da por hecha el encargado de pagos.</p>
+                  ) : (preguntando?.fila === r.fila && preguntando.que === 'devuelta' ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="text-[14px] font-semibold">¿Ya le devolviste {enPesos(devolver)}?</span>
                       <button type="button" disabled={ocupado(r)} onClick={() => void hacer(r, 'devuelta')}

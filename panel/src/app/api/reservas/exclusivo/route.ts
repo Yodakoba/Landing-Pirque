@@ -40,7 +40,7 @@ type Accion = typeof ACCIONES[number];
  *   porque la de una reserva de Shopify la reescribe la tienda en cada
  *   sincronización. Reserva primero: si lo segundo falla, se ve doble y se
  *   nota, en vez de perder a alguien.
- * - `devuelta` (`exclusividad`): la devolución de una cancelada ya se hizo.
+ * - `devuelta` (`pagar`, desde el 2026-11-13): la devolución de una cancelada ya se hizo.
  *
  * Una reserva que viene de otra cotización no se toca acá: se cancela o se
  * mueve desde su cotización, que tiene sus condiciones y su devolución.
@@ -50,7 +50,9 @@ export const POST = conLecturas([HOJA_RESERVAS, HOJA_PRESUPUESTOS, HOJA_FECHAS, 
     const b = (await req.json().catch(() => ({}))) ?? {};
     const accion = String(b.accion ?? '') as Accion;
     if (!ACCIONES.includes(accion)) return NextResponse.json({ error: 'Acción desconocida.' }, { status: 400 });
-    const no = await exigir(req, accion === 'avisar' ? 'operarDia' : 'exclusividad');
+    // **Dar una devolución por hecha es de pagos** (2026-11-13, regla del
+    // cliente: la plata la cierra el encargado de pagos).
+    const no = await exigir(req, accion === 'avisar' ? 'operarDia' : accion === 'devuelta' ? 'pagar' : 'exclusividad');
     if (no) return no;
 
     const fila = Number(b.fila);
