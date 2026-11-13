@@ -129,7 +129,7 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
     if (p.tipo === 'sobrecupo') return <>{dia}: <b className="text-rojo-texto">{p.exceso} {p.exceso === 1 ? 'persona' : 'personas'} sobre el cupo</b> ({p.tomadas} de {p.cupoActual})</>;
     if (p.tipo === 'pago') return <><b>{p.pide}</b> anotó el pago de <b>{p.nombre}</b>{p.monto ? <> · {pesos(p.monto)}</> : null} · {dia}</>;
     if (p.tipo === 'descuentoVisto') return <><b>{p.pide}</b> aplicó <b className="text-ambar-texto">{p.porcentaje}%</b> de descuento · {p.nombre} · {dia}{p.aprobo && <> · lo aprobó {p.aprobo}</>}</>;
-    if (p.tipo === 'cuenta') return <><b>{p.pide}</b> cambió <b className="text-ambar-texto">{p.que}</b> de <b>{p.nombre}</b> · {p.de === 'trabajador' ? 'equipo' : 'extras'}</>;
+    if (p.tipo === 'cuenta') return <><b>{p.pide}</b> cambió los datos de pago de <b>{p.nombre}</b> ({p.de === 'trabajador' ? 'equipo' : 'extras'}): <b className="text-ambar-texto">{p.que}</b></>;
     return <><b>{p.pide}</b> pide liberar {dia} para un <b className="text-morado-texto">🟣 evento exclusivo</b> · {p.cliente}</>;
   };
 
@@ -147,7 +147,11 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
           const verbo = revisar === visibles.length ? 'que revisar' : revisar ? 'que aprobar o revisar' : 'que aprobar';
           return visibles.length === 1 ? `1 cosa ${verbo}` : `${visibles.length} cosas ${verbo}`;
         })()}
-        <span className="text-[13px] font-normal text-hueso/65"><span aria-hidden className="hidden sm:inline">· </span>mientras no respondas, no cambia nada</span>
+        <span className="text-[13px] font-normal text-hueso/65"><span aria-hidden className="hidden sm:inline">· </span>{
+          // Lo de aprobar espera la respuesta; lo de pagos ya rige.
+          visibles.every((p) => DE_PAGOS.has(p.tipo)) ? 'ya rige: lo revisas para que quede a tu nombre'
+            : visibles.some((p) => DE_PAGOS.has(p.tipo)) ? 'lo de aprobar espera tu respuesta; lo demás ya rige'
+            : 'mientras no respondas, no cambia nada'}</span>
       </h2>
 
       <ul className="mt-2 space-y-1.5">

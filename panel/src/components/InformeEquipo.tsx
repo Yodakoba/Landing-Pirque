@@ -342,6 +342,27 @@ function LineaPersona({
           pantalla ancha es una sola fila**: los botones van entre el nombre
           y el monto, con su ancho natural; estirados a lo largo de 1.200px
           serían barras, no botones. */}
+      {/* **Antes de transferir, lo que pagos no ha confirmado** (2026-11-13,
+          regla *"la plata la cierra el encargado de pagos"*): alguien que no
+          es pagos cambió su cuenta o su tarifa. Ya rige; se mira y se
+          confirma acá mismo o en la bandeja de la portada. Va arriba de la
+          línea, para leerlo antes de copiar los datos. */}
+      {puedePagar && porConfirmar && (
+        <div className="mx-4 mt-3 flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed
+                        border-ambar-fuerte/70 bg-ambar/10 px-3 py-2">
+          <p className="min-w-[12rem] flex-1 text-[14px] font-semibold text-ambar-texto">
+            ⚠ Por confirmar: {porConfirmar.que}
+            <span className="font-normal text-hueso/75"> · lo cambió {porConfirmar.quien}. Revísalo antes de transferir.</span>
+          </p>
+          {onConfirmar && (
+            <button type="button" disabled={confirmando}
+              onClick={async () => { setConfirmando(true); try { await onConfirmar(); } finally { setConfirmando(false); } }}
+              className="boton min-h-[44px] !border-verde-fuerte !text-[15px] !font-bold text-verde-texto">
+              {confirmando ? 'Guardando…' : '✓ Confirmar'}
+            </button>
+          )}
+        </div>
+      )}
       <div className="md:flex md:items-center">
       {/* El anillo del foco va **adentro** del botón (`ring-inset`) y solo con
           el teclado: el de siempre del navegador se montaba sobre los botones
@@ -414,27 +435,6 @@ function LineaPersona({
         {aTransferir > 0 && estadoPill(estado, partes.reduce((s, o) => s + o.parte.falta, 0))}
       </span>
       </div>
-
-      {/* **Antes de transferir, lo que pagos no ha confirmado** (2026-11-13,
-          regla *"la plata la cierra el encargado de pagos"*): alguien que no
-          es pagos cambió su cuenta o su tarifa. Ya rige; se mira y se
-          confirma acá mismo, o en la bandeja de la portada. */}
-      {puedePagar && porConfirmar && (
-        <div className="mx-4 mb-3 flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed
-                        border-ambar-fuerte/70 bg-ambar/10 px-3 py-2">
-          <p className="min-w-[12rem] flex-1 text-[14px] font-semibold text-ambar-texto">
-            ⚠ Por confirmar: {porConfirmar.que}
-            <span className="font-normal text-hueso/75"> · lo cambió {porConfirmar.quien}. Revísalo antes de transferir.</span>
-          </p>
-          {onConfirmar && (
-            <button type="button" disabled={confirmando}
-              onClick={async () => { setConfirmando(true); try { await onConfirmar(); } finally { setConfirmando(false); } }}
-              className="boton min-h-[44px] !border-verde-fuerte !text-[15px] !font-bold text-verde-texto">
-              {confirmando ? 'Guardando…' : '✓ Confirmar'}
-            </button>
-          )}
-        </div>
-      )}
 
       {/* **Los sin marcar, a la vista y con su camino** (2026-11-12, lo
           pidió el cliente): no suman al total hasta que el encargado de turno
