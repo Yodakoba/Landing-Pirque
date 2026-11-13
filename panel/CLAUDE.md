@@ -5607,6 +5607,20 @@ vino o no vino. Por ahora"*. El rol se usa **solo el día de apertura**.
   corrimiento lateral.
 - **Pendiente, a propósito**: *"Llegó alguien sin reserva"*. El cliente lo
   dejó para después.
+- **Compacta: cada reserva es una fila de dos pisos** (2026-11-13, lo pidió
+  el cliente: *"compactar toda la información… colapsar pero sin colapsar,
+  que ya hay el botón simplemente vino o no vino"*). Arriba, **la misma fila
+  de la página del día**, más grande porque se usa de pie: (+), nombre y
+  menú, **el círculo de Fudo** (`IconoFudo`: ✓ ya pagó, $ se cobra, ½ abonó,
+  ! ojo) y la gente. Abajo, **Llegó / No vino siempre a la vista**. Con (+)
+  se abre la caja entera de Fudo y *📣 Avisar al jefe de turno*; **al
+  apretar Llegó, la pregunta *¿Llegaron las N?* trae la caja de Fudo**,
+  porque es cuando se abre la mesa. Una ya recibida dice *✓ Llegaron 4* o
+  *✕ No vino* en el segundo piso, con *Cambiar*. Los tres números de arriba
+  van en una franja más baja (número y palabra en la misma línea). Medido a
+  393px: una reserva por llegar pasó de unos 390px a **132**, de una y media
+  por pantalla a cuatro o cinco. El rótulo *EN FUDO* subió de 12 a 13px.
+  Misiones de la anfitriona y la del encargado, y el `?`, al día.
 
 ### El middleware autentica, cada ruta autoriza
 

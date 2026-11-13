@@ -45,13 +45,13 @@ const ANFITRION: Mision[] = [
     puntos: [
       'Cuánta gente llegó de la que se espera hoy. Se pone al día solo cada minuto.',
       'Busca a quien llega por su nombre: no hace falta bajar por toda la lista.',
-      'Cada reserva trae sus dos botones grandes: Llegó o No vino.'
+      'Cada reserva es una fila con Llegó y No vino a la vista. El círculo dice cómo viene el pago; con + ves el detalle.'
     ],
     probar: { texto: 'Abrir la recepción', url: '/recepcion' }
   },
   {
     id: 'llego', emoji: '✅', titulo: 'Llegó: ¿llegaron todos?', escena: 'anf-llego',
-    intro: 'Al apretar Llegó te pregunta si llegaron todas las personas de esa reserva.',
+    intro: 'Al apretar Llegó te muestra cómo ingresarla en Fudo y te pregunta si llegaron todas las personas de esa reserva.',
     puntos: [
       'Si llegaron todas, un toque y listo.',
       'Si llegaron más o menos, cuéntalas con − y +.',
@@ -61,17 +61,17 @@ const ANFITRION: Mision[] = [
   },
   {
     id: 'cobrar', emoji: '💵', titulo: 'Qué cobrar al abrir la mesa', escena: 'anf-fudo',
-    intro: 'Cada reserva dice cómo ingresarla en Fudo, con el precio que corresponde.',
+    intro: 'El círculo de cada reserva dice cómo viene el pago: ✓ ya pagó, $ se cobra, ½ abonó, ! ojo. Ábrela con + para ver cómo ingresarla en Fudo.',
     puntos: [
-      'Por pagar: se cobra el precio sin descuento, y aquí está el total.',
-      'Ya pagó: se ingresa como pago directo, sin cobrarle el menú.',
+      'El círculo: cómo viene el pago, sin abrir nada.',
+      'Abierta, dice qué cobrar: el precio sin descuento y el total.',
       'Si alguien no llegó, márcalo No vino.'
     ],
     probar: { texto: 'Abrir la recepción', url: '/recepcion' }
   },
   {
     id: 'avisar', emoji: '📣', titulo: 'Avisar al jefe de turno', escena: 'anf-aviso',
-    intro: 'Para lo que no cambias tú —personas, menús, pago o un pedido especial— le escribes al jefe de turno.',
+    intro: 'Para lo que no cambias tú —personas, menús, pago o un pedido especial— abre la reserva con + y le escribes al jefe de turno.',
     puntos: [
       'Escribe el aviso en pocas palabras.',
       'Avisar se lo manda al jefe de turno.',

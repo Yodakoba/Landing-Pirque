@@ -15,6 +15,21 @@ const ESTILO: Record<Ingreso['tono'], { caja: string; texto: string; icono: stri
   rojo: { caja: 'border-rojo-fuerte/70 bg-rojo/10', texto: 'text-rojo-texto', icono: '!' }
 };
 
+/**
+ * **Solo el círculo** (2026-11-13), para la fila cerrada de la recepción:
+ * cómo viene el pago sin abrir la reserva. La misma forma y el mismo ícono
+ * de la caja, y el título entero como nombre accesible.
+ */
+export function IconoFudo({ ingreso }: { ingreso: Ingreso | null | undefined }) {
+  if (!ingreso) return null;
+  const e = ESTILO[ingreso.tono];
+  return (
+    <span role="img" aria-label={`En Fudo: ${ingreso.titulo}`} title={ingreso.titulo}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current
+                  text-[17px] font-extrabold ${e.texto} ${e.caja}`}>{e.icono}</span>
+  );
+}
+
 export default function IngresoFudo({ ingreso, compacto = false }: {
   ingreso: Ingreso | null | undefined; compacto?: boolean;
 }) {
@@ -25,7 +40,7 @@ export default function IngresoFudo({ ingreso, compacto = false }: {
       <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2
                                     border-current text-[17px] font-extrabold ${e.texto}`}>{e.icono}</span>
       <div className="min-w-0">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-hueso/60">En Fudo</p>
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-hueso/60">En Fudo</p>
         <p className={`font-bold leading-tight ${compacto ? 'text-[14px]' : 'text-[16px]'} ${e.texto}`}>
           {ingreso.titulo}
         </p>

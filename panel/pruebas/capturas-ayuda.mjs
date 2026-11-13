@@ -41,6 +41,11 @@ const enVentana = (t) => (p) => p.locator('[role=dialog] button').filter({ hasTe
 const campo = (t) => (p) => p.getByPlaceholder(t).first();
 const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeout(900); };
 
+/** Una reserva de la recepción: su fila, que se abre con (+). */
+const filaRecepcion = (n) => (p) => p.locator('li > button[aria-expanded]').nth(n);
+/** El círculo de Fudo de una fila de la recepción. */
+const circuloFudo = (n) => (p) => p.locator('li > button[aria-expanded] [role=img]').nth(n);
+
 /** La página del día: el bloque del equipo queda al medio de la foto. */
 const focoDia = (p) => p.getByRole('button', { name: /Equipo y cuentas del día|Planificar equipo/ }).first();
 
@@ -59,9 +64,11 @@ const ESCENAS = {
     puntos: [texto('personas llegaron'), campo(/Buscar por nombre/), boton(/Llegó/)] },
   'anf-llego': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(boton(/Llegó/))], foco: texto(/¿Llegaron las/),
     puntos: [boton(/Sí, las/), boton('Una más'), texto(/Si es otro número/)] },
-  'anf-fudo': { rol: 'anfitrion', ruta: '/recepcion', alto: 1000, foco: texto(/Por pagar · cobra/),
-    puntos: [texto(/Por pagar · cobra/), texto(/Ya pagó · ingrésalo/), boton(/No vino/, 0)] },
-  'anf-aviso': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(boton(/Avisar al jefe/))], foco: texto(/Qué le avisas/),
+  // Desde el 2026-11-13 cada reserva es una fila: el detalle de Fudo y
+  // *Avisar* se abren con su (+).
+  'anf-fudo': { rol: 'anfitrion', ruta: '/recepcion', alto: 900, pasos: [clic(filaRecepcion(0))], foco: filaRecepcion(0),
+    puntos: [circuloFudo(0), texto(/Por pagar · cobra/), boton(/No vino/, 0)] },
+  'anf-aviso': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(filaRecepcion(0)), clic(boton(/Avisar al jefe/))], foco: texto(/Qué le avisas/),
     puntos: [campo(/Quieren cambiar/), boton('Avisar', 0), boton('Volver', 0)] },
 
   'ven-calendario': { rol: 'vendedor', ruta: '/', alto: 1000,
@@ -82,7 +89,7 @@ const ESCENAS = {
     puntos: [texto(/días por cerrar/), boton(/11 de noviembre · /), boton(/Mes siguiente/)] },
   'enc-cerrar': { rol: 'encargado', ruta: '/turnos', pasos: [clic(boton(/11 de noviembre · /))], alto: 900,
     puntos: [enVentana(/Trabajadores/), enVentana(/^\W*Vino$/), enVentana(/Agregar/)] },
-  'enc-recepcion': { rol: 'encargado', ruta: '/recepcion', foco: texto(/Por pagar · cobra/),
+  'enc-recepcion': { rol: 'encargado', ruta: '/recepcion', pasos: [clic(filaRecepcion(0))], foco: texto(/Por pagar · cobra/),
     puntos: [texto(/Por pagar · cobra/), boton(/Llegó/), boton(/Avisar al jefe/)] },
 
   'ope-dia': { rol: 'gerente', ruta: '/dia/2026-11-12', alto: 1000, foco: focoDia,
