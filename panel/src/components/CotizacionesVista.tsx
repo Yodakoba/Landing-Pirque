@@ -41,6 +41,7 @@ import BandaSeccion, { TONO } from './BandaSeccion';
 import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
 import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
+import Pendientes, { FilaPendiente } from './Pendientes';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
@@ -483,123 +484,77 @@ export default function CotizacionesVista() {
       </div>
 
       <AvisoSobrecupo dias={datos.sobrecupo ?? []} />
-      {(pronto.length > 0 || vencidas.length > 0 || avisos.anticipoSinGanar.length > 0
-        || avisos.saldo.length > 0 || sinRevisar.size > 0 || porDevolver.length > 0
-        || porSeguir.length > 0) && (
-        <div className="mb-4 space-y-2">
-          <EsperandoRespuesta lista={porSeguir} onCambio={() => void cargar()}
+      {/* **Los pendientes, en una fila de pastillas** (2026-11-13, lo pidió
+          el cliente: los avisos apilados *"se anotan como lista Excel"* y
+          empujaban el calendario). Una pastilla por tipo, en orden de
+          urgencia —la plata primero—; se abre una lista a la vez. */}
+      <Pendientes items={[
+        ...(porDevolver.length ? [{
+          clave: 'devolver', icono: '↩', tono: 'rojo' as const,
+          texto: porDevolver.length === 1 ? '1 devolución por hacer' : `${porDevolver.length} devoluciones por hacer`,
+          ayuda: 'Eventos cancelados con plata acordada para devolver. Ábrelo y anota la devolución al transferir.',
+          lista: <div className="space-y-1.5">{porDevolver.map(({ p, falta }) => (
+            <FilaPendiente key={p.id} quien={p.cliente || 'Sin cliente'} dato={`devolver ${enPesos(falta)}`} rojo
+              onAbrir={() => setAbierta({ p, paso: 4 })} />))}</div>
+        }] : []),
+        ...(avisos.saldo.length ? (() => {
+          const vencidos = avisos.saldo.filter((a) => a.dias < 0).length;
+          return [{
+            clave: 'saldo', icono: '💰', tono: (vencidos ? 'rojo' : 'ambar') as 'rojo' | 'ambar',
+            texto: avisos.saldo.length === 1 ? '1 saldo por cobrar' : `${avisos.saldo.length} saldos por cobrar`,
+            urgente: vencidos ? (vencidos === 1 ? '1 vencido' : `${vencidos} vencidos`) : undefined,
+            lista: <div className="space-y-1.5">{avisos.saldo.map((a) => {
+              const p = porId.get(a.id)!;
+              return <FilaPendiente key={a.id} quien={p.cliente} rojo={a.dias < 0}
+                dato={`${enPesos(a.monto)} · ${a.dias < 0 ? `venció hace ${-a.dias} ${a.dias === -1 ? 'día' : 'días'}`
+                  : a.dias === 0 ? 'vence hoy' : a.dias === 1 ? 'vence mañana' : `vence en ${a.dias} días`}`}
+                onAbrir={() => setAbierta({ p })} />;
+            })}</div>
+          }];
+        })() : []),
+        ...(sinRevisar.size ? [{
+          clave: 'revisar', icono: '🧾', tono: 'ambar' as const,
+          texto: sinRevisar.size === 1 ? '1 con cobros por revisar' : `${sinRevisar.size} con cobros por revisar`,
+          ayuda: 'Comprueba que la plata llegó y márcalos revisados.',
+          lista: <div className="space-y-1.5">{[...sinRevisar].map(([id, r]) => {
+            const p = porId.get(id)!;
+            return <FilaPendiente key={id} quien={p.cliente}
+              dato={`${r.n === 1 ? '1 cobro' : `${r.n} cobros`} · ${enPesos(r.monto)}`} onAbrir={() => setAbierta({ p })} />;
+          })}</div>
+        }] : []),
+        ...(avisos.anticipoSinGanar.length ? [{
+          clave: 'ganar', icono: '✓', tono: 'verde' as const,
+          texto: avisos.anticipoSinGanar.length === 1 ? '1 pagó y falta ganarla' : `${avisos.anticipoSinGanar.length} pagaron y falta ganarlas`,
+          ayuda: 'Ya pagaron el anticipo. Mientras no esté ganada, otro puede tomar ese día.',
+          lista: <div className="space-y-1.5">{avisos.anticipoSinGanar.map((a) => {
+            const p = porId.get(a.id)!;
+            return <FilaPendiente key={a.id} quien={p.cliente} dato={`pagó ${enPesos(a.monto)}`}
+              onAbrir={() => setAbierta({ p, paso: 4 })} />;
+          })}</div>
+        }] : []),
+        ...(porSeguir.length ? [{
+          clave: 'seguir', icono: '📨', tono: 'rosa' as const,
+          texto: porSeguir.length === 1 ? '1 esperando respuesta' : `${porSeguir.length} esperando respuesta`,
+          lista: <EsperandoRespuesta embebida lista={porSeguir} onCambio={() => void cargar()}
             onAbrir={(p, paso) => setAbierta({ p, paso: paso ?? 4 })} />
-          {porDevolver.length > 0 && (
-            <div className="rounded border border-rojo-fuerte/50 bg-rojo/5 p-3">
-              <p className="text-[15px] font-semibold text-rojo-texto">
-                {porDevolver.length === 1 ? '1 devolución por hacer'
-                  : `${porDevolver.length} devoluciones por hacer`}
-              </p>
-              <p className="text-[14px] text-hueso/70">
-                Eventos cancelados con plata acordada para devolver. Ábrelo y anota la devolución al transferir.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {porDevolver.map(({ p, falta }) => (
-                  <button key={p.id} type="button" onClick={() => setAbierta({ p, paso: 4 })} className="boton">
-                    {p.cliente || 'Sin cliente'} · {enPesos(falta)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {sinRevisar.size > 0 && (
-            <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
-              <p className="text-[15px] font-semibold text-ambar-texto">
-                {sinRevisar.size === 1 ? '1 cotización con cobros por revisar'
-                  : `${sinRevisar.size} cotizaciones con cobros por revisar`}
-              </p>
-              <p className="text-[14px] text-hueso/70">Comprueba que la plata llegó y márcalos revisados.</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {[...sinRevisar].map(([id, r]) => {
-                  const p = porId.get(id)!;
-                  return (
-                    <button key={id} type="button" onClick={() => setAbierta({ p })} className="boton">
-                      {p.cliente} · {r.n === 1 ? '1 cobro' : `${r.n} cobros`} · {enPesos(r.monto)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {avisos.anticipoSinGanar.length > 0 && (
-            <div className="rounded border border-verde-fuerte/60 bg-verde/5 p-3">
-              <p className="text-[15px] font-semibold text-verde-texto">
-                {avisos.anticipoSinGanar.length === 1
-                  ? '1 cotización ya pagó el anticipo y falta marcarla ganada'
-                  : `${avisos.anticipoSinGanar.length} cotizaciones ya pagaron el anticipo y falta marcarlas ganadas`}
-              </p>
-              <p className="text-[14px] text-hueso/70">Mientras no esté ganada, otro puede tomar ese día.</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {avisos.anticipoSinGanar.map((a) => {
-                  const p = porId.get(a.id)!;
-                  return (
-                    <button key={a.id} type="button" onClick={() => setAbierta({ p, paso: 4 })} className="boton">
-                      {p.cliente} · pagó {enPesos(a.monto)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {avisos.saldo.length > 0 && (
-            <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
-              <p className="text-[15px] font-semibold text-ambar-texto">
-                {avisos.saldo.length === 1 ? '1 saldo por cobrar' : `${avisos.saldo.length} saldos por cobrar`}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {avisos.saldo.map((a) => {
-                  const p = porId.get(a.id)!;
-                  return (
-                    <button key={a.id} type="button" onClick={() => setAbierta({ p })}
-                      className={`boton ${a.dias < 0 ? '!border-rojo-fuerte text-rojo-texto' : ''}`}>
-                      {p.cliente} · {enPesos(a.monto)} · {a.dias < 0
-                        ? `venció hace ${-a.dias} ${a.dias === -1 ? 'día' : 'días'}`
-                        : a.dias === 0 ? 'vence hoy' : a.dias === 1 ? 'vence mañana' : `vence en ${a.dias} días`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {pronto.length > 0 && (
-            <div className="rounded border border-ambar/50 bg-ambar/5 p-3">
-              <p className="text-[15px] font-semibold text-ambar-texto">
-                {pronto.length === 1 ? '1 cotización vence pronto' : `${pronto.length} cotizaciones vencen pronto`}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {pronto.map((p) => {
-                  const n = diasParaVencer(p, hoy);
-                  return (
-                    <button key={p.id} type="button" onClick={() => setAbierta({ p })} className="boton">
-                      {p.cliente} · {n === 0 ? 'vence hoy' : n === 1 ? 'vence mañana' : `vence en ${n} días`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {vencidas.length > 0 && (
-            <div className="rounded border border-hueso/25 p-3">
-              <p className="text-[15px] font-semibold">
-                {vencidas.length === 1 ? '1 cotización venció y nadie la cerró'
-                  : `${vencidas.length} cotizaciones vencieron y nadie las cerró`}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {vencidas.map((p) => (
-                  <button key={p.id} type="button" onClick={() => setAbierta({ p })} className="boton">
-                    {p.cliente} · N° {folioDe(p)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        }] : []),
+        ...(pronto.length ? [{
+          clave: 'pronto', icono: '⌛', tono: 'ambar' as const,
+          texto: pronto.length === 1 ? '1 vence pronto' : `${pronto.length} vencen pronto`,
+          lista: <div className="space-y-1.5">{pronto.map((p) => {
+            const n = diasParaVencer(p, hoy);
+            return <FilaPendiente key={p.id} quien={p.cliente}
+              dato={n === 0 ? 'vence hoy' : n === 1 ? 'vence mañana' : `vence en ${n} días`} onAbrir={() => setAbierta({ p })} />;
+          })}</div>
+        }] : []),
+        ...(vencidas.length ? [{
+          clave: 'vencidas', icono: '·', tono: 'neutro' as const,
+          texto: vencidas.length === 1 ? '1 venció sin cerrar' : `${vencidas.length} vencieron sin cerrar`,
+          ayuda: 'Ya no cuentan como gente posible: márcalas perdidas o renueva la vigencia.',
+          lista: <div className="space-y-1.5">{vencidas.map((p) => (
+            <FilaPendiente key={p.id} quien={p.cliente} dato={`N° ${folioDe(p)}`} onAbrir={() => setAbierta({ p })} />))}</div>
+        }] : [])
+      ]} />
 
       {vista === 'calendario' && (
         <div className="space-y-4">

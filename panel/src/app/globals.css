@@ -402,8 +402,16 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
 }
 .aviso-flotante { animation: subir-aviso .2s ease-out; }
 
+/* **La reserva a la que se llegó desde un aviso** (2026-11-13): destella un
+   momento para que el ojo la encuentre en la lista. Ver `DayView`. */
+@keyframes destellar {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--rojo-fuerte) / 0); }
+  30%, 70% { box-shadow: 0 0 0 6px rgb(var(--rojo-fuerte) / .55); }
+}
+.destello { animation: destellar .9s ease-in-out 2; }
+
 @media (prefers-reduced-motion: reduce) {
-  .girar, .aviso-flotante { animation: none; }
+  .girar, .aviso-flotante, .destello { animation: none; }
 }
 
 /**

@@ -30,6 +30,7 @@ import { copiarConAviso } from './AvisoFlotante';
 import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
 import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes, type PendienteExclusivo } from '@/lib/aprobaciones';
+import AvisosRecepcion from './AvisosRecepcion';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { usarAlDia, BarraAlDia, horaDe } from './AlDia';
 import { diferencias, MARCA_DURA } from '@/lib/cambios';
@@ -239,8 +240,10 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
   }, [marcas]);
 
   /**
-   * **Los avisos de la recepción de hoy** (2026-11-11): lo que la anfitriona
-   * le dejó al jefe de turno, solo para quien puede resolverlos.
+   * **Los avisos de la recepción** (2026-11-11; desde el 2026-11-13 también
+   * los de días anteriores sin resolver, con nombres: `AvisosRecepcion`): lo
+   * que la anfitriona le dejó al jefe de turno, solo para quien puede
+   * resolverlos.
    *
    * **Salen de las reservas que esta pantalla ya cargó** (2026-11-12). Antes
    * se pedía `/api/recepcion` entera solo para contarlos, y eran seis
@@ -271,12 +274,8 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
     return juntarPendientes(descuentos, pedidos, pendientesDeSobrecupo(dias ?? [], cfg.capacidadMaxima, conPedido));
   }, [reservas, rol, conCupo, fechasHoja, dias, cfg.capacidadMaxima, exclusivos]);
 
-  const avisosHoy = useMemo(() => {
-    if (!puede(rol as Rol, 'asistencia')) return null;
-    const fecha = hoy();
-    const n = reservas.filter((x) => x.fecha === fecha && x.avisoRecepcion).length;
-    return n > 0 ? { fecha, n } : null;
-  }, [reservas, rol]);
+  /** Los avisos de la recepción sin resolver, de hoy y de antes (2026-11-13). */
+  const conAvisos = puede(rol as Rol, 'asistencia');
 
   /**
    * Agrupado **por semana**, conservando el orden.
@@ -316,14 +315,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
           los demás roles, el aviso de siempre. */}
       {!conCupo && <AvisoSobrecupo dias={sobrecupo} />}
       <BandejaAprobaciones pendientes={pendientes} onCambio={() => void cargar()} />
-      {avisosHoy && (
-        <a href={`/dia/${avisosHoy.fecha}`}
-          className="tecla mb-4 flex flex-wrap items-center gap-3 rounded-xl border-2 border-ambar/60
-                     bg-ambar/10 p-3 text-[16px] font-semibold text-ambar-texto hover:bg-ambar/15">
-          📣 La recepción dejó {avisosHoy.n === 1 ? '1 aviso' : `${avisosHoy.n} avisos`} hoy
-          <span className="boton ml-auto">Ver el día →</span>
-        </a>
-      )}
+      {conAvisos && <AvisosRecepcion reservas={reservas} />}
       <p className="text-hueso/60 text-sm mb-6">
         Toca un día para ver quiénes vienen.{' '}
         {dias.length > 0 && (

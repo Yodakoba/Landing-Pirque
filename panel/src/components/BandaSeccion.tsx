@@ -40,29 +40,41 @@ export const TONO: Record<Tono, {
   }
 };
 
-/** La banda del título de un calendario: ícono, sección, nombre y su `?`. */
+/**
+ * La banda del título de un calendario: ícono, sección, nombre y su `?`.
+ *
+ * **En una línea** (2026-11-13, lo pidió el cliente: la banda de dos pisos
+ * —el rótulo *COTIZACIONES* sobre el título *COTIZACIONES*, con un ícono de
+ * 48px— medía unos 110px y empujaba el calendario hacia abajo). Ahora mide
+ * unos 48: ícono chico, la sección y el título juntos —una sola vez si son
+ * iguales—, el `?` y la frase al lado, chica. El tono sigue en el borde
+ * izquierdo grueso y el fondo suave, que es lo que dice dónde se está.
+ */
 export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, children }: {
   tono: Tono; icono: string;
-  /** La palabra corta de arriba: *RESERVAS*, *COTIZACIONES*, *TURNOS*. */
+  /** La palabra corta: *RESERVAS*, *COTIZACIONES*, *TURNOS*. */
   seccion: string;
   titulo: string;
   /** El `?` de la pantalla. */
   ayuda?: React.ReactNode;
-  /** La frase de abajo, si la hay. */
+  /** La frase, si la hay: va chica, al lado del título. */
   children?: React.ReactNode;
 }) {
   const t = TONO[tono];
+  const mismo = seccion.trim().toLowerCase() === titulo.trim().toLowerCase();
   return (
-    <header className={`mb-4 flex items-start gap-3 rounded-2xl border-2 px-4 py-3 ${t.banda}`}>
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[26px] shadow-sm ${t.icono}`}
+    <header className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border-2 border-l-[6px] px-3 py-1.5 ${t.banda}`}>
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[18px] ${t.icono}`}
         aria-hidden>{icono}</span>
-      <div className="min-w-0 flex-1">
-        <p className={`text-[13px] font-black uppercase tracking-widest ${t.titulo}`}>{seccion}</p>
-        <h1 className="flex flex-wrap items-center text-xl font-bold uppercase tracking-wide">
-          {titulo}{ayuda}
-        </h1>
-        {children && <div className="mt-1 max-w-2xl text-[15px] text-hueso/75">{children}</div>}
-      </div>
+      {/* El título se parte adentro y nunca se va debajo del ícono; el `?`
+          queda a su derecha. En un teléfono son dos líneas a lo más. */}
+      <h1 className="min-w-0 flex-1 text-[15px] font-bold uppercase leading-tight tracking-wide sm:flex-none sm:text-[17px]">
+        {!mismo && <span className={`font-black tracking-widest ${t.titulo}`}>{seccion}</span>}
+        {!mismo && <span aria-hidden className="mx-1.5 text-hueso/40">·</span>}
+        <span>{titulo}</span>
+      </h1>
+      {ayuda && <span className="shrink-0">{ayuda}</span>}
+      {children && <p className="min-w-0 basis-full text-[14px] text-hueso/70 sm:basis-auto sm:flex-1">{children}</p>}
     </header>
   );
 }

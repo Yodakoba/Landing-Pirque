@@ -6,7 +6,7 @@
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
 import { usarAlDia, BarraAlDia } from './AlDia';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
 import { grupoDe, principalDe } from '@/lib/cotizar';
 import Ayuda from './Ayuda';
@@ -25,6 +25,7 @@ import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
 import PastillaPago from './PastillaPago';
 import RectificarReserva from './RectificarReserva';
+import { partirAviso } from './AvisosRecepcion';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { pendientesDeAprobar } from '@/lib/aprobaciones';
 import { avisar } from './AvisoFlotante';
@@ -171,6 +172,20 @@ export default function DayView(
   const [deCotizacionIds, setDeCotizacionIds] = useState<Record<string, string>>({});
   /** La reserva abierta en la lista del día (una a la vez); vacío, ninguna. */
   const [reservaAbierta, setReservaAbierta] = useState('');
+  /**
+   * **La reserva a la que se llegó desde un aviso de la recepción**
+   * (2026-11-13): `/dia/<fecha>#reserva-<fila>` la abre, baja hasta ella y
+   * la hace destellar un momento. Lo mismo al apretar su nombre en la franja
+   * roja de arriba. Muestra todas para que no la esconda un filtro.
+   */
+  const [destello, setDestello] = useState(0);
+  const yaFueAlAncla = useRef(false);
+  function irAReserva(r: Reserva) {
+    setFiltro('todas'); setSoloMias(false); setReservaAbierta(r.id); setDestello(r.fila);
+    setTimeout(() => document.getElementById(`reserva-${r.fila}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+    setTimeout(() => setDestello(0), 2200);
+  }
   /** Quién vendió y qué número tiene la cotización de cada reserva (por id de reserva). */
   /** La reserva que se está rectificando (2026-11-12), o `null`. */
   const [rectificando, setRectificando] = useState<Reserva | null>(null);
@@ -329,6 +344,15 @@ export default function DayView(
     () => (todas ?? []).filter((r) => r.fecha === fecha),
     [todas, fecha]
   );
+  // El ancla `#reserva-<fila>`, una sola vez, cuando llegan las reservas.
+  useEffect(() => {
+    if (yaFueAlAncla.current || !todas) return;
+    const m = /^#reserva-(\d+)$/.exec(window.location.hash);
+    if (!m) return;
+    yaFueAlAncla.current = true;
+    const r = todas.find((x) => x.fila === Number(m[1]) && x.fecha === fecha);
+    if (r) irAReserva(r);
+  }, [todas, fecha]);
 
   /** Si la anotó o la vendió esta cuenta. */
   const esMia = (r: Reserva) => esSuya(usuario, r.anotadaPor) || esSuya(usuario, origen.vendedor[r.id] ?? '');
@@ -484,6 +508,8 @@ export default function DayView(
   const puedeRectificar = puede(rol as Rol, 'rectificar');
   const porAprobarHoy = delDia.filter((r) => ocupaLugar(r) && estaRectificada(r) && porAprobar(r));
   const cuantas = (rs: Reserva[]) => `${rs.length} reserva${rs.length === 1 ? '' : 's'}`;
+  /** Las reservas de este día con un aviso de la recepción sin resolver. */
+  const conAviso = delDia.filter((r) => (r.avisoRecepcion ?? '').trim());
 
   return (
     <>
@@ -499,6 +525,26 @@ export default function DayView(
           <span className="text-rojo-texto"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
         )}
       </p>
+
+      {/* **Los avisos de la recepción, arriba de todo** (2026-11-13, lo pidió
+          el cliente: *"guiar más al usuario"*). Rojo suave —ámbar ya es
+          *falta cobrar*—, con el nombre de cada reserva: apretarlo baja a
+          ella y la abre. Desaparece al resolver el último. */}
+      {conAviso.length > 0 && (
+        <div role="status" className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border-2 border-rojo-fuerte/50
+                                      bg-rojo/[0.08] px-3 py-2">
+          <span className="text-[15px] font-bold text-rojo-texto">
+            📣 {conAviso.length === 1 ? '1 aviso' : `${conAviso.length} avisos`} de la recepción por resolver:
+          </span>
+          {conAviso.map((r) => (
+            <a key={r.fila} href={`#reserva-${r.fila}`}
+              onClick={(e) => { e.preventDefault(); history.replaceState(null, '', `#reserva-${r.fila}`); irAReserva(r); }}
+              className="tecla boton min-h-[40px] !border-rojo-fuerte/60 !text-[15px] !font-semibold text-rojo-texto">
+              {r.nombre || 'Sin nombre'} ↓
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Lo que hay que preparar. Va arriba y GRANDE porque es el dato por el
           que se abre esta página el sábado en la mañana: no compite con el
@@ -961,9 +1007,13 @@ export default function DayView(
             const abierta = reservaAbierta === r.id;
             const libera = !ocupaLugar(r);
             const pago = iconoPago(r);
+            const aviso = (r.avisoRecepcion ?? '').trim();
             return (
-              <li key={r.fila} className={`overflow-hidden rounded-2xl border-2 bg-panel transition-colors ${
-                abierta ? 'border-oro shadow-md' : 'border-hueso/15'} ${libera ? 'opacity-50' : ''}`}>
+              <li key={r.fila} id={`reserva-${r.fila}`}
+                className={`scroll-mt-24 overflow-hidden rounded-2xl border-2 transition-colors ${
+                aviso ? 'bg-rojo/[0.07]' : 'bg-panel'} ${
+                abierta ? 'border-oro shadow-md' : aviso ? 'border-rojo-fuerte/60' : 'border-hueso/15'} ${
+                libera ? 'opacity-50' : ''} ${destello === r.fila ? 'destello' : ''}`}>
                 {/* La línea cerrada: quién, su número, cómo va el pago (solo
                     el ícono) y cuánta gente. Lo que no puede quedar escondido
                     —un aviso de la recepción, un pedido repetido— lleva su
@@ -986,10 +1036,6 @@ export default function DayView(
                       {idCotizacion ? `Cotización N° ${folio}` : r.id}
                     </span>
                   </span>
-                  {r.avisoRecepcion && (
-                    <span title="La recepción dejó un aviso" className="shrink-0 rounded-full border-2
-                      border-ambar/60 bg-ambar/10 px-2 py-0.5 text-[13px] font-semibold text-ambar-texto">📣</span>
-                  )}
                   {repetida && (
                     <span title="Pedido repetido en la planilla" className="shrink-0 text-[15px] font-bold
                       text-ambar-texto">⚠</span>
@@ -1009,6 +1055,27 @@ export default function DayView(
                     <span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
                   </span>
                 </button>
+
+                {/* **El aviso de la recepción, a la vista sin abrirla**
+                    (2026-11-11; desde el 2026-11-13 fuera del detalle y en
+                    rojo suave), con *✓ Resuelto* a mano. Al resolverlo la
+                    reserva vuelve a verse como las demás. */}
+                {aviso && (
+                  <div className="flex flex-wrap items-center gap-2 border-t border-rojo-fuerte/30 px-3 py-2">
+                    <p className="min-w-[12rem] flex-1 text-[15px] font-semibold text-rojo-texto">
+                      📣 {(() => { const { hora, texto } = partirAviso(aviso); return hora ? `${hora} · ${texto}` : texto; })()}
+                    </p>
+                    {mia && !idCotizacion && (
+                      <button type="button" className="boton min-h-[40px]" onClick={() => setEditando(r)}>
+                        Editar la reserva
+                      </button>
+                    )}
+                    {puede(rol as Rol, 'asistencia') && (
+                      <button type="button" className="boton min-h-[44px] !border-verde-fuerte !font-semibold text-verde-texto"
+                        onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
+                    )}
+                  </div>
+                )}
 
                 {abierta && (
                   <div className="space-y-3 border-t-2 border-oro/30 p-3">
@@ -1101,25 +1168,6 @@ export default function DayView(
                         ⚠ Este pedido está {r.duplicadas} veces en la planilla. El panel lo cuenta una
                         sola vez; conviene borrar la fila de más.
                       </p>
-                    )}
-
-                    {/* **El aviso de la recepción** (2026-11-11), hasta que
-                        alguien lo resuelve. */}
-                    {r.avisoRecepcion && (
-                      <div className="rounded-xl border-2 border-ambar/60 bg-ambar/10 p-3">
-                        <p className="text-[15px] font-semibold text-ambar-texto">📣 Recepción: {r.avisoRecepcion}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {mia && !idCotizacion && (
-                            <button type="button" className="boton" onClick={() => setEditando(r)}>
-                              Editar la reserva
-                            </button>
-                          )}
-                          {puede(rol as Rol, 'asistencia') && (
-                            <button type="button" className="boton !border-verde-fuerte text-verde-texto"
-                              onClick={() => void resolverAviso(r)}>✓ Resuelto</button>
-                          )}
-                        </div>
-                      </div>
                     )}
 
                     {/* **El contacto son botones**: llamar, WhatsApp y correo,

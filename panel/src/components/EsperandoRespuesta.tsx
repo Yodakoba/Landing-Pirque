@@ -27,10 +27,15 @@ export interface PorSeguir {
   puedeTocar: boolean;
 }
 
-export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
+export default function EsperandoRespuesta({ lista, onCambio, onAbrir, embebida = false }: {
   lista: PorSeguir[];
   onCambio: () => void;
   onAbrir: (p: Presupuesto, paso?: number) => void;
+  /**
+   * Sin su caja ni su título (2026-11-13): va dentro de la pastilla
+   * *Esperando respuesta* de los pendientes de Cotizaciones, que ya dice qué es.
+   */
+  embebida?: boolean;
 }) {
   const [perdiendo, setPerdiendo] = useState('');
   // Con vista gerencia y sin el permiso de cotizar, se ve qué espera
@@ -53,12 +58,14 @@ export default function EsperandoRespuesta({ lista, onCambio, onAbrir }: {
   }
 
   return (
-    <div className="rounded-xl border-2 border-rosa/40 bg-rosa/[0.06] p-3">
-      <p className="flex items-center text-[16px] font-bold text-rosa-texto">
-        📨 Esperando respuesta · {lista.length}
-        <AyudaCorta tema="esperandoRespuesta" />
-      </p>
-      <ul className="mt-2 space-y-2">
+    <div className={embebida ? '' : 'rounded-xl border-2 border-rosa/40 bg-rosa/[0.06] p-3'}>
+      {!embebida && (
+        <p className="flex items-center text-[16px] font-bold text-rosa-texto">
+          📨 Esperando respuesta · {lista.length}
+          <AyudaCorta tema="esperandoRespuesta" />
+        </p>
+      )}
+      <ul className={embebida ? 'space-y-2' : 'mt-2 space-y-2'}>
         {lista.map(({ p, motivo, dias, puedeTocar }) => (
           <li key={p.id} className="rounded-lg border border-hueso/15 bg-panel p-3">
             <button type="button" onClick={() => onAbrir(p)} className="text-left">

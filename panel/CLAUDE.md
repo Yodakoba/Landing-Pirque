@@ -5107,7 +5107,8 @@ aprobarlo sea simple. **Arriba de la portada** (y de la página del día, con
 lo de ese día) va **🔔 Tienes N cosas que aprobar**, para quien tiene
 `aprobar`: gerente, quien paga y administrador.
 
-- **Una tarjeta por cosa**: *Fran pide un **25%** de descuento*, para quién,
+- **Una tarjeta por cosa** (desde el 2026-11-13 **una fila**: ver *Lo
+  importante arriba y chico*): *Fran pide un **25%** de descuento*, para quién,
   cuánta gente, qué día y a qué hora lo pidió, y el motivo con el
   comentario. Debajo, **✓ Aprobar 25%** (verde, un toque) y **✕ Rechazar**,
   que pregunta antes —*"Se cobra sin descuento, y avísale a Fran"*—, y
@@ -5458,6 +5459,9 @@ vino o no vino. Por ahora"*. El rol se usa **solo el día de apertura**.
   **✓ Resuelto** (que vacía el aviso), y *llegaron N* bajo las personas; lo
   mismo en la cara *Reservas* de la ventana del día en `/turnos`; y arriba
   del calendario de la portada, *📣 La recepción dejó N avisos hoy*.
+  **Desde el 2026-11-13 en rojo suave, con nombres, también los de días
+  anteriores y con *Ir a la reserva →***: ver *Los avisos de la recepción
+  guían hasta la reserva*.
 - **El celular es la pantalla número uno**, y la tablet la segunda (lo
   pidió el cliente). Los tres números y el buscador **quedan fijos arriba**
   al bajar; una reserva ya marcada se achica a **una línea** con *Cambiar*,
@@ -6036,6 +6040,82 @@ grande, que gana espacio frente a *"Miércoles 11 de noviembre"*.
   `HABIA` de `letra-chica` bajó (PuntoDia 1 → 0, CalendarView 5 → 1). Queda
   a propósito el *Renovarlo* del link de la planilla, chico porque casi
   nunca se aprieta.
+
+### Lo importante arriba y chico, y el calendario enseguida (2026-11-13)
+
+Lo reclamó el cliente con una captura de Cotizaciones: *"se desproporcionó…
+debería ser mucho más chico, alarmante… no puede ser que la información más
+importante se anote como lista Excel… tiene que ser compacto, y luego el
+calendario"*. Se midió dónde empezaba el calendario y se aprobaron las
+propuestas juntas (*"sí, aplica todo junto"*):
+
+| Pantalla | Antes | Después |
+|---|---|---|
+| Cotizaciones, computador | 1,75 pantallas | **0,52** |
+| Cotizaciones, celular 393 | 3,06 | **1,30** |
+| Portada, computador | 1,09 | **0,76** |
+| Portada, celular 393 | 1,81 | **1,23** |
+
+(Mismos datos de prueba: un sobrecupo, un pedido de exclusivo y los
+pendientes de cobro de Cotizaciones.)
+
+- **La banda de la sección es una línea** (`BandaSeccion.tsx`): ícono,
+  *SECCIÓN · Título*, el `?` a la derecha y la frase al lado. En celular el
+  título se parte adentro —dos líneas a lo más— y nunca se va debajo del
+  ícono. Vale para Reservas, Cotizaciones y Turnos.
+- **Los pendientes de Cotizaciones son una fila de pastillas**
+  (`Pendientes.tsx`): *↩ devoluciones*, *💰 saldos por cobrar* (con la
+  insignia roja *N vencido*), *🧾 cobros por revisar*, *✓ pagó y falta
+  ganarla*, *📨 esperando respuesta*, *⌛ vencen pronto*, *vencidas*. Cada
+  una con su color y su número; **una lista abierta a la vez**, debajo, con
+  una fila por cotización (`FilaPendiente`: quién, el dato y *Abrir →*).
+  Antes eran siete cajas apiladas, cada una con su título y su lista
+  abierta. *Esperando respuesta* va adentro con `embebida`.
+- **El sobrecupo es una línea roja por día** (`AvisoSobrecupo.tsx`): el
+  día, cuántos sobran, *158 de 150 · en riesgo: …* y *Decidir →*; la
+  explicación pasó a un `?`.
+- **La bandeja de aprobaciones va en filas** (`BandejaAprobaciones.tsx`):
+  una línea por pedido —*Fran pide **25%** de descuento · Empresa XYZ ·
+  sábado 14*— con su botón principal a la vista (*✓ Aprobar 25%*, *✓ Subir a
+  140*, *✓ Ampliar a 132* + *Soltar una →*). El resto —para quién, a qué hora
+  lo pidió, el motivo, *✕ Rechazar*, *Ver el día*— se abre con *Más ▾*. **El
+  exclusivo** no se aprueba de un toque: su fila trae *Ver y decidir ▾*, y
+  ahí están el plazo, *⏸ Dejar de vender el día*, *✓ Aprobar* y *✕
+  Rechazar*, con las mismas preguntas de antes. En celular el texto va
+  arriba y los botones debajo (`min-w-[14rem]`), para que no se apriete en
+  una columna angosta.
+
+#### Los avisos de la recepción guían hasta la reserva
+
+Lo pidió el cliente: con varios avisos, *"colapsar y mostrar los distintos
+avisos y ofrecer el link directamente al día de problema… iluminarlo más la
+sección de problema con un fondo rojo… no rojo full… guiar más al
+usuario"*.
+
+- **En la portada** (`AvisosRecepcion.tsx`), para quien tiene
+  `asistencia`: con **uno**, se ve entero —*Hoy 13:42 · Familia Soto ·
+  Llegaron 6 de 4* y *Ir a la reserva →*—; con **varios**, una línea *📣 3
+  avisos de la recepción sin resolver* con *Ver ▾*, que los lista igual, el
+  más nuevo primero. Antes decía *"La recepción dejó 2 avisos hoy"*, sin
+  nombres.
+- **Entran los de días anteriores** mientras nadie los resuelva. Antes
+  contaba solo los de hoy, así que uno de ayer sin resolver desaparecía de
+  la portada. Sale de las reservas que la portada ya carga: **ninguna
+  lectura más**.
+- ***Ir a la reserva*** lleva a `/dia/<fecha>#reserva-<fila>`: la página del
+  día muestra *Todas* (para que no la esconda un filtro ni *Mías*), abre
+  esa reserva, baja hasta ella y **la hace destellar** dos veces (`.destello`
+  en `globals.css`, apagado con `prefers-reduced-motion`).
+- **En la página del día**, arriba, una franja *📣 N avisos de la recepción
+  por resolver:* con un botón por nombre que hace lo mismo sin recargar. La
+  reserva con aviso va **en rojo suave con borde rojo**, y el aviso —*13:42 ·
+  Llegaron 6 de 4*, con *Editar la reserva* y **✓ Resuelto**— queda a la
+  vista **sin abrirla**. Al resolverlo vuelve a verse como las demás.
+- **Rojo suave y no ámbar**, en la portada, el día y la cara *Reservas* de
+  `/turnos` (que ahora dice *Ir a la reserva →*): ámbar en el panel ya
+  significa *falta cobrar*.
+- `revisarPlayStation()` a 393 y 1280 sin hallazgos en la portada, la
+  bandeja abierta, el día y Turnos; ninguna página se corre de lado.
 
 ### Las misiones de la ayuda (2026-11-12, segunda vuelta)
 
