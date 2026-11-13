@@ -231,6 +231,34 @@ día—, y ninguna firmaba.
 - **Solo aparece donde hay contacto**: con el contacto tapado
   (`privacidad.ts`) no hay número y el botón no se dibuja.
 
+## El título de un link al llegar (2026-11-13)
+
+Lo pidió el cliente: cuando la planilla semanal le llega al grupo, *"que diga
+al tiro planilla semanal de Brasas"*. WhatsApp arma la vista previa de un
+link con el `og:title` y la `og:description` de la página, y todos los links
+del panel decían *Reservas — Brasas de Lo Pirque*, el título del panel
+interno. Ahora cada link que se manda dice lo que es (`lib/vistaPrevia.ts`):
+
+| Link | Título | Debajo |
+|---|---|---|
+| `/semana/<token>` | *Planilla semanal · Brasas de Lo Pirque* | Los turnos de la semana: quién trabaja cada día y en qué puesto. |
+| `/mi/<token>` | *Tu resumen · Brasas de Lo Pirque* | Tus días, lo que ganaste y lo que ya se te pagó. |
+| `/presupuesto/<token>` | *Cotización · Brasas de Lo Pirque* | La cotización del evento, con su detalle y las condiciones de pago. |
+| `/contrato/<token>` | *Contrato · Brasas de Lo Pirque* | El contrato del evento, para revisarlo e imprimirlo. |
+
+- **Sin fechas ni nombres en el título**: WhatsApp guarda la vista previa
+  por dirección y la planilla semanal es el mismo link todas las semanas;
+  una fecha quedaría vieja y un nombre se lo mostraría a todo el chat.
+- **No lee la planilla**: es texto fijo. La empresa es la de los mensajes
+  (`EMPRESA_DE_LOS_MENSAJES`, *Brasas de Lo Pirque*).
+- **La dirección que se ve debajo** (`landing-pirque-alpha.vercel.app`) es
+  la del proyecto en Vercel: cambiarla es ponerle un dominio propio al
+  panel (por ejemplo `panel.brasasdelopirque.cl`), que se configura en
+  Vercel y en el DNS del dominio. No es código.
+- **WhatsApp recuerda la vista previa vieja** de un link que ya se mandó:
+  el título nuevo aparece en los links nuevos, o en el mismo después de
+  unos días.
+
 ## Las reservas en el panel
 
 Lo que sigue venía bajo "Reserva en línea" en la raíz: es cómo el panel

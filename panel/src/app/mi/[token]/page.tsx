@@ -92,6 +92,10 @@ import { enPalabras, mesEnPalabras, rangoEnPalabras, hoy, diaSemana, semanaDe,
 import { climaDe, urlPronostico, IDENTIFICACION, iconoDe, FUENTE,
          type Clima } from '@/lib/clima';
 import { estaCerrado } from '@/lib/columnas';
+import { vistaPrevia } from '@/lib/vistaPrevia';
+
+/** El título al llegar el link: ver `lib/vistaPrevia.ts`. */
+export const metadata = vistaPrevia('Tu resumen', 'Tus días, lo que ganaste y lo que ya se te pagó.');
 
 export const dynamic = 'force-dynamic';
 
