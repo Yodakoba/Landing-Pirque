@@ -16,6 +16,7 @@
 export type Tono = 'oro' | 'rosa' | 'cielo' | 'anil';
 
 export const TONO: Record<Tono, {
+  /** La línea de debajo del título (desde el 2026-11-13, sin fondo). */
   banda: string; icono: string; titulo: string;
   /**
    * La caja de una semana (o del mes, en Turnos y Extras). **Solo el borde
@@ -27,19 +28,19 @@ export const TONO: Record<Tono, {
   caja: string;
 }> = {
   oro: {
-    banda: 'border-oro/50 bg-oro/10', icono: 'bg-oro text-white', titulo: 'text-oro',
+    banda: 'border-oro/70', icono: 'bg-oro text-white', titulo: 'text-oro',
     caja: 'border-oro/30'
   },
   rosa: {
-    banda: 'border-rosa-fuerte/50 bg-rosa/10', icono: 'bg-rosa-fuerte text-white', titulo: 'text-rosa-texto',
+    banda: 'border-rosa-fuerte/70', icono: 'bg-rosa-fuerte text-white', titulo: 'text-rosa-texto',
     caja: 'border-rosa-fuerte/30'
   },
   cielo: {
-    banda: 'border-cielo-fuerte/50 bg-cielo/10', icono: 'bg-cielo-fuerte text-white', titulo: 'text-cielo-texto',
+    banda: 'border-cielo-fuerte/70', icono: 'bg-cielo-fuerte text-white', titulo: 'text-cielo-texto',
     caja: 'border-cielo-fuerte/30'
   },
   anil: {
-    banda: 'border-anil-fuerte/50 bg-anil/10', icono: 'bg-anil-fuerte text-white', titulo: 'text-anil-texto',
+    banda: 'border-anil-fuerte/70', icono: 'bg-anil-fuerte text-white', titulo: 'text-anil-texto',
     caja: 'border-anil-fuerte/30'
   }
 };
@@ -54,6 +55,14 @@ export const TONO: Record<Tono, {
  * iguales—, el `?` y la frase al lado, chica. El tono sigue en el borde
  * izquierdo grueso y el fondo suave, que es lo que dice dónde se está.
  */
+/*
+ * **Un título, no una caja** (2026-11-13, lo reclamó el cliente: después de
+ * cerrar el aviso de Cotizaciones, *"no desaparece esta franja de aviso"*).
+ * La banda iba con fondo de color y borde alrededor, y así se leía como un
+ * aviso más —igual que la línea roja del sobrecupo—, no como el nombre de la
+ * pantalla. Ahora es el ícono en su color, *SECCIÓN · Título* y **una línea
+ * del tono debajo**, sin fondo ni caja. El tono sigue diciendo dónde se está.
+ */
 export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, children }: {
   tono: Tono; icono: string;
   /** La palabra corta: *RESERVAS*, *COTIZACIONES*, *TURNOS*. */
@@ -67,7 +76,7 @@ export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, chil
   const t = TONO[tono];
   const mismo = seccion.trim().toLowerCase() === titulo.trim().toLowerCase();
   return (
-    <header className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border-2 border-l-[6px] px-3 py-1.5 ${t.banda}`}>
+    <header className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 pb-2 ${t.banda}`}>
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[18px] ${t.icono}`}
         aria-hidden>{icono}</span>
       {/* El título se parte adentro y nunca se va debajo del ícono; el `?`
