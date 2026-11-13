@@ -331,10 +331,12 @@ export const AYUDAS: Record<string, Ayuda> = {
     ],
     pasos: [
       'Busca la reserva por nombre.',
-      'Aprieta Llegó o No vino. Una ya marcada se achica; Cambiar la vuelve a '
-      + 'abrir.',
-      'Para todo lo demás —personas, menús, pago, un pedido especial— aprieta '
-      + 'Avisar al jefe de turno y escríbelo.'
+      'Aprieta Llegó o No vino: están a la vista en cada reserva. Una ya '
+      + 'marcada dice qué quedó; Cambiar vuelve a ofrecer los dos botones.',
+      'El círculo de cada reserva dice cómo viene el pago (✓ ya pagó, $ se '
+      + 'cobra, ½ abonó, ! ojo). Con + la abres: cómo ingresarla en Fudo y '
+      + 'Avisar al jefe de turno, para todo lo demás —personas, menús, pago, un '
+      + 'pedido especial—.'
     ],
     ojo: 'Antes de la hora de apertura, o con el día cerrado, los botones no '
        + 'aparecen.'

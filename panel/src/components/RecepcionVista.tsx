@@ -5,7 +5,14 @@
  * anfitriona, *"con un tablet en la mano y simplemente recibiendo la
  * gente"*. Solo hoy, solo lo justo para recibir, y todo grande.
  *
- * - **Llegó / No vino**, dos botones gigantes por reserva.
+ * - **Llegó / No vino**, dos botones grandes por reserva, siempre a la vista.
+ * - **Cada reserva es una fila de dos pisos** (2026-11-13, lo pidió el
+ *   cliente: *"compactar toda la información… colapsar pero sin colapsar,
+ *   que ya hay el botón simplemente vino o no vino"*). Arriba la misma fila
+ *   de la página del día —(+), nombre y menú, el círculo de Fudo y la
+ *   gente—; abajo Llegó / No vino. Con (+) se abre cómo ingresarla en Fudo y
+ *   *Avisar al jefe de turno*. Una reserva por llegar medía unos 390px en el
+ *   celular (cabía una y media por pantalla); ahora unos 130.
  * - Al apretar *Llegó* pregunta **¿Llegaron las N?**: *Sí* de un toque, o un
  *   contador − / + si llegaron más o menos. Lo distinto **no cambia la
  *   reserva**: queda en `Llegaron` y le avisa solo al jefe de turno, que es
@@ -20,7 +27,7 @@
  * alguien marcó desde otro lado.
  */
 import AvisoFijo from './AvisoFijo';
-import IngresoFudo from './IngresoFudo';
+import IngresoFudo, { IconoFudo } from './IngresoFudo';
 import { usarSoloMira } from './SesionCliente';
 import type { Ingreso } from '@/lib/fudo';
 import { useEffect, useMemo, useState } from 'react';
@@ -61,6 +68,11 @@ export default function RecepcionVista() {
    * la vuelve a abrir.
    */
   const [abierta, setAbierta] = useState(0);
+  /** Las reservas abiertas con (+): cómo ingresarla en Fudo y Avisar. */
+  const [expandidas, setExpandidas] = useState<Set<number>>(new Set());
+  const alternar = (fila: number) => setExpandidas((x) => {
+    const y = new Set(x); if (y.has(fila)) y.delete(fila); else y.add(fila); return y;
+  });
 
   const cargar = () => fetch('/api/recepcion').then((r) => r.json()).then((x) => {
     if (x.error) return setError(x.error);
@@ -134,30 +146,35 @@ export default function RecepcionVista() {
           lista: en el celular, quien recibe busca un nombre tras otro y no
           puede volver a subir cada vez. Llevan su propio fondo para que la
           lista no se vea por debajo. */}
-      <div className="sticky top-0 z-10 -mx-5 mt-2 bg-tinta px-5 pb-3 pt-3 shadow-sm">
+      <div className="sticky top-0 z-10 -mx-5 mt-2 bg-tinta px-5 pb-2 pt-2 shadow-sm">
       <div className="grid grid-cols-3 gap-2">
         {([
           [`${llegaron}/${esperadas}`, 'personas llegaron', 'text-verde-texto'],
           [String(porLlegar), porLlegar === 1 ? 'reserva por llegar' : 'reservas por llegar', 'text-oro'],
           [String(noVinieron), noVinieron === 1 ? 'no vino' : 'no vinieron', 'text-rojo-texto']
         ] as const).map(([n, que, color]) => (
-          <div key={que} className="rounded-xl border border-hueso/15 bg-panel px-2 py-2.5 text-center">
-            <p className={`text-[26px] font-extrabold leading-none tabular-nums sm:text-[30px] ${color}`}>{n}</p>
-            <p className="mt-1 text-[13px] leading-tight text-hueso/75 sm:text-[14px]">{que}</p>
+          // **Más bajos** (2026-11-13): el número y su palabra en la misma
+          // línea. Antes cada uno ocupaba dos y la franja fija de arriba se
+          // comía un cuarto de la pantalla del celular.
+          <div key={que} className="flex items-center justify-center gap-1.5 rounded-xl border border-hueso/15
+                                    bg-panel px-1.5 py-1.5 sm:gap-2 sm:py-2">
+            <p className={`text-[22px] font-extrabold leading-none tabular-nums sm:text-[26px] ${color}`}>{n}</p>
+            <p className="text-left text-[13px] leading-tight text-hueso/75 sm:text-[14px]">{que}</p>
           </div>
         ))}
       </div>
 
       <input value={busca} onChange={(e) => setBusca(e.target.value)} type="search"
         placeholder="Buscar por nombre…" aria-label="Buscar reserva por nombre"
-        className="mt-3 w-full rounded-xl border-2 border-hueso/20 bg-panel px-4 py-3 text-[18px]
+        className="mt-2 w-full rounded-xl border-2 border-hueso/20 bg-panel px-4 py-2.5 text-[18px]
                    outline-none focus:border-oro" />
       </div>
 
       {/* Una sola vez y no en cada tarjeta: repetida era ruido. */}
       {!bloqueada && (
         <AvisoFijo clave="recepcion-avisar" className="mt-1">
-          Para cambiar personas, menús o el pago, usa <strong>📣 Avisar al jefe de turno</strong>.
+          Para cambiar personas, menús o el pago, abre la reserva con <strong>+</strong> y usa
+          {' '}<strong>📣 Avisar al jefe de turno</strong>.
         </AvisoFijo>
       )}
 
@@ -168,66 +185,69 @@ export default function RecepcionVista() {
         <p className="mt-6 text-[17px] text-hueso/70">Nadie calza con “{busca}”.</p>
       )}
 
-      <ul className="mt-3 grid grid-cols-1 items-start gap-3 md:grid-cols-2">
+      <ul className="mt-3 grid grid-cols-1 items-start gap-2.5 md:grid-cols-2">
         {lista.map((r) => {
           const vino = r.asistencia === ASISTENCIA.vino;
           const noVino = r.asistencia === ASISTENCIA.noVino;
           const n = r.llegaron ?? r.personas;
-          // Ya recibida y sin tocar: una línea. Abierta a mano, contando o
-          // avisando, la tarjeta entera.
-          if ((vino || noVino) && abierta !== r.fila && contando?.fila !== r.fila && avisando?.fila !== r.fila) {
-            return (
-              <li key={r.fila} className={`flex min-w-0 items-center gap-3 rounded-xl border-2 px-3 py-2 ${vino
-                ? 'border-verde/40 bg-verde/[0.06]' : 'border-rojo/35 bg-rojo/[0.05]'}`}>
-                <span aria-hidden className={`text-[22px] font-bold ${vino ? 'text-verde-texto' : 'text-rojo-texto'}`}>
-                  {vino ? '✓' : '✕'}
+          const marcada = vino || noVino;
+          const abiertaEsta = expandidas.has(r.fila);
+          const contandoEsta = contando?.fila === r.fila;
+          const avisandoEsta = avisando?.fila === r.fila;
+          // Una marcada vuelve a ofrecer Llegó / No vino solo con *Cambiar*.
+          const cambiandoEsta = abierta === r.fila;
+          return (
+            <li key={r.fila} className={`min-w-0 overflow-hidden rounded-2xl border-2 ${vino
+              ? 'border-verde/50 bg-verde/[0.06]' : noVino ? 'border-rojo/40 bg-rojo/[0.05]'
+              : abiertaEsta ? 'border-oro bg-panel' : 'border-hueso/20 bg-panel'}`}>
+              {/* **El primer piso: la misma fila de la página del día**, más
+                  grande porque se usa de pie y con un tablet. (+), quién y qué
+                  menú, el círculo de Fudo y la gente. */}
+              <button type="button" aria-expanded={abiertaEsta} onClick={() => alternar(r.fila)}
+                className={`tecla flex min-h-[60px] w-full items-center gap-3 px-3 py-2 text-left
+                            ${abiertaEsta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
+                <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full
+                                             border-2 text-[17px] font-bold ${abiertaEsta
+                  ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
+                  {abiertaEsta ? '−' : '+'}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[17px] font-semibold">{r.nombre || 'Sin nombre'}</span>
-                  <span className={`block text-[14px] ${vino && n !== r.personas ? 'font-semibold text-ambar-texto'
-                    : 'text-hueso/70'}`}>
-                    {vino ? `Llegaron ${n}${n !== r.personas ? ` de ${r.personas}` : ''}` : 'No vino'}
-                    {r.avisoRecepcion && ' · 📣 avisado'}
+                  <span className={`block truncate text-[18px] font-bold ${noVino ? 'line-through opacity-70' : ''}`}>
+                    {r.nombre || 'Sin nombre'}
                   </span>
+                  {r.menu && <span className="block truncate text-[14px] text-hueso/70">{r.menu}</span>}
                 </span>
-                {!bloqueada && (
-                  <button type="button" className="boton min-h-[44px] shrink-0"
-                    onClick={() => setAbierta(r.fila)}>Cambiar</button>
-                )}
-              </li>
-            );
-          }
-          return (
-            <li key={r.fila} className={`min-w-0 rounded-2xl border-2 p-3.5 sm:p-4 ${vino
-              ? 'border-verde/50 bg-verde/[0.06]' : noVino ? 'border-rojo/40 bg-rojo/[0.05] opacity-80'
-              : 'border-hueso/20 bg-panel'}`}>
-              <div className="flex flex-wrap items-baseline gap-x-3">
-                <p className="text-[21px] font-bold">{r.nombre || 'Sin nombre'}</p>
-                <p className="text-[17px] text-hueso/80">
-                  <strong className="tabular-nums">{r.personas}</strong> {r.personas === 1 ? 'persona' : 'personas'}
-                </p>
-              </div>
-              {r.menu && <p className="mt-0.5 text-[15px] text-hueso/70">{r.menu}</p>}
-              {/* **Cómo se ingresa en Fudo** (2026-11-11, lo pidió el
-                  cliente): lo primero que mira quien abre la mesa. */}
-              {!noVino && <div className="mt-2"><IngresoFudo ingreso={r.ingreso} /></div>}
+                {!noVino && <IconoFudo ingreso={r.ingreso} />}
+                <span className="w-[4.5rem] shrink-0 text-right text-[20px] font-bold tabular-nums">
+                  {r.personas}<span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
+                </span>
+              </button>
 
-              {vino && (
-                <p className="mt-2 text-[17px] font-semibold text-verde-texto">
-                  ✓ Llegaron {n}{n !== r.personas && <span className="text-ambar-texto"> de {r.personas}</span>}
-                </p>
-              )}
-              {noVino && <p className="mt-2 text-[17px] font-semibold text-rojo-texto">✕ No vino</p>}
+              {/* El aviso ya mandado, a la vista sin abrirla. */}
               {r.avisoRecepcion && (
-                <p className="mt-2 rounded-lg border border-ambar/60 bg-ambar/10 px-3 py-2 text-[15px] text-ambar-texto">
+                <p className="mx-3 mb-2 rounded-lg border border-ambar/60 bg-ambar/10 px-3 py-1.5 text-[14px] text-ambar-texto">
                   📣 Avisado al jefe de turno: {r.avisoRecepcion}
                 </p>
               )}
 
-              {/* ¿Llegaron las N? */}
-              {contando?.fila === r.fila ? (
-                <div className="mt-3 rounded-xl border-2 border-verde/50 p-3">
-                  <p className="text-[18px] font-semibold">¿Llegaron las {r.personas}?</p>
+              {/* Abierta con (+): cómo ingresarla en Fudo y Avisar. */}
+              {abiertaEsta && !contandoEsta && !avisandoEsta && (
+                <div className="space-y-2 border-t border-hueso/10 px-3 py-2.5">
+                  {!noVino && <IngresoFudo ingreso={r.ingreso} />}
+                  {!bloqueada && (
+                    <button type="button" className="boton min-h-[48px] w-full !text-[15px]"
+                      onClick={() => setAvisando({ fila: r.fila, texto: '' })}>📣 Avisar al jefe de turno</button>
+                  )}
+                </div>
+              )}
+
+              {/* El segundo piso. */}
+              {contandoEsta ? (
+                <div className="mx-3 mb-3 mt-1 rounded-xl border-2 border-verde/50 p-3">
+                  {/* Al apretar Llegó se abre la mesa: lo que hay que
+                      ingresar en Fudo va acá mismo, sin abrir nada. */}
+                  <IngresoFudo ingreso={r.ingreso} compacto />
+                  <p className="mt-3 text-[18px] font-semibold">¿Llegaron las {r.personas}?</p>
                   <button type="button" disabled={!!guardando}
                     onClick={() => { setContando(null); void llego(r, r.personas); }}
                     className="tecla mt-2 min-h-[60px] w-full rounded-xl border-2 border-verde-fuerte bg-verde-fuerte
@@ -252,8 +272,8 @@ export default function RecepcionVista() {
                   </p>
                   <button type="button" className="boton mt-2 min-h-[44px]" onClick={() => setContando(null)}>Volver</button>
                 </div>
-              ) : avisando?.fila === r.fila ? (
-                <div className="mt-3 rounded-xl border-2 border-ambar/60 p-3">
+              ) : avisandoEsta ? (
+                <div className="mx-3 mb-3 mt-1 rounded-xl border-2 border-ambar/60 p-3">
                   <p className="text-[17px] font-semibold">¿Qué le avisas al jefe de turno?</p>
                   <textarea value={avisando.texto} autoFocus rows={2} maxLength={250}
                     onChange={(e) => setAvisando({ fila: r.fila, texto: e.target.value })}
@@ -267,33 +287,39 @@ export default function RecepcionVista() {
                       className="boton boton-relleno boton-hito flex-1 disabled:opacity-40">📣 Avisar</button>
                   </div>
                 </div>
+              ) : marcada && !cambiandoEsta ? (
+                // Ya recibida: lo que quedó, y *Cambiar* por si fue un error.
+                <div className="flex items-center gap-2 px-3 pb-2.5">
+                  <span className={`flex-1 text-[16px] font-bold ${vino
+                    ? (n !== r.personas ? 'text-ambar-texto' : 'text-verde-texto') : 'text-rojo-texto'}`}>
+                    {vino ? `✓ Llegaron ${n}${n !== r.personas ? ` de ${r.personas}` : ''}` : '✕ No vino'}
+                  </span>
+                  {!bloqueada && (
+                    <button type="button" className="boton min-h-[44px] shrink-0"
+                      onClick={() => setAbierta(r.fila)}>Cambiar</button>
+                  )}
+                </div>
               ) : !bloqueada && (
-                <>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button type="button" disabled={!!guardando}
-                      onClick={() => setContando({ fila: r.fila, n: r.personas })}
-                      className={`tecla min-h-[64px] rounded-xl border-2 text-[20px] font-bold ${vino
-                        ? 'border-verde-fuerte bg-verde-fuerte text-tinta'
-                        : 'border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
-                      ✓ Llegó
-                    </button>
-                    <button type="button" disabled={!!guardando}
-                      onClick={() => { setAbierta(0); void guardar(r, { asistencia: noVino ? '' : ASISTENCIA.noVino, llegaron: null },
-                        noVino ? `${r.nombre}: sin marcar` : `${r.nombre}: no vino`); }}
-                      className={`tecla min-h-[64px] rounded-xl border-2 text-[20px] font-bold ${noVino
-                        ? 'border-rojo-fuerte bg-rojo-fuerte text-white'
-                        : 'border-rojo-fuerte/70 text-rojo-texto hover:bg-rojo/10'}`}>
-                      ✕ No vino
-                    </button>
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <button type="button" className="boton min-h-[48px] flex-1 !text-[15px]"
-                      onClick={() => setAvisando({ fila: r.fila, texto: '' })}>📣 Avisar al jefe de turno</button>
-                    {abierta === r.fila && (
-                      <button type="button" className="boton min-h-[48px]" onClick={() => setAbierta(0)}>Listo</button>
-                    )}
-                  </div>
-                </>
+                <div className="grid grid-cols-2 gap-2 px-3 pb-3">
+                  <button type="button" disabled={!!guardando}
+                    onClick={() => setContando({ fila: r.fila, n: r.personas })}
+                    className={`tecla min-h-[52px] rounded-xl border-2 text-[18px] font-bold ${vino
+                      ? 'border-verde-fuerte bg-verde-fuerte text-tinta'
+                      : 'border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>
+                    ✓ Llegó
+                  </button>
+                  <button type="button" disabled={!!guardando}
+                    onClick={() => { setAbierta(0); void guardar(r, { asistencia: noVino ? '' : ASISTENCIA.noVino, llegaron: null },
+                      noVino ? `${r.nombre}: sin marcar` : `${r.nombre}: no vino`); }}
+                    className={`tecla min-h-[52px] rounded-xl border-2 text-[18px] font-bold ${noVino
+                      ? 'border-rojo-fuerte bg-rojo-fuerte text-white'
+                      : 'border-rojo-fuerte/70 text-rojo-texto hover:bg-rojo/10'}`}>
+                    ✕ No vino
+                  </button>
+                  {cambiandoEsta && (
+                    <button type="button" className="boton col-span-2 min-h-[44px]" onClick={() => setAbierta(0)}>Listo</button>
+                  )}
+                </div>
               )}
             </li>
           );

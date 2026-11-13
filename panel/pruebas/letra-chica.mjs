@@ -21,7 +21,7 @@ const CHICA = /text-\[(9|10|11|12)px\]|\btext-xs\b/g;
 /** Lo que había el 2026-11-12. Solo puede bajar. */
 const HABIA = {
     "src/components/CampoTelefono.tsx": 1,
-    "src/components/IngresoFudo.tsx": 1,
+    "src/components/IngresoFudo.tsx": 0,
     "src/components/Entrada.tsx": 3,
     "src/components/EventosCRM.tsx": 1,
     "src/components/Clima.tsx": 2,
