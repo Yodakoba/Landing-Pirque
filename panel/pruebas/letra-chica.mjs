@@ -26,7 +26,7 @@ const HABIA = {
     "src/components/EventosCRM.tsx": 1,
     "src/components/Clima.tsx": 2,
     "src/components/CalendarioExtras.tsx": 0,
-    "src/components/CalendarioEquipo.tsx": 8,
+    "src/components/CalendarioEquipo.tsx": 0,
     "src/components/PuntoDia.tsx": 0,
     "src/components/BotonTema.tsx": 0,
     "src/components/DiaEditor.tsx": 9,

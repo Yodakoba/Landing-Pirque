@@ -6017,6 +6017,19 @@ grande, que gana espacio frente a *"Miércoles 11 de noviembre"*.
 - **La caja de la semana es la misma** en los dos: `rounded-lg`, el rango en
   negrita con una línea debajo y la pastilla *ESTA SEMANA*, y las tarjetas
   con 12px de separación.
+- **Iguales, pero cada uno con su tono** (segunda vuelta, el mismo día; lo
+  pidió el cliente: *"se tiene que sentir igual, pero distintivo"*, y que
+  Turnos entre en la misma familia). **Igual en los tres**: la fecha
+  (`FechaDia`, también en las celdas de Turnos y en sus avisos de días por
+  cerrar, ahí con el mes: *DOM 8 nov*), las tarjetas pintadas por el estado
+  del día y la caja de la semana o del mes. **Distinto**: un tono por sección
+  (`BandaSeccion.tsx`, `TONO`), en una **banda de título** con ícono y en el
+  marco de las cajas —**Reservas dorado** 📅, **Cotizaciones rosado** 💼 (el
+  color que ya significa "cotizado"), **Turnos celeste** 👥— con la pastilla
+  *ESTA SEMANA* rellena del mismo tono. Las clases de cada tono van escritas
+  enteras, porque Tailwind solo genera las que encuentra literales. En Turnos,
+  la letra de las celdas pasó de 12 a 13px como en los otros dos
+  (`HABIA` 8 → 0).
 - **De paso, la regla PlayStation en lo que comparten**: la palabra bajo el
   punto (*PÚBLICO*) de 12 a 13px, *ESTA SEMANA* de 10 a 13, la línea del mes
   de 12 a 13, y *Enviar planilla semanal* pasó de texto suelto a botón.

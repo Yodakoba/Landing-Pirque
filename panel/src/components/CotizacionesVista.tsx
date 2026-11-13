@@ -37,6 +37,7 @@ import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
 import FechaDia from './FechaDia';
+import BandaSeccion, { TONO } from './BandaSeccion';
 import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
 import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
@@ -442,12 +443,12 @@ export default function CotizacionesVista() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Cotizaciones<Ayuda tema="presupuestos" />
-      </h1>
-      <p className="mb-4 max-w-2xl text-[15px] text-hueso/70">
+      {/* La banda rosada de Cotizaciones: mismo formato que Reservas y Turnos,
+          su propio tono. Ver `BandaSeccion.tsx`. */}
+      <BandaSeccion tono="rosa" icono="💼" seccion="Cotizaciones" titulo="Cotizaciones"
+        ayuda={<Ayuda tema="presupuestos" />}>
         Lo cotizado no ocupa cupo: recién al marcarla ganada se vuelve reserva.
-      </p>
+      </BandaSeccion>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {!soloMira && (
@@ -610,13 +611,13 @@ export default function CotizacionesVista() {
           {cajas.map((c) => (
             /* La caja de la semana, igual que en Reservas. */
             <div key={c.lunes} className={`rounded-lg border p-3 ${c.lunes === inicio
-              ? 'border-oro/40 bg-oro/[0.03]' : 'border-hueso/15'}`}>
+              ? TONO.rosa.cajaAhora : TONO.rosa.caja}`}>
               <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hueso/10 pb-2">
                 <strong className="text-sm">
                   {rangoEnPalabras(Array.from({ length: 7 }, (_, d) => sumarDias(c.lunes, d)))}
                 </strong>
                 {c.lunes === inicio && (
-                  <span className="rounded bg-oro/15 px-1.5 py-0.5 text-[13px] font-semibold uppercase tracking-wide text-oro">
+                  <span className={`rounded px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide ${TONO.rosa.pastilla}`}>
                     esta semana
                   </span>
                 )}
