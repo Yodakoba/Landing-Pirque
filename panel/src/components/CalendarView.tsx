@@ -31,6 +31,7 @@ import AvisoSobrecupo from './AvisoSobrecupo';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
 import { pendientesDeAprobar, pendientesDeCupo, pendientesDeSobrecupo, juntarPendientes, type PendienteExclusivo } from '@/lib/aprobaciones';
 import AvisosRecepcion from './AvisosRecepcion';
+import { MarcaAhora } from './FechaDia';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { usarAlDia, BarraAlDia, horaDe } from './AlDia';
 import { diferencias, MARCA_DURA } from '@/lib/cambios';
@@ -481,17 +482,15 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               lo que agrupa: una grilla corrida bajo un título de mes no dice
               dónde termina un fin de semana y empieza el otro. */}
           <div
-            className={`mb-4 rounded-lg border p-3 ${esta ? TONO_SECCION.oro.cajaAhora : TONO_SECCION.oro.caja}`}>
+            className={`mb-4 rounded-lg border p-3 ${TONO_SECCION.oro.caja}`}>
             <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1
                             border-b border-hueso/10 pb-2">
               <strong className="text-sm">
                 {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
               </strong>
-              {esta && (
-                <span className={`rounded px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide ${TONO_SECCION.oro.pastilla}`}>
-                  esta semana
-                </span>
-              )}
+              {/* La semana en curso: la misma caja que las otras y una
+                  palabra, igual en todos los calendarios (`MarcaAhora`). */}
+              {esta && <MarcaAhora>esta semana</MarcaAhora>}
               {/* **Solo lo que se sale de lo normal** (2026-11-05). El conteo
                   de personas y reservas se sacó: ya se ve en las tarjetas de
                   abajo, y la línea sirve más para avisar. Ver

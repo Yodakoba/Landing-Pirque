@@ -994,7 +994,8 @@ en $0 y la pantalla avisa que se escriba en pesos.
   vencidas siguen arriba.
 - **Mías / De todos** (2026-11-12, lo pidió el cliente): dos botones arriba
   de Cotizaciones, con cuántas hay en cada uno. Filtran la pantalla entera
-  —calendario, *Sin fecha*, *Todas* y los avisos— por quién la creó
+  —calendario, *Sin fecha*, *Todas*; **los avisos ya no** desde el
+  2026-11-13: ver *Hoy, esta semana y los pendientes de cada cuenta*— por quién la creó
   (`esSuya()` en `auth.ts`); **un grupo de alternativas va entero** si una
   es suya. No cambia quién puede tocar qué. El vendedor parte en *Mías* y
   los demás en *De todos*; la elección se recuerda en el navegador
@@ -6044,7 +6045,10 @@ grande, que gana espacio frente a *"Miércoles 11 de noviembre"*.
   (`BandaSeccion.tsx`, `TONO`), en una **banda de título** con ícono y en el
   marco de las cajas —**Reservas dorado** 📅, **Cotizaciones rosado** 💼 (el
   color que ya significa "cotizado"), **Turnos celeste** 👥— con la pastilla
-  *ESTA SEMANA* rellena del mismo tono. Las clases de cada tono van escritas
+  *ESTA SEMANA* rellena del mismo tono (**cambió el 2026-11-13**: la caja
+  lleva solo un borde fino del tono y *ESTA SEMANA* es una pastilla neutra,
+  igual en todos; ver *Hoy, esta semana y los pendientes de cada cuenta*).
+  Las clases de cada tono van escritas
   enteras, porque Tailwind solo genera las que encuentra literales. En Turnos,
   la letra de las celdas pasó de 12 a 13px como en los otros dos
   (`HABIA` 8 → 0).
@@ -6154,6 +6158,50 @@ los otros"*. `CalendarioExtras.tsx` quedó como Turnos, que también es un mes:
   eso es lo normal.
 - `revisarPlayStation()` a 393 y 1280 sin hallazgos ni página corrida de
   lado.
+
+### Hoy, esta semana y los pendientes de cada cuenta (2026-11-13)
+
+Lo reclamó el cliente mirando Cotizaciones: la semana en curso iba con un
+fondo rosado *"que no lo haces en ningún otro lado… sigue a un hilo
+conectivo"*, y el rosado *"se junta mucho con los avisos en rojo arriba"*.
+Y que en *Pendientes* cada cuenta vea **solo lo que ella tiene que
+arreglar**, sin cambiar la forma de los avisos.
+
+**Un solo hilo para marcar el ahora, en los cuatro calendarios.** Había
+cuatro formas: un fondo dorado casi invisible en Reservas, uno rosado en
+Cotizaciones y un anillo dorado en Turnos y Extras —el mismo anillo que en
+Cotizaciones quiere decir *día abierto*—, y Reservas no marcaba hoy. Ahora:
+
+- **Una palabra en una pastilla con borde, sin color** (`MarcaAhora`, en
+  `FechaDia.tsx`): ***HOY*** al lado de la fecha del día —la pone
+  `FechaDia` sola, así que sale igual en Reservas, Cotizaciones, Turnos y
+  Extras, y el `aria-label` dice *Hoy, …*— y ***ESTA SEMANA*** al lado del
+  rango de la semana en Reservas y Cotizaciones. El anillo dorado de hoy en
+  Turnos y Extras se sacó.
+- **Las cajas de semana y de mes no llevan fondo**: solo un borde fino del
+  tono de la sección (`TONO[…].caja`). La semana en curso va en la misma
+  caja que las otras. El tono sigue entero en la banda del título.
+- **El color queda para lo que significa algo**: el estado del día en la
+  tarjeta y los avisos.
+
+**Los pendientes son de cada cuenta** (`CotizacionesVista`, rótulo *Tus
+pendientes*):
+
+- **Los de una cotización salen de las suyas**: *saldos por cobrar*, *pagó
+  y falta ganarla*, *esperando respuesta*, *vence pronto* y *vencieron sin
+  cerrar*, de las cotizaciones que creó esa cuenta (con su grupo de
+  alternativas entero, como en *Mías*). **No cambian con *Mías / De
+  todos***: ese par sigue filtrando el calendario y las listas, y la marca
+  *esperando respuesta* de cada tarjeta sigue a lo que se mira.
+- **Los del rol de pagos son de quien paga**: *cobros por revisar* y
+  *devoluciones por hacer*, de **todas** las cotizaciones, porque revisar y
+  transferir es su trabajo y no el de quien vendió.
+- **El sobrecupo** (la línea roja de arriba) ya venía por cuenta: el
+  vendedor lo ve solo cuando la reserva en riesgo es suya.
+- Comprobado con la mitad de las cotizaciones de prueba a nombre de una
+  vendedora: el administrador ve *3 saldos (1 vencido) · 5 por revisar · 1
+  pagó y falta ganarla · 2 esperando · 1 vence pronto*, y ella *3 saldos ·
+  1 esperando · 1 vence pronto*. Sumados dan lo que antes veían todos.
 
 ### Las misiones de la ayuda (2026-11-12, segunda vuelta)
 

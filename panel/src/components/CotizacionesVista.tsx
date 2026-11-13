@@ -36,7 +36,7 @@ import { puede, puedeTocarPresupuesto, esSuya, ROL, type Rol } from '@/lib/auth'
 import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
-import FechaDia from './FechaDia';
+import FechaDia, { MarcaAhora } from './FechaDia';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
@@ -245,36 +245,52 @@ export default function CotizacionesVista() {
     return cuentaComoPosible(p, hoy);
   };
 
-  const pronto = visibles.filter((p) => porVencer(p, hoy));
+  /**
+   * **Los pendientes son de cada cuenta** (2026-11-13, lo pidió el cliente:
+   * *"que solo le aparecen las reservas que él mismo tiene que arreglar,
+   * separado por cuenta"*). Los de una cotización —por vencer, esperando
+   * respuesta, vencidas, saldos y *pagó y falta ganarla*— salen de **las
+   * suyas** (`mias`: las que creó esa cuenta, con su grupo de alternativas
+   * entero), y no cambian con *Mías / De todos*, que sigue filtrando el
+   * calendario y las listas. Los del rol —cobros por revisar y devoluciones—
+   * son de quien paga, de todas las cotizaciones: ver más abajo.
+   */
+  const propias = mias;
+  const pronto = propias.filter((p) => porVencer(p, hoy));
   // **El seguimiento** (2026-11-11): lo mandado que espera respuesta. De
   // cada grupo de alternativas, una sola tarjeta.
   const cfgSeg = { seguimientoDias: datos.seguimiento?.dias ?? 5, avisoEvento: datos.seguimiento?.antesEvento ?? 14 };
-  const porSeguir: PorSeguir[] = [];
-  const gruposVistos = new Set<string>();
-  for (const p of visibles) {
-    const s = seguimientoDe(p, hoy, cfgSeg);
-    if (!s || gruposVistos.has(grupoDe(p))) continue;
-    gruposVistos.add(grupoDe(p));
-    porSeguir.push({ p, ...s, puedeTocar: puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor) });
-  }
-  porSeguir.sort((a, b) => (a.motivo === b.motivo ? 0 : a.motivo === 'eventoCerca' ? -1 : 1));
-  const seguirIds = new Set(porSeguir.map((x) => grupoDe(x.p)));
-  const vencidas = visibles.filter((p) => vencidoSinCerrar(p, hoy));
+  const seguimientoDeLista = (lista: Presupuesto[]) => {
+    const salida: PorSeguir[] = [];
+    const gruposVistos = new Set<string>();
+    for (const p of lista) {
+      const s = seguimientoDe(p, hoy, cfgSeg);
+      if (!s || gruposVistos.has(grupoDe(p))) continue;
+      gruposVistos.add(grupoDe(p));
+      salida.push({ p, ...s, puedeTocar: puedeTocarPresupuesto(datos.rol as Rol, datos.usuario, p.creadoPor) });
+    }
+    return salida.sort((a, b) => (a.motivo === b.motivo ? 0 : a.motivo === 'eventoCerca' ? -1 : 1));
+  };
+  const porSeguir = seguimientoDeLista(propias);
+  // La marca de la tarjeta del día sigue a lo que se está mirando.
+  const seguirIds = new Set(seguimientoDeLista(visibles).map((x) => grupoDe(x.p)));
+  const vencidas = propias.filter((p) => vencidoSinCerrar(p, hoy));
   // **Los avisos de plata** (2026-11-10): anticipo pagado sin ganar, y el
   // saldo de una ganada que vence pronto o ya venció. Ver `avisosDeCobro()`.
   const avisos = avisosDeCobro(
-    visibles.map((p) => ({ ...p, total: totalDe(lineasDe(datos.lineas, p.id), p.descuento) })),
+    propias.map((p) => ({ ...p, total: totalDe(lineasDe(datos.lineas, p.id), p.descuento) })),
     datos.cobros ?? [], datos.condiciones ?? { anticipoPct: 30, saldoDias: 3 }, hoy,
     [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida]);
   const porId = new Map(datos.presupuestos.map((p) => [p.id, p]));
-  const idsVisibles = new Set(visibles.map((p) => p.id));
   // **Cobros por revisar** (2026-11-10): solo para quien hace los pagos,
-  // que es quien los revisa. Uno por cotización, con cuántos y cuánto.
+  // que es quien los revisa. Uno por cotización, con cuántos y cuánto. Son
+  // de su rol, así que van **todas** las cotizaciones, mire *Mías* o *De
+  // todos* (2026-11-13).
   const sinRevisar = new Map<string, { n: number; monto: number }>();
   if (puede(datos.rol as Rol, 'pagar')) {
     for (const c of porRevisar((datos.cobros ?? []).map((c) => ({ ...c, revisadoPor: c.revisadoPor ?? '' })))) {
       const p = porId.get(c.presupuesto);
-      if (!p || !idsVisibles.has(p.id)) continue;
+      if (!p) continue;
       // Una cancelada ya no pide revisar lo cobrado: lo que queda es la
       // devolución, que tiene su propio aviso (2026-11-11).
       if (estadoDe(p) === ESTADO_PRESUPUESTO.cancelada) continue;
@@ -287,7 +303,7 @@ export default function CotizacionesVista() {
   // acordado devolver que todavía no se anotó. Solo para quien paga, que es
   // quien transfiere.
   const porDevolver = puede(datos.rol as Rol, 'pagar')
-    ? visibles
+    ? datos.presupuestos
       .filter((p) => estadoDe(p) === ESTADO_PRESUPUESTO.cancelada && p.devolucion > 0)
       .map((p) => ({ p, falta: faltaDevolver(p.devolucion,
         (datos.cobros ?? []).filter((c) => c.presupuesto === p.id)
@@ -488,7 +504,7 @@ export default function CotizacionesVista() {
           el cliente: los avisos apilados *"se anotan como lista Excel"* y
           empujaban el calendario). Una pastilla por tipo, en orden de
           urgencia —la plata primero—; se abre una lista a la vez. */}
-      <Pendientes items={[
+      <Pendientes titulo="Tus pendientes" items={[
         ...(porDevolver.length ? [{
           clave: 'devolver', icono: '↩', tono: 'rojo' as const,
           texto: porDevolver.length === 1 ? '1 devolución por hacer' : `${porDevolver.length} devoluciones por hacer`,
@@ -565,17 +581,12 @@ export default function CotizacionesVista() {
           )}
           {cajas.map((c) => (
             /* La caja de la semana, igual que en Reservas. */
-            <div key={c.lunes} className={`rounded-lg border p-3 ${c.lunes === inicio
-              ? TONO.rosa.cajaAhora : TONO.rosa.caja}`}>
+            <div key={c.lunes} className={`rounded-lg border p-3 ${TONO.rosa.caja}`}>
               <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hueso/10 pb-2">
                 <strong className="text-sm">
                   {rangoEnPalabras(Array.from({ length: 7 }, (_, d) => sumarDias(c.lunes, d)))}
                 </strong>
-                {c.lunes === inicio && (
-                  <span className={`rounded px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide ${TONO.rosa.pastilla}`}>
-                    esta semana
-                  </span>
-                )}
+                {c.lunes === inicio && <MarcaAhora>esta semana</MarcaAhora>}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {c.dias.map(tarjeta)}

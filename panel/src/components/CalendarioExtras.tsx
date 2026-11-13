@@ -364,7 +364,6 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
             const delDia = extrasDelDia(extras, f);
             const costo = costoExtrasDelDia(extras, f);
             const sinConfirmar = delDia.filter((e) => !e.estado).length;
-            const esHoy = f === hoy();
             const estado = partesDelDia(oc);
             // **El contenido va pegado arriba, y eso hay que pedirlo.** Las celdas
             // de una fila se estiran todas a la más alta, y el contenido de un
@@ -384,8 +383,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                             overflow-hidden rounded border p-2
                             text-left align-top text-[13px] leading-snug transition
                             hover:border-oro
-                            ${oc ? COLOR_TARJETA(oc) : 'border-hueso/10 bg-panel'}
-                            ${esHoy ? 'ring-1 ring-oro' : ''}`}>
+                            ${oc ? COLOR_TARJETA(oc) : 'border-hueso/10 bg-panel'}`}>
                 {/* Las mismas tres líneas fijas de Turnos: la fecha y el punto,
                     el pronóstico, y la palabra del estado con todo el ancho. */}
                 <span className="flex items-start justify-between gap-1">

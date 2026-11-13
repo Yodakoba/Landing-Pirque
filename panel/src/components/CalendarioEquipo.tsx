@@ -235,7 +235,6 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           const oc = porFecha.get(f);
           const res = resumenDe(f);
           const preparando = prepara(f);
-          const esHoy = f === hoy();
           const estado = partesDelDia(oc, preparando);
           // **El contenido va pegado arriba, y eso hay que pedirlo.** Las celdas
           // de una fila se estiran todas a la más alta, y el contenido de un
@@ -254,8 +253,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                           hover:border-oro disabled:opacity-40
                           ${preparando ? 'border-cafe/50 bg-cafe/[0.06]'
                              : oc ? COLOR_TARJETA(oc)
-                                  : 'border-hueso/10 bg-panel'}
-                          ${esHoy ? 'ring-1 ring-oro' : ''}`}>
+                                  : 'border-hueso/10 bg-panel'}`}>
               {/* **Tres líneas fijas, ninguna que envuelve** (2026-11-06). La
                   fecha y el punto de color arriba; el pronóstico debajo; y la
                   palabra del estado en su propia línea, con todo el ancho de
