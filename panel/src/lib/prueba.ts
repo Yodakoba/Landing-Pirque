@@ -4738,6 +4738,15 @@ console.log('\nVista gerencia');
      'la columna Vista gerencia se lee; en blanco, o en una planilla vieja, es no');
   ok(aFilasUsuarios(cuentasG)[0][5] === 'Vista gerencia' && aFilasUsuarios(cuentasG)[1][5] === 'Sí',
      'y se escribe al final, sin mover las columnas de antes');
+  // **Los avisos cerrados para siempre** (2026-11-13): van en la cuenta.
+  const conAvisos = leerUsuariosDe([['Nombre','Usuario','Rol','Activo','Clave (huella)','Vista gerencia','Avisos leídos'],
+    ['Vero', 'vero', 'vendedor', 'Sí', 'x', '', 'cotizaciones-cupo, inventado'], ['Ana', 'ana', 'encargado', 'Sí', 'x']]);
+  ok(conAvisos[0].avisosLeidos.join() === 'cotizaciones-cupo' && conAvisos[1].avisosLeidos.length === 0,
+     'los avisos leídos se leen de la cuenta; una clave que no existe no entra, y una planilla vieja no tiene ninguno');
+  const filasAvisos = aFilasUsuarios(conAvisos);
+  ok(filasAvisos[0][6] === 'Avisos leídos' && filasAvisos[1][6] === 'cotizaciones-cupo'
+     && leerUsuariosDe(filasAvisos)[0].avisosLeidos.join() === 'cotizaciones-cupo',
+     'y se escriben en la columna siguiente, de ida y vuelta');
 }
 
 {

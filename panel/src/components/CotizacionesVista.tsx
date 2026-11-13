@@ -42,9 +42,12 @@ import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
 import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
 import Pendientes, { FilaPendiente } from './Pendientes';
+import { usarAvisoCerrable } from './usarAvisoCerrable';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
+  /** Los avisos que esta cuenta cerró para siempre (2026-11-13). */
+  avisosLeidos?: string[];
   cobros?: { presupuesto: string; monto: number; revisadoPor?: string; concepto?: string }[];
   /** Los días que se pasaron del cupo (2026-11-12). Ver `AvisoSobrecupo`. */
   sobrecupo?: SobrecupoCorto[];
@@ -113,6 +116,8 @@ export default function CotizacionesVista() {
     try { localStorage.setItem('blp-cotizaciones-de', v); } catch { /* da igual */ }
   }
   const [semanas, setSemanas] = useState(10);
+  /** La frase de la banda, que se cierra para siempre (2026-11-13). */
+  const avisoCupo = usarAvisoCerrable('cotizaciones-cupo', datos?.avisosLeidos);
   /** Qué día está abierto en el calendario, para ver sus cotizaciones. */
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   /** La ventana: una cotización existente, o una nueva (con fecha opcional). */
@@ -462,9 +467,13 @@ export default function CotizacionesVista() {
     <section>
       {/* La banda rosada de Cotizaciones: mismo formato que Reservas y Turnos,
           su propio tono. Ver `BandaSeccion.tsx`. */}
+      {/* **La frase se cierra para siempre** (2026-11-13, lo pidió el
+          cliente: le gusta que esté presente, pero ocupa mucho para estar
+          siempre). *✕ No mostrar más* la guarda en la cuenta; lo mismo
+          sigue explicado en el `?`. Ver `usarAvisoCerrable`. */}
       <BandaSeccion tono="rosa" icono="💼" seccion="Cotizaciones" titulo="Cotizaciones"
-        ayuda={<Ayuda tema="presupuestos" />}>
-        Lo cotizado no ocupa cupo: recién al marcarla ganada se vuelve reserva.
+        ayuda={<Ayuda tema="presupuestos" />} alCerrar={avisoCupo.cerrar}>
+        {!avisoCupo.leido && 'Lo cotizado no ocupa cupo: recién al marcarla ganada se vuelve reserva.'}
       </BandaSeccion>
 
       <div className="mb-4 flex flex-wrap gap-2">
