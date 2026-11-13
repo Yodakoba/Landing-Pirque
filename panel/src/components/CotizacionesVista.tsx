@@ -43,6 +43,7 @@ import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 import AvisoSobrecupo, { type SobrecupoCorto } from './AvisoSobrecupo';
 import Pendientes, { FilaPendiente } from './Pendientes';
 import AvisoFijo from './AvisoFijo';
+import { BotonMias, BotonTodos } from './BotonMias';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
@@ -481,19 +482,11 @@ export default function CotizacionesVista() {
             className="boton boton-relleno min-h-[48px] px-5 text-[15px]">+ Cotizar</button>
         )}
         <span className="flex-1" />
-        <div className="flex gap-2" role="group" aria-label="De quién">
-          {([
-            ['mias', `Mías (${agrupar(mias).length})`],
-            ['todos', `De todos (${agrupar(datos.presupuestos).length})`]
-          ] as const).map(([k, texto]) => {
-            const elegido = (k === 'mias') === soloMias;
-            return (
-              <button key={k} type="button" onClick={() => elegirDe(k)} aria-pressed={elegido}
-                className={`boton min-h-[48px] ${elegido ? 'border-cielo-fuerte bg-cielo/15 font-semibold' : ''}`}>
-                {texto}
-              </button>
-            );
-          })}
+        {/* El mismo *Mías* de todo el panel (`BotonMias`, 2026-11-13). */}
+        <div className="flex items-center gap-2" role="group" aria-label="De quién">
+          <BotonMias cuantas={agrupar(mias).length} elegido={soloMias} onClick={() => elegirDe('mias')} />
+          <BotonTodos texto="De todos" cuantas={agrupar(datos.presupuestos).length} elegido={!soloMias}
+            onClick={() => elegirDe('todos')} />
         </div>
         {([
           ['calendario', 'Calendario'],

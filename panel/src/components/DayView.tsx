@@ -26,6 +26,7 @@ import ReservaForm from './ReservaForm';
 import PastillaPago from './PastillaPago';
 import RectificarReserva from './RectificarReserva';
 import { partirAviso } from './AvisosRecepcion';
+import { BotonMias } from './BotonMias';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { pendientesDeAprobar } from '@/lib/aprobaciones';
 import { avisar } from './AvisoFlotante';
@@ -954,10 +955,7 @@ export default function DayView(
         ))}
         {/* **Mías** (2026-11-12, lo pidió el cliente): de un toque, solo las
             que anotó o vendió esta cuenta. Se suma al filtro del pago. */}
-        <button onClick={() => setSoloMias((v) => !v)} aria-pressed={soloMias}
-          className={`boton rounded-full ${soloMias ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
-          👤 Mías ({cuantasMias})
-        </button>
+        <BotonMias cuantas={cuantasMias} elegido={soloMias} onClick={() => setSoloMias((v) => !v)} />
         <span className="flex-1" />
         <button onClick={exportar} className="boton">Exportar CSV</button>
         {conAnotar ? (
