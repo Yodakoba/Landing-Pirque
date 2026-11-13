@@ -26,6 +26,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
+import FechaDia from './FechaDia';
+import BandaSeccion, { TONO } from './BandaSeccion';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -124,10 +126,11 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
-        Calendario del equipo<Ayuda tema="turnos" />
-      </h1>
-      <p className="mb-5 max-w-2xl text-sm text-hueso/60">
+      {/* La banda celeste de Turnos: mismo formato que Reservas y
+          Cotizaciones, su propio tono. Ver `BandaSeccion.tsx`. */}
+      <BandaSeccion tono="cielo" icono="👥" seccion="Turnos" titulo="Calendario del equipo"
+        ayuda={<Ayuda tema="turnos" />} />
+      <p className="mb-5 max-w-2xl text-[15px] text-hueso/70">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,
         incluidos los que no reciben público: los de preparación, montaje o
         cierre. <strong>Apreta el día</strong> —el que sea— y asígnale equipo;
@@ -163,9 +166,9 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
               const x = falta(f);
               return (
                 <button key={f} onClick={() => setPlanificando(f)}
-                  className="rounded border border-ambar/40 px-2 py-1 text-xs
+                  className="tecla rounded-lg border-2 border-ambar/50 px-2.5 py-1.5 text-[13px]
                              hover:border-oro">
-                  <span className="inline-block first-letter:uppercase">{enPalabras(f)}</span>
+                  <FechaDia fecha={f} tamano="aviso" conMes />
                   {x.sinMarcar > 0 && (
                     <span className="text-ambar-texto"> · {x.sinMarcar} sin marcar</span>
                   )}
@@ -182,7 +185,10 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      {/* La caja del mes, con el tono de Turnos, como las cajas de semana de
+          Reservas y Cotizaciones. */}
+      <div className={`rounded-lg border p-3 ${TONO.cielo.caja}`}>
+      <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-hueso/10 pb-3">
         <button onClick={() => setMes(sumarMeses(mes, -1))}
           className="boton">
           ‹ Mes anterior
@@ -195,7 +201,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           Mes siguiente ›
         </button>
         <span className="flex-1" />
-        <span className="text-xs text-hueso/50">
+        <span className="text-[13px] text-hueso/60">
           {conEquipo.length} {conEquipo.length === 1 ? 'día' : 'días'} con equipo
           {preparacion.length > 0 && (
             <> · {preparacion.length} de preparación</>
@@ -214,7 +220,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           interno viene a evitar. Comprobado a 393px. */}
       <div className="relative overflow-x-auto pb-1">
        <div className="min-w-[840px]">
-        <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-semibold
+        <div className="grid grid-cols-7 gap-1 text-center text-[13px] font-semibold
                         uppercase tracking-wide text-hueso/60">
           {DIAS.map((d) => <div key={d} className="pb-1">{d}</div>)}
         </div>
@@ -269,20 +275,14 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                     que subir la vista y contar columnas para saber qué día
                     era; ahora cada celda se lee sola. La fila de arriba se
                     queda como guía al recorrer el mes. */}
-                <span className={`flex items-baseline gap-1.5 leading-none ${oc || preparando || res.total > 0
-                  ? 'text-hueso' : 'text-hueso/55'}`}>
-                  <span className="text-[13px] font-semibold uppercase tracking-wide opacity-75">
-                    {DIAS[columna(f)]}
-                  </span>
-                  <span className={`text-[18px] ${oc || preparando || res.total > 0 ? 'font-bold' : 'font-medium'}`}>
-                    {Number(f.slice(8, 10))}
-                  </span>
-                </span>
+                {/* La misma fecha que Reservas y Cotizaciones (`FechaDia`), al
+                    tamaño de la celda. */}
+                <FechaDia fecha={f} tamano="celda" apagada={!(oc || preparando || res.total > 0)} />
                 {estado && <span aria-hidden className="text-[14px] leading-none">{estado.punto}</span>}
               </span>
               {pronostico.get(f) && <span className="mt-1 block"><Clima c={pronostico.get(f)} /></span>}
               {estado && (
-                <span className={`mt-1 block whitespace-nowrap text-[12px] font-semibold uppercase tracking-wide ${estado.clase}`}>
+                <span className={`mt-1 block whitespace-nowrap text-[13px] font-semibold uppercase tracking-wide ${estado.clase}`}>
                   {estado.texto}
                 </span>
               )}
@@ -342,7 +342,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
               {res.total > 0 && cerrado(f) && (
                 <span className="mt-auto block self-start pt-1.5">
                   <span className="block max-w-full whitespace-nowrap rounded-full bg-verde-fuerte
-                                   px-2 py-0.5 text-[12px] font-bold text-tinta">
+                                   px-2 py-0.5 text-[13px] font-bold text-tinta">
                     ✓ Cerrado
                   </span>
                 </span>
@@ -356,10 +356,10 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                     : 'listo para cerrar';
                 return (
                   <>
-                    <span className="mt-1 block text-[12px] font-semibold text-ambar-texto">{pendiente}</span>
+                    <span className="mt-1 block text-[13px] font-semibold text-ambar-texto">{pendiente}</span>
                     <span className="mt-auto block self-start pt-1.5">
                       <span className="block max-w-full whitespace-nowrap rounded-full border-[1.5px]
-                                       border-ambar-fuerte bg-ambar/10 px-2 py-0.5 text-[12px]
+                                       border-ambar-fuerte bg-ambar/10 px-2 py-0.5 text-[13px]
                                        font-bold text-ambar-texto">
                         ! Sin cerrar
                       </span>
@@ -373,8 +373,9 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
         </div>
        </div>
       </div>
+      </div>
 
-      <p className="mt-4 max-w-2xl text-xs text-hueso/50">
+      <p className="mt-4 max-w-2xl text-[13px] text-hueso/60">
         <strong>Un día con equipo y sin público es un día de preparación</strong>,
         y así aparece acá y en la planilla semanal. No hay que marcarlo: se
         deduce de que el día no recibe gente y tiene a alguien asignado.

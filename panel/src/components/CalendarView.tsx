@@ -10,6 +10,7 @@ import { CRM_APAGADO } from '@/lib/crm';
 import type { EventosDelDia } from '@/lib/crm';
 import Ayuda from './Ayuda';
 import { verRecorrido } from './Recorrido';
+import BandaSeccion, { TONO as TONO_SECCION } from './BandaSeccion';
 import type { FechaHabil, Ocupacion, Reserva } from '@/lib/tipos';
 import ReservaForm from './ReservaForm';
 import DiaEditor from './DiaEditor';
@@ -303,12 +304,13 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
 
   return (
     <>
-      <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
-        Fechas abiertas
-        {/* El único `?` que además ofrece el recorrido: es la portada,
-            o sea donde vuelve quien se perdió. */}
-        <Ayuda tema="calendario" onRecorrido={verRecorrido} />
-      </h1>
+      {/* **La banda dorada de Reservas** (2026-11-13): el mismo formato que
+          Cotizaciones (rosado) y Turnos (celeste), con su tono para saber
+          dónde se está. Ver `BandaSeccion.tsx`. El `?` es el único que
+          además lleva a las misiones: es la portada, donde vuelve quien se
+          perdió. */}
+      <BandaSeccion tono="oro" icono="📅" seccion="Reservas" titulo="Fechas abiertas"
+        ayuda={<Ayuda tema="calendario" onRecorrido={verRecorrido} />} />
       <BarraAlDia {...alDia} />
       {/* Quien sube el cupo lo ve en la bandeja, con *Ampliar* de un toque;
           los demás roles, el aviso de siempre. */}
@@ -470,11 +472,11 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
             /* Separador sutil: una línea y el mes en chico. No un título
                grande, que competiría con el dato de cada día. */
             <div className={`mb-3 flex items-center gap-3 ${i > 0 ? 'mt-8' : ''}`}>
-              <h2 className="text-xs uppercase tracking-widest text-hueso/45">
+              <h2 className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
                 {mesEnPalabras(mes)}
               </h2>
               <span className="h-px flex-1 bg-hueso/10" />
-              <span className="text-xs text-hueso/35">
+              <span className="text-[13px] text-hueso/55">
                 {(dias ?? []).filter((d) => mesDe(d.fecha) === mes).length} días
               </span>
             </div>
@@ -487,16 +489,14 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               lo que agrupa: una grilla corrida bajo un título de mes no dice
               dónde termina un fin de semana y empieza el otro. */}
           <div
-            className={`mb-4 rounded-lg border p-3 ${
-              esta ? 'border-oro/40 bg-oro/[0.03]' : 'border-hueso/15'}`}>
+            className={`mb-4 rounded-lg border p-3 ${esta ? TONO_SECCION.oro.cajaAhora : TONO_SECCION.oro.caja}`}>
             <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1
                             border-b border-hueso/10 pb-2">
               <strong className="text-sm">
                 {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
               </strong>
               {esta && (
-                <span className="rounded bg-oro/15 px-1.5 py-0.5 text-[10px]
-                                 font-semibold uppercase tracking-wide text-oro">
+                <span className={`rounded px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide ${TONO_SECCION.oro.pastilla}`}>
                   esta semana
                 </span>
               )}
@@ -520,7 +520,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               )}
               {conPlanilla && (
                 <button onClick={() => mandarPlanilla(semana)}
-                  className="text-xs text-hueso/45 hover:text-oro">
+                  className="boton boton-angosto text-hueso/70">
                   Enviar planilla semanal
                 </button>
               )}

@@ -100,7 +100,7 @@ export function PuntoYPalabra({ punto, texto, clase }: { punto: string; texto: s
   return (
     <span className="flex shrink-0 flex-col items-end leading-none">
       <span aria-hidden className="text-[15px]">{punto}</span>
-      <span className={`mt-1 text-[12px] font-semibold uppercase tracking-wide ${clase}`}>
+      <span className={`mt-1 text-[13px] font-semibold uppercase tracking-wide ${clase}`}>
         {texto}
       </span>
     </span>

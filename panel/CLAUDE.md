@@ -5996,6 +5996,47 @@ pantallas** (`components/AyudaRol.tsx`, lógica pura en `lib/ayudaRol.ts`).
   panel ya sabe subir a Drive, es el paso siguiente), y el link personal del
   trabajador (`/mi/`) no tiene el botón, porque no tiene sesión.
 
+### Los dos calendarios se ven iguales (2026-11-13)
+
+Lo pidió el cliente: el calendario de **Reservas** (la portada) y el de
+**Cotizaciones** tenían que *"sentirse iguales, como ya estoy en el mismo
+mundo"*. Del de Reservas, el diseño general —*"más redondo, más
+elaborado"*—; del de Cotizaciones, **la fecha**: *MIÉ 11* con el número
+grande, que gana espacio frente a *"Miércoles 11 de noviembre"*.
+
+- **`FechaDia.tsx`**: la fecha de toda tarjeta de día (el día de la semana
+  corto y el número a 28px; 20 en la tarjeta achicada). El mes lo dice la
+  caja de la semana; el nombre completo va en el `aria-label`. La usan
+  `TarjetaDia` (frente y dorso), `DiaCompacto` y la tarjeta de Cotizaciones.
+- **La tarjeta de Cotizaciones tomó el marco de la de Reservas**: borde y
+  fondo según el estado del día (`COLOR_TARJETA`), lo reservado en grande con
+  **la misma barra** (`BarraDia`, que salió de `TarjetaDia` para compartirla)
+  y el botón *+ Cotizar este día* en un pie separado por una línea. Encima,
+  lo propio de Cotizaciones: las pastillas de lo cotizado y *N personas
+  posibles, sin confirmar* en rosado.
+- **La caja de la semana es la misma** en los dos: `rounded-lg`, el rango en
+  negrita con una línea debajo y la pastilla *ESTA SEMANA*, y las tarjetas
+  con 12px de separación.
+- **Iguales, pero cada uno con su tono** (segunda vuelta, el mismo día; lo
+  pidió el cliente: *"se tiene que sentir igual, pero distintivo"*, y que
+  Turnos entre en la misma familia). **Igual en los tres**: la fecha
+  (`FechaDia`, también en las celdas de Turnos y en sus avisos de días por
+  cerrar, ahí con el mes: *DOM 8 nov*), las tarjetas pintadas por el estado
+  del día y la caja de la semana o del mes. **Distinto**: un tono por sección
+  (`BandaSeccion.tsx`, `TONO`), en una **banda de título** con ícono y en el
+  marco de las cajas —**Reservas dorado** 📅, **Cotizaciones rosado** 💼 (el
+  color que ya significa "cotizado"), **Turnos celeste** 👥— con la pastilla
+  *ESTA SEMANA* rellena del mismo tono. Las clases de cada tono van escritas
+  enteras, porque Tailwind solo genera las que encuentra literales. En Turnos,
+  la letra de las celdas pasó de 12 a 13px como en los otros dos
+  (`HABIA` 8 → 0).
+- **De paso, la regla PlayStation en lo que comparten**: la palabra bajo el
+  punto (*PÚBLICO*) de 12 a 13px, *ESTA SEMANA* de 10 a 13, la línea del mes
+  de 12 a 13, y *Enviar planilla semanal* pasó de texto suelto a botón.
+  `HABIA` de `letra-chica` bajó (PuntoDia 1 → 0, CalendarView 5 → 1). Queda
+  a propósito el *Renovarlo* del link de la planilla, chico porque casi
+  nunca se aprieta.
+
 ### Las misiones de la ayuda (2026-11-12, segunda vuelta)
 
 Lo pidió el cliente: la ayuda *"de forma lúdica en distintos pasos"*, con
