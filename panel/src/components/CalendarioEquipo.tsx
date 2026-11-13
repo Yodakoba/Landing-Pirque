@@ -28,7 +28,7 @@ import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import FechaDia, { MARCO_HOY } from './FechaDia';
-import { PastillaCotizado } from './Pastilla';
+import { Pastilla, PastillaCotizado } from './Pastilla';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import { Aviso } from './CalendarView';
 import EquipoDialogo from './EquipoDialogo';
@@ -313,9 +313,15 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                 </span>
               )}
 
+              {/* El equipo del día en su pastilla dorada (2026-11-13): la
+                  misma pieza que las actividades en Extras y lo cotizado. */}
               {res.total > 0 && (
-                <span className="mt-1 block text-oro">
-                  <b className="font-bold">{res.total}</b> en el equipo
+                <span className="mt-1 block">
+                  <Pastilla tipo="equipo" className="max-w-full flex-wrap !whitespace-normal" title={`${res.total} en el equipo`}>
+                    <span aria-hidden>👥</span><b className="font-bold tabular-nums">{res.total}</b>
+                    {/* En la celda angosta del celular, solo el número: el 👥 ya dice qué es. */}
+                    <span className="sr-only sm:not-sr-only">en el equipo</span>
+                  </Pastilla>
                 </span>
               )}
               {res.faltan > 0 && (

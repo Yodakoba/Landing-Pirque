@@ -36,11 +36,24 @@ export const PASTILLA = {
    * borde cortado y sin color, porque no es gente que venga sino algo que
    * hacer (2026-11-13). Solo lo ve quien lo creó.
    */
-  propio: `${BASE} border border-dashed border-hueso/50 text-hueso/80`
+  propio: `${BASE} border border-dashed border-hueso/50 text-hueso/80`,
+  /**
+   * **Lo de la propia sección en un calendario, en su tono** (2026-11-13, lo
+   * pidió el cliente: en Extras *"los 40 mil… no deberían ser texto libre,
+   * sino también como un botón, como en el otro calendario"*). Las
+   * actividades de Extras en añil y el equipo de Turnos en dorado, con el
+   * mismo borde que lo cotizado: es un dato del día, no algo hecho.
+   */
+  extras: `${BASE} border border-anil-fuerte/60 text-anil-texto`,
+  equipo: `${BASE} border border-oro/60 text-oro`
 } as const;
 
-export function Pastilla({ tipo, children, title }: { tipo: keyof typeof PASTILLA; children: ReactNode; title?: string }) {
-  return <span className={PASTILLA[tipo]} title={title}>{children}</span>;
+export function Pastilla({ tipo, children, title, className = '' }: {
+  tipo: keyof typeof PASTILLA; children: ReactNode; title?: string;
+  /** Para una celda angosta: que pueda cortar la línea en vez de salirse. */
+  className?: string;
+}) {
+  return <span className={`${PASTILLA[tipo]} ${className}`} title={title}>{children}</span>;
 }
 
 /**

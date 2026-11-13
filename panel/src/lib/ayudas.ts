@@ -92,7 +92,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'día de preparación. No hay que marcarlo: se deduce solo.',
       'Arriba aparecen los días que ya pasaron y a los que les falta algo '
       + 'para poder cerrarse. Entrar acá es que la pantalla te diga qué '
-      + 'queda pendiente.'
+      + 'queda pendiente.',
+      'En cada día del mes, la pastilla 👥 dice cuánta gente hay en el equipo.'
     ],
     pasos: [
       'Apreta cualquier día del mes para abrir su ventana.',
@@ -169,7 +170,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'jornada, no entran en el reparto de la propina, y no aparecen en la '
       + 'planilla que se le manda al grupo.',
       'Se juntan en un solo lugar: la planilla que descarga quien paga, donde '
-      + 'cada fila dice si es equipo o actividad extra.'
+      + 'cada fila dice si es equipo o actividad extra.',
+      'En cada día del mes, la pastilla 🎠 dice cuántas actividades hay y la '
+      + 'de al lado, cuánto cuestan.'
     ],
     pasos: [
       'Apreta un día del mes para agendar a quien venga.',

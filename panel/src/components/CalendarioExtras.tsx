@@ -30,6 +30,7 @@ import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
 import { partesDelDia } from './PuntoDia';
 import FechaDia, { MARCO_HOY } from './FechaDia';
+import { Pastilla } from './Pastilla';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import Clima, { usePronostico } from './Clima';
 import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
@@ -408,11 +409,24 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
                 {/* **Las actividades, en añil**: el tono de la sección, como
                     *en el equipo* va en dorado en Turnos. */}
+                {/* **En pastilla y no en texto suelto** (2026-11-13, lo pidió
+                    el cliente: *"los 40 mil… no deberían ser texto libre"*):
+                    la misma pieza que lo cotizado en los otros calendarios,
+                    en el añil de Extras. Lo que se contrató y lo que cuesta,
+                    juntos. */}
                 {delDia.length > 0 && (
-                  <span className="mt-1 block text-anil-texto">
-                    🎠 <b className="font-bold">{delDia.length}</b> {delDia.length === 1 ? 'actividad' : 'actividades'}
+                  <span className="mt-1 flex flex-wrap gap-1">
+                    {/* Dos pastillas y no una: en la celda angosta del
+                        celular las dos juntas se partían en una burbuja. El
+                        🎠 ya dice qué es; el detalle va en el nombre accesible. */}
+                    <Pastilla tipo="extras" title={`${delDia.length} ${delDia.length === 1 ? 'actividad' : 'actividades'}`}>
+                      <span aria-hidden>🎠</span><b className="font-bold tabular-nums">{delDia.length}</b>
+                      <span className="sr-only">{delDia.length === 1 ? ' actividad' : ' actividades'}</span>
+                    </Pastilla>
                     {costo > 0 && (
-                      <span className="block tabular-nums">{enPesos(costo)}</span>
+                      <Pastilla tipo="extras" title="Lo que cuestan las actividades del día">
+                        <span className="tabular-nums">{enPesos(costo)}</span>
+                      </Pastilla>
                     )}
                   </span>
                 )}
