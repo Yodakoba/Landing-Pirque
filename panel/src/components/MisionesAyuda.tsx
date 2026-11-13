@@ -10,7 +10,9 @@
  * - **Arriba, un mapa de niveles**: las cinco misiones como casillas unidas
  *   por una línea. Cada estado se distingue **por forma**, no solo por color:
  *   hecha (verde, rellena, ✓), la actual (dorada, más grande, *Aquí estás*),
- *   pendiente (borde cortado). *Tu voz* tiene su casilla rosada.
+ *   pendiente (borde cortado).
+ * - **Tu voz ya no es una misión** (2026-11-13): es lo primero de la página,
+ *   `VozAyuda.tsx`. *¿Esto no te sirve?* sube hasta ella.
  * - **Cada misión en tres etapas**, cada una con su franja de color y su
  *   número: **① Mira** (la captura con sus puntos), **② Entiende** (qué es
  *   cada punto: tocar uno ilumina su número y al revés) y **③ Hazlo**
@@ -19,7 +21,6 @@
  *   cambia de teléfono, se parte de nuevo. No se escribe en la planilla.
  */
 import { useEffect, useState } from 'react';
-import FormularioComentario, { type ComentarioMandado } from './FormularioComentario';
 import { misionesDe, type Mision } from '@/lib/misiones';
 import type { Rol } from '@/lib/auth';
 import PUNTOS from '../../public/ayuda/puntos.json';
@@ -38,8 +39,7 @@ const anotar = (llave: string, v: unknown) => {
 const COLOR = {
   cielo: { franja: 'bg-cielo/15 border-cielo-fuerte/50', num: 'bg-cielo-fuerte text-white', borde: 'border-cielo-fuerte/40', texto: 'text-cielo-texto' },
   ambar: { franja: 'bg-ambar/15 border-ambar-fuerte/50', num: 'bg-ambar-fuerte text-tinta', borde: 'border-ambar-fuerte/40', texto: 'text-ambar-texto' },
-  verde: { franja: 'bg-verde/15 border-verde-fuerte/50', num: 'bg-verde-fuerte text-white', borde: 'border-verde-fuerte/40', texto: 'text-verde-texto' },
-  rosa: { franja: 'bg-rosa/15 border-rosa-fuerte/50', num: 'bg-rosa-fuerte text-white', borde: 'border-rosa-fuerte/40', texto: 'text-rosa-texto' }
+  verde: { franja: 'bg-verde/15 border-verde-fuerte/50', num: 'bg-verde-fuerte text-white', borde: 'border-verde-fuerte/40', texto: 'text-verde-texto' }
 } as const;
 
 /** Una etapa: franja con su número y su nombre, y lo de adentro. */
@@ -76,14 +76,15 @@ export function Seccion({ icono, titulo, que }: { icono: string; titulo: string;
   );
 }
 
-export default function MisionesAyuda({ rol, nombreRol, conComentar }: {
-  rol: string; nombreRol: string; conComentar: boolean;
+export default function MisionesAyuda({ rol, nombreRol, onContar }: {
+  rol: string; nombreRol: string;
+  /** *¿Esto no te sirve? Cuéntalo*: sube a Tu voz con la misión anotada. Sin esto no se ofrece. */
+  onContar?: (pantalla: string) => void;
 }) {
   const misiones = misionesDe(rol as Rol);
   const llave = `brasas-misiones-${rol}`;
   const [hechas, setHechas] = useState<string[]>([]);
   const [actual, setActual] = useState(0);
-  const [desde, setDesde] = useState('');
 
   // El avance se lee después de dibujar: el servidor no tiene `localStorage`.
   useEffect(() => {
@@ -111,14 +112,10 @@ export default function MisionesAyuda({ rol, nombreRol, conComentar }: {
     const sig = misiones.findIndex((x, i) => i > actual && !hechas.includes(x.id) && x.id !== m.id);
     ir(sig >= 0 ? sig : Math.min(actual + 1, misiones.length - 1));
   }
-  function contarDesde(mision: Mision) {
-    setDesde(`Ayuda · ${mision.titulo}`);
-    ir(misiones.length - 1);
-  }
 
   return (
     <section className="space-y-6" aria-label="Misiones">
-      <Seccion icono="🎮" titulo="Tus misiones" que={`Cinco misiones cortas para conocer tu panel de ${nombreRol}.`} />
+      <Seccion icono="🎮" titulo="Tus misiones" que={`Cuatro misiones cortas para conocer tu panel de ${nombreRol}.`} />
 
       {/* El marcador: cuántas van y la barra, con el trofeo al final. */}
       <div className="flex items-center gap-4 rounded-2xl border-2 border-oro/40 bg-oro/5 px-4 py-3">
@@ -142,11 +139,10 @@ export default function MisionesAyuda({ rol, nombreRol, conComentar }: {
       {/* El mapa de niveles. */}
       <nav aria-label="Elegir misión" className="relative">
         <div className="absolute left-[10%] right-[10%] top-[34px] h-1 rounded-full bg-hueso/15" aria-hidden />
-        <ol className="relative grid grid-cols-5 gap-1.5 sm:gap-3">
+        <ol className="relative grid gap-1.5 sm:gap-3" style={{ gridTemplateColumns: `repeat(${misiones.length}, minmax(0, 1fr))` }}>
           {misiones.map((x, i) => {
             const hecha = hechas.includes(x.id);
             const aqui = i === actual;
-            const voz = x.id === 'voz';
             return (
               <li key={x.id} className="flex flex-col items-center gap-1.5 text-center">
                 <button type="button" onClick={() => ir(i)} aria-current={aqui ? 'step' : undefined}
@@ -155,9 +151,7 @@ export default function MisionesAyuda({ rol, nombreRol, conComentar }: {
                     ? 'h-[68px] w-[68px] scale-105 border-[3px] border-oro bg-oro text-white shadow-lg ring-4 ring-oro/25'
                     : hecha
                       ? 'h-[60px] w-[60px] border-[3px] border-verde-fuerte bg-verde-fuerte text-white'
-                      : voz
-                        ? 'h-[60px] w-[60px] border-[3px] border-dashed border-rosa-fuerte bg-panel'
-                        : 'h-[60px] w-[60px] border-[3px] border-dashed border-hueso/35 bg-panel hover:border-oro'}`}>
+                      : 'h-[60px] w-[60px] border-[3px] border-dashed border-hueso/35 bg-panel hover:border-oro'}`}>
                   <span className="text-[26px] leading-none" aria-hidden>{x.emoji}</span>
                   {hecha && !aqui && (
                     <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full
@@ -178,8 +172,8 @@ export default function MisionesAyuda({ rol, nombreRol, conComentar }: {
 
       <article id="mision" className="scroll-mt-4 space-y-4">
         {/* La cabecera de la misión, como la pantalla de inicio de un nivel. */}
-        <header className={`rounded-2xl border-2 px-4 py-4 sm:px-5 ${m.id === 'voz' ? 'border-rosa-fuerte/50 bg-rosa/10' : 'border-oro/50 bg-oro/10'}`}>
-          <p className={`text-[13px] font-black uppercase tracking-widest ${m.id === 'voz' ? 'text-rosa-texto' : 'text-oro'}`}>
+        <header className="rounded-2xl border-2 border-oro/50 bg-oro/10 px-4 py-4 sm:px-5">
+          <p className="text-[13px] font-black uppercase tracking-widest text-oro">
             Misión {actual + 1} de {misiones.length}{hechas.includes(m.id) ? ' · ✓ hecha' : ''}
           </p>
           <h3 className="mt-1 text-[22px] font-black leading-tight sm:text-[26px]">
@@ -188,10 +182,8 @@ export default function MisionesAyuda({ rol, nombreRol, conComentar }: {
           <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-hueso/80">{m.intro}</p>
         </header>
 
-        {m.escena
-          ? <MisionConCaptura key={m.id} m={m} onSiguiente={siguiente}
-              onContar={conComentar ? () => contarDesde(m) : undefined} ultima={actual === misiones.length - 1} />
-          : <TuVoz key={desde} desde={desde} conComentar={conComentar} onListo={() => completar(m.id)} />}
+        <MisionConCaptura key={m.id} m={m} onSiguiente={siguiente}
+          onContar={onContar ? () => onContar(`Ayuda · ${m.titulo}`) : undefined} ultima={actual === misiones.length - 1} />
       </article>
     </section>
   );
@@ -265,58 +257,6 @@ function MisionConCaptura({ m, onSiguiente, onContar, ultima }: {
             </button>
           )}
         </Etapa>
-      </div>
-    </div>
-  );
-}
-
-/** La quinta misión: el formulario, a página completa, y lo que ya mandaste. */
-function TuVoz({ desde, conComentar, onListo }: { desde: string; conComentar: boolean; onListo: () => void }) {
-  const llave = 'brasas-comentarios-mandados';
-  const [mandados, setMandados] = useState<ComentarioMandado[]>([]);
-  useEffect(() => { setMandados(leer<ComentarioMandado[]>(llave, [])); }, []);
-
-  if (!conComentar) {
-    return (
-      <p className="rounded-xl border-2 border-ambar/50 bg-ambar/10 px-4 py-3 text-[15px]">
-        Los comentarios todavía no están conectados. Mientras tanto, cuéntaselo a quien administra el panel.
-      </p>
-    );
-  }
-
-  return (
-    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,300px)] md:items-start">
-      <Etapa n="✎" titulo="Cuéntalo" que="Una cosa por comentario. Va con tu nombre." color="rosa">
-        <FormularioComentario pantalla={desde || 'Ayuda'}
-          onMandado={(c) => {
-            const lista = [c, ...mandados].slice(0, 6);
-            setMandados(lista); anotar(llave, lista); onListo();
-          }} />
-      </Etapa>
-      <div className="space-y-4">
-        <Etapa n="💡" titulo="Lo que más sirve" que="Ejemplos de comentarios útiles." color="ambar">
-          <ul className="space-y-2 text-[14px] text-hueso/80">
-            <li>🧩 <em>«Al recibir a la gente no veo si la reserva está pagada.»</em></li>
-            <li>🐞 <em>«Al guardar la cotización me salió un error.»</em></li>
-            <li>🤔 <em>«No entendí qué hace Cerrar el día.»</em></li>
-            <li>💡 <em>«Sería más rápido si el día abriera en Turnos.»</em></li>
-          </ul>
-          <p className="mt-3 text-[14px] text-hueso/65">
-            Si piensas «¿y por qué no puedo hacer esto?», eso es justo lo que buscamos.
-          </p>
-        </Etapa>
-        {mandados.length > 0 && (
-          <Etapa n="✓" titulo="Ya mandaste" que="Desde esta página, en este teléfono." color="verde">
-            <ul className="space-y-1.5">
-              {mandados.map((c, i) => (
-                <li key={i} className="rounded-lg border border-hueso/15 px-3 py-2 text-[14px]">
-                  <span className="font-semibold">{c.tipo}</span>{' '}
-                  <span className="text-hueso/75">{c.texto.length > 90 ? c.texto.slice(0, 90) + '…' : c.texto}</span>
-                </li>
-              ))}
-            </ul>
-          </Etapa>
-        )}
       </div>
     </div>
   );

@@ -6030,6 +6030,25 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
   va en rosado con *Cuéntalo*, *Lo que más sirve* y *Ya mandaste*. La página
   tiene tres secciones con título propio: *Tus misiones*, *Consulta rápida* y
   *Tu rol*.
+- **Tu voz primero, y los poderes en vez de las listas** (2026-11-13, lo
+  pidió el cliente: el formulario *"tiene que estar muy presente… en primer
+  paso"*, y las listas *puede / no puede* eran *"muy Excel"*).
+  - **💬 Tu voz manda** (`VozAyuda.tsx`) es lo primero de `/ayuda`: un bloque
+    rosado grande con el formulario abierto, *Lo que más sirve* y *Ya
+    mandaste*. **Dejó de ser la quinta misión**: las misiones son cuatro.
+    Cuando se baja por la página, un botón flotante **💬 Cuéntame** sube a
+    él, y el **💬 Comentar** de la cabecera va en rosado en todas las
+    pantallas (borde y fondo, no relleno: no compite con el botón principal).
+  - **⚡ Tus poderes** (`PoderesRol.tsx`, `lib/poderes.ts`): cada permiso es
+    un poder con ícono y nombre corto, en **cinco mundos** (Reservas y días,
+    El equipo, Ventas, La plata, El sistema) con su marcador *2/9*.
+    Desbloqueado en verde con ✓; bloqueado gris, punteado y 🔒. Tocar uno
+    muestra la frase de `PALABRAS`; uno bloqueado ofrece **🙋 Lo necesito
+    para mi trabajo**, que sube a Tu voz con *Me falta* elegido y el pedido
+    escrito (`pedidoDePoder()`). Lo desbloqueado sale de `PERMISOS`; una
+    prueba fija que cada permiso esté en exactamente un mundo.
+  - *¿Esto no te sirve? Cuéntalo* de cada misión también sube a Tu voz, con
+    la misión como pantalla.
 - **Las capturas se sacan, no se dibujan**: `pruebas/capturas-ayuda.mjs`
   entra con una sesión de cada rol, hace los clics de cada escena, guarda
   `public/ayuda/<escena>.jpg` y **mide dónde quedó cada punto** —el borde

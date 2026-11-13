@@ -17,7 +17,12 @@ export default function Comentar() {
 
   return (
     <>
-      <button type="button" onClick={() => setAbierta(true)} className="tecla boton"
+      {/* **En rosado, para que se vea en todas las pantallas** (2026-11-13, lo
+          pidió el cliente: el formulario tiene que estar *muy presente*). Es
+          el color de Tu voz en la ayuda; no es relleno, así que no compite con
+          el botón principal de cada pantalla. */}
+      <button type="button" onClick={() => setAbierta(true)}
+        className="tecla boton border-2 border-rosa-fuerte/70 bg-rosa/10 font-bold text-rosa-texto"
         title="Cuéntanos un error, una duda o algo que te falta">
         💬 Comentar
       </button>

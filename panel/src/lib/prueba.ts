@@ -4978,8 +4978,8 @@ console.log('\nLas misiones de la ayuda');
   const { ROL, puedeVer, ROLES_DE_CUENTA } = await import('./auth.ts');
   const fs = await import('node:fs');
   const medidas = JSON.parse(fs.readFileSync(new URL('../../public/ayuda/puntos.json', import.meta.url), 'utf8'));
-  ok(ROLES_DE_CUENTA.every((r) => { const m = misionesDe(r); return m.length === 5 && m[4].id === 'voz' && m.slice(0, 4).every((x) => x.escena); }),
-     'cada rol tiene cuatro misiones con captura y Tu voz como quinta');
+  ok(ROLES_DE_CUENTA.every((r) => { const m = misionesDe(r); return m.length === 4 && m.every((x) => x.escena); }),
+     'cada rol tiene cuatro misiones, cada una con su captura (Tu voz va aparte, primero en la página)');
   ok(escenasDeLasMisiones().every((e) => medidas[e]
        && fs.existsSync(new URL(`../../public/ayuda/${e}.jpg`, import.meta.url))),
      'cada escena tiene su captura y sus puntos medidos (npm: pruebas/capturas-ayuda.mjs)');
@@ -4990,6 +4990,23 @@ console.log('\nLas misiones de la ayuda');
      'Pruébalo nunca manda a una pantalla que ese rol no abre');
   ok(misionesDe(ROL.gerencia)[0].escena === 'ger-informe' && misionesDe(ROL.pagos)[0].escena === 'pag-informe',
      'la gerencia general tiene sus propias capturas, con su menú');
+}
+
+console.log('\nTus poderes');
+{
+  const { MUNDOS, PODER, poderesDe, pedidoDePoder } = await import('./poderes.ts');
+  const { PERMISOS, ROL, puede } = await import('./auth.ts');
+  const todos = MUNDOS.flatMap((m) => m.poderes);
+  ok(Object.keys(PERMISOS).every((a) => todos.filter((x) => x === a).length === 1) && todos.length === Object.keys(PERMISOS).length,
+     'cada permiso del panel está en exactamente un mundo: uno nuevo sin mundo no pasa');
+  ok(Object.keys(PERMISOS).every((a) => PODER[a as keyof typeof PODER]?.icono),
+     'cada poder tiene su ícono y su nombre corto');
+  const anf = poderesDe(ROL.anfitrion).flatMap((m) => m.poderes);
+  ok(anf.every((p) => p.tiene === puede(ROL.anfitrion, p.accion)) && anf.some((p) => p.tiene) && anf.some((p) => !p.tiene),
+     'lo desbloqueado sale de PERMISOS, igual que el menú');
+  ok(poderesDe(ROL.admin).every((m) => m.tiene === m.poderes.length), 'el administrador tiene todos los mundos completos');
+  ok(pedidoDePoder({ corto: 'Subir el cupo', frase: 'Subir el cupo de un día' }).startsWith('Necesito poder «Subir el cupo» (subir el cupo de un día)'),
+     'Lo necesito deja el pedido escrito con el nombre del poder');
 }
 
 console.log('\nLos comentarios del equipo');
