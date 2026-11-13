@@ -54,7 +54,7 @@ export const TONO: Record<Tono, {
  * iguales—, el `?` y la frase al lado, chica. El tono sigue en el borde
  * izquierdo grueso y el fondo suave, que es lo que dice dónde se está.
  */
-export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, children }: {
+export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, children, alCerrar }: {
   tono: Tono; icono: string;
   /** La palabra corta: *RESERVAS*, *COTIZACIONES*, *TURNOS*. */
   seccion: string;
@@ -63,6 +63,11 @@ export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, chil
   ayuda?: React.ReactNode;
   /** La frase, si la hay: va chica, al lado del título. */
   children?: React.ReactNode;
+  /**
+   * Si la frase se puede cerrar para siempre: *✕ No mostrar más* al lado
+   * (2026-11-13). Ver `usarAvisoCerrable`.
+   */
+  alCerrar?: () => void;
 }) {
   const t = TONO[tono];
   const mismo = seccion.trim().toLowerCase() === titulo.trim().toLowerCase();
@@ -79,6 +84,12 @@ export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, chil
       </h1>
       {ayuda && <span className="shrink-0">{ayuda}</span>}
       {children && <p className="min-w-0 basis-full text-[14px] text-hueso/70 sm:basis-auto sm:flex-1">{children}</p>}
+      {children && alCerrar && (
+        <button type="button" onClick={alCerrar} title="Ya lo leí: no volver a mostrarlo"
+          className="boton !min-h-[36px] shrink-0 !px-3 !text-[14px]">
+          ✕ No mostrar más
+        </button>
+      )}
     </header>
   );
 }

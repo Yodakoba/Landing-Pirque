@@ -6203,6 +6203,42 @@ pendientes*):
   pagó y falta ganarla · 2 esperando · 1 vence pronto*, y ella *3 saldos ·
   1 esperando · 1 vence pronto*. Sumados dan lo que antes veían todos.
 
+### Un aviso que se cierra para siempre (2026-11-13)
+
+Lo pidió el cliente sobre la frase de Cotizaciones —*"Lo cotizado no ocupa
+cupo: recién al marcarla ganada se vuelve reserva"*—: le gusta que esté
+presente, pero ocupa mucho para estar siempre. Pidió una ✕ *"que realmente
+funciona bien para que no vuelva este aviso después más, como muchas veces
+pasa en otros sitios"*.
+
+- **Se guarda en la cuenta, no en el navegador**: columna nueva **`Avisos
+  leídos`** al final de `Usuarios` (la séptima, después de *Vista
+  gerencia*), con las claves separadas por coma. Por eso no vuelve en el
+  teléfono, en otro computador ni al borrar los datos del navegador, que es
+  lo que hace volver los avisos de otros sitios.
+- **`✕ No mostrar más`** al lado de la frase, en la banda
+  (`BandaSeccion`, prop `alCerrar`). Lo maneja `usarAvisoCerrable(clave,
+  avisosLeidos)`: oculta al tiro, lo anota también en el navegador
+  (`blp-aviso-leido:<clave>`) por si la planilla no responde, y llama a
+  **`POST /api/avisos`**, que lo escribe en la fila de **la persona de la
+  sesión** —también mirando *Ver como*: el que lo leyó es la persona, no el
+  rol—. Si no se pudo guardar en la cuenta, lo dice.
+- **Solo claves conocidas** (`AVISOS_CERRABLES` en `usuarios.ts`, hoy
+  `cotizaciones-cupo`): el navegador no puede llenar la celda con lo que
+  quiera, y una clave desconocida en la planilla se ignora al leer. Sumar
+  otro aviso cerrable es agregar su clave ahí y usar el mismo hook.
+- **Guardar las cuentas no la borra**: el `PUT` de `/api/usuarios` conserva
+  los avisos leídos de cada fila, igual que la huella de la contraseña.
+- **La cuenta de emergencia del entorno** (`PANEL_USUARIO`) no tiene fila:
+  ahí queda cerrado solo en ese navegador, y lo avisa.
+- **Lo que decía la frase sigue en el `?`** de la banda (*"Lo cotizado NO
+  ocupa cupo…"*), así que cerrarla no pierde la explicación.
+- **Lecturas de Google**: ninguna más al abrir Cotizaciones —`Usuarios` se
+  sumó a la tanda de `/api/presupuestos`—; cerrar el aviso gasta una lectura
+  y una escritura, una vez por persona. Medido con el Google falso.
+- Comprobado con Playwright a 393 y 1280: se cierra, no vuelve al recargar
+  ni en un navegador nuevo sin nada guardado, cuando la cuenta lo trae.
+
 ### Las misiones de la ayuda (2026-11-12, segunda vuelta)
 
 Lo pidió el cliente: la ayuda *"de forma lúdica en distintos pasos"*, con

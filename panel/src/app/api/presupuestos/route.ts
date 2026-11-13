@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CLIENTES } from '@/lib/clientes';
 import { HOJA_COBROS } from '@/lib/cobros';
-import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
+import { HOJA_FECHAS, HOJA_RESERVAS, normalizar } from '@/lib/columnas';
 import { ocupacionDeTodos } from '@/lib/ocupacion';
 import { diasConSobrecupo } from '@/lib/sobrecupo';
 import { HOJA_CONFIG } from '@/lib/config';
@@ -15,8 +15,9 @@ import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import {
   leerPresupuestos, leerLineasPresupuesto, guardarPresupuesto, guardarLineas,
   borrarPresupuesto, leerMenus, leerConfig, leerClientes, leerFechas, anotar, leerCobros,
-  sincronizarReserva, leerReservas, leerVendedores
+  sincronizarReserva, leerReservas, leerVendedores, leerUsuarios
 } from '@/lib/datos';
+import { HOJA_USUARIOS } from '@/lib/usuarios';
 import {
   nuevoId, validoHastaDe, ESTADO_PRESUPUESTO, estaMandada, aEntero, folioDe, estadoNormal, lineasDe,
   documentoDe, numeroONulo, montoONulo, type Presupuesto, type LineaEntrante
@@ -40,15 +41,15 @@ export const dynamic = 'force-dynamic';
  * nombre y el contacto ya puestos. Las de antes de las fichas siguen
  * mostrando lo que tenían escrito.
  */
-export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS, HOJA_RESERVAS, HOJA_VENDEDORES], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA_CONFIG, HOJA_CLIENTES, HOJA_FECHAS, HOJA_COBROS, HOJA_RESERVAS, HOJA_VENDEDORES, HOJA_USUARIOS], async function GET(req: Request) {
   const no = await exigirVer(req, 'presupuestos');
   if (no) return no;
   try {
     const quien = await quienEs(req);
-    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros, reservas, fichas] = await Promise.all([
+    const [presupuestos, lineas, menus, cfg, clientes, fechas, cobros, reservas, fichas, cuentas] = await Promise.all([
       leerPresupuestos(), leerLineasPresupuesto(), leerMenus(), leerConfig(),
       leerClientes(), leerFechas(), leerCobros().catch(() => []), leerReservas().catch(() => []),
-      leerVendedores().catch(() => [])
+      leerVendedores().catch(() => []), leerUsuarios()
     ]);
     // **Los días que se pasaron del cupo** (2026-11-12): un pago entró sobre
     // reservas sin pagar. Va en la misma lectura —la tanda ya trae
@@ -96,6 +97,9 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       hoy: hoy(),
       usuario: quien.usuario,
       rol: quien.rol,
+      // **Los avisos que esta cuenta cerró para siempre** (2026-11-13): van
+      // en la misma tanda de lecturas (`Usuarios` se sumó a la precarga).
+      avisosLeidos: cuentas.find((u) => normalizar(u.usuario) === normalizar(quien.usuario))?.avisosLeidos ?? [],
       sobrecupo
     });
   } catch (e) {

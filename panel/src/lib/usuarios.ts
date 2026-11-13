@@ -29,7 +29,9 @@ export const COL_USUARIOS = {
   activo: 'Activo',
   clave: 'Clave (huella)',
   /** Ver ↓ `gerencia`. Va al final: una planilla vieja se lee igual. */
-  gerencia: 'Vista gerencia'
+  gerencia: 'Vista gerencia',
+  /** Ver ↓ `avisosLeidos`. También al final, después de `gerencia`. */
+  avisos: 'Avisos leídos'
 } as const;
 
 export interface Usuario {
@@ -54,7 +56,25 @@ export interface Usuario {
    * configuración— y **edita solo lo de su rol**. Ver `puedeVer()`.
    */
   gerencia: boolean;
+  /**
+   * **Los avisos que la persona cerró con *No mostrar más*** (2026-11-13, lo
+   * pidió el cliente: una ✕ *"que realmente funciona… ok, lo he leído y
+   * ahora no me lo muestras más"*). Van en la cuenta y no en el navegador,
+   * así que no vuelven en el teléfono, en otro computador ni al borrar los
+   * datos del navegador. Una lista de claves (`AVISOS_CERRABLES`), separadas
+   * por coma en la celda.
+   */
+  avisosLeidos: string[];
 }
+
+/**
+ * Los avisos que se pueden cerrar para siempre. Una clave que no está acá no
+ * se guarda: el navegador no puede llenar la celda con lo que quiera.
+ */
+export const AVISOS_CERRABLES = ['cotizaciones-cupo'] as const;
+export type AvisoCerrable = typeof AVISOS_CERRABLES[number];
+export const esAvisoCerrable = (x: unknown): x is AvisoCerrable =>
+  (AVISOS_CERRABLES as readonly string[]).includes(String(x));
 
 /* ---------- La huella de la contraseña ---------- */
 
@@ -125,7 +145,8 @@ export function leerUsuariosDe(filas: string[][]): Usuario[] {
       huella: String(filas[i]?.[4] ?? '').trim(),
       // En blanco es NO, al revés que `Activo`: ver más es un permiso que
       // se da a propósito, no uno que se tiene por defecto.
-      gerencia: String(filas[i]?.[5] ?? '').trim() !== '' && esSi(filas[i]?.[5])
+      gerencia: String(filas[i]?.[5] ?? '').trim() !== '' && esSi(filas[i]?.[5]),
+      avisosLeidos: String(filas[i]?.[6] ?? '').split(',').map((x) => x.trim()).filter(esAvisoCerrable)
     });
   }
   return salida;
@@ -134,9 +155,9 @@ export function leerUsuariosDe(filas: string[][]): Usuario[] {
 export function aFilasUsuarios(lista: Usuario[]): string[][] {
   return [
     [COL_USUARIOS.nombre, COL_USUARIOS.usuario, COL_USUARIOS.rol,
-     COL_USUARIOS.activo, COL_USUARIOS.clave, COL_USUARIOS.gerencia],
+     COL_USUARIOS.activo, COL_USUARIOS.clave, COL_USUARIOS.gerencia, COL_USUARIOS.avisos],
     ...lista.map((u) => [u.nombre, u.usuario, u.rol, u.activo ? 'Sí' : 'No', u.huella,
-                         u.gerencia ? 'Sí' : 'No'])
+                         u.gerencia ? 'Sí' : 'No', (u.avisosLeidos ?? []).join(', ')])
   ];
 }
 

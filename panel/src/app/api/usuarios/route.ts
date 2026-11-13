@@ -47,8 +47,10 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
       return NextResponse.json({ error: 'Falta la lista de usuarios.' }, { status: 400 });
     }
 
+    // Lo que no viene del navegador se conserva de la fila de antes: la
+    // huella de la contraseña y los avisos que la persona ya cerró.
     const previas = new Map(
-      (await leerUsuarios()).map((u) => [normalizar(u.usuario), u.huella])
+      (await leerUsuarios()).map((u) => [normalizar(u.usuario), u])
     );
     const limpia: Usuario[] = [];
     const vistos = new Set<string>();
@@ -64,7 +66,8 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
         usuario,
         rol: esRolDeCuenta(rol) ? (rol as Rol) : ROL.encargado,
         activo: u?.activo === undefined ? true : esSi(u.activo),
-        huella: previas.get(normalizar(usuario)) ?? '',
+        huella: previas.get(normalizar(usuario))?.huella ?? '',
+        avisosLeidos: previas.get(normalizar(usuario))?.avisosLeidos ?? [],
         // La vista gerencia: un agregado a la cuenta, no un rol. Al
         // administrador no le suma nada —ya ve todo—, así que no se guarda.
         gerencia: u?.gerencia === true && rol !== ROL.admin
