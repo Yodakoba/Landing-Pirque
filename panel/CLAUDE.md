@@ -79,6 +79,25 @@ revisan antes de cada cambio en esta carpeta.
   arregla el localizador y se vuelve a sacar la foto. **Única excepción**:
   un arreglo urgente de algo roto en producción puede salir antes; la ayuda
   va en el PR siguiente, el mismo día, y el PR del arreglo lo dice.
+- **La plata la cierra el encargado de pagos** (regla del cliente,
+  2026-11-13; está también en la raíz). *"En movimientos muy claves el
+  encargado de pagos tiene la última palabra si se trata de plata… la regla
+  lo deja responsable a él."* Hay que poder responsabilizar a alguien por
+  cada movimiento de caja.
+  - **Anotar y respaldar es de quien corresponde**: el vendedor anota el
+    cobro de su cotización y sube el comprobante; el encargado anota la
+    propina y los montos del día.
+  - **Confirmar es del encargado de pagos**: marcar un cobro revisado,
+    registrar un pago, dar una devolución por hecha. Hoy eso es el permiso
+    `pagar` (pagos, y la gerencia general y el administrador, que por ahora
+    pueden lo mismo), y queda en la bitácora a su nombre.
+  - **Sin complicar los flujos que ya están bien**: la confirmación no
+    frena a nadie. Ganar una cotización sigue dependiendo del cobro anotado
+    y del comprobante, no de la revisión.
+  - **Al diseñar algo con números** se pregunta primero *¿quién lo
+    confirma?*, y la respuesta por defecto es el encargado de pagos.
+  - **No se cambia ningún permiso de plata sin que el cliente lo diga
+    concretamente**: lo que esta regla encuentre se propone primero.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
