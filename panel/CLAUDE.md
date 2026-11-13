@@ -6421,6 +6421,19 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
   Quien ya las terminó y vuelve a `/ayuda` cae en esa pregunta, no en la
   misión 1. *Entendido* dice *la siguiente →* mientras quede alguna sin
   hacer, en cualquier orden.
+  **Es una sola pieza para los siete roles** (`MisionesAyuda`), y se
+  comprobó rol por rol con *Ver como*, a 393 y 1280: administrador,
+  gerencia general, encargado de operaciones, encargado de turno, pagos,
+  vendedor y anfitrión llegan a la pregunta con sus cuatro misiones, sus
+  capturas cargan y *Pruébalo* abre pantallas que ese rol sí ve. De paso, la
+  tira de bienvenida decía *Cinco misiones* y son cuatro desde que *Tu voz*
+  salió de la lista.
+- **Las capturas de las misiones son del 2026-11-12** y quedaron atrás de
+  lo que cambió el 13 (el título de sección sin caja, las ✕ de los avisos,
+  *🔎 Buscar*, las pastillas, *Mías*, el encargado de turno sin
+  Cotizaciones ni Clientes). Volver a sacarlas pide armar otra vez la
+  planilla de ejemplo, que no está en el repo; `capturas-ayuda.mjs` ya busca
+  *🔎 Buscar* en vez de *Todas*.
 - **Tu voz primero, y los poderes en vez de las listas** (2026-11-13, lo
   pidió el cliente: el formulario *"tiene que estar muy presente… en primer
   paso"*, y las listas *puede / no puede* eran *"muy Excel"*).
