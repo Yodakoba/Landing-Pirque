@@ -488,12 +488,17 @@ export default function CotizacionesVista() {
           <BotonTodos texto="De todos" cuantas={agrupar(datos.presupuestos).length} elegido={!soloMias}
             onClick={() => elegirDe('todos')} />
         </div>
+        {/* **El calendario no tiene botón: es lo que se ve siempre**
+            (2026-11-13, lo pidió el cliente: el botón *Calendario* no se
+            entendía, y *Todas* se confundía con *De todos*). *Sin fecha* y
+            *🔎 Buscar* —la lista con buscador y filtros, que antes se
+            llamaba *Todas*— se encienden al apretarlos, y apretarlos de
+            nuevo, o *← Volver al calendario*, vuelve a las semanas. */}
         {([
-          ['calendario', 'Calendario'],
           ['sinFecha', `Sin fecha (${agrupar(sinFecha).filter((p) => cuentaComoPosible(p, hoy)).length})`],
-          ['todas', 'Todas']
+          ['todas', '🔎 Buscar']
         ] as const).map(([k, texto]) => (
-          <button key={k} type="button" onClick={() => setVista(k)} aria-pressed={vista === k}
+          <button key={k} type="button" onClick={() => setVista(vista === k ? 'calendario' : k)} aria-pressed={vista === k}
             className={`boton min-h-[48px] ${vista === k ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
             {texto}
           </button>
@@ -601,6 +606,14 @@ export default function CotizacionesVista() {
         </div>
       )}
 
+      {/* Justo encima de la lista, no arriba de los avisos: es lo que se
+          busca al terminar de mirar. */}
+      {vista !== 'calendario' && (
+        <button type="button" onClick={() => setVista('calendario')}
+          className="boton mb-4 min-h-[44px] !text-[15px] !font-semibold">
+          ← Volver al calendario
+        </button>
+      )}
       {vista === 'sinFecha' && (
         <div>
           <p className="mb-3 text-[14px] text-hueso/70">

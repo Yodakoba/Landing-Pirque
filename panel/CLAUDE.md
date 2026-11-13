@@ -990,11 +990,12 @@ en $0 y la pantalla avisa que se escriba en pesos.
 - **`/presupuestos`** (en el menú, *Cotizaciones*): un calendario por semanas
   con una tarjeta por día —estado del día, candidatos, cotizaciones, ganadas
   y personas posibles, y *+ Cotizar este día*—, la vista **Sin fecha** y la
-  vista **Todas** con filtro por estado y buscador. Los avisos de por vencer y
+  vista **🔎 Buscar** (hasta el 2026-11-13 se llamaba *Todas*; ver abajo) con
+  filtro por estado y buscador. Los avisos de por vencer y
   vencidas siguen arriba.
 - **Mías / De todos** (2026-11-12, lo pidió el cliente): dos botones arriba
   de Cotizaciones, con cuántas hay en cada uno. Filtran la pantalla entera
-  —calendario, *Sin fecha*, *Todas*; **los avisos ya no** desde el
+  —calendario, *Sin fecha*, *🔎 Buscar*; **los avisos ya no** desde el
   2026-11-13: ver *Hoy, esta semana y los pendientes de cada cuenta*— por quién la creó
   (`esSuya()` en `auth.ts`); **un grupo de alternativas va entero** si una
   es suya. No cambia quién puede tocar qué. El vendedor parte en *Mías* y
@@ -1696,7 +1697,7 @@ estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
   hay nada que cotizar ahí. Con alguna viva o una ganada sí, porque es una
   conversación abierta con un cliente.
 - **Una cancelada no aparece en el calendario de Cotizaciones**: sigue en
-  *Todas* (filtro *Perdidas y vencidas*), con su devolución.
+  *🔎 Buscar* (filtro *Perdidas y vencidas*), con su devolución.
 
 ### Las fases
 
@@ -6207,6 +6208,23 @@ pendientes*):
   vendedora: el administrador ve *3 saldos (1 vencido) · 5 por revisar · 1
   pagó y falta ganarla · 2 esperando · 1 vence pronto*, y ella *3 saldos ·
   1 esperando · 1 vence pronto*. Sumados dan lo que antes veían todos.
+
+### Cotizaciones: el calendario sin botón, y *🔎 Buscar* (2026-11-13)
+
+Lo preguntó el cliente: *"¿es necesario el botón calendario? Creo que el
+botón todas ya es el calendario"*. No lo era —*Todas* abría una lista sin
+semanas, con el buscador por cliente o N° y los filtros por estado, el único
+lugar para buscar una cotización o ver las perdidas—, pero la confusión
+tenía dos causas reales: *Calendario* se veía como una acción suelta, y
+*Todas* se confundía con *De todos*, que dice de quién son.
+
+- **El calendario no tiene botón**: es lo que se ve siempre.
+- ***Todas* pasó a llamarse *🔎 Buscar***. *Sin fecha* quedó igual.
+- **Los dos se encienden al apretarlos**, y apretarlos de nuevo —o el botón
+  ***← Volver al calendario***, que aparece arriba de su lista— vuelve a las
+  semanas.
+- Adentro de *Buscar* sigue el filtro *Todas* de los estados: ahí no se
+  confunde, porque va al lado de *Activas*, *Ganadas*…
 
 ### El botón *Mías*, igual en todo el panel (2026-11-13)
 
