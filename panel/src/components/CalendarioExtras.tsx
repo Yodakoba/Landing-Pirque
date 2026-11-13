@@ -29,7 +29,7 @@ import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
 import { partesDelDia } from './PuntoDia';
-import FechaDia from './FechaDia';
+import FechaDia, { MARCO_HOY } from './FechaDia';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import Clima, { usePronostico } from './Clima';
 import { costoDeExtra, extrasDelDia, costoExtrasDelDia, actividadesConocidas,
@@ -383,7 +383,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                 className={`flex min-h-[104px] flex-col items-stretch justify-start
                             overflow-hidden rounded border p-2
                             text-left align-top text-[13px] leading-snug transition
-                            hover:border-oro
+                            hover:border-oro ${f === hoy() ? MARCO_HOY : ''}
                             ${oc ? COLOR_TARJETA(oc) : 'border-hueso/10 bg-panel'}`}>
                 {/* Las mismas tres líneas fijas de Turnos: la fecha y el punto,
                     el pronóstico, y la palabra del estado con todo el ancho. */}

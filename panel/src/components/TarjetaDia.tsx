@@ -37,7 +37,8 @@ import type { Ocupacion } from '@/lib/tipos';
 import { textoFaltantes, type ResumenEquipo } from '@/lib/equipo';
 import { enPesos } from '@/lib/ocupacion';
 import PuntoDia from './PuntoDia';
-import FechaDia from './FechaDia';
+import FechaDia, { MARCO_HOY } from './FechaDia';
+import { hoy } from '@/lib/fechas';
 import Clima from './Clima';
 import type { Clima as DatoClima } from '@/lib/clima';
 
@@ -224,7 +225,7 @@ export default function TarjetaDia({
         style={{ transform: volteada ? 'rotateY(180deg)' : undefined }}>
 
         {/* ---------- el frente: la ocupación ---------- */}
-        <div className={`${CARA} ${COLOR_TARJETA(d)} ${volteada ? 'pointer-events-none' : ''}`}
+        <div className={`${CARA} ${COLOR_TARJETA(d)} ${d.fecha === hoy() ? MARCO_HOY : ''} ${volteada ? 'pointer-events-none' : ''}`}
              aria-hidden={volteada}>
           <div className="flex items-start justify-between gap-2">
             {/* **El pronóstico ya no va acá.** Estaba bajo la fecha a 10px,
@@ -454,7 +455,7 @@ export default function TarjetaDia({
         {/* ---------- el dorso: el equipo ---------- */}
         {conEquipo && (
         <div
-          className={`${CARA} border-hueso/15 bg-panel [transform:rotateY(180deg)] ${
+          className={`${CARA} border-hueso/15 bg-panel [transform:rotateY(180deg)] ${d.fecha === hoy() ? MARCO_HOY : ''} ${
             volteada ? '' : 'pointer-events-none'}`}
           aria-hidden={!volteada}>
           <div className="flex items-start justify-between gap-2">

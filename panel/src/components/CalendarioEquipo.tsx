@@ -27,7 +27,7 @@
 import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
-import FechaDia from './FechaDia';
+import FechaDia, { MARCO_HOY } from './FechaDia';
 import { PastillaCotizado } from './Pastilla';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import { Aviso } from './CalendarView';
@@ -253,7 +253,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
                           overflow-hidden rounded border p-2
                           text-left align-top
                           text-[13px] leading-snug transition
-                          hover:border-oro disabled:opacity-40
+                          hover:border-oro disabled:opacity-40 ${f === hoy() ? MARCO_HOY : ''}
                           ${preparando ? 'border-cafe/50 bg-cafe/[0.06]'
                              : oc ? COLOR_TARJETA(oc)
                                   : 'border-hueso/10 bg-panel'}`}>

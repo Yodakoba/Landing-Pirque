@@ -37,7 +37,7 @@ import { puede, puedeTocarPresupuesto, esSuya, ROL, type Rol } from '@/lib/auth'
 import EsperandoRespuesta, { type PorSeguir } from './EsperandoRespuesta';
 import type { Ocupacion } from '@/lib/tipos';
 import PuntoDia, { PuntoYPalabra } from './PuntoDia';
-import FechaDia, { MarcaAhora } from './FechaDia';
+import FechaDia, { MarcaAhora, MARCO_HOY } from './FechaDia';
 import BandaSeccion, { TONO } from './BandaSeccion';
 import { BarraDia, COLOR_TARJETA } from './TarjetaDia';
 
@@ -398,7 +398,7 @@ export default function CotizacionesVista() {
          y el botón en un pie separado por una línea. Encima de eso, lo que es
          propio de Cotizaciones: las pastillas de lo cotizado. */
       <div key={f} className={`flex h-full min-w-0 flex-col rounded border p-4 ${occ ? COLOR_TARJETA(occ) : 'border-hueso/15 bg-panel'}
-        ${abiertaEsta ? 'ring-2 ring-oro' : ''}`}>
+        ${abiertaEsta ? 'ring-2 ring-oro' : ''} ${f === hoy ? MARCO_HOY : ''}`}>
         <button type="button" onClick={() => setDiaAbierto(abiertaEsta ? null : f)}
           aria-expanded={abiertaEsta}
           className="tecla flex flex-1 flex-col items-stretch gap-3 rounded text-left">
