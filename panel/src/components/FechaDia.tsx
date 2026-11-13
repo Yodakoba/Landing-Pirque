@@ -9,7 +9,31 @@
  * (`conMes`: *DOM 8 nov*). El nombre completo va igual para los lectores de
  * pantalla (`aria-label`).
  */
-import { diaSemana, enPalabras } from '@/lib/fechas';
+import type { ReactNode } from 'react';
+import { diaSemana, enPalabras, hoy } from '@/lib/fechas';
+
+/**
+ * **Hoy y esta semana se marcan igual en todos los calendarios** (2026-11-13,
+ * lo pidió el cliente: Cotizaciones pintaba la semana en rosado *"que no lo
+ * haces en ningún otro lado… sigue a un hilo conectivo"*, y el rosado se
+ * juntaba con los avisos rojos de arriba). Antes había cuatro formas: un
+ * fondo dorado casi invisible en Reservas, uno rosado en Cotizaciones y un
+ * anillo dorado en Turnos y Extras —el mismo anillo que en Cotizaciones
+ * quiere decir *día abierto*—.
+ *
+ * Ahora es **una palabra en una pastilla con borde, sin color**: *HOY* junto
+ * a la fecha del día (la pone `FechaDia` sola) y *ESTA SEMANA* junto al rango
+ * de la semana. El color queda para lo que significa algo: el estado del día
+ * y los avisos.
+ */
+export function MarcaAhora({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-block whitespace-nowrap rounded-full border-2 border-hueso/60 px-2 py-px
+                     text-[13px] font-bold uppercase leading-tight tracking-wide text-hueso">
+      {children}
+    </span>
+  );
+}
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -29,7 +53,7 @@ export default function FechaDia({ fecha, tamano = 'tarjeta', chica = false, con
   const t = chica ? 'chica' : tamano;
   return (
     <span className={`inline-flex items-baseline gap-1.5 leading-none ${apagada ? 'text-hueso/55' : ''}`}
-      aria-label={enPalabras(fecha)}>
+      aria-label={fecha === hoy() ? `Hoy, ${enPalabras(fecha)}` : enPalabras(fecha)}>
       <span aria-hidden className="text-[13px] font-bold uppercase tracking-wide opacity-75">
         {DIAS[diaSemana(fecha)]}
       </span>
@@ -39,6 +63,7 @@ export default function FechaDia({ fecha, tamano = 'tarjeta', chica = false, con
       {conMes && (
         <span aria-hidden className="text-[13px] font-semibold opacity-75">{MESES[Number(fecha.slice(5, 7)) - 1]}</span>
       )}
+      {t !== 'aviso' && fecha === hoy() && <span className="self-center"><MarcaAhora>hoy</MarcaAhora></span>}
     </span>
   );
 }

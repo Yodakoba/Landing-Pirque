@@ -17,32 +17,30 @@ export type Tono = 'oro' | 'rosa' | 'cielo' | 'anil';
 
 export const TONO: Record<Tono, {
   banda: string; icono: string; titulo: string;
-  /** La caja de una semana (o del mes, en Turnos). */
+  /**
+   * La caja de una semana (o del mes, en Turnos y Extras). **Solo el borde
+   * fino lleva el tono, sin fondo** (2026-11-13, lo pidió el cliente: el
+   * fondo rosado de Cotizaciones *"se junta mucho con los avisos en rojo"*).
+   * **La semana en curso va en la misma caja**: la marca `MarcaAhora`, igual
+   * en todos.
+   */
   caja: string;
-  /** La caja de la semana en curso. */
-  cajaAhora: string;
-  /** La pastilla *ESTA SEMANA*. */
-  pastilla: string;
 }> = {
   oro: {
     banda: 'border-oro/50 bg-oro/10', icono: 'bg-oro text-white', titulo: 'text-oro',
-    caja: 'border-oro/25 bg-oro/[0.03]', cajaAhora: 'border-oro/70 bg-oro/[0.06] border-2',
-    pastilla: 'bg-oro text-tinta'
+    caja: 'border-oro/30'
   },
   rosa: {
     banda: 'border-rosa-fuerte/50 bg-rosa/10', icono: 'bg-rosa-fuerte text-white', titulo: 'text-rosa-texto',
-    caja: 'border-rosa-fuerte/25 bg-rosa/[0.04]', cajaAhora: 'border-rosa-fuerte/70 bg-rosa/[0.08] border-2',
-    pastilla: 'bg-rosa-fuerte text-tinta'
+    caja: 'border-rosa-fuerte/30'
   },
   cielo: {
     banda: 'border-cielo-fuerte/50 bg-cielo/10', icono: 'bg-cielo-fuerte text-white', titulo: 'text-cielo-texto',
-    caja: 'border-cielo-fuerte/25 bg-cielo/[0.04]', cajaAhora: 'border-cielo-fuerte/70 bg-cielo/[0.08] border-2',
-    pastilla: 'bg-cielo-fuerte text-tinta'
+    caja: 'border-cielo-fuerte/30'
   },
   anil: {
     banda: 'border-anil-fuerte/50 bg-anil/10', icono: 'bg-anil-fuerte text-white', titulo: 'text-anil-texto',
-    caja: 'border-anil-fuerte/25 bg-anil/[0.04]', cajaAhora: 'border-anil-fuerte/70 bg-anil/[0.08] border-2',
-    pastilla: 'bg-anil-fuerte text-tinta'
+    caja: 'border-anil-fuerte/30'
   }
 };
 
