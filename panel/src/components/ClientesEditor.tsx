@@ -351,7 +351,7 @@ export default function ClientesEditor() {
                       </span>
                     )}
                   </button>
-                  {n === 0 && !soloMira && (
+                  {n === 0 && !soloMira && !c.contactoTapado && (
                     <button onClick={() => void borrar(c)}
                       className="boton shrink-0 hover:border-rojo-fuerte hover:text-rojo-texto"
                       title="No tiene cotizaciones, así que se puede borrar">Borrar</button>
@@ -404,6 +404,16 @@ export default function ClientesEditor() {
                         </ul>
                       )}
                     </div>
+                    {/* **La ficha de un cliente de otro vendedor** (2026-11-13,
+                        `privacidad.ts`): llega con el contacto tapado y no
+                        se edita. Cotizarle la vuelve suya. */}
+                    {c.contactoTapado ? (
+                      <p className="rounded-lg border border-hueso/15 px-3 py-2.5 text-[15px] text-hueso/75">
+                        🔒 Es un cliente de otro vendedor{c.telefono ? ` · ${c.telefono}` : ''}. Su contacto lo ven
+                        la administración y quien lo atiende; si te pide una cotización, <strong>+ Cotizarle</strong> lo
+                        deja también en tu lista.
+                      </p>
+                    ) : (
                     <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
                     {formulario(edicion!, (k, v) => {
                       setEdicion({ ...edicion!, [k]: v });
@@ -411,6 +421,7 @@ export default function ClientesEditor() {
                       if (k !== 'nombre') fichas.programar(c.id, { [k]: v });
                     }, c.nombre)}
                     </fieldset>
+                    )}
                     {aviso && <p className="mt-3 text-[15px] text-rojo-texto">{aviso}</p>}
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       {cambiaNombre && !soloMira && (

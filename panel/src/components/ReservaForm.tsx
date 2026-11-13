@@ -172,8 +172,11 @@ export default function ReservaForm({
     if (personas < 1) return setError('Tiene que haber al menos una persona en algún menú.');
 
     setGuardando(true);
+    // Un contacto tapado (`privacidad.ts`) no viaja de vuelta: el servidor
+    // también lo descarta.
+    const { telefono, email, ...resto } = f;
     const cuerpo = {
-      ...f, personas, menu: componerMenu(cuenta),
+      ...resto, ...(reserva?.contactoTapado ? {} : { telefono, email }), personas, menu: componerMenu(cuenta),
       abonado: f.estadoPago === ESTADO_PAGO.abonado ? aMonto(f.abonado) || null : null,
       // Sin precios puestos el sugerido da 0; eso se guarda en blanco, que
       // es lo mismo que hacia antes de pedir el monto.
@@ -225,6 +228,14 @@ export default function ReservaForm({
               una que llega de Shopify, o el día que se automatice algo
               —mandar la confirmación, avisar un cambio— habría que adivinar
               cuál es cuál. Ver `contacto.ts`. */}
+          {reserva?.contactoTapado ? (
+            <Campo etiqueta="Contacto" ancho>
+              <p className="py-2 text-[14px] text-hueso/70">
+                {reserva.telefono ? `📞 ${reserva.telefono} · ` : ''}El contacto de esta reserva lo ven
+                la administración y quien la atiende.
+              </p>
+            </Campo>
+          ) : (<>
           <Campo etiqueta="Teléfono">
             <CampoTelefono valor={f.telefono} className={ENTRADA}
               etiqueta="Teléfono de quien reserva"
@@ -240,6 +251,7 @@ export default function ReservaForm({
               </p>
             )}
           </Campo>
+          </>)}
           {/* **El pago, con botones y no con un desplegable** (2026-11-11,
               lo pidió el cliente, estilo PlayStation). Tres que se ven a la
               vez —Pagada · Abonada · Por pagar— con el mismo vocabulario de

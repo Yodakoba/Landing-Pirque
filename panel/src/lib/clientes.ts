@@ -62,6 +62,8 @@ export interface Cliente {
   creado: string;
   /** La fila en la planilla, 1-based. 0 si todavía no está escrita. */
   fila: number;
+  /** El servidor tapó el contacto para esta cuenta: ver `privacidad.ts`. */
+  contactoTapado?: boolean;
 }
 
 export type DatosCliente = Pick<Cliente,

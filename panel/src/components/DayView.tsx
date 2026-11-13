@@ -1170,7 +1170,17 @@ export default function DayView(
 
                     {/* **El contacto son botones**: llamar, WhatsApp y correo,
                         con el dato a la vista. Es lo que se hace con él. */}
-                    {(r.telefono || r.email) && (
+                    {/* **Un contacto tapado no se ofrece** (2026-11-13,
+                        `privacidad.ts`): el servidor lo mandó como
+                        `···· 5678`, así que no hay a quién llamar ni
+                        escribir. Se dice quién lo tiene. */}
+                    {r.contactoTapado && (
+                      <p className="rounded-lg border border-hueso/15 px-3 py-2 text-[14px] text-hueso/70">
+                        🔒 {r.telefono ? `${r.telefono} · ` : ''}El contacto de esta reserva lo ven la
+                        administración y quien la atiende.
+                      </p>
+                    )}
+                    {!r.contactoTapado && (r.telefono || r.email) && (
                       <div className="flex flex-wrap gap-2">
                         {r.telefono && (
                           <a href={`tel:${String(r.telefono).replace(/\s+/g, '')}`} className="tecla boton min-h-[44px]">

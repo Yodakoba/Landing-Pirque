@@ -5071,5 +5071,51 @@ console.log('\nLos comentarios del equipo');
   }
 }
 
+console.log('\nEl contacto de los clientes, por rol');
+{
+  const { alcanceDeContacto, taparTelefono, estaTapado, recortarReserva, recortarCliente, clientePropio,
+    recortarContactoDeCotizacion } = await import('./privacidad.ts');
+  const { ROL: R } = await import('./auth.ts');
+  ok([R.admin, R.operaciones, R.pagos, R.gerencia].every((r) => alcanceDeContacto(r) === 'todo')
+     && alcanceDeContacto(R.encargado) === 'desdeHoy' && alcanceDeContacto(R.vendedor) === 'propio'
+     && alcanceDeContacto(R.anfitrion) === 'nada' && alcanceDeContacto('rol-nuevo') === 'nada'
+     && alcanceDeContacto(R.anfitrion, true) === 'todo' && alcanceDeContacto(R.ninguno, true) === 'nada',
+     'cada rol con su alcance; un rol que no se conoce no ve nada, y Vista gerencia ve lo de la gerencia');
+  ok(taparTelefono('+56 9 4009 6228') === '···· 6228' && taparTelefono('') === '' && estaTapado(taparTelefono('+56 9 4009 6228'))
+     && !estaTapado('+56 9 4009 6228'),
+     'el teléfono tapado deja solo los cuatro últimos dígitos');
+  const r = { id: 'X', fecha: '2026-11-14', nombre: 'Camila', telefono: '+56 9 4009 6228', email: 'c@ejemplo.cl',
+    monto: 196000, notaPago: 'transferencia', abonado: null, anotadaPor: 'Jorge' } as never as import('./tipos.ts').Reserva;
+  const hoyX = '2026-11-13';
+  ok(recortarReserva(r, 'todo', { hoy: hoyX, propia: false }) === r
+     && recortarReserva(r, 'propio', { hoy: hoyX, propia: true }) === r
+     && recortarReserva(r, 'desdeHoy', { hoy: hoyX, propia: false }) === r,
+     'la administración ve todo, el vendedor lo suyo y el encargado lo de hoy en adelante, sin cambios');
+  const ajena = recortarReserva(r, 'propio', { hoy: hoyX, propia: false });
+  ok(ajena.telefono === '···· 6228' && ajena.email === '' && ajena.monto === null && ajena.notaPago === ''
+     && ajena.contactoTapado === true && ajena.nombre === 'Camila',
+     'al vendedor la reserva ajena le llega con el nombre, sin correo, sin plata y con el teléfono tapado');
+  const pasada = recortarReserva({ ...r, fecha: '2026-11-07' }, 'desdeHoy', { hoy: hoyX, propia: false });
+  ok(pasada.telefono === '···· 6228' && pasada.email === '' && pasada.monto === 196000,
+     'al encargado una reserva pasada le llega sin contacto pero con su plata (cierra los días)');
+  ok(recortarReserva(r, 'nada', { hoy: hoyX, propia: true }).telefono === '···· 6228',
+     'sin alcance, ni lo propio trae contacto');
+  const c = { id: 'C-1', nombre: 'Andrés', empresa: 'Andes SpA', rut: '76.543.210-K', domicilio: 'Calle 1', giro: 'g',
+    telefono: '+56 9 1234 5678', correo: 'a@ejemplo.cl', notas: 'n', creadoPor: 'Daniela Rojas', creado: '', fila: 2 } as import('./clientes.ts').Cliente;
+  ok(clientePropio(c, 'Daniela Rojas', []) && !clientePropio(c, 'Jorge', [])
+     && clientePropio(c, 'Jorge', [{ idCliente: 'C-1', creadoPor: 'Jorge' }])
+     && !clientePropio(c, '', [{ idCliente: 'C-1', creadoPor: '' }]),
+     'un cliente es del vendedor que lo creó o que le cotizó; una cuenta sin nombre no es dueña de nada');
+  const cAjeno = recortarCliente(c, 'propio', false);
+  ok(cAjeno.telefono === '···· 5678' && cAjeno.correo === '' && cAjeno.rut === '' && cAjeno.domicilio === ''
+     && cAjeno.notas === '' && cAjeno.nombre === 'Andrés' && cAjeno.empresa === 'Andes SpA' && cAjeno.contactoTapado === true
+     && recortarCliente(c, 'propio', true) === c && recortarCliente(c, 'todo', false) === c,
+     'la ficha de otro vendedor llega con nombre y empresa, sin RUT, domicilio, correo ni notas');
+  const cot = { telefono: '+56 9 1234 5678', email: 'a@ejemplo.cl', creadoPor: 'Daniela Rojas' };
+  ok(recortarContactoDeCotizacion(cot, 'propio', 'Jorge').email === ''
+     && recortarContactoDeCotizacion(cot, 'propio', 'daniela rojas') === cot,
+     'la cotización de otro vendedor llega sin el contacto del cliente');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

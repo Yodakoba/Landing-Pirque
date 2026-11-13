@@ -13,6 +13,12 @@
 #
 # Después: `python3 pruebas/ejemplo/marcar.py <carpeta>` dibuja los puntos
 # sobre cada foto para revisarlas a ojo.
+#
+#   panel/pruebas/ejemplo/capturas.sh --servidor   # solo levanta el panel de ejemplo
+#
+# deja el panel de ejemplo andando en el 3125 —con las sesiones en
+# <copia>/sesiones.json— para probar a mano o con Playwright, hasta que se
+# corte el comando.
 set -euo pipefail
 PANEL=$(cd "$(dirname "$0")/../.." && pwd)
 E=$PANEL/pruebas/ejemplo
@@ -69,6 +75,12 @@ for _ in $(seq 1 60); do
   curl -s -o /dev/null "http://localhost:$PUERTO/entrar" && break
   sleep 2
 done
+
+if [ "${1:-}" = "--servidor" ]; then
+  echo "Panel de ejemplo en http://localhost:$PUERTO · sesiones en $W/sesiones.json"
+  wait
+  exit 0
+fi
 
 # 4. Las fotos.
 AYUDA_URL="http://localhost:$PUERTO" AYUDA_SESIONES="$W/sesiones.json" AYUDA_RELOJ="$RELOJ" \
