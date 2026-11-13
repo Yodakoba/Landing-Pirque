@@ -347,17 +347,26 @@ export default function CotizacionesVista() {
   );
 
   // ---- El calendario: semanas desde la en curso, con los días que importan.
+  /** Lo que esta cuenta ve en la tarjeta de un día: lo mandado, una ganada, o lo suyo sin mandar. */
+  const seVeEnLaTarjeta = (p: Presupuesto) => estadoDe(p) === ESTADO_PRESUPUESTO.aceptado || !!p.idReserva
+    || cuentaEnElCalendario(p, hoy) || (cuentaComoPosible(p, hoy) && esSuya(datos.usuario, p.creadoPor));
   const inicio = semanaDe(hoy);
   const cajas = Array.from({ length: semanas }, (_, s) => {
     const lunes = sumarDias(inicio, s * 7);
     // Un día cerrado sin cotizaciones vivas no se muestra (2026-11-11, lo
     // pidió el cliente): no hay nada que cotizar ahí. Con alguna viva sí,
     // porque es una conversación abierta con un cliente.
+    //
+    // **Y un día fuera del calendario del local se muestra solo si esta
+    // cuenta ve algo en su tarjeta** (2026-11-13, lo pidió el cliente): lo
+    // mandado, una ganada o lo suyo sin mandar (`seVeEnLaTarjeta`). Antes
+    // aparecía por un candidato ajeno, que nadie más ve, y la tarjeta decía
+    // *nada cotizado*. Un día abierto del local se sigue mostrando vacío,
+    // porque ahí se puede cotizar.
     const dias = Array.from({ length: 7 }, (_, d) => sumarDias(lunes, d))
       .filter((f) => f >= hoy && (
-        (porDia.get(f) ?? []).some((p) => cuentaComoPosible(p, hoy) || p.idReserva)
-        || (estadoDelDia.has(f) && !estaCerrado(estadoDelDia.get(f) ?? ''))
-        || (porDia.has(f) && !estadoDelDia.has(f))));
+        (porDia.get(f) ?? []).some(seVeEnLaTarjeta)
+        || (estadoDelDia.has(f) && !estaCerrado(estadoDelDia.get(f) ?? ''))));
     return { lunes, dias };
   }).filter((c) => c.dias.length > 0);
 

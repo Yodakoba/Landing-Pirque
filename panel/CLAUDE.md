@@ -6273,6 +6273,12 @@ rosado, en Turnos otra línea de texto.
   mandar*— para que se acuerde de recontactar; nadie más, tampoco el
   administrador. La franja que se abre al apretar el día, *Sin fecha* y
   *🔎 Buscar* siguen mostrándolas todas: ahí se trabaja con ellas.
+- **Un día sin nada visible no aparece** (el mismo día, lo pidió el
+  cliente): un día fuera del calendario del local se muestra solo si esa
+  cuenta ve algo en su tarjeta —lo mandado, una ganada o lo suyo sin mandar
+  (`seVeEnLaTarjeta`)—. Antes salía por un candidato ajeno y la tarjeta
+  decía *nada cotizado*. Un día abierto del local sigue apareciendo vacío,
+  porque ahí se puede cotizar.
 
 ### El botón *Mías*, igual en todo el panel (2026-11-13)
 
