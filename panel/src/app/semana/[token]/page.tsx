@@ -24,6 +24,10 @@ import { normalizar, estaCerrado } from '@/lib/columnas';
 import { VINO, esPreparacion } from '@/lib/equipo';
 import { hoy, semanaDe, sumarDias, enPalabras, rangoEnPalabras, esFecha,
          diaSemana } from '@/lib/fechas';
+import { vistaPrevia } from '@/lib/vistaPrevia';
+
+/** El título al llegar el link: ver `lib/vistaPrevia.ts`. */
+export const metadata = vistaPrevia('Planilla semanal', 'Los turnos de la semana: quién trabaja cada día y en qué puesto.');
 
 export const dynamic = 'force-dynamic';
 

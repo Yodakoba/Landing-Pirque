@@ -34,6 +34,10 @@ import { enPalabras, hoy } from '@/lib/fechas';
 import BotonImprimir from '@/components/BotonImprimir';
 import TablaCotizacion from '@/components/TablaCotizacion';
 import { negocioDe } from '@/lib/negocio';
+import { vistaPrevia } from '@/lib/vistaPrevia';
+
+/** El título al llegar el link: ver `lib/vistaPrevia.ts`. */
+export const metadata = vistaPrevia('Cotización', 'La cotización del evento, con su detalle y las condiciones de pago.');
 
 export const dynamic = 'force-dynamic';
 

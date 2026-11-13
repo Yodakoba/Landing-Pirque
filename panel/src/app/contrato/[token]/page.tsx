@@ -17,6 +17,10 @@
 import { leerPresupuestos, leerLineasPresupuesto, leerClientes, leerConfig } from '@/lib/datos';
 import { porToken, lineasDe } from '@/lib/presupuestos';
 import HojaContrato from '@/components/HojaContrato';
+import { vistaPrevia } from '@/lib/vistaPrevia';
+
+/** El título al llegar el link: ver `lib/vistaPrevia.ts`. */
+export const metadata = vistaPrevia('Contrato', 'El contrato del evento, para revisarlo e imprimirlo.');
 
 export const dynamic = 'force-dynamic';
 
