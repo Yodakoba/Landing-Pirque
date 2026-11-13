@@ -36,6 +36,9 @@ const enVentana = (t) => (p) => p.locator('[role=dialog] button').filter({ hasTe
 const campo = (t) => (p) => p.getByPlaceholder(t).first();
 const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeout(900); };
 
+/** La página del día: el bloque del equipo queda al medio de la foto. */
+const focoDia = (p) => p.getByRole('button', { name: /Equipo y cuentas del día|Planificar equipo/ }).first();
+
 const abrirEnvio = (nombre) => [
   // *Todas* pasó a llamarse *🔎 Buscar* el 2026-11-13.
   clic(boton(/Buscar/, 0)),
@@ -45,7 +48,9 @@ const abrirEnvio = (nombre) => [
 
 /** Cada escena: con qué rol, dónde, qué clics, qué dejar a la vista y sus puntos. */
 const ESCENAS = {
-  'anf-recepcion': { rol: 'anfitrion', ruta: '/recepcion',
+  // Más alta desde el 2026-11-13: con el aviso fijo en su cajita, el *Llegó*
+  // de la primera reserva quedaba bajo el borde de 760.
+  'anf-recepcion': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
     puntos: [texto('personas llegaron'), campo(/Buscar por nombre/), boton(/Llegó/)] },
   'anf-llego': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(boton(/Llegó/))], foco: texto(/¿Llegaron las/),
     puntos: [boton(/Sí, las/), boton('Una más'), texto(/Si es otro número/)] },
@@ -63,7 +68,10 @@ const ESCENAS = {
   'ven-resumen': { rol: 'vendedor', ruta: '/vendedores', alto: 900, foco: texto(/^(Te|Le) toca/),
     puntos: [texto(/^(Te|Le) toca/), texto(/^Falta\??$/), toque(/Viene/)] },
 
-  'enc-dia': { rol: 'encargado', ruta: '/dia/2026-11-12', alto: 1000, foco: texto(/Cómo viene el pago/i),
+  // El foco va en el bloque del equipo (2026-11-13): desde que muestra a la
+  // gente y la propina, centrar *Cómo viene el pago* dejaba *Agregar reserva*
+  // y la primera reserva bajo el borde.
+  'enc-dia': { rol: 'encargado', ruta: '/dia/2026-11-12', alto: 1000, foco: focoDia,
     puntos: [texto(/Qué preparar/i), texto(/Cómo viene el pago/i), boton(/Agregar reserva/), texto('Familia Soto')] },
   'enc-turnos': { rol: 'encargado', ruta: '/turnos', alto: 900, foco: texto(/días por cerrar/),
     puntos: [texto(/días por cerrar/), boton(/11 de noviembre · /), boton(/Mes siguiente/)] },
@@ -72,7 +80,7 @@ const ESCENAS = {
   'enc-recepcion': { rol: 'encargado', ruta: '/recepcion', foco: texto(/Por pagar · cobra/),
     puntos: [texto(/Por pagar · cobra/), boton(/Llegó/), boton(/Avisar al jefe/)] },
 
-  'ope-dia': { rol: 'gerente', ruta: '/dia/2026-11-12', alto: 1000, foco: texto(/Cómo viene el pago/i),
+  'ope-dia': { rol: 'gerente', ruta: '/dia/2026-11-12', alto: 1000, foco: focoDia,
     puntos: [texto(/Qué preparar/i), texto(/Cómo viene el pago/i), boton(/Agregar reserva/), texto('Familia Soto')] },
   'ope-turnos': { rol: 'gerente', ruta: '/turnos', alto: 900, foco: texto(/días por cerrar/),
     puntos: [texto(/días por cerrar/), boton(/11 de noviembre · /), boton(/Mes siguiente/)] },
@@ -83,9 +91,12 @@ const ESCENAS = {
       }
       await p.waitForTimeout(1200);
     }],
-    puntos: [texto(/por encargado/), enVentana(/Corregir este día/), enVentana(/Trabajadores/)], alto: 820 },
+    // *✓ Día cerrado por <quien>, <cuándo>*: desde que hay cuentas con nombre
+    // ya no dice "por encargado" (2026-11-13).
+    puntos: [(p) => p.locator('[role=dialog]').getByText(/Día cerrado/).first(),
+      enVentana(/Corregir este día/), enVentana(/Trabajadores/)], alto: 820 },
   'ope-informe': { rol: 'gerente', ruta: '/informe', foco: texto(/Por semana/),
-    alto: 900, puntos: [boton(/Por semana/), texto(/turno sin cerrar/), boton(/Trabajadores/)] },
+    alto: 900, puntos: [boton(/Por semana/), texto(/turnos? sin cerrar/), boton(/Trabajadores/)] },
 
   ...Object.fromEntries(['pag', 'ger'].flatMap((pre) => {
     const rol = pre === 'pag' ? 'pagos' : 'gerencia';
