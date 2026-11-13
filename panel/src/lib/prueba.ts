@@ -4188,7 +4188,12 @@ console.log('\nCotizaciones, fase 2');
   // --- El vendedor ---
   ok(puedeTocarPresupuesto(ROL.vendedor, 'Vero', 'vero') && !puedeTocarPresupuesto(ROL.vendedor, 'vero', 'hugo'),
      'el vendedor edita las suyas y no las de otro');
-  ok(puedeTocarPresupuesto(ROL.encargado, 'carla', 'hugo'), 'los demás roles editan todas');
+  ok(puedeTocarPresupuesto(ROL.operaciones, 'carla', 'hugo'), 'los demás roles editan todas');
+  // **El encargado de turno no ve cotizaciones** (2026-11-13, lo decidió el
+  // cliente): ni las toca, ni ve las fichas de clientes, que las muestran.
+  ok(!puedeTocarPresupuesto(ROL.encargado, 'carla', 'carla') && !puede(ROL.encargado, 'presupuestos')
+     && !puede(ROL.encargado, 'clientes'),
+     'el encargado de turno no ve cotizaciones ni clientes');
 }
 
 /* ---------- productos desactivados (2026-11-10) ---------- */

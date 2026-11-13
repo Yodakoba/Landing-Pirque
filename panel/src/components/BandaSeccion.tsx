@@ -7,12 +7,13 @@
  * - **Distinto, para saber dónde estás**: un tono por sección, en la banda del
  *   título y en el marco de las cajas. Reservas en **dorado** (el calendario
  *   principal), Cotizaciones en **rosado** (el color que ya significa
- *   "cotizado") y Turnos en **celeste** (el equipo).
+ *   "cotizado"), Turnos en **celeste** (el equipo) y, desde el 2026-11-13,
+ *   Extras en **añil** (las actividades que se contratan aparte).
  *
  * Las clases van escritas enteras —no armadas con `${tono}`— porque Tailwind
  * solo genera las que encuentra literalmente en el código.
  */
-export type Tono = 'oro' | 'rosa' | 'cielo';
+export type Tono = 'oro' | 'rosa' | 'cielo' | 'anil';
 
 export const TONO: Record<Tono, {
   banda: string; icono: string; titulo: string;
@@ -37,6 +38,11 @@ export const TONO: Record<Tono, {
     banda: 'border-cielo-fuerte/50 bg-cielo/10', icono: 'bg-cielo-fuerte text-white', titulo: 'text-cielo-texto',
     caja: 'border-cielo-fuerte/25 bg-cielo/[0.04]', cajaAhora: 'border-cielo-fuerte/70 bg-cielo/[0.08] border-2',
     pastilla: 'bg-cielo-fuerte text-tinta'
+  },
+  anil: {
+    banda: 'border-anil-fuerte/50 bg-anil/10', icono: 'bg-anil-fuerte text-white', titulo: 'text-anil-texto',
+    caja: 'border-anil-fuerte/25 bg-anil/[0.04]', cajaAhora: 'border-anil-fuerte/70 bg-anil/[0.08] border-2',
+    pastilla: 'bg-anil-fuerte text-tinta'
   }
 };
 

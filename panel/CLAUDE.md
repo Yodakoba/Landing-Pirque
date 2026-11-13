@@ -888,7 +888,9 @@ domicilio, teléfono, correo y notas. Código en `lib/clientes.ts`.
   Ana Soto son dos personas.
 - **Una ficha con cotizaciones no se borra**, y lo comprueba la ruta.
 - **Permiso `clientes`**: administrador, encargado, quien paga **y el
-  vendedor**, que es quien atiende al cliente.
+  vendedor**, que es quien atiende al cliente. **El encargado de turno lo
+  perdió el 2026-11-13**, junto con Cotizaciones: ver *El encargado de turno
+  no ve cotizaciones*.
 - **Los presupuestos de antes pasan a fichas con un botón** (*Crear las
   fichas*, en `/clientes`). `Presupuestos` ganó la columna `ID Cliente`, que
   se agrega sola. Dos presupuestos del mismo cliente quedan en una ficha, y
@@ -5242,7 +5244,7 @@ anfitrión y la pantalla de Recepción"—, y la tabla vive en `PERMISOS`, en
 | Confirmar el día: asistencia, montos, propina | sí | sí | **sí** | — | — |
 | **Cerrar el día** (con la ventana de confirmación) | sí | sí | **sí** | — | — |
 | Agendar actividades extras y confirmarlas | sí | sí | **sí** | — | — |
-| Crear y mandar presupuestos, y ver el CRM del socio | sí | sí | **sí** | — | — |
+| Crear y mandar presupuestos, y ver el CRM del socio | sí | **— (desde el 2026-11-13)** | **sí** | — | — |
 | Montos habituales y cuentas bancarias de la ficha (los dos encargados desde el 2026-11-12) | sí | **sí** | **sí** | — | — |
 | Puestos y su regla "uno cada N" | sí | — | **sí** | — | — |
 | Precios, menús y configuración | sí | — | **sí** | — | — |
@@ -5268,6 +5270,18 @@ calendario. Lo que sí hace en el día quedó en un permiso propio,
 **`operarDia`**: pedir más cupo desde el bloque de sobrecupo, soltar una
 reserva por cupo y avisarle a una reserva cuando el día se libera para un
 evento exclusivo.
+
+**El encargado de turno no ve cotizaciones** (2026-11-13, lo decidió el
+cliente: *"encargado de turno no ve cotizaciones"*). Se le sacaron los
+permisos `presupuestos` y `clientes`: no ve las pestañas *Cotizaciones* ni
+*Clientes* —la ficha de un cliente muestra su historial de cotizaciones con
+los totales, y por ahí las seguiría viendo—, en la página del día no aparece
+el bloque de lo cotizado, y las rutas le responden 403. **Lo que sí sigue
+viendo, a propósito**: cuánta gente podría venir, *1 presupuesto · 18
+posibles* en las tarjetas del calendario y en `/turnos`, sin nombres ni
+montos. Le sirve para armar el equipo y sale de la ocupación, no de esos
+permisos. Comprobado con *Ver como*: su menú queda en Calendario,
+Recepción, Equipo, Turnos y Extras.
 
 **El encargado sí agrega trabajadores**: lo pidió el cliente explícitamente,
 y desde el 2026-11-12 llena la ficha completa, con sueldo y cuenta. Lo que
@@ -6116,6 +6130,30 @@ usuario"*.
   significa *falta cobrar*.
 - `revisarPlayStation()` a 393 y 1280 sin hallazgos en la portada, la
   bandeja abierta, el día y Turnos; ninguna página se corre de lado.
+
+### Extras entra en la familia: el añil (2026-11-13)
+
+Lo pidió el cliente: *"llevar el calendario de extras al mismo formato que
+los otros"*. `CalendarioExtras.tsx` quedó como Turnos, que también es un mes:
+
+- **La banda** *🎠 EXTRAS · ACTIVIDADES EXTRAS* con su `?`, y **la caja del
+  mes** con el tono de la sección.
+- **Un tono nuevo, añil** (`--anil`, `-fuerte`, `-texto`, en las dos
+  paletas; `anil` en `TONO`). Hacía falta uno propio y los que quedaban ya
+  significan algo: café es *preparación*, morado *exclusivo*, verde
+  *pagado*. Cambiarlo es cambiar el tono de la banda y de la caja.
+- **La celda es la de Turnos**: `FechaDia` (*SÁB 14*), el punto y la palabra
+  del estado (*PÚBLICO*, *CERRADO*…), el pronóstico, *112 personas* y
+  **🎠 2 actividades** con su monto en añil. **La celda la pinta el estado
+  del día**, como en los otros: antes un día con actividades se pintaba
+  dorado y perdía el color que dice si ese día abre, que es justo lo que
+  esta pantalla quiere mostrar antes de contratar un castillo.
+- ***! N sin confirmar*** pasó a la pastilla con borde del pie de la celda,
+  como *! Sin cerrar* en Turnos, y **solo en un día que ya pasó**: *sin
+  confirmar* es que nadie marcó si vino, y en un día que todavía no llega
+  eso es lo normal.
+- `revisarPlayStation()` a 393 y 1280 sin hallazgos ni página corrida de
+  lado.
 
 ### Las misiones de la ayuda (2026-11-12, segunda vuelta)
 
