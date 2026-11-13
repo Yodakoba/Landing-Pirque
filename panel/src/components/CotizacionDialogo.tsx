@@ -53,7 +53,8 @@ import BloqueCancelada from './BloqueCancelada';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, esFecha } from '@/lib/fechas';
 import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
-import { enlaceWhatsApp } from '@/lib/contacto';
+import { enlaceWhatsApp, saludoAlCliente } from '@/lib/contacto';
+import { abrirWhatsApp } from './BotonWhatsApp';
 import { cupoParaGanar } from '@/lib/dias';
 import { tieneArriendo, esExclusivo, exclusividadDe, plazoParaLiberar } from '@/lib/exclusivo';
 import { usarSoloMira } from './SesionCliente';
@@ -739,8 +740,10 @@ export default function CotizacionDialogo({
     ? `${window.location.origin}/contrato/${p.token}` : '';
   const textoWhatsapp = !link || !cliente ? ''
     : enVariasAlt > 1
-      ? `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización con ${enVariasAlt} alternativas para que elijas: ${link}`
-      : `Hola ${cliente.nombre.split(' ')[0]}, te mando la cotización: ${link}`;
+      // **Firmado por quien la manda** (2026-11-13): *Hola Andrés, te escribe
+      // Jorge de Brasas de Lo Pirque. Te mando la cotización: …*
+      ? `${saludoAlCliente(cliente.nombre, datos.usuario, datos.empresa)}. Te mando la cotización con ${enVariasAlt} alternativas para que elijas: ${link}`
+      : `${saludoAlCliente(cliente.nombre, datos.usuario, datos.empresa)}. Te mando la cotización: ${link}`;
   const whatsapp = textoWhatsapp ? enlaceWhatsApp(cliente!.telefono, textoWhatsapp) : '';
   /**
    * **El correo** (2026-11-11): sin un servidor de correo, abre el programa
@@ -757,7 +760,7 @@ export default function CotizacionDialogo({
   const folio = p ? `N° ${folioDe({ id: grupoDe(p) })}` : '';
   /** **Mandar el contrato** (2026-11-11): los mismos tres caminos que la cotización. */
   const textoWhatsappContrato = linkContrato && cliente
-    ? `Hola ${nombreCorto}, te mando el contrato para firmar: ${linkContrato}` : '';
+    ? `${saludoAlCliente(cliente.nombre, datos.usuario, datos.empresa)}. Te mando el contrato para firmar: ${linkContrato}` : '';
   const whatsappContrato = textoWhatsappContrato
     ? enlaceWhatsApp(cliente!.telefono, textoWhatsappContrato) : '';
   const correoContrato = linkContrato && cliente?.correo
@@ -2515,6 +2518,7 @@ export default function CotizacionDialogo({
                 <div className="mt-2 flex flex-wrap gap-2">
                   {url && (
                     <a href={url} target={viaEnvio === 'whatsapp' ? '_blank' : undefined} rel="noreferrer"
+                      onClick={viaEnvio === 'whatsapp' ? (e) => { e.preventDefault(); abrirWhatsApp(url); } : undefined}
                       className="tecla boton min-h-[44px]">
                       {viaEnvio === 'whatsapp' ? '💬 Abrir WhatsApp de nuevo' : '✉️ Abrir el correo de nuevo'}
                     </a>
@@ -2741,18 +2745,6 @@ function Camino({ pasos }: { pasos: { nombre: string; listo: boolean }[] }) {
   );
 }
 
-/**
- * **Abre WhatsApp en otra pestaña, y si el navegador no lo deja, en esta**
- * (2026-11-12). Lo reclamó el cliente: apretaba WhatsApp y solo aparecía la
- * pregunta de si la había mandado. Un navegador que bloquea la pestaña nueva
- * no avisa; `window.open` sí lo dice —devuelve `null`— y entonces se abre en
- * la misma, que en un teléfono salta directo a la aplicación.
- */
-function abrirFuera(url: string) {
-  const w = window.open(url, '_blank');
-  if (w) { try { w.opener = null; } catch { /* sin acceso: da igual */ } }
-  else window.location.href = url;
-}
 
 /** WhatsApp, correo y link: los tres preguntan "¿la mandaste?" (ver `mandar()`). */
 function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false, ver = 'Ver el documento' }: {
@@ -2766,7 +2758,7 @@ function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false, ver =
     <div className="flex flex-wrap gap-2">
       {whatsapp ? (
         <a href={whatsapp} target="_blank" rel="noreferrer" className={`tecla ${clase}`}
-          onClick={(e) => { e.preventDefault(); abrirFuera(whatsapp); onMandar('whatsapp'); }}>💬 WhatsApp</a>
+          onClick={(e) => { e.preventDefault(); abrirWhatsApp(whatsapp); onMandar('whatsapp'); }}>💬 WhatsApp</a>
       ) : <button type="button" className={clase} disabled>Falta su teléfono</button>}
       {correo ? (
         <a href={correo} className={`tecla ${clase}`} onClick={() => onMandar('correo')}>✉️ Correo</a>

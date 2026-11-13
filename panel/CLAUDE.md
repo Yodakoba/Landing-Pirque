@@ -59,6 +59,7 @@ revisan antes de cada cambio en esta carpeta.
   | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
   | Guardar | `BotonGuardar` / `AvisoGuardado` |
   | Elegir de una lista que crece | `BuscarEnLista` |
+  | Escribirle al cliente por WhatsApp | `BotonWhatsApp` (o `abrirWhatsApp()`), con el saludo de `saludoAlCliente()` |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -182,6 +183,33 @@ se manda no se puede filtrar**, así que el recorte lo hace el servidor
   pasadas, la administración las 35; de 6 clientes, el vendedor ve el
   contacto de 4. **Lecturas de Google**: ninguna más en las pantallas; crear,
   editar o borrar una ficha suma `Presupuestos` a su tanda.
+
+## WhatsApp al tiro y firmado (2026-11-13)
+
+Lo pidió el cliente junto con el contacto por rol: *"el WhatsApp debería
+haber al tiro el WhatsApp"*, y que cada persona tenga lo suyo. Había cuatro
+formas de abrir WhatsApp —un enlace pelado en la página del día,
+`abrirFuera()` en la cotización y dos copias en Sobrecupo y Liberar el
+día—, y ninguna firmaba.
+
+- **Un solo botón**, `BotonWhatsApp` (y `abrirWhatsApp()` para los que ya
+  tienen su propio botón, como *Mandarla* de la cotización). **En el
+  celular** abre la aplicación (`wa.me`); **en el computador** va derecho
+  al chat de **WhatsApp Web** con el mensaje escrito, sin la página
+  intermedia de `wa.me` (`enlaceWhatsAppDirecto()` en `contacto.ts`). Si el
+  navegador bloquea la pestaña nueva, se abre en la misma.
+- **Firmado por quien lo manda** (`saludoAlCliente()`): *Hola Camila, te
+  escribe Tomás de Brasas de Lo Pirque por tu reserva del sábado 14 de
+  noviembre.* El nombre es el de la cuenta (el de pila) y la empresa, el
+  nombre comercial de Configuración; en blanco, *Brasas de Lo Pirque*, que
+  es lo que los mensajes ya decían escrito. Sin cuenta, *te escribimos*.
+  Firman igual el WhatsApp de la página del día, el de la cotización y el
+  contrato, el aviso de sobrecupo y el de liberar el día.
+- **La página del día pone la firma una vez** (`FirmaWhatsApp`) y la leen
+  sus bloques; `/api/reservas` manda el nombre comercial en la misma tanda
+  de lecturas (ninguna más).
+- **Solo aparece donde hay contacto**: con el contacto tapado
+  (`privacidad.ts`) no hay número y el botón no se dibuja.
 
 ## Las reservas en el panel
 

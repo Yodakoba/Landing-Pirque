@@ -80,6 +80,48 @@ export function enlaceWhatsApp(telefono: unknown, mensaje = ''): string {
   return `https://wa.me/${n}` + (mensaje ? `?text=${encodeURIComponent(mensaje)}` : '');
 }
 
+/**
+ * **WhatsApp "al tiro"** (2026-11-13, lo pidió el cliente). `wa.me` en un
+ * celular abre la aplicación directo, pero en un computador cae en una
+ * página intermedia de WhatsApp que pide apretar otra vez. Desde un
+ * computador se va derecho al chat de **WhatsApp Web** con el mensaje
+ * escrito. Recibe el enlace `wa.me` que ya arman las pantallas y lo
+ * convierte; uno que no sea `wa.me` se deja tal cual.
+ */
+export function enlaceWhatsAppDirecto(waMe: string, enCelular: boolean): string {
+  const m = /^https:\/\/wa\.me\/(\d+)(?:\?text=(.*))?$/.exec(String(waMe ?? ''));
+  if (!m || enCelular) return waMe;
+  return `https://web.whatsapp.com/send?phone=${m[1]}` + (m[2] ? `&text=${m[2]}` : '');
+}
+
+/** El nombre de pila: *Tomás Herrera* → *Tomás*. */
+export const nombreDePila = (v: unknown) => String(v ?? '').trim().split(/\s+/)[0] ?? '';
+
+/**
+ * **El saludo de todo mensaje al cliente, firmado por quien lo manda**
+ * (2026-11-13, lo pidió el cliente: *"cada persona tiene que tener su"*).
+ * *Hola Camila, te escribe Tomás de Brasas de Lo Pirque* — sin punto, para
+ * que cada mensaje siga como le corresponda. Sin quién, *te escribimos*.
+ * La empresa sale de Configuración; en blanco, la de esta planilla.
+ */
+export function saludoAlCliente(cliente: unknown, quien: unknown, empresa = ''): string {
+  const a = nombreDePila(cliente);
+  const b = nombreDePila(quien);
+  const de = ` de ${String(empresa ?? '').trim() || EMPRESA_DE_LOS_MENSAJES}`;
+  return `Hola${a ? ` ${a}` : ''}, ` + (b ? `te escribe ${b}${de}` : `te escribimos${de}`);
+}
+
+/**
+ * Lo que firman los mensajes si Configuración no dice el nombre comercial:
+ * el de esta planilla. Era lo que ya decían, escrito en cada mensaje.
+ */
+export const EMPRESA_DE_LOS_MENSAJES = 'Brasas de Lo Pirque';
+
+/** El mensaje del botón de WhatsApp de una reserva. */
+export function mensajeDeReserva(cliente: unknown, quien: unknown, empresa: string, diaEnPalabras: string): string {
+  return `${saludoAlCliente(cliente, quien, empresa)} por tu reserva del ${diaEnPalabras}.`;
+}
+
 /* ---------- Correos ---------- */
 
 /**

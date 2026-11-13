@@ -29,15 +29,12 @@ import { grupoDe } from '@/lib/cotizar';
 import { ocupaLugar, enPesos } from '@/lib/ocupacion';
 import { enPalabras, hoy } from '@/lib/fechas';
 import { enlaceWhatsApp } from '@/lib/contacto';
+import BotonWhatsApp, { usarFirmaWhatsApp } from './BotonWhatsApp';
 import {
   exclusividadDe, liberacionDe, mensajeLiberacion, montoADevolver, esDeShopify
 } from '@/lib/exclusivo';
 
 /** Abre WhatsApp como en la cotización: `window.open` y, si se bloquea, en la misma pestaña. */
-function abrir(href: string) {
-  const w = window.open(href, '_blank');
-  if (w) { try { w.opener = null; } catch { /* da igual */ } } else window.location.href = href;
-}
 
 export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacion, puedeAvisar, puedeDecidir, onCambio }: {
   fecha: string;
@@ -51,6 +48,7 @@ export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacio
   onCambio: () => void;
 }) {
   const [guardando, setGuardando] = useState('');
+  const firma = usarFirmaWhatsApp();
   /** La tarjeta con una pregunta abierta: qué se va a hacer y con qué reserva. */
   const [preguntando, setPreguntando] = useState<{ fila: number; que: 'cancelar' | 'reagendar' | 'devuelta' } | null>(null);
   const [nuevaFecha, setNuevaFecha] = useState('');
@@ -127,7 +125,7 @@ export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacio
             const lib = liberacionDe(r.liberacion);
             const idCot = deCotizacion[r.id];
             const devolver = montoADevolver(r);
-            const wa = enlaceWhatsApp(r.telefono, mensajeLiberacion(r.nombre, dia));
+            const wa = enlaceWhatsApp(r.telefono, mensajeLiberacion(r.nombre, dia, firma));
             const pregunta = preguntando?.fila === r.fila ? preguntando.que : null;
             return (
               <li key={r.fila} className="flex flex-col rounded-xl border-2 border-hueso/15 bg-panel p-4">
@@ -192,9 +190,7 @@ export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacio
                 ) : (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {wa ? (
-                      <a href={wa} target="_blank" rel="noopener noreferrer"
-                        onClick={(e) => { e.preventDefault(); abrir(wa); }}
-                        className="tecla boton min-h-[44px] !border-verde-fuerte/60 text-verde-texto">💬 Avisarle por WhatsApp</a>
+                      <BotonWhatsApp enlace={wa}>💬 Avisarle por WhatsApp</BotonWhatsApp>
                     ) : (
                       <span className="text-[14px] text-ambar-texto">Sin celular anotado: avísale por otro medio.</span>
                     )}
