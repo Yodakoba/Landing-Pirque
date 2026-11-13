@@ -17,6 +17,7 @@
  * decide: eso es de quien mira el día. Una reserva que viene de una
  * cotización no se suelta acá: se cancela desde su cotización.
  */
+import { BotonMias, BotonTodos } from './BotonMias';
 import { useState } from 'react';
 import Dialogo from './Dialogo';
 import { avisar, copiarConAviso } from './AvisoFlotante';
@@ -249,14 +250,13 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
       <h3 className="mt-4 text-[13px] font-semibold uppercase tracking-wide text-hueso/60">
         Reservas sin pagar de este día
       </h3>
-      <div className={conFiltro ? 'mt-2 flex gap-2' : 'hidden'}>
-        {conFiltro && (['mias', 'todas'] as const).map((k) => (
-          <button key={k} type="button" onClick={() => setVer(k)} aria-pressed={ver === k}
-            className={`boton rounded-full ${ver === k ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>
-            {k === 'mias' ? `Mías (${mias.length})` : `Todas (${riesgo.length})`}
-          </button>
-        ))}
-      </div>
+      {/* El mismo *Mías* de todo el panel (`BotonMias`, 2026-11-13). */}
+      {conFiltro && (
+        <div className="mt-2 flex gap-2">
+          <BotonMias cuantas={mias.length} elegido={ver === 'mias'} onClick={() => setVer('mias')} />
+          <BotonTodos texto="Todas" cuantas={riesgo.length} elegido={ver === 'todas'} onClick={() => setVer('todas')} />
+        </div>
+      )}
       {riesgo.length === 0 && (
         <p className="mt-1 text-[14px] text-hueso/75">No quedan reservas sin pagar: solo queda ampliar el cupo.</p>
       )}

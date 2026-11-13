@@ -6203,6 +6203,25 @@ pendientes*):
   pagó y falta ganarla · 2 esperando · 1 vence pronto*, y ella *3 saldos ·
   1 esperando · 1 vence pronto*. Sumados dan lo que antes veían todos.
 
+### El botón *Mías*, igual en todo el panel (2026-11-13)
+
+Lo pidió el cliente: *"ya en varios textos existe el botón mías —reserva
+mía, cotización mía— y quiero que sutilmente le des un aspecto uniforme por
+todo el sitio… no cambies nada en la estructura"*. Había tres formas:
+*Mías / De todos* en Cotizaciones con borde celeste, y el *👤 Mías* de la
+página del día y el *Mías / Todas* del bloque de sobrecupo en dorado —el
+mismo dorado de los filtros del pago que van al lado en la página del día—.
+
+- **`BotonMias.tsx`**: `BotonMias` (*👤 Mías*) y su pareja `BotonTodos`
+  (*👥 De todos* / *👥 Todas*). Pastilla redonda de 44px, el número en una
+  burbujita, y **elegido en celeste** —el que ya usaba Cotizaciones—, así no
+  se confunde con un filtro dorado.
+- **Solo el aspecto**: cada pantalla sigue filtrando como antes. En la
+  página del día sigue siendo un botón que se prende y se apaga; en
+  Cotizaciones y en el sobrecupo, un par.
+- Comprobado a 393 y 1280 en las tres, el sobrecupo mirando como vendedor
+  (que es cuando aparece el par): `revisarPlayStation()` sin hallazgos.
+
 ### Los avisos fijos se cierran para siempre (2026-11-13)
 
 Lo pidió el cliente primero sobre la frase de Cotizaciones —*"Lo cotizado no
