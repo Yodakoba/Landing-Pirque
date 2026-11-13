@@ -28,6 +28,7 @@
  *   el teclado. `backface-visibility` oculta el dibujo pero deja los enlaces
  *   alcanzables, así que sin esto se podría tabular hacia botones invisibles.
  */
+import { PastillaCotizado } from './Pastilla';
 import { MarcaCambio } from './AlDia';
 import { useState } from 'react';
 import { LineaCRM } from './EventosCRM';
@@ -369,17 +370,12 @@ export default function TarjetaDia({
               y los cotizados en rosado — ver `EventosCRM.tsx`. */}
           {delSocio && <LineaCRM e={delSocio} quedan={d.quedan} />}
 
+          {/* La misma pastilla de Cotizaciones y Turnos (`Pastilla.tsx`,
+              2026-11-13): antes era cuadrada, con un punto, y decía
+              *presupuesto*. */}
           {d.presupuestos > 0 && (
-            <p className="mt-2 flex flex-wrap gap-2 text-[13px]">
-              <span className="inline-flex items-center gap-1.5 rounded-md border
-                               border-rosa/50 bg-rosa/10 px-2 py-1 text-rosa-texto">
-                <span aria-hidden className="h-2 w-2 rounded-full bg-rosa-fuerte" />
-                <strong className="tabular-nums">{d.presupuestos}</strong>
-                {d.presupuestos === 1 ? 'presupuesto' : 'presupuestos'}
-                {d.presupuestadas > 0 && (
-                  <> · <strong className="tabular-nums">{d.presupuestadas}</strong> posibles</>
-                )}
-              </span>
+            <p className="mt-2 flex flex-wrap gap-2">
+              <PastillaCotizado cotizaciones={d.presupuestos} posibles={d.presupuestadas} />
             </p>
           )}
 
