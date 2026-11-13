@@ -86,6 +86,16 @@ más abajo; esto es la lista para revisar.
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
 - **Los permisos los comprueba el servidor**; la pantalla solo deja de
   dibujar lo que la cuenta no puede.
+- **La plata la cierra el encargado de pagos** (regla del cliente,
+  2026-11-13: *"en movimientos muy claves el encargado de pagos tiene la
+  última palabra si se trata de plata… la regla lo deja responsable a
+  él"*). Anotar un movimiento de plata y subir su comprobante lo hace quien
+  corresponda; **confirmarlo —revisado, pagado, devuelto— es del encargado
+  de pagos**, y queda a su nombre. Al diseñar algo con números se pregunta
+  primero *¿quién lo confirma?*. **Sin complicar lo que ya funciona**: la
+  confirmación no frena el trabajo de los demás —ganar una cotización sigue
+  dependiendo del cobro anotado, no del revisado—. El detalle, en
+  `panel/CLAUDE.md`.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
