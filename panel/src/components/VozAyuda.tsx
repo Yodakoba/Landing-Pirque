@@ -1,20 +1,22 @@
 'use client';
 
 /**
- * **💬 Tu voz**, lo primero de la página `/ayuda` (2026-11-13).
+ * **💬 Tu voz** en la página `/ayuda`.
  *
- * Lo pidió el cliente: *"el formulario tiene que estar muy presente,
- * accesible, fácil… en primer paso"*. Antes era la quinta misión y había que
- * llegar hasta ella. Ahora es el bloque grande de arriba, **con el formulario
- * abierto**, antes de las misiones: quien entra a la ayuda porque algo no le
- * funciona escribe ahí mismo, sin recorrer nada.
+ * - **2026-11-13, primera vuelta**: el cliente pidió que el formulario *"esté
+ *   muy presente… en primer paso"*, y fue el bloque grande de arriba, abierto.
+ * - **2026-11-13, segunda vuelta**: *"que no ocupe desde el inicio todo el
+ *   espacio… lo primero que tengo que ver es: haz esta tarea"*. Ahora **parte
+ *   cerrado**: una barra rosada de una línea con **💬 Coméntame**, y el
+ *   formulario se abre al apretarlo. El título es **Aquí tu voz cuenta**: el
+ *   *"Tu voz manda"* de la primera vuelta sonaba a texto genérico (lo dijo el
+ *   cliente). Así se ve al tiro que se puede comentar, sin tapar las misiones.
  *
- * - **Le llegan pedidos de abajo**: *¿Esto no te sirve? Cuéntalo* de una
- *   misión anota esa misión como pantalla, y *🙋 Lo necesito* de un poder
- *   bloqueado deja el pedido escrito. El formulario se vuelve a armar con eso
- *   (`key`), y la página sube hasta aquí.
- * - **Al lado, lo que más sirve** (ejemplos) y **lo que ya mandaste** desde
- *   este navegador, para ver que llegó.
+ * **Se abre desde varios lugares**, todos con el mismo botón y la misma
+ * palabra: la barra de arriba, el botón flotante, *¿Esto no te sirve?
+ * Coméntame* de cada misión y *🙋 Lo necesito* de un poder bloqueado. Los dos
+ * últimos dejan el pedido armado (`key` vuelve a armar el formulario) y la
+ * página sube hasta aquí. Quien abre la página es `AyudaRol`, que lo controla.
  */
 import { useEffect, useState } from 'react';
 import FormularioComentario, { type ComentarioMandado } from './FormularioComentario';
@@ -27,26 +29,40 @@ const leer = (): ComentarioMandado[] => {
   try { return JSON.parse(localStorage.getItem(LLAVE) ?? '[]'); } catch { return []; }
 };
 
-export default function VozAyuda({ pedido, conComentar }: { pedido: Pedido; conComentar: boolean }) {
+export default function VozAyuda({ pedido, abierto, onAbrir, onCerrar }: {
+  pedido: Pedido; abierto: boolean; onAbrir: () => void; onCerrar: () => void;
+}) {
   const [mandados, setMandados] = useState<ComentarioMandado[]>([]);
   useEffect(() => { setMandados(leer()); }, []);
 
   return (
-    <section id="tu-voz" aria-label="Tu voz" className="scroll-mt-4 overflow-hidden rounded-3xl border-[3px] border-rosa-fuerte/60 bg-rosa/10">
-      <header className="flex items-start gap-4 border-b-2 border-rosa-fuerte/30 bg-rosa/15 px-4 py-4 sm:px-6">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-rosa-fuerte text-[30px] shadow-md" aria-hidden>💬</span>
-        <div className="min-w-0">
-          <p className="text-[13px] font-black uppercase tracking-widest text-rosa-texto">Lo primero</p>
-          <h2 className="text-[24px] font-black leading-tight sm:text-[28px]">Tu voz manda</h2>
-          <p className="mt-1 max-w-2xl text-[15px] leading-relaxed text-hueso/85">
-            ¿Algo no funciona, no se entiende o <strong>te falta para tu trabajo</strong>? Escríbelo aquí, en
-            medio minuto. Llega directo a la lista de lo que hay que arreglar.
+    <section id="tu-voz" aria-label="Aquí tu voz cuenta"
+      className={`scroll-mt-4 overflow-hidden rounded-2xl border-2 border-rosa-fuerte/60 bg-rosa/10 ${abierto ? 'border-[3px]' : ''}`}>
+      {/* La barra: siempre a la vista. Cerrada es todo lo que ocupa. */}
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rosa-fuerte text-[24px]" aria-hidden>💬</span>
+        <div className="min-w-0 flex-1 basis-[13rem] leading-snug">
+          <h2 className="text-[17px] font-black uppercase tracking-wide text-rosa-texto">Aquí tu voz cuenta</h2>
+          <p className="text-[15px] text-hueso/80">
+            ¿Algo no funciona, no se entiende o te falta? Mándame tu comentario y lo arreglamos.
           </p>
         </div>
-      </header>
+        {abierto ? (
+          <button type="button" onClick={onCerrar} aria-expanded
+            className="boton min-h-[44px] w-full border-2 border-rosa-fuerte/50 text-rosa-texto sm:w-auto">
+            Cerrar ✕
+          </button>
+        ) : (
+          <button type="button" onClick={onAbrir} aria-expanded={false} aria-controls="tu-voz-formulario"
+            className="tecla boton min-h-[48px] w-full border-[3px] sm:w-auto border-rosa-fuerte bg-rosa/20 px-5 text-[16px] font-black text-rosa-texto">
+            💬 Coméntame
+          </button>
+        )}
+      </div>
 
-      {conComentar ? (
-        <div className="grid gap-5 p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,280px)] md:items-start">
+      {abierto && (
+        <div id="tu-voz-formulario"
+          className="grid gap-4 border-t-2 border-rosa-fuerte/30 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,260px)] md:items-start">
           <div className="rounded-2xl border-2 border-rosa-fuerte/30 bg-panel p-4">
             <FormularioComentario key={pedido.vez} pantalla={pedido.pantalla || 'Ayuda'}
               tipoInicial={pedido.tipo} textoInicial={pedido.texto}
@@ -83,10 +99,6 @@ export default function VozAyuda({ pedido, conComentar }: { pedido: Pedido; conC
             )}
           </aside>
         </div>
-      ) : (
-        <p className="m-4 rounded-xl border-2 border-ambar/50 bg-ambar/10 px-4 py-3 text-[15px] sm:m-6">
-          Los comentarios todavía no están conectados. Mientras tanto, cuéntaselo a quien administra el panel.
-        </p>
       )}
     </section>
   );

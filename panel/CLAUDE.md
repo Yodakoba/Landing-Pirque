@@ -6090,6 +6090,24 @@ comentarios al centro**: que cada rol entienda solo lo que puede hacer.
     prueba fija que cada permiso esté en exactamente un mundo.
   - *¿Esto no te sirve? Cuéntalo* de cada misión también sube a Tu voz, con
     la misión como pantalla.
+- **Tu voz se pliega: *Aquí tu voz cuenta* y 💬 Coméntame** (2026-11-13,
+  segunda vuelta; lo pidió el cliente: *"que no ocupe desde el inicio todo
+  el espacio… lo primero que tengo que ver es: haz esta tarea"*, y el
+  formulario *"como un cliquéame"*). Lo de arriba sobre el bloque grande
+  abierto quedó atrás:
+  - **Parte cerrado**: una barra rosada de una línea —*Aquí tu voz cuenta ·
+    ¿Algo no funciona, no se entiende o te falta? Mándame tu comentario*— con
+    **💬 Coméntame**. Apretado, se abre el mismo formulario con *Lo que más
+    sirve* y *Ya mandaste*, y *Cerrar ✕*. Justo debajo van las misiones.
+  - **El título dejó de ser *Tu voz manda***: al cliente le sonaba a texto
+    genérico.
+  - **Una sola palabra en todos los lugares que lo abren**: la barra, el
+    flotante (*💬 Coméntame*, que ahora abre y sube), *¿Esto no te sirve
+    para tu trabajo? Coméntame* de cada misión, *🙋 Lo necesito* de un poder
+    bloqueado (abre con el pedido armado) y el botón de la cabecera, que
+    pasó de *💬 Comentar* a **💬 Coméntame**.
+  - **Coméntame no va relleno**: borde grueso y fondo rosado. El relleno de
+    la vista es el *Entendido* de la misión abierta.
 - **Las capturas se sacan, no se dibujan**: `pruebas/capturas-ayuda.mjs`
   entra con una sesión de cada rol, hace los clics de cada escena, guarda
   `public/ayuda/<escena>.jpg` y **mide dónde quedó cada punto** —el borde
