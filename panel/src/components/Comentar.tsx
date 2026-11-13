@@ -24,11 +24,11 @@ export default function Comentar() {
       <button type="button" onClick={() => setAbierta(true)}
         className="tecla boton border-2 border-rosa-fuerte/70 bg-rosa/10 font-bold text-rosa-texto"
         title="Cuéntanos un error, una duda o algo que te falta">
-        💬 Comentar
+        💬 Coméntame
       </button>
 
       {abierta && (
-        <Dialogo titulo="Comentar" onCerrar={() => setAbierta(false)}>
+        <Dialogo titulo="Coméntame" onCerrar={() => setAbierta(false)}>
           <p className="mt-2 text-[14px] text-hueso/70">
             Errores, dudas, ideas y, sobre todo, lo que te falta para tu trabajo.
           </p>

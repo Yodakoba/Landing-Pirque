@@ -78,7 +78,7 @@ export function Seccion({ icono, titulo, que }: { icono: string; titulo: string;
 
 export default function MisionesAyuda({ rol, nombreRol, onContar }: {
   rol: string; nombreRol: string;
-  /** *¿Esto no te sirve? Cuéntalo*: sube a Tu voz con la misión anotada. Sin esto no se ofrece. */
+  /** *¿Esto no te sirve? Coméntame*: abre Tu voz con la misión anotada. Sin esto no se ofrece. */
   onContar?: (pantalla: string) => void;
 }) {
   const misiones = misionesDe(rol as Rol);
@@ -253,7 +253,7 @@ function MisionConCaptura({ m, onSiguiente, onContar, ultima }: {
           {onContar && (
             <button type="button" onClick={onContar}
               className="boton mt-3 min-h-[44px] border-dashed text-hueso/75">
-              💬 ¿Esto no te sirve para tu trabajo? Cuéntalo
+              💬 ¿Esto no te sirve para tu trabajo? Coméntame
             </button>
           )}
         </Etapa>
