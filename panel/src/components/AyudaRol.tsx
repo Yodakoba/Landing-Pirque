@@ -1,28 +1,54 @@
 'use client';
 
 /**
- * La página `/ayuda` (2026-11-12): las misiones del rol arriba y, debajo, la
- * consulta rápida. Ver `lib/misiones.ts` y `lib/ayudaRol.ts`.
+ * La página `/ayuda`. Ver `lib/misiones.ts`, `lib/poderes.ts` y `lib/ayudaRol.ts`.
  *
- * - **Las misiones** son lo que se vino a buscar: cuatro con la pantalla real
- *   y *Tu voz*, el formulario de comentarios, como quinta.
- * - **La consulta rápida** es para quien ya sabe y busca algo puntual: cada
- *   pantalla con su `?` (el mismo texto de la pantalla) y *Ir →*.
- * - **Qué puede y qué no tu cuenta**, sacado de la tabla de permisos. Contesta
- *   *"¿por qué no tengo esto?"* antes de que haya que preguntarlo.
+ * **El orden es la decisión** (2026-11-13, lo pidió el cliente: el formulario
+ * *"tiene que estar muy presente… en primer paso"*):
+ *
+ * 1. **💬 Tu voz** (`VozAyuda`): el formulario abierto, lo primero.
+ * 2. **🎮 Tus misiones**: cuatro, con la pantalla real del rol.
+ * 3. **⚡ Tus poderes** (`PoderesRol`): qué desbloquea tu rol y qué no, por
+ *    mundos. Reemplaza a las dos listas *puede / no puede*, *"muy Excel"*.
+ * 4. **🔎 Consulta rápida**: cada pantalla con su `?`.
+ *
+ * **Todo lo de abajo sube a Tu voz**: *¿Esto no te sirve?* de una misión y
+ * *🙋 Lo necesito* de un poder bloqueado dejan el pedido armado. Y mientras
+ * se baja por la página, un botón flotante **💬 Cuéntame** lleva arriba.
  */
+import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
 import MisionesAyuda, { Seccion } from './MisionesAyuda';
+import VozAyuda, { type Pedido } from './VozAyuda';
+import PoderesRol from './PoderesRol';
 import { pantallasDe } from '@/lib/ayudaRol';
-import { NOMBRE_ROL, RESUMEN_ROL, resumenRol } from '@/lib/roles';
+import { pedidoDePoder } from '@/lib/poderes';
+import { NOMBRE_ROL, RESUMEN_ROL } from '@/lib/roles';
 import type { Rol } from '@/lib/auth';
+
+const subir = () => document.getElementById('tu-voz')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 export default function AyudaRol({ rol, gerencia, conComentar }: {
   rol: string; gerencia: boolean; conComentar: boolean;
 }) {
   const pantallas = pantallasDe(rol as Rol, gerencia);
-  const { puede, noPuede } = resumenRol(rol as Rol);
   const nombre = NOMBRE_ROL[rol] ?? rol;
+  const [pedido, setPedido] = useState<Pedido>({ pantalla: 'Ayuda', tipo: '', texto: '', vez: 0 });
+  const [flotante, setFlotante] = useState(false);
+
+  // El botón flotante aparece cuando Tu voz ya quedó arriba, fuera de la vista.
+  useEffect(() => {
+    const voz = document.getElementById('tu-voz');
+    if (!voz || !('IntersectionObserver' in window)) return;
+    const o = new IntersectionObserver(([e]) => setFlotante(!e.isIntersecting), { threshold: 0 });
+    o.observe(voz);
+    return () => o.disconnect();
+  }, []);
+
+  function pedir(p: Omit<Pedido, 'vez'>) {
+    setPedido((x) => ({ ...p, vez: x.vez + 1 }));
+    setTimeout(subir, 30);
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-10">
@@ -33,7 +59,17 @@ export default function AyudaRol({ rol, gerencia, conComentar }: {
         </p>
       </header>
 
-      <MisionesAyuda rol={rol} nombreRol={nombre} conComentar={conComentar} />
+      <VozAyuda pedido={pedido} conComentar={conComentar} />
+
+      <MisionesAyuda rol={rol} nombreRol={nombre}
+        onContar={conComentar ? (pantalla) => pedir({ pantalla, tipo: '', texto: '' }) : undefined} />
+
+      <section className="space-y-4" aria-label="Tus poderes">
+        <Seccion icono="⚡" titulo="Tus poderes"
+          que="Lo que tu rol desbloquea. Toca uno para ver qué es; si te falta uno para tu trabajo, pídelo." />
+        <PoderesRol rol={rol}
+          onPedir={conComentar ? (p) => pedir({ pantalla: 'Ayuda · Tus poderes', tipo: '🧩 Me falta', texto: pedidoDePoder(p) }) : undefined} />
+      </section>
 
       <section className="space-y-4" aria-label="Consulta rápida">
         <Seccion icono="🔎" titulo="Consulta rápida" que="Cada pantalla que abres, con su explicación en el ?." />
@@ -49,28 +85,13 @@ export default function AyudaRol({ rol, gerencia, conComentar }: {
         </ul>
       </section>
 
-      <section className="space-y-4" aria-label="Qué puede tu cuenta">
-        <Seccion icono="🪪" titulo="Tu rol" que="Lo que tu cuenta puede hacer, y lo que es de otro rol." />
-        <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-verde/40 bg-verde/5 p-4">
-          <h2 className="text-[15px] font-semibold text-verde-texto">✓ Tu cuenta puede</h2>
-          <ul className="mt-2 space-y-1 text-[14px] text-hueso/80">
-            {puede.map((t) => <li key={t}>· {t}</li>)}
-          </ul>
-        </div>
-        <div className="rounded-xl border border-hueso/15 p-4">
-          <h2 className="text-[15px] font-semibold text-hueso/70">✕ No es de tu rol</h2>
-          <ul className="mt-2 space-y-1 text-[14px] text-hueso/60">
-            {noPuede.length ? noPuede.map((t) => <li key={t}>· {t}</li>) : <li>Nada: puedes todo.</li>}
-          </ul>
-          {noPuede.length > 0 && conComentar && (
-            <p className="mt-3 text-[14px] text-hueso/70">
-              ¿Necesitas algo de esta lista para tu trabajo? Cuéntalo en la misión <strong>💬 Tu voz</strong>.
-            </p>
-          )}
-        </div>
-        </div>
-      </section>
+      {conComentar && flotante && (
+        <button type="button" onClick={subir}
+          className="tecla fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 flex min-h-[52px] items-center gap-2
+                     rounded-full border-2 border-white bg-rosa-fuerte px-5 text-[16px] font-black text-white shadow-xl">
+          💬 Cuéntame
+        </button>
+      )}
     </div>
   );
 }

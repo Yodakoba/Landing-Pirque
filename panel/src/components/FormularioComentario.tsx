@@ -39,7 +39,7 @@ const leerBorrador = (): { tipo?: TipoComentario | ''; texto?: string; para?: st
 
 export interface ComentarioMandado { tipo: TipoComentario; texto: string; pantalla: string }
 
-export default function FormularioComentario({ pantalla, onCerrar, onMandado, tipoInicial = '' }: {
+export default function FormularioComentario({ pantalla, onCerrar, onMandado, tipoInicial = '', textoInicial = '' }: {
   /** Desde qué pantalla se escribe; va con el comentario. */
   pantalla: string;
   /** En una ventana: el botón para cerrarla. Sin esto, el formulario va suelto. */
@@ -47,6 +47,8 @@ export default function FormularioComentario({ pantalla, onCerrar, onMandado, ti
   /** Avisa lo que se mandó, para mostrarlo (la misión *Tu voz*). */
   onMandado?: (c: ComentarioMandado) => void;
   tipoInicial?: TipoComentario | '';
+  /** Lo que llega ya escrito (*🙋 Lo necesito* de un poder bloqueado). Le gana al borrador. */
+  textoInicial?: string;
 }) {
   const [tipo, setTipo] = useState<TipoComentario | ''>(tipoInicial);
   const [texto, setTexto] = useState('');
@@ -56,10 +58,11 @@ export default function FormularioComentario({ pantalla, onCerrar, onMandado, ti
   useEffect(() => {
     const b = leerBorrador();
     if (!tipoInicial && b.tipo) setTipo(b.tipo);
-    if (b.texto) setTexto(b.texto);
+    if (textoInicial) setTexto(textoInicial);
+    else if (b.texto) setTexto(b.texto);
     if (b.para) setPara(b.para);
     setLeido(true);
-  }, [tipoInicial]);
+  }, [tipoInicial, textoInicial]);
   useEffect(() => {
     if (!leido) return;
     try { sessionStorage.setItem(BORRADOR, JSON.stringify({ tipo, texto, para })); } catch { /* sin memoria */ }

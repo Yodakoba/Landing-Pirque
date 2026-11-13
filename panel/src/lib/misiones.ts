@@ -4,9 +4,12 @@
  * con gráficas que tú inventas"*, interactivo donde se pueda, y con el
  * formulario de comentarios al centro).
  *
- * Cada rol tiene **cuatro misiones con una captura real de su panel** —tomada
- * con una cuenta de ese rol, así que el menú y los botones son los que ve— y
- * **una quinta, *Tu voz***, que es el formulario de comentarios.
+ * Cada rol tiene **cuatro misiones con una captura real de su panel**, tomada
+ * con una cuenta de ese rol: el menú y los botones son los que ve.
+ *
+ * **Tu voz ya no es la quinta misión** (2026-11-13, lo pidió el cliente: *"el
+ * formulario tiene que estar muy presente… en primer paso"*): es lo primero
+ * de la página `/ayuda`, antes de las misiones (`VozAyuda.tsx`).
  *
  * - **Las capturas no se dibujan: se sacan.** `pruebas/capturas-ayuda.mjs`
  *   abre el panel con cada rol, hace los clics de cada escena, saca la foto a
@@ -27,22 +30,13 @@ export interface Mision {
   titulo: string;
   /** Una o dos frases: qué se hace acá. */
   intro: string;
-  /** La captura (`public/ayuda/<escena>.jpg`). Sin escena es *Tu voz*. */
-  escena?: string;
+  /** La captura (`public/ayuda/<escena>.jpg`). */
+  escena: string;
   /** Qué es cada punto numerado de la captura, en orden. */
   puntos?: string[];
   /** Para ir a hacerlo en la pantalla de verdad. */
   probar?: { texto: string; url: string };
 }
-
-/** La quinta de todos: el formulario de comentarios. */
-export const MISION_VOZ: Mision = {
-  id: 'voz',
-  emoji: '💬',
-  titulo: 'Tu voz: lo que te falta',
-  intro: 'El panel se arma con lo que nos cuentas. Errores, dudas, ideas y, sobre todo, '
-    + 'lo que te falta para hacer tu trabajo completo.'
-};
 
 const ANFITRION: Mision[] = [
   {
@@ -286,7 +280,7 @@ const ADMIN: Mision[] = [
   }
 ];
 
-/** Las misiones de cada rol: cuatro con captura y *Tu voz* al final. */
+/** Las cuatro misiones de cada rol, cada una con su captura. */
 export function misionesDe(rol: Rol): Mision[] {
   const propias = rol === ROL.anfitrion ? ANFITRION
     : rol === ROL.vendedor ? VENDEDOR
@@ -298,13 +292,13 @@ export function misionesDe(rol: Rol): Mision[] {
   // La gerencia general tiene las de quien paga, con sus propias capturas
   // (su menú dice *Gerencia general*).
   const con = rol === ROL.gerencia
-    ? propias.map((m) => ({ ...m, escena: m.escena?.replace(/^pag-/, 'ger-') }))
+    ? propias.map((m) => ({ ...m, escena: m.escena.replace(/^pag-/, 'ger-') }))
     : propias;
-  return [...con, MISION_VOZ];
+  return con;
 }
 
 /** Todas las escenas que hay que fotografiar, sin repetir. */
 export function escenasDeLasMisiones(): string[] {
   const roles = [ROL.anfitrion, ROL.vendedor, ROL.encargado, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.admin];
-  return [...new Set(roles.flatMap((r) => misionesDe(r).map((m) => m.escena).filter((e): e is string => !!e)))];
+  return [...new Set(roles.flatMap((r) => misionesDe(r).map((m) => m.escena)))];
 }
