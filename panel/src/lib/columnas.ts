@@ -117,7 +117,16 @@ export const COL_RESERVAS = {
    */
   pagoAnotado: 'Pago anotado',
   pagoRevisado: 'Pago revisado',
-  descuentoRevisado: 'Descuento revisado'
+  descuentoRevisado: 'Descuento revisado',
+  /**
+   * **La mesa** (2026-11-17, `lib/mesa.ts`): la gente que se sumó a la
+   * reserva en el día, con su menú o *a la carta* (*"1 × Tradiciones + 2 × A
+   * la carta"*); el valor final de la cuenta en Fudo, y quién y cuándo lo
+   * anotó. Shopify no las toca (`camposDeShopify()`). Se agregan solas.
+   */
+  agregados: 'Agregados',
+  valorFinal: 'Valor final',
+  mesaCerrada: 'Mesa cerrada'
 } as const;
 
 export const COL_FECHAS = {

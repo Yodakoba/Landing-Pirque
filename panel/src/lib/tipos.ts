@@ -26,6 +26,12 @@ export interface Reserva {
   avisoRecepcion?: string;
   /** Cuánto abonó, si está *Abonada*; `null` si no se sabe. */
   abonado?: number | null;
+  /** La gente que se sumó a la mesa en el día (`lib/mesa.ts`): *"1 × Tradiciones + 2 × A la carta"*. */
+  agregados?: string;
+  /** El total de la cuenta de la mesa en Fudo, con lo ya pagado; `null` si no se anotó. */
+  valorFinal?: number | null;
+  /** Quién y cuándo anotó el valor final: *"2026-11-17 17:40 · Fernanda"*. */
+  mesaCerrada?: string;
   /**
    * **Cómo se ingresa en Fudo** (`comoIngresar()`). No es una columna: lo
    * arma el servidor al responder, para que la pantalla no tenga que

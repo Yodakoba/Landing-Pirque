@@ -24,6 +24,7 @@ import { desglosarMenu } from './shopify.ts';
 import type { Menu } from './menus.ts';
 import { estaRectificada, personasEfectivas, menuEfectivo, descuentoVigente, porAprobar, rechazado,
          type Rectificacion } from './rectificacion.ts';
+import { leerAgregados, A_LA_CARTA } from './mesa.ts';
 
 export interface Ingreso {
   /** verde ya pagó · ámbar se cobra · cielo abonó una parte · rojo ojo. */
@@ -41,9 +42,24 @@ const comparable = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g,
 const enCarta = (nombre: string, menus: Menu[]) =>
   menus.find((m) => comparable(m.nombre) === comparable(nombre));
 
+/**
+ * **La gente que se sumó a la mesa** (2026-11-17, `mesa.ts`): se cobra
+ * aparte, sea cual sea el pago de la reserva. Un menú agregado, al precio del
+ * local —no pagó por adelantado—; *a la carta*, lo que consuma.
+ */
+function lineasAgregados(agregados: string | undefined, menus: Menu[]): string[] {
+  return leerAgregados(agregados).map((a) => {
+    if (a.menu === A_LA_CARTA) return `+ ${a.cantidad} a la carta · se cobra lo que consuman`;
+    const precio = enCarta(a.menu, menus)?.precioEnLocal ?? 0;
+    return precio > 0
+      ? `+ ${a.cantidad} × ${a.menu} a ${pesos(precio)} · agregado, se cobra aparte`
+      : `+ ${a.cantidad} × ${a.menu} · agregado, se cobra aparte`;
+  });
+}
+
 export function comoIngresar(
   r: Pick<Reserva, 'id' | 'menu' | 'tipoPago' | 'estadoPago' | 'monto'>
-    & { abonado?: number | null; personas?: number } & Rectificacion,
+    & { abonado?: number | null; personas?: number; agregados?: string } & Rectificacion,
   menus: Menu[],
   deCotizacion = false
 ): Ingreso | null {
@@ -77,6 +93,7 @@ export function comoIngresar(
         ...(dif > 0 ? [`Llegaron ${dif} más de lo pagado: cóbralos aparte a precio del local.`] : []),
         ...(dif < 0 ? [`Llegaron ${-dif} menos: lo pagado no se devuelve desde acá, avísale a quien paga.`] : []),
         ...(desc > 0 ? [`Descuento −${desc}% sobre lo que se cobre aparte.`] : []),
+        ...lineasAgregados(r.agregados, menus),
         'No se le cobra el menú: lo que consuma aparte, sí.'
       ]
     };
@@ -122,7 +139,8 @@ export function comoIngresar(
         ...lineasMenu,
         ...notasRect,
         ...lineaDescuento,
-        resto > 0 ? `Falta por cobrar: ${pesos(resto)}` : 'Pregúntale al jefe de turno cuánto falta.'
+        resto > 0 ? `Falta por cobrar: ${pesos(resto)}` : 'Pregúntale al jefe de turno cuánto falta.',
+        ...lineasAgregados(r.agregados, menus)
       ]
     };
   }
@@ -137,7 +155,8 @@ export function comoIngresar(
       ...notasRect,
       ...lineaDescuento,
       ...(total > 0 ? [`Total a cobrar: ${pesos(total)}`] : []),
-      ...(deCotizacion ? ['Es lo acordado en la cotización, no el precio de la carta.'] : [])
+      ...(deCotizacion ? ['Es lo acordado en la cotización, no el precio de la carta.'] : []),
+      ...lineasAgregados(r.agregados, menus)
     ]
   };
 }

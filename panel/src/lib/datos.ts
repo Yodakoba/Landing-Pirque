@@ -138,6 +138,10 @@ export async function editarReserva(fila: number, cambios: Partial<Reserva>): Pr
   for (const k of ['pagoAnotado', 'pagoRevisado', 'descuentoRevisado'] as const) {
     if (cambios[k] !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS[k]);
   }
+  // La mesa (2026-11-17, `mesa.ts`).
+  for (const k of ['agregados', 'valorFinal', 'mesaCerrada'] as const) {
+    if (cambios[k] !== undefined) enc = await asegurarColumna(HOJA_RESERVAS, enc, COL_RESERVAS[k]);
+  }
   const previa = filas[fila - 1];
   if (!previa) throw new Error(`La fila ${fila} ya no existe en la planilla.`);
   await escribirFila(HOJA_RESERVAS, fila, filaReserva(enc, cambios, previa));

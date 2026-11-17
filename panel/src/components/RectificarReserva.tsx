@@ -12,6 +12,7 @@
  * - **Un cambio grande pide una segunda confirmación**: más de 5 personas de
  *   diferencia o un descuento sobre el tope estándar.
  */
+import { cuantosAgregados, resumenAgregados } from '@/lib/mesa';
 import { useMemo, useState } from 'react';
 import Dialogo from './Dialogo';
 import IngresoFudo from './IngresoFudo';
@@ -57,6 +58,9 @@ export default function RectificarReserva({
     return c;
   });
   const [descuento, setDescuento] = useState<number | null>(r.descuento ?? null);
+  // Los que se sumaron a la mesa no son de la reserva (2026-11-17).
+  const agregados = cuantosAgregados(r.agregados);
+  const delGrupo = r.llegaron != null ? Math.max(0, r.llegaron - agregados) : null;
   const [otro, setOtro] = useState(() =>
     r.descuento && !descuentos.includes(r.descuento) ? String(r.descuento) : '');
   const [motivo, setMotivo] = useState('');
@@ -152,13 +156,21 @@ export default function RectificarReserva({
                 <button type="button" aria-label="Uno más" className="boton h-12 w-12 justify-center text-[22px]"
                   onClick={() => setPersonas((n) => n + 1)}>+</button>
               </div>
-              {r.llegaron != null && r.llegaron !== personas && (
+              {/* **Lo agregado a la mesa va aparte** (2026-11-17, `mesa.ts`):
+                  esto es la gente de la reserva, así que de lo que dijo la
+                  recepción se descuentan los que ya se sumaron a la mesa. */}
+              {delGrupo != null && delGrupo !== personas && (
                 <button type="button" className="boton min-h-[44px] !border-ambar-fuerte/60 text-ambar-texto"
-                  onClick={() => setPersonas(r.llegaron ?? personas)}>
-                  📣 Usar lo de la recepción: llegaron {r.llegaron}
+                  onClick={() => setPersonas(delGrupo)}>
+                  📣 Usar lo de la recepción: llegaron {delGrupo}{agregados > 0 ? ` de la reserva` : ''}
                 </button>
               )}
             </div>
+            {agregados > 0 && (
+              <p className="mt-2 text-[14px] text-cielo-texto">
+                Además se sumaron a la mesa {resumenAgregados(r.agregados).replace(/^\+\d+: /, '')}: se cuentan aparte.
+              </p>
+            )}
           </section>
 
           {/* 2 · Qué se sirvió */}

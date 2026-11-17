@@ -3,6 +3,7 @@ import { conLecturas } from '@/lib/sheets';
 import { ESTADO_PAGO } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
 import { marcasDePago } from '@/lib/plata';
+import { limpiarAgregados, limpiarValorFinal, llegaronDespues, marcaMesa, resumenAgregados, pesosCL } from '@/lib/mesa';
 import { puedeTocarReserva, puede, type Rol } from '@/lib/auth';
 import { editarReserva, borrarReserva, anotar, leerReservas,
          reservasDeCotizaciones, leerFechas, leerConfig } from '@/lib/datos';
@@ -59,7 +60,9 @@ async function duenaDeLaReserva(req: Request, antes: { anotadaPor: string } | un
  * anfitriona, con el permiso `asistencia`; cualquier otro campo pide
  * `reservas`, igual que siempre.
  */
-const DE_LA_ENTRADA = new Set(['asistencia', 'llegaron', 'avisoRecepcion']);
+// **La mesa** (2026-11-17, `mesa.ts`): la gente que se suma y el valor
+// final también los anota la anfitriona.
+const DE_LA_ENTRADA = new Set(['asistencia', 'llegaron', 'avisoRecepcion', 'agregados', 'valorFinal']);
 
 export const PATCH = conLecturas([], async function PATCH(req: Request, { params }: { params: { fila: string } }) {
   const cuerpo = await req.json().catch(() => ({}));
@@ -92,7 +95,7 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
     // reserva es un hecho de cuando se anotó, no algo que se edite después.
     // Las marcas de la plata (`plata.ts`) tampoco: las pone el servidor.
     const { tipoPago, id, creada, fila: _f, correccion, anotadaPor,
-            pagoAnotado: _pa, pagoRevisado: _pr, descuentoRevisado: _dr,
+            pagoAnotado: _pa, pagoRevisado: _pr, descuentoRevisado: _dr, mesaCerrada: _mc,
             ...cambios } = cuerpo;
     if (cambios.llegaron !== undefined) {
       const n = Number(cambios.llegaron);
@@ -113,6 +116,27 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
       const abonada = (cambios.estadoPago ?? antes?.estadoPago) === ESTADO_PAGO.abonado;
       const n = Number(cambios.abonado);
       cambios.abonado = abonada && Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    }
+    // **La mesa** (2026-11-17, `mesa.ts`): lo agregado se limpia, y si la
+    // recepción ya había anotado cuántos llegaron, se les suma; el valor
+    // final queda a nombre de quien lo anota.
+    if (cambios.agregados !== undefined) {
+      const limpio = limpiarAgregados(cambios.agregados);
+      if (limpio === null) {
+        return NextResponse.json({ error: 'No se entendió lo agregado a la mesa.' }, { status: 400 });
+      }
+      cambios.agregados = limpio;
+      if (cambios.llegaron === undefined && antes && antes.llegaron != null) {
+        cambios.llegaron = llegaronDespues(antes.llegaron, antes.agregados, limpio);
+      }
+    }
+    if (cambios.valorFinal !== undefined) {
+      const v = limpiarValorFinal(cambios.valorFinal);
+      if (v === undefined) {
+        return NextResponse.json({ error: 'El valor final tiene que ser un monto en pesos.' }, { status: 400 });
+      }
+      cambios.valorFinal = v;
+      cambios.mesaCerrada = v == null ? '' : marcaMesa(ahoraEnChile(), quien0.usuario);
     }
     // **Y sirve para una tercera cosa desde el 2026-11-05**: saber de quién
     // es, porque un vendedor solo toca las suyas.
@@ -136,7 +160,8 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
     // se cambia acá es lo del día: si vino, cómo va el pago y su nota.
     const deCotizacion = antes ? (await reservasDeCotizaciones()).get(antes.id) : undefined;
     if (deCotizacion) {
-      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago', 'abonado', 'llegaron', 'avisoRecepcion']);
+      const DEL_DIA = new Set(['asistencia', 'estadoPago', 'notaPago', 'abonado', 'llegaron', 'avisoRecepcion',
+        'agregados', 'valorFinal', 'mesaCerrada']);
       const ajenos = Object.keys(cambios).filter((k) => !DEL_DIA.has(k));
       if (ajenos.length) {
         return NextResponse.json({
@@ -166,7 +191,7 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
     // **Lo de la entrada, desde la hora de apertura** (2026-11-11, lo pidió
     // el cliente): ni la anfitriona ni el jefe de turno anotan quién llegó,
     // cuántos ni avisos antes de que el día abra (`yaAbrio()`).
-    const deEntrada = ['asistencia', 'llegaron', 'avisoRecepcion'].some((k) => cambios[k] !== undefined);
+    const deEntrada = ['asistencia', 'llegaron', 'avisoRecepcion', 'agregados', 'valorFinal'].some((k) => cambios[k] !== undefined);
     if (deEntrada && diaDeLaReserva) {
       const [fechas, cfg] = await Promise.all([leerFechas(), leerConfig()]);
       const apertura = fechas.find((f) => f.fecha === diaDeLaReserva)?.apertura || cfg.horaApertura;
@@ -197,9 +222,16 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
     const quien = await quienEs(req);
     // Qué campos se tocaron, no sus valores: la bitácora es un rastro para
     // poder preguntar, no una copia de la planilla. Ver bitacora.ts.
+    // La mesa se anota con lo que se anotó: es un registro para la gerencia.
+    const deMesa = cambios.agregados !== undefined || cambios.valorFinal !== undefined;
     await anotar({ ...quien,
-      accion: guarda.motivo ? 'Corrigió una reserva de un día cerrado' : 'Editó una reserva',
-      detalle: `fila ${fila} · ${Object.keys(cambios).join(', ')}` +
+      accion: guarda.motivo ? 'Corrigió una reserva de un día cerrado' : deMesa ? 'Anotó la mesa' : 'Editó una reserva',
+      detalle: (deMesa
+        ? [antes?.nombre ?? `fila ${fila}`, antes?.fecha ?? '',
+           cambios.agregados !== undefined ? (resumenAgregados(cambios.agregados) || 'sin agregados') : '',
+           cambios.valorFinal !== undefined ? (cambios.valorFinal == null ? 'sin valor final'
+             : 'valor final ' + pesosCL(Number(cambios.valorFinal))) : ''].filter(Boolean).join(' · ')
+        : `fila ${fila} · ${Object.keys(cambios).join(', ')}`) +
                (guarda.motivo ? ` · motivo: ${guarda.motivo}` : '') });
     return NextResponse.json({ ok: true });
   } catch (e) {
