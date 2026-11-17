@@ -215,27 +215,31 @@ export function cuentasPorFiltro(base: Presupuesto[], ctx: ContextoLista): Recor
 
 const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
+export type Paso = { texto: string; tono: 'rojo' | 'ambar' | 'verde' | 'neutro' };
+
 /**
  * **El próximo paso de cada cotización**, en pocas palabras y con su tono:
- * lo que la gerencia mira para saber a quién preguntarle.
+ * lo que la gerencia mira para saber a quién preguntarle. Lo que espera que
+ * alguien la siga va primero; en una ganada, además, la plata.
  */
-export function proximoPaso(p: Presupuesto, ctx: ContextoLista): { texto: string; tono: 'rojo' | 'ambar' | 'verde' | 'neutro' } | null {
+export function proximosPasos(p: Presupuesto, ctx: ContextoLista): Paso[] {
   const e = estadoVisible(p, ctx.hoy);
   const s = seguimientoDe(p, ctx.hoy, ctx.seguimiento);
-  if (s?.motivo === 'contratoSinFirmar') return { texto: `contrato sin volver hace ${s.dias} días`, tono: 'ambar' };
-  if (s?.motivo === 'eventoCerca') return { texto: s.dias === 0 ? 'el evento es hoy y no se gana' : `evento en ${s.dias} ${s.dias === 1 ? 'día' : 'días'} sin ganar`, tono: 'rojo' };
-  if (s?.motivo === 'sinRespuesta') return { texto: `sin respuesta hace ${s.dias} días`, tono: 'rojo' };
-  if (porVencer(p, ctx.hoy)) {
+  const pasos: Paso[] = [];
+  if (s?.motivo === 'contratoSinFirmar') pasos.push({ texto: `contrato sin volver hace ${s.dias} días`, tono: 'ambar' });
+  else if (s?.motivo === 'eventoCerca') pasos.push({ texto: s.dias === 0 ? 'el evento es hoy y no se gana' : `evento en ${s.dias} ${s.dias === 1 ? 'día' : 'días'} sin ganar`, tono: 'rojo' });
+  else if (s?.motivo === 'sinRespuesta') pasos.push({ texto: `sin respuesta hace ${s.dias} días`, tono: 'rojo' });
+  else if (porVencer(p, ctx.hoy)) {
     const d = diasParaVencer(p, ctx.hoy) ?? 0;
-    return { texto: d === 0 ? 'vence hoy' : d === 1 ? 'vence mañana' : `vence en ${d} días`, tono: 'ambar' };
+    pasos.push({ texto: d === 0 ? 'vence hoy' : d === 1 ? 'vence mañana' : `vence en ${d} días`, tono: 'ambar' });
   }
   if (e === ESTADO_PRESUPUESTO.aceptado) {
     const falta = faltaCobrarDe(p, ctx);
-    return falta > 0 ? { texto: `falta cobrar ${pesos(falta)}`, tono: 'ambar' } : { texto: '✓ pagada', tono: 'verde' };
+    pasos.push(falta > 0 ? { texto: `falta cobrar ${pesos(falta)}`, tono: 'ambar' } : { texto: '✓ pagada', tono: 'verde' });
   }
-  if (e === ESTADO_PRESUPUESTO.rechazado && p.motivo) return { texto: `perdida: ${p.motivo}`, tono: 'neutro' };
-  if (e === ESTADO_PRESUPUESTO.candidato || e === ESTADO_PRESUPUESTO.borrador) return { texto: 'sin mandar', tono: 'neutro' };
-  return null;
+  if (!pasos.length && e === ESTADO_PRESUPUESTO.rechazado && p.motivo) pasos.push({ texto: `perdida: ${p.motivo}`, tono: 'neutro' });
+  if (!pasos.length && (e === ESTADO_PRESUPUESTO.candidato || e === ESTADO_PRESUPUESTO.borrador)) pasos.push({ texto: 'sin mandar', tono: 'neutro' });
+  return pasos;
 }
 
 /**
@@ -246,8 +250,8 @@ export function proximoPaso(p: Presupuesto, ctx: ContextoLista): { texto: string
 export function ordenarLista(lista: Presupuesto[], filtro: FiltroLista, ctx: ContextoLista): Presupuesto[] {
   const fecha = (p: Presupuesto) => (esFecha(p.fecha) ? p.fecha : '9999');
   const urgencia = (p: Presupuesto) => {
-    const t = proximoPaso(p, ctx)?.tono;
-    return t === 'rojo' ? 0 : t === 'ambar' ? 1 : 2;
+    const t = proximosPasos(p, ctx).map((x) => x.tono);
+    return t.includes('rojo') ? 0 : t.includes('ambar') ? 1 : 2;
   };
   return [...lista].sort((a, b) => {
     if (filtro === 'ganadas') return (ctx.ganadaEl[b.id] ?? '').localeCompare(ctx.ganadaEl[a.id] ?? '') || fecha(a).localeCompare(fecha(b));

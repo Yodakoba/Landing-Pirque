@@ -25,7 +25,7 @@ import { mesEnPalabras, rangoEnPalabras, semanaDe, sumarDias } from '@/lib/fecha
 import type { Presupuesto } from '@/lib/presupuestos';
 import {
   veElEquipo, unaPorGrupo, enRango, rangoDe, pasaFiltro, calzaBusqueda, resumenLista, ganadoPorMes,
-  cuentasPorFiltro, proximoPaso, ordenarLista, vendedoresDe,
+  cuentasPorFiltro, proximosPasos, ordenarLista, vendedoresDe,
   type ContextoLista, type FiltroLista, type PorFecha
 } from '@/lib/listaCotizaciones';
 
@@ -210,7 +210,7 @@ export default function ListaCotizaciones({ ctx, rol, visibles, mias, socios, fi
           tono="border-rosa/50 bg-rosa/[0.05]" activa={filtro === 'enCarrera'} onClick={() => setFiltro('enCarrera')} />
         <Tarjeta que="Cotizado" ayuda="listaCotizado" valor={enPesos(r.cotizado.monto)}
           nota={`${r.cotizado.n} ${r.cotizado.n === 1 ? 'mandada' : 'mandadas'}${r.cotizado.borradores
-            ? ` · sin mandar ${enPesos(r.cotizado.montoBorradores)}` : ''}`}
+            ? ` · ${r.cotizado.borradores} sin mandar${r.cotizado.montoBorradores ? ` (${enPesos(r.cotizado.montoBorradores)})` : ''}` : ''}`}
           tono="border-rosa/50 bg-rosa/[0.05]" activa={filtro === 'mandadas'} onClick={() => alternar('mandadas')} />
         <Tarjeta que="Ganado" ayuda="listaGanado" valor={enPesos(r.ganado.monto)}
           nota={`${r.ganado.n} ${r.ganado.n === 1 ? 'evento' : 'eventos'}`}
@@ -272,13 +272,12 @@ export default function ListaCotizaciones({ ctx, rol, visibles, mias, socios, fi
         ) : (
           <ul className="space-y-2">
             {lista.map((p) => {
-              const paso = proximoPaso(p, ctx);
               const detalle = (
                 <>
                   {equipo && p.creadoPor && <span>👤 {p.creadoPor}</span>}
                   {p.socio && <span>🤝 {nombreSocio(p.socio)}</span>}
                   {p.tipoEvento && <span>{p.tipoEvento}</span>}
-                  {paso && <span className={TONO_PASO[paso.tono]}>{paso.texto}</span>}
+                  {proximosPasos(p, ctx).map((x) => <span key={x.texto} className={TONO_PASO[x.tono]}>{x.texto}</span>)}
                 </>
               );
               return fila(p, detalle);

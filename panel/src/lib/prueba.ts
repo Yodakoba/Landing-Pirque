@@ -5290,10 +5290,12 @@ console.log('\nLa Lista de cotizaciones');
      && r.ganado.monto === 300000 && r.ganado.n === 1 && r.tasa.pct === 50
      && r.porCobrar.monto === 200000 && r.porCobrar.n === 1 && r.porSeguir === 1,
      'las tarjetas: en carrera, cotizado (solo lo mandado), ganado, tasa de cierre, por seguir y por cobrar; las alternativas una vez');
-  const paso = L.proximoPaso(ps[0], ctx);
+  const paso = L.proximosPasos(ps[0], ctx)[0];
   ok(paso?.texto === 'sin respuesta hace 10 días' && paso.tono === 'rojo'
-     && L.proximoPaso(ps[3], ctx)?.texto === 'falta cobrar $200.000'
-     && L.proximoPaso(ps[4], ctx)?.texto === 'perdida: Precio',
+     && L.proximosPasos(ps[3], ctx).map((x) => x.texto).join() === 'falta cobrar $200.000'
+     && L.proximosPasos({ ...ps[3], contratoEnviado: '2026-11-01' } as Presupuesto, ctx).map((x) => x.texto).join(' · ')
+        === 'contrato sin volver hace 12 días · falta cobrar $200.000'
+     && L.proximosPasos(ps[4], ctx)[0]?.texto === 'perdida: Precio',
      'cada fila dice el próximo paso: sin respuesta, falta cobrar, por qué se perdió');
   const c = L.cuentasPorFiltro(base, ctx);
   ok(c.enCarrera === 2 && c.esperando === 1 && c.ganadas === 1 && c.cerradas === 2 && c.todas === 5 && c.porCobrar === 1,
