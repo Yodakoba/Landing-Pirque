@@ -15,7 +15,7 @@ import { TIPO_PAGO, ESTADO_PAGO } from './columnas.ts';
 import type { Reserva } from './tipos.ts';
 import { esFecha } from './fechas.ts';
 import { canonizar, type Menu } from './menus.ts';
-import { menuEfectivo } from './rectificacion.ts';
+import { menuEnLaMesa } from './mesa.ts';
 import { telefonoNormal, correoNormal } from './contacto.ts';
 
 /** Lo que nos importa de un pedido. El resto del objeto de Shopify es enorme. */
@@ -244,12 +244,13 @@ export function desglosarMenu(
  * Ordenado de mayor a menor, que es como se lee una lista de preparación.
  */
 export function menusDe(
-  reservas: { menu: string; menuReal?: string; rectificacion?: string }[], menus?: Menu[]
+  reservas: { menu: string; menuReal?: string; rectificacion?: string; agregados?: string; personas?: number }[], menus?: Menu[]
 ): { menu: string; cantidad: number }[] {
   const total = new Map<string, number>();
   for (const r of reservas) {
-    // Lo que se sirvió de verdad, si la reserva se rectificó (2026-11-12).
-    for (const { menu, cantidad } of desglosarMenu(menuEfectivo(r), menus)) {
+    // Lo que se sirvió de verdad, si la reserva se rectificó (2026-11-12), y
+    // los menús agregados en la mesa (2026-11-17, `mesa.ts`).
+    for (const { menu, cantidad } of desglosarMenu(menuEnLaMesa({ personas: 0, ...r }), menus)) {
       total.set(menu, (total.get(menu) ?? 0) + cantidad);
     }
   }
@@ -324,7 +325,7 @@ export function aReserva(p: PedidoShopify, menus?: Menu[]): Omit<Reserva, 'fila'
 export function camposDeShopify(r: Omit<Reserva, 'fila'>): Partial<Reserva> {
   const { asistencia, creada, notaPago, eventoCRM, anotadaPor, llegaron, avisoRecepcion, abonado, liberada,
           personasReales, menuReal, descuento, rectificacion, aprobacion, liberacion,
-          pagoAnotado, pagoRevisado, descuentoRevisado, ...resto } = r;
+          pagoAnotado, pagoRevisado, descuentoRevisado, agregados, valorFinal, mesaCerrada, ...resto } = r;
   return resto;
 }
 

@@ -66,7 +66,9 @@ export function recortarReserva<T extends Reserva>(r: T, alcance: Alcance, { hoy
   // Las marcas de la revisión de pagos (`plata.ts`) llevan una firma con el
   // monto y la nota del pago: van con la plata.
   return { ...sinContacto, monto: null, notaPago: '', abonado: null, ingreso: null, descuento: null,
-    pagoAnotado: '', pagoRevisado: '', descuentoRevisado: '' };
+    pagoAnotado: '', pagoRevisado: '', descuentoRevisado: '',
+    // El valor final de la mesa (2026-11-17, `mesa.ts`) también es plata.
+    valorFinal: null, mesaCerrada: '' };
 }
 
 /**

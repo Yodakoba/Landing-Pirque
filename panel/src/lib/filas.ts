@@ -61,6 +61,9 @@ export function filaReserva(
   poner(i.pagoAnotado, r.pagoAnotado);
   poner(i.pagoRevisado, r.pagoRevisado);
   poner(i.descuentoRevisado, r.descuentoRevisado);
+  poner(i.agregados, r.agregados);
+  poner(i.valorFinal, r.valorFinal === undefined ? undefined : r.valorFinal === null ? '' : r.valorFinal);
+  poner(i.mesaCerrada, r.mesaCerrada);
   return fila;
 }
 
@@ -190,6 +193,9 @@ export function leerReservasDe(filas: string[][]): Reserva[] {
       pagoAnotado: String(en(f, i.pagoAnotado)),
       pagoRevisado: String(en(f, i.pagoRevisado)),
       descuentoRevisado: String(en(f, i.descuentoRevisado)),
+      agregados: String(en(f, i.agregados)),
+      valorFinal: String(en(f, i.valorFinal)).trim() === '' ? null : num(en(f, i.valorFinal)),
+      mesaCerrada: String(en(f, i.mesaCerrada)),
       fila: n + 1                            // 1-based, y la 1 es el encabezado
     };
     salida.push(reserva);

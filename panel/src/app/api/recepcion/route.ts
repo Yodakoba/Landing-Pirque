@@ -26,6 +26,8 @@ import { hoy } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
 import { yaAbrio, estaCerrado as diaCerrado } from '@/lib/cierres';
 import { ocupaLugar } from '@/lib/ocupacion';
+import { paraReservar } from '@/lib/menus';
+import { opcionesParaAgregar } from '@/lib/mesa';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +41,8 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CI
       leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>())
     ]);
     const apertura = fechas.find((f) => f.fecha === fecha)?.apertura || cfg.horaApertura;
+    // Los menús que se pueden agregar a una mesa (2026-11-17, `mesa.ts`).
+    const delSitio = paraReservar(menus).map((m) => m.nombre);
     return NextResponse.json({
       fecha, apertura,
       abierta: yaAbrio(fecha, apertura, ahoraEnChile()),
@@ -47,7 +51,12 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CI
         fila: r.fila, nombre: r.nombre, personas: r.personas, menu: r.menu,
         asistencia: r.asistencia, llegaron: r.llegaron ?? null,
         avisoRecepcion: r.avisoRecepcion ?? '',
-        ingreso: comoIngresar(r, menus, deCot.has(r.id))
+        ingreso: comoIngresar(r, menus, deCot.has(r.id)),
+        // **La mesa** (2026-11-17): lo que se sumó, el valor final y con qué
+        // se puede sumar. El valor final lo anota ella misma: no es un dato
+        // que se le esconda.
+        agregados: r.agregados ?? '', valorFinal: r.valorFinal ?? null, mesaCerrada: r.mesaCerrada ?? '',
+        opciones: opcionesParaAgregar(r.menu, delSitio)
       }))
     });
   } catch (e) {

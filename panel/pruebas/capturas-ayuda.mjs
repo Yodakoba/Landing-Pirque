@@ -43,8 +43,6 @@ const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeou
 
 /** Una reserva de la recepción: su fila, que se abre con (+). */
 const filaRecepcion = (n) => (p) => p.locator('li > button[aria-expanded]').nth(n);
-/** El círculo de Fudo de una fila de la recepción. */
-const circuloFudo = (n) => (p) => p.locator('li > button[aria-expanded] [role=img]').nth(n);
 
 /** La página del día: el bloque del equipo queda al medio de la foto. */
 const focoDia = (p) => p.getByRole('button', { name: /Equipo y cuentas del día|Planificar equipo/ }).first();
@@ -63,11 +61,12 @@ const ESCENAS = {
   'anf-recepcion': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
     puntos: [texto('personas llegaron'), campo(/Buscar por nombre/), boton(/Llegó/)] },
   'anf-llego': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(boton(/Llegó/))], foco: texto(/¿Llegaron las/),
-    puntos: [boton(/Sí, las/), boton('Una más'), texto(/Si es otro número/)] },
-  // Desde el 2026-11-13 cada reserva es una fila: el detalle de Fudo y
-  // *Avisar* se abren con su (+).
-  'anf-fudo': { rol: 'anfitrion', ruta: '/recepcion', alto: 900, pasos: [clic(filaRecepcion(0))], foco: filaRecepcion(0),
-    puntos: [circuloFudo(0), texto(/Por pagar · cobra/), boton(/No vino/, 0)] },
+    puntos: [boton(/Sí, las/), (p) => p.getByRole('button', { name: 'Una más', exact: true }), texto(/Si llegaron menos/)] },
+  // **La mesa** (2026-11-17): una reserva que ya llegó, abierta con su (+).
+  'anf-mesa': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
+    pasos: [clic((p) => p.locator('li > button[aria-expanded]').filter({ hasText: 'Valentina Castro' }))],
+    foco: (p) => p.locator('section[aria-label="La mesa"]'),
+    puntos: [texto(/Sin valor final todavía/), boton(/Agregar a la mesa/), boton(/Anotar el valor final/)] },
   'anf-aviso': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(filaRecepcion(0)), clic(boton(/Avisar al jefe/))], foco: texto(/Qué le avisas/),
     puntos: [campo(/Quieren cambiar/), boton('Avisar', 0), boton('Volver', 0)] },
 

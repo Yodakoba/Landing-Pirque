@@ -247,7 +247,7 @@ const bueno = ['ID Orden','Fecha Reserva','Nombre','Email','Teléfono','Menú',
                'Asistencia','Nota de pago','ID Evento CRM','Anotada por',
                'Llegaron','Aviso recepción','Abonado','Se cayó por cupo',
                'Personas reales','Menú real','Descuento','Rectificación','Aprobación','Evento exclusivo',
-               'Pago anotado','Pago revisado','Descuento revisado'];
+               'Pago anotado','Pago revisado','Descuento revisado','Agregados','Valor final','Mesa cerrada'];
 ok(faltantes(bueno, COL_RESERVAS).length === 0, 'el encabezado del encargo calza entero');
 ok(indices(bueno, COL_RESERVAS).tipoPago === 8, 'y cada campo sabe su columna');
 
@@ -5200,6 +5200,53 @@ console.log('\nLa plata la confirma pagos');
   const cuentas = pendientesDeCuenta([{ nombre: 'Ana Pérez', porConfirmar: pc }, { nombre: 'Luis', porConfirmar: '' }], []);
   ok(cuentas.length === 1 && cuentas[0].de === 'trabajador' && cuentas[0].que === 'cuenta bancaria' && cuentas[0].fecha === '2026-11-13',
      'la bandeja de pagos lista las cuentas por confirmar');
+}
+
+console.log('\nLa mesa: agregados y valor final');
+{
+  const m = await import('./mesa.ts');
+  const { comoIngresar: ingresar } = await import('./fudo.ts');
+  const { menusDe: cocina } = await import('./shopify.ts');
+  const { ocupacionDe: ocupa } = await import('./ocupacion.ts');
+  ok(m.escribirAgregados([{ menu: 'A la carta', cantidad: 2 }, { menu: 'Tradiciones', cantidad: 1 }, { menu: 'tradiciones', cantidad: 1 }])
+       === '2 × Tradiciones + 2 × A la carta'
+     && m.cuantosAgregados('2 × Tradiciones + 2 × A la carta') === 4
+     && m.menusAgregados('2 × Tradiciones + 2 × a la carta') === '2 × Tradiciones'
+     && m.aLaCarta('1 × Niños + 3 × A la carta') === 3,
+     'los agregados se escriben como los menús, juntos, con a la carta al final');
+  ok(m.limpiarAgregados('') === '' && m.limpiarAgregados('2 x Tradiciones+1 × a la carta') === '2 × Tradiciones + 1 × A la carta'
+     && m.limpiarAgregados('dos tradiciones') === null && m.limpiarAgregados('99 × Tradiciones') === null
+     && m.limpiarAgregados('1 × <script>') === null,
+     'lo agregado que llega del navegador se limpia; lo que no se entiende se rechaza');
+  ok(m.limpiarValorFinal('264.000') === 264000 && m.limpiarValorFinal('$ 1.250.500') === 1250500
+     && m.limpiarValorFinal('') === null && m.limpiarValorFinal('-5') === undefined && m.limpiarValorFinal('hola') === undefined,
+     'el valor final es un entero en pesos; vacío lo borra; lo raro se rechaza');
+  ok(m.llegaronDespues(6, '', '2 × A la carta') === 8 && m.llegaronDespues(8, '2 × A la carta', '1 × A la carta') === 7
+     && m.llegaronDespues(null, '', '2 × A la carta') === null,
+     'si la recepción ya anotó cuántos llegaron, los agregados se suman ahí; si no, sigue sin anotar');
+  const r = { fila: 7, id: 'MANUAL-9', fecha: '2026-11-14', nombre: 'Camila Rojas', email: '', telefono: '', menu: '4 × Tradiciones',
+    personas: 4, monto: 196000, tipoPago: '', estadoPago: 'pending', notaPago: '', asistencia: 'Sí', creada: '', eventoCRM: '',
+    agregados: '1 × Tradiciones + 2 × A la carta', valorFinal: 310000 } as unknown as Reserva;
+  ok(m.personasEnLaMesa(r) === 7 && m.menuEnLaMesa(r) === '4 × Tradiciones + 1 × Tradiciones'
+     && cocina([r], POR_DEFECTO_MENUS).find((x) => x.menu === 'Tradiciones')?.cantidad === 5,
+     'la mesa suma su gente al día, y los menús agregados a lo que hay que preparar; a la carta no es un menú');
+  const dia = { fecha: '2026-11-14', capacidad: 60, estado: 'Pública', notas: '', apertura: '13:00', fila: 2 } as unknown as FechaHabil;
+  ok(ocupa([r], dia).tomadas === 7, 'el cupo del día cuenta a los que se sumaron a la mesa');
+  const conPrecio = POR_DEFECTO_MENUS.map((x) => x.nombre === 'Tradiciones' ? { ...x, precioEnLocal: 49000 } : x);
+  const caja = ingresar(r, conPrecio);
+  ok(!!caja && caja.lineas.some((l) => /^\+ 1 × Tradiciones a \$49\.000 · agregado/.test(l))
+     && caja.lineas.some((l) => l === '+ 2 a la carta · se cobra lo que consuman')
+     && (ingresar({ ...r, estadoPago: 'paid' }, conPrecio)?.lineas.some((l) => l.startsWith('+ 2 a la carta')) ?? false),
+     'la caja de Fudo dice cómo cobrar a los que se sumaron, también si la reserva ya pagó');
+  const mesas = m.mesasDelDia([r, { ...r, fila: 8, agregados: '', valorFinal: null },
+    { ...r, fila: 9, asistencia: 'No', agregados: '', valorFinal: null }]);
+  ok(mesas.conValor === 1 && mesas.total === 310000 && mesas.sinValor === 1 && mesas.agregadas === 3 && mesas.aLaCarta === 2,
+     'el registro del día: cuánto suman las mesas anotadas y cuántas que llegaron faltan');
+  ok(m.opcionesParaAgregar('20 × Lo Pirque + 4 × Niños', ['Tradiciones', 'Niños']).join() === 'Lo Pirque,Niños,Tradiciones,A la carta',
+     'para agregar se ofrecen los menús de la reserva primero, los del sitio y a la carta al final');
+  const { recortarReserva: recorta } = await import('./privacidad.ts');
+  const ajena = recorta({ ...r, mesaCerrada: '2026-11-14 17:40 · Fernanda' }, 'propio', { hoy: '2026-11-14', propia: false });
+  ok(ajena.valorFinal === null && ajena.mesaCerrada === '', 'el valor final de una mesa ajena no le llega al vendedor');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

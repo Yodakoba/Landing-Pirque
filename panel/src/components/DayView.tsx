@@ -30,6 +30,8 @@ import { partirAviso } from './AvisosRecepcion';
 import { BotonMias } from './BotonMias';
 import BandejaAprobaciones from './BandejaAprobaciones';
 import { pendientesDeAprobar, pendientesDePago, pendientesDeDescuentoVisto, juntarPendientes } from '@/lib/aprobaciones';
+import { personasEnLaMesa, cuantosAgregados, opcionesParaAgregar, mesasDelDia, partesMarcaMesa, resumenAgregados, pesosCL } from '@/lib/mesa';
+import MesaReserva from './MesaReserva';
 import { avisar } from './AvisoFlotante';
 import { estaRectificada, personasEfectivas, menuEfectivo, porAprobar, rechazado,
          resumenRectificacion } from '@/lib/rectificacion';
@@ -62,7 +64,7 @@ import { extrasDelDia, costoExtrasDelDia, costoDeExtra,
  * para React, que desmonta y vuelve a montar. Ver CLAUDE.md.
  */
 function Azulejo({ n, titulo, nota, color, borde }: {
-  n: number;
+  n: number | string;
   titulo: string;
   nota?: string;
   color?: string;
@@ -370,7 +372,7 @@ export default function DayView(
   }), [delDia, filtro, soloMias, origen, usuario]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const personas = visibles.filter(ocupaLugar)
-    .reduce((s, r) => s + personasEfectivas(r), 0);
+    .reduce((s, r) => s + personasEnLaMesa(r), 0);
   const noShows = visibles.filter((r) => r.asistencia === ASISTENCIA.noVino).length;
 
   // Lo que mira la cocina: cuántos de cada menú hay que preparar ese día.
@@ -481,6 +483,14 @@ export default function DayView(
   // `corregirDiaCerrado()`; el servidor lo comprueba por su cuenta.
   const diaCerrado = !!equipo && estaCerrado(equipo.cierres, fecha);
   const puedeCorregir = !!equipo?.puedeCorregir;
+  /**
+   * **La mesa** (2026-11-17, `mesa.ts`): la anotan quienes reciben —el
+   * permiso `asistencia`— desde la apertura y con el día abierto. El
+   * registro de las mesas lo leen quienes ven la plata del día.
+   */
+  const puedeMesa = puede(rol as Rol, 'asistencia') && infoDia.abierto && !diaCerrado;
+  const verMesas = puede(rol as Rol, 'rectificar') || puede(rol as Rol, 'informe');
+  const opcionesDe = (r: Reserva) => opcionesParaAgregar(r.menu, paraReservar(catalogo).map((m) => m.nombre));
   const vinieron = turnosDelDia.filter((t) => t.asistencia === VINO.si).length;
   const faltaron = turnosDelDia.filter((t) => t.asistencia === VINO.no).length;
   const costo = costoDelDia(turnosDelDia, fecha);
@@ -507,7 +517,7 @@ export default function DayView(
   const sinPagar = cuentan.filter((r) => faltaCobrar(r) && !estaAbonada(r));
   const pagadas = cuentan.filter((r) => !faltaCobrar(r));
   const liberadas = visibles.filter((r) => !ocupaLugar(r));
-  const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + personasEfectivas(r), 0);
+  const gente = (rs: Reserva[]) => rs.reduce((n, r) => n + personasEnLaMesa(r), 0);
   const cuantasMias = delDia.filter(esMia).length;
   const puedeAprobarDescuentos = puede(rol as Rol, 'aprobar');
   const puedeRectificar = puede(rol as Rol, 'rectificar');
@@ -588,6 +598,57 @@ export default function DayView(
           </div>
         </>
       )}
+
+      {/* **Las mesas** (2026-11-17, lo pidió el cliente): el valor final de
+          cada mesa y la gente que se sumó, para que la gerencia lo compare
+          con Fudo. Es un registro: no se marca nada. Aparece cuando hay algo
+          anotado. */}
+      {verMesas && (() => {
+        const delDiaQueOcupan = delDia.filter(ocupaLugar);
+        const m = mesasDelDia(delDiaQueOcupan);
+        if (!m.conValor && !m.agregadas) return null;
+        // Las que tienen algo anotado y las que llegaron sin valor final:
+        // esas son las que faltan.
+        const conMesa = delDiaQueOcupan.filter((r) => r.valorFinal != null || cuantosAgregados(r.agregados) > 0
+          || r.asistencia === ASISTENCIA.vino)
+          .sort((a, b) => Number(a.valorFinal != null) - Number(b.valorFinal != null) || a.nombre.localeCompare(b.nombre, 'es'));
+        return (
+          <>
+            <Rotulo>Las mesas</Rotulo>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              <Azulejo n={pesosCL(m.total)} titulo="Valor final de las mesas"
+                nota={`${m.conValor} ${m.conValor === 1 ? 'mesa anotada' : 'mesas anotadas'}${m.sinValor ? ` · faltan ${m.sinValor}` : ''}`}
+                color="text-hueso" borde={m.sinValor ? 'border-ambar/40' : 'border-hueso/15'} />
+              {m.agregadas > 0 && (
+                <Azulejo n={m.agregadas} titulo="Se sumaron a las mesas"
+                  nota={m.aLaCarta ? `${m.aLaCarta} a la carta` : 'todos con menú'}
+                  color="text-cielo-texto" borde="border-cielo/40" />
+              )}
+            </div>
+            <details className="mt-2 rounded-xl border border-hueso/15 bg-panel">
+              <summary className="tecla flex min-h-[44px] cursor-pointer items-center px-3 text-[15px] font-semibold">
+                Ver mesa por mesa ({conMesa.length})
+              </summary>
+              <ul className="divide-y divide-hueso/10 border-t border-hueso/10">
+                {conMesa.map((r) => {
+                  const marca = partesMarcaMesa(r.mesaCerrada);
+                  return (
+                    <li key={r.fila} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-3 py-2 text-[15px]">
+                      <span className="min-w-[10rem] flex-1 font-semibold">{r.nombre || 'Sin nombre'}</span>
+                      <span className="text-hueso/75">{personasEnLaMesa(r)} pers.{cuantosAgregados(r.agregados) > 0
+                        ? ` · ${resumenAgregados(r.agregados)}` : ''}</span>
+                      <span className={`font-bold tabular-nums ${r.valorFinal != null ? '' : 'text-ambar-texto'}`}>
+                        {r.valorFinal != null ? `🧾 ${pesosCL(r.valorFinal)}` : 'sin valor final'}
+                      </span>
+                      {marca && <span className="basis-full text-[13px] text-hueso/60">lo anotó {marca.quien} · {marca.cuando}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          </>
+        );
+      })()}
 
       {/* **El evento exclusivo** (2026-11-12): con el pedido de liberar el día
           aprobado, el plan para avisar y mover a cada reserva. Con el pedido
@@ -1058,7 +1119,7 @@ export default function DayView(
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2
                                 text-[14px] font-bold ${pago.clase}`}>{pago.icono}</span>
                   <span className="w-[4.5rem] shrink-0 text-right text-[18px] font-bold tabular-nums">
-                    {personasEfectivas(r)}
+                    {personasEnLaMesa(r)}
                     <span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
                   </span>
                 </button>
@@ -1093,12 +1154,15 @@ export default function DayView(
                         grande arriba y qué es debajo. */}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <div className={`${AZULEJO} order-1`}>
-                        <span className="text-[30px] font-bold leading-none tabular-nums">{personasEfectivas(r)}</span>
+                        <span className="text-[30px] font-bold leading-none tabular-nums">{personasEnLaMesa(r)}</span>
                         <span className={ROTULO_AZULEJO}>personas</span>
-                        {personasEfectivas(r) !== r.personas && (
+                        {personasEnLaMesa(r) !== r.personas && (
                           <span className="text-[13px] text-hueso/65">reservó <s>{r.personas}</s></span>
                         )}
-                        {r.llegaron != null && r.llegaron !== r.personas && (
+                        {cuantosAgregados(r.agregados) > 0 && (
+                          <span className="text-[13px] font-semibold text-cielo-texto">+{cuantosAgregados(r.agregados)} en la mesa</span>
+                        )}
+                        {r.llegaron != null && r.llegaron !== personasEnLaMesa(r) && (
                           <span className="mt-1 text-[13px] font-semibold text-ambar-texto">llegaron {r.llegaron}</span>
                         )}
                       </div>
@@ -1130,6 +1194,13 @@ export default function DayView(
                     {/* **Cómo ingresarla en Fudo, a todo el ancho**: es lo que
                         se viene a mirar al abrir la mesa. */}
                     {ocupaLugar(r) && <IngresoFudo ingreso={r.ingreso} />}
+
+                    {/* **La mesa** (2026-11-17): lo que se sumó y el valor
+                        final. La misma pieza de la recepción. */}
+                    {ocupaLugar(r) && r.asistencia !== ASISTENCIA.noVino
+                      && (puedeMesa || r.valorFinal != null || cuantosAgregados(r.agregados) > 0) && (
+                      <MesaReserva r={r} opciones={opcionesDe(r)} editable={puedeMesa} onGuardado={() => void cargar()} />
+                    )}
 
                     {/* **La rectificación del día** (2026-11-12): qué cambió,
                         quién, cuándo y por qué; el descuento por aprobar con

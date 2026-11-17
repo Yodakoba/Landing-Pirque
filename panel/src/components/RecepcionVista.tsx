@@ -17,6 +17,14 @@
  *   contador − / + si llegaron más o menos. Lo distinto **no cambia la
  *   reserva**: queda en `Llegaron` y le avisa solo al jefe de turno, que es
  *   quien decide si la ajusta (y así cuadra con Fudo, donde se cobra la mesa).
+ * - **Si llegaron más, pregunta qué comen** (2026-11-17, lo pidió el
+ *   cliente): cada uno con un menú o *a la carta*. Quedan como **agregados
+ *   de la mesa** (`lib/mesa.ts`), no como un aviso: suman a la gente del
+ *   día y a la caja de Fudo. Si llegaron menos, se le avisa al jefe de turno
+ *   como siempre.
+ * - **La mesa** (`MesaReserva`), al abrir una reserva que llegó: agregar a
+ *   alguien más tarde y **anotar el valor final**, el total de la cuenta en
+ *   Fudo. La misma pieza de la página del día.
  * - **Avisar al jefe de turno**, con un texto corto, para todo lo demás.
  * - Lo que no puede tocar —personas, menús, pago— no tiene botón: la tarjeta
  *   dice *"Para cambiar la reserva, avisa al jefe de turno"*.
@@ -27,6 +35,8 @@
  * alguien marcó desde otro lado.
  */
 import AvisoFijo from './AvisoFijo';
+import MesaReserva, { ElegirAgregados } from './MesaReserva';
+import { leerAgregados, escribirAgregados, cuantosAgregados, pesosCL, type Agregado } from '@/lib/mesa';
 import IngresoFudo, { IconoFudo } from './IngresoFudo';
 import { usarSoloMira } from './SesionCliente';
 import type { Ingreso } from '@/lib/fudo';
@@ -40,6 +50,11 @@ interface R {
   asistencia: string; llegaron: number | null; avisoRecepcion: string;
   /** Cómo se ingresa en Fudo, armado por el servidor. */
   ingreso?: Ingreso | null;
+  /** La mesa (2026-11-17): lo agregado, el valor final y con qué se puede agregar. */
+  agregados?: string;
+  valorFinal?: number | null;
+  mesaCerrada?: string;
+  opciones?: string[];
 }
 interface Datos {
   fecha: string; apertura: string; abierta: boolean; cerrado: boolean; reservas: R[];
@@ -57,7 +72,7 @@ export default function RecepcionVista() {
   const [error, setError] = useState('');
   const [busca, setBusca] = useState('');
   /** La reserva a la que se le está preguntando "¿llegaron las N?". */
-  const [contando, setContando] = useState<{ fila: number; n: number } | null>(null);
+  const [contando, setContando] = useState<{ fila: number; n: number; agregados: Agregado[] } | null>(null);
   /** La reserva a la que se le está escribiendo un aviso. */
   const [avisando, setAvisando] = useState<{ fila: number; texto: string } | null>(null);
   const [guardando, setGuardando] = useState(0);
@@ -100,11 +115,23 @@ export default function RecepcionVista() {
     finally { setGuardando(0); }
   }
 
-  const llego = (r: R, n: number) => { setAbierta(0); return guardar(r, {
-    asistencia: ASISTENCIA.vino, llegaron: n,
-    // **Lo distinto avisa solo**: el jefe de turno lo ve y decide.
-    ...(n !== r.personas ? { avisoRecepcion: `${hora()} · Llegaron ${n} de ${r.personas}` } : {})
-  }, n === r.personas ? `✓ ${r.nombre}: llegaron los ${n}` : `${r.nombre}: llegaron ${n} de ${r.personas} · avisado al jefe de turno`); };
+  /**
+   * **Llegó.** Si llegaron más de los reservados, los de más van como
+   * agregados de la mesa con lo que comen (2026-11-17): no hace falta avisar.
+   * Si llegaron menos, el jefe de turno lo ve y decide, como siempre.
+   */
+  const llego = (r: R, n: number, agregados: Agregado[] = []) => {
+    setAbierta(0);
+    const mas = Math.max(0, n - r.personas);
+    const texto = mas > 0 ? escribirAgregados(agregados) : '';
+    return guardar(r, {
+      asistencia: ASISTENCIA.vino, llegaron: n,
+      ...((texto || r.agregados) ? { agregados: texto } : {}),
+      ...(n < r.personas ? { avisoRecepcion: `${hora()} · Llegaron ${n} de ${r.personas}` } : {})
+    }, n === r.personas ? `✓ ${r.nombre}: llegaron los ${n}`
+      : mas > 0 ? `✓ ${r.nombre}: llegaron ${n} · +${mas} en la mesa`
+      : `${r.nombre}: llegaron ${n} de ${r.personas} · avisado al jefe de turno`);
+  };
 
   const lista = useMemo(() => {
     const todas = d?.reservas ?? [];
@@ -218,8 +245,10 @@ export default function RecepcionVista() {
                   {r.menu && <span className="block truncate text-[14px] text-hueso/70">{r.menu}</span>}
                 </span>
                 {!noVino && <IconoFudo ingreso={r.ingreso} />}
+                {/* La gente de la mesa, con los que se sumaron: el mismo
+                    número que la página del día (2026-11-17). */}
                 <span className="w-[4.5rem] shrink-0 text-right text-[20px] font-bold tabular-nums">
-                  {r.personas}<span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
+                  {r.personas + cuantosAgregados(r.agregados)}<span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
                 </span>
               </button>
 
@@ -234,6 +263,9 @@ export default function RecepcionVista() {
               {abiertaEsta && !contandoEsta && !avisandoEsta && (
                 <div className="space-y-2 border-t border-hueso/10 px-3 py-2.5">
                   {!noVino && <IngresoFudo ingreso={r.ingreso} />}
+                  {vino && (
+                    <MesaReserva r={r} opciones={r.opciones ?? []} editable={!bloqueada} onGuardado={() => void cargar()} />
+                  )}
                   {!bloqueada && (
                     <button type="button" className="boton min-h-[48px] w-full !text-[15px]"
                       onClick={() => setAvisando({ fila: r.fila, texto: '' })}>📣 Avisar al jefe de turno</button>
@@ -257,18 +289,43 @@ export default function RecepcionVista() {
                   <p className="mt-3 text-[15px] text-hueso/75">Llegaron más o menos:</p>
                   <div className="mt-1 flex flex-wrap items-center gap-3">
                     <button type="button" aria-label="Una menos" className="boton h-14 w-14 !text-[28px] !font-bold"
-                      onClick={() => setContando({ fila: r.fila, n: Math.max(0, contando.n - 1) })}>−</button>
+                      onClick={() => setContando({ ...contando, n: Math.max(0, contando.n - 1) })}>−</button>
                     <span className="w-16 text-center text-[28px] font-bold tabular-nums">{contando.n}</span>
                     <button type="button" aria-label="Una más" className="boton h-14 w-14 !text-[28px] !font-bold"
-                      onClick={() => setContando({ fila: r.fila, n: contando.n + 1 })}>+</button>
-                    <button type="button" disabled={!!guardando || contando.n === r.personas}
-                      onClick={() => { const k = contando.n; setContando(null); void llego(r, k); }}
-                      className="boton boton-relleno boton-hito w-full disabled:opacity-40 sm:w-auto sm:flex-1">
-                      Llegaron {contando.n}
-                    </button>
+                      onClick={() => setContando({ ...contando, n: contando.n + 1 })}>+</button>
                   </div>
+                  {/* **Llegaron más: ¿qué comen?** (2026-11-17). Un menú o a
+                      la carta, uno por uno; hasta decirlo no se guarda. */}
+                  {contando.n > r.personas && (() => {
+                    const mas = contando.n - r.personas;
+                    const dichos = contando.agregados.reduce((s, a) => s + a.cantidad, 0);
+                    return (
+                      <div className="mt-3 rounded-xl border-2 border-cielo-fuerte/60 bg-cielo/[0.06] p-2.5">
+                        <p className="text-[16px] font-semibold">
+                          ¿Qué comen {mas === 1 ? 'la persona de más' : `los ${mas} de más`}?
+                          {' '}<span className={`font-bold ${dichos === mas ? 'text-verde-texto' : 'text-ambar-texto'}`}>{dichos}/{mas}</span>
+                        </p>
+                        <div className="mt-2">
+                          <ElegirAgregados opciones={r.opciones ?? []} valor={contando.agregados}
+                            onCambio={(v) => setContando({ ...contando, agregados: v })} />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const mas = Math.max(0, contando.n - r.personas);
+                    const dichos = contando.agregados.reduce((s, a) => s + a.cantidad, 0);
+                    const falta = mas > 0 && dichos !== mas;
+                    return (
+                      <button type="button" disabled={!!guardando || contando.n === r.personas || falta}
+                        onClick={() => { const k = contando.n; const ag = contando.agregados; setContando(null); void llego(r, k, ag); }}
+                        className="boton boton-relleno boton-hito mt-3 w-full disabled:opacity-40">
+                        {falta ? `Falta decir qué comen ${mas - dichos > 0 ? mas - dichos : 'los de más'}` : `Llegaron ${contando.n}`}
+                      </button>
+                    );
+                  })()}
                   <p className="mt-2 text-[14px] text-hueso/65">
-                    Si es otro número, la reserva no cambia: se le avisa al jefe de turno.
+                    Si llegaron menos, la reserva no cambia: se le avisa al jefe de turno. Si llegaron más, se suman a la mesa.
                   </p>
                   <button type="button" className="boton mt-2 min-h-[44px]" onClick={() => setContando(null)}>Volver</button>
                 </div>
@@ -291,9 +348,19 @@ export default function RecepcionVista() {
                 // Ya recibida: lo que quedó, y *Cambiar* por si fue un error.
                 <div className="flex items-center gap-2 px-3 pb-2.5">
                   <span className={`flex-1 text-[16px] font-bold ${vino
-                    ? (n !== r.personas ? 'text-ambar-texto' : 'text-verde-texto') : 'text-rojo-texto'}`}>
-                    {vino ? `✓ Llegaron ${n}${n !== r.personas ? ` de ${r.personas}` : ''}` : '✕ No vino'}
+                    ? (n !== r.personas + cuantosAgregados(r.agregados) ? 'text-ambar-texto' : 'text-verde-texto') : 'text-rojo-texto'}`}>
+                    {vino ? `✓ Llegaron ${n}${n < r.personas ? ` de ${r.personas}` : ''}` : '✕ No vino'}
+                    {vino && cuantosAgregados(r.agregados) > 0 && (
+                      <span className="font-semibold text-cielo-texto"> · +{cuantosAgregados(r.agregados)} en la mesa</span>
+                    )}
+                    {vino && r.valorFinal != null && <span className="font-semibold text-hueso"> · 🧾 {pesosCL(r.valorFinal)}</span>}
                   </span>
+                  {/* **Cerrar la mesa a un toque** (2026-11-17): abre la
+                      reserva en su bloque de la mesa. */}
+                  {vino && r.valorFinal == null && !bloqueada && !abiertaEsta && (
+                    <button type="button" className="boton min-h-[44px] shrink-0 !border-oro/70 !font-semibold text-oro"
+                      onClick={() => alternar(r.fila)}>🧾 Valor final</button>
+                  )}
                   {!bloqueada && (
                     <button type="button" className="boton min-h-[44px] shrink-0"
                       onClick={() => setAbierta(r.fila)}>Cambiar</button>
@@ -302,7 +369,8 @@ export default function RecepcionVista() {
               ) : !bloqueada && (
                 <div className="grid grid-cols-2 gap-2 px-3 pb-3">
                   <button type="button" disabled={!!guardando}
-                    onClick={() => setContando({ fila: r.fila, n: r.personas })}
+                    onClick={() => setContando({ fila: r.fila, n: r.personas + cuantosAgregados(r.agregados),
+                      agregados: leerAgregados(r.agregados) })}
                     className={`tecla min-h-[52px] rounded-xl border-2 text-[18px] font-bold ${vino
                       ? 'border-verde-fuerte bg-verde-fuerte text-tinta'
                       : 'border-verde-fuerte text-verde-texto hover:bg-verde/10'}`}>

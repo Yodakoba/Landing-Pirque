@@ -81,6 +81,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Editar abre la reserva para corregir un teléfono, un menú o el estado '
       + 'del pago. Marcarla Pagada o Abonada le avisa al encargado de pagos, '
       + 'que la revisa.',
+      'La mesa, en cada reserva abierta: quién se sumó en el día —con su menú '
+      + 'o a la carta— y el valor final de la cuenta en Fudo. Se anota desde la '
+      + 'hora de apertura. Arriba, Las mesas suma los valores finales del día y '
+      + 'dice cuántas mesas faltan, para compararlo con Fudo.',
       'Equipo y cuentas del día abre la ventana donde se escriben los montos '
       + 'y la propina.'
     ],
@@ -340,9 +344,14 @@ export const AYUDAS: Record<string, Ayuda> = {
     cuerpo: [
       'La pantalla de la entrada: solo las reservas de hoy, en grande, para '
       + 'recibir a la gente con un tablet o el celular en la mano.',
-      'Al apretar Llegó te pregunta si llegaron todos. Si vino más o menos '
-      + 'gente, lo cuentas con − y +: eso no cambia la reserva, le avisa al '
-      + 'jefe de turno.'
+      'Al apretar Llegó te pregunta si llegaron todos. Si llegaron menos, lo '
+      + 'cuentas con − y +: eso no cambia la reserva, le avisa al jefe de turno. '
+      + 'Si llegaron más, te pregunta qué come cada uno —un menú o a la carta— '
+      + 'y se suman a la mesa.',
+      'Al abrir una reserva que llegó está su mesa: Agregar a la mesa, para '
+      + 'alguien que llegó después, y el valor final, que es el total de la '
+      + 'cuenta en Fudo con lo ya pagado incluido. Las bebidas y lo de la carta '
+      + 'no se anotan uno por uno: basta el total.'
     ],
     pasos: [
       'Busca la reserva por nombre.',
