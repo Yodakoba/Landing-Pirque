@@ -1962,7 +1962,10 @@ coherencia). Decidido con el cliente:
   día en que se ganó**, que es el día en que nació su reserva
   (`ganadasEl()`, en hora de Chile, armado por `/api/presupuestos` con las
   reservas de la misma tanda). No hizo falta una columna nueva. Sigue a *De
-  quién*, no al periodo.
+  quién*, no al periodo. **Es solo para mirar** (lo decidió el cliente el
+  mismo día): tocar un mes no lo elige como periodo, porque el periodo va
+  por fecha del evento o de cotización y estos meses van por el día en que
+  se ganó; mezclarlos mostraría otra cosa que lo que el cuadro dice.
 - **Estado**: *En carrera · Esperando respuesta · Negociando · Ganadas ·
   Perdidas y vencidas · Todas*, con cuántas hay. Reemplaza a los
   desplegables de etapa del CRM y a *Ver historial*: lo cerrado ya vive en
