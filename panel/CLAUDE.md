@@ -1205,9 +1205,9 @@ en $0 y la pantalla avisa que se escriba en pesos.
 - **`/presupuestos`** (en el menú, *Cotizaciones*): un calendario por semanas
   con una tarjeta por día —estado del día, candidatos, cotizaciones, ganadas
   y personas posibles, y *+ Cotizar este día*—, la vista **Sin fecha** y la
-  vista **🔎 Buscar** (hasta el 2026-11-13 se llamaba *Todas*; ver abajo) con
-  filtro por estado y buscador. Los avisos de por vencer y
-  vencidas siguen arriba.
+  vista **📋 Lista** (antes *Todas* y después *🔎 Buscar*; desde el
+  2026-11-17 es la vista de la gerencia: ver *📋 Lista*) con tarjetas,
+  filtros y buscador. Los avisos de por vencer y vencidas siguen arriba.
 - **Mías / De todos** (2026-11-12, lo pidió el cliente): dos botones arriba
   de Cotizaciones, con cuántas hay en cada uno. Filtran la pantalla entera
   —calendario, *Sin fecha*, *🔎 Buscar*; **los avisos ya no** desde el
@@ -1916,6 +1916,75 @@ estado a cancelado y cómo gestionar si hay devolución de dinero"*. Código en
   conversación abierta con un cliente.
 - **Una cancelada no aparece en el calendario de Cotizaciones**: sigue en
   *🔎 Buscar* (filtro *Perdidas y vencidas*), con su devolución.
+
+### 📋 Lista: la vista de la gerencia (2026-11-17)
+
+Lo pidió el cliente: *"una vista lista… se listan todas las cotizaciones,
+son como una sobrevista gerencial… permite buscar dentro de una lista,
+filtrar por vendedor y hace distintos resúmenes"*, mirando la *Lista* del
+CRM antiguo. Se revisó su código publicado (`crm-asadosycorderos.netlify.app`,
+la página de inicio): seis tarjetas —oportunidades abiertas, monto en
+pipeline, cerrado en 30 días, ganados, tasa de cierre, seguimientos
+vencidos—, cierres por mes, filtros rápidos por etapa, desplegables de
+vendedor, etapa y empresa, rango de fechas por evento o contacto, y una
+tabla. Lógica en `lib/listaCotizaciones.ts` (pura, con pruebas) y la vista
+en `ListaCotizaciones.tsx`.
+
+**Reemplaza a *🔎 Buscar***: eran dos listas de lo mismo (regla de
+coherencia). Decidido con el cliente:
+
+- **Quién ve qué**: pagos, la gerencia general, el administrador **y el
+  encargado de operaciones** ven todo el equipo, con *👤 Por vendedor…* y
+  *🤝 Por socio…* (`BuscarEnLista`; elegir uno mira *De todos*). **El
+  vendedor ve sus números**: la Lista es lo suyo, sin *Por vendedor* y sin
+  *Mías / De todos* (`veElEquipo()`, con los roles escritos: `vendedores`
+  lo tiene también el vendedor, por *Mi resumen*). No es un permiso nuevo
+  del servidor: el vendedor ya recibía todas las cotizaciones (*"ve todas,
+  edita las suyas"*); lo que cambia es lo que la Lista le resume.
+- **Cuándo**: *Todo · Mes · Semana* con ◀ ▶ (la barra de `/vendedores`),
+  **por fecha del evento** o **por fecha en que se cotizó** (`Creado`). Una
+  cotización sin día entra en un mes si su periodo escrito lo nombra
+  (*"marzo o abril"*, con el año si lo dice; `periodoTocaRango()`); si no
+  nombra ningún mes, solo sale en *Todo*. Parte en *Todo*.
+- **Seis tarjetas**, sobre lo que se mira (de quién y cuándo), y un grupo
+  de alternativas cuenta una vez (`resumenLista()`):
+
+  | Tarjeta | Qué cuenta | Al apretarla |
+  |---|---|---|
+  | En carrera | Las vivas —candidato, borrador, mandada, en negociación— y su gente posible | filtra *En carrera* |
+  | Cotizado | Lo **mandado** (Enviada y Negociación), como el calendario; lo sin mandar, aparte en la línea | filtra lo mandado |
+  | Ganado | Monto y cantidad de las ganadas | filtra *Ganadas* |
+  | Tasa de cierre | Ganadas ÷ (ganadas + perdidas); no cuentan vencidas ni no elegidas | — |
+  | Por seguir | Las de `seguimientoDe()`: sin respuesta, evento cerca, contrato sin volver | filtra esas |
+  | Por cobrar | Lo que falta cobrar de las ganadas (total menos cobros; las devoluciones restan). La pidió el cliente; el CRM no la tenía | filtra esas |
+
+- **Ganado por mes**: los últimos seis meses con algo ganado, **según el
+  día en que se ganó**, que es el día en que nació su reserva
+  (`ganadasEl()`, en hora de Chile, armado por `/api/presupuestos` con las
+  reservas de la misma tanda). No hizo falta una columna nueva. Sigue a *De
+  quién*, no al periodo.
+- **Estado**: *En carrera · Esperando respuesta · Negociando · Ganadas ·
+  Perdidas y vencidas · Todas*, con cuántas hay. Reemplaza a los
+  desplegables de etapa del CRM y a *Ver historial*: lo cerrado ya vive en
+  sus botones.
+- **El buscador**: cliente, N°, tipo de evento, vendedor y periodo.
+- **Las filas son las de siempre** (`fila()` de `CotizacionesVista`, la de
+  *Sin fecha* y la franja del día), con una segunda línea: quién la vende
+  (solo para el equipo), 🤝 el socio, el tipo y **el próximo paso**
+  (`proximosPasos()`): *sin respuesta hace N días*, *evento en N días sin
+  ganar*, *contrato sin volver*, *vence en N días*, *falta cobrar $X* o
+  *✓ pagada*, *perdida: motivo*, *sin mandar*. En *En carrera* lo más urgente
+  va arriba; en *Ganadas*, la más reciente.
+- **Lo que no se trajo del CRM**: el filtro por empresa (cada panel es una
+  planilla) y las columnas *Recontactos* y *Visita*, que hoy no se anotan.
+- **Lecturas de Google**: ninguna más. Todo sale de la tanda de
+  `/api/presupuestos`.
+- **Probado en el panel de ejemplo** con gerencia, operaciones y vendedor a
+  393 y 1280: la gerencia ve las seis tarjetas de todo el equipo y *Por
+  vendedor* (con Daniela, 1 fila), *Mes* por fecha en que se cotizó y *Por
+  cobrar* con la ganada que tiene saldo; el vendedor ve las suyas, sin *Por
+  vendedor* ni *Mías / De todos*. `revisarPlayStation()` solo marca los `?`
+  de 30px, que son la pieza de siempre.
 
 ### Las fases
 

@@ -5249,5 +5249,69 @@ console.log('\nLa mesa: agregados y valor final');
   ok(ajena.valorFinal === null && ajena.mesaCerrada === '', 'el valor final de una mesa ajena no le llega al vendedor');
 }
 
+console.log('\nLa Lista de cotizaciones');
+{
+  const L = await import('./listaCotizaciones.ts');
+  const { ROL: R } = await import('./auth.ts');
+  ok(L.veElEquipo(R.pagos) && L.veElEquipo(R.gerencia) && L.veElEquipo(R.admin) && L.veElEquipo(R.operaciones)
+     && !L.veElEquipo(R.vendedor) && !L.veElEquipo(R.encargado),
+     'la lista del equipo la ven pagos, gerencia general, administrador y operaciones; el vendedor ve la suya');
+  ok(L.periodoTocaRango('marzo o abril', { desde: '2027-04-01', hasta: '2027-04-30' })
+     && !L.periodoTocaRango('entre julio y agosto de 2027', { desde: '2026-07-01', hasta: '2026-07-31' })
+     && L.periodoTocaRango('entre julio y agosto de 2027', { desde: '2027-08-01', hasta: '2027-08-31' })
+     && !L.periodoTocaRango('cuando se pueda', { desde: '2026-01-01', hasta: '2026-12-31' }),
+     'una cotización sin día entra en el periodo si su texto nombra un mes de él (y su año, si lo dice)');
+  ok(JSON.stringify(L.rangoDe('2026-11')) === JSON.stringify({ desde: '2026-11-01', hasta: '2026-11-30' })
+     && JSON.stringify(L.rangoDe('2026-11-16')) === JSON.stringify({ desde: '2026-11-16', hasta: '2026-11-22' })
+     && L.rangoDe('') === null,
+     'el periodo es un mes, una semana desde su lunes, o todo');
+  const cot = (x: Record<string, unknown>) => ({ id: 'P', grupo: '', estado: 'Borrador', fecha: '2026-12-05', periodo: '',
+    creado: '2026-11-01 10:00', creadoPor: 'Jorge', socio: '', idReserva: '', invitados: 0, validoHasta: '', enviada: '',
+    ultimoSeguimiento: '', descuento: 0, tipoEvento: 'Empresa', motivo: '', contratoEnviado: '', contrato: '', cliente: 'X', ...x } as unknown as Presupuesto);
+  const lin = (presupuesto: string, precio: number, personas = 0) =>
+    ({ presupuesto, concepto: 'Tradiciones', cantidad: 1, precio, personas, descuento: 0, ivaIncluido: true } as unknown as LineaPresupuesto);
+  const ps = [
+    cot({ id: 'A', estado: 'Enviada', enviada: '2026-11-03', validoHasta: '2026-11-25', creadoPor: 'Daniela', cliente: 'Andrés' }),
+    cot({ id: 'B', estado: 'Borrador' }),
+    cot({ id: 'B2', grupo: 'B', estado: 'Borrador' }),
+    cot({ id: 'C', estado: 'Ganada', idReserva: 'MANUAL-1', fecha: '2026-11-21' }),
+    cot({ id: 'D', estado: 'Perdida', motivo: 'Precio' }),
+    cot({ id: 'E', estado: 'Enviada', enviada: '2026-10-01', validoHasta: '2026-10-16' })
+  ];
+  const ctx = { hoy: '2026-11-13', todas: ps, cobros: [{ presupuesto: 'C', monto: 100000 }],
+    lineas: [lin('A', 100000, 20), lin('B', 50000), lin('B2', 70000), lin('C', 300000), lin('D', 80000), lin('E', 10000)],
+    ganadaEl: L.ganadasEl(ps, [{ id: 'MANUAL-1', creada: '2026-11-14T02:30:00.000Z' }]),
+    seguimiento: { seguimientoDias: 5, avisoEvento: 14 } };
+  ok(ctx.ganadaEl.C === '2026-11-13', 'el día en que se ganó es el de la reserva, en hora de Chile');
+  const base = L.unaPorGrupo(ps, ctx);
+  const r = L.resumenLista(base, ctx);
+  ok(base.length === 5 && r.enCarrera.n === 2 && r.enCarrera.gente === 20
+     && r.cotizado.monto === 100000 && r.cotizado.n === 1 && r.cotizado.borradores === 1 && r.cotizado.montoBorradores === 50000
+     && r.ganado.monto === 300000 && r.ganado.n === 1 && r.tasa.pct === 50
+     && r.porCobrar.monto === 200000 && r.porCobrar.n === 1 && r.porSeguir === 1,
+     'las tarjetas: en carrera, cotizado (solo lo mandado), ganado, tasa de cierre, por seguir y por cobrar; las alternativas una vez');
+  const paso = L.proximosPasos(ps[0], ctx)[0];
+  ok(paso?.texto === 'sin respuesta hace 10 días' && paso.tono === 'rojo'
+     && L.proximosPasos(ps[3], ctx).map((x) => x.texto).join() === 'falta cobrar $200.000'
+     && L.proximosPasos({ ...ps[3], contratoEnviado: '2026-11-01' } as Presupuesto, ctx).map((x) => x.texto).join(' · ')
+        === 'contrato sin volver hace 12 días · falta cobrar $200.000'
+     && L.proximosPasos(ps[4], ctx)[0]?.texto === 'perdida: Precio',
+     'cada fila dice el próximo paso: sin respuesta, falta cobrar, por qué se perdió');
+  const c = L.cuentasPorFiltro(base, ctx);
+  ok(c.enCarrera === 2 && c.esperando === 1 && c.ganadas === 1 && c.cerradas === 2 && c.todas === 5 && c.porCobrar === 1,
+     'cada botón de estado dice cuántas hay');
+  ok(L.calzaBusqueda(ps[0], 'daniela') && L.calzaBusqueda(ps[0], 'andres') && !L.calzaBusqueda(ps[0], 'calicanto'),
+     'el buscador encuentra por cliente y por vendedor, sin tildes');
+  ok(L.enRango(ps[0], L.rangoDe('2026-12'), 'evento') && !L.enRango(ps[0], L.rangoDe('2026-12'), 'cotizada')
+     && L.enRango(ps[0], L.rangoDe('2026-11'), 'cotizada'),
+     'el periodo va por la fecha del evento o por la fecha en que se cotizó');
+  const meses = L.ganadoPorMes(base, ctx);
+  ok(meses.length === 1 && meses[0].mes === '2026-11' && meses[0].monto === 300000 && meses[0].cantidad === 1,
+     'lo ganado por mes sale del día en que se ganó');
+  ok(L.ordenarLista(base.filter((p) => L.pasaFiltro(p, 'enCarrera', ctx)), 'enCarrera', ctx)[0].id === 'A',
+     'en carrera, lo más urgente arriba');
+  ok(L.vendedoresDe(ps).map((v) => v.id).join() === 'Daniela,Jorge', 'los vendedores salen de quién creó las cotizaciones');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

@@ -206,7 +206,12 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'reserva, y desde ahí la reserva se actualiza sola si cambias la '
       + 'cotización.',
       'Un candidato es alguien que preguntó: se anota con cliente, fecha e '
-      + 'invitados, y se cotiza después.'
+      + 'invitados, y se cotiza después.',
+      '📋 Lista muestra todas las cotizaciones con sus números: cuántas siguen '
+      + 'en carrera, cuánto hay cotizado, cuánto se ganó, la tasa de cierre, las '
+      + 'que esperan que alguien las siga y lo que falta cobrar. Se filtra por '
+      + 'periodo —por fecha del evento o por fecha en que se cotizó—, por estado '
+      + 'y con el buscador; la gerencia, además, por vendedor o por socio.'
     ],
     pasos: [
       '“+ Cotizar” (o “Cotizar este día” en una tarjeta).',
@@ -572,6 +577,57 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   // **El resumen de vendedores y socios** (2026-11-12, lo pidió el cliente:
   // *"no te olvides de los signos de interrogación y explicar bien cómo se
   // calcula qué número"*).
+  // ---------- La Lista de cotizaciones (2026-11-17) ----------
+  listaEnCarrera: {
+    titulo: 'En carrera',
+    texto: [
+      'Las cotizaciones que siguen vivas: candidatos, borradores, mandadas y en negociación, sin vencer y sin ganar.',
+      'Una cotización con alternativas cuenta una vez. Abajo, cuánta gente traerían si se ganan todas.'
+    ]
+  },
+  listaCotizado: {
+    titulo: 'Cotizado',
+    texto: [
+      'La suma de lo que se le mandó al cliente y sigue en carrera: Enviadas y en Negociación. Es lo mismo que cuenta el calendario.',
+      'Lo que todavía no se manda —candidatos y borradores— va aparte, en la línea de abajo.'
+    ]
+  },
+  listaGanado: {
+    titulo: 'Ganado',
+    texto: [
+      'La suma de las cotizaciones ganadas de lo que estás mirando, con su total con IVA.',
+      'Si eliges un periodo, cuenta las ganadas cuyo evento cae en él, o que se cotizaron en él, según la fecha que elijas.'
+    ]
+  },
+  listaTasa: {
+    titulo: 'Tasa de cierre',
+    texto: [
+      'De las cotizaciones que ya se decidieron, cuántas se ganaron: ganadas dividido por ganadas más perdidas.',
+      'Las que siguen en carrera, las vencidas y las alternativas no elegidas no cuentan.'
+    ]
+  },
+  listaPorSeguir: {
+    titulo: 'Por seguir',
+    texto: [
+      'Las que esperan que alguien las mueva: mandadas sin respuesta hace días, con el evento cerca y sin ganar, o con el contrato mandado y sin volver firmado.',
+      'Son las mismas de Esperando respuesta, pero de todo lo que estás mirando.'
+    ]
+  },
+  listaPorCobrar: {
+    titulo: 'Por cobrar',
+    texto: [
+      'Lo que falta cobrar de las ganadas: su total menos los pagos anotados. Las devoluciones restan.',
+      'Apriétala para ver cuáles son.'
+    ]
+  },
+  listaPorMes: {
+    titulo: 'Ganado por mes',
+    texto: [
+      'Lo ganado en cada mes, según el día en que se marcó ganada. Muestra los últimos seis meses con algo ganado.',
+      'Sigue a lo que eliges en De quién, no al periodo de arriba.'
+    ]
+  },
+
   vendLeToca: {
     titulo: 'Le toca',
     texto: [
