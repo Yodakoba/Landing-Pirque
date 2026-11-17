@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ganadasEl } from '@/lib/listaCotizaciones';
 import { conLecturas } from '@/lib/sheets';
 import { HOJA_CLIENTES } from '@/lib/clientes';
 import { alcanceDeContacto, recortarCliente, recortarContactoDeCotizacion, clientePropio } from '@/lib/privacidad';
@@ -107,7 +108,10 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       // **Los avisos que esta cuenta cerró para siempre** (2026-11-13): van
       // en la misma tanda de lecturas (`Usuarios` se sumó a la precarga).
       avisosLeidos: cuentaDeSesion(cuentas, quien.usuario)?.avisosLeidos ?? [],
-      sobrecupo
+      sobrecupo,
+      // **El día en que se ganó cada una** (2026-11-17, para la Lista): el día
+      // en que nació su reserva, que ya viene en esta tanda.
+      ganadaEl: ganadasEl(presupuestos, reservas)
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

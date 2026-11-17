@@ -15,9 +15,10 @@
  *   calendario del local, de la semana en curso en adelante.
  * - **Sin fecha**: las que todavía no tienen día exacto ("marzo o abril"),
  *   que no caben en ningún día.
- * - **Todas**: la lista entera, con filtro por estado y buscador.
+ * - **📋 Lista** (2026-11-17, antes *🔎 Buscar*): la vista de la gerencia,
+ *   con tarjetas de resumen, filtros y buscador. Ver `ListaCotizaciones`.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Ayuda from './Ayuda';
 import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
@@ -27,7 +28,7 @@ import {
   porVencer, vencidoSinCerrar, diasParaVencer, ESTADO_PRESUPUESTO, seguimientoDe,
   type Presupuesto, type LineaPresupuesto
 } from '@/lib/presupuestos';
-import { normalizar, estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
+import { estaCerrado, esPrivada, esExclusiva } from '@/lib/columnas';
 import { semanaDe, sumarDias, rangoEnPalabras, enPalabras, esFecha } from '@/lib/fechas';
 import { enPesos } from '@/lib/ocupacion';
 import { grupoDe, alternativasDe, principalDe } from '@/lib/cotizar';
@@ -46,6 +47,8 @@ import Pendientes, { FilaPendiente } from './Pendientes';
 import AvisoFijo from './AvisoFijo';
 import { BotonMias, BotonTodos } from './BotonMias';
 import { Pastilla, PastillaCotizado } from './Pastilla';
+import ListaCotizaciones from './ListaCotizaciones';
+import { veElEquipo, type ContextoLista } from '@/lib/listaCotizaciones';
 
 type Datos = DatosCotizar & {
   presupuestos: Presupuesto[]; lineas: LineaPresupuesto[];
@@ -54,6 +57,8 @@ type Datos = DatosCotizar & {
   cobros?: { presupuesto: string; monto: number; revisadoPor?: string; concepto?: string }[];
   /** Los días que se pasaron del cupo (2026-11-12). Ver `AvisoSobrecupo`. */
   sobrecupo?: SobrecupoCorto[];
+  /** El día en que se ganó cada cotización (2026-11-17, para la Lista). */
+  ganadaEl?: Record<string, string>;
 };
 
 /** El color de cada estado: se distingue por la pastilla con borde. */
@@ -96,11 +101,9 @@ export default function CotizacionesVista() {
   const [datos, setDatos] = useState<Datos | null>(null);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
-  const [vista, setVista] = useState<'calendario' | 'sinFecha' | 'todas'>('calendario');
+  const [vista, setVista] = useState<'calendario' | 'sinFecha' | 'lista'>('calendario');
   /** Vista gerencia sin el permiso de cotizar: se mira y no se crea nada. */
   const soloMira = usarSoloMira('presupuestos');
-  const [filtro, setFiltro] = useState<'activas' | 'candidatos' | 'ganadas' | 'cerradas' | 'todas'>('activas');
-  const [busqueda, setBusqueda] = useState('');
   /**
    * **Mías o de todos** (2026-11-12, lo pidió el cliente). Filtra la pantalla
    * entera —el calendario, *Sin fecha*, *Todas* y los avisos de arriba— y no
@@ -240,16 +243,6 @@ export default function CotizacionesVista() {
     return salida;
   };
 
-  const pasaFiltro = (p: Presupuesto) => {
-    const e = estadoDe(p);
-    if (busqueda && !normalizar(`${p.cliente} ${folioDe(p)}`).includes(normalizar(busqueda))) return false;
-    if (filtro === 'todas') return true;
-    if (filtro === 'candidatos') return e === ESTADO_PRESUPUESTO.candidato;
-    if (filtro === 'ganadas') return e === ESTADO_PRESUPUESTO.aceptado;
-    if (filtro === 'cerradas') return [ESTADO_PRESUPUESTO.rechazado, ESTADO_PRESUPUESTO.noElegida,
-      ESTADO_PRESUPUESTO.cancelada, 'Vencida'].includes(e);
-    return cuentaComoPosible(p, hoy);
-  };
 
   /**
    * **Los pendientes son de cada cuenta** (2026-11-13, lo pidió el cliente:
@@ -318,7 +311,12 @@ export default function CotizacionesVista() {
     : [];
 
   /** Una cotización como línea, para las listas. */
-  const fila = (p: Presupuesto, conFecha = true) => (
+  /**
+   * **La fila de una cotización**, la misma en *Sin fecha*, la franja de un
+   * día y la Lista. `detalle` es la segunda línea que la Lista le suma
+   * (2026-11-17): quién la vende y el próximo paso.
+   */
+  const fila = (p: Presupuesto, conFecha = true, detalle?: ReactNode) => (
     <li key={p.id}>
       <button type="button" onClick={() => setAbierta({ p })}
         className="tecla flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded border
@@ -342,6 +340,9 @@ export default function CotizacionesVista() {
           </span>
         )}
         <span className="text-[13px] text-hueso/55">N° {folioDe({ id: grupoDe(p) })}</span>
+        {detalle && (
+          <span className="flex basis-full flex-wrap gap-x-3 gap-y-0.5 text-[13px] text-hueso/70">{detalle}</span>
+        )}
       </button>
     </li>
   );
@@ -489,21 +490,24 @@ export default function CotizacionesVista() {
             className="boton boton-relleno min-h-[48px] px-5 text-[15px]">+ Cotizar</button>
         )}
         <span className="flex-1" />
-        {/* El mismo *Mías* de todo el panel (`BotonMias`, 2026-11-13). */}
-        <div className="flex items-center gap-2" role="group" aria-label="De quién">
-          <BotonMias cuantas={agrupar(mias).length} elegido={soloMias} onClick={() => elegirDe('mias')} />
-          <BotonTodos texto="De todos" cuantas={agrupar(datos.presupuestos).length} elegido={!soloMias}
-            onClick={() => elegirDe('todos')} />
-        </div>
+        {/* El mismo *Mías* de todo el panel (`BotonMias`, 2026-11-13). **En
+            la Lista, el vendedor ve lo suyo** (2026-11-17): ahí no va. */}
+        {!(vista === 'lista' && !veElEquipo(datos.rol)) && (
+          <div className="flex items-center gap-2" role="group" aria-label="De quién">
+            <BotonMias cuantas={agrupar(mias).length} elegido={soloMias} onClick={() => elegirDe('mias')} />
+            <BotonTodos texto="De todos" cuantas={agrupar(datos.presupuestos).length} elegido={!soloMias}
+              onClick={() => elegirDe('todos')} />
+          </div>
+        )}
         {/* **El calendario no tiene botón: es lo que se ve siempre**
             (2026-11-13, lo pidió el cliente: el botón *Calendario* no se
             entendía, y *Todas* se confundía con *De todos*). *Sin fecha* y
-            *🔎 Buscar* —la lista con buscador y filtros, que antes se
-            llamaba *Todas*— se encienden al apretarlos, y apretarlos de
+            *📋 Lista* —la vista de la gerencia, que antes era *🔎 Buscar*
+            (2026-11-17)— se encienden al apretarlos, y apretarlos de
             nuevo, o *← Volver al calendario*, vuelve a las semanas. */}
         {([
           ['sinFecha', `Sin fecha (${agrupar(sinFecha).filter((p) => cuentaComoPosible(p, hoy)).length})`],
-          ['todas', '🔎 Buscar']
+          ['lista', '📋 Lista']
         ] as const).map(([k, texto]) => (
           <button key={k} type="button" onClick={() => setVista(vista === k ? 'calendario' : k)} aria-pressed={vista === k}
             className={`boton min-h-[48px] ${vista === k ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
@@ -634,32 +638,16 @@ export default function CotizacionesVista() {
         </div>
       )}
 
-      {vista === 'todas' && (() => {
-        const lista = agrupar(visibles).filter(pasaFiltro)
-          .sort((a, b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
+      {vista === 'lista' && (() => {
+        const ctx: ContextoLista = {
+          hoy, lineas: datos.lineas, cobros: (datos.cobros ?? []).map((c) => ({ presupuesto: c.presupuesto, monto: c.monto })),
+          ganadaEl: datos.ganadaEl ?? {}, todas: datos.presupuestos,
+          seguimiento: { seguimientoDias: datos.seguimiento?.dias ?? 5, avisoEvento: datos.seguimiento?.antesEvento ?? 14 }
+        };
         return (
-          <div>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {([
-                ['activas', 'Activas'], ['candidatos', 'Candidatos'], ['ganadas', 'Ganadas'],
-                ['cerradas', 'Perdidas y vencidas'], ['todas', 'Todas']
-              ] as const).map(([k, texto]) => (
-                <button key={k} type="button" onClick={() => setFiltro(k)} aria-pressed={filtro === k}
-                  className={`boton min-h-[44px] ${filtro === k ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
-                  {texto}
-                </button>
-              ))}
-              <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por cliente o N°" aria-label="Buscar cotización"
-                className="min-h-[44px] flex-1 rounded border border-hueso/20 bg-tinta px-3 text-[15px]
-                           focus:border-oro focus:outline-none sm:max-w-xs" />
-            </div>
-            {lista.length === 0 ? (
-              <p className="rounded border border-dashed border-hueso/20 p-5 text-[15px] text-hueso/60">
-                Ninguna calza.
-              </p>
-            ) : <ul className="space-y-2">{lista.map((p) => fila(p))}</ul>}
-          </div>
+          <ListaCotizaciones ctx={ctx} rol={datos.rol} visibles={visibles} mias={mias}
+            socios={(datos.socios ?? []).map((s) => ({ id: s.id, nombre: s.nombre, activo: s.activo }))}
+            fila={(p, detalle) => fila(p, true, detalle)} onDeTodos={() => elegirDe('todos')} />
         );
       })()}
 
