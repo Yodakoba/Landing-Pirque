@@ -54,18 +54,21 @@ const ANFITRION: Mision[] = [
     intro: 'Al apretar Llegó te muestra cómo ingresarla en Fudo y te pregunta si llegaron todas las personas de esa reserva.',
     puntos: [
       'Si llegaron todas, un toque y listo.',
-      'Si llegaron más o menos, cuéntalas con − y +.',
-      'Un número distinto no cambia la reserva: le avisa al jefe de turno, que decide.'
+      'Si llegaron más o menos, cuéntalas con − y +. Si son más, te pregunta qué come cada uno.',
+      'Si llegaron menos, la reserva no cambia: le avisa al jefe de turno, que decide.'
     ],
     probar: { texto: 'Abrir la recepción', url: '/recepcion' }
   },
   {
-    id: 'cobrar', emoji: '💵', titulo: 'Qué cobrar al abrir la mesa', escena: 'anf-fudo',
-    intro: 'El círculo de cada reserva dice cómo viene el pago: ✓ ya pagó, $ se cobra, ½ abonó, ! ojo. Ábrela con + para ver cómo ingresarla en Fudo.',
+    // **La mesa** (2026-11-17): reemplazó a "Qué cobrar al abrir la mesa",
+    // que ya cuentan la primera misión (el círculo) y la segunda (la caja de
+    // Fudo al apretar Llegó).
+    id: 'mesa', emoji: '🧾', titulo: 'La mesa: quién se sumó y cuánto fue', escena: 'anf-mesa',
+    intro: 'Abre con + una reserva que ya llegó: ahí está su mesa. Lo anotas tú, desde la hora de apertura.',
     puntos: [
-      'El círculo: cómo viene el pago, sin abrir nada.',
-      'Abierta, dice qué cobrar: el precio sin descuento y el total.',
-      'Si alguien no llegó, márcalo No vino.'
+      'Lo que se sumó y el valor final, a la vista.',
+      'Agregar a la mesa: alguien que llegó después, con su menú o a la carta.',
+      'El valor final: el total de la cuenta en Fudo, con lo ya pagado incluido.'
     ],
     probar: { texto: 'Abrir la recepción', url: '/recepcion' }
   },
@@ -164,7 +167,7 @@ const ENCARGADO: Mision[] = [
   },
   {
     id: 'recepcion', emoji: '🚪', titulo: 'La recepción y qué cobrar', escena: 'enc-recepcion',
-    intro: 'La misma pantalla de la entrada. Los avisos que manda la anfitriona te llegan a ti.',
+    intro: 'La misma pantalla de la entrada. Los avisos que manda la anfitriona te llegan a ti, y también anotas la mesa: quién se sumó y el valor final.',
     puntos: [
       'Qué cobrar al abrir la mesa en Fudo.',
       'Marca quién llegó.',

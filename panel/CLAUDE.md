@@ -5333,6 +5333,70 @@ Fudo… que tenga que documentar estos cambios obligatoriamente"*. Lógica en
 Pagadas · Abonadas · Sin pagar*: de un toque, solo las que anotó o vendió
 esta cuenta (`esSuya()` con `Anotada por` y el vendedor de la cotización).
 
+### La mesa: agregados y valor final (2026-11-17)
+
+Lo pidió el cliente: *"pasa mucho que viene una reserva, comen los menús,
+pero vienen dos personas más o un niño más que come a la carta… y además
+poder en la misma instancia agregar el valor total final de esta mesa"*,
+para que la gerencia pueda compararlo con Fudo. Lógica en `lib/mesa.ts`
+(pura, con pruebas) y la pieza `MesaReserva.tsx`, **la misma en la
+Recepción y en la página del día**.
+
+- **Quién y cuándo**: quien tiene `asistencia` —la anfitriona, el
+  encargado de turno, **el encargado de operaciones** (lo pidió el cliente
+  el mismo día), quien paga, la gerencia general y el administrador—, en la
+  Recepción o en la página del día, **desde la hora de apertura**
+  (`yaAbrio()`, las 13:00 si el día no dice otra) y con el día sin cerrar.
+  La anfitriona, solo hoy. Va por el mismo `PATCH` de la recepción
+  (`DE_LA_ENTRADA` sumó `agregados` y `valorFinal`).
+- **Agregados**: la gente que se sumó, cada uno con un menú o **a la
+  carta**. Columna `Agregados`, con el formato de los menús: *"1 ×
+  Tradiciones + 2 × A la carta"* (`escribirAgregados()`). Las opciones son
+  los menús de la reserva, los del formulario de reserva y *a la carta*
+  (`opcionesParaAgregar()`). Se eligen con − y + (`ElegirAgregados`).
+- **Al apretar *Llegó* con más gente**, la misma pregunta dice *¿Qué comen
+  los 2 de más?* y no deja guardar hasta repartirlos (*Falta decir qué comen
+  1*). Quedan como agregados, **sin aviso** al jefe de turno: ya están
+  anotados. Con menos gente, el aviso de siempre.
+- **El valor final**: el total de la cuenta de la mesa en Fudo, **con lo ya
+  pagado incluido** (lo decidió el cliente). Columna `Valor final`; quién y
+  cuándo, en `Mesa cerrada`, que pone el servidor. Las bebidas y la carta no
+  se registran producto por producto: basta el total.
+- **Se guardan con un botón que dice lo que pasa** (*✓ Guardar · 2
+  agregados*, *✓ Guardar $310.500*), no solos: toman cupo y son plata.
+  Se pueden cambiar; vaciar el valor final lo borra.
+- **Suman a los números del día** (`personasEnLaMesa()`, `menuEnLaMesa()`):
+  la gente, el cupo y *Qué preparar*. *A la carta* suma gente, no menús. Si
+  la recepción ya anotó cuántos llegaron, los agregados se suman ahí
+  (`llegaronDespues()`), y *Rectificar* descuenta los agregados de lo de la
+  recepción: rectificar es sobre la gente de la reserva, lo agregado va
+  aparte.
+- **La caja de Fudo los dice**: *+ 1 × Tradiciones a $49.000 · agregado, se
+  cobra aparte*, *+ 2 a la carta · se cobra lo que consuman*, también en una
+  reserva ya pagada.
+- **El registro, para la gerencia** (lo pidió el cliente: *"no es necesario
+  marcar si cuadra, solo importante el registro"*). En la página del día,
+  **Las mesas**: el total de los valores finales, cuántas mesas faltan y
+  cuánta gente se sumó, y *Ver mesa por mesa* con cada una —gente,
+  agregados, valor final y quién lo anotó—, las que faltan primero. Lo ven
+  quienes tienen `rectificar` o `informe`. **No hay marca de "cuadra con
+  Fudo"** ni aviso en la bandeja.
+- **El valor final va con la plata** (`privacidad.ts`): a quien la reserva
+  le llega sin monto, le llega sin valor final.
+- **Shopify y la cotización no lo tocan** (`camposDeShopify()`, y el
+  `PATCH` de una reserva de cotización lo acepta como *lo del día*).
+- **Lecturas de Google**: ninguna más. La recepción ya leía `Menús`; la
+  página del día saca el registro de las reservas que ya carga.
+- **Probado en el panel de ejemplo**: la anfitriona marca *Llegó* a Camila
+  (4) con 2 más, reparte 1 Tradiciones y 1 a la carta, y anota $310.500;
+  la encargada de operaciones suma un niño a otra mesa y anota $289.000
+  desde la página del día.
+  La fila dice *6 pers.*, la caja de Fudo los cobra aparte, la página del
+  día de la gerencia y del encargado muestra *Las mesas · $310.500 · 1 mesa
+  anotada · faltan 2* y la mesa en la reserva, y la bitácora dice *Anotó la
+  mesa · Camila Rojas · +2… · valor final $310.500*. `revisarPlayStation()`
+  sin hallazgos a 393 y 1280.
+
 ### La bandeja de aprobaciones (2026-11-12)
 
 Lo pidió el cliente: que al gerente de operaciones, apenas entra, le salga
@@ -5688,7 +5752,9 @@ vino o no vino. Por ahora"*. El rol se usa **solo el día de apertura**.
 - **"Llegaron 4 de 6" no cambia la reserva**: queda en la columna nueva
   `Llegaron` y deja solo un `Aviso recepción` (*"13:40 · Llegaron 4 de
   6"*). El jefe de turno decide si la ajusta, editándola como siempre; así
-  el panel cuadra con **Fudo**, donde se cobra la mesa.
+  el panel cuadra con **Fudo**, donde se cobra la mesa. **Llegaron más** ya
+  no avisa: desde el 2026-11-17 pregunta qué come cada uno y se suman a la
+  mesa (ver *La mesa: agregados y valor final*).
 - **Lo que la anfitriona no toca** —personas, menús, pago, anotar o borrar—
   no tiene botón. En la ruta (`/api/reservas/[fila]`), con `asistencia`
   solo pasa un cambio que sea únicamente `asistencia`, `llegaron` y

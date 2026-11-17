@@ -245,8 +245,10 @@ export default function RecepcionVista() {
                   {r.menu && <span className="block truncate text-[14px] text-hueso/70">{r.menu}</span>}
                 </span>
                 {!noVino && <IconoFudo ingreso={r.ingreso} />}
+                {/* La gente de la mesa, con los que se sumaron: el mismo
+                    número que la página del día (2026-11-17). */}
                 <span className="w-[4.5rem] shrink-0 text-right text-[20px] font-bold tabular-nums">
-                  {r.personas}<span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
+                  {r.personas + cuantosAgregados(r.agregados)}<span className="ml-1 text-[13px] font-normal text-hueso/65">pers.</span>
                 </span>
               </button>
 

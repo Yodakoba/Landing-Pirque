@@ -607,7 +607,11 @@ export default function DayView(
         const delDiaQueOcupan = delDia.filter(ocupaLugar);
         const m = mesasDelDia(delDiaQueOcupan);
         if (!m.conValor && !m.agregadas) return null;
-        const conMesa = delDiaQueOcupan.filter((r) => r.valorFinal != null || cuantosAgregados(r.agregados) > 0);
+        // Las que tienen algo anotado y las que llegaron sin valor final:
+        // esas son las que faltan.
+        const conMesa = delDiaQueOcupan.filter((r) => r.valorFinal != null || cuantosAgregados(r.agregados) > 0
+          || r.asistencia === ASISTENCIA.vino)
+          .sort((a, b) => Number(a.valorFinal != null) - Number(b.valorFinal != null) || a.nombre.localeCompare(b.nombre, 'es'));
         return (
           <>
             <Rotulo>Las mesas</Rotulo>

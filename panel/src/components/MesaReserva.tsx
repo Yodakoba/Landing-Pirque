@@ -49,7 +49,7 @@ export function ElegirAgregados({ opciones, valor, onCambio }: {
         return (
           <li key={m} className={`flex items-center gap-2 rounded-xl border-2 px-2 py-1 ${n > 0
             ? 'border-cielo-fuerte/60 bg-cielo/10' : 'border-hueso/15'}`}>
-            <span className={`min-w-0 flex-1 truncate text-[16px] ${n > 0 ? 'font-bold' : ''}`}>{etiqueta(m)}</span>
+            <span className={`min-w-0 flex-1 text-[16px] leading-tight ${n > 0 ? 'font-bold' : ''}`}>{etiqueta(m)}</span>
             <button type="button" aria-label={`Una menos de ${m}`} disabled={n === 0}
               className="boton h-11 w-11 shrink-0 !text-[22px] !font-bold disabled:opacity-30"
               onClick={() => poner(m, n - 1)}>−</button>
