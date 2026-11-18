@@ -262,7 +262,7 @@ const ADMIN: Mision[] = [
     puntos: [
       'Salta directo a cada sección.',
       'Reservas del sitio: esto cambia lo que ve el público.',
-      'Mantención técnica.'
+      'Mantención: revisar Shopify a mano y, una sola vez, dejar la base en cero.'
     ],
     probar: { texto: 'Abrir Configuración', url: '/config' }
   },

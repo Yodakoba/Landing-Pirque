@@ -12,6 +12,7 @@
 import AvisoFijo from './AvisoFijo';
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
+import PasoAProduccion from './PasoAProduccion';
 import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
 import { deDiasSemana, idDeDrive, type Config } from '@/lib/config';
@@ -293,6 +294,7 @@ export default function ConfigEditor() {
             </button>
             {resumen && <span className="text-[14px] text-hueso/70">{resumen}</span>}
           </div>
+          <PasoAProduccion />
         </div>
       )
     }
