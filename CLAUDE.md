@@ -446,8 +446,9 @@ unos pocos KB; las imágenes se cachean entre páginas.
 - El menú son 4 ítems: **Reserva** (botón dorado relleno, la acción
   principal) · Experiencias · Actividades · Eventos. No hay ítem "Inicio":
   eso lo hace el logo.
-- **Socios comerciales y Promociones viven en el pie, no en el menú**
-  (2026-10-15), apilados como dos botones delineados y en ese orden. Son
+- **Socios comerciales, Promociones y el Dossier viven en el pie, no en el
+  menú** (2026-10-15; el dossier, el 2026-11-18), apilados como botones
+  delineados. Son
   otros públicos, no pasos del recorrido normal: el menú de arriba quedó
   para quien vino a pasar el día. Las reglas `.nav-socios` se borraron.
 - **Casi sin JavaScript.** El menú de celular es checkbox + label, y las
@@ -637,7 +638,63 @@ aterrizar sin mezclarse con el programa de socios.
 - El CSS de los paneles de comisión **se borró de este archivo**, no se dejó
   muerto: el `<style>` es inline y propio de cada página.
 - Está enlazada desde el pie del sitio público y registrada en `PAGINAS` de
-  `tools/traducir.py`, así que son **9 páginas × 3 idiomas = 27**.
+  `tools/traducir.py`. Con el dossier son **10 páginas × 3 idiomas = 30**.
+
+## Landing dossier (`dossier.html`) y los precios de empresa (2026-11-18)
+
+Lo pidió el cliente: *"un tercer landing page, que lo llamamos dossier…
+básicamente lo mismo como promociones o socios comerciales, pero sin
+descuentos ni con comisiones… para enviarlo directamente a una empresa que
+está cotizando"*. Ese mismo día se tomaron tres decisiones que tocan a los
+tres landings de empresa (socios, promociones y dossier).
+
+**El dossier**
+
+- **Nació como copia de `landing-afiliados.html`** sin el bloque de
+  comisiones, sin el panel *Por qué sumarte* (era sobre ser socio) y sin el
+  CSS de ambos: no se dejó muerto. El resto —experiencias, menú, galería,
+  actividades, recinto y extras— es igual.
+- **WhatsApp de Eventos**, con su propio mensaje prellenado: *"estoy
+  revisando el dossier… y quiero cotizar un evento para mi empresa"*.
+- **Enlazado en el pie del sitio público**, debajo de Socios comerciales
+  (lo pidió el cliente), como *Dossier para empresas*. Va con `hreflang` y
+  en los tres idiomas, igual que los otros dos.
+- El copy de la cabecera y de la bajada lo escribió Claude: *Dossier para
+  empresas · Experiencias, actividades y recinto para tu evento*.
+
+**Tradiciones se vende solo en el sitio público.** Salió de los tres
+landings: quedan **tres experiencias**, Lo Pirque, Brasas y Sommelier. La
+grilla pasó a tres columnas sobre 900px y una por fila debajo (con ancho
+máximo de 520px). **Con dos columnas la tercera quedaba sola**, y a 861px las
+tres columnas cortaban el reverso de Brasas en promociones: por eso el corte
+está en 900 y no en 860. El pie de la foto de la galería dejó de decir
+*Experiencia Tradiciones*.
+
+**Los precios de empresa van más IVA**, y son otros números:
+
+| | Por persona |
+|---|---|
+| Lo Pirque | $50.000 + IVA |
+| Brasas | $70.000 + IVA |
+| Sommelier | $90.000 + IVA |
+
+- Viven en `precios.json` bajo **`empresas`**, aparte de los del sitio
+  público, que siguen IVA incluido. Así una lista no puede pisar a la otra.
+  `lo_pirque.local` y `sommelier.local` se borraron: no los usaba nadie más.
+- **El "+ IVA" va al lado de cada precio** (`.mas-iva`, a 13px), fuera de la
+  marca `data-lista`, porque `traducir.py` reescribe el texto de la marca
+  entera. En el reverso de promociones no va: con el precio tachado el
+  renglón no cabía y el texto de abajo ya dice *pp. + IVA*.
+- **Promociones mantiene su 11%**, ahora calculado sobre el neto: Lo Pirque
+  $44.500, Brasas $62.300, Sommelier $80.100, todos + IVA.
+- **El arriendo del recinto también pasa a + IVA en los tres landings**
+  ($2.500.000 / $1.500.000 + IVA). **En `eventos.html` sigue diciendo IVA
+  incluido**, porque el cliente habló de los landings: eso deja el mismo
+  número con dos sentidos según la página, y hay que preguntarle.
+
+**En socios comerciales las experiencias van siempre abiertas** (lo pidió
+el cliente), igual que en promociones: el panel es un `<div class="panel
+panel-fijo">` y no un `<details>`. En el dossier, lo mismo.
 
 ## Reserva en línea (Shopify + sistema propio)
 
@@ -1473,8 +1530,11 @@ agencias que compran por grupo. Por eso:
 - El landing dice **"sobre 25 personas"** en las cuatro tarjetas. Correcto ahí.
 - El sitio público **no** lo dice, y dice "por adulto". Tenerlo era un error:
   le decía a una familia de seis que no podía reservar.
-- El landing ofrece **cuatro** experiencias (Tradiciones $49.000 / Lo Pirque
-  $55.000 / Brasas $75.000 / Sommelier $95.000). El sitio público ofrece
+- ~~El landing ofrece **cuatro** experiencias (Tradiciones $49.000 / Lo Pirque
+  $55.000 / Brasas $75.000 / Sommelier $95.000).~~ **Desde el 2026-11-18 son
+  tres y + IVA**: Lo Pirque $50.000, Brasas $70.000 y Sommelier $90.000, en
+  los tres landings de empresa. Ver "Landing dossier y los precios de
+  empresa". El sitio público ofrece
   **dos** (Tradiciones $44.000 / A Brasas abiertas $70.000). Ver arriba.
 - **Los montos dejaron de coincidir entre los dos entregables** (2026-10-15).
   El landing subió $5.000 en los cuatro niveles y ahora muestra el precio de
