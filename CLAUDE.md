@@ -687,10 +687,12 @@ está en 900 y no en 860. El pie de la foto de la galería dejó de decir
   renglón no cabía y el texto de abajo ya dice *pp. + IVA*.
 - **Promociones mantiene su 11%**, ahora calculado sobre el neto: Lo Pirque
   $44.500, Brasas $62.300, Sommelier $80.100, todos + IVA.
-- **El arriendo del recinto también pasa a + IVA en los tres landings**
-  ($2.500.000 / $1.500.000 + IVA). **En `eventos.html` sigue diciendo IVA
-  incluido**, porque el cliente habló de los landings: eso deja el mismo
-  número con dos sentidos según la página, y hay que preguntarle.
+- **El arriendo del recinto pasa a + IVA en todo el sitio**
+  ($2.500.000 / $1.500.000 + IVA): primero en los tres landings y, el mismo
+  día, en `eventos.html`, que lo pidió el cliente para que el mismo número no
+  tuviera dos sentidos. **Es la misma pieza en las cuatro páginas**: la bajada
+  dice *"Valores sin catering, más IVA"* y cada monto lleva su `.mas-iva` al
+  lado (en el sitio público vive en `site.css`).
 
 **En socios comerciales las experiencias van siempre abiertas** (lo pidió
 el cliente), igual que en promociones: el panel es un `<div class="panel
@@ -1543,6 +1545,10 @@ agencias que compran por grupo. Por eso:
   por adelantado**. No es una inconsistencia: son las dos modalidades.
 
 ### El precio del recinto pasó a ser con IVA incluido (2026-11-01)
+
+> **Revertido el 2026-11-18**: el arriendo volvió a ser **+ IVA**, en todo el
+> sitio. Ver "Landing dossier y los precios de empresa". Lo de abajo queda
+> como historia de por qué estuvo IVA incluido.
 
 Salió al desglosar el IVA en los presupuestos: **el recinto era el único
 precio del sitio anunciado "+ IVA"**, mientras las experiencias dicen "IVA
