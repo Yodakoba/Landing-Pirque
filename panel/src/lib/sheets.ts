@@ -504,6 +504,31 @@ export async function escribirBloque(hoja: string, filas: unknown[][]): Promise<
 }
 
 /**
+ * **Vacía varias pestañas de una vez, dejando su encabezado** (2026-11-18,
+ * para el paso a producción: `lib/produccion.ts`). Va en **una** llamada
+ * (`batchClear`): o se vacían todas o ninguna. Las que no existen se saltan.
+ * Devuelve los títulos que vació.
+ */
+export async function vaciarHojas(hojas: string[]): Promise<string[]> {
+  hojas.forEach(olvidar);
+  try {
+    const titulos: string[] = [];
+    for (const h of hojas) {
+      try { titulos.push(await nombreReal(h)); } catch (e) { if (!esPestanaQueNoExiste(e)) throw e; }
+    }
+    if (!titulos.length) return [];
+    await conReintento(async () => sheets().spreadsheets.values.batchClear({
+      spreadsheetId: idPlanilla(),
+      requestBody: { ranges: titulos.map((t) => `'${t}'!A2:ZZ`) }
+    }));
+    return titulos;
+  } catch (e) {
+    if (esLimiteDeGoogle(e)) throw new Error(MENSAJE_LIMITE);
+    throw e;
+  } finally { hojas.forEach(olvidar); }
+}
+
+/**
  * Agrega varias filas de una vez.
  *
  * Una llamada en vez de N: guardar el equipo de un día son diez o quince

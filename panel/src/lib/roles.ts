@@ -43,7 +43,7 @@ export const PALABRAS: Record<Accion, string> = {
   configurar: 'Cambiar precios, productos y Configuración',
   bitacora: 'Ver la bitácora de quién hizo qué',
   usuarios: 'Crear cuentas y cambiar roles',
-  mantencion: 'Mantención técnica (Shopify a mano, diagnóstico)'
+  mantencion: 'Mantención técnica (Shopify a mano, diagnóstico, dejar la base en cero)'
 };
 
 /** El nombre del rol tal como se lee en pantalla. */

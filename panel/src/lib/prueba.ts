@@ -5313,5 +5313,32 @@ console.log('\nLa Lista de cotizaciones');
   ok(L.vendedoresDe(ps).map((v) => v.id).join() === 'Daniela,Jorge', 'los vendedores salen de quién creó las cotizaciones');
 }
 
+console.log('\nDejar la base en cero para producción');
+{
+  const P = await import('./produccion.ts');
+  const vacian = P.SE_VACIAN.map((p) => p.hoja);
+  const conservan = P.SE_CONSERVAN.map((p) => p.hoja);
+  ok(!vacian.some((h) => conservan.includes(h)), 'ninguna pestaña está en las dos listas');
+  ok(['Trabajadores', 'Puestos', 'Usuarios', 'Config', 'Menús', 'Colaboradores', 'Vendedores'].every((h) => conservan.includes(h))
+     && !['Trabajadores', 'Puestos', 'Usuarios', 'Config', 'Menús'].some((h) => vacian.includes(h)),
+     'el equipo, las cuentas, la configuración y los productos nunca se vacían');
+  ok(['Reservas', 'Presupuestos', 'Presupuesto Líneas', 'Clientes', 'Cobros', 'Turnos', 'Bitácora'].every((h) => vacian.includes(h)),
+     'las reservas, las cotizaciones, los clientes, los cobros, los turnos y la bitácora se vacían');
+  ok(P.confirmado({ copia: true, palabra: 'borrar ' }) && !P.confirmado({ copia: false, palabra: 'BORRAR' })
+     && !P.confirmado({ copia: true, palabra: 'BORRA' }) && !P.confirmado({ copia: 'true', palabra: 'BORRAR' })
+     && !P.confirmado(null),
+     'borrar exige la copia marcada y la palabra');
+  ok(P.filasConDatos([['ID', 'Nombre'], ['1', 'Ana'], ['', ''], ['2', '']]) === 2 && P.filasConDatos([]) === 0,
+     'las filas con datos no cuentan el encabezado ni las vacías');
+  ok(P.tiendaDe('brasas-de-lo-pirque-development.myshopify.com').desarrollo && P.tiendaDe('').desarrollo
+     && !P.tiendaDe('lo-pirque.myshopify.com').desarrollo,
+     'avisa si Shopify sigue en la tienda de desarrollo');
+  ok(P.idsConEvento(['1007', 'MANUAL-17', '1007', 'COT-3', ' 1008 ']).join() === '1007,1008',
+     'los eventos de Calendar son los de las reservas de Shopify, sin repetir');
+  ok(P.detalleDeLaLimpieza({ Reservas: 12, Clientes: 0, Bitácora: 40 }, 3) === 'Reservas 12 · Bitácora 40 · 3 eventos de Calendar'
+     && P.detalleDeLaLimpieza({}, 0) === 'no había nada que borrar',
+     'la bitácora dice qué se borró');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

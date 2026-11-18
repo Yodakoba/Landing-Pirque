@@ -2344,6 +2344,58 @@ documento, que cubre el mouse y el dedo; Escape sigue cerrando.
 `/api/presupuestos`; agregar un socio es la tanda de la ruta más la relectura
 al escribir, como guardar una ficha.
 
+## El paso a producción: dejar la base en cero (2026-11-18)
+
+Lo pidió el cliente: *"resetear todo a cero menos los trabajadores, el
+equipo que ya se ingresó, porque eso viene del mundo real"*, y después
+traer las cotizaciones y los clientes del CRM viejo. Lo que se vacía y lo
+que queda lo aprobó el mismo día, sobre la propuesta. Es una herramienta de
+**Configuración → Mantención** (`PasoAProduccion.tsx`), solo para el
+administrador (permiso `mantencion`), con la lógica en `lib/produccion.ts`
+(pura, con pruebas) y la ruta `/api/mantencion/produccion`.
+
+| Se vacía | Se conserva |
+|---|---|
+| Reservas (y sus eventos en Google Calendar), Presupuestos, Presupuesto Líneas, Clientes, Cobros, Turnos, Cierres, Actividades, Pagos, Boletas, Fechas Hábiles, Bitácora | Trabajadores, Puestos, Usuarios (las cuentas), Config, Menús (productos y precios), Colaboradores (fichas de los extras), Vendedores (fichas de vendedores y socios) y los comentarios, que viven en otra planilla |
+
+- **Es una lista fija**, no una casilla por pestaña: elegir de a una sería
+  una forma de borrar el equipo con un toque de más. Hay una prueba que fija
+  que Trabajadores, Puestos, Usuarios, Config y Menús nunca se vacían.
+- **Se vacían las filas, no las pestañas**: quedan los encabezados y la
+  planilla sigue sirviendo. Va en **una sola llamada** (`vaciarHojas()` en
+  `sheets.ts`, con `batchClear`): o se vacían todas o ninguna.
+- **Pregunta en serio**: la ventana muestra cuántas filas tiene cada
+  pestaña, pide marcar *Ya hice la copia* (Archivo → Hacer una copia, con
+  *Abrir la planilla ↗* al lado) y escribir **BORRAR**. La ruta lo vuelve a
+  comprobar (`confirmado()`): sin las dos, 400.
+- **Avisa si Shopify sigue en la tienda de desarrollo** (`tiendaDe()`, por
+  `SHOPIFY_DOMINIO`), porque la revisión diaria vuelve a traer los pedidos
+  de los últimos 10 días de la tienda a la que esté conectado. **El orden
+  acordado**: copia de la planilla → cambiar la tienda en Vercel (y crear
+  allá el modelo de seis variantes) → dejar en cero → importar del CRM.
+- **Los eventos de Google Calendar se borran primero**, porque salen de las
+  reservas: solo los de las reservas de Shopify (id numérico,
+  `idsConEvento()`), que son las únicas que el panel escribe allá. Uno que no
+  se pueda borrar no detiene el resto: se cuenta y se dice.
+- **La bitácora empieza con esa línea**: *Dejó la base en cero para
+  producción*, a nombre de quien lo hizo, con cuántas filas de cada pestaña.
+- **Después hay que volver a abrir los días.** Fechas Hábiles queda vacía,
+  así que el sitio público no ofrece ninguna fecha hasta que alguien abra los
+  próximos días desde la portada, con su cupo. La ventana lo dice antes y
+  después de borrar.
+- **Lecturas de Google**: abrir la ventana, una tanda (las 19 pestañas
+  juntas). Borrar: la misma tanda, una llamada de borrado y la línea de la
+  bitácora.
+- **Probado en el panel de ejemplo**: 176 filas de 12 pestañas; los 9
+  trabajadores, los 4 puestos, las 9 cuentas, Config, los productos, los
+  extras y los vendedores, intactos y con su encabezado; la portada,
+  Cotizaciones, Turnos, Equipo, Informe y Clientes abren vacíos. Sin la
+  palabra o sin la copia, 400; la gerencia, 403 y sin el bloque.
+
+**Lo que sigue: importar del CRM.** Espera la exportación del socio
+(`contactos`, `cotizaciones`, `pagos`, `profiles` en CSV), que se subirá en
+el panel con vista previa y sin duplicar; nunca al repo, que es público.
+
 ## El CRM del socio (2026-11-02)
 
 > **Apagada desde el 2026-11-10** (lo decidió el cliente: las cotizaciones

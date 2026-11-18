@@ -312,7 +312,11 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Reservas del sitio es lo que ven los clientes: qué días se abre, '
       + 'cuánta gente cabe y hasta cuándo se puede reservar. Cotizaciones y '
       + 'Contrato son lo que propone cada cotización nueva y lo que dice el '
-      + 'contrato que se imprime.'
+      + 'contrato que se imprime.',
+      'En Mantención, el administrador tiene además «Dejar la base en cero»: '
+      + 'borra lo que fueron pruebas —reservas, cotizaciones, clientes, pagos, '
+      + 'turnos y la bitácora— y conserva el equipo, las cuentas, los productos '
+      + 'y la configuración. Pide antes una copia de la planilla y escribir BORRAR.'
     ],
     ojo: 'Esto cambia lo que ve el público. Un día suelto se abre o se cierra '
        + 'desde el calendario, sin tocar esta pantalla.'

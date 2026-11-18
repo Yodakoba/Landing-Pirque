@@ -40,6 +40,15 @@ export function usarSoloMira(accion: Accion): boolean {
   return gerencia && !puede(rol as Rol, accion);
 }
 
+/**
+ * **Si esta cuenta puede `accion`**, para dibujar o no algo que solo una
+ * cuenta usa (2026-11-18: *Dejar la base en cero*, solo el administrador).
+ * Lo vuelve a comprobar la ruta.
+ */
+export function usarPuede(accion: Accion): boolean {
+  return puede(useContext(Sesion).rol as Rol, accion);
+}
+
 /** La franja que lo dice dentro de una ventana o de un bloque. */
 export function AvisoSoloMira({ que = 'esto' }: { que?: string }) {
   return (

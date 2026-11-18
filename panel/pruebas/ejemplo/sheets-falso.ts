@@ -111,6 +111,16 @@ export const sheetsFalso = {
         t.splice(n - 1);
         guardar(l);
         return { data: {} };
+      },
+      // Vaciar varias pestañas de una vez (2026-11-18, el paso a producción).
+      batchClear: async ({ requestBody }: any) => {
+        const l = leer();
+        for (const range of requestBody.ranges ?? []) {
+          const t = hoja(l, range);
+          t.splice(filaDe(range) - 1);
+        }
+        guardar(l);
+        return { data: {} };
       }
     }
   }
