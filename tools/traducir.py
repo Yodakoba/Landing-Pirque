@@ -626,6 +626,27 @@ def precios_sueltos(html, pagina, problemas):
                              % (pagina, monto))
 
 
+def huella_pdf(ruta):
+    """La misma huella que calcula tools/dossier_pdf.mjs: sin los ?v=."""
+    with open(os.path.join(RAIZ, ruta), encoding='utf-8') as f:
+        texto = re.sub(r'\?v=[0-9a-f]+', '', f.read())
+    return hashlib.sha256(texto.encode('utf-8')).hexdigest()[:16]
+
+
+def dossier_pdf_desfasado():
+    """Qué páginas del dossier cambiaron desde que se generó su PDF."""
+    try:
+        with open(os.path.join(RAIZ, 'tools', 'dossier_pdf.json'), encoding='utf-8') as f:
+            anotado = json.load(f)
+    except FileNotFoundError:
+        return ['nunca se generó']
+    viejos = [r for r in ('dossier.html', 'en/dossier.html', 'pt/dossier.html')
+              if anotado.get(r) != huella_pdf(r)]
+    if anotado.get('script') != huella_pdf(os.path.join('tools', 'dossier_pdf.mjs')):
+        viejos.append('tools/dossier_pdf.mjs')
+    return viejos
+
+
 def main():
     ap = argparse.ArgumentParser(
         description='Genera en/ y pt/ a partir del español de la raíz.')
@@ -729,6 +750,17 @@ def main():
         print('Corre: python3 tools/traducir.py', file=sys.stderr)
         for d in desfasados:
             print('  ' + d, file=sys.stderr)
+
+    # El PDF del dossier (2026-11-18) lo genera tools/dossier_pdf.mjs desde
+    # dossier.html ya traducido. Si la página cambió —un precio, un texto— y el
+    # PDF no se volvió a generar, el PDF mentiría: se avisa acá.
+    pdf_viejo = dossier_pdf_desfasado()
+    if pdf_viejo:
+        print('\nEl PDF del dossier no está al día (%s).' % ', '.join(pdf_viejo),
+              file=sys.stderr)
+        print('Corre: node tools/dossier_pdf.mjs', file=sys.stderr)
+        if args.revisar:
+            return 1
 
     if problemas or faltantes or desfasados:
         return 1
