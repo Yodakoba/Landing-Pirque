@@ -1,0 +1,7 @@
+{
+  "_que_es": "Huella de las páginas con que se generaron los PDF del dossier. La escribe tools/dossier_pdf.mjs y la revisa traducir.py --revisar.",
+  "dossier.html": "6ea6bff1f0ca1306",
+  "en/dossier.html": "cac5f80e575a7f42",
+  "pt/dossier.html": "643095a7d20710c1",
+  "script": "bedf7fb2708a38ed"
+}

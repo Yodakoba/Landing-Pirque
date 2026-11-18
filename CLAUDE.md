@@ -694,6 +694,40 @@ está en 900 y no en 860. El pie de la foto de la galería dejó de decir
   dice *"Valores sin catering, más IVA"* y cada monto lleva su `.mas-iva` al
   lado (en el sitio público vive en `site.css`).
 
+### El dossier en PDF (2026-11-18)
+
+Lo pidió el cliente: *"debe haber un botón descargar PDF… con la mini
+presentación con el mismo contenido que está en la página dossier"*. Eligió
+**diapositivas horizontales** sobre un documento vertical.
+
+- **Ocho láminas de 1280×720**: portada, la experiencia, las tres
+  experiencias con su precio + IVA, el menú, las actividades del recinto,
+  las adicionales, recinto y extras, y contacto con el WhatsApp de Eventos
+  (clicable dentro del PDF). Negro y dorado, Fraunces y Work Sans, fotos
+  reales del sitio.
+- **Lo genera `node tools/dossier_pdf.mjs`**, que abre `dossier.html` ya
+  traducido en cada idioma y **lee el contenido de la página** —textos,
+  precios, fotos— para armar las láminas. No hay un segundo texto que
+  mantener: el PDF no puede decir un precio que la página no dice. Lo único
+  escrito en el script es el rótulo *El menú / The menu / O cardápio*, porque
+  la página no lo tiene. Si cambia el HTML del dossier y algo no se
+  encuentra, el script se detiene y dice qué faltó.
+- **Cada idioma tiene su PDF al lado de su página**: `dossier.pdf`,
+  `en/dossier.pdf` y `pt/dossier.pdf`. Por eso el enlace es
+  `href="dossier.pdf"` relativo y sirve igual en las tres carpetas. Se
+  descarga como `Brasas-de-Lo-Pirque-dossier.pdf`.
+- **El botón *Descargar PDF* va dos veces**: en el héroe, junto al de
+  WhatsApp (en una fila que se dobla en el celular, `.hero-acciones`), y en
+  la tarjeta de contacto. Es un enlace con `download`: **cero JavaScript**.
+- **La guarda**: el script anota en `tools/dossier_pdf.json` la huella de
+  las tres páginas (sin los `?v=`, para que cambiar un CSS no lo marque) y
+  de sí mismo. **`traducir.py` avisa si el dossier cambió y el PDF no**, y
+  `--revisar` falla. O sea, el flujo cuando cambia el dossier o un precio de
+  empresa es: `python3 tools/traducir.py`, después
+  `node tools/dossier_pdf.mjs`, y commitear todo junto.
+- Necesita Node y el Playwright que ya trae el entorno; no agrega un
+  `package.json` al sitio.
+
 **En socios comerciales las experiencias van siempre abiertas** (lo pidió
 el cliente), igual que en promociones: el panel es un `<div class="panel
 panel-fijo">` y no un `<details>`. En el dossier, lo mismo.
