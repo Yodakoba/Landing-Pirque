@@ -15,7 +15,7 @@
   "desayuno_de_campo": { "por_persona": 8000 },
   "once_campesina":    { "por_persona": 8000 },
 
-  "_recinto": "Arriendo del recinto, solo arriendo y sin catering. En el sitio publico (eventos.html) se anuncia IVA incluido; en los landings de empresa, + IVA desde el 2026-11-18. El \"+ IVA\" es texto de la pagina.",
+  "_recinto": "Arriendo del recinto, solo arriendo y sin catering. Mas IVA en todo el sitio (eventos.html y los tres landings de empresa) desde el 2026-11-18. El \"+ IVA\" es texto de la pagina.",
   "recinto":           { "fin_de_semana": 2500000, "dias_de_semana": 1500000 },
 
   "_promociones": "El descuento de la pagina de promociones, en porcentaje. Las etiquetas de esa pagina se calculan solas con el precio de pagar en el local menos este porcentaje.",
