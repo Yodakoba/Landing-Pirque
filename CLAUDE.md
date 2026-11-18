@@ -726,7 +726,10 @@ cabeceras, así que el panel **sí usa webhooks** y verifica la firma
 minutos tampoco era opción, porque **el plan gratuito de Vercel solo permite
 tareas una vez al día**. Quedaron las dos cosas —webhook para inmediatez,
 reconciliación diaria para rellenar lo perdido— que es más robusto que
-cualquiera de las dos sola. Ver `panel/DESPLIEGUE.md`.
+cualquiera de las dos sola. Ver `panel/DESPLIEGUE.md`. **Ojo: la
+reconciliación diaria no corrió hasta el 2026-11-18**: el middleware del
+panel le respondía 401 a la llamada de Vercel, que llega sin sesión. Ver
+`panel/DESPLIEGUE.md`.
 
 **El token de Admin API del panel no contradice la regla de este proyecto.**
 "Un token de Admin API jamás" es sobre el **sitio**, donde quedaría en un

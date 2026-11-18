@@ -23,6 +23,25 @@ export function iguales(a: string, b: string): boolean {
 }
 
 /**
+ * **Las tareas que Vercel corre una vez al día** (`vercel.json`). Vercel las
+ * llama sin sesión, con `Authorization: Bearer <CRON_SECRET>`, así que el
+ * middleware las deja pasar solo con esa cabecera y la ruta lo vuelve a
+ * comprobar. **Hasta el 2026-11-18 el middleware no las dejaba pasar**:
+ * respondía 401 antes de llegar a la ruta, y la revisión diaria con Shopify
+ * no corría nunca. Una prueba fija que esta lista calce con `vercel.json`.
+ */
+export const TAREAS_PROGRAMADAS: readonly string[] = [
+  '/api/shopify/sincronizar',
+  '/api/crm/publicar',
+  '/api/fechas/regla'
+];
+
+/** Si esta petición es una de las tareas diarias, con el secreto correcto. */
+export function esTareaProgramada(ruta: string, cabecera: string | null, secreto: string | undefined): boolean {
+  return !!secreto && TAREAS_PROGRAMADAS.includes(ruta) && iguales(cabecera ?? '', `Bearer ${secreto}`);
+}
+
+/**
  * Valida una cabecera `Authorization: Basic <base64>` contra el usuario y
  * la clave esperados.
  */

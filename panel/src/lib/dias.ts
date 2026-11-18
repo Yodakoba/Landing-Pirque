@@ -15,8 +15,40 @@
  * `null` si no hay nada que cambiar.
  */
 import { ESTADO_DIA, estaCerrado, esExclusiva } from './columnas.ts';
+import { diasAbiertosEntre, sumarDias, type Fecha } from './fechas.ts';
 import type { FechaHabil } from './tipos.ts';
 import type { Config } from './config.ts';
+
+/**
+ * **Los días que la regla abre y todavía no tienen fila** (2026-11-18, lo
+ * pidió el cliente: *"en la configuración queda puesto que sábado y domingo
+ * son días públicos… esto debería funcionar automáticamente"*). Los días de
+ * *Días que se abre* entre hoy y *Días hacia adelante*, sin repetir y sin
+ * los que ya están en `Fechas Hábiles`.
+ *
+ * **Un día con fila no se toca nunca**, diga lo que diga: cerrado, privado,
+ * exclusivo o con otro cupo, es una decisión de alguien. Para que un fin de
+ * semana no se abra, se cierra (queda su fila). Sin cupo normal no se abre
+ * nada: un día abierto con cupo 0 no sirve.
+ *
+ * Lo usa `abrirDiasDeLaRegla()` en `datos.ts`, que corre la tarea diaria y
+ * al dejar la base en cero.
+ */
+export function diasPorAbrir(
+  conFila: string[], hoy: Fecha, cfg: Pick<Config, 'diasAbiertos' | 'diasAFuturo' | 'cupoNormal'>
+): Fecha[] {
+  if (!(cfg.cupoNormal > 0) || !(cfg.diasAFuturo >= 0)) return [];
+  const hay = new Set(conFila.map((f) => String(f ?? '').slice(0, 10)));
+  return diasAbiertosEntre(hoy, sumarDias(hoy, cfg.diasAFuturo), cfg.diasAbiertos)
+    .filter((f) => !hay.has(f));
+}
+
+/** Cómo nace un día que abre la regla: público, con el cupo y la hora de Configuración. */
+export function diaDeLaRegla(
+  fecha: Fecha, cfg: Pick<Config, 'cupoNormal' | 'horaApertura'>
+): Omit<FechaHabil, 'fila'> {
+  return { fecha, capacidad: cfg.cupoNormal, apertura: cfg.horaApertura, estado: ESTADO_DIA.abierta, notas: '' };
+}
 
 export function diaParaReservaManual(
   actual: FechaHabil | undefined,

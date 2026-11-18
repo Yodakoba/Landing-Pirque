@@ -150,6 +150,16 @@ webhook, lo respalda: recupera lo que se haya perdido por una caída, un
 despliegue a mitad de camino o un webhook que nunca se creó. Está en
 `vercel.json`.
 
+**Las tres tareas diarias** de `vercel.json`: la revisión con Shopify
+(`/api/shopify/sincronizar`), retirar lo publicado en el CRM
+(`/api/crm/publicar`) y **abrir los días de la regla** (`/api/fechas/regla`,
+desde el 2026-11-18). Vercel las llama sin sesión, con `Authorization:
+Bearer <CRON_SECRET>`, y el middleware las deja pasar solo con esa cabecera
+(`TAREAS_PROGRAMADAS` en `lib/auth.ts`). **Hasta el 2026-11-18 el
+middleware no las dejaba pasar**: respondía 401 antes de llegar a la ruta,
+así que ninguna corría. Para probar una, en Vercel → Settings → Cron Jobs
+está el botón *Run*.
+
 **Por qué las dos cosas y no solo consultar**, que es lo que hacía el Apps
 Script: en Vercel el plan gratuito **solo permite tareas una vez al día**,
 así que consultar cada 5 minutos necesitaría el plan Pro. Y **por qué las

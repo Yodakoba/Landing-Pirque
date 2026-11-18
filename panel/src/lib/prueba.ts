@@ -5340,5 +5340,34 @@ console.log('\nDejar la base en cero para producción');
      'la bitácora dice qué se borró');
 }
 
+console.log('\nLos días de la regla se abren solos');
+{
+  const D = await import('./dias.ts');
+  const A = await import('./auth.ts');
+  const fsx = await import('node:fs');
+  const cfg = { diasAbiertos: [6, 0], diasAFuturo: 10, cupoNormal: 60, horaApertura: '13:00' };
+  // Miércoles 18: los fines de semana hasta el sábado 28, menos el 22 que ya tiene fila.
+  ok(D.diasPorAbrir(['2026-11-22', '2026-11-25'], '2026-11-18', cfg).join() === '2026-11-21,2026-11-28',
+     'abre los sábados y domingos de la ventana que no tienen fila, hasta el último día incluido');
+  ok(D.diasPorAbrir(['2026-11-21 00:00:00'], '2026-11-18', cfg).join() === '2026-11-22,2026-11-28',
+     'un día con fila no se toca, aunque la celda traiga la hora');
+  ok(D.diasPorAbrir([], '2026-11-18', { ...cfg, cupoNormal: 0 }).length === 0,
+     'sin cupo normal no abre nada');
+  ok(D.diasPorAbrir([], '2026-11-20', { ...cfg, diasAbiertos: [5], diasAFuturo: 7 }).join() === '2026-11-20,2026-11-27',
+     'sigue los días de Configuración, hoy incluido');
+  const d = D.diaDeLaRegla('2026-11-21', cfg);
+  ok(d.estado === 'Abierta' && d.capacidad === 60 && d.apertura === '13:00' && d.fecha === '2026-11-21',
+     'nace público, con el cupo normal y la hora de apertura');
+  ok(A.esTareaProgramada('/api/fechas/regla', 'Bearer s3cr3t', 's3cr3t')
+     && !A.esTareaProgramada('/api/fechas/regla', 'Bearer otro', 's3cr3t')
+     && !A.esTareaProgramada('/api/fechas/regla', 'Bearer ', '')
+     && !A.esTareaProgramada('/api/reservas', 'Bearer s3cr3t', 's3cr3t'),
+     'el middleware deja pasar solo las tareas diarias, y solo con su secreto');
+  const vercel = JSON.parse(fsx.readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
+  const rutas = (vercel.crons ?? []).map((c: { path: string }) => c.path).sort().join();
+  ok(rutas === [...A.TAREAS_PROGRAMADAS].sort().join(),
+     'las tareas de vercel.json son las que el middleware deja pasar');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

@@ -22,7 +22,7 @@ propósito**: dice qué es cada una y cómo volver a conseguirla.
 | ☐ | `SHOPIFY_ADMIN_TOKEN` | **Sí** | Token de la app del panel (empieza en `shpat_`) | Shopify admin → Apps → la app del panel → *API credentials*. **No reinstalar la app** si se puede evitar: cambia el token |
 | ☐ | `SHOPIFY_VERSION` | **Sí** | Versión de la API | `2026-10` |
 | ☐ | `SHOPIFY_WEBHOOK_SECRET` | **Sí** | Firma de los webhooks (*Client secret* de la app) | En la misma app, *API credentials* |
-| ☐ | `CRON_SECRET` | **Sí** | Protege las dos tareas diarias | Una cadena larga al azar; se puede inventar una nueva |
+| ☐ | `CRON_SECRET` | **Sí** | Protege las tres tareas diarias | Una cadena larga al azar; se puede inventar una nueva |
 | ☐ | `CRM_API_KEY` | No | Clave del CRM del socio (Asados y Corderos) | Pedírsela al socio. **Nunca con prefijo `NEXT_PUBLIC_`** |
 
 ## Lo que no está acá, a propósito

@@ -2379,10 +2379,10 @@ administrador (permiso `mantencion`), con la lógica en `lib/produccion.ts`
   se pueda borrar no detiene el resto: se cuenta y se dice.
 - **La bitácora empieza con esa línea**: *Dejó la base en cero para
   producción*, a nombre de quien lo hizo, con cuántas filas de cada pestaña.
-- **Después hay que volver a abrir los días.** Fechas Hábiles queda vacía,
-  así que el sitio público no ofrece ninguna fecha hasta que alguien abra los
-  próximos días desde la portada, con su cupo. La ventana lo dice antes y
-  después de borrar.
+- **Al terminar vuelve a abrir los días de la regla** (`abrirDiasDeLaRegla()`,
+  ver la sección que sigue), así que el sitio no queda sin fechas. La
+  ventana lo dice antes y después de borrar. Si eso falla, lo borrado ya está
+  borrado: lo dice y la tarea diaria los abre a la mañana siguiente.
 - **Lecturas de Google**: abrir la ventana, una tanda (las 19 pestañas
   juntas). Borrar: la misma tanda, una llamada de borrado y la línea de la
   bitácora.
@@ -2391,6 +2391,54 @@ administrador (permiso `mantencion`), con la lógica en `lib/produccion.ts`
   extras y los vendedores, intactos y con su encabezado; la portada,
   Cotizaciones, Turnos, Equipo, Informe y Clientes abren vacíos. Sin la
   palabra o sin la copia, 400; la gerencia, 403 y sin el bloque.
+
+### Los días de la regla se abren solos (2026-11-18)
+
+Lo preguntó el cliente al ver que, después de dejar la base en cero, había
+que volver a abrir los días: *"en la configuración queda puesto que sábado y
+domingo son días públicos. Entonces esto debería funcionar automáticamente,
+¿o no?"*. **No lo hacía**: el sitio solo ofrecía los días con su fila en
+`Fechas Hábiles`, y *Días que se abre* solo decidía qué días proponía la
+portada, sin abrir y con cupo 0. Aprobó la primera propuesta:
+
+- **Una tarea diaria** (`/api/fechas/regla`, en `vercel.json` a las 8:23 UTC)
+  abre los días de *Días que se abre* entre hoy y *Días hacia adelante* que
+  **todavía no tienen fila**, como día **público** (`Abierta`), con el **cupo
+  normal** y la hora de apertura. Escribe la fila, así que todo lo demás del
+  panel sigue igual: el modelo sigue siendo una fila por día.
+- **Nunca toca un día que ya tiene su fila** (`diasPorAbrir()` en `lib/dias.ts`):
+  cerrado, privado, exclusivo o con otro cupo, es una decisión de alguien.
+  **Para que un fin de semana no se abra, se cierra**, y queda cerrado.
+  Borrarlo, en cambio, lo devuelve a la regla: al día siguiente se abre.
+- **Sin cupo normal no abre nada.** Los feriados y los días fuera de la regla
+  se siguen abriendo a mano desde la portada.
+- **Se abre también al dejar la base en cero**, y la puede correr a mano el
+  administrador (`mantencion`). Si abrió algo, queda en la bitácora:
+  *Abrió solos los días de la regla*, con las fechas, a nombre de *Tarea
+  diaria* o de quien la corrió.
+- **Lo que no cubre, y conviene saberlo**: una cotización ganada para un fin
+  de semana **más allá de la ventana** crea su día **privado**, como siempre
+  (`diaParaReservaManual()`); cuando ese día entra en la ventana ya tiene
+  fila, así que la regla no lo vuelve público. Se cambia a mano en la
+  portada si corresponde.
+- **Lecturas de Google**: la tarea lee Config y `Fechas Hábiles` y escribe
+  todas las filas en una llamada, una vez al día. Las pantallas no leen nada
+  más.
+
+#### Las tareas diarias no corrían (encontrado el mismo día)
+
+Al armar la tarea se vio que **el middleware le respondía 401 a toda llamada
+a `/api/` sin sesión**, y Vercel llama a sus tareas sin sesión, con
+`Authorization: Bearer <CRON_SECRET>`. La comprobación del secreto estaba
+dentro de las rutas, pero la llamada nunca llegaba a ellas. Comprobado contra
+producción: la respuesta era el 401 del middleware, no el 403 de la ruta.
+**O sea que la revisión diaria con Shopify —el respaldo de los webhooks
+perdidos— y el retiro del CRM no corrieron nunca desde que el panel pide
+sesión.** Ahora el middleware deja pasar `TAREAS_PROGRAMADAS` (`lib/auth.ts`)
+**solo con el secreto correcto**, y la ruta lo vuelve a comprobar. Una prueba
+fija que esa lista calce con `vercel.json`. Probado en el panel de ejemplo:
+sin secreto o con uno equivocado, 401; con el correcto, la revisión de
+Shopify llega a la ruta.
 
 **Lo que sigue: importar del CRM.** Espera la exportación del socio
 (`contactos`, `cotizaciones`, `pagos`, `profiles` en CSV), que se subirá en
