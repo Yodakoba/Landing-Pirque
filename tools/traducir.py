@@ -640,8 +640,9 @@ def dossier_pdf_desfasado():
             anotado = json.load(f)
     except FileNotFoundError:
         return ['nunca se generó']
-    viejos = [r for r in ('dossier.html', 'en/dossier.html', 'pt/dossier.html')
-              if anotado.get(r) != huella_pdf(r)]
+    paginas = [c + p for p in ('dossier.html', 'landing-afiliados.html')
+               for c in ('', 'en/', 'pt/')]
+    viejos = [r for r in paginas if anotado.get(r) != huella_pdf(r)]
     if anotado.get('script') != huella_pdf(os.path.join('tools', 'dossier_pdf.mjs')):
         viejos.append('tools/dossier_pdf.mjs')
     return viejos
@@ -756,7 +757,7 @@ def main():
     # PDF no se volvió a generar, el PDF mentiría: se avisa acá.
     pdf_viejo = dossier_pdf_desfasado()
     if pdf_viejo:
-        print('\nEl PDF del dossier no está al día (%s).' % ', '.join(pdf_viejo),
+        print('\nLos PDF del dossier y de socios no están al día (%s).' % ', '.join(pdf_viejo),
               file=sys.stderr)
         print('Corre: node tools/dossier_pdf.mjs', file=sys.stderr)
         if args.revisar:

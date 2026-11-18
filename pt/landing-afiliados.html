@@ -226,6 +226,9 @@
   .hero-full-content .kicker{ font-family: var(--sans); font-style:normal; text-transform:uppercase; letter-spacing:0.1em; font-size:0.82rem; color: var(--gold); }
   .hero-full-title{ font-size: clamp(2.4rem, 7vw, 4.6rem); margin-top: 14px; max-width: 16ch; }
   .hero-full-content .btn{ margin-top: 30px; }
+  /* WhatsApp y Descargar PDF en una fila que se dobla sola en el celular. */
+  .hero-acciones{ display:flex; flex-wrap:wrap; gap:12px; margin-top:30px; align-items:stretch; }
+  .hero-acciones .btn{ margin-top:0; }
   @media (max-width: 600px){ .hero-full{ min-height: 78vh; } }
 
   .intro-text .wrap{ max-width: 760px; }
@@ -570,10 +573,15 @@
     <div class="hero-full-content">
       <h1 class="hero-full-title">Trabalhe com a gente</h1>
       <p class="kicker" style="margin-top:16px;">Junte-se ao nosso programa de afiliados</p>
+      <div class="hero-acciones">
       <a href="https://wa.me/56933858575?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20programa%20de%20parceiros%20do%20Brasas%20de%20Lo%20Pirque" class="btn btn-whatsapp" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
         Fale com a gente no WhatsApp
       </a>
+      <!-- El PDF de socios comerciales (2026-11-18): lo genera tools/dossier_pdf.mjs
+           desde esta misma página; cada idioma descarga el suyo. -->
+      <a href="socios.pdf" class="btn btn-ghost" download="Brasas-de-Lo-Pirque-socios-comerciales.pdf">Baixar PDF</a>
+      </div>
     </div>
   </header>
 
@@ -972,7 +980,7 @@
       </div>
     </section>
 
-    <section id="socios" class="pad">
+    <section id="arriendo" class="pad">
       <div class="wrap venue-split">
         <div class="venue-photo"><img src="../assets/imgs2/MEATPLATE.jpg" alt="Costela na parrilla com batatas fritas e salada" width="1120" height="1400" loading="lazy" decoding="async"></div>
         <div>
@@ -1052,6 +1060,7 @@
           WhatsApp
         </a>
         <p class="fine">+56 9 3385 8575</p>
+        <a href="socios.pdf" class="btn btn-ghost" style="margin-top:14px;" download="Brasas-de-Lo-Pirque-socios-comerciales.pdf">Baixar PDF</a>
       </div>
       <div class="contact-card">
         <h3>Entre na lista de novidades</h3>
