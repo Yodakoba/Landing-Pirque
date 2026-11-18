@@ -17,7 +17,7 @@ import {
   indices, faltantes, esManual, ESTADO_DIA, esExclusiva, esPrivada, estaCerrado
 } from './columnas.ts';
 import type { Reserva, FechaHabil } from './tipos.ts';
-import { diaParaReservaManual, queLeHizo, deshacerDia } from './dias.ts';
+import { diaParaReservaManual, queLeHizo, deshacerDia, diasPorAbrir, diaDeLaRegla } from './dias.ts';
 import { ocupaLugar } from './ocupacion.ts';
 import { filaReserva, filaFecha, buscarFilaPorId, leerReservasDe,
          idsRepetidos } from './filas.ts';
@@ -191,6 +191,27 @@ export async function guardarFecha(d: Omit<FechaHabil, 'fila'>): Promise<void> {
     k > 0 && i.fecha !== -1 && String(f[i.fecha] ?? '').slice(0, 10) === d.fecha);
   if (n > 0) await escribirFila(HOJA_FECHAS, n + 1, filaFecha(enc, d, filas[n]));
   else await agregarFila(HOJA_FECHAS, filaFecha(enc, d));
+}
+
+/**
+ * **Abre los días de la regla que todavía no tienen fila** (2026-11-18): los
+ * de *Días que se abre* de aquí a *Días hacia adelante*, como día público con
+ * el cupo normal y la hora de apertura. Nunca toca un día que ya tiene su
+ * fila (`diasPorAbrir()`). Escribe todas de una vez y devuelve las fechas
+ * que abrió. La llaman la tarea diaria (`/api/fechas/regla`) y dejar la base
+ * en cero.
+ */
+export async function abrirDiasDeLaRegla(): Promise<Fecha[]> {
+  const cfg = await leerConfig();
+  // Fresca: es para decidir qué filas agregar.
+  const filas = await asegurarEncabezado(HOJA_FECHAS,
+    [COL_FECHAS.fecha, COL_FECHAS.capacidad, COL_FECHAS.apertura, COL_FECHAS.estado, COL_FECHAS.notas]);
+  const enc = filas[0];
+  const i = indices(enc, COL_FECHAS);
+  const conFila = i.fecha === -1 ? [] : filas.slice(1).map((f) => String(f[i.fecha] ?? ''));
+  const nuevas = diasPorAbrir(conFila, hoy(), cfg);
+  if (nuevas.length) await agregarFilas(HOJA_FECHAS, nuevas.map((f) => filaFecha(enc, diaDeLaRegla(f, cfg))));
+  return nuevas;
 }
 
 export async function borrarFecha(fila: number): Promise<void> {

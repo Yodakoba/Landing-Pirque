@@ -156,8 +156,9 @@ export default function ConfigEditor() {
       para: 'Qué días y a qué hora se abre, cuánta gente cabe y qué fechas ofrece el sitio público.',
       cuerpo: <>
         {campo('dias', 'Días que se abre',
-          'Separados por coma: “sáb,dom” y “sabado domingo” son lo mismo. Es lo que el panel ' +
-          'propone al cargar fechas nuevas.',
+          'Separados por coma: “sáb,dom” y “sabado domingo” son lo mismo. Estos días se abren ' +
+          'solos cada mañana, públicos y con el cupo normal, hasta los días hacia adelante. Un día ' +
+          'que ya está en el calendario no se toca: para que uno no se abra, ciérralo.',
           textoLibre('dias', deDiasSemana(config.diasAbiertos), (t) => ({ diasAbiertos: t })))}
         {campo('apertura', 'Hora de apertura',
           'Una sola jornada por día, sin bloques.',
@@ -166,8 +167,8 @@ export default function ConfigEditor() {
           'También es el horario que propone el contrato si la cotización no dice otro.',
           textoLibre('cierre', config.horaCierre, (t) => ({ horaCierre: t }), '18:00'))}
         {campo('cupo', 'Cupo normal de un día',
-          'Las personas que caben en una jornada, niños incluidos. Es el valor de un día nuevo; ' +
-          'cada día se puede cambiar aparte.',
+          'Las personas que caben en una jornada, niños incluidos. Es el cupo con que se abre ' +
+          'solo cada día nuevo; cada día se puede cambiar aparte.',
           numerico('cupo', config.cupoNormal, (n) => ({ cupoNormal: n }), { min: 1, max: 5000, unidad: 'personas' }))}
         {campo('maxima', 'Capacidad máxima del recinto',
           'El tope al ampliar el cupo de un día cuando entraron reservas pagadas sobre reservas ' +
@@ -175,7 +176,7 @@ export default function ConfigEditor() {
           numerico('maxima', config.capacidadMaxima, (n) => ({ capacidadMaxima: n }), { min: 1, max: 100000, unidad: 'personas' }))}
         {campo('futuro', 'Días hacia adelante',
           'Hasta cuántos días en el futuro se ofrecen fechas en el sitio, para no tomar ' +
-          'reservas a un año plazo.',
+          'reservas a un año plazo. Hasta ahí se abren solos los días que se abre.',
           numerico('futuro', config.diasAFuturo, (n) => ({ diasAFuturo: n }), { min: 1, max: 730, unidad: 'días' }))}
         {campo('pocos', 'Aviso de “últimos lugares”',
           'Desde cuántos lugares libres el sitio avisa que quedan pocos. Más arriba el ' +

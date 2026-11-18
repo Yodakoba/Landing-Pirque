@@ -7,15 +7,17 @@
  * - `POST` borra. Exige haber hecho la copia de la planilla y escribir la
  *   palabra; lo comprueba acá, no la pantalla. Primero los eventos de
  *   Calendar (salen de las reservas, que todavía están), después las
- *   pestañas en una sola llamada, y al final la bitácora, que ya quedó vacía:
- *   esta es su primera línea.
+ *   pestañas en una sola llamada, después vuelve a abrir los días de la regla
+ *   (`abrirDiasDeLaRegla()`, para que el sitio no quede sin fechas), y al
+ *   final la bitácora, que ya quedó vacía: esta es su primera línea.
  *
  * Solo el permiso `mantencion` (el administrador).
  */
 import { NextResponse } from 'next/server';
 import { conLecturas, leerHoja, vaciarHojas, idPlanilla, esPestanaQueNoExiste } from '@/lib/sheets';
 import { exigir, quienEs } from '@/lib/permisos';
-import { anotar } from '@/lib/datos';
+import { anotar, abrirDiasDeLaRegla, leerConfig } from '@/lib/datos';
+import { deDiasSemana } from '@/lib/config';
 import { HOJA_RESERVAS, COL_RESERVAS, normalizar } from '@/lib/columnas';
 import { idDeEvento } from '@/lib/calendario';
 import { borrarEvento, hayCalendario } from '@/lib/google-calendar';
@@ -57,7 +59,7 @@ export const GET = conLecturas(TODAS, async function GET(req: Request) {
   const no = await exigir(req, 'mantencion');
   if (no) return no;
   try {
-    const { cuantas, reservas } = await contar();
+    const [{ cuantas, reservas }, cfg] = await Promise.all([contar(), leerConfig()]);
     return NextResponse.json({
       seVacian: SE_VACIAN.map((p) => ({ ...p, filas: cuantas[p.hoja] })),
       seConservan: SE_CONSERVAN.map((p) => ({ ...p, filas: cuantas[p.hoja] })),
@@ -65,6 +67,8 @@ export const GET = conLecturas(TODAS, async function GET(req: Request) {
       calendario: hayCalendario(),
       tienda: tiendaDe(process.env.SHOPIFY_DOMINIO),
       palabra: PALABRA_PARA_BORRAR,
+      // Lo que se vuelve a abrir solo después de borrar.
+      regla: { dias: deDiasSemana(cfg.diasAbiertos).replace(/,\s*/g, ', '), hasta: cfg.diasAFuturo, cupo: cfg.cupoNormal },
       planilla: `https://docs.google.com/spreadsheets/d/${idPlanilla()}`
     });
   } catch (e) {
@@ -102,17 +106,25 @@ export const POST = conLecturas(TODAS, async function POST(req: Request) {
 
     const vaciadas = await vaciarHojas(SE_VACIAN.map((p) => p.hoja));
 
+    // Los días de la regla, de vuelta: sin esto el sitio queda sin fechas
+    // hasta la tarea de mañana. Si falla, lo borrado ya está borrado: se dice
+    // y la tarea diaria los abre igual.
+    let abiertos = 0, sinAbrir = false;
+    try { abiertos = (await abrirDiasDeLaRegla()).length; }
+    catch (e) { sinAbrir = true; console.error('No se pudieron abrir los días de la regla', e); }
+
     const numeros: Record<string, number> = {};
     for (const p of SE_VACIAN) numeros[p.hoja] = cuantas[p.hoja] ?? 0;
     await anotar({ ...quien, accion: 'Dejó la base en cero para producción',
       detalle: detalleDeLaLimpieza(numeros, eventos)
-        + (eventosFallidos ? ` · ${eventosFallidos} eventos no se pudieron borrar` : '') });
+        + (eventosFallidos ? ` · ${eventosFallidos} eventos no se pudieron borrar` : '')
+        + (abiertos ? ` · abrió ${abiertos} días de la regla` : '') });
 
     return NextResponse.json({
       ok: true,
       vaciadas,
       filas: Object.values(numeros).reduce((a, b) => a + b, 0),
-      eventos, eventosFallidos
+      eventos, eventosFallidos, abiertos, sinAbrir
     });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

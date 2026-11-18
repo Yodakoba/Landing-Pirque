@@ -20,6 +20,7 @@ interface Estado {
   eventos: number; calendario: boolean;
   tienda: { dominio: string; desarrollo: boolean };
   palabra: string; planilla: string;
+  regla: { dias: string; hasta: number; cupo: number };
 }
 
 function cuantas(n: number | null): string {
@@ -37,6 +38,7 @@ export default function PasoAProduccion() {
   const [palabra, setPalabra] = useState('');
   const [borrando, setBorrando] = useState(false);
   const [listo, setListo] = useState('');
+  const [abiertos, setAbiertos] = useState('');
 
   if (!puede) return null;
 
@@ -62,6 +64,9 @@ export default function PasoAProduccion() {
       setListo(`Se borraron ${Number(d.filas).toLocaleString('es-CL')} filas de ${d.vaciadas.length} pestañas`
         + (d.eventos ? ` y ${d.eventos} eventos de Google Calendar` : '') + '.'
         + (d.eventosFallidos ? ` ${d.eventosFallidos} eventos no se pudieron borrar: quítalos a mano en el calendario.` : ''));
+      setAbiertos(d.sinAbrir
+        ? 'Los días de la regla no se alcanzaron a abrir: los abre la tarea de mañana temprano, o ábrelos desde la portada.'
+        : `Se abrieron solos ${d.abiertos} ${d.abiertos === 1 ? 'día' : 'días'} de la regla: el sitio ya ofrece fechas.`);
     } catch (e) { setError(String(e)); }
     finally { setBorrando(false); }
   }
@@ -94,10 +99,7 @@ export default function PasoAProduccion() {
                 La bitácora empieza con esta línea, a tu nombre. El equipo, las cuentas, los
                 productos y la configuración siguen como estaban.
               </p>
-              <p className="mt-2 text-[15px] font-semibold">
-                Ahora abre los próximos días desde la portada, con su cupo: hasta entonces el sitio
-                público no ofrece fechas.
-              </p>
+              {abiertos && <p className="mt-2 text-[15px] font-semibold">{abiertos}</p>}
               <div className="mt-3 flex justify-end">
                 <button type="button" className="boton min-h-[48px]" onClick={() => setAbierta(false)}>Cerrar</button>
               </div>
@@ -154,8 +156,10 @@ export default function PasoAProduccion() {
               </div>
               <p className="mt-2 text-[14px] text-hueso/70">
                 Las pestañas quedan con su encabezado: la planilla sigue sirviendo.{' '}
-                <strong className="text-hueso">Después hay que volver a abrir los días</strong> desde la
-                portada, con su cupo: hasta entonces el sitio público no ofrece fechas.
+                <strong className="text-hueso">Los días de la regla se vuelven a abrir solos</strong>
+                {' '}({estado.regla.dias} de los próximos {estado.regla.hasta} días, públicos y con cupo{' '}
+                {estado.regla.cupo}): el sitio no se queda sin fechas. Un feriado u otro día se abre a mano
+                desde la portada.
               </p>
 
               <div className="mt-4 rounded-xl border-2 border-oro/50 p-3">

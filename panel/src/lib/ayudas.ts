@@ -310,13 +310,16 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'una: las reservas del sitio, el calendario del panel, las '
       + 'cotizaciones, el contrato, los datos de la empresa y la mantención.',
       'Reservas del sitio es lo que ven los clientes: qué días se abre, '
-      + 'cuánta gente cabe y hasta cuándo se puede reservar. Cotizaciones y '
+      + 'cuánta gente cabe y hasta cuándo se puede reservar. Esos días se '
+      + 'abren solos cada mañana, públicos y con el cupo normal; uno que ya '
+      + 'está en el calendario, cerrado o con otro cupo, no se toca. Cotizaciones y '
       + 'Contrato son lo que propone cada cotización nueva y lo que dice el '
       + 'contrato que se imprime.',
       'En Mantención, el administrador tiene además «Dejar la base en cero»: '
       + 'borra lo que fueron pruebas —reservas, cotizaciones, clientes, pagos, '
       + 'turnos y la bitácora— y conserva el equipo, las cuentas, los productos '
-      + 'y la configuración. Pide antes una copia de la planilla y escribir BORRAR.'
+      + 'y la configuración. Pide antes una copia de la planilla y escribir BORRAR. '
+      + 'Al terminar, vuelve a abrir solos los días que se abre.'
     ],
     ojo: 'Esto cambia lo que ve el público. Un día suelto se abre o se cierra '
        + 'desde el calendario, sin tocar esta pantalla.'

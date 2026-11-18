@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { leerSesion, secretoDeSesion, cookieDe, COOKIE_SESION } from './lib/sesion.ts';
-import { puede, puedeVer, type Rol } from './lib/auth.ts';
+import { puede, puedeVer, esTareaProgramada, type Rol } from './lib/auth.ts';
 
 
 /**
@@ -93,6 +93,11 @@ const PREFIJO_CONTRATO = '/contrato/';
 export async function middleware(req: NextRequest) {
   const ruta = req.nextUrl.pathname;
   if (PUBLICAS.includes(ruta)) return NextResponse.next();
+  // Las tareas diarias de Vercel llegan sin sesión, con su secreto en la
+  // cabecera (2026-11-18: antes se quedaban acá, en el 401 de abajo).
+  if (esTareaProgramada(ruta, req.headers.get('authorization'), process.env.CRON_SECRET)) {
+    return NextResponse.next();
+  }
   if (ruta.startsWith(PREFIJO_TRABAJADOR)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_PLANILLA)) return NextResponse.next();
   if (ruta.startsWith(PREFIJO_PRESUPUESTO)) return NextResponse.next();
