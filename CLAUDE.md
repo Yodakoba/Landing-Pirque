@@ -727,6 +727,20 @@ presentación con el mismo contenido que está en la página dossier"*. Eligió
   `node tools/dossier_pdf.mjs`, y commitear todo junto.
 - Necesita Node y el Playwright que ya trae el entorno; no agrega un
   `package.json` al sitio.
+- **Socios comerciales también tiene el suyo** (2026-11-18, lo pidió el
+  cliente): `socios.pdf` en las tres carpetas, con el mismo botón en el héroe
+  y en contacto, y se descarga como
+  `Brasas-de-Lo-Pirque-socios-comerciales.pdf`. **Son las mismas ocho
+  láminas más dos propias**, porque el PDF dice lo que dice su página:
+  *Niveles de comisión* con los segmentos, y *Por qué sumarte* con cómo
+  funciona —diez en total—. La portada y el contacto salen de la página de
+  socios (*Trabaja con nosotros*, su mensaje de WhatsApp). El mismo script
+  arma los dos (`PDFS` en `tools/dossier_pdf.mjs`) y la guarda de
+  `traducir.py` mira las seis páginas.
+- **La sección del arriendo se llama `#arriendo` en los tres landings.** En
+  socios y promociones se llamaba `#socios`, un nombre heredado que ya no
+  describía nada y que hacía que el script no la encontrara. Ningún enlace
+  apuntaba ahí.
 
 **En socios comerciales las experiencias van siempre abiertas** (lo pidió
 el cliente), igual que en promociones: el panel es un `<div class="panel

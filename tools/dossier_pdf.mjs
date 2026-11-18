@@ -1,6 +1,9 @@
 // El PDF del dossier para empresas (2026-11-18).
 //
-//   node tools/dossier_pdf.mjs            escribe dossier.pdf, en/dossier.pdf y pt/dossier.pdf
+//   node tools/dossier_pdf.mjs            escribe dossier.pdf y socios.pdf en las tres carpetas
+//
+// Socios comerciales (2026-11-18) usa las mismas láminas más dos propias:
+// comisiones con los segmentos, y por qué sumarte con cómo funciona.
 //
 // **El contenido sale de la página, no de este archivo.** El script abre
 // dossier.html ya generado en cada idioma, lee lo que dice —textos, precios
@@ -23,6 +26,8 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = normalize(join(fileURLToPath(import.meta.url), '..', '..'));
 const IDIOMAS = [['es', ''], ['en', 'en/'], ['pt', 'pt/']];
+// Qué página da qué PDF. Cada PDF vive al lado de su página, en cada idioma.
+const PDFS = [['dossier.html', 'dossier.pdf'], ['landing-afiliados.html', 'socios.pdf']];
 const ROTULOS = { es: 'El menú', en: 'The menu', pt: 'O cardápio' };
 
 async function cargarPlaywright() {
@@ -69,8 +74,19 @@ function leerPagina() {
   const medida = [...document.querySelectorAll('section.fullbleed')].find((s) => !s.classList.contains('fullbleed-ecuestre'));
   const extrasSec = $('.service-card')?.closest('section');
   const wa = $('.contact-card a.btn-whatsapp');
+  const cajas = (sel) => $$(sel).map((c) => ({ num: txt($('.num', c)), titulo: txt($('h3', c)), texto: txt($('p', c)) }));
+  const comm = $('.comm-grid');
+  const socios = comm ? {
+    comision: { titulo: txt(comm.closest('.wrap').querySelector('h2')), pie: txt($('.comm-pie')),
+      niveles: $$('.comm-card').map((c) => ({ pct: txt($('.comm-pct', c)), rotulo: txt($('.comm-label', c)), nota: txt($('.comm-note', c)) })) },
+    segmentos: { titulo: txt($('.segments')?.closest('.wrap')?.querySelector('h2')), lista: cajas('.segment') },
+    beneficios: { titulo: txt($('.benefits')?.closest('.wrap')?.querySelector('h2')),
+      bajada: txt($('.benefits')?.closest('.wrap')?.querySelector('.lede')), lista: cajas('.benefit') },
+    pasos: { titulo: txt($('.steps')?.closest('.wrap')?.querySelector('h2')), lista: cajas('.step') },
+  } : null;
   return {
     lang: document.documentElement.lang,
+    socios,
     portada: { titulo: txt($('.hero-full-title')), bajada: txt($('.hero-full-content .kicker')),
       foto: src($('.hero-full-bg img')), logo: src($('.topbar .brand img, .brand img')) },
     intro: { ceja: txt($('.intro-text .kicker')), titulo: txt($('.intro-text h2')), texto: txt($('.intro-text .lede')),
@@ -109,7 +125,9 @@ function leerPagina() {
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function laminas(d, rotuloMenu) {
-  const pie = (n) => `<footer class="pie"><span>Brasas de Lo Pirque</span><span>${n} / 8</span></footer>`;
+  // El número de cada lámina se pone al final, cuando ya se sabe cuántas son.
+  let n = 1; const total = 8 + (d.socios ? 2 : 0);
+  const pie = () => `<footer class="pie"><span>Brasas de Lo Pirque</span><span>@@N@@</span></footer>`;
   const iva = (t) => t ? ` <span class="iva">${esc(t)}</span>` : '';
   return `<!doctype html><html lang="${esc(d.lang)}"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;0,9..144,600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -191,6 +209,20 @@ function laminas(d, rotuloMenu) {
   .serv .tag{ font-size:13px; color:var(--gold); font-weight:600; } .serv h3{ font-size:14.5px; margin:6px 0; } .serv p{ font-size:13.5px; color:var(--dim); line-height:1.45; }
   .medida{ margin-top:26px; } .medida h3{ font-size:15px; color:var(--gold); letter-spacing:.08em; margin-bottom:6px; } .medida p{ font-size:14.5px; color:var(--dim); }
 
+  /* socios: comisiones, segmentos, beneficios y pasos */
+  .comis{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:22px; }
+  .comi{ border:1px solid var(--line); background:var(--panel); border-radius:3px; padding:22px; text-align:center; }
+  .comi .pct{ font-family:var(--serif); font-style:italic; color:var(--gold); font-size:52px; line-height:1; }
+  .comi .rot{ font-size:14px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin-top:8px; }
+  .comi .nota{ font-size:15px; margin-top:6px; }
+  .pie-comi{ font-family:var(--serif); font-style:italic; color:var(--dim); font-size:16px; margin-top:14px; }
+  .tres{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:18px; }
+  .caja{ border:1px solid var(--line); background:var(--panel); border-radius:3px; padding:16px 18px; }
+  .caja .num{ font-family:var(--serif); font-style:italic; color:var(--gold); font-size:22px; display:block; margin-bottom:4px; }
+  .caja h3{ font-size:14.5px; margin-bottom:6px; } .caja p{ font-size:13.5px; color:var(--dim); line-height:1.45; }
+  .cuatro{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:18px; }
+  .sub{ font-size:17px; color:var(--gold); letter-spacing:.08em; margin-top:30px; }
+
   /* 8. contacto */
   .contacto .cont{ justify-content:center; max-width:640px; }
   .contacto h2{ font-size:46px; }
@@ -217,9 +249,10 @@ function laminas(d, rotuloMenu) {
     <h2>${esc(d.intro.titulo)}</h2>
     <div class="regla"></div>
     <p class="lede">${esc(d.intro.texto)}</p>
-  </div>${pie(2)}
+  </div>${pie()}
 </section>
 
+${d.socios ? laminasSocios(d.socios, pie) : ''}
 <section class="lam">
   <div class="cont">
     <h2>${esc(d.experiencias.titulo)}</h2>
@@ -234,7 +267,7 @@ function laminas(d, rotuloMenu) {
           <p class="det">${e.detalle}</p>
         </div></article>`).join('')}
     </div>
-  </div>${pie(3)}
+  </div>${pie()}
 </section>
 
 <section class="lam menu">
@@ -243,7 +276,7 @@ function laminas(d, rotuloMenu) {
     <h2>${esc(rotuloMenu)}</h2>
     <p class="lede" style="margin-top:10px;">${esc(d.menu.bajada)}</p>
     <div class="platos">${d.menu.platos.map((p) => `<div><h3>${esc(p.titulo)}</h3><p>${esc(p.texto)}</p></div>`).join('')}</div>
-  </div>${pie(4)}
+  </div>${pie()}
 </section>
 
 <section class="lam">
@@ -255,7 +288,7 @@ function laminas(d, rotuloMenu) {
       <div class="act">${a.foto ? `<img class="mini" src="${esc(a.foto)}" alt="">` : `<div class="icono">${a.icono}</div>`}
         <div><h3>${esc(a.titulo)}</h3><p>${esc(a.texto)}</p></div></div>`).join('')}
     </div>
-  </div>${pie(5)}
+  </div>${pie()}
 </section>
 
 <section class="lam">
@@ -265,7 +298,7 @@ function laminas(d, rotuloMenu) {
     <div class="exts">${d.externas.lista.map((x) => `
       <article class="ext"><img src="${esc(x.foto)}" alt=""><div><h3>${esc(x.titulo)}</h3><p>${esc(x.texto)}</p></div></article>`).join('')}
     </div>
-  </div>${pie(6)}
+  </div>${pie()}
 </section>
 
 <section class="lam recinto">
@@ -281,7 +314,7 @@ function laminas(d, rotuloMenu) {
       <div class="serv"><span class="tag">${esc(s.precio)}</span><h3>${esc(s.titulo)}</h3><p>${esc(s.texto)}</p></div>`).join('')}
     </div>
     <div class="medida"><h3>${esc(d.medida.titulo)}</h3><p>${esc(d.medida.texto)}</p></div>
-  </div>${pie(7)}
+  </div>${pie()}
 </section>
 
 <section class="lam contacto">
@@ -292,9 +325,36 @@ function laminas(d, rotuloMenu) {
     <p class="lede">${esc(d.contacto.texto)}</p>
     <a class="wa" href="${esc(d.contacto.wa)}">${esc(d.contacto.boton)} · ${esc(d.contacto.telefono)}</a>
     <p class="datos"><a href="${esc(d.contacto.mapa)}">${esc(d.contacto.direccion)}</a><br>brasasdelopirque.cl</p>
-  </div>${pie(8)}
+  </div>${pie()}
 </section>
-</body></html>`;
+</body></html>`.replace(/@@N@@/g, () => `${++n} / ${total}`);
+}
+
+/** Las dos láminas que solo tiene socios comerciales: comisiones y por qué sumarte. */
+function laminasSocios(s, pie) {
+  const caja = (x) => `<div class="caja">${x.num ? `<span class="num">${esc(x.num)}</span>` : ''}<h3>${esc(x.titulo)}</h3><p>${esc(x.texto)}</p></div>`;
+  return `
+<section class="lam">
+  <div class="cont">
+    <h2>${esc(s.comision.titulo)}</h2>
+    <div class="comis">${s.comision.niveles.map((c) => `
+      <div class="comi"><div class="pct">${esc(c.pct)}</div><div class="rot">${esc(c.rotulo)}</div><div class="nota">${esc(c.nota)}</div></div>`).join('')}
+    </div>
+    <p class="pie-comi">${esc(s.comision.pie)}</p>
+    <h3 class="sub">${esc(s.segmentos.titulo)}</h3>
+    <div class="tres">${s.segmentos.lista.map(caja).join('')}</div>
+  </div>${pie()}
+</section>
+
+<section class="lam">
+  <div class="cont">
+    <h2>${esc(s.beneficios.titulo)}</h2>
+    <p class="lede" style="margin-top:10px;">${esc(s.beneficios.bajada)}</p>
+    <div class="cuatro">${s.beneficios.lista.map(caja).join('')}</div>
+    <h3 class="sub">${esc(s.pasos.titulo)}</h3>
+    <div class="tres">${s.pasos.lista.map(caja).join('')}</div>
+  </div>${pie()}
+</section>`;
 }
 
 async function principal() {
@@ -304,26 +364,26 @@ async function principal() {
   const navegador = await chromium.launch();
   const huellas = {};
   try {
-    for (const [lang, carpeta] of IDIOMAS) {
+    for (const [pagina, pdf] of PDFS) for (const [lang, carpeta] of IDIOMAS) {
       const pag = await navegador.newPage({ viewport: { width: 1280, height: 900 } });
-      await pag.goto(`${base}${carpeta}dossier.html`, { waitUntil: 'networkidle' });
+      await pag.goto(`${base}${carpeta}${pagina}`, { waitUntil: 'networkidle' });
       const datos = await pag.evaluate(leerPagina);
       const faltan = ['portada.titulo', 'experiencias.titulo', 'arriendo.titulo', 'contacto.wa']
         .filter((k) => !k.split('.').reduce((o, p) => o?.[p], datos));
       if (faltan.length || datos.experiencias.lista.length === 0) {
-        throw new Error(`${carpeta}dossier.html: no encontré ${faltan.join(', ') || 'las experiencias'}. ¿Cambió el HTML?`);
+        throw new Error(`${carpeta}${pagina}: no encontré ${faltan.join(', ') || 'las experiencias'}. ¿Cambió el HTML?`);
       }
       await pag.setContent(laminas(datos, ROTULOS[lang]), { waitUntil: 'networkidle' });
       await pag.evaluate(() => document.fonts.ready);
-      const destino = `${carpeta}dossier.pdf`;
+      const destino = `${carpeta}${pdf}`;
       await pag.pdf({ path: join(RAIZ, destino), width: '1280px', height: '720px', printBackground: true });
       if (process.env.DOSSIER_CAPTURAS) {
         const n = await pag.$$eval('.lam', (l) => l.length);
         for (let i = 0; i < n; i++) {
-          await pag.locator('.lam').nth(i).screenshot({ path: join(process.env.DOSSIER_CAPTURAS, `${lang}-${i + 1}.png`) });
+          await pag.locator('.lam').nth(i).screenshot({ path: join(process.env.DOSSIER_CAPTURAS, `${pdf.replace('.pdf', '')}-${lang}-${i + 1}.png`) });
         }
       }
-      huellas[`${carpeta}dossier.html`] = await huella(`${carpeta}dossier.html`);
+      huellas[`${carpeta}${pagina}`] = await huella(`${carpeta}${pagina}`);
       console.log(`  ${destino}`);
       await pag.close();
     }
@@ -333,8 +393,8 @@ async function principal() {
   }
   huellas.script = await huella('tools/dossier_pdf.mjs');
   await writeFile(join(RAIZ, 'tools/dossier_pdf.json'),
-    JSON.stringify({ _que_es: 'Huella de las páginas con que se generaron los PDF del dossier. La escribe tools/dossier_pdf.mjs y la revisa traducir.py --revisar.', ...huellas }, null, 2) + '\n');
-  console.log('Listo: tres PDF del dossier.');
+    JSON.stringify({ _que_es: 'Huella de las páginas con que se generaron los PDF (dossier y socios comerciales). La escribe tools/dossier_pdf.mjs y la revisa traducir.py --revisar.', ...huellas }, null, 2) + '\n');
+  console.log('Listo: los PDF del dossier y de socios comerciales, en tres idiomas.');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
