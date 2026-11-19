@@ -36,7 +36,7 @@ habla de ese mismo repo con su nombre viejo.
 | 2 | Entorno de Claude Code | ✅ `verificar.sh` sin errores de red (14 de 14) |
 | 3 | Google Drive | ✅ El conector encuentra `BRASAS fotos` |
 | 4 | Vercel | ✅ Proyecto transferido al equipo **Ayc y Blp**, con plan pagado, y conectado a la organización `ayc-y-blp`. La URL no cambió, y `main` ya despliega a producción desde ahí (PR #262) |
-| 5 | GitHub a una organización | ✅ `ayc-y-blp/aycyblp`, con `main` protegida. GitHub Pages publica ahora en `ayc-y-blp.github.io/aycyblp/` |
+| 5 | GitHub a una organización | ✅ `ayc-y-blp/aycyblp`, con `main` protegida y **público a propósito** (decidido el 2026-11-19, ver `CLAUDE.md`, "Git"). GitHub Pages publica ahora en `ayc-y-blp.github.io/aycyblp/` |
 | 6 | Shopify | ✅ No hace falta: la URL del panel no cambió |
 | 7 | Prueba de punta a punta | ☐ Lo de `verificar.sh` pasó; faltan las pruebas a mano y ver en **Logs** que las tres tareas diarias corrieron en el equipo nuevo |
 | — | Dirección propia del panel | ⏸ Para después, junto con la mudanza del dominio fuera de Shopify (ver `CLAUDE.md`, "En pausa") |

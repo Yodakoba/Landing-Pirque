@@ -1868,6 +1868,26 @@ con el chequeo de Vercel obligatorio, un Vercel desconectado —como pasó ese
 mismo día, ver `migracion-team/README.md`— bloquearía todos los merges.
 Esperar a Vercel antes de mergear sigue siendo regla de trabajo, no candado.
 
+**El repo es público, a propósito** (lo decidió el cliente el 2026-11-19,
+entre tres opciones). Las razones:
+
+- **No guarda claves**: viven en Vercel y en la bóveda.
+- **El sitio publica solo lo público**, con su lista en Vercel (ver "Lo que
+  Vercel publica del sitio").
+- **Pasarlo a privado tiene costos.** En el plan gratis de GitHub, la
+  protección de `main` solo se aplica a repos públicos: o se pierde, o se
+  paga GitHub Team (unos US$4 por persona al mes). Además, con el repo
+  privado Vercel solo despliega commits de miembros de su equipo, así que
+  habría que cambiar el autor de los commits de Claude. Y GitHub Pages se
+  apagaría.
+
+**La consecuencia que hay que tener presente: todo lo que se escribe en el
+repo lo puede leer cualquiera**, `CLAUDE.md` incluido. Nunca una clave, un
+dato de un cliente ni algo que el negocio no quiera mostrar. Si un día se
+decide pasar a privado, el orden es: primero el autor de los commits de
+Claude, probado con el repo todavía público; después decidir lo de GitHub
+Team; recién ahí cambiar la visibilidad.
+
 **Junta los cambios y abre el PR tú** (cambiado el 2026-10-21). Commitea y
 empuja a la rama a medida que avanzas, para que nada se pierda si se cae el
 contenedor, y **cuando termines un lote que valga la pena mergear, abre el
