@@ -106,7 +106,7 @@ recuperación, y tienen que quedar en un lugar que la empresa controle.
 Con la cuenta de la empresa:
 
 1. Arriba a la derecha, **+ → New organization → Free**.
-2. Nombre: por ejemplo `brasas-de-lo-pirque`. Correo de contacto: el de la
+2. Nombre: se eligió `ayc-y-blp`. Correo de contacto: el de la
    empresa. "Belongs to": **A business or institution** → nombre de la
    empresa.
 3. Cuando ofrezca invitar gente, invita a **tu usuario personal
@@ -125,14 +125,14 @@ Desde **tu cuenta personal**:
 1. Repo `Landing-Pirque` → **Settings → General → abajo del todo, Danger
    Zone → Transfer ownership**.
 2. Elige la organización y escribe el nombre del repo para confirmar.
-3. Listo: el repo pasa a ser `brasas-de-lo-pirque/Landing-Pirque`, con toda
+3. Listo: el repo pasa a ser `ayc-y-blp/aycyblp` (se renombró al traerlo), con toda
    su historia y sus 128 PRs. Los enlaces viejos redirigen solos.
 
 Después de transferir, hay que reconectar dos cosas (los pasos 6 y 8 lo
 hacen): **Vercel** y **Claude**, porque las dos estaban autorizadas sobre tu
 cuenta personal, no sobre la organización.
 
-✅ Listo cuando: `github.com/brasas-de-lo-pirque/Landing-Pirque` abre el
+✅ **Hecho el 2026-11-19.** Listo cuando: `github.com/ayc-y-blp/aycyblp` abre el
 repo y se ven los PRs.
 
 ---
@@ -165,7 +165,7 @@ Desde **tu cuenta personal de Vercel**:
 2. En el equipo, proyecto → **Settings → Git**. Como el repo se mudó a la
    organización, probablemente diga que está desconectado: **Connect Git
    Repository** → GitHub → si no aparece la organización, **Configure GitHub
-   App** e instálala en `brasas-de-lo-pirque` con acceso a `Landing-Pirque`.
+   App** e instálala en `ayc-y-blp` con acceso a `aycyblp`.
 3. Revisa la lista de `variables-vercel.md` (variables, carpeta `panel`,
    tareas diarias, dominio) y haz **Redeploy**.
 4. Haz un cambio mínimo en una rama, ábrelo como PR y mergéalo: el panel
@@ -202,9 +202,9 @@ lo único que la empresa no podría recuperar sin ti.
 ## Paso 8 — Claude en la organización (5 min)
 
 1. github.com/apps/claude → **Configure** → elige la organización →
-   acceso a `Landing-Pirque`.
+   acceso a `aycyblp`.
 2. En el entorno de Claude Code (cuenta Team), cambia el repositorio al
-   nombre nuevo, `brasas-de-lo-pirque/Landing-Pirque`.
+   nombre nuevo, `ayc-y-blp/aycyblp`.
 3. Corre `bash migracion-team/verificar.sh` en una sesión nueva.
 
 ---

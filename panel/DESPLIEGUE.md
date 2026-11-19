@@ -80,7 +80,8 @@ todas las credenciales estén bien puestas.
 ### 1. Crear el proyecto en Vercel
 
 1. Entra a [vercel.com](https://vercel.com) y conéctate con GitHub.
-2. **Add New → Project** → elige el repositorio `Landing-Pirque`.
+2. **Add New → Project** → elige el repositorio `ayc-y-blp/aycyblp`
+   (antes `Yodakoba/Landing-Pirque`).
 3. **Acá viene lo importante:** en *Configure Project*, abre **Root
    Directory** y elige **`panel`**.
 

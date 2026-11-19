@@ -1,7 +1,7 @@
 # Primer mensaje para la cuenta Team
 
 Copia el bloque y pégalo en la primera sesión de Claude Code que abras en la
-cuenta Team, sobre el repo `Landing-Pirque` y con el entorno de
+cuenta Team, sobre el repo `ayc-y-blp/aycyblp` y con el entorno de
 `entorno-claude.md`.
 
 ```
