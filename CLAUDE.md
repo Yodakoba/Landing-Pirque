@@ -1845,7 +1845,12 @@ redirigen). La primera sesión en la cuenta Team corrió
 `migracion-team/verificar.sh` con 14 de 14 bien, y el conector de Drive
 encuentra `BRASAS fotos`. **El panel pasó al equipo de Vercel "Ayc y Blp"**,
 con plan pagado, el mismo día y con la misma URL; `main` despliega a
-producción desde ahí y quedó protegida en GitHub. Lo que queda está al inicio de
+producción desde ahí y quedó protegida en GitHub. **Las variables del panel
+quedaron ordenadas ese día** (Fase 4 de la guía): las versiones de prueba
+usan una copia de la planilla, las secretas son *Sensitive* y están en la
+bóveda, y el webhook de Shopify se verifica con el secreto de firma de
+Notificaciones, no con el Client secret de la app. El detalle, en
+`migracion-team/variables-vercel.md`. Lo que queda está al inicio de
 `migracion-team/README.md`, y ahí mismo, en el paso 4, la trampa que dejó
 a Vercel sin construir después de transferir el repo.
 

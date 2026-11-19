@@ -11,8 +11,11 @@
  * petición, así que esta función era imposible de escribir ahí. En Vercel sí
  * hay cabeceras, y por eso acá el webhook es una opción.
  *
- * Shopify firma el cuerpo con el client secret de la app y manda el
- * resultado en base64 en `X-Shopify-Hmac-Sha256`.
+ * Shopify firma el cuerpo y manda el resultado en base64 en
+ * `X-Shopify-Hmac-Sha256`. La clave es la de quien creó el webhook: los
+ * nuestros se crearon en Configuración → Notificaciones → Webhooks, así que
+ * firman con el *secreto de firma* de esa página, no con el client secret de
+ * una app. Ese secreto es `SHOPIFY_WEBHOOK_SECRET`.
  */
 import { createHmac } from 'node:crypto';
 // La misma comparación de tiempo constante que usa la contraseña del panel.

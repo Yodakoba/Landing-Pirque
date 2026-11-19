@@ -256,9 +256,11 @@ principio no se toca. Solo dos revisiones:
    webhooks `orders/create`, `orders/updated` y `orders/cancelled` tienen que
    apuntar a `https://<url-nueva>/api/shopify/webhook`. Borra los que apunten
    a una URL vieja.
-2. **No reinstales la app del panel.** Reinstalarla cambia el token
-   `SHOPIFY_ADMIN_TOKEN` y el *Client secret*, y habría que actualizar los
-   dos en Vercel.
+2. **Reinstalar la app "Google Sheets Reservas" cambia solo su token**
+   (`SHOPIFY_ADMIN_TOKEN`). Los webhooks son de la tienda —están en
+   Notificaciones— y se firman con el secreto de esa página, así que no se
+   tocan. Se reinstaló el 2026-11-19, cuando el token se perdió al pasar las
+   variables a *Sensitive*.
 
 El token de Storefront del sitio (`reserva.js`) no cambia: es de la tienda,
 no de ninguna cuenta.
