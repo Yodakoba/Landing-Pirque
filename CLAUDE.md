@@ -1656,6 +1656,23 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 - **Logo.** El del sitio antiguo es negro sobre blanco y tiene una A invertida
   como rasgo distintivo. Nuestro fondo es negro, así que hace falta una
   versión clara o un SVG recoloreable. Hoy la marca se compone con tipografía.
+- **Una dirección propia para el panel** (`panel.brasasdelopirque.cl`).
+  **Se deja para la mudanza del dominio** (lo decidió el cliente el
+  2026-11-19): `brasasdelopirque.cl` y el sitio viejo están alojados hoy en
+  Shopify, y se van a mudar a otro alojamiento. Ese es el momento de hacer
+  las dos cosas juntas —publicar ahí el sitio nuevo y agregar el
+  subdominio del panel—, porque el DNS va a cambiar de lugar y hacerlo antes
+  sería configurarlo dos veces. Tres cosas para ese día:
+  - **Lo que se muda es el alojamiento, no la tienda.** El cobro de las
+    reservas sigue pasando por el checkout de Shopify, así que la tienda
+    sigue activa aunque el sitio se publique en otra parte.
+  - **`landing-pirque-alpha.vercel.app` se queda**, aunque se agregue la
+    dirección nueva: viaja en los links de cotizaciones y contratos ya
+    mandados, en `reserva.js` y en los webhooks de Shopify. Ver
+    `migracion-team/README.md`, paso 4.
+  - El dominio nuevo del panel se agrega también a la red del entorno de
+    Claude Code, y si el sitio cambia de dominio, la constante `SITIO` de
+    `tools/traducir.py`.
 
 ## Decisiones abiertas
 
@@ -1694,6 +1711,13 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   factual (precios, menú, actividades) sí es textual del landing.
 
 ## Previsualizar el sitio público
+
+**Publicado** con GitHub Pages desde `main`, en
+`https://ayc-y-blp.github.io/aycyblp/` (desde el 2026-11-19; antes
+`yodakoba.github.io/Landing-Pirque/`, que **no redirige**: GitHub no lleva
+la dirección de Pages cuando un repo cambia de dueño). Cada merge a `main`
+lo vuelve a publicar en un par de minutos. Es para revisar, no el sitio de
+los clientes: `brasasdelopirque.cl` sigue sirviendo el sitio viejo.
 
 Se abre `index.html` directo en el navegador (las rutas son relativas). Para
 ver los cinco enlaces funcionando conviene servirlo:
@@ -1746,8 +1770,9 @@ Claude, y opcionalmente de quién son el proyecto de Vercel y el repo.
 **`ayc-y-blp/aycyblp`** (antes `Yodakoba/Landing-Pirque`; los enlaces viejos
 redirigen). La primera sesión en la cuenta Team corrió
 `migracion-team/verificar.sh` con 14 de 14 bien, y el conector de Drive
-encuentra `BRASAS fotos`. **El panel pasó al equipo de Vercel "Ayc y Blp"**
-el mismo día, con la misma URL. Lo que queda está al inicio de
+encuentra `BRASAS fotos`. **El panel pasó al equipo de Vercel "Ayc y Blp"**,
+con plan pagado, el mismo día y con la misma URL; `main` despliega a
+producción desde ahí y quedó protegida en GitHub. Lo que queda está al inicio de
 `migracion-team/README.md`, y ahí mismo, en el paso 4, la trampa que dejó
 a Vercel sin construir después de transferir el repo.
 
@@ -1756,6 +1781,14 @@ a Vercel sin construir después de transferir el repo.
 Repo: **`ayc-y-blp/aycyblp`**. Rama por defecto: `main`. **La rama de
 trabajo la asigna cada sesión de Claude Code** (`claude/…`), así que no se
 anota acá: la de este archivo dejó de servir al cambiar de cuenta.
+
+**`main` está protegida** (2026-11-19): no se puede borrar ni reescribir su
+historia (*Restrict deletions* y *Block force pushes*). **A propósito no
+pide aprobaciones ni chequeos obligatorios.** Con aprobaciones, cada PR
+quedaría esperando al cliente y se rompe el merge automático de más abajo;
+con el chequeo de Vercel obligatorio, un Vercel desconectado —como pasó ese
+mismo día, ver `migracion-team/README.md`— bloquearía todos los merges.
+Esperar a Vercel antes de mergear sigue siendo regla de trabajo, no candado.
 
 **Junta los cambios y abre el PR tú** (cambiado el 2026-10-21). Commitea y
 empuja a la rama a medida que avanzas, para que nada se pierda si se cae el
