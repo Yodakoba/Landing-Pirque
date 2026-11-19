@@ -1,0 +1,24 @@
+# Lo que el proyecto del SITIO PÚBLICO en Vercel no publica (Fase 3B).
+#
+# El sitio se sirve desde la raíz del repo, así que sin esta lista
+# cualquiera podría abrir brasasdelopirque.cl/CLAUDE.md, con los detalles
+# internos del negocio, o el código del panel. Nada de esto lo carga una
+# página: solo aparece nombrado en comentarios.
+#
+# Una carpeta o archivo nuevo en la raíz que no sea para el público se
+# agrega acá. La prueba: /CLAUDE.md tiene que dar 404 en el sitio.
+#
+# El panel es otro proyecto de Vercel, con Root Directory = panel, y no lo
+# toca esta lista.
+
+/panel
+/backend
+/migracion-team
+/tools
+/traducciones
+/CLAUDE.md
+/README.md
+/precios.json
+/.gitignore
+/.nojekyll
+/.claude
