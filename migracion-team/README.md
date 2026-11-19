@@ -171,6 +171,11 @@ comercial; este es el buen momento para ordenarlo. Es una decisión de pago
    organización, con *Only select repositories* → el repo; y después
    **Connect** en la organización, **en el mismo equipo donde vive el
    proyecto**: cada cuenta de GitHub se conecta a un solo equipo de Vercel.
+   **Con eso todavía no bastó**: hubo que ir al proyecto → **Settings → Git
+   → Disconnect** y volver a conectar el repo, para que el proyecto quedara
+   enganchado a la instalación nueva. La señal de que falta es que la lista
+   de **Deployments** no muestre nada de los pushes nuevos: un despliegue
+   bloqueado o cancelado sí aparecería ahí.
 4. Al terminar, en el proyecto ya transferido:
    - **Settings → Environment Variables**: confirma que están las 15 de
      `variables-vercel.md`. Si falta alguna, ponla de nuevo desde el
