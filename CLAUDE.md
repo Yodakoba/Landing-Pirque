@@ -1746,8 +1746,10 @@ Claude, y opcionalmente de quién son el proyecto de Vercel y el repo.
 **`ayc-y-blp/aycyblp`** (antes `Yodakoba/Landing-Pirque`; los enlaces viejos
 redirigen). La primera sesión en la cuenta Team corrió
 `migracion-team/verificar.sh` con 14 de 14 bien, y el conector de Drive
-encuentra `BRASAS fotos`. Lo que queda está al inicio de
-`migracion-team/README.md`.
+encuentra `BRASAS fotos`. **El panel pasó al equipo de Vercel "Ayc y Blp"**
+el mismo día, con la misma URL. Lo que queda está al inicio de
+`migracion-team/README.md`, y ahí mismo, en el paso 4, la trampa que dejó
+a Vercel sin construir después de transferir el repo.
 
 ## Git
 

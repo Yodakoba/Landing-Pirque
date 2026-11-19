@@ -35,7 +35,7 @@ habla de ese mismo repo con su nombre viejo.
 | 1 | Claude Team + GitHub | ✅ La sesión de la Team abre el repo con su nombre nuevo |
 | 2 | Entorno de Claude Code | ✅ `verificar.sh` sin errores de red (14 de 14) |
 | 3 | Google Drive | ✅ El conector encuentra `BRASAS fotos` |
-| 4 | Vercel | ☐ Falta confirmar que el proyecto quedó conectado al repo con su nombre nuevo, y decidir el plan Pro |
+| 4 | Vercel | ✅ Proyecto transferido al equipo **Ayc y Blp** y conectado a la organización `ayc-y-blp`. La URL no cambió |
 | 5 | GitHub a una organización | ✅ `ayc-y-blp/aycyblp` |
 | 6 | Shopify | ✅ No hace falta: la URL del panel no cambió |
 | 7 | Prueba de punta a punta | ☐ Lo de `verificar.sh` pasó; faltan las pruebas a mano |
@@ -161,18 +161,42 @@ comercial; este es el buen momento para ordenarlo. Es una decisión de pago
    que ya exista), plan **Pro**.
 2. Abre el proyecto del panel (en tu cuenta personal) → **Settings →
    General** → abajo, **Transfer Project** → elige el equipo.
-3. Si Vercel avisa que la app de GitHub no tiene acceso al repo desde el
-   equipo, autorízala (Settings del equipo → Git → GitHub → Configure).
+3. **La app de Vercel tiene que estar instalada en la organización de
+   GitHub y conectada al equipo** — fue lo que faltó el 2026-11-19. Después
+   de transferir el repo, la app seguía instalada solo en la cuenta personal
+   (`Yodakoba`): el proyecto decía *conectado* (Vercel reconoce el repo
+   aunque cambie de dueño), pero los avisos de GitHub no le llegaban y los
+   pushes no se construían, sin ningún error a la vista. El arreglo: Settings
+   del equipo → **Git** → *Install on another GitHub account* → la
+   organización, con *Only select repositories* → el repo; y después
+   **Connect** en la organización, **en el mismo equipo donde vive el
+   proyecto**: cada cuenta de GitHub se conecta a un solo equipo de Vercel.
 4. Al terminar, en el proyecto ya transferido:
    - **Settings → Environment Variables**: confirma que están las 15 de
      `variables-vercel.md`. Si falta alguna, ponla de nuevo desde el
      respaldo del paso 0.
-   - **Settings → General → Root Directory** sigue siendo **`panel`**.
-   - **Settings → Cron Jobs**: aparecen las tres tareas de `panel/vercel.json`
-     (días de la regla 08:23 UTC, Shopify 09:17 UTC, CRM 11:41 UTC).
+   - **Root Directory** sigue siendo **`panel`** (en el diseño nuevo de
+     Vercel está en Settings → Build and Deployment).
+   - **Las tres tareas diarias** de `panel/vercel.json` (días de la regla
+     08:23 UTC, Shopify 09:17 UTC, CRM 11:41 UTC). La pantalla de *Cron
+     Jobs* cambia de lugar según la versión de Vercel: búscala con *Find*.
+     Si no aparece no es grave: las tareas salen del archivo y se registran
+     con cada despliegue a producción. Lo que vale es ver al día siguiente,
+     en **Logs**, que corrieron.
    - **Settings → Domains**: anota la URL. **Debería seguir siendo
      `landing-pirque-alpha.vercel.app`.**
 5. Haz un **Redeploy** del último despliegue para confirmar que construye.
+
+### No cambies la URL del panel
+
+**Renombrar el proyecto en Vercel no la cambia**: el dominio
+`landing-pirque-alpha.vercel.app` es una entrada aparte, en Settings →
+Domains. Lo que no hay que hacer es **quitar o reemplazar ese dominio**.
+Además de los cuatro lugares de abajo, viaja en **los links que ya se
+mandaron** por WhatsApp —cotizaciones (`/presupuesto/…`), contratos
+(`/contrato/…`), la planilla semanal del equipo— y esos no se pueden
+corregir: dejarían de abrir. Para una dirección más linda se **agrega** un
+dominio (por ejemplo `panel.brasasdelopirque.cl`) sin quitar el de ahora.
 
 ### Si la URL del panel cambió (solo en ese caso)
 
