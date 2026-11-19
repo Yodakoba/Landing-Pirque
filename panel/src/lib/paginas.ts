@@ -19,8 +19,16 @@ export const PAGINAS: {
   href: string; texto: string; accion: Accion;
   /** La llave de su explicación en `AYUDAS`: la usan el `?`, la ayuda por rol y el recorrido. */
   tema: string;
+  /**
+   * **No va en el menú** (2026-11-19): se entra por un botón de otra
+   * pantalla. Sigue en la ayuda por rol, en *Coméntame* y en el título de la
+   * pestaña del navegador.
+   */
+  fueraDelMenu?: true;
 }[] = [
   { href: '/', texto: 'Calendario', accion: 'ver', tema: 'calendario' },
+  // Las estadísticas de reservas (2026-11-19): por *📊 Estadísticas* del calendario.
+  { href: '/estadisticas', texto: 'Estadísticas', accion: 'estadisticas', tema: 'estadisticas', fueraDelMenu: true },
   // La pantalla de la entrada, el día de apertura (2026-11-11).
   { href: '/recepcion', texto: 'Recepción', accion: 'asistencia', tema: 'recepcion' },
   { href: '/equipo', texto: 'Equipo', accion: 'equipo', tema: 'equipo' },

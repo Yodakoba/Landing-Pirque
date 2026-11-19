@@ -41,7 +41,7 @@ export default function Nav({ rol, gerencia = false }: { rol: string; gerencia?:
   return (
     <nav className="flex flex-wrap gap-2">
       {/* Con vista gerencia aparecen también las que solo se miran. */}
-      {PAGINAS.filter((p) => puedeVer(rol as Rol, p.accion, gerencia))
+      {PAGINAS.filter((p) => !p.fueraDelMenu && puedeVer(rol as Rol, p.accion, gerencia))
               .map(({ href, texto: rotulo }) => {
         const texto = href === '/vendedores' && rol === ROL.vendedor ? 'Mi resumen' : rotulo;
         // La raíz calza exacto; las demás también con lo que cuelgue de

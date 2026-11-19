@@ -43,6 +43,7 @@ export const PODER: Record<Accion, { icono: string; corto: string }> = {
   aprobar: { icono: '✅', corto: 'Aprobar descuentos' },
   vendedores: { icono: '🤝', corto: 'Ventas y comisiones' },
   informe: { icono: '📊', corto: 'Ver el informe' },
+  estadisticas: { icono: '📊', corto: 'Estadísticas de reservas' },
   pagar: { icono: '💸', corto: 'Registrar pagos' },
   boleta: { icono: '🧾', corto: 'Marcar boletas' },
   configurar: { icono: '⚙️', corto: 'Precios y Configuración' },
@@ -54,7 +55,7 @@ export const PODER: Record<Accion, { icono: string; corto: string }> = {
 /** Los cinco mundos, en el orden en que se leen. */
 export const MUNDOS: { id: string; icono: string; nombre: string; poderes: Accion[] }[] = [
   { id: 'reservas', icono: '📅', nombre: 'Reservas y días',
-    poderes: ['ver', 'anotar', 'reservas', 'asistencia', 'dias', 'operarDia', 'cupo', 'rectificar', 'exclusividad'] },
+    poderes: ['ver', 'anotar', 'reservas', 'asistencia', 'dias', 'operarDia', 'cupo', 'rectificar', 'exclusividad', 'estadisticas'] },
   { id: 'equipo', icono: '👥', nombre: 'El equipo',
     poderes: ['equipo', 'extras', 'cerrar', 'corregir', 'planilla', 'puestos', 'links', 'sueldos'] },
   { id: 'ventas', icono: '💼', nombre: 'Ventas',

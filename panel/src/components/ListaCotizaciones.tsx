@@ -19,6 +19,7 @@
  */
 import { useMemo, useState, type ReactNode } from 'react';
 import AyudaCorta from './AyudaCorta';
+import Tarjeta from './TarjetaNumero';
 import BuscarEnLista from './BuscarEnLista';
 import { enPesos } from '@/lib/ocupacion';
 import { mesEnPalabras, rangoEnPalabras, semanaDe, sumarDias } from '@/lib/fechas';
@@ -40,36 +41,6 @@ function moverMes(mes: string, n: number): string {
 
 const TONO_PASO = { rojo: 'font-semibold text-rojo-texto', ambar: 'font-semibold text-ambar-texto',
   verde: 'font-semibold text-verde-texto', neutro: 'text-hueso/65' } as const;
-
-/**
- * **Una tarjeta**: lo que es arriba con su `?`, el número grande y una línea.
- * Si filtra la lista, el número y la línea son un botón (el `?` va afuera:
- * un botón dentro de otro no es HTML válido).
- */
-function Tarjeta({ que, valor, nota, tono, ayuda, activa, onClick }: {
-  que: string; valor: string; nota?: string; tono: string; ayuda: string;
-  activa?: boolean; onClick?: () => void;
-}) {
-  const cuerpo = (
-    <>
-      <span className="block text-[24px] font-bold leading-none tabular-nums">{valor}</span>
-      {nota && <span className="mt-1 block text-[13px] leading-snug text-hueso/75">{nota}</span>}
-    </>
-  );
-  return (
-    <div className={`min-w-0 rounded-xl border-2 p-3 ${tono} ${activa ? 'ring-2 ring-oro ring-offset-2 ring-offset-tinta' : ''}`}>
-      <p className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wider text-hueso/70">
-        {que}<AyudaCorta tema={ayuda} />
-      </p>
-      {onClick ? (
-        <button type="button" aria-pressed={!!activa} onClick={onClick}
-          className="tecla mt-1 block min-h-[44px] w-full rounded-lg text-left">
-          {cuerpo}
-        </button>
-      ) : <div className="mt-1 min-h-[44px]">{cuerpo}</div>}
-    </div>
-  );
-}
 
 const ESTADOS: [FiltroLista, string][] = [
   ['enCarrera', 'En carrera'], ['esperando', 'Esperando respuesta'], ['negociando', 'Negociando'],
