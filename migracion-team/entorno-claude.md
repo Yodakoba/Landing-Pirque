@@ -10,7 +10,7 @@ abrieron y que no estaban en la lista.
 |---|---|
 | Nombre | `Landing Pirque` |
 | Alcance | Personal (o de la organización, si el resto del Team también va a trabajar en el proyecto) |
-| Repositorio | `Yodakoba/Landing-Pirque` (o su nombre nuevo, si se transfirió) |
+| Repositorio | `ayc-y-blp/aycyblp` (antes `Yodakoba/Landing-Pirque`) |
 | Network access | **Limited** |
 | Allow package managers | ✅ marcado (npm, PyPI) |
 | Allow MCP servers | ✅ marcado |
@@ -58,5 +58,5 @@ instaladas (para correr sus pruebas sin esperar). Sin él, Claude las instala
 cuando hagan falta.
 
 ```bash
-if [ -d Landing-Pirque/panel ]; then (cd Landing-Pirque/panel && npm ci); fi
+if [ -d aycyblp/panel ]; then (cd aycyblp/panel && npm ci); fi
 ```

@@ -24,6 +24,25 @@ Archivos de esta carpeta:
 
 ---
 
+## Dónde va (2026-11-19)
+
+El repo ya se transfirió: hoy es **`ayc-y-blp/aycyblp`** (antes
+`Yodakoba/Landing-Pirque`). Todo lo que en este plan dice `Landing-Pirque`
+habla de ese mismo repo con su nombre viejo.
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Claude Team + GitHub | ✅ La sesión de la Team abre el repo con su nombre nuevo |
+| 2 | Entorno de Claude Code | ✅ `verificar.sh` sin errores de red (14 de 14) |
+| 3 | Google Drive | ✅ El conector encuentra `BRASAS fotos` |
+| 4 | Vercel | ☐ Falta confirmar que el proyecto quedó conectado al repo con su nombre nuevo, y decidir el plan Pro |
+| 5 | GitHub a una organización | ✅ `ayc-y-blp/aycyblp` |
+| 6 | Shopify | ✅ No hace falta: la URL del panel no cambió |
+| 7 | Prueba de punta a punta | ☐ Lo de `verificar.sh` pasó; faltan las pruebas a mano |
+| 0 · 8 | Respaldo de claves · apagar lo viejo | ☐ A mano |
+
+---
+
 ## Resumen en una mirada
 
 | # | Sistema | Qué hay que hacer | ¿Obligatorio? | Tiempo |
@@ -81,7 +100,7 @@ que poder volver a ponerlas.
 > archivo es tan largo.
 
 ✅ Listo cuando: en claude.ai/code, con la organización Team, puedes elegir el
-repo `Yodakoba/Landing-Pirque` al crear una sesión.
+repo `ayc-y-blp/aycyblp` (antes `Yodakoba/Landing-Pirque`) al crear una sesión.
 
 ---
 
@@ -98,7 +117,7 @@ esa cuenta. Hay que crear uno igual en la Team. Los valores exactos están en
 4. En **Allowed domains**, pega la lista de `entorno-claude.md`.
 5. Sin variables de entorno y sin secretos: **las claves del panel se quedan
    en Vercel**, Claude no las necesita.
-6. Elige el repo `Landing-Pirque` para ese entorno.
+6. Elige el repo `ayc-y-blp/aycyblp` para ese entorno.
 
 ✅ Listo cuando: abres una sesión nueva en la Team con ese entorno y le pegas
 `primer-mensaje.md`; la sesión corre `verificar.sh` sin errores de red.
@@ -149,8 +168,8 @@ comercial; este es el buen momento para ordenarlo. Es una decisión de pago
      `variables-vercel.md`. Si falta alguna, ponla de nuevo desde el
      respaldo del paso 0.
    - **Settings → General → Root Directory** sigue siendo **`panel`**.
-   - **Settings → Cron Jobs**: aparecen las dos tareas (Shopify 09:17 UTC,
-     CRM 11:41 UTC).
+   - **Settings → Cron Jobs**: aparecen las tres tareas de `panel/vercel.json`
+     (días de la regla 08:23 UTC, Shopify 09:17 UTC, CRM 11:41 UTC).
    - **Settings → Domains**: anota la URL. **Debería seguir siendo
      `landing-pirque-alpha.vercel.app`.**
 5. Haz un **Redeploy** del último despliegue para confirmar que construye.
@@ -171,6 +190,9 @@ La URL está escrita en cuatro lugares. Hay que cambiarla en los cuatro:
 ---
 
 ## Paso 5 — GitHub: pasar el repo a una organización (opcional)
+
+> **Hecho**: el repo es `ayc-y-blp/aycyblp`. Lo que sigue queda como
+> referencia; de la reconexión de abajo falta confirmar Vercel.
 
 Solo si el Team quiere que el repo sea de una organización y no de la cuenta
 personal `Yodakoba`. **Si se hace, se usa Transfer ownership, nunca "crear
@@ -229,7 +251,7 @@ el panel en menos de un minuto.
      de desarrollo pide contraseña).
    - En el panel, `/configuracion` o `/menus`: guarda algo sin cambiarlo y
      revisa que aparezca en `/bitacora`.
-3. Al día siguiente: revisa en Vercel → **Logs** que corrieron las dos
+3. Al día siguiente: revisa en Vercel → **Logs** que corrieron las tres
    tareas diarias.
 
 ✅ Listo cuando: todo lo anterior pasa.

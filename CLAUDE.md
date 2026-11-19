@@ -1742,10 +1742,18 @@ a recrear y un script que comprueba que todo quedó conectado viven en
 servicio y Shopify **no se mueven**; lo que cambia es desde dónde trabaja
 Claude, y opcionalmente de quién son el proyecto de Vercel y el repo.
 
+**Estado al 2026-11-19**: el repo ya es de la organización, como
+**`ayc-y-blp/aycyblp`** (antes `Yodakoba/Landing-Pirque`; los enlaces viejos
+redirigen). La primera sesión en la cuenta Team corrió
+`migracion-team/verificar.sh` con 14 de 14 bien, y el conector de Drive
+encuentra `BRASAS fotos`. Lo que queda está al inicio de
+`migracion-team/README.md`.
+
 ## Git
 
-Trabajar en la rama `claude/migrate-project-claude-code-hfqsyc`. Rama por
-defecto: `main`.
+Repo: **`ayc-y-blp/aycyblp`**. Rama por defecto: `main`. **La rama de
+trabajo la asigna cada sesión de Claude Code** (`claude/…`), así que no se
+anota acá: la de este archivo dejó de servir al cambiar de cuenta.
 
 **Junta los cambios y abre el PR tú** (cambiado el 2026-10-21). Commitea y
 empuja a la rama a medida que avanzas, para que nada se pierda si se cae el
