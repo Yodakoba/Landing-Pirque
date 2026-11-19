@@ -503,6 +503,18 @@ nombran comentarios (se revisó antes de excluirlo).
 - **GitHub Pages no lee este archivo**: mientras el sitio se revise en
   `ayc-y-blp.github.io`, ahí sí se ve todo. Con el repo público da lo mismo,
   porque el repo entero ya se ve.
+- **El proyecto existe desde el 2026-11-19: `brasas-sitio`**, en
+  `https://brasas-sitio.vercel.app`, en el equipo *Ayc y Blp*. Root Directory
+  `./`, preset *Other*, sin comando de build y sin variables. El cliente
+  comprobó ese día que `/CLAUDE.md` da 404 y que `/en/` se ve completa.
+- **Al crearlo, Vercel propone `panel` y Next.js**, porque ahí encuentra
+  un proyecto Next. Hay que cambiar las dos cosas a mano —la raíz y
+  *Other*—, y el nombre: con lo propuesto quedó `aycyblp-panel`, que es
+  justo lo que no es. Se renombró a `brasas-sitio` y se borró la dirección
+  vieja, que nadie alcanzó a usar.
+- **Desde este entorno no se abre** `brasas-sitio.vercel.app`: el proxy
+  solo deja pasar la dirección del panel. Para revisarlo desde acá hay que
+  agregarlo a *Allowed domains* del entorno.
 
 ### La regla PlayStation, también en el sitio y los landings (2026-11-06)
 
@@ -1745,7 +1757,10 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 
 ## Previsualizar el sitio público
 
-**Publicado** con GitHub Pages desde `main`, en
+**Publicado en Vercel**, proyecto `brasas-sitio`, en
+`https://brasas-sitio.vercel.app` (desde el 2026-11-19): cada merge a
+`main` lo publica y cada PR trae su versión de prueba. Ver "Lo que Vercel
+publica del repo". **También** con GitHub Pages desde `main`, en
 `https://ayc-y-blp.github.io/aycyblp/` (desde el 2026-11-19; antes
 `yodakoba.github.io/Landing-Pirque/`, que **no redirige**: GitHub no lleva
 la dirección de Pages cuando un repo cambia de dueño). Cada merge a `main`
@@ -1851,7 +1866,10 @@ un chequeo; mientras corre, el PR sale **"unstable"**. Mergear en ese
 momento no rompe nada si después termina bien —así pasó con los PRs 141,
 143 y 144—, pero es mergear sin saberlo. Se espera a que el estado del commit
 diga `success` (`gh api repos/<repo>/commits/<sha>/status`) y, si la
-construcción falla, no se mergea: se avisa.
+construcción falla, no se mergea: se avisa. **Desde el 2026-11-19 son dos
+chequeos**, uno por proyecto: `Vercel – landing-pirque` (el panel) y
+`Vercel – brasas-sitio` (el sitio). Se espera a que estén **los dos** en
+`success`; uno solo en verde no basta, aunque el PR toque solo una mitad.
 
 Esto **no cambia** la regla de proponer antes de aplicar: los cambios al
 contenido se siguen conversando antes de hacerlos. Lo que se abre solo es el
