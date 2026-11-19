@@ -487,6 +487,14 @@ unos pocos KB; las imágenes se cachean entre páginas.
 
 ### Lo que Vercel publica del repo (`.vercelignore`, 2026-11-19)
 
+> **Retirado el mismo 2026-11-19, de urgencia**: con ese archivo en la raíz,
+> el **panel** quedó respondiendo 404 en todas sus rutas —la entrada, el
+> webhook de Shopify y las fechas del sitio—. Todo indica que Vercel lo
+> aplica también al proyecto del panel, y la línea `/panel` le quita su
+> propio código. Hasta resolverlo de otra forma, el sitio en
+> `brasas-sitio.vercel.app` publica todo, igual que GitHub Pages. Lo de
+> abajo queda como lo que se intentó.
+
 El sitio público va a ser **su propio proyecto en Vercel**, servido desde la
 raíz del repo, en el mismo equipo que el panel (Fase 3B de la guía
 *Traspaso a producción*). Servir la raíz tal cual publicaría todo: cualquiera
