@@ -473,6 +473,25 @@ unos pocos KB; las imágenes se cachean entre páginas.
   **Eso se acabó el 2026-10-13**: manda Shopify, y ahí vale $70.000, igual
   que en el landing. Los precios coinciden hoy en los dos entregables.
 
+### Lo que Vercel publica del repo (`.vercelignore`, 2026-11-19)
+
+El sitio público va a ser **su propio proyecto en Vercel**, servido desde la
+raíz del repo, en el mismo equipo que el panel (Fase 3B de la guía
+*Traspaso a producción*). Servir la raíz tal cual publicaría todo: cualquiera
+podría abrir `/CLAUDE.md`, con los detalles internos del negocio, o el código
+del panel. **`.vercelignore` es la lista de lo que no se publica**: `panel/`,
+`backend/`, `migracion-team/`, `tools/`, `traducciones/`, `CLAUDE.md`,
+`README.md` y `precios.json`. Ninguna página carga nada de eso; solo lo
+nombran comentarios (se revisó antes de excluirlo).
+
+- **Una carpeta o archivo nuevo en la raíz que no sea para el público se
+  agrega ahí.** La prueba de que funciona: `/CLAUDE.md` da 404 en el sitio.
+- `precios.json` no hace falta en línea: `traducir.py` ya escribió los
+  precios en cada página.
+- **GitHub Pages no lee este archivo**: mientras el sitio se revise en
+  `ayc-y-blp.github.io`, ahí sí se ve todo. Con el repo público da lo mismo,
+  porque el repo entero ya se ve.
+
 ### La regla PlayStation, también en el sitio y los landings (2026-11-06)
 
 Lo pidió el cliente: la misma regla del panel —botones que se ven
