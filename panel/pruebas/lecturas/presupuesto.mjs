@@ -32,7 +32,8 @@ const TOPE = {
   'publico/fechas': 1,             // el sitio público: lo llama cada visitante
   'usuarios': 1,
   'vendedores': 1,                 // el resumen del equipo de ventas (2026-11-12)
-  'mantencion/produccion': 1       // dejar la base en cero: cuenta las 19 pestañas (2026-11-18)
+  'mantencion/produccion': 1,      // dejar la base en cero: cuenta las 19 pestañas (2026-11-18)
+  'estadisticas': 1                // las estadísticas de reservas (2026-11-19)
 };
 
 const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));

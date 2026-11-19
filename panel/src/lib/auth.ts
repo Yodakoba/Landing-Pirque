@@ -383,6 +383,8 @@ export const PERMISOS = {
    * bancarias a quien no paga.
    */
   informe: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
+  /** Las estadísticas de reservas (2026-11-19): operaciones hacia arriba, solo mirar. */
+  estadisticas: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**
    * **Decidir si se libera un día para un evento exclusivo** (2026-11-12, lo
    * decidió el cliente): el encargado de operaciones, el de pagos, la

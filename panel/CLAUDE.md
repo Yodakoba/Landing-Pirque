@@ -2344,6 +2344,74 @@ documento, que cubre el mouse y el dedo; Escape sigue cerrando.
 `/api/presupuestos`; agregar un socio es la tanda de la ruta más la relectura
 al escribir, como guardar una ficha.
 
+## Las estadísticas de reservas (2026-11-19)
+
+Lo pidió el cliente: *"para los roles encargados de operaciones para
+arriba… en el calendario principal, un botón de estadísticas… filtrable por
+fecha, semana o mes o personalizado… cuántas reservas se hicieron en este
+rango de tiempo, cuál es la tasa de no-shows, cuál es el valor promedio y
+datos que tú me propones… un panel de pura vista… para que la gerencia
+pueda ver también números en grandes rasgos"*. Aprobó la propuesta entera
+(*"todo, con el filtro Todo · Visitas · Eventos"*).
+
+- **Dónde y quién**: *📊 Estadísticas* en la cabecera del calendario de
+  Reservas abre **`/estadisticas`**, una página propia y no una ventana
+  (filtros, gráficos y un link que se puede guardar). Permiso nuevo
+  **`estadisticas`**: operaciones, pagos, gerencia general y administrador
+  (y la vista gerencia mira). El encargado de turno, el vendedor y la
+  anfitriona no ven el botón; la ruta les responde 403 y la página, *Esta
+  parte no es tuya*. **No va en el menú**: `PAGINAS` ganó `fueraDelMenu`,
+  para que siga en la ayuda por rol y en *Coméntame* sin ser pestaña.
+- **Solo mirar, y sin datos de clientes**: `/api/estadisticas` manda **una
+  fila chica por reserva** (fecha, día en que se reservó, origen, si ocupa,
+  gente, asistencia, cuántos faltaron, monto, pagado, valor final y menús)
+  y los días con su cupo. Nada de nombres ni contactos.
+- **Las cuentas se hacen en el navegador** (`lib/estadisticas.ts`, puro y
+  con pruebas), así que cambiar el periodo o un filtro **no vuelve a leer
+  la planilla**. **Las reglas son las del calendario**, aplicadas en el
+  servidor con las mismas funciones: `ocupaLugar()`, `personasEnLaMesa()`,
+  `menusDe()`, el estado del pago y `reservasDeCotizaciones()` para el
+  origen. Una estadística que contara distinto sería un tercer número para
+  el mismo día.
+- **Cuándo**: *Día · Semana · Mes · Personalizado* (dos fechas, tope de dos
+  años), con ◀ ▶ como la Lista de cotizaciones; parte en el mes en curso.
+  **Por fecha de la visita** o **por fecha en que se reservó** (`Creada`, en
+  hora de Chile). **Todo · Visitas · Eventos**: visitas son Shopify y a
+  mano; eventos, las reservas que nacieron de una cotización, que son
+  grandes y mueven los promedios.
+- **Cada número se compara con el periodo anterior** (`cambio()`): un mes
+  con el mes anterior, lo demás con el mismo largo justo antes. Los números
+  en %, **las tasas en puntos** (de 10% a 15% son 5 puntos, no "50% más").
+  Con flecha y palabra, no solo color, y el color dice si el cambio es bueno
+  (un no-show que sube va en rojo).
+- **Cuatro bloques**, cada número con su `?` (`AYUDAS_CORTAS`, temas `est…`):
+
+  | Bloque | Qué trae |
+  |---|---|
+  | Cuánto se movió | Reservas que siguen en pie · personas · ocupación (personas ÷ cupo de los días que reciben gente; solo por fecha de la visita) · grupo promedio |
+  | Si vinieron | **No-show**: *No vino* ÷ las marcadas, de días que ya pasaron, con las *sin marcar* aparte · **llegaron menos** (reservaron 6, llegaron 4) · **cancelaciones** sobre todas las del periodo |
+  | La plata | Valor por reserva y por persona (IVA incluido, de las que tienen monto) · total reservado, pagado (con lo abonado) y por cobrar · **cuenta final por persona** (el valor final que anota la mesa) y cuánto más que lo reservado |
+  | De dónde y cómo | Personas por día (por semana sobre dos meses) con el cupo de fondo, tooltip y *Ver en tabla* · de dónde vienen · menús · anticipación en tramos y su mediana · personas promedio por día de la semana |
+
+- **La tarjeta de un número es una pieza compartida** (`TarjetaNumero.tsx`):
+  nació en la Lista de cotizaciones y ganó la línea de comparación.
+- **Los gráficos van con un solo tono** (dorado) y barras finas con la
+  punta redondeada; cada valor está también en texto o en la tabla, así que
+  nada depende solo del color.
+- **Lo que no es exacto, y lo dice**: el no-show depende de que la recepción
+  marque *Vino / No vino*, y la cuenta final de que la mesa anote su valor
+  final (desde el 2026-11-17). Con la base en cero, los números parten con
+  producción.
+- **Lecturas de Google**: una tanda (`Reservas`, `Fechas Hábiles`, `Menús`
+  y `Presupuestos`), al abrir la página. Los filtros no leen nada.
+- **Probado en el panel de ejemplo** a 393 y 1280, claro y oscuro:
+  operaciones, pagos, gerencia y administrador ven el botón y la página;
+  encargado, vendedor y anfitriona, 403 y sin botón. Día, semana, mes y
+  personalizado (de octubre a diciembre la serie pasa a semanas), por fecha
+  en que se reservó (la ocupación dice *solo por fecha de la visita*) y los
+  tres tipos. `revisarPlayStation()` solo marca los `?` de 30px, la pieza de
+  siempre.
+
 ## El paso a producción: dejar la base en cero (2026-11-18)
 
 Lo pidió el cliente: *"resetear todo a cero menos los trabajadores, el

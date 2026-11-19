@@ -5369,5 +5369,75 @@ console.log('\nLos días de la regla se abren solos');
      'las tareas de vercel.json son las que el middleware deja pasar');
 }
 
+console.log('\nLas estadísticas de reservas');
+{
+  const E = await import('./estadisticas.ts');
+  type F = import('./estadisticas.ts').FilaEst;
+  const f = (x: Partial<F>): F => ({ fecha: '2026-11-14', reservadaEl: '', origen: 'directo', ocupa: true, personas: 0,
+    asistencia: '', faltaron: 0, monto: null, pagado: 0, valorFinal: null, menus: [], ...x });
+  const filas: F[] = [
+    f({ fecha: '2026-11-14', reservadaEl: '2026-11-10', personas: 4, asistencia: 'si', monto: 176000, pagado: 176000, valorFinal: 200000, menus: [{ menu: 'Tradiciones', cantidad: 4 }] }),
+    f({ fecha: '2026-11-14', reservadaEl: '2026-11-14', origen: 'soloReserva', personas: 2, asistencia: 'no', monto: 98000, menus: [{ menu: 'Tradiciones', cantidad: 2 }] }),
+    f({ fecha: '2026-11-15', reservadaEl: '2026-10-01', origen: 'mano', personas: 6, asistencia: 'si', faltaron: 2, menus: [{ menu: 'A Brasas abiertas', cantidad: 6 }] }),
+    f({ fecha: '2026-11-15', reservadaEl: '2026-11-01', origen: 'cotizacion', personas: 40, monto: 2000000, pagado: 600000, menus: [{ menu: 'Tradiciones', cantidad: 40 }] }),
+    f({ fecha: '2026-11-15', reservadaEl: '2026-11-12', ocupa: false, personas: 3, monto: 132000 }),
+    f({ fecha: '2026-11-21', reservadaEl: '2026-11-18', personas: 5, monto: 220000, pagado: 220000 }),
+    f({ fecha: '2026-10-17', reservadaEl: '2026-10-01', personas: 10, asistencia: 'si', monto: 440000, pagado: 440000 })
+  ];
+  const dias = [
+    { fecha: '2026-11-14', cupo: 60, abierto: true }, { fecha: '2026-11-15', cupo: 60, abierto: true },
+    { fecha: '2026-11-21', cupo: 60, abierto: true }, { fecha: '2026-11-22', cupo: 60, abierto: true },
+    { fecha: '2026-11-28', cupo: 60, abierto: false }, { fecha: '2026-10-17', cupo: 60, abierto: true }
+  ];
+  const nov = E.rangoDe('mes', '2026-11-20');
+  const o = { base: 'visita' as const, tipo: 'todo' as const, hoy: '2026-11-20' };
+  const r = E.resumen(filas, dias, nov, o);
+  ok(nov.desde === '2026-11-01' && nov.hasta === '2026-11-30' && r.reservas === 5 && r.personas === 57,
+     'las reservas y las personas del mes, sin las canceladas');
+  ok(r.ocupacion?.cupo === 240 && r.ocupacion?.pct === 24 && r.grupo === 11.4,
+     'la ocupación cuenta el cupo de los días que reciben gente (no el cerrado), y el grupo promedio va con un decimal');
+  ok(r.noShow.marcadas === 3 && r.noShow.noVino === 1 && r.noShow.pct === 33 && r.noShow.personas === 2 && r.noShow.sinMarcar === 1,
+     'el no-show sale de las marcadas de días que ya pasaron, y las sin marcar se cuentan aparte');
+  ok(r.llegaronMenos.reservas === 1 && r.llegaronMenos.personas === 2, 'llegaron menos: la gente que faltó en las que vinieron');
+  ok(r.canceladas.reservas === 1 && r.canceladas.pct === 17 && r.canceladas.personas === 3, 'las cancelaciones, sobre todas las del periodo');
+  ok(r.plata.total === 2494000 && r.plata.pagado === 996000 && r.plata.porCobrar === 1498000
+     && r.plata.porReserva === 623500 && r.plata.porPersona === 48902 && r.plata.sinMonto === 1,
+     'la plata: total, pagado (con lo abonado), por cobrar y los promedios de las que tienen monto');
+  ok(r.cuentaFinal.mesas === 1 && r.cuentaFinal.porPersona === 50000 && r.cuentaFinal.deMasPorPersona === 6000,
+     'la cuenta final por persona y cuánto más que lo reservado');
+  ok(r.origen.map((x) => `${x.id}:${x.reservas}:${x.personas}`).join() === 'directo:2:9,soloReserva:1:2,mano:1:6,cotizacion:1:40',
+     'de dónde vienen, en su orden');
+  ok(r.menus.map((m) => `${m.menu}:${m.cantidad}`).join() === 'Tradiciones:46,A Brasas abiertas:6', 'los menús, de más a menos');
+  ok(r.anticipacion.tramos.map((t) => t.reservas).join() === '1,2,1,1' && r.anticipacion.mediana === 4,
+     'la anticipación en tramos y su mediana');
+  ok(r.porDia.map((d) => `${d.nombre}:${d.dias}:${d.promedio}`).join() === 'Sábado:2:6,Domingo:2:23',
+     'por día de la semana: personas promedio por día que recibió gente, de lunes a domingo');
+  ok(r.serie.map((x) => `${x.clave.slice(8)}:${x.personas}/${x.cupo}`).join() === '14:6/60,15:46/60,21:5/60,22:0/60' && !r.serieSemanal,
+     'la serie por día: los días que reciben gente, con su cupo');
+  const vis = E.resumen(filas, dias, nov, { ...o, tipo: 'visitas' });
+  const eve = E.resumen(filas, dias, nov, { ...o, tipo: 'eventos' });
+  ok(vis.reservas === 4 && vis.personas === 17 && eve.reservas === 1 && eve.personas === 40,
+     'Visitas son Shopify y a mano; Eventos, las cotizaciones');
+  const res = E.resumen(filas, dias, nov, { ...o, base: 'reservada' });
+  ok(res.reservas === 4 && res.ocupacion === null, 'por fecha en que se reservó cuenta otras reservas, y la ocupación no aplica');
+  const oct = E.resumen(filas, dias, E.anteriorDe('mes', nov), o);
+  ok(oct.reservas === 1 && E.cambio(r.reservas, oct.reservas)?.texto === '▲ 400%', 'el mes se compara con el mes anterior');
+  ok(E.rangoDe('semana', '2026-11-20').desde === '2026-11-16' && E.rangoDe('semana', '2026-11-20').hasta === '2026-11-22'
+     && E.rangoDe('mes', '2026-02-10').hasta === '2026-02-28'
+     && E.moverRango('dia', { desde: '2026-11-20', hasta: '2026-11-20' }, 1).desde === '2026-11-21'
+     && E.anteriorDe('personalizado', { desde: '2026-11-10', hasta: '2026-11-19' }).desde === '2026-10-31'
+     && E.largoDe({ desde: '2026-11-10', hasta: '2026-11-19' }) === 10,
+     'los periodos: semana de lunes a domingo, mes entero, y el anterior del mismo largo');
+  ok(E.rangoPersonalizado('2026-11-20', '2026-11-10')?.desde === '2026-11-10'
+     && E.largoDe(E.rangoPersonalizado('2020-01-01', '2026-01-01')!) === 731 && E.rangoPersonalizado('ayer', '2026-11-10') === null,
+     'un rango a mano se ordena, tiene tope de dos años y lo que no es fecha no se acepta');
+  ok(E.cambio(15, 10, true)?.texto === '▲ 5 puntos' && E.cambio(10, 10)?.sentido === 'igual' && E.cambio(5, 0) === null
+     && E.cambio(null, 3) === null && E.cambio(9, 10)?.texto === '▼ 10%',
+     'la comparación: % para números, puntos para tasas, nada si no hay con qué comparar');
+  const largo = E.resumen(filas, dias, { desde: '2026-09-01', hasta: '2026-12-31' }, o);
+  ok(largo.serieSemanal && largo.serie.every((x) => E.rangoDe('semana', x.clave).desde === x.clave),
+     'en un periodo de más de dos meses la serie va por semana');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

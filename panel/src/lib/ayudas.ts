@@ -53,6 +53,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Agregar reserva anota a alguien que llamó o escribió por WhatsApp.',
       'Enviar planilla semanal copia un link que se manda al grupo. Ese link '
       + 'no muestra plata ni nombres de clientes.',
+      'Estadísticas (operaciones, pagos, gerencia y administración) abre los '
+      + 'números de las reservas en grandes rasgos: cuántas, no-shows, plata '
+      + 'y de dónde vienen.',
       'Si haces los pagos, arriba te llega lo que tienes que revisar: los '
       + 'pagos que alguien anotó a mano, los descuentos ya aplicados y las '
       + 'cuentas o tarifas que cambió otro. Ya rigen; los cierras con ✓ '
@@ -323,6 +326,25 @@ export const AYUDAS: Record<string, Ayuda> = {
     ],
     ojo: 'Esto cambia lo que ve el público. Un día suelto se abre o se cierra '
        + 'desde el calendario, sin tocar esta pantalla.'
+  },
+
+  estadisticas: {
+    titulo: 'Las estadísticas de reservas',
+    cuerpo: [
+      'Los números de las reservas en grandes rasgos, para mirar: cuántas, '
+      + 'si vinieron, cuánta plata y de dónde vienen. Acá no se cambia nada.',
+      'Arriba eliges el periodo —un día, una semana, un mes o dos fechas— y '
+      + 'por qué fecha se cuenta: la de la visita o la del día en que se '
+      + 'reservó. Todo · Visitas · Eventos separa las reservas de Shopify y '
+      + 'las anotadas a mano de los eventos que vienen de una cotización, que '
+      + 'son grandes y mueven los promedios.',
+      'Cada número se compara con el periodo anterior: un mes con el mes '
+      + 'anterior, una semana con la semana anterior. Las tasas se comparan en '
+      + 'puntos. El signo de pregunta de cada número dice cómo se calcula.'
+    ],
+    ojo: 'El no-show depende de que la recepción marque Vino o No vino, y la '
+       + 'cuenta final, de que la mesa anote su valor final. Lo que no se anotó '
+       + 'no cuenta, y la tarjeta lo dice.'
   },
 
   cuentas: {
@@ -606,6 +628,108 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Si eliges un periodo, cuenta las ganadas cuyo evento cae en él, o que se cotizaron en él, según la fecha que elijas.'
     ]
   },
+  // ---------- Las estadísticas de reservas (2026-11-19) ----------
+  estReservas: {
+    titulo: 'Reservas',
+    texto: [
+      'Las reservas del periodo que siguen en pie: sin las canceladas, reembolsadas, anuladas ni las que se cayeron por cupo.',
+      'Se comparan en % con el periodo anterior.'
+    ]
+  },
+  estPersonas: {
+    titulo: 'Personas',
+    texto: [
+      'La gente de esas reservas, contada igual que en el calendario: si se rectificó, la que llegó de verdad, más la que se agregó en la mesa.'
+    ]
+  },
+  estOcupacion: {
+    titulo: 'Ocupación',
+    texto: [
+      'Las personas dividido por el cupo de los días que recibieron gente en el periodo (abiertos o privados, no los cerrados).',
+      'Solo se calcula por fecha de la visita. Se compara en puntos: de 40% a 45% son 5 puntos.'
+    ]
+  },
+  estGrupo: {
+    titulo: 'Grupo promedio',
+    texto: ['Cuántas personas trae una reserva en promedio: las personas dividido por las reservas.']
+  },
+  estNoShow: {
+    titulo: 'No-show',
+    texto: [
+      'De las reservas que la recepción ya marcó, cuántas no vinieron: No vino dividido por las marcadas (Vino + No vino).',
+      'Solo cuentan los días que ya pasaron. Las que quedaron sin marcar se dicen aparte y no entran en el %: si son muchas, la tasa no es confiable.'
+    ]
+  },
+  estLlegaronMenos: {
+    titulo: 'Llegaron menos',
+    texto: [
+      'En las reservas que sí vinieron, cuánta gente faltó: reservaron 6 y llegaron 4 son 2.',
+      'Sale de lo que la recepción anota en "llegaron". Si no anotó cuántos, no cuenta.'
+    ]
+  },
+  estCanceladas: {
+    titulo: 'Cancelaciones',
+    texto: [
+      'De todas las reservas del periodo, cuántas liberaron su lugar: canceladas, reembolsadas, anuladas o caídas por cupo o por un evento exclusivo.',
+      'Se compara en puntos.'
+    ]
+  },
+  estPorReserva: {
+    titulo: 'Valor por reserva',
+    texto: [
+      'El monto reservado dividido por las reservas que tienen monto. IVA incluido.',
+      'Es lo que se acordó al reservar, no lo que se consumió: eso es la cuenta final.'
+    ]
+  },
+  estPorPersona: {
+    titulo: 'Valor por persona',
+    texto: ['El monto reservado dividido por la gente de esas mismas reservas. IVA incluido.']
+  },
+  estTotal: {
+    titulo: 'Total reservado',
+    texto: [
+      'La suma de los montos de las reservas del periodo que siguen en pie.',
+      'Pagado es lo que ya entró (pagadas completas y lo abonado); por cobrar, el resto.'
+    ]
+  },
+  estCuentaFinal: {
+    titulo: 'Cuenta final por persona',
+    texto: [
+      'El valor final que anota la mesa (el total de la cuenta en Fudo, con lo prepagado) dividido por la gente de esas mesas.',
+      'Debajo, cuánto más que lo reservado se consumió por persona: lo que se pidió de más en la mesa. Solo cuentan las mesas que anotaron su valor final.'
+    ]
+  },
+  estSerie: {
+    titulo: 'Personas por día',
+    texto: [
+      'Cada columna es un día que recibió gente o tuvo reservas; en un periodo de más de dos meses, una semana.',
+      'La barra dorada son las personas y el fondo claro, el cupo de ese día. Toca una columna para ver los números, o abre la tabla.'
+    ]
+  },
+  estOrigen: {
+    titulo: 'De dónde vienen',
+    texto: [
+      'Las reservas según cómo llegaron: Shopify pagando en línea (pago directo), Shopify pagando en el local (solo reserva), anotadas a mano o nacidas de una cotización ganada.'
+    ]
+  },
+  estMenus: {
+    titulo: 'Menús',
+    texto: ['Cuántas personas comieron cada menú, contando lo rectificado y lo agregado en la mesa. Es lo mismo que "Qué preparar" del día, sumado.']
+  },
+  estAnticipacion: {
+    titulo: 'Anticipación',
+    texto: [
+      'Con cuántos días de anticipación se reserva: del día en que se hizo la reserva al día de la visita.',
+      'La mediana es el valor del medio: la mitad reserva con menos días y la otra mitad con más.'
+    ]
+  },
+  estPorDia: {
+    titulo: 'Por día de la semana',
+    texto: [
+      'Las personas promedio de cada día de la semana: las personas de esos días dividido por cuántos de esos días recibieron gente en el periodo.'
+    ]
+  },
+
   listaTasa: {
     titulo: 'Tasa de cierre',
     texto: [

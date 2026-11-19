@@ -366,6 +366,10 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
             Agregar fecha
           </button>
         )}
+        {/* **Las estadísticas** (2026-11-19): operaciones hacia arriba, solo mirar. */}
+        {puedeVer(rol as Rol, 'estadisticas', gerencia) && (
+          <a href="/estadisticas" className="tecla boton inline-flex items-center">📊 Estadísticas</a>
+        )}
       </div>
 
       {avisoPlanilla && (
