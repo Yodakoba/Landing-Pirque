@@ -1,6 +1,8 @@
 # Las variables del panel en Vercel
 
-Son **16** desde el 2026-11-19 (se agregó `SESION_SECRETO`). Viven en
+Son **17** desde el 2026-11-19 (se agregó `SESION_SECRETO`, y se anotó
+`COMENTARIOS_SHEET_ID`, que existía desde el 2026-11-12 y faltaba en esta
+lista). Viven en
 Vercel → equipo *Ayc y Blp* → proyecto **`landing-pirque`** → **Settings →
 Environment Variables**, y en ningún otro lado. Esta lista **no lleva
 valores, a propósito**: dice qué es cada una, en qué entorno va y cómo
@@ -28,6 +30,7 @@ panel en su computador con estas variables.
 | `SHOPIFY_ADMIN_TOKEN` | ✓ | ✓ mismo | **Sí** | Token de la app **"Google Sheets Reservas"** de la tienda (empieza en `shpat_`); solo lee pedidos (`read_orders`) | **Shopify lo muestra una sola vez**: hay que guardarlo en la bóveda al crearlo. Si se pierde, se **reinstala esa app** y sale uno nuevo (se hizo el 2026-11-19); los webhooks no dependen de ella |
 | `SHOPIFY_WEBHOOK_SECRET` | ✓ | ✓ mismo | **Sí** | Con qué se verifica la firma de los webhooks | Shopify → **Configuración → Notificaciones → Webhooks → Secreto de firma → Secreto actual** (se puede volver a ver). **No es el Client secret de la app**: los webhooks se crearon en esa página. No apretar *Crear secreto nuevo* |
 | `CRON_SECRET` | ✓ | ✓ mismo | **Sí** | Protege las tres tareas diarias (solo corren en Production) | Una cadena larga al azar; se puede inventar una nueva y hacer Redeploy |
+| `COMENTARIOS_SHEET_ID` | ✓ | ✓ mismo | No | La planilla del testeo (*Gran Testeo - Panel*), donde escribe el botón 💬 Comentar | Está en la URL de esa planilla, entre `/d/` y `/edit`. Tiene que estar compartida con la cuenta de servicio como *Editor*. **Sin la variable el botón no aparece**; si la planilla cambia de dueño con una copia, el ID cambia y hay que ponerlo acá |
 | `CRM_API_KEY` | ✓ | — | **Sí** | Clave del CRM del socio (Asados y Corderos, opcional) | Pedírsela al socio. **Nunca con prefijo `NEXT_PUBLIC_`** |
 
 **Borrar y volver a crear.** El 2026-11-19 Vercel no dejó cambiar los
@@ -51,6 +54,10 @@ genérico: borrar en Vercel no anula nada en Google ni en Shopify.
 
 ## Lo que no está acá, a propósito
 
+- **El proyecto del sitio (`brasas-sitio`) no lleva ninguna variable**, y
+  está bien que su lista esté vacía. Es HTML estático: el script que lo
+  publica solo copia archivos, y no corre nada en un servidor que pudiera
+  leerlas. Todas viven en `landing-pirque`, que es el panel.
 - **El token de Storefront del sitio** está en `assets/js/reserva.js`: es
   público por diseño y viaja con el repo.
 - **Los parámetros del negocio** (cupos, horarios, precios de menús) viven en

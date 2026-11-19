@@ -16,7 +16,7 @@ Archivos de esta carpeta:
 | Archivo | Para qué |
 |---|---|
 | `README.md` | Este plan, paso a paso |
-| `variables-vercel.md` | Las 15 variables del panel, de dónde sale cada una y cómo recuperarla si se pierde |
+| `variables-vercel.md` | Las 17 variables del panel, de dónde sale cada una y cómo recuperarla si se pierde |
 | `entorno-claude.md` | Cómo recrear el entorno de Claude Code en la cuenta Team (hosts permitidos y demás) |
 | `primer-mensaje.md` | El mensaje para pegar en la primera sesión de la cuenta Team |
 | `verificar.sh` | Comprueba de una vez que todo quedó conectado |
@@ -77,7 +77,7 @@ que poder volver a ponerlas.
 3. Guarda lo que tengas (el JSON de la cuenta de servicio, contraseñas) en un
    **gestor de contraseñas**, nunca en el repo, en un chat ni en un correo.
 
-✅ Listo cuando: tienes a mano o sabes regenerar las 15 variables.
+✅ Listo cuando: tienes a mano o sabes regenerar las 17 variables.
 
 ---
 
@@ -178,7 +178,7 @@ comercial; este es el buen momento para ordenarlo. Es una decisión de pago
    de **Deployments** no muestre nada de los pushes nuevos: un despliegue
    bloqueado o cancelado sí aparecería ahí.
 4. Al terminar, en el proyecto ya transferido:
-   - **Settings → Environment Variables**: confirma que están las 15 de
+   - **Settings → Environment Variables**: confirma que están las 17 de
      `variables-vercel.md`. Si falta alguna, ponla de nuevo desde el
      respaldo del paso 0.
    - **Root Directory** sigue siendo **`panel`** (en el diseño nuevo de
