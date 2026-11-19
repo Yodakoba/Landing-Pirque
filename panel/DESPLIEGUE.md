@@ -142,7 +142,10 @@ Las reservas entran por dos caminos que se respaldan entre ellos.
 **El webhook** (`/api/shopify/webhook`) las anota en cuanto ocurren. Es
 público por fuerza —Shopify no puede autenticarse con la contraseña del
 panel— y lo único que lo protege es la **firma HMAC**, que se verifica con
-el *Client secret* de la app. Sin `SHOPIFY_WEBHOOK_SECRET` configurado la
+`SHOPIFY_WEBHOOK_SECRET`: el **secreto de firma** de Shopify → Configuración →
+Notificaciones → Webhooks, porque los webhooks se crearon ahí y no desde la
+app (aclarado el 2026-11-19; antes este archivo decía *Client secret*, y no
+es). Sin `SHOPIFY_WEBHOOK_SECRET` configurado la
 ruta rechaza todo: se cierra, no se abre.
 
 **La tarea diaria** (`/api/shopify/sincronizar`) le pregunta a Shopify por
@@ -177,9 +180,9 @@ plataforma, no de la idea.
 | Variable | De dónde sale |
 |---|---|
 | `SHOPIFY_DOMINIO` | el `*.myshopify.com` de la tienda |
-| `SHOPIFY_ADMIN_TOKEN` | el token de la app, empieza en `shpat_` |
+| `SHOPIFY_ADMIN_TOKEN` | el token de la app "Google Sheets Reservas", empieza en `shpat_` |
 | `SHOPIFY_VERSION` | `2026-10` (estable al 2026-10-20, soportada hasta oct. 2027) |
-| `SHOPIFY_WEBHOOK_SECRET` | el **Client secret** de la app, que es lo que firma |
+| `SHOPIFY_WEBHOOK_SECRET` | el **secreto de firma** de Configuración → Notificaciones → Webhooks (no el Client secret de la app) |
 | `CRON_SECRET` | una cadena larga al azar, para la tarea programada |
 | `GOOGLE_CALENDAR_ID` | el calendario donde van los eventos (opcional) |
 
@@ -188,15 +191,20 @@ conversación.** Va del admin de Shopify al campo de Vercel y a ningún otro
 lugar: da acceso a pedidos y clientes. Es lo contrario del token de
 Storefront que el sitio lleva en un archivo público, que solo lee catálogo.
 
-Si el token existente se perdió, **antes de reinstalar la app** conviene
-mirar las propiedades del script del Apps Script viejo (Configuración del
-proyecto → Propiedades del script): `SHOPIFY_ADMIN_TOKEN` está ahí, visible.
-Reinstalar la app invalida el token actual, y el Apps Script lo está usando.
+**Shopify muestra el token una sola vez**, así que va a la bóveda en el
+momento. Si se pierde, **se reinstala la app** y sale uno nuevo: así se hizo
+el 2026-11-19. El que guardaba el Apps Script viejo ya no servía (era de
+antes de otra reinstalación). Reinstalar no toca los webhooks, que son de la
+tienda.
 
 ### Crear los webhooks
 
 Tres tópicos —`orders/create`, `orders/updated` y `orders/cancelled`—
-apuntando a `https://<la-url>/api/shopify/webhook`. Basta `read_orders`:
+apuntando a `https://<la-url>/api/shopify/webhook`, en formato JSON y
+versión `2026-10`. **Se crean en Shopify → Configuración → Notificaciones →
+Webhooks**, y se firman con el *secreto de firma* de esa página, que va en
+`SHOPIFY_WEBHOOK_SECRET`. Así no dependen de la app: reinstalarla no los
+borra. Basta `read_orders`:
 suscribirse a los webhooks de un recurso necesita su permiso de LECTURA, no
 de escritura. **No conviene pedir `write_orders`**: el panel solo lee, y un
 token que puede editar o cancelar pedidos reales es mucho más alcance del
