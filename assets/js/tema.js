@@ -4,10 +4,15 @@
    Los colores viven en assets/css/tema.css; esto solo pone o
    saca data-tema="dia" en <html> y lo recuerda.
 
+   EL DÍA ES EL QUE ABRE desde el 2026-11-19 (lo decidió el cliente):
+   data-tema="dia" va puesto salvo que la persona haya elegido la
+   noche, que queda guardada como 'noche'. Sin JavaScript se ve la
+   noche, que es lo que el CSS trae de base.
+
    Va en el <head> SIN defer, a propósito: tiene que pintar el tema
    elegido antes de que el navegador dibuje la página. Con defer, a
-   quien eligió el día le aparecería el sitio negro y pegaría un
-   salto a claro en cada carga.
+   todos les aparecería el sitio negro y pegaría un salto a claro en
+   cada carga.
 
    El botón nace con `hidden` en el HTML y este archivo lo muestra:
    si el JavaScript no carga, no queda un botón muerto en la barra.
@@ -30,7 +35,7 @@
     try { window.localStorage.setItem(MEMORIA, valor); } catch (e) { /* sigue sirviendo en esta página */ }
   }
 
-  if (leer() === 'dia') raiz.setAttribute('data-tema', 'dia');
+  if (leer() !== 'noche') raiz.setAttribute('data-tema', 'dia');
 
   function conectar() {
     var botones = document.querySelectorAll('.tema-btn');

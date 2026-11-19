@@ -102,8 +102,9 @@ más abajo; esto es la lista para revisar.
   algo que una ayuda describe?** Si sí, se actualiza en el mismo PR.
 
 **Sitio público y landings: elegante y sobrio**
-- Fotografía real como protagonista, Fraunces y Work Sans, negro y dorado
-  (y su vista diurna), sin signos de exclamación ni superlativos.
+- Fotografía real como protagonista, Fraunces y Work Sans, dorado sobre
+  papel tibio de día —la vista que abre— y sobre negro de noche, sin signos
+  de exclamación ni superlativos.
 - Cero JavaScript para interfaz: las tres excepciones están decididas y no
   sientan precedente.
 - **Lo que edita el cliente vive en un solo lugar**: los precios en
@@ -369,9 +370,11 @@ tres textos viven en el objeto `TEXTOS` del archivo.
 Lo pidió el cliente para presentarla en una reunión: *"una vista diurna del
 sitio y de los landing pages… un diseño más limpio, que transmite la
 experiencia limpia de un restaurante con familia, salir del mundo negro"*.
-**Por ahora es una segunda opción**: el sitio sigue abriendo en negro y la
-barra trae un botón **☀ Diurno / ☾ Nocturno**, en las ocho páginas del
-español y en las generadas.
+Nació como segunda opción y **desde el 2026-11-19 es la que abre** (lo
+decidió el cliente, con el sitio todavía sin publicar en el dominio, que era
+el momento barato: nadie lo visitaba). La barra trae un botón **☀ Diurno /
+☾ Nocturno** en las ocho páginas del español y en las generadas, y la noche
+queda a un toque.
 
 - **Los colores viven en `assets/css/tema.css`**, una sola hoja para el sitio
   público y los dos landings. Funciona porque los tres ya usan las mismas
@@ -397,9 +400,18 @@ español y en las generadas.
 - **El botón nace con `hidden`** y lo muestra el script: si el JS no carga no
   queda un botón muerto. Bajo 440px queda solo el ícono; el texto se oculta
   a la vista pero no se borra.
-- **Si se decide dejar el día como el que abre**, es invertir la condición en
-  `tema.js` —poner `data-tema="dia"` salvo que se haya guardado `noche`— y
-  revisar este archivo, que en muchos lugares describe el sitio como negro.
+- **Cómo abre de día** (2026-11-19): `tema.js` pone `data-tema="dia"` salvo
+  que la persona haya elegido la noche, que se guarda como `noche`. Fue
+  invertir una condición: el CSS no se tocó, sigue escrito como "la noche de
+  base y el día encima".
+  - **Sin JavaScript se ve la noche**, porque es lo que el CSS trae de base.
+    Es un caso raro y se ve bien igual; dar vuelta el CSS entero para
+    cubrirlo no valía la pena.
+  - **Los PDF del dossier y de socios siguen en negro y dorado.** Los arma
+    `tools/dossier_pdf.mjs` con su propio diseño; pasarlos al día es otra
+    decisión.
+  - Quien había elegido el día lo sigue teniendo, y quien eligió la noche,
+    también: las dos elecciones quedan guardadas.
 
 ### Lo que no sigue al idioma de la página
 
@@ -1457,8 +1469,10 @@ sitio:**
 
 ## Estilo y marca
 
-- Estética: fondo negro/casi negro, sans-serif en mayúsculas con tracking
-  (bold), acentos en dorado, fotografía real como protagonista.
+- Estética: **de día** (la que abre desde el 2026-11-19) papel tibio y
+  tarjetas blancas; **de noche**, fondo negro/casi negro. Las dos con
+  sans-serif en mayúsculas con tracking (bold), acentos en dorado y
+  fotografía real como protagonista. Ver "La vista diurna".
 - Fuentes: **Fraunces** (serif, itálica, para números y precios) + **Work Sans**
   (sans, todo lo demás), vía `<link>` a Google Fonts con fallback a system fonts.
 - Todo el sistema de diseño vive en el `:root{}` al inicio del `<style>`
@@ -1673,8 +1687,8 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
   de las dos excepciones. Lo que queda de este punto es que **en producción
   todavía está el modelo viejo** de una variante por fecha.
 - **Logo.** El del sitio antiguo es negro sobre blanco y tiene una A invertida
-  como rasgo distintivo. Nuestro fondo es negro, así que hace falta una
-  versión clara o un SVG recoloreable. Hoy la marca se compone con tipografía.
+  como rasgo distintivo. El sitio tiene fondo claro de día y negro de noche,
+  así que hace falta un SVG recoloreable que sirva en los dos. Hoy la marca se compone con tipografía.
 - **Una dirección propia para el panel** (`panel.brasasdelopirque.cl`).
   **Se deja para la mudanza del dominio** (lo decidió el cliente el
   2026-11-19): `brasasdelopirque.cl` y el sitio viejo están alojados hoy en
