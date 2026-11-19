@@ -493,13 +493,14 @@ guía *Traspaso a producción*). Sale de la raíz del repo, y servir la raíz
 tal cual publicaría todo: cualquiera podría abrir `/CLAUDE.md`, con los
 detalles internos del negocio, o el código del panel.
 
-**Por eso el sitio publica una lista de lo público, no de lo privado.** En
-Vercel → `brasas-sitio` → Settings → Build and Deployment, con preset
-*Other*:
+**Por eso el sitio publica una lista de lo público, no de lo privado.** La
+arma `tools/publicar_sitio.sh`, que es el Build Command del proyecto
+(Vercel → `brasas-sitio` → Settings → Build and Deployment, preset
+*Other*):
 
 ```
-Build Command      mkdir -p dist && cp -r *.html *.pdf assets en pt dist/
-Output Directory   dist
+Build Command      bash tools/publicar_sitio.sh
+Output Directory   sin override (no se usa)
 ```
 
 Es una copia, no una construcción: el HTML se publica tal cual y la regla
@@ -507,11 +508,55 @@ de "no hay build step" sigue valiendo para el sitio. Comprobado ese día por
 el cliente: `/CLAUDE.md` da 404, y `/`, `/en/` y el calendario de
 `reservas.html` funcionan.
 
-- **Una carpeta o archivo público nuevo en la raíz se agrega a esa línea**,
-  en Vercel; si no, el sitio publicado no lo tiene. Lo privado no hay que
-  anotarlo en ninguna parte: lo que no está en la lista no sale.
-- **Vive en la configuración de Vercel, no en el repo, a propósito.** Así
-  no la lee el proyecto del panel. Ver la trampa de abajo.
+- **Una carpeta o archivo público nuevo en la raíz se agrega a `PUBLICO`**,
+  al inicio del script; si no, el sitio publicado no lo tiene. Lo privado
+  no hay que anotarlo en ninguna parte: lo que no está en la lista no sale.
+- **El script escribe `.vercel/output`, no un `vercel.json`, a
+  propósito.** Esa carpeta se crea durante la construcción del sitio y no
+  está en el repo (va en `.gitignore`), así que el panel no la ve. Vercel la
+  usa cuando existe (*Build Output API v3*), por encima del Output
+  Directory: lo comprobamos en el código de su constructor
+  (`packages/static-build`), que la busca antes de mirar esa opción. Ver la
+  trampa de abajo.
+- Hasta el 2026-11-19 la lista era una línea en la configuración de Vercel
+  (`mkdir -p dist && cp -r *.html *.pdf assets en pt dist/`). Pasó al script
+  para poder sumar las redirecciones del sitio viejo sin un archivo de
+  Vercel en la raíz.
+
+#### Las direcciones del sitio viejo (2026-11-19)
+
+Al mover `brasasdelopirque.cl` a Vercel, las direcciones del sitio de
+Shopify dejan de existir. Google las tiene indexadas y hay links
+compartidos, así que **cada una redirige con un 301** a su página nueva:
+se conservan la visita y la posición en Google. Salen del sitemap del sitio
+viejo, y el reparto lo acordó el cliente:
+
+| Dirección vieja | Va a |
+|---|---|
+| `/products/almuerzo-y-show-ecuestre-1`, `/pages/ticket`, `/pages/contact` | `reservas.html` |
+| `/pages/menu-nuevo`, `/collections/frontpage`, `/collections/restaurante` | `experiencias.html` |
+| `/pages/eventoskthae` | `eventos.html` |
+| `/pages/eventos-corporativos` | `dossier.html` |
+| `/pages/turismo` | `landing-afiliados.html` |
+| `/pages/fotos`, `/pages/galeria-de-fotoskns8x`, `/blogs/news` | `/` |
+
+- **Cualquier otra `/products/…`, `/collections/…`, `/pages/…` o
+  `/blogs/…`** cae en la misma página que su grupo, por si había links que
+  el sitemap no listaba.
+- **Lo que era de la tienda sigue yendo a la tienda**: el estado de un
+  pedido (`/<id>/orders/…`), el carrito, la cuenta, `/checkouts/…` y las
+  políticas, que es lo que traen los correos que Shopify ya mandó con la
+  dirección vieja. Van a `TIENDA`, al inicio del script, con el resto de la
+  ruta. **Hoy dice `tienda.brasasdelopirque.cl`**, el nombre propuesto para
+  el dominio de Shopify después del lanzamiento: si se elige otro, se
+  cambia esa línea.
+- **Un 404 sale en su idioma**: `/en/…` con `en/404.html`, `/pt/…` con el
+  portugués, y todo lo demás con el español. `/en` y `/pt` sin la barra
+  final redirigen a `/en/` y `/pt/`, porque los enlaces de esas páginas son
+  relativos y sin la barra apuntarían al español.
+- **Antes del lanzamiento no tienen efecto**: el dominio sigue en Shopify.
+  En `brasas-sitio.vercel.app` ya se pueden probar —por ejemplo
+  `/pages/ticket` tiene que terminar en `reservas.html`—.
 - **Al crear el proyecto, Vercel propone `panel` y Next.js**, porque ahí
   encuentra un proyecto Next. Hay que elegir a mano la raíz y *Other*, y el
   nombre: con lo propuesto quedó `aycyblp-panel`, que es justo lo que no

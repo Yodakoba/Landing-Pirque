@@ -1,3 +1,7 @@
 # Los .pyc de tools/traducir.py: se regeneran solos y no van al repo.
 __pycache__/
 *.pyc
+
+# Lo que arma tools/publicar_sitio.sh para Vercel: se genera en cada
+# construcción del sitio y no va al repo.
+.vercel/
