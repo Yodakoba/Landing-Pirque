@@ -485,44 +485,61 @@ unos pocos KB; las imágenes se cachean entre páginas.
   **Eso se acabó el 2026-10-13**: manda Shopify, y ahí vale $70.000, igual
   que en el landing. Los precios coinciden hoy en los dos entregables.
 
-### Lo que Vercel publica del repo (`.vercelignore`, 2026-11-19)
+### Lo que Vercel publica del sitio (2026-11-19)
 
-> **Retirado el mismo 2026-11-19, de urgencia**: con ese archivo en la raíz,
-> el **panel** quedó respondiendo 404 en todas sus rutas —la entrada, el
-> webhook de Shopify y las fechas del sitio—. Todo indica que Vercel lo
-> aplica también al proyecto del panel, y la línea `/panel` le quita su
-> propio código. Hasta resolverlo de otra forma, el sitio en
-> `brasas-sitio.vercel.app` publica todo, igual que GitHub Pages. Lo de
-> abajo queda como lo que se intentó.
+El sitio público es **su propio proyecto en Vercel, `brasas-sitio`**, en
+`https://brasas-sitio.vercel.app`, en el equipo *Ayc y Blp* (Fase 3B de la
+guía *Traspaso a producción*). Sale de la raíz del repo, y servir la raíz
+tal cual publicaría todo: cualquiera podría abrir `/CLAUDE.md`, con los
+detalles internos del negocio, o el código del panel.
 
-El sitio público va a ser **su propio proyecto en Vercel**, servido desde la
-raíz del repo, en el mismo equipo que el panel (Fase 3B de la guía
-*Traspaso a producción*). Servir la raíz tal cual publicaría todo: cualquiera
-podría abrir `/CLAUDE.md`, con los detalles internos del negocio, o el código
-del panel. **`.vercelignore` es la lista de lo que no se publica**: `panel/`,
-`backend/`, `migracion-team/`, `tools/`, `traducciones/`, `CLAUDE.md`,
-`README.md` y `precios.json`. Ninguna página carga nada de eso; solo lo
-nombran comentarios (se revisó antes de excluirlo).
+**Por eso el sitio publica una lista de lo público, no de lo privado.** En
+Vercel → `brasas-sitio` → Settings → Build and Deployment, con preset
+*Other*:
 
-- **Una carpeta o archivo nuevo en la raíz que no sea para el público se
-  agrega ahí.** La prueba de que funciona: `/CLAUDE.md` da 404 en el sitio.
-- `precios.json` no hace falta en línea: `traducir.py` ya escribió los
-  precios en cada página.
-- **GitHub Pages no lee este archivo**: mientras el sitio se revise en
-  `ayc-y-blp.github.io`, ahí sí se ve todo. Con el repo público da lo mismo,
-  porque el repo entero ya se ve.
-- **El proyecto existe desde el 2026-11-19: `brasas-sitio`**, en
-  `https://brasas-sitio.vercel.app`, en el equipo *Ayc y Blp*. Root Directory
-  `./`, preset *Other*, sin comando de build y sin variables. El cliente
-  comprobó ese día que `/CLAUDE.md` da 404 y que `/en/` se ve completa.
-- **Al crearlo, Vercel propone `panel` y Next.js**, porque ahí encuentra
-  un proyecto Next. Hay que cambiar las dos cosas a mano —la raíz y
-  *Other*—, y el nombre: con lo propuesto quedó `aycyblp-panel`, que es
-  justo lo que no es. Se renombró a `brasas-sitio` y se borró la dirección
-  vieja, que nadie alcanzó a usar.
+```
+Build Command      mkdir -p dist && cp -r *.html *.pdf assets en pt dist/
+Output Directory   dist
+```
+
+Es una copia, no una construcción: el HTML se publica tal cual y la regla
+de "no hay build step" sigue valiendo para el sitio. Comprobado ese día por
+el cliente: `/CLAUDE.md` da 404, y `/`, `/en/` y el calendario de
+`reservas.html` funcionan.
+
+- **Una carpeta o archivo público nuevo en la raíz se agrega a esa línea**,
+  en Vercel; si no, el sitio publicado no lo tiene. Lo privado no hay que
+  anotarlo en ninguna parte: lo que no está en la lista no sale.
+- **Vive en la configuración de Vercel, no en el repo, a propósito.** Así
+  no la lee el proyecto del panel. Ver la trampa de abajo.
+- **Al crear el proyecto, Vercel propone `panel` y Next.js**, porque ahí
+  encuentra un proyecto Next. Hay que elegir a mano la raíz y *Other*, y el
+  nombre: con lo propuesto quedó `aycyblp-panel`, que es justo lo que no
+  es. Se renombró a `brasas-sitio` y se borró la dirección vieja.
+- **GitHub Pages sigue publicando el repo entero** en `ayc-y-blp.github.io`.
+  Con el repo público da lo mismo, porque el repo ya se ve.
 - **Desde este entorno no se abre** `brasas-sitio.vercel.app`: el proxy
   solo deja pasar la dirección del panel. Para revisarlo desde acá hay que
   agregarlo a *Allowed domains* del entorno.
+
+**La trampa, que costó 40 minutos del panel caído.** El primer intento fue
+un `.vercelignore` en la raíz (PR #264), con `/panel` entre lo excluido.
+**Vercel lo aplica a todos los proyectos que salen del repo, también al
+panel**, aunque el panel tenga Root Directory = `panel`: le quitó su propio
+código. De 16:59 a 17:41 UTC el panel respondió 404 en todas sus rutas —la
+entrada, el webhook de Shopify y las fechas del sitio— y se retiró de
+urgencia (PR #267). Dos lecciones:
+
+- **Nada en la raíz del repo que configure Vercel** (`.vercelignore`,
+  `vercel.json`): lo leen los dos proyectos. Lo de un solo proyecto va en
+  su configuración, o en su propia carpeta (el panel tiene
+  `panel/vercel.json`).
+- **Un chequeo verde de Vercel no dice que la app funcione**, solo que
+  construyó: esa vez construyó un Next.js sin ninguna ruta. **Después de
+  mergear algo que toque cómo se despliega**, se comprueba en producción
+  que `/login` y `/api/publico/fechas` del panel den 200 y el webhook 401
+  —`migracion-team/verificar.sh` lo hace—, y si el panel no responde se
+  revierte primero y se investiga después.
 
 ### La regla PlayStation, también en el sitio y los landings (2026-11-06)
 
@@ -1768,7 +1785,7 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 **Publicado en Vercel**, proyecto `brasas-sitio`, en
 `https://brasas-sitio.vercel.app` (desde el 2026-11-19): cada merge a
 `main` lo publica y cada PR trae su versión de prueba. Ver "Lo que Vercel
-publica del repo". **También** con GitHub Pages desde `main`, en
+publica del sitio". **También** con GitHub Pages desde `main`, en
 `https://ayc-y-blp.github.io/aycyblp/` (desde el 2026-11-19; antes
 `yodakoba.github.io/Landing-Pirque/`, que **no redirige**: GitHub no lleva
 la dirección de Pages cuando un repo cambia de dueño). Cada merge a `main`
