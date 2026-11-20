@@ -472,6 +472,62 @@ la mesa tiene que ver **a primera vista con qué precio la ingresa en Fudo**.
   lo que el cliente pidió —saber qué cobrar al abrir la mesa—, y llega como
   instrucción armada, no como los datos del pago.
 
+### Lo acordado en la cotización, en la caja de Fudo (2026-11-20)
+
+Lo pidió el cliente: la encargada de turno y el de operaciones tienen que
+ver en la reserva, al tiro, **cómo se cierra en Fudo una reserva que viene
+de una cotización ganada** —*"si el arriendo estándar es 2,5 millones más
+IVA, pero se acordó un descuento o un precio fijo para el show ecuestre o
+para el arriendo… tiene que cerrarlo de esta forma"*—. Hasta ese día la caja
+*Cómo ingresarla en Fudo* de esas reservas decía solo los menús y el total:
+el arriendo, el show, la once y los descuentos no aparecían. Lógica en
+`lib/fudo.ts` (`acordadoDe()`, `acordadosPorReserva()`, puras y con pruebas).
+
+- **Una línea por línea de la cotización ganada**, tal como se firmó, dentro
+  de la misma caja de Fudo (la de la recepción, la página del día y la cara
+  *Reservas* de Turnos). Las líneas de la cotización reemplazan a la lista
+  de menús: dicen lo mismo y además lo demás.
+- **Lo que manda es el valor en Fudo, con IVA** (lo pidió el cliente el
+  mismo día: *"Fudo siempre cuenta con IVA… eso es el valor que tiene que
+  ingresar"*). Cada línea lo dice a la derecha, en su pastilla —*En Fudo
+  $44.100 c/u · $2.116.800*—: el precio con su descuento y, si se acordó
+  *+ IVA*, por 1,19. Debajo, chico, cómo se acordó (*acordado $2.000.000 +
+  IVA* o *IVA incluido*) y **el precio de lista solo si se negoció otro**
+  (`precioParaCotizar()` del catálogo). Al pie, *Total en Fudo, con IVA*: el
+  total de la cotización (`cuentasDe()`), el mismo del documento firmado.
+- **Lo negociado se marca por forma**: *≠* y negrita en la línea, y en la
+  fila cerrada de la recepción y de la página del día una pastilla
+  **≠ Acordado** (`MarcaAcordado`), para saberlo antes de abrir la mesa.
+  Solo aparece si algo se negoció: un precio distinto de la lista o un
+  descuento. A cero dice *$0 · incluido, sin costo* (el show de un día
+  público). Un monto fijo va sin cantidad; uno en UF no se compara con la
+  lista. El descuento sobre el total va al final: *−5% a la cuenta*.
+- **Al anotar el valor final** (`MesaReserva`) dice *Lo acordado en la
+  cotización N° …: $X con IVA*, y si el valor queda bajo eso avisa en ámbar
+  y el botón pasa a *Guardar igual*. No bloquea: puede haber una
+  rectificación de por medio. Guardado bajo lo acordado, la mesa lo sigue
+  diciendo.
+- **Quién lo ve** (lo decidió el cliente): el encargado de turno,
+  operaciones, pagos, la gerencia y el administrador —los que tienen
+  `ver`—, y el vendedor en lo suyo. **La anfitriona no**: ella sigue con la
+  caja de siempre (*"la anfitriona es solo básica"*). `/api/recepcion`, que
+  ella usa con `asistencia`, arma lo acordado solo si la cuenta puede `ver`;
+  en `/api/reservas` va dentro de la caja de Fudo, así que el recorte de
+  `privacidad.ts` lo saca junto con ella a quien no ve la plata de esa
+  reserva.
+- **Lecturas de Google**: ninguna más. `Presupuesto Líneas` se sumó a la
+  tanda de `/api/reservas` y de `/api/recepcion` (`npm run lecturas`: 1 de 1
+  en las dos).
+- **Probado en el panel de ejemplo** con una cotización ganada con el
+  arriendo a $2.000.000 + IVA (lista $2.500.000), el show a $300.000 + IVA
+  (lista $450.000), Tradiciones con −10% y desayuno a precio de lista: el
+  encargado ve las cinco líneas con su valor en Fudo y la marca en la fila,
+  y la anfitriona la caja de siempre, sin marca. A 393 y 1280,
+  `revisarPlayStation()` sin hallazgos en la recepción. **En la página del día
+  queda uno que ya estaba**: con muchos puestos faltantes, la pastilla
+  *Faltan 12: 5 × Garzón…* del equipo corre la página 3px a 393. No es de
+  este cambio y queda anotado para arreglarlo aparte.
+
 ### La modalidad la escribe Shopify; el estado del pago, cualquiera (2026-10-30)
 
 Lo encontró el cliente, y era un error lógico de fondo: *"cuando se agrega una

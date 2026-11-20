@@ -18,10 +18,12 @@ import { HOJA_CIERRES } from '@/lib/cierres';
 import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_MENUS } from '@/lib/menus';
-import { HOJA_PRESUPUESTOS } from '@/lib/presupuestos';
-import { exigir, exigirVer } from '@/lib/permisos';
-import { leerReservas, leerFechas, leerConfig, leerCierres, leerMenus, reservasDeCotizaciones } from '@/lib/datos';
-import { comoIngresar } from '@/lib/fudo';
+import { HOJA_PRESUPUESTOS, HOJA_LINEAS } from '@/lib/presupuestos';
+import { exigir, exigirVer, quienEs } from '@/lib/permisos';
+import { puede } from '@/lib/auth';
+import { leerReservas, leerFechas, leerConfig, leerCierres, leerMenus, reservasDeCotizaciones,
+         leerPresupuestos, leerLineasPresupuesto } from '@/lib/datos';
+import { comoIngresar, acordadosPorReserva, type Acordado } from '@/lib/fudo';
 import { hoy } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
 import { yaAbrio, estaCerrado as diaCerrado } from '@/lib/cierres';
@@ -31,7 +33,7 @@ import { opcionesParaAgregar } from '@/lib/mesa';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CIERRES, HOJA_MENUS, HOJA_PRESUPUESTOS], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CIERRES, HOJA_MENUS, HOJA_PRESUPUESTOS, HOJA_LINEAS], async function GET(req: Request) {
   const no = await exigirVer(req, 'asistencia');
   if (no) return no;
   try {
@@ -40,6 +42,15 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CI
       leerReservas(), leerFechas(), leerConfig(), leerCierres().catch(() => []),
       leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>())
     ]);
+    // **Lo acordado en la cotización ganada** (2026-11-20, lo decidió el
+    // cliente): lo ven el encargado de turno, operaciones y los de arriba
+    // —los que tienen `ver`—. **La anfitriona no**: ella sigue con la caja de
+    // siempre. Sale de la misma tanda de lecturas.
+    const quien = await quienEs(req);
+    const acordados = puede(quien.rol, 'ver')
+      ? acordadosPorReserva(await leerPresupuestos().catch(() => []),
+                            await leerLineasPresupuesto().catch(() => []), menus)
+      : new Map<string, Acordado>();
     const apertura = fechas.find((f) => f.fecha === fecha)?.apertura || cfg.horaApertura;
     // Los menús que se pueden agregar a una mesa (2026-11-17, `mesa.ts`).
     const delSitio = paraReservar(menus).map((m) => m.nombre);
@@ -51,7 +62,7 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_CI
         fila: r.fila, nombre: r.nombre, personas: r.personas, menu: r.menu,
         asistencia: r.asistencia, llegaron: r.llegaron ?? null,
         avisoRecepcion: r.avisoRecepcion ?? '',
-        ingreso: comoIngresar(r, menus, deCot.has(r.id)),
+        ingreso: comoIngresar(r, menus, deCot.has(r.id), acordados.get(r.id)),
         // **La mesa** (2026-11-17): lo que se sumó, el valor final y con qué
         // se puede sumar. El valor final lo anota ella misma: no es un dato
         // que se le esconda.

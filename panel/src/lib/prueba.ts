@@ -34,7 +34,7 @@ import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS
 import { idDeDrive } from './config.ts';
 import { ufDeBoostr, ufDeMindicador, aPesos, enUF } from './uf.ts';
 import { puedeTocarPresupuesto, puedeVer, NO_SE_LEE_CON_GERENCIA } from './auth.ts';
-import { comoIngresar } from './fudo.ts';
+import { comoIngresar, acordadoDe } from './fudo.ts';
 import { personasEfectivas, menuEfectivo, descuentoVigente, necesitaAprobacion, erroresRectificacion,
          avisosRectificacion, esCambioGrande, resumenRectificacion, personasDelMenu, POR_APROBAR,
          partesRectificacion } from './rectificacion.ts';
@@ -497,6 +497,56 @@ ok(paraElSitio(ocu)[0].pocos === true,
   ok(!!pagada && pagada.lineas.some((l) => l.includes('Llegaron 2 más')), 'Fudo: pagada y llegaron más, los cobra aparte');
   const cot = comoIngresar({ ...rect, id: 'MANUAL-2', tipoPago: '', monto: 600000, menuReal: '4 × Tradiciones', descuento: null }, carta, true);
   ok(!!cot && cot.lineas.includes('Total a cobrar: $400.000'), 'Fudo: de una cotización, lo acordado por persona × las que llegaron');
+}
+
+/* ---------- lo acordado en la cotización, en la caja de Fudo (2026-11-20) ---------- */
+{
+  const catalogo = [
+    { nombre: 'Lo Pirque', precioEnLinea: 0, precioEnLocal: 0, precioCotizacion: 50000, iva: '+ IVA', cobro: 'Por persona', moneda: 'Pesos' },
+    { nombre: 'Arriendo del recinto', precioEnLinea: 0, precioEnLocal: 0, precioCotizacion: 2500000, iva: '+ IVA', cobro: 'Monto fijo', moneda: 'Pesos' },
+    { nombre: 'Show ecuestre', precioEnLinea: 0, precioEnLocal: 0, precioCotizacion: 300000, iva: '+ IVA', cobro: 'Monto fijo', moneda: 'Pesos' },
+    { nombre: 'Once campesina', precioEnLinea: 0, precioEnLocal: 0, precioCotizacion: 8000, iva: '+ IVA', cobro: 'Por persona', moneda: 'Pesos' }
+  ] as never;
+  const linea = (presupuesto: string, concepto: string, cantidad: number, precio: number, descuento = 0) =>
+    ({ presupuesto, concepto, cantidad, precio, personas: 0, descuento, ivaIncluido: false, sigue: false, precioUF: 0, fila: 2 });
+  const lineas = [
+    linea('PRE-1763000001002', 'Lo Pirque', 40, 50000, 10),
+    linea('PRE-1763000001002', 'Arriendo del recinto', 1, 2000000),
+    linea('PRE-1763000001002', 'Show ecuestre', 1, 0),
+    linea('PRE-1763000001002', 'Once campesina', 40, 8000),
+    linea('PRE-OTRA', 'Arriendo del recinto', 1, 1)
+  ];
+  const a = acordadoDe({ id: 'PRE-1763000001002', descuento: 5 }, lineas, catalogo);
+  const [lp, ar, sh, on, dt] = a.lineas;
+  ok(a.folio === '001002' && a.lineas.length === 5, 'acordado: solo las líneas de su cotización, más el descuento total');
+  ok(lp.que === '40 × Lo Pirque' && lp.enFudo === '$53.550 c/u · $2.142.000'
+     && lp.detalle === 'acordado $50.000 + IVA · −10%' && lp.distinto,
+     'acordado: en Fudo va con IVA y con el descuento (50.000 − 10% + IVA = 53.550); se marca');
+  ok(ar.que === 'Arriendo del recinto' && ar.enFudo === '$2.380.000'
+     && ar.detalle === 'acordado $2.000.000 + IVA · lista $2.500.000 + IVA' && ar.distinto,
+     'acordado: el arriendo sin cantidad, en Fudo con IVA, y el de lista al lado');
+  ok(sh.enFudo === '$0 · incluido, sin costo' && !sh.distinto, 'acordado: el show a cero va incluido');
+  ok(on.enFudo === '$9.520 c/u · $380.800' && on.detalle === 'acordado $8.000 + IVA' && !on.distinto,
+     'acordado: a precio de lista no se marca, pero igual dice el valor con IVA');
+  ok(dt.que === 'Descuento sobre el total' && dt.enFudo === '−5% a la cuenta', 'acordado: el descuento sobre el total, al final');
+  ok(a.total === 4657660, 'acordado: el total es el de la cotización, con descuentos e IVA (4.120.000 neto → 4.657.660)');
+  const incluido = acordadoDe({ id: 'X', descuento: 0 },
+    [{ ...linea('X', 'Lo Pirque', 2, 59500), ivaIncluido: true }], catalogo).lineas[0];
+  ok(incluido.enFudo === '$59.500 c/u · $119.000' && incluido.detalle.startsWith('acordado $59.500 IVA incluido'),
+     'acordado: una línea con IVA incluido va tal cual a Fudo, y lo dice');
+
+  const base = { id: 'MANUAL-9', menu: '40 × Lo Pirque', tipoPago: '' as const, monto: 4657660, personas: 40 };
+  const porPagar = comoIngresar({ ...base, estadoPago: 'pending' }, catalogo, true, a);
+  ok(!!porPagar?.acordado && !porPagar.lineas.some((l) => l.startsWith('Total a cobrar'))
+     && !porPagar.lineas.includes('40 × Lo Pirque'), 'Fudo: con lo acordado, la cotización reemplaza a la lista de menús y su total no se repite');
+  const pagadaCot = comoIngresar({ ...base, estadoPago: 'paid' }, catalogo, true, a);
+  ok(!!pagadaCot?.acordado && pagadaCot.lineas.includes('No se le cobra lo de la cotización: lo que consuma aparte, sí.'),
+     'Fudo: pagada, dice que lo de la cotización no se cobra');
+  const anfitriona = comoIngresar({ ...base, estadoPago: 'pending' }, catalogo, true);
+  ok(!!anfitriona && !anfitriona.acordado && anfitriona.lineas.includes('40 × Lo Pirque'),
+     'Fudo: sin lo acordado (la anfitriona) la caja queda como siempre');
+  const noCot = comoIngresar({ ...base, estadoPago: 'pending' }, catalogo, false, a);
+  ok(!!noCot && !noCot.acordado, 'Fudo: una reserva que no es de cotización no lleva lo acordado');
 }
 
 /* ---------- qué puestos faltan, con nombre (2026-11-12) ---------- */

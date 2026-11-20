@@ -36,7 +36,7 @@ import { avisar } from './AvisoFlotante';
 import { estaRectificada, personasEfectivas, menuEfectivo, porAprobar, rechazado,
          resumenRectificacion } from '@/lib/rectificacion';
 import BloqueSobrecupo, { AvisarCaida, type CupoDelDia } from './BloqueSobrecupo';
-import IngresoFudo from './IngresoFudo';
+import IngresoFudo, { MarcaAcordado } from './IngresoFudo';
 import { BloqueCRM, SIN_EVENTOS } from './EventosCRM';
 import type { EventoCRM, EventosDelDia } from '@/lib/crm';
 import Clima, { usePronostico } from './Clima';
@@ -1100,8 +1100,11 @@ export default function DayView(
                     <span className={`block truncate text-[16px] font-bold ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}
                     </span>
-                    <span className="block truncate text-[13px] text-hueso/65">
-                      {idCotizacion ? `Cotización N° ${folio}` : r.id}
+                    {/* **≠ Acordado** (2026-11-20): viene de una cotización con
+                        precios negociados; se cierra con esos, no con la carta. */}
+                    <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-hueso/65">
+                      <span className="truncate">{idCotizacion ? `Cotización N° ${folio}` : r.id}</span>
+                      <MarcaAcordado ingreso={r.ingreso} />
                     </span>
                   </span>
                   {repetida && (
@@ -1199,7 +1202,7 @@ export default function DayView(
                         final. La misma pieza de la recepción. */}
                     {ocupaLugar(r) && r.asistencia !== ASISTENCIA.noVino
                       && (puedeMesa || r.valorFinal != null || cuantosAgregados(r.agregados) > 0) && (
-                      <MesaReserva r={r} opciones={opcionesDe(r)} editable={puedeMesa} onGuardado={() => void cargar()} />
+                      <MesaReserva r={r} opciones={opcionesDe(r)} editable={puedeMesa} onGuardado={() => void cargar()} acordado={r.ingreso?.acordado} />
                     )}
 
                     {/* **La rectificación del día** (2026-11-12): qué cambió,
