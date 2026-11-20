@@ -235,7 +235,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + '“Marcar ganada”.'
     ],
     ojo: 'En un día público el show ecuestre va incluido y no se puede '
-       + 'quitar. Para ofrecer otra opción al mismo cliente usa “Hacer una '
+       + 'quitar. En un día privado o exclusivo con poca gente, si va, se cobra '
+       + 'al menos el mínimo de Configuración → Extras y arriendo; si no va, se '
+       + 'quita. Para ofrecer otra opción al mismo cliente usa “Hacer una '
        + 'alternativa”: cuando una gana, las otras pasan solas a “No elegida”.'
   },
 
@@ -316,7 +318,12 @@ export const AYUDAS: Record<string, Ayuda> = {
     cuerpo: [
       'Está ordenada por secciones, con un botón arriba para saltar a cada '
       + 'una: las reservas del sitio, el calendario del panel, las '
-      + 'cotizaciones, el contrato, los datos de la empresa y la mantención.',
+      + 'cotizaciones, los extras y el arriendo, el contrato, los datos de la '
+      + 'empresa y la mantención.',
+      'Extras y arriendo: desde cuántas personas el show ecuestre puede ir sin '
+      + 'costo en un día privado, y cuánto se cobra como mínimo, más IVA, cuando '
+      + 'son menos. La gerencia general, el encargado de pagos y el '
+      + 'administrador pueden pasar por encima.',
       'Reservas del sitio es lo que ven los clientes: qué días se abre, '
       + 'cuánta gente cabe y hasta cuándo se puede reservar. Esos días se '
       + 'abren solos cada mañana, públicos y con el cupo normal; uno que ya '
@@ -494,9 +501,10 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   agregarProducto: {
     titulo: 'Agregar productos',
     texto: [
-      'Aparecen los productos marcados "Se puede cotizar" en Productos, con el precio que proponen.',
+      'Aparecen los productos marcados "Se puede cotizar" en Productos, con el precio que proponen: arriba los menús, abajo los extras y el arriendo.',
       'Cada producto va una sola vez: ya agregado, su botón dice "ya está" y la cantidad se cambia en su línea.',
-      'El precio se cambia en la línea: es parte de la negociación. "Otra línea" es para algo que no está en el catálogo.'
+      'El precio se cambia en la línea: es parte de la negociación. "Otra línea" es para algo que no está en el catálogo.',
+      'En un día privado con poca gente, el show ecuestre tiene un precio mínimo (Configuración → Extras y arriendo). Si no va, quítalo.'
     ]
   },
   precioLinea: {

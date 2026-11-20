@@ -244,6 +244,26 @@ export default function ConfigEditor() {
       </>
     },
     {
+      // **Extras y arriendo** (2026-11-20, lo pidió el cliente): las reglas de
+      // lo que se cotiza aparte del menú. Hoy, el show ecuestre en un día
+      // privado; el nombre deja lugar para lo que venga del arriendo.
+      id: 'extras-arriendo', titulo: 'Extras y arriendo',
+      para: 'Reglas de lo que se cotiza aparte del menú. Rigen para el vendedor y el encargado ' +
+            'de operaciones; la gerencia general, el encargado de pagos y el administrador ' +
+            'pueden pasar por encima.',
+      cuerpo: <>
+        {campo('showGratisDesde', 'Show ecuestre sin costo desde',
+          'En un día privado o exclusivo, desde cuántas personas de la cotización se puede ' +
+          'dejar el show incluido sin costo. En un día público va siempre incluido. En 0 ' +
+          'no hay mínimo.',
+          numerico('showGratisDesde', config.showGratisDesde, (n) => ({ showGratisDesde: n }), { min: 0, max: 100000, unidad: 'personas' }))}
+        {campo('showMinimo', 'Show ecuestre: mínimo bajo ese número',
+          'Lo menos que se cobra por el show cuando son menos personas, neto: se le suma el ' +
+          'IVA. Si el show no va en la cotización, no se cobra. En 0 no hay mínimo.',
+          numerico('showMinimo', config.showMinimo, (n) => ({ showMinimo: n }), { min: 0, max: 100000000, unidad: '+ IVA' }))}
+      </>
+    },
+    {
       id: 'contrato', titulo: 'Contrato',
       para: 'Lo que propone el contrato de cada cotización nueva. Cada cotización lo puede ' +
             'cambiar en su bloque Contrato, y eso es lo que se imprime y lo que se aplica al ' +

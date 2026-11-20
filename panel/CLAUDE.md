@@ -1545,8 +1545,9 @@ qué sirve, y arriba **un botón por sección** para saltar a ella:
 **Reservas del sitio** (días, horario, cupo, días hacia adelante, últimos
 lugares) · **Calendario del panel** (semáforo, grupo grande) ·
 **Cotizaciones** (vigencia, descuentos, anticipo, saldo, carpeta de Drive) ·
-**Contrato** (ciudad de firma y las medidas de tranquilidad) · **La
-empresa** · **Mantención**. Van ordenadas por a quién afectan: primero lo
+**Extras y arriendo** (desde el 2026-11-20: el mínimo del show en un día
+privado, ver más abajo) · **Contrato** (ciudad de firma y las medidas de
+tranquilidad) · **La empresa** · **Mantención**. Van ordenadas por a quién afectan: primero lo
 que ve el cliente del sitio, después el equipo, después la venta de
 eventos. De paso pasaron a la regla PlayStation —títulos a 15px, ayudas a
 13, cajas de 44px con su unidad al lado— y aparecieron dos campos que
@@ -1837,6 +1838,70 @@ adentro no cabe.
 - **La contra a asumir**: un evento más grande que el cupo de siempre, en un
   día que todavía no está en el calendario, tampoco cabe. Es lo que pide el
   mensaje: que la administración abra ese día con más cupo antes de ganar.
+
+### El show ecuestre en un día privado con poca gente (2026-11-20)
+
+Lo pidió el cliente: que el vendedor no pueda regalar el show en un día
+privado chico. *"Se tiene que poder estipular a partir de cuántas personas
+se puede dejar incluido el show ecuestre de forma gratis, y hasta esta
+cantidad… se tiene que cobrar por lo menos 100.000 pesos más IVA"*. Lógica
+en `lib/cotizar.ts` (`reglaShowDe()`, `aplicaReglaShow()`,
+`minimoShowEnLinea()`, `showQuedaBajoMinimo()`, `showBajoMinimoDe()`, puras
+y con pruebas).
+
+- **La regla**: en un día **privado o exclusivo** —y en uno que no está en el
+  calendario, que cuenta como privado—, si la cotización tiene **menos de 25
+  personas** (las de sus menús; sin menús, los invitados), el show, si va,
+  se cobra **al menos $100.000 + IVA**. Desde 25 se puede dejar incluido. En
+  un día público no cambia nada: va incluido siempre. **Si el show no va, no
+  se cobra**: el vendedor lo quita y listo (lo aclaró el cliente).
+- **Los dos números viven en Configuración**, sección nueva **Extras y
+  arriendo**: *Show ecuestre sin costo desde* (`show_gratis_desde`, 25) y
+  *mínimo bajo ese número* (`show_minimo_privado`, 100.000, neto). Un 0 en
+  cualquiera apaga la regla. El nombre de la sección deja lugar para lo que
+  venga del arriendo.
+- **La aplica `prepararLineas()`**, la misma función de la pantalla y del
+  servidor: un show que con su descuento queda bajo el mínimo **sube al
+  mínimo y pierde el descuento**. El mínimo va en la forma de la línea:
+  $100.000 si va *+ IVA*, $119.000 si va *IVA incluido*. Una llamada
+  directa a la API no la esquiva.
+- **En la ventana de cotizar**: el precio del show se aplica al salir del
+  campo (escribir 20.000 lo deja en 100.000 al soltarlo; aplicarlo a cada
+  tecla no dejaba escribir), y debajo un aviso ámbar: *🐎 Día privado con
+  menos de 25 personas: el show se cobra, mínimo $100.000 + IVA. Si no va,
+  quítalo.* **Una cotización de antes** que abra con el show a $0 se guarda
+  al tiro con el mínimo (`showSubio`), para que nadie la mande sin cobrarlo.
+- **Quién puede pasar por encima** (permiso nuevo **`showBajoMinimo`**): la
+  gerencia general y el administrador, que pidió el cliente, **y quien
+  paga**, por dos reglas que ya estaban: pagos puede todo menos las cuentas
+  y la mantención, y la gerencia puede, por ahora, lo mismo que pagos. El
+  vendedor y el encargado de operaciones no. Para ellos el aviso dice *Tú
+  puedes cobrar menos o dejarlo sin costo.*
+- **La excepción queda marcada**: cuando uno de ellos guarda el show bajo el
+  mínimo, la cotización anota quién y cuándo en la columna nueva **`Show bajo
+  el mínimo`** de `Presupuestos` (la escribe solo el servidor), y la
+  bitácora dice *Dejó el show bajo el mínimo*. Mientras esté, la regla no
+  corre para nadie: si después la abre el vendedor, el show sigue como lo
+  dejó la gerencia y el aviso dice *Lo autorizó Rodrigo Vera*. Si quien
+  puede pasar por encima lo sube sobre el mínimo, la marca se borra.
+- **Las cotizaciones que ya existen no se tocan solas**: la regla les llega
+  cuando alguien las abre o las edita. Una alternativa nueva copia las
+  líneas de la otra tal cual.
+- **Lecturas de Google**: ninguna más. La configuración ya venía en la tanda
+  de `/api/presupuestos`.
+- **Probado en el panel de ejemplo** con una cotización de 20 personas en un
+  día fuera del calendario y el show a $0: el vendedor la abre y el show
+  queda en $100.000 + IVA, guardado; escribe 20.000 y vuelve a 100.000; la
+  gerencia lo deja en $0 y queda la marca y la línea en la bitácora; el
+  vendedor la vuelve a abrir y el show sigue en $0. `revisarPlayStation()`
+  sin hallazgos (salvo los `?` de 30px de siempre) a 393 y 1280.
+
+**Los botones de agregar van en dos filas** (2026-11-20, lo pidió el cliente:
+*"separar los productos de forma muy simple"*): **Menús** arriba —lo que es
+gente— y **Extras y arriendo** abajo —el arriendo, el show, el desayuno, las
+actividades, y *+ Otra línea*—. Sale del tipo de cada producto en
+*Productos*: un producto nuevo de tipo Extra, Arriendo o Show cae solo en la
+fila de abajo.
 
 ### El evento exclusivo, y pedir liberar un día (2026-11-12)
 

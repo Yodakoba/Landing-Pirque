@@ -107,6 +107,16 @@ export interface Config {
    */
   exclusivoDias: number;
   /**
+   * **El show ecuestre en un día privado** (2026-11-20, lo pidió el
+   * cliente): desde cuántas personas de una cotización el show se puede
+   * dejar incluido sin costo, y cuánto se cobra como mínimo, neto + IVA,
+   * cuando son menos. Vale en un día privado o exclusivo; en uno público el
+   * show va siempre incluido. En 0 cualquiera de los dos, no hay mínimo.
+   * Ver `reglaShowDe()` en `cotizar.ts`.
+   */
+  showGratisDesde: number;
+  showMinimo: number;
+  /**
    * La unidad compartida de Google Drive donde se guardan los comprobantes
    * de pago (2026-11-10). Es el ID que va después de `folders/`; vive acá y
    * no en el código porque Calicanto tendrá la suya. En blanco, no se puede
@@ -174,6 +184,9 @@ export const POR_DEFECTO: Config = {
   seguimientoDias: 5,
   avisoEvento: 14,
   exclusivoDias: 7,
+  // Los fijó el cliente el 2026-11-20: bajo 25 personas, $100.000 + IVA.
+  showGratisDesde: 25,
+  showMinimo: 100000,
   driveComprobantes: '',
   empresa: EMPRESA_VACIA
 };
@@ -201,6 +214,8 @@ export const CLAVES = {
   seguimientoDias: 'seguimiento_dias',
   avisoEvento: 'seguimiento_antes_evento',
   exclusivoDias: 'exclusivo_dias_minimos',
+  showGratisDesde: 'show_gratis_desde',
+  showMinimo: 'show_minimo_privado',
   driveComprobantes: 'drive_comprobantes',
   empresaNombre: 'empresa_nombre',
   empresaRazonSocial: 'empresa_razon_social',
@@ -342,6 +357,9 @@ export function leerConfigDe(filas: string[][]): Config {
     seguimientoDias: numero(v(CLAVES.seguimientoDias), POR_DEFECTO.seguimientoDias, 0, 365),
     avisoEvento: numero(v(CLAVES.avisoEvento), POR_DEFECTO.avisoEvento, 0, 365),
     exclusivoDias: numero(v(CLAVES.exclusivoDias), POR_DEFECTO.exclusivoDias, 0, 365),
+    // En cero no hay mínimo: es un valor que alguien puede querer.
+    showGratisDesde: numero(v(CLAVES.showGratisDesde), POR_DEFECTO.showGratisDesde, 0, 100000),
+    showMinimo: numero(v(CLAVES.showMinimo), POR_DEFECTO.showMinimo, 0, 100000000),
     driveComprobantes: idDeDrive(v(CLAVES.driveComprobantes)),
     empresa: {
       nombre: texto(v(CLAVES.empresaNombre)),
@@ -382,6 +400,8 @@ export function aFilasConfig(c: Config): string[][] {
     [CLAVES.seguimientoDias, String(c.seguimientoDias)],
     [CLAVES.avisoEvento, String(c.avisoEvento)],
     [CLAVES.exclusivoDias, String(c.exclusivoDias)],
+    [CLAVES.showGratisDesde, String(c.showGratisDesde)],
+    [CLAVES.showMinimo, String(c.showMinimo)],
     [CLAVES.driveComprobantes, c.driveComprobantes],
     [CLAVES.empresaNombre, c.empresa.nombre],
     [CLAVES.empresaRazonSocial, c.empresa.razonSocial],

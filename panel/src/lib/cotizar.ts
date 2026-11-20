@@ -11,7 +11,7 @@
 import { normalizar, estaCerrado, esPrivada } from './columnas.ts';
 import { canonizar, TIPO_PRODUCTO, IVA_PRECIO, MONEDA, COBRO, type Menu } from './menus.ts';
 import {
-  normalizarLineas, ESTADO_PRESUPUESTO, estadoNormal,
+  normalizarLineas, ESTADO_PRESUPUESTO, estadoNormal, IVA,
   type LineaEntrante, type LineaPresupuesto, type Presupuesto
 } from './presupuestos.ts';
 import type { Cliente } from './clientes.ts';
@@ -43,6 +43,74 @@ export function showDe(catalogo: Menu[]): Menu | undefined {
 }
 
 /**
+ * **El show ecuestre en un día privado con poca gente** (2026-11-20, lo pidió
+ * el cliente). En un día privado o exclusivo —y en uno que no está en el
+ * calendario, que cuenta como privado—, si la cotización tiene menos
+ * personas que `desde`, el show **no puede ir gratis**: si va, se cobra al
+ * menos `minimo`, neto + IVA. Desde `desde` personas se puede dejar
+ * incluido, como siempre. Si el show no está en la cotización, no se cobra:
+ * el vendedor lo quita y listo.
+ *
+ * Los dos números viven en Configuración (*Extras y arriendo*). La gerencia
+ * general, quien paga y el administrador pueden pasar por encima
+ * (`showBajoMinimo`): para ellos quien llama pasa `null`.
+ */
+export interface ReglaShow {
+  /** Desde cuántas personas el show puede ir sin costo. */
+  desde: number;
+  /** El mínimo bajo ese número, neto (+ IVA). */
+  minimo: number;
+}
+
+/** La regla de la configuración, o `null` si está apagada (algún 0). */
+export function reglaShowDe(cfg: { showGratisDesde: number; showMinimo: number }): ReglaShow | null {
+  return cfg.showGratisDesde > 0 && cfg.showMinimo > 0
+    ? { desde: cfg.showGratisDesde, minimo: cfg.showMinimo } : null;
+}
+
+/** Si la regla corre para esta cotización: día no público y menos gente que `desde`. */
+export function aplicaReglaShow(regla: ReglaShow | null | undefined, diaPublico: boolean,
+  personas: number): regla is ReglaShow {
+  return !!regla && !diaPublico && personas < regla.desde;
+}
+
+/**
+ * El precio mínimo del show **en la forma de su línea**: si la línea va
+ * *+ IVA*, el mínimo tal cual; si va *IVA incluido*, con el IVA sumado. Así
+ * $100.000 + IVA y $119.000 IVA incluido son el mismo mínimo.
+ */
+export function minimoShowEnLinea(regla: ReglaShow, ivaIncluido: boolean): number {
+  return ivaIncluido === false ? regla.minimo : Math.round(regla.minimo * (1 + IVA));
+}
+
+/**
+ * Si en estas líneas —ya preparadas— el show queda **bajo el mínimo** de un
+ * día privado con poca gente. Es lo que hizo quien puede pasar por encima, y
+ * con esto el servidor sabe si dejar la marca de que lo autorizó.
+ */
+export function showQuedaBajoMinimo(
+  lineas: Pick<LineaPresupuesto, 'concepto' | 'precio' | 'descuento' | 'ivaIncluido' | 'personas' | 'precioUF'>[],
+  catalogo: Menu[], regla: ReglaShow | null, diaPublico: boolean, invitados: number
+): boolean {
+  const enMenus = lineas.reduce((n, l) => n + (l.personas || 0), 0);
+  if (!aplicaReglaShow(regla, diaPublico, enMenus > 0 ? enMenus : invitados)) return false;
+  return lineas.some((l) => productoDe(l.concepto, catalogo)?.tipo === TIPO_PRODUCTO.show && !(l.precioUF > 0)
+    && l.precio * (1 - (Number(l.descuento) || 0) / 100) < minimoShowEnLinea(regla, l.ivaIncluido));
+}
+
+/**
+ * **La marca de la excepción** (`Show bajo el mínimo` de la cotización). Solo
+ * la cambia quien puede pasar por encima: la deja al guardar el show bajo el
+ * mínimo —con su nombre y la hora, la primera vez— y la saca si lo sube. Para
+ * los demás queda como estaba, y mientras esté, la regla no corre para nadie.
+ */
+export function showBajoMinimoDe(previa: string, pasaPorEncima: boolean, bajoMinimo: boolean,
+  quien: string, ahora: string): string {
+  if (!pasaPorEncima) return previa;
+  return bajoMinimo ? (previa || `${quien} · ${ahora}`) : '';
+}
+
+/**
  * Deja las líneas listas para guardar, con las reglas del negocio:
  *
  * - **La gente sale del tipo del producto**: una línea de un producto de
@@ -69,7 +137,15 @@ export function prepararLineas(
    * pesos de acá**, siempre: así lo que se ve y lo que se guarda salen de la
    * misma cuenta. Sin UF, la línea conserva el precio que traía.
    */
-  uf = 0
+  uf = 0,
+  /**
+   * El mínimo del show en un día privado con poca gente (`ReglaShow`), o
+   * `null` para quien puede pasar por encima. Un show que con su descuento
+   * queda bajo el mínimo **sube al mínimo y pierde el descuento**: lo que se
+   * ve y lo que se guarda salen de acá, y una llamada directa a la API no lo
+   * esquiva.
+   */
+  reglaShow: ReglaShow | null = null
 ): Omit<LineaPresupuesto, 'fila'>[] {
   const show = showDe(catalogo);
   const lineas = normalizarLineas(entrantes).map((l) => {
@@ -91,6 +167,20 @@ export function prepararLineas(
       descuento: esShow && diaPublico ? 0 : l.descuento
     };
   });
+  // La gente de la cotización: la de sus menús, o los invitados si todavía
+  // no tiene menús.
+  const enMenus = lineas.reduce((n, l) => n + l.personas, 0);
+  if (aplicaReglaShow(reglaShow, diaPublico, enMenus > 0 ? enMenus : invitados)) {
+    for (const l of lineas) {
+      const prod = productoDe(l.concepto, catalogo);
+      if (prod?.tipo !== TIPO_PRODUCTO.show || l.precioUF > 0) continue;
+      const minimo = minimoShowEnLinea(reglaShow, l.ivaIncluido);
+      if (l.precio * (1 - (Number(l.descuento) || 0) / 100) < minimo) {
+        l.precio = minimo;
+        l.descuento = 0;
+      }
+    }
+  }
   if (diaPublico && show && !lineas.some((l) => l.concepto === show.nombre)) {
     lineas.push({
       presupuesto: lineas[0]?.presupuesto ?? '', concepto: show.nombre,
