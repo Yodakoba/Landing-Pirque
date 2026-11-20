@@ -9,10 +9,16 @@
  * principal y con la ficha entera siempre abierta). El orden es el de lo que
  * se viene a hacer acá:
  *
- * 1. **Quién**: nombre grande y una pastilla que dice vendedor o socio por
- *    forma (borde lleno o cortado). Para elegir a otro, dos botones que
- *    abren su lista con buscador (`BuscarEnLista`): nunca uno por persona.
- * 2. **Cuándo**: Mes / Semana y una sola barra ◀ periodo ▶.
+ * 1. **Quién** (cambió el 2026-11-20, lo pidió el cliente: con varios
+ *    vendedores no se veía cada uno con lo suyo). Arriba, *Ver* con dos
+ *    botones que filtran la lista —👤 Vendedores · 🤝 Socios comerciales— y
+ *    *+ Agregar socio comercial* al lado; un buscador y *Mostrar
+ *    desactivados*. Debajo, **una tarjeta por persona**, como en Equipo y el
+ *    informe: cerrada dice lo que le toca en el periodo y cómo va su pago;
+ *    abierta, todo lo de abajo. Se abre una a la vez. El vendedor no tiene
+ *    lista: ve lo suyo.
+ * 2. **Cuándo**: Mes / Semana y una sola barra ◀ periodo ▶, una vez para
+ *    toda la lista.
  * 3. **Cuánto**: tres azulejos —le toca (con su desglose en una línea),
  *    pagado y falta—.
  * 4. **El hito**, el único botón relleno: *💸 Pagarle $X →*, que abre el
@@ -31,7 +37,7 @@ import AvisoFijo from './AvisoFijo';
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
-import BuscarEnLista from './BuscarEnLista';
+import MostrarDesactivados from './MostrarDesactivados';
 import Dialogo from './Dialogo';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import DatosBancarios from './DatosBancarios';
@@ -39,7 +45,7 @@ import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { enPesos } from '@/lib/ocupacion';
 import { enPalabras, mesEnPalabras, rangoEnPalabras, semanaDe, sumarDias, esFecha } from '@/lib/fechas';
 import { BASE_COMISION, CON_SOCIO_DEFECTO, type FichaVendedor, type Venta, type ResumenVendedor as Resumen } from '@/lib/vendedores';
-import { sePuedeTransferir, faltaParaTransferir, type Banco } from '@/lib/banco';
+import { sePuedeTransferir, faltaParaTransferir, bancoVacio, type Banco } from '@/lib/banco';
 import type { PagoEquipo } from '@/lib/remuneraciones';
 
 type VentaConFolio = Venta & { folio: string };
@@ -47,11 +53,39 @@ type EnCurso = { id: string; folio: string; cliente: string; fecha: string; esta
 interface Datos {
   vendedores: { usuario: string; nombre: string; activo: boolean }[];
   socios: { usuario: string; nombre: string; activo: boolean }[];
+  /** Una línea por persona, para la lista (no le llega al vendedor). */
+  resumenes?: Linea[];
   usuario: string; nombre: string; tipo: 'vendedor' | 'socio'; ficha: FichaVendedor; formaDePago: boolean;
   desde: string; hasta: string; periodo: string; hoy: string;
   resumen: Omit<Resumen, 'cuentan'> & { cuentan: VentaConFolio[] }; pagado: number; falta: number; pagos: PagoEquipo[];
   porCobrar: VentaConFolio[]; enCurso: EnCurso[];
   puedeEditar: boolean; puedeLinks?: boolean; error?: string;
+}
+
+/** Lo que dice la tarjeta cerrada de una persona. Ver `/api/vendedores`. */
+interface Linea {
+  usuario: string; nombre: string; tipo: 'vendedor' | 'socio'; activo: boolean;
+  total: number; pagado: number; falta: number; ventas: number; fijo: number; formaDePago: boolean; sinCuenta: boolean;
+}
+
+/** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
+const llano = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/**
+ * **Cómo va el pago de una persona en el periodo**, con las mismas palabras y
+ * la misma forma que la línea del informe: *✓ pagado*, *falta $X* o *sin
+ * pagar*.
+ */
+function EstadoPago({ total, pagado, falta }: { total: number; pagado: number; falta: number }) {
+  if (total <= 0) return <span className="text-[13px] text-hueso/60">nada en el periodo</span>;
+  return (
+    <span className={`whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${
+      falta <= 0 ? 'border-verde/60 text-verde-texto'
+      : pagado > 0 ? 'border-ambar/60 text-ambar-texto'
+      : 'border-hueso/25 text-hueso/65'}`}>
+      {falta <= 0 ? '✓ pagado' : pagado > 0 ? `falta ${enPesos(falta)}` : 'sin pagar'}
+    </span>
+  );
 }
 
 const ENTRADA = 'min-h-[44px] w-full rounded-lg border-2 border-hueso/25 bg-tinta px-3 text-[16px] tabular-nums focus:border-oro focus:outline-none';
@@ -160,14 +194,16 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   /** El nombre de un socio escrito y sin confirmar. */
   const [nombreEscrito, setNombreEscrito] = useState<string | null>(null);
   const [aviso, setAviso] = useState('');
-  /** Qué lista está abierta para elegir: la de vendedores, la de socios o ninguna. */
-  const [lista, setLista] = useState<'' | 'vendedores' | 'socios'>('');
+  /** Qué grupo se ve en la lista: vendedores o socios comerciales. */
+  const [grupo, setGrupo] = useState<'vendedores' | 'socios'>('vendedores');
+  const [busca, setBusca] = useState('');
+  const [verInactivos, setVerInactivos] = useState(false);
   /** La pestaña del detalle. */
   const [pestana, setPestana] = useState<'suma' | 'viene' | 'pagos'>('suma');
   /** Qué ventana está abierta: el trato o la transferencia. */
   const [ventana, setVentana] = useState<'' | 'trato' | 'banco'>('');
 
-  const cargar = (u = usuario, p = periodo) => {
+  const cargar = (u = usuario, p = periodo, inicial = false) => {
     const q = new URLSearchParams();
     if (u) q.set('usuario', u);
     if (p) q.set('p', p);
@@ -176,14 +212,26 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
       setError(''); setDatos(d); setFicha(d.ficha ?? null); setNombreEscrito(null);
       if (!u && d.usuario) setUsuario(d.usuario);
       if (!p && d.periodo) setPeriodo(d.periodo);
+      // La lista parte en el grupo de quien se abrió; sin nadie, en
+      // vendedores, salvo que solo haya socios.
+      if (d.usuario && d.tipo) setGrupo(d.tipo === 'socio' ? 'socios' : 'vendedores');
+      else if (inicial && !d.vendedores?.length && d.socios?.length) setGrupo('socios');
     }).catch((e) => setError(String(e)));
   };
-  // Se puede llegar directo a alguien: el informe enlaza `/vendedores?usuario=…`.
+  // Se puede llegar directo a alguien: el informe enlaza `/vendedores?usuario=…`,
+  // y abre su tarjeta.
   useEffect(() => {
     const u = new URLSearchParams(window.location.search).get('usuario') ?? '';
     if (u) setUsuario(u);
-    cargar(u);
+    cargar(u, '', true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Al abrir una tarjeta más abajo, la de arriba se cierra y la página salta:
+  // si la abierta quedó arriba de la pantalla, se trae a la vista.
+  useEffect(() => {
+    if (!usuario || esVendedor) return;
+    const el = document.getElementById(`v-${usuario}`);
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: 'start' });
+  }, [usuario, datos?.usuario, esVendedor]);
 
   const fichas = usarGuardadoPorFicha<Partial<FichaVendedor>>(async (u, cambios) => {
     const r = await fetch('/api/vendedores', {
@@ -200,7 +248,14 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
   const esMes = periodo.length === 7;
   const irA = (p: string) => { setPeriodo(p); cargar(usuario, p); };
-  const elegir = (u: string) => { void fichas.forzar(); setUsuario(u); setPestana('suma'); cargar(u, periodo); };
+  /** Abre la tarjeta de alguien —y cierra la que estaba— o la cierra. */
+  const abrir = (u: string) => {
+    void fichas.forzar(); setVentana(''); setNombreEscrito(null);
+    if (u === usuario) { setUsuario(''); return; }
+    setUsuario(u); setPestana('suma'); cargar(u, periodo);
+  };
+  /** Si el detalle que llegó es el de la tarjeta abierta. */
+  const hay = !!datos.usuario && datos.usuario === usuario && !!datos.ficha && !!datos.resumen;
   const tituloPeriodo = esMes ? mesEnPalabras(periodo) : rangoEnPalabras([datos.desde, datos.hasta]);
   const cambiar = (k: keyof FichaVendedor, v: unknown) => {
     if (!ficha) return;
@@ -211,9 +266,9 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   const r = datos.resumen;
   const esSocio = datos.tipo === 'socio';
   const tu = esVendedor;
-  const banco = ficha?.banco ?? datos.ficha.banco;
+  const banco = ficha?.banco ?? datos.ficha?.banco ?? bancoVacio();
   const listoBanco = sePuedeTransferir(banco);
-  const viene = datos.porCobrar.length + datos.enCurso.length;
+  const viene = (datos.porCobrar?.length ?? 0) + (datos.enCurso?.length ?? 0);
 
   /** Lo que se confirma a mano de un socio: el nombre, y desactivarlo o activarlo. */
   const cambiarYa = async (cambios: Partial<FichaVendedor>, pregunta: string) => {
@@ -251,112 +306,15 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok || d.error) { setAviso(d.error || 'No se pudo crear.'); return; }
-    setNuevoSocio(null); setLista('');
-    elegir(d.ficha.usuario);
+    setNuevoSocio(null); setGrupo('socios'); setBusca('');
+    setUsuario(d.ficha.usuario); setPestana('suma'); cargar(d.ficha.usuario, periodo);
   };
   const pagarEn = `/informe?${new URLSearchParams({ pagar: datos.nombre, desde: datos.desde, hasta: datos.hasta })}`;
   const terminacion = banco.numero ? `···${banco.numero.replace(/\D/g, '').slice(-4)}` : '';
 
-  return (
-    <div className="max-w-4xl space-y-5">
-      <div>
-        <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
-        <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar y el encargado de pagos lo revisó.</AvisoFijo>
-      </div>
-
-      {/* 1. Quién. Para elegir a otro, dos botones con buscador (regla del cliente). */}
-      {!esVendedor && (
-        <div className="space-y-2">
-          {/* **Ver: el grupo que se está mirando queda marcado** (2026-11-12, lo
-              reclamó el cliente: filtraba bien pero no se veía en cuál). Los
-              dos botones son un par: el del grupo de la persona elegida va
-              con ✓ y relleno suave; apretar cualquiera abre su lista con
-              buscador. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-full text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:w-auto">Ver</span>
-            <div className="grid w-full grid-cols-2 gap-2 sm:w-auto" role="group" aria-label="Qué grupo ver">
-              {([['vendedores', '👤 Vendedores', '', datos.vendedores.length, !esSocio],
-                 ['socios', '🤝 Socios', ' comerciales', datos.socios.length, esSocio]] as const).map(([k, rotulo, resto, n, actual]) => {
-                const marcado = !!datos.usuario && actual;
-                return (
-                  <button key={k} type="button" aria-expanded={lista === k} aria-pressed={marcado}
-                    onClick={() => { setLista(lista === k ? '' : k); setNuevoSocio(null); }}
-                    className={`boton !min-h-[48px] !px-2 !text-[15px] border-2 ${marcado
-                      ? '!border-oro bg-oro/15 font-bold !text-oro' : lista === k ? '!border-oro' : ''}`}>
-                    {marcado ? '✓ ' : ''}{rotulo}<span className="hidden sm:inline">{resto}</span>
-                    <span className="rounded-full bg-hueso/10 px-1.5 text-[13px] tabular-nums">{n}</span>
-                    <span aria-hidden className="hidden sm:inline">{lista === k ? '▴' : '▾'}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          {lista === 'vendedores' && (
-            <BuscarEnLista etiqueta="Buscar vendedor" elegido={datos.usuario}
-              vacia="Todavía no hay cuentas de vendedor. Se crean en Cuentas, con el rol Vendedor."
-              opciones={datos.vendedores.map((v) => ({ id: v.usuario, nombre: v.nombre, detalle: v.activo ? '' : 'inactivo' }))}
-              onElegir={(u) => { setLista(''); elegir(u); }} onCerrar={() => setLista('')} />
-          )}
-          {lista === 'socios' && (
-            <BuscarEnLista etiqueta="Buscar socio comercial" elegido={datos.usuario}
-              vacia="Todavía no hay socios comerciales."
-              opciones={datos.socios.map((v) => ({ id: v.usuario, nombre: v.nombre, detalle: v.activo ? '' : 'desactivado' }))}
-              onElegir={(u) => { setLista(''); elegir(u); }} onCerrar={() => { setLista(''); setNuevoSocio(null); }}
-              pie={datos.puedeEditar && (nuevoSocio === null ? (
-                <button type="button" className="boton !min-h-[44px] !text-[15px] w-full border-dashed text-[15px]"
-                  onClick={() => setNuevoSocio('')}>+ Agregar socio comercial</button>
-              ) : (
-                <form className="flex flex-wrap items-end gap-2"
-                  onSubmit={(e) => { e.preventDefault(); void crearSocio(); }}>
-                  <label className="block min-w-[12rem] flex-1 text-[14px] font-semibold">
-                    Nombre del socio nuevo
-                    <input autoFocus className={ENTRADA} value={nuevoSocio} placeholder="Ej.: Turismo Maipo"
-                      onChange={(e) => setNuevoSocio(e.target.value)} />
-                  </label>
-                  <button type="submit" className="boton !min-h-[44px] !text-[15px] border-oro text-oro" disabled={!nuevoSocio.trim()}>Crear el socio</button>
-                  <button type="button" className="boton !min-h-[44px] !text-[15px]" onClick={() => setNuevoSocio(null)}>Cancelar</button>
-                  <p className="w-full text-[13px] text-hueso/70">
-                    Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto.
-                  </p>
-                </form>
-              ))} />
-          )}
-          {aviso && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px]">{aviso}</p>}
-        </div>
-      )}
-
-      {datos.usuario && (
-        <>
-          {/* 2. Quién y cuándo, en una fila: el nombre a la izquierda y el
-              periodo compacto a la derecha. En el computador la barra del mes
-              era de todo el ancho y se robaba la vista (lo reclamó el cliente). */}
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            {!esVendedor && (
-              <div className="min-w-0">
-                <p className="truncate text-[22px] font-bold leading-tight">{datos.nombre}</p>
-                <span className={`mt-1 inline-flex items-center gap-1 rounded-full border-2 px-2.5 py-0.5 text-[13px] font-bold uppercase tracking-wider ${esSocio
-                  ? 'border-dashed border-cielo-fuerte/70 text-cielo-texto' : 'border-oro/60 text-oro'}`}>
-                  {esSocio ? '🤝 Socio comercial' : '👤 Vendedor'}{esSocio && !datos.ficha.activo ? ' · desactivado' : ''}
-                </span>
-              </div>
-            )}
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <div className="flex gap-2" role="group" aria-label="Periodo">
-              {([['Mes', true, datos.hoy.slice(0, 7)], ['Semana', false, semanaDe(datos.hoy)]] as const).map(([rotulo, mes, p]) => (
-                <button key={rotulo} type="button" aria-pressed={esMes === mes} onClick={() => irA(p)}
-                  className={`boton !min-h-[44px] !text-[15px] ${esMes === mes ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>{rotulo}</button>
-              ))}
-            </div>
-            <div className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-xl border-2 border-oro/50 bg-oro/[0.06] p-1 sm:w-72 sm:flex-none">
-              <button type="button" aria-label="Periodo anterior" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
-                onClick={() => irA(esMes ? moverMes(periodo, -1) : sumarDias(semanaDe(periodo), -7))}>◀</button>
-              <span className="min-w-0 flex-1 truncate text-center text-[17px] font-bold first-letter:uppercase">{tituloPeriodo}</span>
-              <button type="button" aria-label="Periodo siguiente" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
-                onClick={() => irA(esMes ? moverMes(periodo, 1) : sumarDias(semanaDe(periodo), 7))}>▶</button>
-            </div>
-          </div>
-          </div>
-
+  /** El detalle de la persona abierta: lo que antes era toda la página. */
+  const detalle = hay ? (
+    <div className="space-y-5">
           {!datos.formaDePago && (
             <p className="rounded-xl border-2 border-ambar-fuerte/70 bg-ambar/10 p-3 text-[15px]">
               <b className="text-ambar-texto">Todavía no está escrito cómo se le paga.</b>{' '}
@@ -630,8 +588,162 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
               </div>
             </Dialogo>
           )}
-        </>
+    </div>
+  ) : null;
+
+  // **La lista** (2026-11-20): una tarjeta por persona del grupo elegido.
+  const lineas = datos.resumenes ?? [];
+  const delGrupo = lineas.filter((x) => x.tipo === (grupo === 'socios' ? 'socio' : 'vendedor'));
+  const q = llano(busca);
+  const inactivos = delGrupo.filter((x) => !x.activo).length;
+  // La abierta no se esconde aunque deje de calzar con el buscador.
+  const visibles = delGrupo
+    .filter((x) => x.usuario === usuario || ((verInactivos || x.activo) && (!q || llano(x.nombre).includes(q))))
+    .sort((a, b) => Number(b.activo) - Number(a.activo) || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+  const cuantos = { vendedores: datos.vendedores?.length ?? 0, socios: datos.socios?.length ?? 0 };
+
+  return (
+    <div className="max-w-4xl space-y-5">
+      <div>
+        <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
+        <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar y el encargado de pagos lo revisó.</AvisoFijo>
+      </div>
+
+      {/* 1. Quién: los dos grupos como filtro, arriba (como antes, lo pidió el
+          cliente), y agregar un socio al lado. */}
+      {!esVendedor && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-full text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:w-auto">Ver</span>
+            <div className="grid w-full grid-cols-2 gap-2 sm:w-auto" role="group" aria-label="Qué grupo ver">
+              {([['vendedores', '👤 Vendedores', ''], ['socios', '🤝 Socios', ' comerciales']] as const).map(([k, rotulo, resto]) => {
+                const marcado = grupo === k;
+                return (
+                  <button key={k} type="button" aria-pressed={marcado}
+                    onClick={() => { if (!marcado) { void fichas.forzar(); setVentana(''); setUsuario(''); setBusca(''); setGrupo(k); } }}
+                    className={`boton !min-h-[48px] !px-2 !text-[15px] border-2 ${marcado ? '!border-oro bg-oro/15 font-bold !text-oro' : ''}`}>
+                    {marcado ? '✓ ' : ''}{rotulo}<span className="hidden sm:inline">{resto}</span>
+                    <span className="rounded-full bg-hueso/10 px-1.5 text-[13px] tabular-nums">{cuantos[k]}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {datos.puedeEditar && nuevoSocio === null && (
+              <button type="button" className="boton !min-h-[48px] w-full border-dashed !text-[15px] sm:w-auto"
+                onClick={() => { setNuevoSocio(''); setAviso(''); }}>+ Agregar socio comercial</button>
+            )}
+          </div>
+          {datos.puedeEditar && nuevoSocio !== null && (
+            <form className="flex flex-wrap items-end gap-2 rounded-2xl border-2 border-dashed border-hueso/25 bg-panel p-3"
+              onSubmit={(e) => { e.preventDefault(); void crearSocio(); }}>
+              <label className="block min-w-[12rem] flex-1 text-[14px] font-semibold">
+                Nombre del socio nuevo
+                <input autoFocus className={ENTRADA} value={nuevoSocio} placeholder="Ej.: Turismo Maipo"
+                  onChange={(e) => setNuevoSocio(e.target.value)} />
+              </label>
+              <button type="submit" className="boton !min-h-[44px] !text-[15px] border-oro text-oro" disabled={!nuevoSocio.trim()}>Crear el socio</button>
+              <button type="button" className="boton !min-h-[44px] !text-[15px]" onClick={() => setNuevoSocio(null)}>Cancelar</button>
+              <p className="w-full text-[13px] text-hueso/70">
+                Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto.
+              </p>
+            </form>
+          )}
+          {aviso && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px]">{aviso}</p>}
+        </div>
       )}
+
+      {/* 2. Cuándo, una vez para toda la lista. */}
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <div className="flex gap-2" role="group" aria-label="Periodo">
+          {([['Mes', true, datos.hoy.slice(0, 7)], ['Semana', false, semanaDe(datos.hoy)]] as const).map(([rotulo, mes, p]) => (
+            <button key={rotulo} type="button" aria-pressed={esMes === mes} onClick={() => irA(p)}
+              className={`boton !min-h-[44px] !text-[15px] ${esMes === mes ? 'border-oro bg-oro/15 font-semibold text-oro' : ''}`}>{rotulo}</button>
+          ))}
+        </div>
+        <div className="flex min-w-[15rem] flex-1 items-center gap-2 rounded-xl border-2 border-oro/50 bg-oro/[0.06] p-1 sm:w-72 sm:flex-none">
+          <button type="button" aria-label="Periodo anterior" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
+            onClick={() => irA(esMes ? moverMes(periodo, -1) : sumarDias(semanaDe(periodo), -7))}>◀</button>
+          <span className="min-w-0 flex-1 truncate text-center text-[17px] font-bold first-letter:uppercase">{tituloPeriodo}</span>
+          <button type="button" aria-label="Periodo siguiente" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
+            onClick={() => irA(esMes ? moverMes(periodo, 1) : sumarDias(semanaDe(periodo), 7))}>▶</button>
+        </div>
+      </div>
+
+      {/* 3. La lista: una tarjeta por persona, como en Equipo y el informe.
+          Cerrada, lo que le toca y cómo va su pago; abierta, el detalle. */}
+      {!esVendedor && (
+        <div>
+          {delGrupo.length > 0 && (
+            <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+              placeholder={grupo === 'socios' ? 'Buscar socio comercial' : 'Buscar vendedor'}
+              aria-label={grupo === 'socios' ? 'Buscar socio comercial' : 'Buscar vendedor'}
+              className="mb-3 min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
+                         text-[15px] focus:border-oro focus:outline-none sm:max-w-md" />
+          )}
+          <MostrarDesactivados cuantos={inactivos} visible={verInactivos} onCambio={setVerInactivos} />
+          {delGrupo.length === 0 ? (
+            <p className="rounded-xl border-2 border-hueso/15 px-4 py-3 text-[15px] text-hueso/70">
+              {grupo === 'socios' ? 'Todavía no hay socios comerciales.'
+                : 'Todavía no hay cuentas de vendedor. Se crean en Cuentas, con el rol Vendedor.'}
+            </p>
+          ) : visibles.length === 0 ? (
+            <p className="rounded-xl border-2 border-hueso/15 px-4 py-3 text-[15px] text-hueso/70">
+              {q ? <>Nadie calza con “{busca.trim()}”.</> : 'Todos están desactivados.'}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {visibles.map((x) => {
+                const abierta = x.usuario === usuario;
+                return (
+                  <li key={x.usuario} id={`v-${x.usuario}`}
+                    className={`scroll-mt-4 rounded-2xl border-2 bg-panel ${abierta ? 'border-oro/70'
+                      : x.total > 0 && x.falta <= 0 ? 'border-verde/40' : 'border-hueso/15'} ${x.activo || abierta ? '' : 'opacity-70'}`}>
+                    <button type="button" aria-expanded={abierta} onClick={() => abrir(x.usuario)}
+                      className="tecla flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none
+                                 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro">
+                      <span aria-hidden className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full
+                                                   border-2 text-[15px] font-bold ${abierta ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
+                        {abierta ? '−' : '+'}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[17px] font-bold leading-tight">{x.nombre}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-hueso/70">
+                          <span>
+                            {x.ventas} {x.ventas === 1 ? 'venta pagada' : 'ventas pagadas'}
+                            {x.fijo > 0 && <> · fijo {enPesos(x.fijo)}</>}
+                          </span>
+                          {!x.activo && (
+                            <span className="rounded-full border border-hueso/25 px-2 font-semibold text-hueso/65">
+                              {x.tipo === 'socio' ? 'desactivado' : 'cuenta inactiva'}
+                            </span>
+                          )}
+                          {!x.formaDePago && (
+                            <span className="rounded-full border-2 border-dashed border-ambar/60 px-2 font-semibold text-ambar-texto">⚠ sin trato</span>
+                          )}
+                          {x.sinCuenta && (
+                            <span className="rounded-full border border-ambar/50 px-2 font-semibold text-ambar-texto">falta su cuenta</span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <span className="text-[19px] font-bold tabular-nums">{x.total > 0 ? enPesos(x.total) : '—'}</span>
+                        <EstadoPago total={x.total} pagado={x.pagado} falta={x.falta} />
+                      </span>
+                    </button>
+                    {abierta && (
+                      <div className="border-t-2 border-hueso/10 px-3 pb-4 pt-4 sm:px-4">
+                        {detalle ?? <p className="text-[15px] text-hueso/60">Cargando…</p>}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {esVendedor && detalle}
     </div>
   );
 }

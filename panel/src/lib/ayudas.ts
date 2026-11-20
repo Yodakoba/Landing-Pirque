@@ -433,9 +433,13 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'comisión.'
     ],
     pasos: [
-      'Elige mes o semana y muévete con las flechas.',
-      'Los azulejos de arriba dicen cuánto toca, cuánto se pagó y cuánto falta.',
-      'Abajo está el detalle de cada venta.'
+      'Arriba elige qué mirar: Vendedores o Socios comerciales. Ahí mismo '
+      + 'está + Agregar socio comercial.',
+      'Elige mes o semana y muévete con las flechas: vale para toda la lista.',
+      'Cada persona es una tarjeta: cerrada dice cuánto le toca en el periodo '
+      + 'y si está pagado. Busca por nombre si son muchas.',
+      'Ábrela con el +: los azulejos dicen cuánto toca, cuánto se pagó y '
+      + 'cuánto falta, con Pagarle, el detalle de cada venta y su trato.'
     ]
   },
 

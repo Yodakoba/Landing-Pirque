@@ -2532,6 +2532,42 @@ relleno y ningún campo a la vista:
   pasó a la capa de componentes". Los `!` de `ResumenVendedor.tsx` ya no
   hacen falta, pero tampoco molestan.
 
+### `/vendedores` es una lista de tarjetas (2026-11-20)
+
+Lo pidió el cliente: *"aplicar también la búsqueda… y la forma de colapsar
+para que quede más fácil de mirar… junto a cada vendedor"*. La pantalla
+mostraba **una persona a la vez** y para ver a otra había que abrir una
+lista aparte: con varios vendedores no se podían mirar juntos, al revés que
+en Equipo, Extras, Clientes y el informe.
+
+- **Arriba, como antes** (lo pidió el cliente): *Ver* con **👤 Vendedores** y
+  **🤝 Socios comerciales**, que ahora **filtran la lista** en vez de abrir
+  un buscador aparte, y **+ Agregar socio comercial** al lado, no al pie.
+  Después el periodo (Mes / Semana con ◀ ▶), una vez para toda la lista,
+  el buscador por nombre y *Mostrar desactivados* (socios desactivados y
+  cuentas inactivas).
+- **Una tarjeta por persona**, con la forma de la línea del informe: cerrada
+  dice el nombre, cuántas ventas pagadas y el fijo, lo que le toca en el
+  periodo y cómo va su pago con las mismas palabras —*✓ pagado*, *falta $X*,
+  *sin pagar*—, más *⚠ sin trato* o *falta su cuenta* si corresponde.
+  Abierta (con el +), **todo lo de antes**: Le toca / Pagado / Falta,
+  *💸 Pagarle →*, Suma · Viene · Pagos, el trato, la transferencia y el link
+  del socio. **Se abre una a la vez**, y si la abierta queda arriba de la
+  pantalla se trae a la vista. La abierta no se esconde aunque deje de
+  calzar con el buscador.
+- **`/api/vendedores` sin `usuario` manda solo la lista** (`resumenes`: una
+  línea por persona, con las mismas cuentas del detalle y del informe), y
+  con `usuario` además el detalle de esa persona. **Lecturas de Google**:
+  ninguna más; las líneas salen de la misma tanda, y abrir una tarjeta
+  cuesta lo mismo que antes elegir a alguien.
+- **El vendedor no tiene lista**: *Mi resumen* sigue siendo lo suyo.
+  `/vendedores?usuario=…` (desde el informe) abre esa tarjeta en su grupo.
+- Probado en el panel de ejemplo a 393 y 1280: dos vendedores y un socio,
+  abrir y cerrar, el buscador, cambiar de grupo, agregar un socio, llegar
+  con `?usuario=S-0001` y la vista del vendedor. `revisarPlayStation()` sin
+  hallazgos (salvo los `?` de siempre). Ayuda, misión *Vendedores y socios*
+  y sus capturas (`pag-`, `ger-vendedores`, `ven-resumen`) al día.
+
 ### `.boton` pasó a la capa de componentes (2026-11-12)
 
 Lo pidió el cliente después de ver que en `/vendedores` el *Pagarle* salía

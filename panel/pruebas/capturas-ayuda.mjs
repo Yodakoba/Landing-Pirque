@@ -122,8 +122,9 @@ const ESCENAS = {
         puntos: [boton(/Sueldo/), boton(/Propina/), texto(/Boleta del/)] }],
       [`${pre}-cobros`, { rol, ruta: '/presupuestos', pasos: abrirEnvio('Andrés Pino'), alto: 900, foco: texto('Pagos del cliente'),
         puntos: [texto(/El pago/), boton(/Anticipo recibido/), texto(/Anticipo 30%/)] }],
-      [`${pre}-vendedores`, { rol, ruta: '/vendedores', alto: 900, foco: texto(/^(Te|Le) toca/),
-        puntos: [boton(/Vendedores/), texto(/^(Te|Le) toca/), texto(/^Falta\??$/)] }]
+      // Desde el 2026-11-20 es una lista de tarjetas: se abre la de Daniela.
+      [`${pre}-vendedores`, { rol, ruta: '/vendedores', alto: 1100, pasos: [clic(boton(/^Daniela/))],
+        foco: boton(/Vendedores/), puntos: [boton(/Vendedores/), boton(/^Daniela/), texto(/^(Te|Le) toca/)] }]
     ];
   })),
 
