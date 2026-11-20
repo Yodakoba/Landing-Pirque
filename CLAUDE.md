@@ -34,6 +34,19 @@ más abajo; esto es la lista para revisar.
   importa, como una pregunta antes de confirmar— en la misma pasada en que
   se termina, sin esperar a que lo pida y sin preguntar si quiere verlo.
   Pocas preguntas: se pregunta solo lo que de verdad decide el cliente.
+- **Desde el lanzamiento, dos caminos para mergear** (regla del cliente,
+  2026-11-20; el lanzamiento es el domingo 22-11-2026, y si no se sabe si
+  ya pasó, se trata como que sí). Todo cambio pasa primero por la versión
+  de prueba (preview) del PR; lo que se decide es cuándo se mergea a
+  producción. **Chico** —textos, ayudas, colores, lo que se ve y no mueve
+  nada—: se mergea solo con Vercel en verde, como hasta ahora, y se mandan
+  las capturas. **Con prueba** —plata, la reserva o el pago en Shopify, el
+  cupo, columnas nuevas en la planilla, permisos—: el PR queda **abierto
+  sin mergear**, se le manda al cliente el link de la preview y se mergea
+  recién cuando diga *"mergea"*. **Cada PR dice en qué camino va.** Si el
+  cliente dice *"déjalo en preview"*, ese PR espera su OK aunque sea chico.
+  Un arreglo urgente de algo roto en producción va directo, avisando en el
+  mismo momento. Detalle en "Git".
 - **Coherencia: el mismo tipo de información, con el mismo formato y el
   mismo peso en todo el sitio** (regla del cliente, 2026-11-13: *"ya estoy
   en el mismo mundo… me lo muestras un poco distinto, de tamaño, por la
@@ -2010,6 +2023,32 @@ antes era caso a caso). Se abre el PR, se espera a que la construcción de
 Vercel diga `success` y se mergea, salvo que el cliente diga lo contrario
 para ese PR. "Propone antes de aplicar" no cambia: la revisión ocurre al
 proponer el cambio. Si el merge se bloquea, se avisa y el PR queda abierto.
+
+**Desde el lanzamiento eso vale solo para los cambios chicos** (regla del
+cliente, 2026-11-20, pensando en después de salir a producción: *"necesito
+hacer un cambio, pero tiene que ser en preview"*). Producción pasa a ser
+gente de verdad pagando, así que hay dos caminos:
+
+| Camino | Qué cambios | Cómo se mergea |
+|---|---|---|
+| **Chico** | Textos, ayudas, colores, lo que se ve y no mueve nada | Solo, con los dos chequeos de Vercel en `success`, como hasta ahora, con las capturas |
+| **Con prueba** | Plata (pagos, cobros, boletas, comisiones), la reserva o el pago en Shopify, el cupo, columnas nuevas en la planilla, permisos | El PR queda **abierto sin mergear**; se le manda al cliente el link de la versión de prueba y se mergea cuando diga *"mergea"* |
+
+- **Cada PR dice en su descripción en qué camino va**, y el mensaje al
+  cliente también. En la duda, *con prueba*.
+- **"Déjalo en preview"** de parte del cliente pone ese PR en *con prueba*,
+  aunque sea chico.
+- **La versión de prueba no cobra ni toca lo real**: el sitio de un PR va
+  contra la tienda de desarrollo (ver "Dos tiendas") y el panel contra la
+  planilla "Pruebas" y, desde la separación de las variables de Shopify, la
+  tienda de desarrollo. El panel de prueba está protegido por Vercel: se
+  abre con la sesión de Vercel del equipo.
+- **Un arreglo urgente de algo roto en producción** va directo, avisando en
+  el mismo momento; si la ayuda queda atrás, va en el PR siguiente (la
+  excepción de "La ayuda siempre al día").
+- **Antes del lanzamiento** —con el sitio todavía sin el dominio y la tienda
+  real sin conectar— sigue el merge automático para todo. Si no se sabe si
+  el lanzamiento ya pasó, se trata como que sí.
 
 **Antes de mergear se espera a Vercel** (2026-11-11). Cada rama que se
 empuja dispara una construcción de prueba en Vercel, que GitHub muestra como
