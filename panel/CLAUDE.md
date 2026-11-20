@@ -61,6 +61,7 @@ revisan antes de cada cambio en esta carpeta.
   | Guardar | `BotonGuardar` / `AvisoGuardado` |
   | Elegir de una lista que crece | `BuscarEnLista` |
   | Escribirle al cliente por WhatsApp | `BotonWhatsApp` (o `abrirWhatsApp()`), con el saludo de `saludoAlCliente()` |
+  | Cuánto boletear: bruto, retención y neto | `CajaBoleta` (link personal e informe) |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -133,6 +134,73 @@ con menos 4.000 y más 4.000"*. Ahora son **dos botones**, **− Descontar**
   efectivo quedan en la planilla como `-4000|10000` · `Adelanto ·
   Transferencia|Feriado · Efectivo`. `revisarPlayStation()` no marca nada
   nuevo (la letra de 12px que señala ya estaba en esa ventana).
+
+## La boleta: cuánto boletear, en bruto y en neto (2026-11-20)
+
+Lo pidió el cliente: que cada persona vea en su link **el valor que tiene
+que boletear**, *"la boleta por semana y boleta por mes… y ahí se tienen que
+arreglar entre ellos"*; que quien paga lo vea por persona; que se muestren
+**el neto y el bruto**, *"porque en el SII hay que poner el bruto correcto
+para llegar al neto correcto"*; que **el encargado de operaciones también lo
+vea** (*"lo van a preguntar a él mucho"*), y que pagos y más arriba puedan
+**filtrar a quien no ha mandado su boleta** para exigirla. Lógica en
+`lib/boletas.ts` (pura, con pruebas), la pieza en `CajaBoleta.tsx`.
+
+- **Lo que calcula el panel es el neto**: lo que la persona recibe (lo
+  confirmó el cliente). El bruto se calcula hacia arriba, como las
+  calculadoras de boletas: con 15,25%, $500.000 → **$589.971**
+  (`brutoParaNeto()`, neto ÷ (1 − tasa) redondeado hacia arriba). Ese bruto
+  deja el neto con cualquier redondeo del SII, o a lo más un peso más; la
+  caja lo dice.
+- **La tasa la fija la ley, no Configuración**, como el IVA: la tabla de la
+  Ley 21.133 en `retencionDelAno()` —15,25% en 2026, 16% en 2027, 17% desde
+  2028—, con **la del año en que se emite** (`fechaDeEmision()`): la boleta
+  de diciembre hecha en enero ya va al 16%.
+- **Qué entra**: sueldo o servicio —jornada, horas extra y ajustes—. **La
+  propina nunca, y un contratado no tiene caja** (`pideBoleta()`). **Un
+  *Adelanto* no baja la boleta** (lo confirmó el cliente: es plata ya
+  entregada, no un menor pago); *Llegó tarde* y *Rompió algo* sí, y las
+  sumas la suben (`paraBoletaDeTurno()`, `paraBoletaDeExtra()`). Del
+  vendedor, cada comisión el día en que el cliente terminó de pagar y el
+  sueldo fijo a fin de mes.
+- **Una boleta cubre días**, y así se puede boletear por semana o por mes y
+  mezclar. Cada monto se respalda con la primera boleta que cubre su día, en
+  el orden en que se marcaron (`cuentaBoleta()`): dos semanas boleteadas y
+  después el mes por lo que faltaba no cuentan nada dos veces. La caja dice
+  *Ya boleteó $X de $Y: esta es la que falta*.
+- **La pestaña `Boletas` ganó `Monto neto`**, al final y sola
+  (`asegurarColumna()`): el neto que respalda esa boleta al marcarla. Si
+  después alguien corrige un día y la boleta queda corta, la caja lo dice
+  (*la boleta del 2 – 8 de noviembre fue por $80.000 y hoy suma $90.000*),
+  la persona vuelve a salir en *Sin boleta*, y **✓ Llegó la de la
+  diferencia** corrige el monto de esa fila. Las marcadas antes no tienen el
+  monto y no inventan diferencias.
+- **El link personal** (trabajador y extra): la caja **🧾 Tu boleta** sigue a
+  la vista que tiene el link —por semana o por mes— y ofrece la otra (*Ver
+  noviembre →*). Dice *✓ Ya la recibimos* o *○ Por mandar*.
+- **El informe**: la misma caja al abrir la línea de cada uno, con el botón
+  de siempre (*Falta la boleta / Boleta recibida*), que marca **el periodo
+  que se mira**: la de la semana en la semana, la del mes en el mes. Lo
+  cubierto por la boleta de otro periodo se ve en la caja y se desmarca
+  mirando ese periodo. **Filtro 🧾 Sin boleta (N)**, al lado de *Todos* y
+  *Por pagar*: quien ganó algo y no tiene todo respaldado; también el
+  encargado de operaciones, que ya marcaba boletas. **Un socio comercial no
+  lleva bruto ni neto** (factura con IVA): solo el botón.
+- **Retención de boletas** bajo *Costo del periodo*: la suma de las
+  retenciones del periodo, que la empresa paga en el F29, y el costo con
+  ellas. Sin contratados ni socios.
+- **Una persona, una boleta**: si alguien trabaja por turno y además es
+  extra, sus montos van juntos en la misma caja.
+- **Ningún permiso cambió**: el informe y el botón siguen con `informe` y
+  `boleta`. **Lecturas de Google**: ninguna más en las pantallas; el link
+  personal suma `Boletas` a su tanda.
+- **Probado en el panel de ejemplo** a 393 y 1280, con un adelanto de
+  $20.000 en un turno: la boleta de la semana queda en $102.000 neto y
+  $120.354 bruto (el sueldo a transferir, $82.000), marcarla escribe
+  `Monto neto` 102000 y el filtro baja de 10 a 9; en noviembre la caja dice
+  *Ya boleteó $102.000 de $147.000* y pide $53.098 bruto por el resto; el
+  link de la persona dice lo mismo; operaciones ve la caja y su filtro (sin
+  los vendedores, que no ve). `revisarPlayStation()` sin hallazgos.
 
 ## Las pruebas que cuidan las reglas (2026-11-12)
 
@@ -4103,7 +4171,9 @@ mismo criterio que los cierres: se guarda el hecho, la ausencia se deduce.
 
 - **Es una boleta por la semana**, no una por día: *"cuando mandó las
   boletas por los 4 días de la semana, se puede dar un check"*. La regla
-  vive en `pideBoleta()`.
+  vive en `pideBoleta()`. **Desde el 2026-11-20 también puede ser por mes**,
+  y cada línea dice cuánto boletear en bruto y en neto: ver *La boleta:
+  cuánto boletear*, más arriba.
 - **Avisa, no bloquea.** Registrar el sueldo sin boleta marcada muestra un
   aviso ámbar y se puede guardar igual: la boleta puede llegar después de la
   transferencia, y trabar el registro obligaría a anotar el pago en otro

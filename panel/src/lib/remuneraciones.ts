@@ -407,7 +407,14 @@ export const COL_BOLETAS = {
   hasta: 'Periodo hasta',
   registradoPor: 'Registrado por',
   cuando: 'Cuándo',
-  nota: 'Nota'
+  nota: 'Nota',
+  /**
+   * **El neto que esa boleta respalda** (2026-11-20, ver `lib/boletas.ts`):
+   * lo que faltaba boletear al marcarla. Sirve para darse cuenta si después
+   * alguien corrigió un día y la boleta quedó corta. Las de antes no lo
+   * tienen, y se leen como `null`.
+   */
+  neto: 'Monto neto'
 } as const;
 
 export const ENCABEZADO_BOLETAS: string[] = Object.values(COL_BOLETAS);
@@ -419,6 +426,8 @@ export interface Boleta {
   registradoPor: string;
   cuando: string;
   nota: string;
+  /** El neto que respalda; `null` si se marcó antes de guardarlo. */
+  neto: number | null;
   fila: number;
 }
 
@@ -433,6 +442,7 @@ export function leerBoletasDe(filas: string[][]): Boleta[] {
   const iReg = col(COL_BOLETAS.registradoPor);
   const iCuando = col(COL_BOLETAS.cuando);
   const iNota = col(COL_BOLETAS.nota);
+  const iNeto = col(COL_BOLETAS.neto);
   const en = (f: string[], k: number) => (k === -1 ? '' : String(f[k] ?? '').trim());
   const salida: Boleta[] = [];
   for (let n = 1; n < filas.length; n++) {
@@ -440,8 +450,10 @@ export function leerBoletasDe(filas: string[][]): Boleta[] {
     const desde = en(filas[n], iDesde).slice(0, 10);
     const hasta = en(filas[n], iHasta).slice(0, 10);
     if (!quien || !esFecha(desde) || !esFecha(hasta)) continue;
+    const neto = en(filas[n], iNeto);
     salida.push({ quien, desde, hasta, registradoPor: en(filas[n], iReg),
-                  cuando: en(filas[n], iCuando), nota: en(filas[n], iNota), fila: n + 1 });
+                  cuando: en(filas[n], iCuando), nota: en(filas[n], iNota),
+                  neto: neto === '' ? null : aEntero(neto), fila: n + 1 });
   }
   return salida;
 }
@@ -456,6 +468,7 @@ export function filaBoleta(b: Omit<Boleta, 'fila'>, enc: string[]): string[] {
   poner(i(COL_BOLETAS.registradoPor), b.registradoPor);
   poner(i(COL_BOLETAS.cuando), b.cuando);
   poner(i(COL_BOLETAS.nota), b.nota);
+  poner(i(COL_BOLETAS.neto), b.neto === null ? '' : String(b.neto));
   return fila;
 }
 

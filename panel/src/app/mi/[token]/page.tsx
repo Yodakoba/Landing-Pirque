@@ -62,7 +62,7 @@
  * hay que cocinar; quién lo pidió y cuánto pagó no es dato de un turno.
  */
 import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
-         leerMenus, leerPagosEquipo, leerColaboradores, leerExtras, leerVendedores,
+         leerMenus, leerPagosEquipo, leerColaboradores, leerExtras, leerVendedores, leerBoletas,
          leerPresupuestos, leerLineasPresupuesto, leerCobros, leerClientes } from '@/lib/datos';
 import { colaboradorPorToken } from '@/lib/extras';
 import VistaColaborador from './Colaborador';
@@ -77,7 +77,9 @@ import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
 import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_MENUS } from '@/lib/menus';
-import { HOJA_PAGOS } from '@/lib/remuneraciones';
+import { HOJA_PAGOS, HOJA_BOLETAS } from '@/lib/remuneraciones';
+import { cuentaBoleta, montosDeTurnos } from '@/lib/boletas';
+import CajaBoleta from '@/components/CajaBoleta';
 import { HOJA_COLABORADORES, HOJA_ACTIVIDADES } from '@/lib/extras';
 import { menusDe } from '@/lib/shopify';
 import { trabajadorPorToken, turnosDe, pagoDe, esContratado, esPreparacion,
@@ -368,9 +370,9 @@ export default async function Pagina({ params, searchParams }: {
 }) {
   // **Todo en una tanda** (2026-11-12): eran siete consultas a Google por
   // visita, una por pestaña; ahora es una sola, con los extras incluidos.
-  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras, fichasV] = await conLecturas(
+  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras, fichasV, boletas] = await conLecturas(
     [HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_FECHAS, HOJA_CONFIG, HOJA_RESERVAS, HOJA_MENUS, HOJA_PAGOS,
-     HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_VENDEDORES],
+     HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_VENDEDORES, HOJA_BOLETAS],
     async () => Promise.all([
     leerTrabajadores(), leerTurnos(),
     // Igual que las reservas: la hora de apertura y las notas del día son un
@@ -394,7 +396,10 @@ export default async function Pagina({ params, searchParams }: {
     leerExtras().catch(() => []),
     // **El link de un socio comercial** (2026-11-12): su ficha viaja en la
     // misma tanda; sus ventas, en una segunda, solo si el token es suyo.
-    leerVendedores().catch(() => [])
+    leerVendedores().catch(() => []),
+    // **La boleta** (2026-11-20): si llegó se ve en la caja de la boleta.
+    // Sin poder leerlas, la caja dice cuánto boletear igual.
+    leerBoletas().catch(() => [])
   ]))();
 
   // La lista vacía no es "tu link no sirve": no existe el caso de un token
@@ -418,7 +423,7 @@ export default async function Pagina({ params, searchParams }: {
   if (colaborador) {
     const porDia = new Map(fechas.map((f) => [f.fecha, f]));
     return (
-      <VistaColaborador quien={colaborador} extras={extras} pagos={pagos} token={params.token}
+      <VistaColaborador quien={colaborador} extras={extras} pagos={pagos} boletas={boletas} token={params.token}
         p={searchParams?.p} v={searchParams?.v}
         apertura={(f) => porDia.get(f)?.apertura || cfg.horaApertura} />
     );
@@ -515,6 +520,16 @@ export default async function Pagina({ params, searchParams }: {
    * exactamente lo que esta página viene a evitar.
    */
   const cuadra = cuenta.jornadas + cuenta.montoHorasExtra + cuenta.ajustes === cuenta.total;
+
+  /**
+   * **La boleta del periodo** (2026-11-20, `lib/boletas.ts`): cuánto
+   * boletear en bruto para recibir el neto, sin propina y sin restar los
+   * adelantos. Un contratado no boletea su sueldo: no le sale.
+   */
+  const boleta = esContratado(l?.modalidad ?? quien.modalidad) ? null
+    : cuentaBoleta(montosDeTurnos(trabajados, quien.nombre), boletas, quien.nombre, desde, hasta, ahora);
+  // Si la semana cruza de mes, los dos meses.
+  const mesesDeLaSemana = [...new Set([desde.slice(0, 7), hasta.slice(0, 7)])];
 
   const delPeriodo = trabajados
     .filter((t) => t.fecha >= desde && t.fecha <= hasta)
@@ -793,6 +808,36 @@ export default async function Pagina({ params, searchParams }: {
               Algún día quedó en cero porque el descuento era mayor que la
               jornada: un día nunca baja de cero.
             </p>
+          )}
+
+          {/* ---------- La boleta ---------- */}
+
+          {/* **Cuánto boletear** (2026-11-20, lo pidió el cliente): el bruto
+              que se escribe en el SII para recibir el neto. Sigue a la vista
+              de arriba —por semana o por mes— y ofrece la otra, porque cada
+              uno se arregla con quien le paga. */}
+          {boleta && boleta.neto > 0 && (
+            <div className="mt-5">
+              <CajaBoleta tu cuenta={boleta}
+                titulo={esMes ? `Tu boleta de ${comoSeLlama}` : `Tu boleta del ${comoSeLlama}`}>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {esMes ? (
+                    <p className="text-[13px] text-hueso/75">
+                      ¿Boleteas por semana? Elige la semana en <strong>Tus semanas</strong>, más abajo.
+                    </p>
+                  ) : (
+                    <>
+                      <span className="text-[13px] text-hueso/75">¿Boleteas por mes?</span>
+                      {mesesDeLaSemana.map((m) => (
+                        <a key={m} href={enlace(`?p=${m}`)} className="tecla boton min-h-[44px] font-semibold">
+                          Ver {mesEnPalabras(m)} →
+                        </a>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </CajaBoleta>
+            </div>
           )}
 
           {/* ---------- Qué te pagaron ---------- */}

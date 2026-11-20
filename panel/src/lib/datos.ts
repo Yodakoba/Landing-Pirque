@@ -32,7 +32,7 @@ import { HOJA_USUARIOS, leerUsuariosDe, aFilasUsuarios, type Usuario } from './u
 import { HOJA_CIERRES, COL_CIERRES, ENCABEZADO_CIERRES, leerCierresDe,
          type Cierre } from './cierres';
 import { HOJA_PAGOS, ENCABEZADO_PAGOS, COL_PAGOS, leerPagosDe, filaPago, nuevoIdPago,
-         HOJA_BOLETAS, ENCABEZADO_BOLETAS, leerBoletasDe, filaBoleta,
+         HOJA_BOLETAS, ENCABEZADO_BOLETAS, COL_BOLETAS, leerBoletasDe, filaBoleta,
          type PagoEquipo, type Boleta } from './remuneraciones';
 import {
   HOJA_BITACORA, ENCABEZADO_BITACORA, filaBitacora, leerBitacoraDe,
@@ -753,17 +753,31 @@ export async function leerBoletas(): Promise<Boleta[]> {
  * y así no hay dos filas que puedan decir cosas distintas.
  */
 export async function marcarBoleta(
-  quien: string, desde: Fecha, hasta: Fecha, recibida: boolean, registradoPor: string
+  quien: string, desde: Fecha, hasta: Fecha, recibida: boolean, registradoPor: string,
+  neto: number | null = null
 ): Promise<void> {
   const filas = await asegurarEncabezado(HOJA_BOLETAS, ENCABEZADO_BOLETAS);
   const clave = normalizar(quien);
   const suyas = leerBoletasDe(filas)
     .filter((b) => normalizar(b.quien) === clave && b.desde === desde && b.hasta === hasta);
   if (recibida) {
-    if (suyas.length) return;
+    // **El neto que respalda** (2026-11-20): la columna se agrega sola en
+    // una planilla de antes, al final y sin tocar ninguna fila.
+    const enc = neto === null ? (filas[0] ?? ENCABEZADO_BOLETAS)
+      : await asegurarColumna(HOJA_BOLETAS, filas[0] ?? ENCABEZADO_BOLETAS, COL_BOLETAS.neto);
+    if (suyas.length) {
+      // **Marcar otra vez con otro monto lo corrige**: llegó la boleta por
+      // la diferencia de un día que se corrigió después.
+      const b = suyas[0];
+      if (neto !== null && b.neto !== neto) {
+        await escribirFila(HOJA_BOLETAS, b.fila, filaBoleta({ ...b, neto,
+          nota: [b.nota, `Corregida por ${registradoPor} el ${ahoraEnChile()}`].filter(Boolean).join(' · ') }, enc));
+      }
+      return;
+    }
     await agregarFilas(HOJA_BOLETAS, [filaBoleta({
-      quien, desde, hasta, registradoPor, cuando: ahoraEnChile(), nota: ''
-    }, filas[0] ?? ENCABEZADO_BOLETAS)]);
+      quien, desde, hasta, registradoPor, cuando: ahoraEnChile(), nota: '', neto
+    }, enc)]);
   } else if (suyas.length) {
     await borrarFilas(HOJA_BOLETAS, suyas.map((b) => b.fila));
   }

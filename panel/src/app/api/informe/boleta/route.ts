@@ -3,6 +3,7 @@ import { conLecturas } from '@/lib/sheets';
 import { marcarBoleta, anotar } from '@/lib/datos';
 import { exigir, quienEs } from '@/lib/permisos';
 import { esFecha } from '@/lib/fechas';
+import { enPesos } from '@/lib/ocupacion';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,11 +28,17 @@ export const POST = conLecturas([], async function POST(req: Request) {
       return NextResponse.json({ error: 'Falta la persona o el periodo.' }, { status: 400 });
     }
     const recibida = c.recibida === true;
+    // **El neto que respalda** (2026-11-20): lo que faltaba boletear según
+    // la pantalla, que lo calcula con `cuentaBoleta()`. Opcional: sin él la
+    // boleta se marca igual, como antes.
+    const n = Number(c.neto);
+    const neto = recibida && c.neto !== undefined && c.neto !== null && Number.isFinite(n) && n >= 0
+      ? Math.round(n) : null;
     const yo = await quienEs(req);
-    await marcarBoleta(quien, desde, hasta, recibida, yo.usuario);
+    await marcarBoleta(quien, desde, hasta, recibida, yo.usuario, neto);
     await anotar({ ...yo,
       accion: recibida ? 'Marcó boleta recibida' : 'Desmarcó una boleta',
-      detalle: `${quien} · ${desde} a ${hasta}` });
+      detalle: `${quien} · ${desde} a ${hasta}${neto !== null ? ` · neto ${enPesos(neto)}` : ''}` });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

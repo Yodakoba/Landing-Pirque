@@ -192,11 +192,11 @@ const OPERACIONES: Mision[] = [
   },
   {
     id: 'informe', emoji: '📊', titulo: 'El informe: lo que cuesta el equipo', escena: 'ope-informe',
-    intro: 'Por persona: cuántos días vino, sus jornadas, ajustes y total.',
+    intro: 'Por persona: cuántos días vino, sus jornadas, ajustes y total, y cuánto tiene que boletear. El periodo se elige arriba: día, semana, mes u otro rango.',
     puntos: [
-      'Elige el periodo: día, semana, mes u otro rango.',
       'Si falta cerrar un turno, el total está incompleto.',
-      'Trabajadores y extras, cada uno con lo que falta.'
+      'Trabajadores y extras, cada uno con lo que falta.',
+      '🧾 Sin boleta: a quién le falta mandarla. Abre su línea y ves el bruto para el SII y el neto.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }
   }
@@ -219,7 +219,7 @@ const PAGOS: Mision[] = [
     puntos: [
       'Copia el sueldo: la cuenta y el monto, para pegarlos en el banco.',
       'La propina va en otra transferencia.',
-      'El detalle de los días que vino.'
+      'Su boleta: el bruto que escribe en el SII y el neto que recibe. Márcala cuando llegue.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }
   },
