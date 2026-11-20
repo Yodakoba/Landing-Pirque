@@ -604,9 +604,13 @@ only*)**: con la naranja, Vercel no puede sacar el certificado.
   conectado en Shopify **sin ser el principal** —por eso hoy redirige al
   sitio viejo—. En Vercel ya están `brasasdelopirque.cl` (en `brasas-sitio`,
   Production) y `www` (redirige a la raíz), esperando el DNS.
-- **El lanzamiento son tres pasos**: en Shopify, `tienda.` pasa a ser el
-  dominio principal; en Cloudflare, se borra el A de la raíz y se crea el
-  CNAME `@`, y se cambia el de `www`. **La vuelta atrás** es devolver los
+- **Del lado del dominio, el lanzamiento son tres pasos**: en Shopify,
+  `tienda.` pasa a ser el dominio principal; en Cloudflare, se borra el A de
+  la raíz y se crea el CNAME `@`, y se cambia el de `www`. **La tienda real
+  va aparte y antes**: crear allá los productos con sus dos modalidades y
+  llenar `CONFIG.tiendas.real` (ver "Dos tiendas" y "La tienda de
+  producción, mirada por su catálogo público"); sin eso el sitio nuevo
+  sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
   dos registros a los valores de la columna *Hoy* y volver a dejar
   `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
   minutos).
