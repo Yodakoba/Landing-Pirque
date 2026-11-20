@@ -26,7 +26,7 @@ import { leerConfigDe, aFilasConfig, aDiasSemana, deDiasSemana, aDescuentos,
          POR_DEFECTO, CLAVES } from './config.ts';
 import { prepararLineas, esDiaPublico, clienteDe, otrasAlternativas, grupoSinGanar, lineaDeProducto, yaEstaEnLaCotizacion, cambiarCantidad,
          alternativasDe, letraDe, principalDe, sigueViva, vivasDelGrupo, faltaElegir, paraElLink,
-         ESTADOS_A_MANO, productoDe, showDe } from './cotizar.ts';
+         ESTADOS_A_MANO, productoDe, showDe, reglaShowDe, showQuedaBajoMinimo, showBajoMinimoDe } from './cotizar.ts';
 import { estadoNormal, cuentasDe, documentoDe, DOCUMENTO, numeroONulo } from './presupuestos.ts';
 import { condicionesDe, estadoCobros, leerCobrosDe, filaCobro, ENCABEZADO_COBROS, limpiarCobro,
          montoCobro, cobrosDe, CONCEPTO_COBRO, avisosDeCobro, diasEntre, porRevisar,
@@ -4091,6 +4091,46 @@ console.log('\nCotizaciones, fase 2');
   const privado = prepararLineas(
     [li({ concepto: 'Show ecuestre', precio: 500000, cantidad: 1, personas: 0 })], catalogo, 40, false);
   ok(privado[0].precio === 500000, 'en un día privado el show cobra su precio');
+
+  // --- El mínimo del show en un día privado con poca gente (2026-11-20) ---
+  const regla = reglaShowDe({ showGratisDesde: 25, showMinimo: 100000 });
+  ok(reglaShowDe({ showGratisDesde: 0, showMinimo: 100000 }) === null
+     && reglaShowDe({ showGratisDesde: 25, showMinimo: 0 }) === null, 'show: con un 0 en Configuración no hay mínimo');
+  const elShow = (extra: Partial<LineaPresupuesto>, personas = 20, diaPublico = false, r = regla) =>
+    prepararLineas([li({ cantidad: personas, personas }),
+                    li({ concepto: 'Show ecuestre', cantidad: 1, personas: 0, ...extra })],
+                   catalogo, personas, diaPublico, 0, r).find((l) => l.concepto === 'Show ecuestre');
+  ok(elShow({ precio: 0, ivaIncluido: false })?.precio === 100000,
+     'show: 20 personas en un día privado, a cero sube al mínimo de $100.000 + IVA');
+  ok(elShow({ precio: 0, ivaIncluido: true })?.precio === 119000,
+     'show: en una línea con IVA incluido, el mínimo es $119.000');
+  const conDescuento = elShow({ precio: 110000, descuento: 15, ivaIncluido: false });
+  ok(conDescuento?.precio === 100000 && conDescuento.descuento === 0,
+     'show: un descuento que lo deja bajo el mínimo se saca, y queda en el mínimo');
+  ok(elShow({ precio: 450000, ivaIncluido: false })?.precio === 450000, 'show: sobre el mínimo se respeta lo escrito');
+  ok(elShow({ precio: 0, ivaIncluido: false }, 25)?.precio === 0, 'show: desde 25 personas puede ir sin costo');
+  ok(elShow({ precio: 0 }, 20, true)?.precio === 0, 'show: en un día público va incluido y la regla no corre');
+  ok(elShow({ precio: 0, ivaIncluido: false }, 20, false, null)?.precio === 0,
+     'show: la gerencia y el administrador pasan por encima (la regla llega en null)');
+  ok(!prepararLineas([li({ cantidad: 20, personas: 20 })], catalogo, 20, false, 0, regla)
+       .some((l) => l.concepto === 'Show ecuestre'), 'show: si no va en la cotización, no se agrega ni se cobra');
+  ok(prepararLineas([li({ concepto: 'Show ecuestre', cantidad: 1, personas: 0, precio: 0, ivaIncluido: false })],
+       catalogo, 10, false, 0, regla)[0].precio === 100000,
+     'show: sin menús todavía, cuentan los invitados');
+  const gerenciaGratis = prepararLineas([li({ cantidad: 20, personas: 20 }),
+    li({ concepto: 'Show ecuestre', cantidad: 1, personas: 0, precio: 0, ivaIncluido: false })], catalogo, 20, false, 0, null);
+  ok(showQuedaBajoMinimo(gerenciaGratis, catalogo, regla, false, 20)
+     && !showQuedaBajoMinimo(gerenciaGratis, catalogo, regla, true, 20)
+     && !showQuedaBajoMinimo(gerenciaGratis, catalogo, null, false, 20),
+     'show: se sabe cuándo quedó bajo el mínimo (y que en un día público o sin regla no cuenta)');
+  ok(showBajoMinimoDe('', true, true, 'Rodrigo Vera', '2026-11-20 18:00') === 'Rodrigo Vera · 2026-11-20 18:00'
+     && showBajoMinimoDe('Rodrigo Vera · 2026-11-20 18:00', true, true, 'Paula', 'x') === 'Rodrigo Vera · 2026-11-20 18:00'
+     && showBajoMinimoDe('Rodrigo Vera · 2026-11-20 18:00', true, false, 'Paula', 'x') === ''
+     && showBajoMinimoDe('Rodrigo Vera · 2026-11-20 18:00', false, false, 'Jorge', 'x') === 'Rodrigo Vera · 2026-11-20 18:00',
+     'show: la marca la deja y la saca solo quien puede pasar por encima; el vendedor no la toca');
+  ok(puede(ROL.gerencia, 'showBajoMinimo') && puede(ROL.admin, 'showBajoMinimo') && puede(ROL.pagos, 'showBajoMinimo')
+     && !puede(ROL.vendedor, 'showBajoMinimo') && !puede(ROL.operaciones, 'showBajoMinimo'),
+     'show: pasan por encima la gerencia, pagos y el administrador; el vendedor y operaciones no');
 
   const once = lineaDeProducto(catalogo[1], 'PRE-1', 25, 8000);
   ok(!once.sigue && once.cantidad === 25 && !once.ivaIncluido,

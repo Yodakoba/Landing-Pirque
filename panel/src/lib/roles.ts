@@ -21,6 +21,7 @@ export const PALABRAS: Record<Accion, string> = {
   anotar: 'Anotar una reserva nueva directo en el calendario',
   asistencia: 'Marcar si cada reserva vino o no',
   presupuestos: 'Cotizar: crear cotizaciones, marcarlas ganadas, cancelarlas',
+  showBajoMinimo: 'Cobrar el show ecuestre bajo el mínimo en un día privado con poca gente',
   clientes: 'Ver y editar las fichas de clientes',
   dias: 'Agregar, abrir, cerrar y editar días del calendario',
   operarDia: 'Llevar el día: pedir más cupo, soltar reservas por cupo y avisar a los clientes',

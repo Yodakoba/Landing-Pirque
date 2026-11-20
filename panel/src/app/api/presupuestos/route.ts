@@ -25,9 +25,10 @@ import {
   documentoDe, numeroONulo, montoONulo, type Presupuesto, type LineaEntrante
 } from '@/lib/presupuestos';
 import {
-  prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe, otrasAlternativas
+  prepararLineas, esDiaPublico, conCliente, ESTADOS_A_MANO, grupoDe, otrasAlternativas, reglaShowDe,
+  showQuedaBajoMinimo, showBajoMinimoDe
 } from '@/lib/cotizar';
-import { puedeTocarPresupuesto, type Rol } from '@/lib/auth';
+import { puede, puedeTocarPresupuesto, type Rol } from '@/lib/auth';
 import { nuevoToken } from '@/lib/equipo';
 import { hoy, esFecha } from '@/lib/fechas';
 import { ahoraEnChile } from '@/lib/bitacora';
@@ -85,6 +86,10 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       fechas: fechas.map((f) => ({ fecha: f.fecha, estado: f.estado, capacidad: f.capacidad })),
       vigencia: cfg.vigenciaPresupuesto,
       descuentos: cfg.descuentos,
+      // El mínimo del show en un día privado (2026-11-20). La pantalla lo
+      // aplica con la misma función del servidor, salvo a quien puede pasar
+      // por encima: eso lo decide con el rol, que ya viaja.
+      reglaShow: reglaShowDe(cfg),
       condiciones: { anticipoPct: cfg.anticipoPct, saldoDias: cfg.saldoDias },
       seguimiento: { dias: cfg.seguimientoDias, antesEvento: cfg.avisoEvento },
       empresa: cfg.empresa.nombre,
@@ -159,10 +164,17 @@ function cuandoDelCuerpo(cuerpo: Record<string, unknown>, antes?: Presupuesto) {
 const pct = (v: unknown) => Math.min(100, Math.max(0, aEntero(v)));
 
 async function lineasListas(crudo: unknown, id: string, invitados: number, fecha: string,
-  uf = 0) {
-  const [menus, fechas] = await Promise.all([leerMenus(), leerFechas()]);
-  return prepararLineas(lineasDelCuerpo(crudo, id), menus, invitados,
-    esFecha(fecha) && esDiaPublico(fecha, fechas), uf);
+  uf: number, rol: Rol, excepcion = false) {
+  const [menus, fechas, cfg] = await Promise.all([leerMenus(), leerFechas(), leerConfig()]);
+  // **El mínimo del show en un día privado** (2026-11-20): rige para todos
+  // menos quien puede pasar por encima (la gerencia, quien paga y el
+  // administrador), y no corre en una cotización donde uno de ellos ya lo
+  // autorizó (`excepcion`).
+  const deConfig = reglaShowDe(cfg);
+  const regla = puede(rol, 'showBajoMinimo') || excepcion ? null : deConfig;
+  const publico = esFecha(fecha) && esDiaPublico(fecha, fechas);
+  const lineas = prepararLineas(lineasDelCuerpo(crudo, id), menus, invitados, publico, uf, regla);
+  return { lineas, bajoMinimo: showQuedaBajoMinimo(lineas, menus, deConfig, publico, invitados) };
 }
 
 /**
@@ -292,8 +304,11 @@ export const POST = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJ
       creadoPor: quien.usuario,
       creado: ahoraEnChile()
     };
+    const nuevas = await lineasListas(cuerpo.lineas, id, invitados, p.fecha, p.uf, quien.rol as Rol);
+    p.showBajoMinimo = showBajoMinimoDe('', puede(quien.rol as Rol, 'showBajoMinimo'), nuevas.bajoMinimo,
+      quien.usuario, ahoraEnChile());
     await guardarPresupuesto(p);
-    await guardarLineas(id, await lineasListas(cuerpo.lineas, id, invitados, p.fecha, p.uf));
+    await guardarLineas(id, nuevas.lineas);
     await anotar({ ...quien,
       accion: estado === ESTADO_PRESUPUESTO.candidato ? 'Anotó un candidato' : 'Creó una cotización',
       detalle: `${folioDe(p)} · ${cliente.nombre} · ${p.fecha || p.periodo}` });
@@ -467,15 +482,26 @@ export const PATCH = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HO
       // línea no puede correrle el plazo al cliente.
       validoHasta
     };
-    await guardarPresupuesto(p);
     // Las líneas se vuelven a preparar también cuando solo cambian los
     // invitados o la fecha: las que siguen a los invitados toman el número
-    // nuevo, y la regla del show depende del día.
+    // nuevo, y la regla del show depende del día. Se preparan antes de
+    // guardar la cotización, porque de ellas sale la marca del show bajo el
+    // mínimo (2026-11-20).
+    let nuevas: Awaited<ReturnType<typeof lineasListas>> | null = null;
     if (cuerpo.lineas !== undefined || cuerpo.invitados !== undefined
         || cuerpo.fecha !== undefined || cuerpo.uf !== undefined) {
       const crudo = cuerpo.lineas !== undefined
         ? cuerpo.lineas : lineasDe(await leerLineasPresupuesto(), id);
-      await guardarLineas(id, await lineasListas(crudo, id, invitados, p.fecha, p.uf));
+      nuevas = await lineasListas(crudo, id, invitados, p.fecha, p.uf, quien.rol as Rol,
+        !!previo.showBajoMinimo);
+      p.showBajoMinimo = showBajoMinimoDe(previo.showBajoMinimo ?? '', puede(quien.rol as Rol, 'showBajoMinimo'),
+        nuevas.bajoMinimo, quien.usuario, ahoraEnChile());
+    }
+    await guardarPresupuesto(p);
+    if (nuevas) await guardarLineas(id, nuevas.lineas);
+    if (p.showBajoMinimo && !previo.showBajoMinimo) {
+      await anotar({ ...quien, accion: 'Dejó el show bajo el mínimo',
+        detalle: `${folioDe(p)} · ${p.fecha || p.periodo} · bajo ${reglaShowDe(await leerConfig())?.desde ?? ''} personas` });
     }
     if (p.idReserva) await sincronizarReserva(id);
 

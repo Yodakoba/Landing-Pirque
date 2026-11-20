@@ -196,6 +196,14 @@ export const COL_PRESUPUESTOS = {
    */
   socio: 'Socio comercial',
   /**
+   * **El show bajo el mínimo, autorizado** (2026-11-20): *"quién · cuándo"*,
+   * cuando la gerencia general, quien paga o el administrador guardaron el
+   * show ecuestre bajo el mínimo de un día privado con poca gente. Mientras
+   * esté, la regla no lo vuelve a subir aunque la abra el vendedor. Lo
+   * escribe solo el servidor (`showBajoMinimoDe()` en `cotizar.ts`).
+   */
+  showBajoMinimo: 'Show bajo el mínimo',
+  /**
    * **La comisión del socio, congelada** cuando el cliente terminó de pagar
    * (2026-11-12, segunda entrega): *"300000 · 60 personas → etapa 2, 10% =
    * …"*. Igual que `Comisión vendedor`: desde ahí no cambia aunque se edite
@@ -356,6 +364,8 @@ export interface Presupuesto {
   anticipoMonto?: number | null;
   /** `sí`, `no` o vacío: ver `COL_PRESUPUESTOS.exclusivo`. */
   exclusivo?: string;
+  /** *"quién · cuándo"* autorizó el show bajo el mínimo: ver `COL_PRESUPUESTOS.showBajoMinimo`. */
+  showBajoMinimo?: string;
   exclusividad?: string;
   diaPausado?: string;
   /** La comisión congelada del vendedor: *"285000 · cómo se calculó"*. */
@@ -961,6 +971,7 @@ export function leerPresupuestosDe(filas: string[][]): Presupuesto[] {
       diaPausado: en(f, i.diaPausado).trim(),
       comisionVendedor: en(f, i.comisionVendedor).trim(),
       socio: en(f, i.socio).trim(),
+      showBajoMinimo: en(f, i.showBajoMinimo).trim(),
       comisionSocio: en(f, i.comisionSocio).trim(),
       saldoDias: numeroONulo(en(f, i.saldoDias), 365),
       uf: aPrecio(en(f, i.uf)),
@@ -1035,6 +1046,7 @@ export function filaPresupuesto(
   poner(i.diaPausado, p.diaPausado ?? '');
   poner(i.comisionVendedor, p.comisionVendedor ?? '');
   poner(i.socio, p.socio ?? '');
+  poner(i.showBajoMinimo, p.showBajoMinimo ?? '');
   poner(i.comisionSocio, p.comisionSocio ?? '');
   poner(i.saldoDias, p.saldoDias === null ? '' : String(p.saldoDias));
   poner(i.uf, p.uf ? String(p.uf) : '');

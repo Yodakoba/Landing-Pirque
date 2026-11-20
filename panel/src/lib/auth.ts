@@ -356,6 +356,17 @@ export const PERMISOS = {
   // armar el equipo y sale de la ocupación, no de este permiso.
   presupuestos: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia, ROL.vendedor],
   /**
+   * **El show ecuestre bajo el mínimo** (2026-11-20, lo pidió el cliente). En
+   * un día privado o exclusivo con menos personas que `showGratisDesde`, el
+   * show, si va, se cobra al menos `showMinimo` + IVA (`reglaShowDe()` en
+   * `cotizar.ts`). **La gerencia general y el administrador pueden pasar por
+   * encima**: *"vale sobre todo para los vendedores. La gerencia puede pasar
+   * por encima, el administrador también"*. **Y quien paga**, por las dos
+   * reglas que ya estaban: pagos puede todo menos las cuentas y la mantención
+   * (2026-11-01), y la gerencia puede, por ahora, lo mismo que pagos.
+   */
+  showBajoMinimo: [ROL.admin, ROL.pagos, ROL.gerencia],
+  /**
    * **Las fichas de clientes** (2026-11-10): verlas, crearlas y editarlas.
    *
    * **Va con el vendedor**, al revés que casi todo lo demás: es quien

@@ -35,7 +35,7 @@ import {
 import {
   prepararLineas, esDiaPublico, lineaDeProducto, yaEstaEnLaCotizacion, productoDe, showDe, cambiarCantidad,
   alternativasDe, letraDe, grupoDe, vivasDelGrupo, sigueViva, paraElLink,
-  MOTIVOS_PERDIDA
+  MOTIVOS_PERDIDA, aplicaReglaShow, minimoShowEnLinea, type ReglaShow
 } from '@/lib/cotizar';
 import { paraCotizar, precioParaCotizar, aPrecio, TIPO_PRODUCTO, MONEDA, COBRO, type Menu } from '@/lib/menus';
 import {
@@ -74,6 +74,8 @@ export interface DatosCotizar {
   lineas?: LineaPresupuesto[];
   /** Las condiciones de pago por defecto, de Configuración. */
   condiciones?: { anticipoPct: number; saldoDias: number };
+  /** El mínimo del show en un día privado con poca gente (2026-11-20). */
+  reglaShow?: ReglaShow | null;
   /** Los plazos del seguimiento de Configuración: los que rigen en blanco. */
   seguimiento?: { dias: number; antesEvento: number };
   /** El nombre comercial, para el asunto del correo. */
@@ -348,13 +350,24 @@ export default function CotizacionDialogo({
   const cliente = clientes.find((c) => c.id === idCliente);
   const fechaReal = sinFecha ? '' : fecha;
   const publico = esFecha(fechaReal) && esDiaPublico(fechaReal, datos.fechas);
+  /**
+   * **El mínimo del show en un día privado** (2026-11-20): la misma regla del
+   * servidor. La gerencia y el administrador pueden pasar por encima, así que
+   * para ellos no corre (`showBajoMinimo`).
+   */
+  const pasaPorEncima = puede(datos.rol as Rol, 'showBajoMinimo');
+  /** Si la gerencia, pagos o el administrador ya autorizaron el show bajo el mínimo. */
+  const showAutorizado = (p?.showBajoMinimo ?? '').split(' · ')[0];
+  const reglaShow = pasaPorEncima || showAutorizado ? null : datos.reglaShow ?? null;
   // **Lo que se ve es lo que se guarda**: la misma función del servidor.
   const vistas = useMemo(
-    () => prepararLineas(lineas, datos.menus, invitados, publico, uf),
-    [lineas, datos.menus, invitados, publico, uf]);
+    () => prepararLineas(lineas, datos.menus, invitados, publico, uf, reglaShow),
+    [lineas, datos.menus, invitados, publico, uf, reglaShow]);
   const cuentas = cuentasDe(vistas, descuento);
   /** Cuánta gente suman los menús: tiene que calzar con los invitados. */
   const enMenus = vistas.reduce((n, l) => n + l.personas, 0);
+  /** Si en esta cotización el show tiene mínimo: día no público y poca gente. */
+  const showConMinimo = aplicaReglaShow(datos.reglaShow, publico, enMenus > 0 ? enMenus : invitados);
   const cond = condicionesDe(
     { anticipo: numeroONulo(anticipoTxt, 100), anticipoMonto: montoONulo(anticipoMontoTxt),
       saldoDias: numeroONulo(saldoTxt, 365), fecha: fechaReal },
@@ -383,6 +396,14 @@ export default function CotizacionDialogo({
   });
   const [guardada, setGuardada] = useState<string | null>(null);
   useEffect(() => { if (p) setGuardada(firma); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * **Si al abrir, el mínimo del show cambió el precio** (2026-11-20). Pasa
+   * con una cotización de antes de la regla, o si cambió la Configuración.
+   * Se guarda en el acto, para que nadie la mande con el show a $0. Solo
+   * miran las líneas del show: lo demás no se escribe al abrir.
+   */
+  const showSubio = lineas.some((l, i) => productoDe(l.concepto, datos.menus)?.tipo === TIPO_PRODUCTO.show
+    && !!vistas[i] && (vistas[i].precio !== l.precio || vistas[i].descuento !== l.descuento));
   const sucio = !p || (guardada !== null && firma !== guardada);
 
   /**
@@ -402,6 +423,12 @@ export default function CotizacionDialogo({
   const auto = usarAutoguardado(firma, async () => {
     if (!(await guardar(undefined, true))) return ultimoError.current || 'No se pudo guardar';
   }, 1200, autoActivo);
+  // El guardado del mínimo del show al abrir (ver `showSubio`).
+  useEffect(() => {
+    if (!showSubio || !autoActivo) return;
+    const t = setTimeout(() => { void auto.reintentar(); }, 1200);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /**
    * **Si la planilla dijo "demasiadas consultas", se reintenta sola**
    * (2026-11-12). Google corta a 60 lecturas por minuto para la cuenta del
@@ -1526,31 +1553,46 @@ export default function CotizacionDialogo({
                 <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                   Agregar <AyudaCorta tema="agregarProducto" />
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {cotizables.map((m) => {
-                    // **Ya agregado, el botón se apaga y lo dice** (2026-11-12):
-                    // un producto va una sola vez; la cantidad se cambia en su línea.
-                    const ya = yaEstaEnLaCotizacion(vistas, m.nombre);
-                    return (
-                      <button key={m.nombre} type="button" onClick={() => agregar(m)} disabled={ya}
-                        title={ya ? 'Ya está en la cotización: cambia la cantidad en su línea' : undefined}
-                        className={`boton min-h-[48px] text-[14px] ${ya ? 'border-verde-fuerte/50 text-verde-texto' : ''}`}>
-                        {ya ? '✓' : '+'} {m.nombre}
-                        <span className="ml-1 text-hueso/60">
-                          {ya ? '· ya está'
-                            : m.moneda === MONEDA.uf ? `${String(m.precioCotizacion).replace('.', ',')} UF`
-                            : precioParaCotizar(m) ? enPesos(precioParaCotizar(m)) : ''}
-                        </span>
-                      </button>
-                    );
-                  })}
-                  <button type="button" className="boton min-h-[48px] text-[14px]"
-                    onClick={() => setLineas([...vistas, {
-                      presupuesto: p?.id ?? '', concepto: 'Otro', cantidad: 1, precio: 0,
-                      personas: 0, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0 }])}>
-                    + Otra línea
-                  </button>
-                </div>
+                {/* **Menús en una fila, extras en otra** (2026-11-20, lo pidió el
+                    cliente: *"separar los productos de forma muy simple"*). Arriba
+                    lo que es gente —los menús—; abajo lo que se suma aparte: el
+                    arriendo, el show, el desayuno, las actividades. Sale del tipo
+                    de cada producto en Productos. */}
+                {[
+                  { titulo: 'Menús', lista: cotizables.filter((m) => m.tipo === TIPO_PRODUCTO.menu), otra: false },
+                  { titulo: 'Extras y arriendo', lista: cotizables.filter((m) => m.tipo !== TIPO_PRODUCTO.menu), otra: true }
+                ].filter((g) => g.lista.length > 0 || g.otra).map((g) => (
+                  <div key={g.titulo} className="mb-3 last:mb-0">
+                    <p className="mb-1.5 text-[13px] font-semibold text-hueso/75">{g.titulo}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {g.lista.map((m) => {
+                        // **Ya agregado, el botón se apaga y lo dice** (2026-11-12):
+                        // un producto va una sola vez; la cantidad se cambia en su línea.
+                        const ya = yaEstaEnLaCotizacion(vistas, m.nombre);
+                        return (
+                          <button key={m.nombre} type="button" onClick={() => agregar(m)} disabled={ya}
+                            title={ya ? 'Ya está en la cotización: cambia la cantidad en su línea' : undefined}
+                            className={`boton min-h-[48px] text-[14px] ${ya ? 'border-verde-fuerte/50 text-verde-texto' : ''}`}>
+                            {ya ? '✓' : '+'} {m.nombre}
+                            <span className="ml-1 text-hueso/60">
+                              {ya ? '· ya está'
+                                : m.moneda === MONEDA.uf ? `${String(m.precioCotizacion).replace('.', ',')} UF`
+                                : precioParaCotizar(m) ? enPesos(precioParaCotizar(m)) : ''}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {g.otra && (
+                        <button type="button" className="boton min-h-[48px] text-[14px]"
+                          onClick={() => setLineas([...vistas, {
+                            presupuesto: p?.id ?? '', concepto: 'Otro', cantidad: 1, precio: 0,
+                            personas: 0, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0 }])}>
+                          + Otra línea
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
                 {show && !publico && esFecha(fechaReal) && !vistas.some((l) => l.concepto === show.nombre) && (
                   <p className="mt-2 text-[13px] text-hueso/70">
                     Día privado: el show ecuestre es opcional y tiene costo. Agrégalo arriba si va.
@@ -1568,6 +1610,9 @@ export default function CotizacionDialogo({
                 {vistas.map((l, i) => {
                   const prod = productoDe(l.concepto, datos.menus);
                   const esShowIncluido = publico && prod?.tipo === TIPO_PRODUCTO.show;
+                  // El show con mínimo (2026-11-20): día privado y poca gente.
+                  const showMinimo = prod?.tipo === TIPO_PRODUCTO.show && showConMinimo && datos.reglaShow
+                    ? datos.reglaShow : null;
                   return (
                     <li key={i} className="rounded border border-hueso/15 bg-panel p-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1627,9 +1672,28 @@ export default function CotizacionDialogo({
                             </Campo>
                           ) : (
                           <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-48" ayuda="precioLinea">
+                            {showMinimo && reglaShow ? (
+                              // Con mínimo, el precio se aplica al salir del campo: así
+                              // se puede escribir un número entero sin que el mínimo
+                              // lo corrija a cada tecla.
+                              <input key={`show-${l.precio}`} type="number" step={500}
+                                min={minimoShowEnLinea(showMinimo, l.ivaIncluido)}
+                                defaultValue={l.precio || ''} placeholder="0"
+                                onBlur={(e) => {
+                                  // Lo mismo que hará `prepararLineas()`, escrito de una vez
+                                  // en el campo: si queda bajo el mínimo, sube al mínimo.
+                                  const v = Number(e.target.value) || 0;
+                                  const minimo = minimoShowEnLinea(showMinimo, l.ivaIncluido);
+                                  const final = v * (1 - (l.descuento || 0) / 100) < minimo ? minimo : v;
+                                  e.target.value = String(final);
+                                  cambiarLinea(i, { precio: final, ...(final !== v ? { descuento: 0 } : {}) });
+                                }}
+                                className={ENTRADA} />
+                            ) : (
                             <input type="number" min={0} step={500} value={l.precio || ''} placeholder="0"
                               onChange={(e) => cambiarLinea(i, { precio: Number(e.target.value) || 0 })}
                               className={ENTRADA} />
+                            )}
                           </Campo>
                           )}
                           <div>
@@ -1653,6 +1717,20 @@ export default function CotizacionDialogo({
                             </span>
                           </span>
                         </div>
+                      )}
+                      {/* **El mínimo del show en un día privado** (2026-11-20):
+                          dice por qué el precio no baja, y que quitarlo es la
+                          salida. A la gerencia y al administrador, que pueden
+                          pasar por encima, se les dice el mínimo sin forzarlo. */}
+                      {showMinimo && (
+                        <p className={`mt-2 rounded border px-3 py-2 text-[14px] font-semibold ${reglaShow
+                          ? 'border-ambar/50 bg-ambar/5 text-ambar-texto' : 'border-hueso/20 text-hueso/75'}`}>
+                          🐎 Día privado con menos de {showMinimo.desde} personas: el show se cobra, mínimo{' '}
+                          {enPesos(showMinimo.minimo)} + IVA.{' '}
+                          {reglaShow ? 'Si no va, quítalo.'
+                            : showAutorizado && !pasaPorEncima ? `Lo autorizó ${showAutorizado}: va bajo el mínimo.`
+                            : 'Tú puedes cobrar menos o dejarlo sin costo.'}
+                        </p>
                       )}
                     </li>
                   );
