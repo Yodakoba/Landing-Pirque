@@ -523,10 +523,18 @@ el arriendo, el show, la once y los descuentos no aparecían. Lógica en
   (lista $450.000), Tradiciones con −10% y desayuno a precio de lista: el
   encargado ve las cinco líneas con su valor en Fudo y la marca en la fila,
   y la anfitriona la caja de siempre, sin marca. A 393 y 1280,
-  `revisarPlayStation()` sin hallazgos en la recepción. **En la página del día
-  queda uno que ya estaba**: con muchos puestos faltantes, la pastilla
-  *Faltan 12: 5 × Garzón…* del equipo corre la página 3px a 393. No es de
-  este cambio y queda anotado para arreglarlo aparte.
+  `revisarPlayStation()` sin hallazgos en la recepción. En la página del día
+  apareció uno que ya estaba —la pastilla *Faltan 12: 5 × Garzón…* corría la
+  página a 393—, y se arregló en el PR siguiente: ver la nota de abajo.
+
+**La pastilla de lo pendiente se dobla** (2026-11-20). `Pendiente`, en la
+página del día, iba en una sola línea (`whitespace-nowrap`): con muchos
+puestos faltantes —*Faltan 12: 5 × Garzón, 3 × Cocina, 2 × Parrilla, 2 ×
+Barra*— corría la página 3px de lado en un teléfono de 393. Ahora puede ir
+en dos renglones, y se parte **solo entre puestos** (`PartesSinCortar`):
+*5 × Garzón* nunca queda con el número en un renglón y el puesto en el
+otro. En el computador sigue en una línea. Comprobado en el panel de
+ejemplo: `revisarPlayStation()` sin desborde a 393 en los días 13, 14 y 21.
 
 ### La modalidad la escribe Shopify; el estado del pago, cualquiera (2026-10-30)
 

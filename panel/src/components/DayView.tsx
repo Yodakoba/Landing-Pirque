@@ -129,12 +129,33 @@ function sinNotaDeCotizacion(r: Reserva, deCot: boolean): Reserva {
 }
 
 /** Un aviso corto en ámbar: pastilla con borde, para reconocerlo sin leerlo. */
+/**
+ * Una pastilla de algo pendiente. **Puede doblarse en dos renglones**
+ * (2026-11-20): antes iba en una sola línea, y con muchos puestos faltantes
+ * —*Faltan 12: 5 × Garzón, 3 × Cocina, 2 × Parrilla…*— corría la página de
+ * lado en un teléfono. Quien la usa decide por dónde se parte, con
+ * `PartesSinCortar`.
+ */
 function Pendiente({ children }: { children: React.ReactNode }) {
   return (
-    <span className="whitespace-nowrap rounded-full border border-ambar/50 px-2 py-0.5
+    <span className="max-w-full rounded-2xl border border-ambar/50 px-2 py-0.5
                      text-[13px] font-semibold text-ambar-texto">
       {children}
     </span>
+  );
+}
+
+/**
+ * Un texto que se puede partir solo entre sus partes: *5 × Garzón* no queda
+ * con el número en un renglón y el puesto en el otro.
+ */
+function PartesSinCortar({ texto, separador }: { texto: string; separador: string }) {
+  return (
+    <>
+      {texto.split(separador).map((parte, i) => (
+        <span key={i}>{i > 0 && separador}<span className="whitespace-nowrap">{parte}</span></span>
+      ))}
+    </>
   );
 }
 
@@ -728,7 +749,10 @@ export default function DayView(
           )}
           <span className="flex-1" />
           {faltan > 0 && (
-            <Pendiente>{faltan === 1 ? 'Falta' : 'Faltan'} {faltan}: {textoFaltantes(faltantesDe(plan))}</Pendiente>
+            <Pendiente>
+              <span className="whitespace-nowrap">{faltan === 1 ? 'Falta' : 'Faltan'} {faltan}:</span>{' '}
+              <PartesSinCortar texto={textoFaltantes(faltantesDe(plan))} separador=", " />
+            </Pendiente>
           )}
           {/* **Es un botón, no un enlace de texto en oro** (2026-11-01). Es
               la acción del bloque y estaba escrita igual que un rótulo:
