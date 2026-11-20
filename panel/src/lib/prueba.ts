@@ -3393,7 +3393,7 @@ console.log('\nPagos al equipo');
      'quien cobra por turno y una actividad extra mandan boleta');
   ok(!pideBoleta('equipo', true), 'un contratado no: su sueldo va por la liquidación');
   const filaB = filaBoleta({ quien: 'Ana Soto', desde: sem.desde, hasta: sem.hasta,
-    registradoPor: 'tesorera', cuando: '2026-11-16 10:00', nota: '' }, ENCABEZADO_BOLETAS);
+    registradoPor: 'tesorera', cuando: '2026-11-16 10:00', nota: '', neto: null }, ENCABEZADO_BOLETAS);
   const boletas = leerBoletasDe([ENCABEZADO_BOLETAS, filaB]);
   ok(boletas.length === 1 && boletas[0].registradoPor === 'tesorera',
      'una boleta escrita se vuelve a leer, con quién la marcó');
@@ -5549,6 +5549,83 @@ console.log('\nLas estadísticas de reservas');
   const largo = E.resumen(filas, dias, { desde: '2026-09-01', hasta: '2026-12-31' }, o);
   ok(largo.serieSemanal && largo.serie.every((x) => E.rangoDe('semana', x.clave).desde === x.clave),
      'en un periodo de más de dos meses la serie va por semana');
+}
+
+console.log('\nLa boleta: bruto, neto y lo que falta boletear');
+{
+  const B = await import('./boletas.ts');
+  const R = await import('./remuneraciones.ts');
+  ok(B.retencionDelAno('2026-11-20') === 1525 && B.retencionDelAno('2027-01-02') === 1600
+     && B.retencionDelAno('2028-06-01') === 1700 && B.retencionDelAno('2031-01-01') === 1700
+     && B.tasaEnTexto(1525) === '15,25%' && B.tasaEnTexto(1600) === '16%',
+     'la retención de la Ley 21.133: 15,25% en 2026, 16% en 2027, 17% desde 2028');
+  ok(B.fechaDeEmision('2026-12-31', '2027-01-05') === '2027-01-05' && B.fechaDeEmision('2026-11-30', '2026-11-20') === '2026-11-30',
+     'la tasa es la del día en que se emite: hoy si el periodo ya terminó, y si no al terminar');
+  ok(B.brutoParaNeto(500000, 1525) === 589971 && B.liquidoDe(589971, 1525) === 500000,
+     'el bruto para $500.000 líquidos al 15,25% es $589.971, como las calculadoras del SII');
+  let todos = true;
+  for (const t of [1525, 1600, 1700]) {
+    for (let n = 1; n <= 30000; n++) {
+      const b = B.brutoParaNeto(n, t);
+      const l = B.liquidoDe(b, t);
+      // Con cualquier redondeo del SII (abajo, al más cercano o arriba) llega el neto.
+      if (l < n || l > n + 1 || b - Math.ceil((b * t) / 10000) < n || (b - 1) * (10000 - t) >= n * 10000) { todos = false; break; }
+    }
+  }
+  ok(todos, 'el bruto deja siempre el neto, con cualquier redondeo del SII, y uno un peso más chico ya no alcanza');
+  const d = B.desgloseDe(160000, 1525);
+  ok(d.bruto === 188791 && d.retencion === 28791 && d.bruto - d.retencion === d.neto && B.desgloseDe(0, 1525).bruto === 0,
+     'el desglose: bruto $188.791 − retención $28.791 = neto $160.000');
+
+  const turno = { asistencia: 'Sí', modalidad: 'Por turno', pagoJornada: 40000, horasExtra: 1, valorHora: 5000,
+    ajustes: [{ monto: -10000, motivo: 'Adelanto · Transferencia' }, { monto: -5000, motivo: 'Llegó tarde' },
+              { monto: 8000, motivo: 'Feriado · Efectivo' }] };
+  ok(B.paraBoletaDeTurno(turno) === 48000 && pagoDe(turno) === 38000,
+     'un adelanto no baja la boleta; llegar tarde sí, y el feriado suma');
+  ok(B.paraBoletaDeTurno({ ...turno, modalidad: 'Contratado' }) === 0 && B.paraBoletaDeTurno({ ...turno, asistencia: 'No' }) === 0,
+     'un contratado y un día que no vino no van en la boleta');
+  ok(B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -20000, motivo: 'Adelanto' }) === 60000
+     && B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -5000, motivo: 'Rompió algo' }) === 55000,
+     'en una actividad extra, lo mismo: el adelanto no baja la boleta');
+
+  const montos = ['2026-11-07', '2026-11-08', '2026-11-14', '2026-11-15', '2026-11-21', '2026-11-22', '2026-11-28', '2026-11-29']
+    .map((fecha) => ({ fecha, monto: 40000 }));
+  const bol = (desde: string, hasta: string, neto: number | null, fila: number) =>
+    ({ quien: 'Ana Pérez', desde, hasta, registradoPor: 'pagos', cuando: '', nota: '', neto, fila });
+  const nada = B.cuentaBoleta(montos, [], 'Ana Pérez', '2026-11-01', '2026-11-30', '2026-11-20');
+  ok(nada.neto === 320000 && nada.falta === 320000 && !nada.exacta && B.faltaBoleta(nada),
+     'sin boletas, falta boletear todo lo del mes');
+  const semanas = [bol('2026-11-02', '2026-11-08', 80000, 2), bol('2026-11-09', '2026-11-15', 80000, 3)];
+  const mes = B.cuentaBoleta(montos, semanas, 'ana perez', '2026-11-01', '2026-11-30', '2026-11-20');
+  ok(mes.boleteado === 160000 && mes.falta === 160000 && mes.otras.length === 2 && !mes.exacta
+     && mes.porBoletear.neto === 160000 && mes.porBoletear.bruto === 188791,
+     'dos semanas boleteadas: el mes dice cuánto falta y con qué bruto');
+  const conMes = B.cuentaBoleta(montos, [...semanas, bol('2026-11-01', '2026-11-30', 160000, 4)], 'Ana Pérez',
+    '2026-11-01', '2026-11-30', '2026-11-20');
+  ok(conMes.falta === 0 && conMes.exacta?.fila === 4 && conMes.diferencias.length === 0 && !B.faltaBoleta(conMes),
+     'y la del mes por lo que faltaba lo cierra, sin contar dos veces las semanas');
+  const semana = B.cuentaBoleta(montos, [bol('2026-11-01', '2026-11-30', 320000, 2)], 'Ana Pérez',
+    '2026-11-16', '2026-11-22', '2026-11-20');
+  ok(semana.falta === 0 && !semana.exacta && semana.otras[0]?.fila === 2,
+     'una semana dentro de un mes boleteado queda respaldada por la del mes');
+  const corta = B.cuentaBoleta([...montos, { fecha: '2026-11-08', monto: 10000 }], semanas, 'Ana Pérez',
+    '2026-11-02', '2026-11-08', '2026-11-20');
+  ok(corta.falta === 10000 && corta.diferencias[0]?.dice === 80000 && corta.diferencias[0]?.suma === 90000
+     && B.netoAlMarcar(corta) === 90000,
+     'una boleta por menos de lo que hoy suman sus días: falta la diferencia, y marcarla otra vez la corrige');
+  const vieja = B.cuentaBoleta([...montos, { fecha: '2026-11-08', monto: 10000 }], [bol('2026-11-02', '2026-11-08', null, 2)],
+    'Ana Pérez', '2026-11-02', '2026-11-08', '2026-11-20');
+  ok(vieja.falta === 0, 'una boleta marcada antes de guardar su monto no inventa diferencias');
+  ok(B.cuentaBoleta(montos, semanas, 'Otra Persona', '2026-11-01', '2026-11-30', '2026-11-20').boleteado === 0,
+     'las boletas son de cada persona');
+
+  const enc = [...R.ENCABEZADO_BOLETAS];
+  const fila = R.filaBoleta({ quien: 'Ana', desde: '2026-11-02', hasta: '2026-11-08', registradoPor: 'pagos',
+    cuando: 'x', nota: '', neto: 80000 }, enc);
+  const leidas = R.leerBoletasDe([enc, fila]);
+  const antes = R.leerBoletasDe([['Trabajador', 'Periodo desde', 'Periodo hasta'], ['Ana', '2026-11-02', '2026-11-08']]);
+  ok(leidas[0]?.neto === 80000 && enc.includes('Monto neto') && antes[0]?.neto === null,
+     'la pestaña Boletas guarda el neto, y una planilla de antes se lee sin él');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

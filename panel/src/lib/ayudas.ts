@@ -265,8 +265,11 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
       + 'Confirmar.',
       'Aprieta la línea para abrirla. Si pagaste todo, aprieta Pagado '
-      + 'completo; si fue una parte, Pago parcial. Ahí también marcas la '
-      + 'boleta cuando llegue.',
+      + 'completo; si fue una parte, Pago parcial. Ahí también está su '
+      + 'boleta: el bruto que tiene que escribir en el SII y el neto que '
+      + 'recibe, y el botón para marcarla cuando llegue.',
+      'Para exigir las boletas, aprieta 🧾 Sin boleta: quedan solo los que '
+      + 'ganaron algo en el periodo y no la han mandado.',
       'Para una transferencia masiva, arriba está su tarjeta: baja la '
       + 'planilla de sueldos o de propinas, súbela al banco, y cuando esté '
       + 'pagada aprieta Todos pagados.',
@@ -944,8 +947,16 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
   boleta: {
     titulo: 'La boleta',
     texto: [
-      'Una por semana, por su sueldo o su servicio. La propina nunca la pide, y a un contratado tampoco.',
-      'Si falta, igual se puede pagar: el aviso queda en ámbar hasta que llegue.'
+      'Por su sueldo o su servicio, por semana o por mes: lo arreglan entre ustedes. La propina nunca va, y un contratado no boletea.',
+      'El bruto es lo que escribe en el SII; el SII retiene la tasa del año y queda el neto, que es lo que recibe. Un adelanto no baja la boleta.',
+      'Marca "Boleta recibida" mirando el mismo periodo de la boleta: la de la semana en la semana, la del mes en el mes. Si falta, igual se puede pagar.'
+    ]
+  },
+  retenciones: {
+    titulo: 'Retención de boletas',
+    texto: [
+      'Lo que se paga a cada uno es el neto. La retención de sus boletas la paga la empresa aparte, en el F29: por eso el costo real es el bruto.',
+      'Es la suma de las boletas del periodo, sin los contratados ni los socios comerciales, que facturan.'
     ]
   },
   transferenciaMasiva: {

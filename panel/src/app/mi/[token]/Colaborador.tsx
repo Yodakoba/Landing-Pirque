@@ -12,7 +12,9 @@
 import type { Colaborador, Extra } from '@/lib/extras';
 import { informeDeExtras, costoDeExtra } from '@/lib/extras';
 import { VINO, rangoDelPeriodo, semanaPorDefecto, esPeriodo, etiquetaSemana } from '@/lib/equipo';
-import { pagosEnPeriodo, faltaDe, type PagoEquipo } from '@/lib/remuneraciones';
+import { pagosEnPeriodo, faltaDe, type PagoEquipo, type Boleta } from '@/lib/remuneraciones';
+import { cuentaBoleta, montosDeExtras } from '@/lib/boletas';
+import CajaBoleta from '@/components/CajaBoleta';
 import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
 import { enPalabras, mesEnPalabras, rangoEnPalabras, sumarDias, hoy } from '@/lib/fechas';
@@ -60,10 +62,12 @@ function Estado({ e }: { e: Pick<Extra, 'estado'> }) {
   );
 }
 
-export default function VistaColaborador({ quien, extras, pagos, token, p, v, apertura }: {
+export default function VistaColaborador({ quien, extras, pagos, boletas, token, p, v, apertura }: {
   quien: Colaborador;
   extras: Extra[];
   pagos: PagoEquipo[];
+  /** Las boletas recibidas, para la caja de la boleta (2026-11-20). */
+  boletas: Boleta[];
   token: string;
   p?: string;
   v?: string;
@@ -90,6 +94,10 @@ export default function VistaColaborador({ quien, extras, pagos, token, p, v, ap
   const pagado = recibidos.reduce((s, x) => s + x.monto, 0);
   const falta = faltaDe(total, pagado);
   const delPeriodo = pasados.filter((e) => e.fecha >= desde && e.fecha <= hasta).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  // **La boleta del periodo** (2026-11-20): la misma caja que el link del
+  // trabajador, con lo confirmado y sin restar un adelanto.
+  const boleta = cuentaBoleta(montosDeExtras(pasados, quien.nombre), boletas, quien.nombre, desde, hasta, ahora);
+  const mesesDeLaSemana = [...new Set([desde.slice(0, 7), hasta.slice(0, 7)])];
   const mesActual = ahora.slice(0, 7);
   const mesAnterior = (() => {
     const [a, m] = mesActual.split('-').map(Number);
@@ -167,6 +175,31 @@ export default function VistaColaborador({ quien, extras, pagos, token, p, v, ap
               <b>{l!.sinConfirmar} {l!.sinConfirmar === 1 ? 'día sin confirmar' : 'días sin confirmar'}</b>: no suman hasta que lo confirmen.
               Si viniste, avísale a quien te contrató.
             </p>
+          )}
+
+          {boleta.neto > 0 && (
+            <div className="mt-5">
+              <CajaBoleta tu cuenta={boleta}
+                titulo={esMes ? `Tu boleta de ${comoSeLlama}` : `Tu boleta del ${comoSeLlama}`}>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {esMes ? (
+                    <>
+                      <span className="text-[13px] text-hueso/75">¿Boleteas por semana?</span>
+                      <a href={enlace('')} className="tecla boton min-h-[44px] font-semibold">Ver por semana →</a>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[13px] text-hueso/75">¿Boleteas por mes?</span>
+                      {mesesDeLaSemana.map((m) => (
+                        <a key={m} href={enlace(`?p=${m}`)} className="tecla boton min-h-[44px] font-semibold">
+                          Ver {mesEnPalabras(m)} →
+                        </a>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </CajaBoleta>
+            </div>
           )}
 
           <h3 className="mt-7 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Día por día</h3>

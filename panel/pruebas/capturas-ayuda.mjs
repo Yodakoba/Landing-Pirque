@@ -107,16 +107,19 @@ const ESCENAS = {
     // ya no dice "por encargado" (2026-11-13).
     puntos: [(p) => p.locator('[role=dialog]').getByText(/Día cerrado/).first(),
       enVentana(/Corregir este día/), enVentana(/Trabajadores/)], alto: 820 },
-  'ope-informe': { rol: 'gerente', ruta: '/informe', foco: texto(/Por semana/),
-    alto: 900, puntos: [boton(/Por semana/), texto(/turnos? sin cerrar/), boton(/Trabajadores/)] },
+  // El foco va en lo que falta cerrar (2026-11-20): así entra el filtro
+  // 🧾 Sin boleta, que va debajo de las tres secciones.
+  'ope-informe': { rol: 'gerente', ruta: '/informe', foco: texto(/turnos? sin cerrar/),
+    alto: 900, puntos: [texto(/turnos? sin cerrar/), boton(/Trabajadores/), boton(/Sin boleta/)] },
 
   ...Object.fromEntries(['pag', 'ger'].flatMap((pre) => {
     const rol = pre === 'pag' ? 'pagos' : 'gerencia';
     return [
       [`${pre}-informe`, { rol, ruta: '/informe', alto: 960, foco: boton(/Solo sueldos/),
         puntos: [boton(/Por semana/), boton(/Solo sueldos/), texto(/Transferencia masiva/i)] }],
-      [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/Sueldo/),
-        puntos: [boton(/Sueldo/), boton(/Propina/), texto(/Suma: /)] }],
+      // Más alto desde el 2026-11-20: entra la caja de la boleta.
+      [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/Sueldo/), alto: 1500,
+        puntos: [boton(/Sueldo/), boton(/Propina/), texto(/Boleta del/)] }],
       [`${pre}-cobros`, { rol, ruta: '/presupuestos', pasos: abrirEnvio('Andrés Pino'), alto: 900, foco: texto('Pagos del cliente'),
         puntos: [texto(/El pago/), boton(/Anticipo recibido/), texto(/Anticipo 30%/)] }],
       [`${pre}-vendedores`, { rol, ruta: '/vendedores', alto: 900, foco: texto(/^(Te|Le) toca/),
