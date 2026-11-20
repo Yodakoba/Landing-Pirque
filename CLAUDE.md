@@ -607,10 +607,10 @@ only*)**: con la naranja, Vercel no puede sacar el certificado.
 - **Del lado del dominio, el lanzamiento son tres pasos**: en Shopify,
   `tienda.` pasa a ser el dominio principal; en Cloudflare, se borra el A de
   la raíz y se crea el CNAME `@`, y se cambia el de `www`. **La tienda real
-  va aparte y antes**: crear allá los productos con sus dos modalidades y
-  llenar `CONFIG.tiendas.real` (ver "Dos tiendas" y "La tienda de
-  producción, mirada por su catálogo público"); sin eso el sitio nuevo
-  sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
+  va aparte y antes**: los productos con sus dos modalidades ya están allá y
+  `CONFIG.tiendas.real` está lleno desde el 2026-11-20, en un PR que se
+  mergea con el OK del cliente (ver "La tienda real, conectada"); sin ese
+  merge el sitio nuevo sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
   dos registros a los valores de la columna *Hoy* y volver a dejar
   `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
   minutos).
@@ -1043,9 +1043,9 @@ del servidor, que nunca sale al navegador.
   llama a la API: avisa y manda a WhatsApp.
 - **Salir a producción es llenar `CONFIG.tiendas.real`**: dominio, token y
   los ocho IDs, juntos. Mientras sea `null`, todas las direcciones usan la
-  tienda de prueba —también la real— y la página lo dice. **Antes hay que
-  crear allá el modelo de variantes**, que hoy no existe: ver "La tienda de
-  producción, mirada por su catálogo público".
+  tienda de prueba —también la real— y la página lo dice. **Se llenó el
+  2026-11-20**, con el modelo de variantes ya creado allá: ver "La tienda
+  real, conectada".
 - **Las variantes ya no son una por fecha** (cambió el 2026-10-13, con la
   tienda de desarrollo en pie). Antes eran 20: diez fechas × adulto/niño.
   Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
@@ -1258,6 +1258,65 @@ producción los rechaza, porque la firma no calza con el secreto de la tienda
 real: esa es la segunda barrera. En una versión de prueba del panel, los
 pedidos de prueba se traen con *Revisar Shopify ahora*.
 
+### La tienda real, conectada (2026-11-20)
+
+`CONFIG.tiendas.real` dejó de ser `null`: dominio `lo-pirque.myshopify.com`
+(shopId 63433277497, la misma tienda que sirve `brasasdelopirque.cl`), el
+token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
+
+| Menú | Pago directo | Solo reserva |
+|---|---|---|
+| Tradiciones | `51261066182713` — $44.000 | `51261066215481` — $49.000 |
+| A Brasas Abiertas | `51261066051641` — $70.000 | `51261066084409` — $75.000 |
+| Niños | `51261065691193` — $19.000 | `51261065723961` — $24.000 |
+| Pequeños | `51261065887801` — $6.000 | `51261065920569` — $9.000 |
+
+- **Los productos los creó el agente de Shopify del cliente**, con nombres
+  y variantes que calzan con lo que el panel lee —el producto sin "Menú"
+  delante (`canonizar()`), la variante `Pago directo` / `Solo reserva`
+  (`tipoPagoDe()`)—. **Inventó SKU nuevos y se cambiaron a los de la tienda
+  de desarrollo** (`pago-directo-<menú>` / `solo-reserva-<menú>`): el sitio
+  y el panel no leen el SKU, pero la regla de medios de pago del checkout
+  va por SKU, y así se copia igual en las dos tiendas.
+- **Publicados solo en el canal Headless, no en Tienda online**: el sitio
+  viejo no los muestra antes del lanzamiento. El token es el **público** de
+  ese canal (API Storefront → Gestionar); el privado no se usa.
+- **Comprobado ese día**: la Storefront API devuelve los cuatro con sus
+  títulos, SKU y precios, en CLP y disponibles; dos `cartCreate` con el
+  payload del sitio dan `userErrors: []`, $176.000 (3 Tradiciones, 2 niños
+  y 1 pequeño, pagando ahora) y $282.000 (los mismos, subidos a A Brasas y
+  solo reservando), con `_booking_date` en cada línea. Y con Playwright, el
+  `reserva.js` de verdad —sin nada inyectado— servido en seis direcciones:
+  el dominio, `www` y `brasas-sitio.vercel.app` piden a la real, sin aviso;
+  una versión de prueba de un PR, GitHub Pages y `localhost`, a la de
+  desarrollo, con aviso.
+- **Desde este entorno, la Storefront API de la real responde en
+  `brasasdelopirque.cl`**, el dominio principal de esa tienda;
+  `lo-pirque.myshopify.com` está bloqueado. Desde el lanzamiento ese
+  dominio es Vercel: para volver a probar la real desde acá hay que agregar
+  `lo-pirque.myshopify.com` a *Allowed domains*.
+- **El checkout sale en el dominio principal de la tienda**: hoy
+  `brasasdelopirque.cl/cart/c/…`, desde el lanzamiento `tienda.`. Si el DNS
+  se moviera antes que el principal, `tools/publicar_sitio.sh` igual manda
+  `/cart/` y `/checkouts/` a la tienda.
+- **Mergear ese PR es del camino *con prueba***: desde el merge,
+  `brasas-sitio.vercel.app` cobra de verdad. El orden: primero el panel
+  —las tres variables de Shopify de Production con los datos de la real y
+  sus webhooks—, después el merge, y después una compra de prueba en
+  `brasas-sitio.vercel.app` de cada modalidad, que comprueba lo que falta:
+  que `_booking_date` llegue al pedido, que la regla de medios de pago
+  aplique y que el pedido aparezca en el panel. Poner el panel primero no
+  ensucia nada: los pedidos del sitio viejo no traen `_booking_date` y el
+  panel los ignora.
+- **Los pedidos del sitio viejo no entran al panel, y eso tiene una
+  consecuencia.** El producto viejo, *Menú Tradiciones*, vende la fecha en
+  la variante (*"Sábado 28 de Noviembre / Adultos"*), sin `_booking_date`,
+  y `aReserva()` lo descarta a propósito. Al 2026-11-20 vendía hasta el
+  domingo 27 de diciembre: **quien compró ahí para una fecha posterior al
+  lanzamiento no le descuenta cupo al panel** hasta que alguien lo anote.
+  Y al lanzar, ese producto hay que sacarlo de Tienda online: en `tienda.`
+  el tema viejo lo seguiría vendiendo.
+
 ### Las variantes de la tienda de desarrollo (2026-10-13)
 
 Las entregó el agente de Shopify del cliente. **Son de la tienda de
@@ -1459,7 +1518,8 @@ producción, y cambia lo que hay que preparar.
   —13 fechas × 3 tipos—, que es el modelo viejo de una variante por fecha.
   O sea: **"A Brasas abiertas" no existe como producto publicado en
   producción**, y el modelo de seis variantes (3 menús × 2 modalidades) que
-  usa el sitio nuevo hay que crearlo allá. Hasta que eso exista, el cambio a
+  usa el sitio nuevo hay que crearlo allá. **Creado el 2026-11-20**, solo en
+  el canal Headless: ver "La tienda real, conectada". Hasta que eso exista, el cambio a
   producción no se puede hacer aunque se cambien el token y el dominio.
 - **Los precios de producción hoy**: adultos $44.000, niños (4 a 12)
   $19.000. Coinciden con los del sitio.
@@ -1643,7 +1703,9 @@ sitio:**
   comprobó que sobreviven en el carrito —de nuevo el 2026-10-22, contra la
   API `2026-10`—; falta verlas en un **pedido** real, porque de ahí las lee
   `leerReserva()`. Requiere completar una compra, y para eso primero hay que
-  pasar la contraseña de la tienda.
+  pasar la contraseña de la tienda. **Con la tienda real conectada**
+  (2026-11-20) se comprueba en la compra de prueba de
+  `brasas-sitio.vercel.app`, después del merge.
 - ~~Que el Web App de Apps Script se pueda leer desde el sitio~~ — ya no
   aplica: el sitio le pide las fechas al panel, y **eso quedó probado contra
   el panel de verdad** el 2026-10-22: `reservas.html` corriendo en local
