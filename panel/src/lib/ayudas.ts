@@ -116,7 +116,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Apreta cualquier día del mes para abrir su ventana.',
       'Elige a cada persona en el puesto que le toca.',
       'Marca Vino o No vino de cada una.',
-      'Escribe la jornada, los ajustes y la propina del día.',
+      'Escribe la jornada, los ajustes y la propina del día. Un ajuste es '
+      + '− Descontar (adelanto, llegó tarde, rompió algo) o + Sumar (hora extra, '
+      + 'mérito, feriado): el monto va sin signo, el motivo con un botón y '
+      + 'cómo se pagó, en efectivo o por transferencia.',
       'Cerrar el día pregunta antes y muestra lo que estás declarando: '
       + 'quién vino, la propina, las actividades extras. Queda anotado con tu '
       + 'nombre y la hora, y desde ahí el día queda en solo lectura.',

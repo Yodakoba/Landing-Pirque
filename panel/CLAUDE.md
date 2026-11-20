@@ -104,6 +104,36 @@ revisan antes de cada cambio en esta carpeta.
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
 
+## Los ajustes del día: Descontar y Sumar (2026-11-20)
+
+Lo pidió el cliente: en la ventana del equipo del día, un ajuste se anotaba
+con un monto con signo (−4000) y un motivo libre, y *"no tiene que jugar
+con menos 4.000 y más 4.000"*. Ahora son **dos botones**, **− Descontar**
+(rojo) y **+ Sumar** (verde), y cada ajuste es una tarjeta de su color:
+
+- **El monto se escribe sin signo**; el tipo lo pone (`montoConSigno()`).
+  Arriba de la tarjeta va el signo grande y la palabra —*Descuento* o
+  *Suma*—, así que se distingue por forma y no solo por color.
+- **El motivo con botones**, los que dio el cliente: al descontar *Adelanto
+  · Llegó tarde · Rompió algo · Otro*; al sumar *Hora extra · Mérito ·
+  Feriado · Otro* (`MOTIVOS_AJUSTE`). Apretar uno elegido lo desmarca.
+- **Cómo se pagó, en los dos**: *Efectivo* o *Transferencia*
+  (`MEDIOS_AJUSTE`). Lo pidió el cliente también para lo que se suma: un
+  adelanto puede salir por transferencia del jefe.
+- **Una nota libre** debajo; con *Otro* pide *qué fue*.
+- **En la planilla no cambió nada**: `Ajuste` sigue con el monto con signo y
+  `Motivo del ajuste` es texto, *"Adelanto · Transferencia · lo pidió el
+  jueves"* (`motivoDePartes()` / `partesDeMotivo()`). Lo anotado antes se
+  lee igual —*"llegó tarde"* escrito a mano reconoce su botón—, y el
+  informe, el link de cada trabajador y la ventana del pago no se enteran.
+  El tipo de una línea nueva en cero vive solo en la pantalla (`tipo`).
+- Lo usan los mismos roles de antes. **Lecturas de Google**: ninguna más.
+- **Probado en el panel de ejemplo** a 393 y 1280: un descuento de $4.000
+  por adelanto por transferencia y una suma de $10.000 por feriado en
+  efectivo quedan en la planilla como `-4000|10000` · `Adelanto ·
+  Transferencia|Feriado · Efectivo`. `revisarPlayStation()` no marca nada
+  nuevo (la letra de 12px que señala ya estaba en esa ventana).
+
 ## Las pruebas que cuidan las reglas (2026-11-12)
 
 Lo pidió el cliente: que la regla PlayStation y el límite de Google no
