@@ -15,7 +15,7 @@ import { conCliente } from '@/lib/cotizar';
 import { HOJA_VENDEDORES, fichaDe, ventasDe, resumenDelPeriodo, porCobrar, comisionDe, porcentaje, baseDeVenta,
          tieneFormaDePago, esVentaDe, fichaSocio, nuevoIdSocio, BASE_COMISION,
          type FichaVendedor } from '@/lib/vendedores';
-import { bancoVacio } from '@/lib/banco';
+import { bancoVacio, sePuedeTransferir } from '@/lib/banco';
 import { normalizar } from '@/lib/columnas';
 import { esFecha, hoy } from '@/lib/fechas';
 import { rangoDelPeriodo } from '@/lib/equipo';
@@ -55,8 +55,10 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
       .sort((a, b) => Number(b.activo) - Number(a.activo) || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
     // La sesión trae el NOMBRE de la persona; la lista va por usuario.
     const propia = esVendedor ? cuentaDeSesion(usuarios, quien.usuario) : undefined;
-    const pedido = esVendedor ? propia?.usuario ?? quien.usuario
-      : String(q.get('usuario') ?? '') || lista[0]?.usuario || socios[0]?.usuario || '';
+    // **Sin `usuario`, quien paga recibe solo la lista** (2026-11-20): la
+    // pantalla es una tarjeta por persona y todas parten cerradas; el
+    // detalle llega al abrir una.
+    const pedido = esVendedor ? propia?.usuario ?? quien.usuario : String(q.get('usuario') ?? '');
     const cuenta = [...lista, ...socios].find((v) => normalizar(v.usuario) === normalizar(pedido))
       ?? (esVendedor ? { usuario: quien.usuario, nombre: quien.usuario, activo: true } : undefined);
     const periodo = String(q.get('p') ?? '') || hoy().slice(0, 7);
@@ -64,17 +66,34 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
       ? { desde: q.get('desde')!, hasta: q.get('hasta')! } : rangoDelPeriodo(periodo);
     const puedeEditar = puede(quien.rol as Rol, 'pagar');
     const puedeLinks = puede(quien.rol as Rol, 'links');
+    const conNombre = presupuestos.map((p) => conCliente(p, clientes));
+    const comisiones = pagos.filter((p) => p.concepto === CONCEPTO.comision);
+    /**
+     * **Una línea por persona** (2026-11-20, lo pidió el cliente: con varios
+     * vendedores tiene que verse cada uno con lo suyo, como en Equipo). Lo
+     * que le toca en el periodo, lo pagado y lo que falta, con las mismas
+     * cuentas del detalle y del informe. Sale de lo que ya se leyó: ninguna
+     * lectura más. Si falta su cuenta, solo a quien paga.
+     */
+    const resumenes = esVendedor ? [] : [...lista.map((v) => ({ ...v, tipo: 'vendedor' as const })),
+      ...socios.map((v) => ({ ...v, tipo: 'socio' as const }))].map((v) => {
+      const f = fichaDe(fichas, v.usuario, v.nombre);
+      const r = resumenDelPeriodo(f, ventasDe(v.usuario, conNombre, lineas, cobros, f, menus, v.nombre), desde, hasta);
+      const pag = pagosEnPeriodo(comisiones, f.nombre || v.nombre, desde, hasta).reduce((n, p) => n + p.monto, 0);
+      return { usuario: v.usuario, nombre: f.nombre || v.nombre, tipo: v.tipo, activo: v.activo,
+        total: r.total, pagado: pag, falta: Math.max(0, r.total - pag), ventas: r.cuentan.length, fijo: r.sueldoFijo,
+        formaDePago: tieneFormaDePago(f), sinCuenta: puedeEditar && !sePuedeTransferir(f.banco) };
+    });
     if (!cuenta) {
-      return NextResponse.json({ vendedores: esVendedor ? [] : lista, socios, usuario: '', desde, hasta, periodo, puedeEditar, hoy: hoy() });
+      return NextResponse.json({ vendedores: esVendedor ? [] : lista, socios, resumenes, usuario: '', desde, hasta, periodo, puedeEditar, hoy: hoy() });
     }
 
     const ficha = fichaDe(fichas, cuenta.usuario, cuenta.nombre);
-    const conNombre = presupuestos.map((p) => conCliente(p, clientes));
     const ventas = ventasDe(cuenta.usuario, conNombre, lineas, cobros, ficha, menus, cuenta.nombre)
       .map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }));
     const resumen = resumenDelPeriodo(ficha, ventas, desde, hasta);
     // Lo que se le pagó: los pagos con concepto Comisión, a su nombre.
-    const suyos = pagosEnPeriodo(pagos.filter((p) => p.concepto === CONCEPTO.comision), ficha.nombre || cuenta.nombre, desde, hasta);
+    const suyos = pagosEnPeriodo(comisiones, ficha.nombre || cuenta.nombre, desde, hasta);
     const pagado = suyos.reduce((n, p) => n + p.monto, 0);
 
     // **En curso**: lo mandado y sin ganar, una vez por cotización (la alternativa más cara).
@@ -96,7 +115,7 @@ export const GET = conLecturas([HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTO
     // La cuenta bancaria la ven quien paga y el propio vendedor; nadie más.
     const verBanco = puedeEditar || esVendedor;
     return NextResponse.json({
-      vendedores: esVendedor ? [] : lista, socios,
+      vendedores: esVendedor ? [] : lista, socios, resumenes,
       usuario: cuenta.usuario, nombre: ficha.nombre || cuenta.nombre, tipo: ficha.tipo,
       // El token del link solo a quien maneja links (`links`), como en Extras.
       ficha: { ...ficha, banco: verBanco ? ficha.banco : bancoVacio(), token: puedeLinks ? ficha.token : '' },

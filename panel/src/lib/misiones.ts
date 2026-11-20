@@ -235,11 +235,11 @@ const PAGOS: Mision[] = [
   },
   {
     id: 'vendedores', emoji: '🤝', titulo: 'Vendedores y socios', escena: 'pag-vendedores',
-    intro: 'Lo que le toca a cada vendedor y socio comercial, y cómo se le paga.',
+    intro: 'Lo que le toca a cada vendedor y socio comercial, y cómo se le paga. Cada uno en su tarjeta, con buscador.',
     puntos: [
-      'Elige a quién mirar: vendedores o socios comerciales.',
-      'Lo que le toca en el periodo. El ? explica el cálculo.',
-      'Lo que ya se le pagó y lo que falta.'
+      'Elige qué mirar: vendedores o socios comerciales.',
+      'Cada uno en su tarjeta: lo que le toca en el periodo y si está pagado. Ábrela con el +.',
+      'Abierta: lo que le toca, lo pagado y lo que falta. El ? explica el cálculo.'
     ],
     probar: { texto: 'Abrir Vendedores', url: '/vendedores' }
   }
