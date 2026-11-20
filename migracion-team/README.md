@@ -203,6 +203,9 @@ mandaron** por WhatsApp —cotizaciones (`/presupuesto/…`), contratos
 (`/contrato/…`), la planilla semanal del equipo— y esos no se pueden
 corregir: dejarían de abrir. Para una dirección más linda se **agrega** un
 dominio (por ejemplo `panel.brasasdelopirque.cl`) sin quitar el de ahora.
+**Así se hizo el 2026-11-20**: `panel.brasasdelopirque.cl` responde y
+`landing-pirque-alpha.vercel.app` sigue igual (ver "El dominio en
+Cloudflare" en el `CLAUDE.md` de la raíz).
 
 ### Si la URL del panel cambió (solo en ese caso)
 

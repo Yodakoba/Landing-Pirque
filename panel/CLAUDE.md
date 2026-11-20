@@ -349,10 +349,11 @@ interno. Ahora cada link que se manda dice lo que es (`lib/vistaPrevia.ts`):
   una fecha quedaría vieja y un nombre se lo mostraría a todo el chat.
 - **No lee la planilla**: es texto fijo. La empresa es la de los mensajes
   (`EMPRESA_DE_LOS_MENSAJES`, *Brasas de Lo Pirque*).
-- **La dirección que se ve debajo** (`landing-pirque-alpha.vercel.app`) es
-  la del proyecto en Vercel: cambiarla es ponerle un dominio propio al
-  panel (por ejemplo `panel.brasasdelopirque.cl`), que se configura en
-  Vercel y en el DNS del dominio. No es código.
+- **La dirección que se ve debajo** es la desde donde se copió el link
+  (`window.location.origin`). **Desde el 2026-11-20 el panel también
+  responde en `panel.brasasdelopirque.cl`** (ver "El dominio en Cloudflare"
+  en el `CLAUDE.md` de la raíz): quien entra por ahí manda links con esa
+  dirección, y los de `landing-pirque-alpha.vercel.app` siguen abriendo.
 - **WhatsApp recuerda la vista previa vieja** de un link que ya se mandó:
   el título nuevo aparece en los links nuevos, o en el mismo después de
   unos días.

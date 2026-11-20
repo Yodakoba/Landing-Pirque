@@ -580,6 +580,51 @@ viejo, y el reparto lo acordó el cliente:
   solo deja pasar la dirección del panel. Para revisarlo desde acá hay que
   agregarlo a *Allowed domains* del entorno.
 
+#### El dominio en Cloudflare (2026-11-20)
+
+**El DNS de `brasasdelopirque.cl` se edita en Cloudflare**, no en NIC Chile
+(los servidores de nombre son `etienne` y `michelle.ns.cloudflare.com`).
+NIC Chile solo registra el dominio. El cliente tiene su propio acceso a la
+cuenta de Cloudflare desde ese día. Los pasos, con capturas y la vuelta
+atrás, viven en el documento *Cloudflare: pasos para la videollamada*.
+
+**Todo lo que apunta a Vercel o a Shopify va con la nube gris (*DNS
+only*)**: con la naranja, Vercel no puede sacar el certificado.
+
+| Registro | Hoy (2026-11-20) | Desde el lanzamiento |
+|---|---|---|
+| Raíz `@` | A `23.227.38.65` (Shopify) | CNAME `10c7284c4c88203f.vercel-dns-016.com` (Cloudflare lo resuelve en la raíz) |
+| `www` | CNAME `shops.myshopify.com` | CNAME `10c7284c4c88203f.vercel-dns-016.com`; Vercel lo redirige con 308 a la raíz |
+| `panel` | CNAME `ff42ec43123a7939.vercel-dns-017.com` | igual |
+| `tienda` | CNAME `shops.myshopify.com` | igual |
+| 5 MX y 2 TXT de Google | el correo del dominio | **no se tocan nunca** |
+
+- **Ya funciona, sin tocar el sitio viejo**: `panel.brasasdelopirque.cl`
+  (Vercel lo da por válido y abre la entrada) y `tienda.brasasdelopirque.cl`,
+  conectado en Shopify **sin ser el principal** —por eso hoy redirige al
+  sitio viejo—. En Vercel ya están `brasasdelopirque.cl` (en `brasas-sitio`,
+  Production) y `www` (redirige a la raíz), esperando el DNS.
+- **Del lado del dominio, el lanzamiento son tres pasos**: en Shopify,
+  `tienda.` pasa a ser el dominio principal; en Cloudflare, se borra el A de
+  la raíz y se crea el CNAME `@`, y se cambia el de `www`. **La tienda real
+  va aparte y antes**: crear allá los productos con sus dos modalidades y
+  llenar `CONFIG.tiendas.real` (ver "Dos tiendas" y "La tienda de
+  producción, mirada por su catálogo público"); sin eso el sitio nuevo
+  sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
+  dos registros a los valores de la columna *Hoy* y volver a dejar
+  `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
+  minutos).
+- **El sitio quedó sin www** a propósito, al revés de lo que propone Vercel:
+  así están escritos los `hreflang` (`SITIO` en `tools/traducir.py`) y las
+  redirecciones del sitio viejo.
+- **`landing-pirque-alpha.vercel.app` sigue igual** y no se toca: va en
+  `reserva.js`, en los webhooks de Shopify y en los links ya mandados. Los
+  links que el panel copia salen de la dirección desde donde se usa
+  (`window.location.origin`), así que quien entra por `panel.` manda links
+  con `panel.`, y los viejos siguen abriendo.
+- **Desde este entorno no se abren** `panel.` ni `tienda.` hasta que se
+  agreguen a *Allowed domains* del entorno de Claude Code.
+
 **La trampa, que costó 40 minutos del panel caído.** El primer intento fue
 un `.vercelignore` en la raíz (PR #264), con `/panel` entre lo excluido.
 **Vercel lo aplica a todos los proyectos que salen del repo, también al
@@ -1840,8 +1885,10 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 - **Logo.** El del sitio antiguo es negro sobre blanco y tiene una A invertida
   como rasgo distintivo. El sitio tiene fondo claro de día y negro de noche,
   así que hace falta un SVG recoloreable que sirva en los dos. Hoy la marca se compone con tipografía.
-- **Una dirección propia para el panel** (`panel.brasasdelopirque.cl`).
-  **Se deja para la mudanza del dominio** (lo decidió el cliente el
+- ~~**Una dirección propia para el panel** (`panel.brasasdelopirque.cl`)~~
+  — **hecho el 2026-11-20**, antes del lanzamiento y sin tocar el sitio
+  viejo: ver "El dominio en Cloudflare". Lo de abajo queda como el porqué.
+  **Se dejaba para la mudanza del dominio** (lo decidió el cliente el
   2026-11-19): `brasasdelopirque.cl` y el sitio viejo están alojados hoy en
   Shopify, y se van a mudar a otro alojamiento. Ese es el momento de hacer
   las dos cosas juntas —publicar ahí el sitio nuevo y agregar el
