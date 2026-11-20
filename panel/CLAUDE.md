@@ -2568,6 +2568,77 @@ en Equipo, Extras, Clientes y el informe.
   hallazgos (salvo los `?` de siempre). Ayuda, misión *Vendedores y socios*
   y sus capturas (`pag-`, `ger-vendedores`, `ven-resumen`) al día.
 
+### Agregar vendedores y socios, con su boleta o factura (2026-11-20)
+
+Lo pidió el cliente: *"también se debería poder agregar el vendedor…
+y tanto en vendedor y socio comercial, poder agregar al tiro los datos
+necesarios para el pago… boleta o factura"*. Y el mismo día: que pagos y la
+gerencia también puedan, **solo el rol Vendedor**; que **la factura vaya con
+el IVA incluido y la boleta con la retención incluida**, pero editable y
+reflejado en el informe; y que **el vendedor también pueda agregar un
+socio**, con el trato confirmado por pagos, la gerencia o el administrador.
+
+- **Arriba, el botón sigue al grupo**: *+ Agregar vendedor* o *+ Agregar
+  socio comercial*. Abre una ventana (`AgregarVendedor.tsx`) con tres
+  bloques: **quién** —un vendedor es una cuenta del panel: nombre, usuario y
+  clave, con *Generar*—, **con qué documento se le paga**
+  (`CamposDocumento.tsx`) y **la transferencia** (`DatosBancarios`). Crear un
+  vendedor pregunta antes (toca cuentas) y después muestra el usuario y la
+  clave con *📋 Copiar usuario y clave*: la clave no se vuelve a ver. El
+  trato se escribe después, en *Cambiar el trato*.
+- **Permisos nuevos**: `agregarVendedores` (administrador, pagos, gerencia):
+  crea cuentas **solo con el rol Vendedor**; las demás cuentas y roles
+  siguen siendo de `usuarios`. `agregarSocios` (los mismos y el vendedor).
+  Las dos en `PALABRAS` y `PODER` (mundo *Ventas*).
+- **El documento, por ficha** (columnas nuevas de `Vendedores`, al final):
+  `Documento` (*Boleta* / *Factura*; en blanco, boleta el vendedor y factura
+  el socio), `Impuesto` (*Incluido* / *Aparte*; en blanco, incluido) y, para
+  la factura, `Razón social`, `RUT factura`, `Giro` y `Dirección`. En la
+  tarjeta abierta, bajo *Cómo se le paga*, la línea **Documento** con su
+  *Cambiar* (se guarda solo) y lo que se le transfiere en el periodo; si
+  falta un dato de la factura, la tarjeta cerrada dice *falta su factura*.
+- **Lo que se transfiere sale del documento** (`desgloseDocumento()` en
+  `boletas.ts`, con pruebas):
+
+  | Documento | Lo que gana según su trato es… | Se le transfiere |
+  |---|---|---|
+  | Boleta, retención incluida (de partida) | el bruto | el bruto menos la retención |
+  | Boleta, retención aparte (como el equipo) | el neto | el neto; el bruto se calcula hacia arriba |
+  | Factura, IVA incluido (de partida) | el total de la factura | el total |
+  | Factura, más IVA | el neto | el neto más el 19% |
+
+  Lo usan `/vendedores` (lo que falta y *Pagarle*), el informe (la línea, lo
+  que falta, la transferencia masiva y la planilla) y el link del socio.
+- **En el informe**: la caja de cada vendedor y socio dice su documento
+  (`CajaBoleta` muestra la factura con *Total · IVA · Neto*), el botón dice
+  *Factura recibida* cuando corresponde, y el **costo** de un vendedor es lo
+  que va en su documento (el bruto, o la factura con IVA). *Retención de
+  boletas* suma también las de los vendedores con boleta; *Costo con ella*
+  agrega solo las del equipo y los extras, porque las de vendedores ya
+  están en su costo.
+- **El socio que agrega un vendedor** —desde la cotización, *+ Agregar socio
+  comercial* al pie de la lista con buscador— nace con el trato de partida
+  y queda **por confirmar** (columna `Por confirmar` de `Vendedores`,
+  *cuándo · quién*). Se puede cotizar con él al tiro (la lista dice *trato
+  por confirmar*). Le llega a la **bandeja de pagos** como las cuentas por
+  confirmar (`pendientesDeCuenta()`, `de: 'socio'`), se confirma con *✓
+  Confirmar* o en su tarjeta (`/api/equipo/confirmar` con `de: 'socio'`), y
+  el informe lo avisa arriba de su línea. Cualquier cambio que guarde pagos
+  en su ficha también lo confirma.
+- **El link del socio** muestra su factura (o boleta) del mes con la misma
+  caja, y lo que falta es contra lo que se le transfiere.
+- **Lecturas de Google**: ninguna más en las pantallas; `/api/ocupacion`
+  sumó `Vendedores` a su tanda (para la bandeja). Crear un vendedor escribe
+  `Usuarios` y `Vendedores`.
+- **Probado en el panel de ejemplo** a 393 y 1280: pagos crea a Camila Soto
+  (cuenta `camila`, rol vendedor, con clave; ficha *Boleta · Incluido*) y al
+  socio Turismo Sur (*Factura · Aparte*, con su razón social); Jorge, con
+  boleta y la retención incluida, le tocan $538.739 y se le transfieren
+  $456.581 —en `/vendedores` y en el informe—; el vendedor agrega *Agencia
+  Nueva* desde la cotización, queda elegido y por confirmar, y a pagos le
+  llega *"Jorge agregó el socio comercial Agencia Nueva: confirma su
+  trato"*. `revisarPlayStation()` sin hallazgos.
+
 ### `.boton` pasó a la capa de componentes (2026-11-12)
 
 Lo pidió el cliente después de ver que en `/vendedores` el *Pagarle* salía

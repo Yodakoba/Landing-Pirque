@@ -8,7 +8,8 @@ import { HOJA_TRABAJADORES } from '@/lib/equipo';
 import { HOJA_COLABORADORES } from '@/lib/extras';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { leerReservas, leerFechas, leerConfig, posiblesDeLosDias, leerPresupuestos, leerClientes,
-  leerTrabajadores, leerColaboradores } from '@/lib/datos';
+  leerTrabajadores, leerColaboradores, leerVendedores } from '@/lib/datos';
+import { HOJA_VENDEDORES } from '@/lib/vendedores';
 import { puede, type Rol } from '@/lib/auth';
 import { pendientesDeExclusivo, pendientesDeCuenta } from '@/lib/aprobaciones';
 import { conCliente, grupoDe } from '@/lib/cotizar';
@@ -53,7 +54,7 @@ export const dynamic = 'force-dynamic';
  * personas. Lo notó el cliente mirando octubre.
  */
 export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_CLIENTES,
-  HOJA_TRABAJADORES, HOJA_COLABORADORES], async function GET(req: Request) {
+  HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_VENDEDORES], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
@@ -135,7 +136,8 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_FECHAS, HOJA_CONFIG, HOJA_PR
     // para pagos: las cambió alguien que no es pagos. `Trabajadores` y
     // `Colaboradores` se sumaron a la precarga: ninguna lectura más.
     const cuentas = puede(rol as Rol, 'pagar')
-      ? pendientesDeCuenta(await leerTrabajadores().catch(() => []), await leerColaboradores().catch(() => []))
+      ? pendientesDeCuenta(await leerTrabajadores().catch(() => []), await leerColaboradores().catch(() => []),
+        (await leerVendedores().catch(() => [])).filter((f) => f.tipo === 'socio'))
       : [];
     return NextResponse.json({ ocupacion, config: cfg, firma: firmaDe(reservas, fechas), exclusivos, cuentas });
   } catch (e) {

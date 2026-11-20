@@ -38,6 +38,8 @@ import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
 import MostrarDesactivados from './MostrarDesactivados';
+import AgregarVendedor from './AgregarVendedor';
+import CamposDocumento, { type CambioDocumento } from './CamposDocumento';
 import Dialogo from './Dialogo';
 import { avisar, copiarConAviso } from './AvisoFlotante';
 import DatosBancarios from './DatosBancarios';
@@ -47,6 +49,8 @@ import { enPalabras, mesEnPalabras, rangoEnPalabras, semanaDe, sumarDias, esFech
 import { BASE_COMISION, CON_SOCIO_DEFECTO, type FichaVendedor, type Venta, type ResumenVendedor as Resumen } from '@/lib/vendedores';
 import { sePuedeTransferir, faltaParaTransferir, bancoVacio, type Banco } from '@/lib/banco';
 import type { PagoEquipo } from '@/lib/remuneraciones';
+import { tasaEnTexto, type Desglose } from '@/lib/boletas';
+import { faltaParaFacturar } from '@/lib/vendedores';
 
 type VentaConFolio = Venta & { folio: string };
 type EnCurso = { id: string; folio: string; cliente: string; fecha: string; estado: string; total: number; comision: number; detalle: string };
@@ -59,13 +63,17 @@ interface Datos {
   desde: string; hasta: string; periodo: string; hoy: string;
   resumen: Omit<Resumen, 'cuentan'> & { cuentan: VentaConFolio[] }; pagado: number; falta: number; pagos: PagoEquipo[];
   porCobrar: VentaConFolio[]; enCurso: EnCurso[];
+  /** El documento del periodo: lo que va en la boleta o la factura y lo que se le transfiere (2026-11-20). */
+  documento?: Desglose;
   puedeEditar: boolean; puedeLinks?: boolean; error?: string;
+  puedeAgregarVendedor?: boolean; puedeAgregarSocio?: boolean;
 }
 
 /** Lo que dice la tarjeta cerrada de una persona. Ver `/api/vendedores`. */
 interface Linea {
   usuario: string; nombre: string; tipo: 'vendedor' | 'socio'; activo: boolean;
-  total: number; pagado: number; falta: number; ventas: number; fijo: number; formaDePago: boolean; sinCuenta: boolean;
+  total: number; aTransferir: number; pagado: number; falta: number; ventas: number; fijo: number;
+  formaDePago: boolean; sinCuenta: boolean; documento: 'boleta' | 'factura'; faltaFactura: boolean; porConfirmar: boolean;
 }
 
 /** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
@@ -189,8 +197,8 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   const [error, setError] = useState('');
   /** Lo escrito en la ficha, mientras se guarda solo. */
   const [ficha, setFicha] = useState<FichaVendedor | null>(null);
-  /** El nombre del socio nuevo, mientras se escribe; `null` es el botón cerrado. */
-  const [nuevoSocio, setNuevoSocio] = useState<string | null>(null);
+  /** La ventana de agregar abierta: un vendedor o un socio (2026-11-20). */
+  const [agregando, setAgregando] = useState<'' | 'vendedor' | 'socio'>('');
   /** El nombre de un socio escrito y sin confirmar. */
   const [nombreEscrito, setNombreEscrito] = useState<string | null>(null);
   const [aviso, setAviso] = useState('');
@@ -201,7 +209,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   /** La pestaña del detalle. */
   const [pestana, setPestana] = useState<'suma' | 'viene' | 'pagos'>('suma');
   /** Qué ventana está abierta: el trato o la transferencia. */
-  const [ventana, setVentana] = useState<'' | 'trato' | 'banco'>('');
+  const [ventana, setVentana] = useState<'' | 'trato' | 'banco' | 'documento'>('');
 
   const cargar = (u = usuario, p = periodo, inicial = false) => {
     const q = new URLSearchParams();
@@ -297,17 +305,27 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
     else copiarConAviso(`${window.location.origin}/mi/${d.token}`, `Link de ${datos.nombre} copiado`, `Link de ${datos.nombre}:`);
     cargar(datos.usuario, periodo);
   };
-  const crearSocio = async () => {
-    const nombre = (nuevoSocio ?? '').trim();
-    if (!nombre) return;
-    setAviso('');
-    const res = await fetch('/api/vendedores', {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre })
+  /** Lo recién creado en la ventana de agregar: se abre su tarjeta. */
+  const creado = (id: string, tipo: 'vendedor' | 'socio') => {
+    setAgregando(''); setGrupo(tipo === 'socio' ? 'socios' : 'vendedores'); setBusca('');
+    setUsuario(id); setPestana('suma'); cargar(id, periodo);
+  };
+  /** **Confirmar el trato de un socio que agregó un vendedor** (regla: la plata la cierra pagos). */
+  const confirmarTrato = async () => {
+    const res = await fetch('/api/equipo/confirmar', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ de: 'socio', id: datos.usuario, nombre: datos.nombre })
     });
     const d = await res.json().catch(() => ({}));
-    if (!res.ok || d.error) { setAviso(d.error || 'No se pudo crear.'); return; }
-    setNuevoSocio(null); setGrupo('socios'); setBusca('');
-    setUsuario(d.ficha.usuario); setPestana('suma'); cargar(d.ficha.usuario, periodo);
+    if (!res.ok || d.error) { avisar(d.error || 'No se pudo confirmar.', 'atencion'); return; }
+    avisar(`Confirmado: el trato de ${datos.nombre}`);
+    cargar(datos.usuario, periodo);
+  };
+  /** El documento de la ficha: se guarda solo, como el trato. */
+  const cambiarDocumento = (c: CambioDocumento) => {
+    if (c.documento) cambiar('documento', c.documento);
+    if (c.incluido !== undefined) cambiar('incluido', c.incluido);
+    if (c.factura) cambiar('factura', c.factura);
   };
   const pagarEn = `/informe?${new URLSearchParams({ pagar: datos.nombre, desde: datos.desde, hasta: datos.hasta })}`;
   const terminacion = banco.numero ? `···${banco.numero.replace(/\D/g, '').slice(-4)}` : '';
@@ -315,6 +333,21 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   /** El detalle de la persona abierta: lo que antes era toda la página. */
   const detalle = hay ? (
     <div className="space-y-5">
+          {/* **El trato de un socio que agregó un vendedor** (2026-11-20):
+              ya rige con el de partida; pagos lo mira y lo confirma. */}
+          {datos.ficha?.porConfirmar && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed border-ambar-fuerte/70 bg-ambar/10 p-3">
+              <p className="min-w-[12rem] flex-1 text-[15px]">
+                <b className="text-ambar-texto">⚠ Trato por confirmar.</b>{' '}
+                Lo agregó {datos.ficha.porConfirmar.split(' · ')[1] || 'un vendedor'} con el trato de partida.
+                {datos.puedeEditar ? ' Revísalo abajo, en Cambiar el trato, y confírmalo.' : ' Lo confirma el encargado de pagos.'}
+              </p>
+              {datos.puedeEditar && (
+                <button type="button" className="boton !min-h-[44px] !border-verde-fuerte !text-[15px] !font-bold text-verde-texto"
+                  onClick={() => void confirmarTrato()}>✓ Confirmar el trato</button>
+              )}
+            </div>
+          )}
           {!datos.formaDePago && (
             <p className="rounded-xl border-2 border-ambar-fuerte/70 bg-ambar/10 p-3 text-[15px]">
               <b className="text-ambar-texto">Todavía no está escrito cómo se le paga.</b>{' '}
@@ -325,9 +358,11 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
           {/* 3. Cuánto: tres azulejos; el desglose va en una línea. */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Azulejo grande ayuda="vendLeToca" que={tu ? 'Te toca' : 'Le toca'} monto={r.total} tono="border-oro/40 bg-oro/[0.07] text-oro"
-              nota={r.sueldoFijo
+              nota={(r.sueldoFijo
                 ? `comisiones ${enPesos(r.comisiones)} + fijo ${enPesos(r.sueldoFijo)}`
-                : `${r.cuentan.length} ${r.cuentan.length === 1 ? 'venta pagada' : 'ventas pagadas'}`} />
+                : `${r.cuentan.length} ${r.cuentan.length === 1 ? 'venta pagada' : 'ventas pagadas'}`)
+                + (datos.documento && datos.documento.aTransferir !== r.total
+                  ? ` · ${tu ? 'te transferimos' : 'se le transfieren'} ${enPesos(datos.documento.aTransferir)}` : '')} />
             <Azulejo ayuda="vendPagado" que="Pagado" monto={datos.pagado} tono="border-verde-fuerte/40 bg-verde/[0.06] text-verde-texto"
               nota={datos.pagos.length ? `${datos.pagos.length} ${datos.pagos.length === 1 ? 'pago' : 'pagos'}` : 'sin pagos'} />
             <Azulejo ayuda="vendFalta" que="Falta" monto={datos.falta}
@@ -430,6 +465,40 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                 )}
               </div>
             </div>
+            {/* **El documento** (2026-11-20): boleta o factura, con el
+                impuesto incluido o aparte, y lo que se le transfiere. */}
+            {(() => {
+              const f = ficha ?? datos.ficha;
+              const doc = datos.documento;
+              const faltaF = faltaParaFacturar(f);
+              return (
+                <div className="flex flex-col items-start gap-2 border-t border-hueso/10 pt-3 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="min-w-0 flex-1 text-[15px] leading-relaxed">
+                    <span className="block text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:inline sm:text-[15px] sm:font-normal sm:normal-case sm:tracking-normal sm:text-hueso/70">Documento: </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border-2 border-oro/50 px-2 text-[14px] font-bold">
+                      🧾 {f.documento === 'factura' ? 'Factura' : 'Boleta de honorarios'} · {f.documento === 'factura'
+                        ? (f.incluido ? 'IVA incluido' : 'más IVA') : (f.incluido ? 'retención incluida' : 'retención aparte')}
+                    </span>
+                    {f.documento === 'factura' && f.factura.razonSocial && <span className="text-hueso/75"> · {f.factura.razonSocial}</span>}
+                    {faltaF.length > 0 && (
+                      <span className="ml-1 inline-flex rounded-full border-2 border-dashed border-ambar-fuerte/70 px-2 text-[14px] font-bold text-ambar-texto">
+                        ⚠ falta {faltaF.join(', ')}
+                      </span>
+                    )}
+                    {doc && doc.enDocumento > 0 && (
+                      <p className="mt-1 text-[14px] text-hueso/80">
+                        Este periodo: {f.documento === 'factura' ? 'factura' : 'boleta'} por <b>{enPesos(doc.enDocumento)}</b>
+                        {' '}({f.documento === 'factura' ? `IVA ${tasaEnTexto(doc.tasa)}` : `retención ${tasaEnTexto(doc.tasa)}`} {enPesos(doc.impuesto)})
+                        {' '}· {tu ? 'te transferimos' : 'se le transfieren'} <b>{enPesos(doc.aTransferir)}</b>
+                      </p>
+                    )}
+                  </div>
+                  {datos.puedeEditar && (
+                    <button type="button" className="boton !min-h-[44px] !text-[15px]" onClick={() => setVentana('documento')}>Cambiar</button>
+                  )}
+                </div>
+              );
+            })()}
             {(datos.puedeEditar || esVendedor) && (
               <div className="flex flex-col items-start gap-2 border-t border-hueso/10 pt-3 sm:flex-row sm:items-center sm:gap-3">
                 <p className="min-w-0 flex-1 text-[15px] leading-relaxed">
@@ -574,6 +643,21 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             </Dialogo>
           )}
 
+          {ventana === 'documento' && ficha && (
+            <Dialogo titulo={`Documento · ${datos.nombre}`} onCerrar={() => { void fichas.forzar(); setVentana(''); }} ancho="max-w-xl">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[14px] text-hueso/75">Se guarda solo. Cambia lo que se le transfiere desde este periodo, también en el informe.</p>
+                  <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(datos.usuario)} />
+                </div>
+                <CamposDocumento documento={ficha.documento} incluido={ficha.incluido} factura={ficha.factura} onCambio={cambiarDocumento} />
+                <div className="flex justify-end">
+                  <button type="button" className="boton !min-h-[44px] !text-[15px]" onClick={() => { void fichas.forzar(); setVentana(''); }}>Listo</button>
+                </div>
+              </div>
+            </Dialogo>
+          )}
+
           {ventana === 'banco' && ficha && (
             <Dialogo titulo={`Transferencia · ${datos.nombre}`} onCerrar={() => { void fichas.forzar(); setVentana(''); }} ancho="max-w-xl">
               <div className="space-y-3">
@@ -628,25 +712,18 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                 );
               })}
             </div>
-            {datos.puedeEditar && nuevoSocio === null && (
+            {/* **Agregar sigue al grupo** (2026-11-20): vendedores o socios,
+                arriba como antes. Abre una ventana con sus datos de pago. */}
+            {(grupo === 'socios' ? datos.puedeAgregarSocio : datos.puedeAgregarVendedor) && (
               <button type="button" className="boton !min-h-[48px] w-full border-dashed !text-[15px] sm:w-auto"
-                onClick={() => { setNuevoSocio(''); setAviso(''); }}>+ Agregar socio comercial</button>
+                onClick={() => { setAviso(''); setAgregando(grupo === 'socios' ? 'socio' : 'vendedor'); }}>
+                {grupo === 'socios' ? '+ Agregar socio comercial' : '+ Agregar vendedor'}
+              </button>
             )}
           </div>
-          {datos.puedeEditar && nuevoSocio !== null && (
-            <form className="flex flex-wrap items-end gap-2 rounded-2xl border-2 border-dashed border-hueso/25 bg-panel p-3"
-              onSubmit={(e) => { e.preventDefault(); void crearSocio(); }}>
-              <label className="block min-w-[12rem] flex-1 text-[14px] font-semibold">
-                Nombre del socio nuevo
-                <input autoFocus className={ENTRADA} value={nuevoSocio} placeholder="Ej.: Turismo Maipo"
-                  onChange={(e) => setNuevoSocio(e.target.value)} />
-              </label>
-              <button type="submit" className="boton !min-h-[44px] !text-[15px] border-oro text-oro" disabled={!nuevoSocio.trim()}>Crear el socio</button>
-              <button type="button" className="boton !min-h-[44px] !text-[15px]" onClick={() => setNuevoSocio(null)}>Cancelar</button>
-              <p className="w-full text-[13px] text-hueso/70">
-                Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto.
-              </p>
-            </form>
+          {agregando && (
+            <AgregarVendedor tipo={agregando} onCerrar={() => setAgregando('')}
+              onCreado={(id) => creado(id, agregando)} />
           )}
           {aviso && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px]">{aviso}</p>}
         </div>
@@ -723,11 +800,17 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                           {x.sinCuenta && (
                             <span className="rounded-full border border-ambar/50 px-2 font-semibold text-ambar-texto">falta su cuenta</span>
                           )}
+                          {x.faltaFactura && (
+                            <span className="rounded-full border border-ambar/50 px-2 font-semibold text-ambar-texto">falta su factura</span>
+                          )}
+                          {x.porConfirmar && (
+                            <span className="rounded-full border-2 border-dashed border-ambar/60 px-2 font-semibold text-ambar-texto">⚠ trato por confirmar</span>
+                          )}
                         </span>
                       </span>
                       <span className="flex shrink-0 flex-col items-end gap-1">
                         <span className="text-[19px] font-bold tabular-nums">{x.total > 0 ? enPesos(x.total) : '—'}</span>
-                        <EstadoPago total={x.total} pagado={x.pagado} falta={x.falta} />
+                        <EstadoPago total={x.aTransferir} pagado={x.pagado} falta={x.falta} />
                       </span>
                     </button>
                     {abierta && (

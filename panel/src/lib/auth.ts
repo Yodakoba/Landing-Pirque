@@ -414,6 +414,20 @@ export const PERMISOS = {
    * (eso último pide además `pagar`). Ver `lib/vendedores.ts`.
    */
   vendedores: [ROL.admin, ROL.pagos, ROL.gerencia, ROL.vendedor],
+  /**
+   * **Agregar un vendedor desde `/vendedores`** (2026-11-20, lo decidió el
+   * cliente): crea su cuenta, **solo con el rol Vendedor**, con sus datos de
+   * pago. Pagos, la gerencia y el administrador. Las demás cuentas y roles
+   * siguen siendo de `usuarios` (solo el administrador).
+   */
+  agregarVendedores: [ROL.admin, ROL.pagos, ROL.gerencia],
+  /**
+   * **Agregar un socio comercial** (2026-11-20). El vendedor también —en la
+   * cotización, al elegir el socio—, pero **su trato queda por confirmar**
+   * hasta que lo confirma quien tiene `pagar` (lo pidió el cliente). Ver
+   * `Por confirmar` en `lib/vendedores.ts`.
+   */
+  agregarSocios: [ROL.admin, ROL.pagos, ROL.gerencia, ROL.vendedor],
   /** Marcar que llegó la boleta de alguien en el informe (2026-11-12). */
   boleta: [ROL.admin, ROL.operaciones, ROL.pagos, ROL.gerencia],
   /**

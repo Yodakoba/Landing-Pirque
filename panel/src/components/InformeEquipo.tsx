@@ -40,6 +40,7 @@ import {
 import { informeDeExtras, costoDeExtra, type Extra } from '@/lib/extras';
 import { resumenDelPeriodo, finesDeMesEntre, type Venta, type FichaVendedor } from '@/lib/vendedores';
 import { cuentaBoleta, montosDeTurnos, montosDeExtras, montosDeVendedor, faltaBoleta, netoAlMarcar,
+         desgloseDocumento, retencionDelAno, fechaDeEmision,
          type CuentaBoleta, type MontoDelDia } from '@/lib/boletas';
 import CajaBoleta from './CajaBoleta';
 import { enPesos } from '@/lib/ocupacion';
@@ -276,7 +277,7 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
  */
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, cuentan, fuera, marcarEn, palabraSinMarcar, nota, sinCuenta,
-  boleta, tituloBoleta, desglose = true, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar,
+  boleta, tituloBoleta, desglose = true, sinPropina = false, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar,
   onPagarCompleto, onBoleta, anotados, onVerPagos, porConfirmar, onConfirmar
 }: {
   nombre: string;
@@ -311,6 +312,8 @@ function LineaPersona({
    * con IVA, no con boleta de honorarios; a él solo se le marca si llegó.
    */
   desglose?: boolean;
+  /** El equipo: la caja recuerda que la propina no va en la boleta. */
+  sinPropina?: boolean;
   puedePagar: boolean;
   /** Si marca la boleta: quien paga y también el gerente (2026-11-12). */
   puedeBoleta?: boolean;
@@ -330,7 +333,7 @@ function LineaPersona({
    * **Su cuenta o su tarifa, cambiada por quien no es pagos** (2026-11-13,
    * `plata.ts`): se avisa antes de transferir, y pagos la confirma acá.
    */
-  porConfirmar?: { que: string; quien: string; cuando: string } | null;
+  porConfirmar?: { que: string; quien: string; cuando: string; de?: string } | null;
   onConfirmar?: () => Promise<void>;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
@@ -366,7 +369,7 @@ function LineaPersona({
                         border-ambar-fuerte/70 bg-ambar/10 px-3 py-2">
           <p className="min-w-[12rem] flex-1 text-[14px] font-semibold text-ambar-texto">
             ⚠ Por confirmar: {porConfirmar.que}
-            <span className="font-normal text-hueso/75"> · lo cambió {porConfirmar.quien}. Revísalo antes de transferir.</span>
+            <span className="font-normal text-hueso/75"> · {porConfirmar.de === 'socio' ? 'lo agregó' : 'lo cambió'} {porConfirmar.quien}. Revísalo antes de transferir.</span>
           </p>
           {onConfirmar && (
             <button type="button" disabled={confirmando}
@@ -519,12 +522,14 @@ function LineaPersona({
             )}
           </div>
 
-          {boleta && (boleta.neto > 0 || boleta.exacta) && (() => {
+          {boleta && (boleta.total > 0 || boleta.exacta) && (() => {
             // **El botón de siempre, sobre la boleta de este periodo**: marca
             // y desmarca la fila de este periodo exacto. Si los días ya los
             // cubre otra (la del mes, o las semanas), se ve en la caja y se
             // desmarca mirando ese periodo.
             const recibida = !!boleta.exacta;
+            // Con factura, el mismo botón dice factura (2026-11-20).
+            const doc = boleta.como.documento === 'factura' ? 'factura' : 'boleta';
             const marcable = recibida || boleta.falta > 0;
             const dif = boleta.exacta ? boleta.diferencias.find((x) => x.boleta === boleta.exacta) : undefined;
             const botones = puedeBoleta ? (
@@ -540,7 +545,7 @@ function LineaPersona({
                       ? 'border-verde-fuerte bg-verde-fuerte text-tinta' : 'border-ambar/70'}`}>
                       {recibida ? '✓' : ''}
                     </span>
-                    {recibida ? 'Boleta recibida' : 'Falta la boleta'}
+                    {recibida ? (doc === 'factura' ? 'Factura recibida' : 'Boleta recibida') : `Falta la ${doc}`}
                   </button>
                 )}
                 {dif && (
@@ -556,10 +561,11 @@ function LineaPersona({
               </div>
             ) : null;
             return desglose ? (
-              <CajaBoleta titulo={tituloBoleta} cuenta={boleta} estado={!puedeBoleta}>{botones}</CajaBoleta>
+              <CajaBoleta titulo={doc === 'factura' ? tituloBoleta.replace(/^Boleta/, 'Factura') : tituloBoleta}
+                cuenta={boleta} estado={!puedeBoleta} sinPropina={sinPropina}>{botones}</CajaBoleta>
             ) : botones ?? (
               <p className={`text-[14px] font-semibold ${boleta.falta === 0 ? 'text-verde-texto' : 'text-ambar-texto'}`}>
-                {boleta.falta === 0 ? '✓ Boleta recibida' : 'Falta la boleta'}
+                {boleta.falta === 0 ? `✓ ${doc === 'factura' ? 'Factura recibida' : 'Boleta recibida'}` : `Falta la ${doc}`}
               </p>
             );
           })()}
@@ -807,14 +813,14 @@ export default function InformeEquipo() {
   /** El equipo de ventas (2026-11-12): solo llega para quien paga, la gerencia y el administrador. */
   const [vendedores, setVendedores] = useState<{
     nombre: string; usuario: string;
-    ficha: Pick<FichaVendedor, 'sueldoFijo' | 'comisionPct' | 'montoEvento' | 'base'>;
+    ficha: Pick<FichaVendedor, 'sueldoFijo' | 'comisionPct' | 'montoEvento' | 'base' | 'documento' | 'incluido'>;
     ventas: (Venta & { folio: string })[];
     /** Vendedor con cuenta, o socio comercial (2026-11-12). */
     tipo?: 'vendedor' | 'socio';
   }[]>([]);
   const [cuentas, setCuentas] = useState<Record<string, Banco>>({});
   /** Cuentas y tarifas por confirmar, por nombre normalizado: solo a quien paga. */
-  const [porConfirmar, setPorConfirmar] = useState<Record<string, { que: string; quien: string; cuando: string; de: 'trabajador' | 'colaborador' }>>({});
+  const [porConfirmar, setPorConfirmar] = useState<Record<string, { que: string; quien: string; cuando: string; de: 'trabajador' | 'colaborador' | 'socio'; id?: string }>>({});
   // Los pagos ya registrados. El "check" de cada fila **se deduce de
   // sumarlos**, no es un campo guardado que pueda decir otra cosa que la
   // plata. Ver `remuneraciones.ts`.
@@ -932,13 +938,19 @@ export default function InformeEquipo() {
    */
   const lineasVendedores = useMemo(() => vendedores.map((v) => {
     const r = resumenDelPeriodo(v.ficha, v.ventas, desde, hasta);
+    // **Su documento** (2026-11-20): boleta o factura, con el impuesto
+    // incluido o aparte. Decide lo que se le transfiere y lo que cuesta.
+    const como = { documento: v.ficha.documento ?? (v.tipo === 'socio' ? 'factura' : 'boleta'), incluido: v.ficha.incluido ?? true } as const;
+    const doc = desgloseDocumento(r.total, como, retencionDelAno(fechaDeEmision(hasta, hoy())));
     return { nombre: v.nombre, usuario: v.usuario, socio: v.tipo === 'socio', total: r.total, comisiones: r.comisiones,
              sueldoFijo: r.sueldoFijo, mesesFijo: r.mesesFijo,
              ventas: r.cuentan as (Venta & { folio: string })[],
-             montos: montosDeVendedor(r.cuentan, v.ficha.sueldoFijo, finesDeMesEntre(desde, hasta)) };
+             montos: montosDeVendedor(r.cuentan, v.ficha.sueldoFijo, finesDeMesEntre(desde, hasta)),
+             como, doc, aTransferir: doc.aTransferir };
   }).filter((l) => l.total > 0 || pagosEnPeriodo(pagos, l.nombre, desde, hasta).length > 0),
   [vendedores, desde, hasta, pagos]);
-  const totalVendedores = lineasVendedores.reduce((s, l) => s + l.total, 0);
+  // Lo que cuestan: lo que va en su documento (el bruto, o la factura con IVA).
+  const totalVendedores = lineasVendedores.reduce((s, l) => s + l.doc.enDocumento, 0);
   const haySocios = vendedores.some((v) => v.tipo === 'socio');
   const total = lineas.reduce((s, l) => s + l.total, 0);
   const propina = lineas.reduce((s, l) => s + l.propina, 0);
@@ -966,22 +978,30 @@ export default function InformeEquipo() {
       if (pideBoleta('equipo', esContratado(l.modalidad))) sumar(l.trabajador, montosDeTurnos(turnos ?? [], l.trabajador));
     }
     for (const l of lineasExtras) sumar(l.colaborador, montosDeExtras(extras, l.colaborador));
-    for (const l of lineasVendedores) sumar(l.nombre, l.montos);
     const ahora = hoy();
-    return new Map([...montos].map(([k, x]) => [k, cuentaBoleta(x.montos, boletas, x.nombre, desde, hasta, ahora)]));
+    const salida = new Map([...montos].map(([k, x]) => [k, cuentaBoleta(x.montos, boletas, x.nombre, desde, hasta, ahora)]));
+    // Los vendedores y socios, cada uno con su documento: boleta o factura,
+    // con el impuesto incluido o aparte (2026-11-20).
+    for (const l of lineasVendedores) {
+      salida.set(normalizar(l.nombre), cuentaBoleta(l.montos, boletas, l.nombre, desde, hasta, ahora, l.como));
+    }
+    return salida;
   }, [lineas, lineasExtras, lineasVendedores, turnos, extras, boletas, desde, hasta]);
   const boletaDe = (nombre: string) => cuentasBoleta.get(normalizar(nombre)) ?? null;
   /** Si a esa persona le falta boleta en el periodo: ganó algo y no está todo respaldado. */
   const faltaB = (nombre: string) => { const c = boletaDe(nombre); return !!c && faltaBoleta(c); };
   /** Para la columna Boleta de la planilla: *Sí* solo si está todo respaldado. */
-  const boletaRecibida = (nombre: string) => { const c = boletaDe(nombre); return !!c && c.neto > 0 && c.falta === 0; };
+  const boletaRecibida = (nombre: string) => { const c = boletaDe(nombre); return !!c && c.total > 0 && c.falta === 0; };
   /**
    * **La retención de las boletas del periodo**: la paga la empresa en el
    * F29, así que el costo real es el bruto. Sin socios comerciales, que
    * facturan.
    */
-  const socios = new Set(lineasVendedores.filter((l) => l.socio).map((l) => normalizar(l.nombre)));
-  const retenciones = [...cuentasBoleta].reduce((n, [k, c]) => n + (socios.has(k) ? 0 : c.delPeriodo.retencion), 0);
+  const deVentas = new Set(lineasVendedores.map((l) => normalizar(l.nombre)));
+  // Las del equipo y los extras van aparte del costo (lo de arriba es su
+  // neto); las de vendedores con boleta ya están en su costo (su bruto).
+  const retencionesEquipo = [...cuentasBoleta].reduce((n, [k, c]) => n + (deVentas.has(k) ? 0 : c.delPeriodo.impuesto), 0);
+  const retenciones = retencionesEquipo + lineasVendedores.reduce((n, l) => n + (l.doc.documento === 'boleta' ? l.doc.impuesto : 0), 0);
   const tituloBoleta = tipo === 'mes' ? `Boleta de ${mesEnPalabras(periodo)}`
     : desde === hasta ? `Boleta del ${rangoEnPalabras([desde])}` : `Boleta del ${rangoEnPalabras([desde, hasta])}`;
 
@@ -991,7 +1011,7 @@ export default function InformeEquipo() {
     if (!p) return;
     const res = await fetch('/api/equipo/confirmar', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ de: p.de, nombre })
+      body: JSON.stringify({ de: p.de, nombre, id: p.id })
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok || d.error) { avisar(d.error || 'No se pudo guardar.', 'atencion'); return; }
@@ -1032,7 +1052,7 @@ export default function InformeEquipo() {
     && (filtro !== 'sinBoleta' || faltaB(nombre));
   const visiblesEquipo = seccion && seccion !== 'equipo' ? [] : lineas.filter((l) => seVe(l.trabajador, l.total, l.propina));
   const visiblesExtras = seccion && seccion !== 'extras' ? [] : lineasExtras.filter((l) => seVe(l.colaborador, l.total, 0));
-  const visiblesVendedores = seccion && seccion !== 'vendedores' ? [] : lineasVendedores.filter((l) => seVe(l.nombre, l.total, 0));
+  const visiblesVendedores = seccion && seccion !== 'vendedores' ? [] : lineasVendedores.filter((l) => seVe(l.nombre, l.aTransferir, 0));
   // Los contadores de *Todos / Por pagar* cuentan la sección que se ve.
   const en = (x: 'equipo' | 'extras' | 'vendedores') => !seccion || seccion === x;
   const cuantosTodos = (en('equipo') ? lineas.length : 0) + (en('extras') ? lineasExtras.length : 0)
@@ -1040,7 +1060,7 @@ export default function InformeEquipo() {
   const cuantosPorPagar =
     (en('equipo') ? lineas.filter((l) => sePorPagar(l.trabajador, l.total, l.propina)).length : 0)
     + (en('extras') ? lineasExtras.filter((l) => sePorPagar(l.colaborador, l.total, 0)).length : 0)
-    + (en('vendedores') ? lineasVendedores.filter((l) => sePorPagar(l.nombre, l.total, 0)).length : 0);
+    + (en('vendedores') ? lineasVendedores.filter((l) => sePorPagar(l.nombre, l.aTransferir, 0)).length : 0);
   const cuantosSinBoleta =
     (en('equipo') ? lineas.filter((l) => faltaB(l.trabajador)).length : 0)
     + (en('extras') ? lineasExtras.filter((l) => faltaB(l.colaborador)).length : 0)
@@ -1062,7 +1082,7 @@ export default function InformeEquipo() {
   const sumaExtras = sumaDe(
     lineasExtras.map((l) => ({ nombre: l.colaborador, tot: l.total, prop: 0 }))
   );
-  const sumaVendedores = sumaDe(lineasVendedores.map((l) => ({ nombre: l.nombre, tot: l.total, prop: 0 })));
+  const sumaVendedores = sumaDe(lineasVendedores.map((l) => ({ nombre: l.nombre, tot: l.aTransferir, prop: 0 })));
 
   /**
    * Registra uno o dos pagos —*Los dos* son dos filas, una por concepto,
@@ -1211,7 +1231,7 @@ export default function InformeEquipo() {
         partes: partesDe(l.colaborador, l.total, 0, true) })) : []),
       // Los vendedores van con los sueldos: su pago es la comisión (2026-11-12).
       ...(cual === 'sueldos' ? lineasVendedores.map((l) => ({ nombre: l.nombre,
-        partes: partesDe(l.nombre, l.total, 0, false, true) })) : [])
+        partes: partesDe(l.nombre, l.aTransferir, 0, false, true) })) : [])
     ];
     const entran: { nombre: string; o: Opcion }[] = [];
     const fuera: string[] = [];
@@ -1317,7 +1337,7 @@ export default function InformeEquipo() {
     if (!l) return;
     porPagar.current = null;
     setSeccion('vendedores');
-    const opciones = partesDe(l.nombre, l.total, 0, false, true);
+    const opciones = partesDe(l.nombre, l.aTransferir, 0, false, true);
     setPagando({ quien: l.nombre, opciones, inicial: opciones[0].concepto, modo: 'parte',
                  boletaPendiente: faltaB(l.nombre) });
   }); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1445,7 +1465,7 @@ export default function InformeEquipo() {
         return partes.map((x, i) => [
           l.socio ? 'Socio comercial' : 'Vendedor', l.nombre, x.fecha, x.que, x.modalidad, '', x.monto || '', '', '', '', x.motivo, x.monto,
           ...(conPropina ? [''] : []),
-          ...fin(l.nombre, l.total, i === 0), ...columnasBanco(l.nombre)
+          ...fin(l.nombre, l.aTransferir, i === 0), ...columnasBanco(l.nombre)
         ]);
       });
 
@@ -1834,7 +1854,7 @@ export default function InformeEquipo() {
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.trabajador))}
                       porConfirmar={porConfirmar[normalizar(l.trabajador)] ?? null}
                       onConfirmar={() => confirmarCuenta(l.trabajador)}
-                      boleta={aplica ? boletaDe(l.trabajador) : null} tituloBoleta={tituloBoleta}
+                      boleta={aplica ? boletaDe(l.trabajador) : null} tituloBoleta={tituloBoleta} sinPropina
                       puedePagar={puedePagar}
                       puedeBoleta={puedeBoleta}
                       abierta={abierta === 'e-' + l.trabajador}
@@ -1939,7 +1959,7 @@ export default function InformeEquipo() {
               </h2>
               <ul className="space-y-2">
                 {visiblesVendedores.map((l) => {
-                  const pago = pagoDeFila(l.nombre, l.total, 0);
+                  const pago = pagoDeFila(l.nombre, l.aTransferir, 0);
                   const clave = 'v-' + l.nombre;
                   return (
                     <LineaPersona key={clave}
@@ -1950,15 +1970,19 @@ export default function InformeEquipo() {
                       fuera={SIN_FUERA}
                       marcarEn={`/vendedores?usuario=${encodeURIComponent(l.usuario)}`} palabraSinMarcar="sin pagar"
                       aTransferir={pago.aTransferir} estado={pago.estado}
-                      partes={partesDe(l.nombre, l.total, 0, false, true)}
+                      partes={partesDe(l.nombre, l.aTransferir, 0, false, true)}
                       datos={[
                         { que: 'Comisiones', valor: l.comisiones ? enPesos(l.comisiones) : '—' },
                         ...(l.socio ? [] : [{ que: 'Sueldo fijo', valor: l.sueldoFijo ? enPesos(l.sueldoFijo) : '—' }]),
-                        { que: 'Total', valor: enPesos(l.total), tono: 'fuerte' }
+                        { que: 'Le toca', valor: enPesos(l.total), tono: 'fuerte' },
+                        // **Lo que se le transfiere sale de su documento** (2026-11-20).
+                        ...(l.aTransferir !== l.total ? [{ que: l.doc.documento === 'factura' ? 'Más IVA: se le transfiere'
+                          : 'Menos retención: se le transfiere', valor: enPesos(l.aTransferir) }] : [])
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.nombre))}
                       boleta={pideBoleta('vendedor', false) ? boletaDe(l.nombre) : null} tituloBoleta={tituloBoleta}
-                      desglose={!l.socio}
+                      porConfirmar={porConfirmar[normalizar(l.nombre)] ?? null}
+                      onConfirmar={() => confirmarCuenta(l.nombre)}
                       puedePagar={puedePagar}
                       puedeBoleta={puedeBoleta}
                       abierta={abierta === clave}
@@ -1969,7 +1993,7 @@ export default function InformeEquipo() {
                       onVerPagos={() => setViendoPagos(l.nombre)}
                       onPagar={(concepto) => setPagando({
                         quien: l.nombre,
-                        opciones: partesDe(l.nombre, l.total, 0, false, true),
+                        opciones: partesDe(l.nombre, l.aTransferir, 0, false, true),
                         inicial: concepto, modo: 'parte',
                         boletaPendiente: faltaB(l.nombre)
                       })}
@@ -2021,8 +2045,8 @@ export default function InformeEquipo() {
               {retenciones > 0 && (
                 <p className="mt-1.5 flex items-center gap-1 text-[13px] text-hueso/75">
                   <span>
-                    + Retención de boletas <strong className="tabular-nums">{enPesos(retenciones)}</strong>, que
-                    se paga en el F29: con ella, <strong className="tabular-nums">{enPesos(total + totalExtras + totalVendedores + retenciones)}</strong>.
+                    Retención de boletas <strong className="tabular-nums">{enPesos(retenciones)}</strong>: la paga la
+                    empresa en el F29.{retencionesEquipo > 0 && <> Costo con ella: <strong className="tabular-nums">{enPesos(total + totalExtras + totalVendedores + retencionesEquipo)}</strong>.</>}
                   </span>
                   <AyudaCorta tema="retenciones" />
                 </p>

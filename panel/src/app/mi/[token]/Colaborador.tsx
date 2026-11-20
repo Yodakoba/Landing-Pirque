@@ -177,7 +177,7 @@ export default function VistaColaborador({ quien, extras, pagos, boletas, token,
             </p>
           )}
 
-          {boleta.neto > 0 && (
+          {boleta.total > 0 && (
             <div className="mt-5">
               <CajaBoleta tu cuenta={boleta}
                 titulo={esMes ? `Tu boleta de ${comoSeLlama}` : `Tu boleta del ${comoSeLlama}`}>

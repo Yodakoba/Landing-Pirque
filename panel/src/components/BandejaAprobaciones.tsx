@@ -52,7 +52,7 @@ function respuesta(p: Pendiente, aprobar: boolean, motivo = ''): { url: string; 
       aviso: `Visto: el ${p.porcentaje}% de ${p.nombre}` };
   }
   if (p.tipo === 'cuenta') {
-    return { url: '/api/equipo/confirmar', cuerpo: { de: p.de, nombre: p.nombre },
+    return { url: '/api/equipo/confirmar', cuerpo: { de: p.de, nombre: p.nombre, id: p.id },
       aviso: `Confirmado: ${p.que} de ${p.nombre}` };
   }
   if (p.tipo === 'cupo') {
@@ -129,6 +129,7 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
     if (p.tipo === 'sobrecupo') return <>{dia}: <b className="text-rojo-texto">{p.exceso} {p.exceso === 1 ? 'persona' : 'personas'} sobre el cupo</b> ({p.tomadas} de {p.cupoActual})</>;
     if (p.tipo === 'pago') return <><b>{p.pide}</b> anotó el pago de <b>{p.nombre}</b>{p.monto ? <> · {pesos(p.monto)}</> : null} · {dia}</>;
     if (p.tipo === 'descuentoVisto') return <><b>{p.pide}</b> aplicó <b className="text-ambar-texto">{p.porcentaje}%</b> de descuento · {p.nombre} · {dia}{p.aprobo && <> · lo aprobó {p.aprobo}</>}</>;
+    if (p.tipo === 'cuenta' && p.de === 'socio') return <><b>{p.pide}</b> agregó el socio comercial <b>{p.nombre}</b>: <b className="text-ambar-texto">confirma su trato</b></>;
     if (p.tipo === 'cuenta') return <><b>{p.pide}</b> cambió los datos de pago de <b>{p.nombre}</b> ({p.de === 'trabajador' ? 'equipo' : 'extras'}): <b className="text-ambar-texto">{p.que}</b></>;
     return <><b>{p.pide}</b> pide liberar {dia} para un <b className="text-morado-texto">🟣 evento exclusivo</b> · {p.cliente}</>;
   };
@@ -212,7 +213,8 @@ export default function BandejaAprobaciones({ pendientes, onCambio, verReserva }
                     {p.tipo === 'cupo' && <>Hoy es <b>{p.cupoActual}</b> · ya reservaron <b>{p.tomadas}</b></>}
                     {p.tipo === 'pago' && <>Ya rige: la reserva cuenta como {p.estado.toLowerCase()}. Revísalo contra el banco o la caja; si algo no calza, corrígelo en la reserva</>}
                     {p.tipo === 'descuentoVisto' && <>Para <b>{p.nombre}</b> · {p.personas} {p.personas === 1 ? 'persona' : 'personas'} · ya rige en lo que se cobra</>}
-                    {p.tipo === 'cuenta' && <>Ya rige. Antes de transferir, mira la ficha y confirma que los datos están bien</>}
+                    {p.tipo === 'cuenta' && p.de === 'socio' && <>Ya se puede cotizar con él. Nació con el trato de partida —5% desde 22, 10% desde 55, 15% desde 77—: míralo en su tarjeta, <a className="text-oro underline" href={`/vendedores?usuario=${encodeURIComponent(p.id ?? '')}`}>Vendedores →</a>, y confírmalo</>}
+                    {p.tipo === 'cuenta' && p.de !== 'socio' && <>Ya rige. Antes de transferir, mira la ficha y confirma que los datos están bien</>}
                     {p.tipo === 'exclusivo' && <>Cotización N° {p.folio}{p.invitados > 0 && <> · {p.invitados} invitados</>} · ese día hay que mover{' '}
                       <b>{p.reservas} {p.reservas === 1 ? 'reserva' : 'reservas'}</b> · <b>{p.personas}</b> {p.personas === 1 ? 'persona' : 'personas'}</>}
                     {p.cuando && <> · {DE_PAGOS.has(p.tipo) ? 'lo anotó' : 'lo pidió'} {p.tipo === 'cuenta' ? `el ${enPalabras(p.cuando.slice(0, 10))} a las` : 'a las'} {p.cuando.slice(11) || p.cuando}</>}

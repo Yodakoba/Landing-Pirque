@@ -75,7 +75,7 @@ export const GET = conLecturas([HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_MENUS, HOJA
       // **Los socios comerciales**, para *"¿Viene por un socio comercial?"*:
       // solo el id, el nombre y si está activo. Su trato y su cuenta, no.
       socios: fichas.filter((f) => f.tipo === 'socio')
-        .map((f) => ({ id: f.usuario, nombre: f.nombre || f.usuario, activo: f.activo }))
+        .map((f) => ({ id: f.usuario, nombre: f.nombre || f.usuario, activo: f.activo, porConfirmar: !!f.porConfirmar }))
         .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
       // Lo justo para los avisos de la lista: de qué cotización, cuánto y si
       // ya se revisó.

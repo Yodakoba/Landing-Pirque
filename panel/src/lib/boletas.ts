@@ -88,27 +88,84 @@ export function brutoParaNeto(neto: number, centesimas: number): number {
   return Math.ceil((n * 10000) / (10000 - centesimas));
 }
 
+/* ---------- El documento: boleta o factura (2026-11-20) ---------- */
+
+/**
+ * **Con qué documento se le paga a alguien.** El equipo y los extras,
+ * siempre con boleta de honorarios. Un vendedor o un socio comercial, con
+ * boleta o con factura: lo dice su ficha (lo pidió el cliente el
+ * 2026-11-20, *"en los dos, boleta o factura"*).
+ */
+export type Documento = 'boleta' | 'factura';
+
+export interface ComoSeDocumenta {
+  documento: Documento;
+  /**
+   * **Si lo que gana ya trae el impuesto.** Con boleta, *retención
+   * incluida*: lo que gana es el bruto, y se le transfiere el bruto menos la
+   * retención. Con factura, *IVA incluido*: lo que gana es el total de la
+   * factura. Si va **aparte**, con boleta lo que gana es el neto y el bruto
+   * se calcula hacia arriba (así el equipo), y con factura se le suma el IVA.
+   * De partida, **incluido** para vendedores y socios (lo decidió el cliente,
+   * *"por ahora… incluyendo el IVA… y que sea incluida la retención"*), y
+   * editable en cada ficha.
+   */
+  incluido: boolean;
+}
+
+/** El equipo y los extras: boleta, y lo que calcula el panel es el neto. */
+export const BOLETA_NETO: ComoSeDocumenta = { documento: 'boleta', incluido: false };
+
+/** El IVA de una factura, en centésimas de punto. Lo fija la ley, como la retención. */
+export const IVA_CENTESIMAS = 1900;
+
 export interface Desglose {
-  /** Lo que recibe la persona. */
+  documento: Documento;
+  incluido: boolean;
+  /** Lo que se escribe en el documento: el bruto de la boleta, o el total de la factura con IVA. */
+  enDocumento: number;
+  /** La retención de la boleta (la paga la empresa en el F29), o el IVA de la factura. */
+  impuesto: number;
+  /** El neto: lo que recibe quien boletea, o la factura sin IVA. */
   neto: number;
-  /** Lo que escribe en el SII. */
-  bruto: number;
-  /** Lo que se retiene, y paga la empresa en el F29. */
-  retencion: number;
-  /** En centésimas de punto: 1525 = 15,25%. */
+  /** **Lo que se le transfiere**: el neto de la boleta, o el total de la factura. */
+  aTransferir: number;
+  /** En centésimas de punto: 1525 = 15,25% de retención; 1900 = 19% de IVA. */
   tasa: number;
 }
 
 /**
- * El desglose de una boleta. **La retención se muestra como bruto menos
- * neto**, para que los tres números siempre cuadren en pantalla; el SII la
- * calcula del bruto y puede ajustar un peso por redondeo.
+ * **El documento por un monto**, según cómo se documenta. `retencion` es la
+ * tasa de la boleta (`retencionDelAno()`); la factura usa el IVA. Las
+ * cuentas siempre cuadran: lo que va en el documento es el neto más el
+ * impuesto, y el impuesto sale de restar.
  */
-export function desgloseDe(neto: number, centesimas: number): Desglose {
-  const n = Math.max(0, Math.round(neto));
-  const bruto = brutoParaNeto(n, centesimas);
-  return { neto: n, bruto, retencion: bruto - n, tasa: centesimas };
+export function desgloseDocumento(monto: number, como: ComoSeDocumenta, retencion: number): Desglose {
+  const m = Math.max(0, Math.round(monto));
+  const base = { documento: como.documento, incluido: como.incluido };
+  if (como.documento === 'factura') {
+    if (como.incluido) {
+      const neto = Math.round((m * 10000) / (10000 + IVA_CENTESIMAS));
+      return { ...base, enDocumento: m, impuesto: m - neto, neto, aTransferir: m, tasa: IVA_CENTESIMAS };
+    }
+    const iva = Math.round((m * IVA_CENTESIMAS) / 10000);
+    return { ...base, enDocumento: m + iva, impuesto: iva, neto: m, aTransferir: m + iva, tasa: IVA_CENTESIMAS };
+  }
+  if (como.incluido) {
+    const ret = retencionDe(m, retencion);
+    return { ...base, enDocumento: m, impuesto: ret, neto: m - ret, aTransferir: m - ret, tasa: retencion };
+  }
+  const bruto = brutoParaNeto(m, retencion);
+  return { ...base, enDocumento: bruto, impuesto: bruto - m, neto: m, aTransferir: m, tasa: retencion };
 }
+
+/**
+ * El desglose de la boleta del equipo, desde su neto. **La retención se
+ * muestra como bruto menos neto**, para que los tres números siempre
+ * cuadren en pantalla; el SII la calcula del bruto y puede ajustar un peso.
+ */
+export const desgloseDe = (neto: number, centesimas: number): Desglose =>
+  desgloseDocumento(neto, BOLETA_NETO, centesimas);
 
 /* ---------- Lo que entra en la boleta ---------- */
 
@@ -171,15 +228,20 @@ export function montosDeVendedor(
 /* ---------- Lo que falta boletear ---------- */
 
 export interface CuentaBoleta {
-  /** Lo que la persona ganó en el periodo: el neto de todas sus boletas. */
-  neto: number;
-  /** Lo que ya está respaldado por boletas recibidas. */
+  /** Con qué documento, y si lo que gana trae el impuesto. */
+  como: ComoSeDocumenta;
+  /**
+   * Lo que la persona ganó en el periodo, como lo dice su trato: el neto
+   * para el equipo; con impuesto incluido, el bruto o el total de la factura.
+   */
+  total: number;
+  /** Lo que ya está respaldado por documentos recibidos. */
   boleteado: number;
-  /** **Lo que falta boletear**: días sin boleta y diferencias. */
+  /** **Lo que falta documentar**: días sin boleta o factura, y diferencias. */
   falta: number;
-  /** La boleta que falta: su bruto, su retención y su neto. */
+  /** El documento que falta: lo que va en él, su impuesto y su neto. */
   porBoletear: Desglose;
-  /** La boleta del periodo entero, como si fuera una sola. */
+  /** El documento del periodo entero, como si fuera uno solo. */
   delPeriodo: Desglose;
   /** La marcada justo por este periodo, si hay. Es la que se marca y desmarca acá. */
   exacta: Boleta | null;
@@ -188,7 +250,8 @@ export interface CuentaBoleta {
   /**
    * **Boletas por menos de lo que hoy suman sus días**: se marcó la boleta
    * y después alguien agregó una hora extra o corrigió un día. Solo las que
-   * caben enteras en el periodo, y solo las que guardaron su monto.
+   * caben enteras en el periodo, solo las que guardaron su monto, y solo con
+   * el impuesto aparte (lo que gana es el neto que se guardó).
    */
   diferencias: { boleta: Boleta; dice: number; suma: number }[];
 }
@@ -205,7 +268,8 @@ export interface CuentaBoleta {
  * `hoy` decide la tasa (`fechaDeEmision()`).
  */
 export function cuentaBoleta(
-  montos: MontoDelDia[], boletas: Boleta[], quien: string, desde: Fecha, hasta: Fecha, hoy: Fecha
+  montos: MontoDelDia[], boletas: Boleta[], quien: string, desde: Fecha, hasta: Fecha, hoy: Fecha,
+  como: ComoSeDocumenta = BOLETA_NETO
 ): CuentaBoleta {
   const clave = normalizar(quien);
   const suyas = boletas.filter((b) => clave && normalizar(b.quien) === clave)
@@ -222,7 +286,7 @@ export function cuentaBoleta(
   }
   const diferencias: CuentaBoleta['diferencias'] = [];
   for (const [b, suma] of asignado) {
-    if (b.neto !== null && b.desde >= desde && b.hasta <= hasta && suma > b.neto) {
+    if (!como.incluido && b.neto !== null && b.desde >= desde && b.hasta <= hasta && suma > b.neto) {
       diferencias.push({ boleta: b, dice: b.neto, suma });
     }
   }
@@ -230,9 +294,9 @@ export function cuentaBoleta(
   const tasa = retencionDelAno(fechaDeEmision(hasta, hoy));
   const exacta = suyas.find((b) => b.desde === desde && b.hasta === hasta) ?? null;
   return {
-    neto, falta, boleteado: neto - falta,
-    porBoletear: desgloseDe(falta, tasa),
-    delPeriodo: desgloseDe(neto, tasa),
+    como, total: neto, falta, boleteado: neto - falta,
+    porBoletear: desgloseDocumento(falta, como, tasa),
+    delPeriodo: desgloseDocumento(neto, como, tasa),
     exacta,
     otras: suyas.filter((b) => b !== exacta && b.desde <= hasta && b.hasta >= desde),
     diferencias
@@ -243,12 +307,12 @@ export function cuentaBoleta(
 export const faltaBoleta = (c: CuentaBoleta) => c.falta > 0;
 
 /**
- * **El neto que se guarda al marcar la boleta del periodo**: lo que esa
- * boleta respalda. Sin una marcada, lo que falta; con una por menos de lo
- * que hoy suma, lo que ya decía más la diferencia.
+ * **El neto que se guarda al marcar el documento del periodo**: lo que
+ * respalda. Sin uno marcado, el neto de lo que falta; con uno por menos de
+ * lo que hoy suma, lo que ya decía más la diferencia.
  */
 export function netoAlMarcar(c: CuentaBoleta): number {
-  if (!c.exacta) return c.falta;
+  if (!c.exacta) return c.porBoletear.neto;
   const dif = c.diferencias.find((d) => d.boleta === c.exacta);
-  return dif ? dif.suma : (c.exacta.neto ?? c.falta);
+  return dif ? dif.suma : (c.exacta.neto ?? c.porBoletear.neto);
 }

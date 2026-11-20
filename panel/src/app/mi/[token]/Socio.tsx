@@ -10,7 +10,10 @@
  * otras ventas.
  */
 import type { FichaVendedor, Venta } from '@/lib/vendedores';
-import { resumenDelPeriodo, porCobrar } from '@/lib/vendedores';
+import { resumenDelPeriodo, porCobrar, comoDe } from '@/lib/vendedores';
+import { cuentaBoleta, montosDeVendedor } from '@/lib/boletas';
+import CajaBoleta from '@/components/CajaBoleta';
+import type { Boleta } from '@/lib/remuneraciones';
 import { rangoDelPeriodo } from '@/lib/equipo';
 import { pagosEnPeriodo, faltaDe, type PagoEquipo } from '@/lib/remuneraciones';
 import { enPesos } from '@/lib/ocupacion';
@@ -72,10 +75,12 @@ function trato(f: FichaVendedor): string {
   ].filter(Boolean).join(' + ');
 }
 
-export default function VistaSocio({ socio, ventas, pagos, token, p, v }: {
+export default function VistaSocio({ socio, ventas, pagos, boletas, token, p, v }: {
   socio: FichaVendedor;
   ventas: VentaConFolio[];
   pagos: PagoEquipo[];
+  /** Las facturas o boletas recibidas, para la caja del documento (2026-11-20). */
+  boletas: Boleta[];
   token: string;
   p?: string;
   v?: string;
@@ -88,7 +93,10 @@ export default function VistaSocio({ socio, ventas, pagos, token, p, v }: {
   const r = resumenDelPeriodo({ sueldoFijo: 0 }, ventas, desde, hasta);
   const recibidos = pagosEnPeriodo(pagos, socio.nombre, desde, hasta);
   const pagado = recibidos.reduce((s, x) => s + x.monto, 0);
-  const falta = faltaDe(r.total, pagado);
+  // **Su documento** (2026-11-20): factura o boleta, con el impuesto incluido
+  // o aparte. Lo que falta es contra lo que se le transfiere.
+  const documento = cuentaBoleta(montosDeVendedor(r.cuentan, 0, []), boletas, socio.nombre, desde, hasta, ahora, comoDe(socio));
+  const falta = faltaDe(documento.delPeriodo.aTransferir, pagado);
   const vienen = porCobrar(ventas).sort((a, b) => a.fechaEvento.localeCompare(b.fechaEvento));
   const cuenta = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
@@ -150,6 +158,13 @@ export default function VistaSocio({ socio, ventas, pagos, token, p, v }: {
               nota={recibidos.length ? cuenta(recibidos.length, 'pago', 'pagos') : undefined} />
             <Azulejo que="Falta" monto={falta} tono={falta > 0 ? 'border-ambar/40 bg-ambar/[0.06] text-ambar-texto' : 'border-hueso/20 bg-panel text-hueso/85'} />
           </div>
+
+          {documento.total > 0 && (
+            <div className="mt-5">
+              <CajaBoleta tu cuenta={documento}
+                titulo={`${socio.documento === 'factura' ? 'Tu factura' : 'Tu boleta'} de ${mesEnPalabras(periodo)}`} />
+            </div>
+          )}
 
           <h3 className="mt-7 text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Evento por evento</h3>
           <p className="text-[13px] text-hueso/65">Cuentan en el mes en que el cliente terminó de pagar y se revisó.</p>

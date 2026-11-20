@@ -2363,8 +2363,10 @@ ok(ROLES_DE_CUENTA.includes(ROL.vendedor), 'se le puede crear una cuenta');
 // línea a ponerlo, que es exactamente lo que se quiere de la cuenta más
 // acotada del panel.
 const deVendedor = todas.filter((a) => puede(ROL.vendedor, a)).sort();
-ok(deVendedor.join() === 'clientes,presupuestos,reservas,vendedores,ver',
-   'cinco permisos y ninguno más: el calendario, sus reservas, las fichas de clientes, cotizar y su resumen (2026-11-12)');
+// **Agregar socios entró el 2026-11-20** (lo pidió el cliente): desde la
+// cotización, con el trato por confirmar hasta que lo confirma pagos.
+ok(deVendedor.join() === 'agregarSocios,clientes,presupuestos,reservas,vendedores,ver',
+   'seis permisos y ninguno más: el calendario, sus reservas, las fichas de clientes, cotizar, su resumen y agregar socios (2026-11-20)');
 ok(!puede(ROL.vendedor, 'dias'),
    'no abre ni cierra días: eso le cambiaría el cupo al sitio público');
 ok(!puede(ROL.vendedor, 'equipo') && !puede(ROL.vendedor, 'extras'),
@@ -5574,7 +5576,8 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
   }
   ok(todos, 'el bruto deja siempre el neto, con cualquier redondeo del SII, y uno un peso más chico ya no alcanza');
   const d = B.desgloseDe(160000, 1525);
-  ok(d.bruto === 188791 && d.retencion === 28791 && d.bruto - d.retencion === d.neto && B.desgloseDe(0, 1525).bruto === 0,
+  ok(d.enDocumento === 188791 && d.impuesto === 28791 && d.enDocumento - d.impuesto === d.neto && d.aTransferir === 160000
+     && B.desgloseDe(0, 1525).enDocumento === 0,
      'el desglose: bruto $188.791 − retención $28.791 = neto $160.000');
 
   const turno = { asistencia: 'Sí', modalidad: 'Por turno', pagoJornada: 40000, horasExtra: 1, valorHora: 5000,
@@ -5593,12 +5596,12 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
   const bol = (desde: string, hasta: string, neto: number | null, fila: number) =>
     ({ quien: 'Ana Pérez', desde, hasta, registradoPor: 'pagos', cuando: '', nota: '', neto, fila });
   const nada = B.cuentaBoleta(montos, [], 'Ana Pérez', '2026-11-01', '2026-11-30', '2026-11-20');
-  ok(nada.neto === 320000 && nada.falta === 320000 && !nada.exacta && B.faltaBoleta(nada),
+  ok(nada.total === 320000 && nada.falta === 320000 && !nada.exacta && B.faltaBoleta(nada),
      'sin boletas, falta boletear todo lo del mes');
   const semanas = [bol('2026-11-02', '2026-11-08', 80000, 2), bol('2026-11-09', '2026-11-15', 80000, 3)];
   const mes = B.cuentaBoleta(montos, semanas, 'ana perez', '2026-11-01', '2026-11-30', '2026-11-20');
   ok(mes.boleteado === 160000 && mes.falta === 160000 && mes.otras.length === 2 && !mes.exacta
-     && mes.porBoletear.neto === 160000 && mes.porBoletear.bruto === 188791,
+     && mes.porBoletear.neto === 160000 && mes.porBoletear.enDocumento === 188791,
      'dos semanas boleteadas: el mes dice cuánto falta y con qué bruto');
   const conMes = B.cuentaBoleta(montos, [...semanas, bol('2026-11-01', '2026-11-30', 160000, 4)], 'Ana Pérez',
     '2026-11-01', '2026-11-30', '2026-11-20');
@@ -5618,6 +5621,46 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
   ok(vieja.falta === 0, 'una boleta marcada antes de guardar su monto no inventa diferencias');
   ok(B.cuentaBoleta(montos, semanas, 'Otra Persona', '2026-11-01', '2026-11-30', '2026-11-20').boleteado === 0,
      'las boletas son de cada persona');
+
+  // El documento de vendedores y socios (2026-11-20).
+  const bi = B.desgloseDocumento(300000, { documento: 'boleta', incluido: true }, 1525);
+  const ba = B.desgloseDocumento(300000, { documento: 'boleta', incluido: false }, 1525);
+  const fi = B.desgloseDocumento(300000, { documento: 'factura', incluido: true }, 1525);
+  const fa = B.desgloseDocumento(300000, { documento: 'factura', incluido: false }, 1525);
+  ok(bi.enDocumento === 300000 && bi.impuesto === 45750 && bi.aTransferir === 254250 && bi.neto === 254250,
+     'boleta con la retención incluida: lo que gana es el bruto y se le transfiere el bruto menos la retención');
+  ok(ba.neto === 300000 && ba.aTransferir === 300000 && ba.enDocumento === B.brutoParaNeto(300000, 1525),
+     'boleta con la retención aparte: lo que gana es el neto y el bruto se calcula hacia arriba');
+  ok(fi.enDocumento === 300000 && fi.neto === 252101 && fi.impuesto === 47899 && fi.aTransferir === 300000,
+     'factura con el IVA incluido: se transfiere lo que gana, y el neto y el IVA salen de ahí');
+  ok(fa.neto === 300000 && fa.impuesto === 57000 && fa.enDocumento === 357000 && fa.aTransferir === 357000,
+     'factura más IVA: se le suma el 19%');
+  let cuadra = true;
+  for (const m of [1, 99, 44000, 70001, 123457, 999999]) {
+    for (const como of [{ documento: 'boleta', incluido: true }, { documento: 'boleta', incluido: false },
+      { documento: 'factura', incluido: true }, { documento: 'factura', incluido: false }] as const) {
+      const x = B.desgloseDocumento(m, como, 1525);
+      if (x.neto + (x.documento === 'factura' ? x.impuesto : x.impuesto) !== x.enDocumento || x.impuesto < 0) cuadra = false;
+    }
+  }
+  ok(cuadra, 'en los cuatro casos el neto más el impuesto es lo que va en el documento');
+  const vend = B.cuentaBoleta([{ fecha: '2026-11-15', monto: 300000 }], [], 'Jorge', '2026-11-01', '2026-11-30', '2026-11-20',
+    { documento: 'boleta', incluido: true });
+  ok(vend.total === 300000 && vend.porBoletear.aTransferir === 254250 && B.netoAlMarcar(vend) === 254250,
+     'la cuenta de un vendedor con retención incluida: al marcar se guarda el neto que recibe');
+  const V = await import('./vendedores.ts');
+  const encV = [...V.ENCABEZADO_VENDEDORES];
+  const socioF = { ...V.fichaSocio('S-0009', 'Turismo Sur'), incluido: false,
+    factura: { razonSocial: 'Turismo Sur SpA', rut: '76.123.456-7', giro: 'Agencia de viajes', direccion: '' } };
+  const vuelta = V.leerVendedoresDe([encV, V.filaVendedor(socioF, encV), V.filaVendedor(V.fichaVacia('jorge', 'Jorge'), encV)]);
+  ok(vuelta[0].documento === 'factura' && !vuelta[0].incluido && vuelta[0].factura.giro === 'Agencia de viajes'
+     && vuelta[1].documento === 'boleta' && vuelta[1].incluido,
+     'la ficha guarda el documento, el impuesto y los datos de la factura');
+  ok(V.faltaParaFacturar(vuelta[0]).join() === 'dirección' && V.faltaParaFacturar(vuelta[1]).length === 0,
+     'con factura avisa lo que falta para emitirla; con boleta, nada');
+  const deAntes = V.leerVendedoresDe([['Usuario', 'Nombre', 'Tipo'], ['S-0001', 'Agencia', 'Socio comercial'], ['ana', 'Ana', '']]);
+  ok(deAntes[0].documento === 'factura' && deAntes[0].incluido && deAntes[1].documento === 'boleta' && deAntes[1].incluido,
+     'una ficha de antes: el socio con factura y el vendedor con boleta, con el impuesto incluido');
 
   const enc = [...R.ENCABEZADO_BOLETAS];
   const fila = R.filaBoleta({ quien: 'Ana', desde: '2026-11-02', hasta: '2026-11-08', registradoPor: 'pagos',
