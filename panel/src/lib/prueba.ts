@@ -105,6 +105,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          semanasEntre, etiquetaSemana, escaleraDeSemanas,
          repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
+         partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
@@ -3087,6 +3088,27 @@ ok(leerAjustes('', '').length === 0, 'y una celda vacía no inventa ninguno');
 const cojo = leerAjustes('5000|-20000', 'hora extra');
 ok(cojo.length === 2 && cojo[1].motivo === '' && cojo[1].monto === -20000,
    'si faltan motivos, los montos igual se leen en su posición');
+
+// **Descontar y Sumar, con motivo y medio** (2026-11-20).
+ok(montoConSigno(4000, 'resta') === -4000 && montoConSigno(-4000, 'suma') === 4000,
+   'ajustes: el monto se escribe sin signo y el tipo lo pone');
+const partes = partesDeMotivo('Adelanto · Transferencia · lo pidió el jueves');
+ok(partes.razon === 'Adelanto' && partes.medio === 'Transferencia' && partes.nota === 'lo pidió el jueves',
+   'ajustes: el motivo guardado se parte en razón, medio y nota');
+ok(motivoDePartes({ razon: 'Hora extra', medio: '', nota: '' }) === 'Hora extra'
+   && motivoDePartes({ razon: 'Mérito', medio: 'Efectivo', nota: ' ' }) === 'Mérito · Efectivo',
+   'ajustes: se guarda solo lo que tiene algo, en orden');
+ok(partesDeMotivo('llegó tarde').razon === 'Llegó tarde' && partesDeMotivo('se le pagó el taxi').nota === 'se le pagó el taxi',
+   'ajustes: un motivo de antes se reconoce sin importar mayúsculas, y lo libre queda como nota');
+ok(tipoDeAjuste({ monto: -5000, motivo: '' }) === 'resta' && tipoDeAjuste({ monto: 3000, motivo: '' }) === 'suma'
+   && tipoDeAjuste({ monto: 0, motivo: 'Rompió algo' }) === 'resta' && tipoDeAjuste({ monto: 0, motivo: '', tipo: 'resta' }) === 'resta',
+   'ajustes: el tipo sale de lo elegido, del signo o, en cero, del motivo');
+const celdasAjustes = escribirAjustes([{ monto: montoConSigno(4000, 'resta'), motivo: 'Adelanto · Efectivo', tipo: 'resta' },
+                             { monto: montoConSigno(10000, 'suma'), motivo: 'Feriado', tipo: 'suma' }]);
+const vueltaConTipos = leerAjustes(celdasAjustes[0], celdasAjustes[1]);
+ok(celdasAjustes[0] === '-4000|10000' && celdasAjustes[1] === 'Adelanto · Efectivo|Feriado'
+   && totalAjustes(vueltaConTipos) === 6000,
+   'ajustes: en la planilla queda igual que antes —monto con signo y motivo de texto— y el tipo no se guarda');
 
 // Un ajuste en cero y sin motivo es una fila que alguien abrió y no llenó.
 ok(escribirAjustes([{ monto: 0, motivo: '' }])[0] === '',

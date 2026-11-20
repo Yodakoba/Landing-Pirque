@@ -21,6 +21,8 @@ import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
 import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
+         MOTIVOS_AJUSTE, MEDIOS_AJUSTE, partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno,
+         type PartesAjuste, type TipoAjuste,
          repartirPropina, propinaDelDia, porNombre, faltantesDe,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { faltaParaCerrar, type Cierre, yaLlego } from '@/lib/cierres';
@@ -229,14 +231,26 @@ export default function EquipoDialogo({
     setPlan(copia);
   };
 
-  /** Los ajustes sí: un descuento es justamente un número negativo. */
-  const cambiarAjuste = (i: number, k: number, campo: 'monto' | 'motivo', valor: string) => {
+  /**
+   * **El monto de un ajuste se escribe sin signo** (2026-11-20): lo pone su
+   * tipo, *Descontar* o *Sumar* (`montoConSigno()`). Antes había que escribir
+   * −4000, y era fácil olvidar el menos.
+   */
+  const cambiarMontoAjuste = (i: number, k: number, valor: string) => {
     const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
-    if (campo === 'motivo') copia[i].ajustes[k].motivo = valor;
-    else {
-      const n = Number(String(valor).replace(/[^\d.-]/g, ''));
-      copia[i].ajustes[k].monto = Number.isFinite(n) ? Math.round(n) : 0;
-    }
+    const a = copia[i].ajustes[k];
+    const n = Number(String(valor).replace(/[^\d]/g, ''));
+    a.tipo = tipoDeAjuste(a);
+    a.monto = montoConSigno(Number.isFinite(n) ? n : 0, a.tipo);
+    setPlan(copia);
+  };
+
+  /** El motivo: la razón y el medio con botones, y la nota escrita. */
+  const cambiarPartesAjuste = (i: number, k: number, cambio: Partial<PartesAjuste>) => {
+    const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
+    const a = copia[i].ajustes[k];
+    a.tipo = tipoDeAjuste(a);
+    a.motivo = motivoDePartes({ ...partesDeMotivo(a.motivo), ...cambio });
     setPlan(copia);
   };
 
@@ -251,10 +265,10 @@ export default function EquipoDialogo({
   /** La persona cuya línea está abierta, normalizada; una a la vez. */
   const [abierto, setAbierto] = useState('');
 
-  const agregarAjuste = (i: number) => {
+  const agregarAjuste = (i: number, tipo: TipoAjuste) => {
     const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
     setRecienAjuste(`${copia[i].trabajador}#${copia[i].ajustes.length}`);
-    copia[i].ajustes.push({ monto: 0, motivo: '' });
+    copia[i].ajustes.push({ monto: 0, motivo: '', tipo });
     setPlan(copia);
   };
 
@@ -690,49 +704,100 @@ export default function EquipoDialogo({
                             </label>
                           </div>
 
-                          {/* **Sumar o restar plata de ese día.** Llegó
-                              tarde, se le adelantó de la caja, le toca más
-                              por feriado: va como ajuste con su motivo, no
-                              editando la jornada, para que quede el porqué. */}
+                          {/* **Sumar o restar plata de ese día** (2026-11-20, lo pidió
+                              el cliente: *"para que no tenga que jugar con menos
+                              4.000 y más 4.000"*). Dos botones, *− Descontar* y
+                              *+ Sumar*; el monto va sin signo, el motivo con
+                              botones y cómo se pagó. Va como ajuste con su motivo,
+                              no editando la jornada, para que quede el porqué. */}
                           <div>
                             <span className={ROTULO}>Ajustes</span>
-                            {t.ajustes.map((a, k) => (
-                              <div key={k} className="mb-2 flex items-center gap-1.5">
-                                <input type="number" step={1000}
-                                  className={`${ENTRADA_GRANDE} w-24 shrink-0`}
-                                  value={a.monto || ''} placeholder="−5000"
-                                  aria-label={`Monto del ajuste ${k + 1} de ${t.trabajador}`}
-                                  /* El que se acaba de agregar se trae el
-                                     cursor; la llave se limpia para que no
-                                     vuelva a saltar en cada dibujado. */
-                                  ref={(el) => {
-                                    if (!el || recienAjuste !== `${t.trabajador}#${k}`) return;
-                                    setRecienAjuste('');
-                                    el.focus();
-                                  }}
-                                  onChange={(e) => cambiarAjuste(i, k, 'monto', e.target.value)} />
-                                <input type="text" className={`${ENTRADA_GRANDE} w-full min-w-0 flex-1`}
-                                  value={a.motivo} placeholder="por qué"
-                                  aria-label={`Motivo del ajuste ${k + 1} de ${t.trabajador}`}
-                                  onChange={(e) => cambiarAjuste(i, k, 'motivo', e.target.value)} />
-                                <button type="button" onClick={() => quitarAjuste(i, k)}
-                                  className="boton shrink-0 hover:border-rojo/60 hover:text-rojo-texto"
-                                  aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
-                                  title="Quitar este ajuste">✕</button>
-                              </div>
-                            ))}
-                            <button type="button" onClick={() => agregarAjuste(i)}
-                              className="boton border-oro/60 text-oro">
-                              + {t.ajustes.length ? 'Otro ajuste' : 'Ajuste'}
-                            </button>
-                            {t.ajustes.length > 1 && (
-                              /* El signo va adelante y aparte: "$-18.000" se
-                                 lee como un error de tipeo. */
-                              <span className="ml-2 text-[13px] tabular-nums text-hueso/65">
-                                suman {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
-                                {enPesos(Math.abs(totalAjustes(t.ajustes)))}
-                              </span>
-                            )}
+                            {t.ajustes.map((a, k) => {
+                              const tipo = tipoDeAjuste(a);
+                              const resta = tipo === 'resta';
+                              const partes = partesDeMotivo(a.motivo);
+                              const elegido = 'border-oro bg-oro/15 font-semibold';
+                              return (
+                                <div key={k} className={`mb-2 rounded-lg border-2 p-2.5 ${resta
+                                  ? 'border-rojo-fuerte/50 bg-rojo/[0.04]' : 'border-verde-fuerte/50 bg-verde/[0.04]'}`}>
+                                  {/* Arriba qué es —el signo grande y su palabra— y la ✕;
+                                      abajo el monto. En dos renglones porque en un
+                                      teléfono, todo en uno, la ✕ se salía de la tarjeta. */}
+                                  <div className="flex items-center gap-2">
+                                    {/* El signo va adelante, grande y de su color:
+                                        se distingue por forma, no solo por color. */}
+                                    <span aria-hidden className={`w-5 shrink-0 text-center text-[22px] font-bold ${resta
+                                      ? 'text-rojo-texto' : 'text-verde-texto'}`}>{resta ? '−' : '+'}</span>
+                                    <span className={`text-[15px] font-bold ${resta ? 'text-rojo-texto' : 'text-verde-texto'}`}>
+                                      {resta ? 'Descuento' : 'Suma'}
+                                    </span>
+                                    <span className="flex-1" />
+                                    <button type="button" onClick={() => quitarAjuste(i, k)}
+                                      className="boton shrink-0 hover:border-rojo/60 hover:text-rojo-texto"
+                                      aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
+                                      title="Quitar este ajuste">✕</button>
+                                  </div>
+                                  <div className="mt-1.5 flex items-center gap-2">
+                                    <span className="w-5 shrink-0 text-center text-[17px] font-bold">$</span>
+                                    <input type="number" min={0} step={1000} inputMode="numeric"
+                                      className={`${ENTRADA_GRANDE} w-32 min-w-0`}
+                                      value={Math.abs(a.monto) || ''} placeholder="4000"
+                                      aria-label={`${resta ? 'Descuento' : 'Suma'} ${k + 1} de ${t.trabajador}`}
+                                      /* El que se acaba de agregar se trae el
+                                         cursor; la llave se limpia para que no
+                                         vuelva a saltar en cada dibujado. */
+                                      ref={(el) => {
+                                        if (!el || recienAjuste !== `${t.trabajador}#${k}`) return;
+                                        setRecienAjuste('');
+                                        el.focus();
+                                      }}
+                                      onChange={(e) => cambiarMontoAjuste(i, k, e.target.value)} />
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Por qué">
+                                    {MOTIVOS_AJUSTE[tipo].map((m) => (
+                                      <button key={m} type="button" aria-pressed={partes.razon === m}
+                                        onClick={() => cambiarPartesAjuste(i, k, { razon: partes.razon === m ? '' : m })}
+                                        className={`boton boton-angosto min-h-[40px] ${partes.razon === m ? elegido : ''}`}>
+                                        {partes.razon === m && '✓ '}{m}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5" role="group" aria-label="Cómo">
+                                    <span className="text-[13px] font-semibold text-hueso/65">Cómo:</span>
+                                    {MEDIOS_AJUSTE.map((m) => (
+                                      <button key={m} type="button" aria-pressed={partes.medio === m}
+                                        onClick={() => cambiarPartesAjuste(i, k, { medio: partes.medio === m ? '' : m })}
+                                        className={`boton boton-angosto min-h-[40px] ${partes.medio === m ? elegido : ''}`}>
+                                        {partes.medio === m && '✓ '}{m}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <input type="text" className={`${ENTRADA_GRANDE} mt-1.5 w-full`}
+                                    value={partes.nota}
+                                    placeholder={partes.razon === 'Otro' ? 'qué fue' : 'nota (opcional)'}
+                                    aria-label={`Nota del ajuste ${k + 1} de ${t.trabajador}`}
+                                    onChange={(e) => cambiarPartesAjuste(i, k, { nota: e.target.value })} />
+                                </div>
+                              );
+                            })}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button type="button" onClick={() => agregarAjuste(i, 'resta')}
+                                className="boton min-h-[44px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto">
+                                − Descontar
+                              </button>
+                              <button type="button" onClick={() => agregarAjuste(i, 'suma')}
+                                className="boton min-h-[44px] !border-verde-fuerte/60 !font-semibold text-verde-texto">
+                                + Sumar
+                              </button>
+                              {t.ajustes.length > 1 && (
+                                /* El signo va adelante y aparte: "$-18.000" se
+                                   lee como un error de tipeo. */
+                                <span className="text-[13px] tabular-nums text-hueso/65">
+                                  suman {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
+                                  {enPesos(Math.abs(totalAjustes(t.ajustes)))}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <dl className="grid grid-cols-2 gap-3 rounded-lg bg-hueso/[0.04]

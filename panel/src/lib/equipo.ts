@@ -187,7 +187,84 @@ export interface Trabajador {
 export interface Ajuste {
   monto: number;
   motivo: string;
+  /**
+   * Si descuenta o suma, mientras se edita (2026-11-20). **No se guarda**:
+   * en la planilla lo dice el signo del monto. Sirve para una línea recién
+   * agregada, que todavía está en cero. Ver `tipoDeAjuste()`.
+   */
+  tipo?: TipoAjuste;
 }
+
+/**
+ * **Descontar o sumar, cada uno con su botón** (2026-11-20, lo pidió el
+ * cliente: *"para que no tenga que jugar con menos 4.000 y más 4.000"*).
+ * El monto se escribe sin signo y el tipo decide si resta o suma; el motivo
+ * se elige con botones y se dice cómo se pagó. **En la planilla no cambia
+ * nada**: el monto lleva su signo y el motivo es texto, *"Adelanto ·
+ * Transferencia · lo pidió el jueves"*, así que lo anotado antes se lee
+ * igual y el informe y el link de cada uno no se enteran.
+ */
+export type TipoAjuste = 'resta' | 'suma';
+
+/** Los motivos con botón, por tipo. Los dio el cliente; *Otro* va con nota. */
+export const MOTIVOS_AJUSTE: Record<TipoAjuste, string[]> = {
+  resta: ['Adelanto', 'Llegó tarde', 'Rompió algo', 'Otro'],
+  suma: ['Hora extra', 'Mérito', 'Feriado', 'Otro']
+};
+
+/** Cómo se le pagó o se le descontó: en los dos tipos (lo pidió el cliente). */
+export const MEDIOS_AJUSTE = ['Efectivo', 'Transferencia'];
+
+export interface PartesAjuste {
+  /** Uno de `MOTIVOS_AJUSTE`, o vacío. */
+  razon: string;
+  /** Uno de `MEDIOS_AJUSTE`, o vacío. */
+  medio: string;
+  /** Lo que se escribió aparte. */
+  nota: string;
+}
+
+const SEP_MOTIVO = ' · ';
+
+/**
+ * El motivo guardado, partido en sus tres partes. Un motivo de antes de los
+ * botones —*"llegó tarde"* escrito a mano— se reconoce sin importar
+ * mayúsculas ni tildes; lo que no calza con ningún botón queda como nota.
+ */
+export function partesDeMotivo(motivo: string): PartesAjuste {
+  const salida: PartesAjuste = { razon: '', medio: '', nota: '' };
+  const conocidas = [...MOTIVOS_AJUSTE.resta, ...MOTIVOS_AJUSTE.suma];
+  const resto: string[] = [];
+  for (const parte of String(motivo ?? '').split(SEP_MOTIVO).map((x) => x.trim()).filter(Boolean)) {
+    const razon = !salida.razon && conocidas.find((r) => normalizar(r) === normalizar(parte));
+    const medio = !salida.medio && MEDIOS_AJUSTE.find((m) => normalizar(m) === normalizar(parte));
+    if (razon) salida.razon = razon;
+    else if (medio) salida.medio = medio;
+    else resto.push(parte);
+  }
+  salida.nota = resto.join(SEP_MOTIVO);
+  return salida;
+}
+
+/** Las tres partes, como se guardan: las que tienen algo, en orden. */
+export const motivoDePartes = (p: PartesAjuste) =>
+  [p.razon, p.medio, p.nota.trim()].filter(Boolean).join(SEP_MOTIVO);
+
+/**
+ * Si un ajuste descuenta o suma: lo que se eligió al agregarlo, o el signo
+ * del monto, o —en cero— su motivo.
+ */
+export function tipoDeAjuste(a: Ajuste): TipoAjuste {
+  if (a.tipo) return a.tipo;
+  if (a.monto < 0) return 'resta';
+  if (a.monto > 0) return 'suma';
+  const razon = partesDeMotivo(a.motivo).razon;
+  return razon && razon !== 'Otro' && MOTIVOS_AJUSTE.resta.includes(razon) ? 'resta' : 'suma';
+}
+
+/** El monto con su signo según el tipo: se escribe sin signo. */
+export const montoConSigno = (n: number, tipo: TipoAjuste) =>
+  tipo === 'resta' ? -Math.abs(Math.round(n)) : Math.abs(Math.round(n));
 
 /** Lo que separa un ajuste del siguiente dentro de la celda. */
 const SEPARADOR = '|';
