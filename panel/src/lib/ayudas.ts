@@ -74,6 +74,11 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'ábrela con “+” para ver qué compró, cómo ingresarla en Fudo y su '
       + 'contacto. 💬 WhatsApp abre el chat directo, con el saludo ya escrito y '
       + 'firmado por ti.',
+      'Una reserva que viene de una cotización con precios negociados lleva '
+      + '≠ Acordado: su caja de Fudo trae cada línea acordada —el arriendo, el '
+      + 'show, los descuentos— con el valor que se ingresa en Fudo, siempre con '
+      + 'IVA, para cerrarla con esos precios y no con la carta. Al anotar el '
+      + 'valor final, si queda bajo lo acordado, avisa antes de guardar.',
       'El teléfono y el correo de una reserva los ve quien la atiende: la '
       + 'administración, el encargado de turno de hoy en adelante y el vendedor '
       + 'solo en las suyas. Si te llega con 🔒 y tapado (···· 5678), pídeselo a '
@@ -385,7 +390,11 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Al abrir una reserva que llegó está su mesa: Agregar a la mesa, para '
       + 'alguien que llegó después, y el valor final, que es el total de la '
       + 'cuenta en Fudo con lo ya pagado incluido. Las bebidas y lo de la carta '
-      + 'no se anotan uno por uno: basta el total.'
+      + 'no se anotan uno por uno: basta el total.',
+      'Para el jefe de turno: una reserva de una cotización con precios '
+      + 'negociados lleva ≠ Acordado, y su caja de Fudo trae lo acordado línea '
+      + 'por línea, con el valor a ingresar en Fudo con IVA. Esa mesa la cierra '
+      + 'él, con esos precios.'
     ],
     pasos: [
       'Busca la reserva por nombre.',

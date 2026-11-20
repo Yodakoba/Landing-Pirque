@@ -5,16 +5,16 @@ import { HOJA_CONFIG } from '@/lib/config';
 import { ocupacionDe } from '@/lib/ocupacion';
 import { esFecha, hoy } from '@/lib/fechas';
 import { HOJA_MENUS } from '@/lib/menus';
-import { HOJA_PRESUPUESTOS, folioDe } from '@/lib/presupuestos';
+import { HOJA_PRESUPUESTOS, HOJA_LINEAS, folioDe } from '@/lib/presupuestos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
 import { marcasDePago } from '@/lib/plata';
 import { ROL, esSuya, puede, type Rol } from '@/lib/auth';
 import { empujarDia } from '@/lib/crm-escribir';
 import { anotar } from '@/lib/datos';
-import { leerPresupuestos } from '@/lib/datos';
+import { leerPresupuestos, leerLineasPresupuesto } from '@/lib/datos';
 import { leerReservas, crearReserva, leerMenus, abrirElDiaSiHaceFalta, reservasDeCotizaciones,
          leerFechas, leerConfig } from '@/lib/datos';
-import { comoIngresar } from '@/lib/fudo';
+import { comoIngresar, acordadosPorReserva } from '@/lib/fudo';
 import { ASISTENCIA, ESTADO_PAGO } from '@/lib/columnas';
 import { telefonoNormal, correoNormal } from '@/lib/contacto';
 import { alcanceDeContacto, recortarReserva } from '@/lib/privacidad';
@@ -25,16 +25,21 @@ import { ahoraEnChile } from '@/lib/bitacora';
 
 export const dynamic = 'force-dynamic';   // nunca cachear: son datos vivos
 
-export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HOJA_FECHAS, HOJA_CONFIG], async function GET(req: Request) {
+export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_FECHAS, HOJA_CONFIG], async function GET(req: Request) {
   const no = await exigirVer(req, 'ver');
   if (no) return no;
   try {
     // Los menus viajan junto a las reservas: las dos vistas que leen esto
     // los necesitan para agrupar, y asi no hay una peticion mas.
-    const [reservas, menus, deCot, presupuestos] = await Promise.all([
+    const [reservas, menus, deCot, presupuestos, lineasCot] = await Promise.all([
       leerReservas(), leerMenus(), reservasDeCotizaciones().catch(() => new Map<string, string>()),
-      leerPresupuestos().catch(() => [])
+      leerPresupuestos().catch(() => []), leerLineasPresupuesto().catch(() => [])
     ]);
+    // **Lo acordado en la cotización ganada** (2026-11-20): va dentro de la
+    // caja de Fudo, así que el recorte de `privacidad.ts` lo saca junto con
+    // ella a quien no ve la plata de esa reserva. Esta ruta pide `ver`, que
+    // la anfitriona no tiene. Las líneas vienen en la misma tanda.
+    const acordados = acordadosPorReserva(presupuestos, lineasCot, menus);
     // **Quién vendió cada reserva que viene de una cotización** (2026-11-12,
     // lo pidió el cliente): el encargado lo ve en la lista del día para saber
     // con quién hablar. Sale de la misma tanda de lecturas.
@@ -81,7 +86,7 @@ export const GET = conLecturas([HOJA_RESERVAS, HOJA_MENUS, HOJA_PRESUPUESTOS, HO
     const alcance = alcanceDeContacto(quien.rol, quien.gerencia);
     const h = hoy();
     return NextResponse.json({
-      reservas: reservas.map((r) => recortarReserva({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id)) },
+      reservas: reservas.map((r) => recortarReserva({ ...r, ingreso: comoIngresar(r, menus, deCot.has(r.id), acordados.get(r.id)) },
         alcance, { hoy: h, propia: esSuya(quien.usuario, r.anotadaPor) || esSuya(quien.usuario, vendedorDe[r.id] ?? '') })),
       menus, dia, capacidadMaxima, firma: firmaDe(reservas, fechas), apertura, abierto, descuentos,
       // Qué reservas vienen de una cotización: esas no se sueltan acá, se

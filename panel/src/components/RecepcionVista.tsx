@@ -37,7 +37,7 @@
 import AvisoFijo from './AvisoFijo';
 import MesaReserva, { ElegirAgregados } from './MesaReserva';
 import { leerAgregados, escribirAgregados, cuantosAgregados, pesosCL, type Agregado } from '@/lib/mesa';
-import IngresoFudo, { IconoFudo } from './IngresoFudo';
+import IngresoFudo, { IconoFudo, MarcaAcordado } from './IngresoFudo';
 import { usarSoloMira } from './SesionCliente';
 import type { Ingreso } from '@/lib/fudo';
 import { useEffect, useMemo, useState } from 'react';
@@ -242,7 +242,14 @@ export default function RecepcionVista() {
                   <span className={`block truncate text-[18px] font-bold ${noVino ? 'line-through opacity-70' : ''}`}>
                     {r.nombre || 'Sin nombre'}
                   </span>
-                  {r.menu && <span className="block truncate text-[14px] text-hueso/70">{r.menu}</span>}
+                  {(r.menu || r.ingreso?.acordado) && (
+                    <span className="flex min-w-0 items-center gap-1.5 text-[14px] text-hueso/70">
+                      {r.menu && <span className="truncate">{r.menu}</span>}
+                      {/* Precios negociados en su cotización (2026-11-20). La
+                          anfitriona no recibe lo acordado, así que no la ve. */}
+                      <MarcaAcordado ingreso={r.ingreso} />
+                    </span>
+                  )}
                 </span>
                 {!noVino && <IconoFudo ingreso={r.ingreso} />}
                 {/* La gente de la mesa, con los que se sumaron: el mismo
@@ -264,7 +271,7 @@ export default function RecepcionVista() {
                 <div className="space-y-2 border-t border-hueso/10 px-3 py-2.5">
                   {!noVino && <IngresoFudo ingreso={r.ingreso} />}
                   {vino && (
-                    <MesaReserva r={r} opciones={r.opciones ?? []} editable={!bloqueada} onGuardado={() => void cargar()} />
+                    <MesaReserva r={r} opciones={r.opciones ?? []} editable={!bloqueada} onGuardado={() => void cargar()} acordado={r.ingreso?.acordado} />
                   )}
                   {!bloqueada && (
                     <button type="button" className="boton min-h-[48px] w-full !text-[15px]"

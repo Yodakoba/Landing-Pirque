@@ -18,6 +18,7 @@ import {
   A_LA_CARTA, leerAgregados, escribirAgregados, limpiarValorFinal, partesMarcaMesa,
   pesosCL, type Agregado
 } from '@/lib/mesa';
+import type { Acordado } from '@/lib/fudo';
 
 export interface DatosMesa {
   fila: number;
@@ -64,8 +65,15 @@ export function ElegirAgregados({ opciones, valor, onCambio }: {
   );
 }
 
-export default function MesaReserva({ r, opciones, editable, onGuardado, compacta = false }: {
+export default function MesaReserva({ r, opciones, editable, onGuardado, compacta = false, acordado }: {
   r: DatosMesa;
+  /**
+   * Lo acordado en su cotización (2026-11-20), si viene de una y esta cuenta
+   * lo ve. Al anotar el valor final se muestra al lado, y si el valor queda
+   * bajo lo acordado, avisa antes de guardar: casi siempre es una mesa
+   * ingresada en Fudo con los precios de la carta.
+   */
+  acordado?: Acordado;
   opciones: string[];
   /** Si esta cuenta, a esta hora, puede anotar la mesa. */
   editable: boolean;
@@ -121,6 +129,11 @@ export default function MesaReserva({ r, opciones, editable, onGuardado, compact
               {' '}· lo anotó {marca.quien}{marca.cuando ? ` a las ${marca.cuando.slice(11) || marca.cuando}` : ''}</span>}</>
           : 'Sin valor final todavía'}
       </p>
+      {acordado && r.valorFinal != null && r.valorFinal < acordado.total && (
+        <p className="mt-1 text-[14px] font-semibold text-ambar-texto">
+          ⚠ Bajo lo acordado en la cotización N° {acordado.folio} ({pesosCL(acordado.total)})
+        </p>
+      )}
 
       {editable && modo === '' && (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -170,12 +183,25 @@ export default function MesaReserva({ r, opciones, editable, onGuardado, compact
           <p className="text-[14px] text-hueso/75">
             Es el total de la cuenta de esta mesa en Fudo, con lo ya pagado incluido.
           </p>
+          {acordado && (
+            <p className="text-[15px] font-semibold text-oro">
+              📋 Lo acordado en la cotización N° {acordado.folio}: {pesosCL(acordado.total)} con IVA,
+              sin lo que se haya sumado aparte.
+            </p>
+          )}
+          {acordado && valor != null && valor < acordado.total && (
+            <p className="rounded-lg border-2 border-ambar-fuerte/60 bg-ambar/10 px-3 py-2 text-[15px] font-semibold text-ambar-texto">
+              ⚠ Es menos que lo acordado ({pesosCL(acordado.total)}). Revisa que en Fudo esté ingresada con los
+              precios de la cotización antes de guardar.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {valorTexto.trim() ? (
               <button type="button" disabled={guardando || valor == null || valor === r.valorFinal}
                 className="boton min-h-[48px] flex-1 !border-verde-fuerte bg-verde-fuerte !text-[16px] !font-bold text-tinta disabled:opacity-40"
                 onClick={() => valor != null && void guardar({ valorFinal: valor }, `${r.nombre}: valor final ${pesosCL(valor)}`)}>
-                {guardando ? 'Guardando…' : valor == null ? 'Escribe un monto' : `✓ Guardar ${pesosCL(valor)}`}
+                {guardando ? 'Guardando…' : valor == null ? 'Escribe un monto'
+                  : acordado && valor < acordado.total ? `✓ Guardar igual ${pesosCL(valor)}` : `✓ Guardar ${pesosCL(valor)}`}
               </button>
             ) : r.valorFinal != null ? (
               <button type="button" disabled={guardando}
