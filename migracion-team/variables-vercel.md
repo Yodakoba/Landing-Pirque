@@ -9,10 +9,23 @@ valores, a propósito**: dice qué es cada una, en qué entorno va y cómo
 volver a conseguirla. **Los valores van en la bóveda de la empresa.**
 
 **La regla de los entornos** (Fase 4, 2026-11-19): **solo se separan la
-planilla, el calendario y el CRM**, para que las versiones de prueba de un
-PR (*Preview*) no escriban en lo real. Todo lo demás va **igual en
-Production y Preview**. *Development* no se marca nunca: nadie corre el
-panel en su computador con estas variables.
+planilla, el calendario, el CRM y la tienda de Shopify**, para que las
+versiones de prueba de un PR (*Preview*) no escriban ni cobren en lo real.
+Todo lo demás va **igual en Production y Preview**. *Development* no se
+marca nunca: nadie corre el panel en su computador con estas variables.
+
+**La tienda se separa desde el 2026-11-20** (lo pidió el cliente: una
+prueba no puede terminar en una transacción real). Production usa la tienda
+real y Preview la de desarrollo, que no puede cobrar plata de verdad. El
+sitio hace lo mismo por su lado: ver "Dos tiendas" en el `CLAUDE.md` de la
+raíz. **Hasta el lanzamiento las dos apuntan a la de desarrollo**; ese día
+se cambian solo las de Production.
+
+**Una variable con dos valores son dos variables en Vercel**, con el mismo
+nombre: una marcada solo *Production* y otra solo *Preview*. Como las de
+Shopify son *Sensitive* y Vercel no deja cambiarles los entornos, para
+separarlas se borra la que está en los dos y se crean las dos nuevas, con
+los valores a mano antes de borrar.
 
 | Variable | Production | Preview | Sensitive | Qué es | Si se pierde |
 |---|---|---|---|---|---|
@@ -25,10 +38,10 @@ panel en su computador con estas variables.
 | `SESION_SECRETO` | ✓ | ✓ mismo | **Sí** | Con qué se firman las sesiones. Existe desde el 2026-11-19; antes se derivaba de `PANEL_CLAVE` | Una cadena larga al azar. **Cambiarla cierra la sesión de todos** (vuelven a entrar con su clave de siempre) |
 | `PANEL_ENCARGADO_USUARIO` | ✓ | ✓ mismo | No | Clave compartida de encargado, de antes de las cuentas (opcional) | Se puede dejar sin poner: hoy hay cuentas con nombre en `/usuarios` |
 | `PANEL_ENCARGADO_CLAVE` | ✓ | ✓ mismo | **Sí** | Su contraseña (opcional) | Igual que la anterior |
-| `SHOPIFY_DOMINIO` | ✓ | ✓ mismo | No | La tienda | Hoy `brasas-de-lo-pirque-development.myshopify.com`; cambia en la Fase 6 |
+| `SHOPIFY_DOMINIO` | tienda **real** (`lo-pirque.myshopify.com`) desde el lanzamiento | tienda de **desarrollo** (`brasas-de-lo-pirque-development.myshopify.com`) | No | La tienda | Hasta el lanzamiento, la de desarrollo en los dos |
 | `SHOPIFY_VERSION` | ✓ | ✓ mismo | No | Versión de la API | `2026-10` |
-| `SHOPIFY_ADMIN_TOKEN` | ✓ | ✓ mismo | **Sí** | Token de la app **"Google Sheets Reservas"** de la tienda (empieza en `shpat_`); solo lee pedidos (`read_orders`) | **Shopify lo muestra una sola vez**: hay que guardarlo en la bóveda al crearlo. Si se pierde, se **reinstala esa app** y sale uno nuevo (se hizo el 2026-11-19); los webhooks no dependen de ella |
-| `SHOPIFY_WEBHOOK_SECRET` | ✓ | ✓ mismo | **Sí** | Con qué se verifica la firma de los webhooks | Shopify → **Configuración → Notificaciones → Webhooks → Secreto de firma → Secreto actual** (se puede volver a ver). **No es el Client secret de la app**: los webhooks se crearon en esa página. No apretar *Crear secreto nuevo* |
+| `SHOPIFY_ADMIN_TOKEN` | el de la app del panel en la tienda **real** | el de **"Google Sheets Reservas"** en la de **desarrollo** | **Sí** | Token de la app del panel en esa tienda (empieza en `shpat_`); solo lee pedidos (`read_orders`) | **Shopify lo muestra una sola vez**: hay que guardarlo en la bóveda al crearlo, uno por tienda. Si se pierde, se **reinstala esa app** y sale uno nuevo (se hizo el 2026-11-19 en la de desarrollo); los webhooks no dependen de ella |
+| `SHOPIFY_WEBHOOK_SECRET` | el de la tienda **real** | el de la de **desarrollo** | **Sí** | Con qué se verifica la firma de los webhooks | Shopify → **Configuración → Notificaciones → Webhooks → Secreto de firma → Secreto actual**, en cada tienda (se puede volver a ver). **No es el Client secret de la app**: los webhooks se crearon en esa página. No apretar *Crear secreto nuevo*. Los webhooks de la de desarrollo se borran al lanzar: una versión de prueba no los recibe, y en Preview los pedidos se traen con *Revisar Shopify ahora* |
 | `CRON_SECRET` | ✓ | ✓ mismo | **Sí** | Protege las tres tareas diarias (solo corren en Production) | Una cadena larga al azar; se puede inventar una nueva y hacer Redeploy |
 | `COMENTARIOS_SHEET_ID` | ✓ | ✓ mismo | No | La planilla del testeo (*Gran Testeo - Panel*), donde escribe el botón 💬 Comentar | Está en la URL de esa planilla, entre `/d/` y `/edit`. Tiene que estar compartida con la cuenta de servicio como *Editor*. **Sin la variable el botón no aparece**; si la planilla cambia de dueño con una copia, el ID cambia y hay que ponerlo acá |
 | `CRM_API_KEY` | ✓ | — | **Sí** | Clave del CRM del socio (Asados y Corderos, opcional) | Pedírsela al socio. **Nunca con prefijo `NEXT_PUBLIC_`** |

@@ -87,14 +87,15 @@
 
            Por eso la fila lleva CUATRO variantes: el par de Tradiciones y el
            par de A Brasas abiertas, cada uno con su version de pagar en
-           linea y de pagar en el local. Siguen viviendo en el HTML, que es
-           el unico lugar que hay que editar al pasar a produccion. -->
+           linea y de pagar en el local. Desde el 2026-11-20 los IDs no
+           estan aca: data-menu y data-menu-alta dicen que menus son, y
+           reserva.js saca los IDs de la tienda de esta pagina (la real o
+           la de prueba, ver CONFIG.tiendas). -->
       <div class="reserva-fila" data-opcion
            data-lista="data-precio:tradiciones.linea data-precio-local:tradiciones.local data-precio-alta:a_brasas_abiertas.linea data-precio-alta-local:a_brasas_abiertas.local"
-           data-variante="50684108013785" data-precio="44000"
-           data-variante-local="50684108046553" data-precio-local="49000"
-           data-variante-alta="50684143173849" data-precio-alta="70000"
-           data-variante-alta-local="50684143206617" data-precio-alta-local="75000"
+           data-menu="tradiciones" data-menu-alta="a_brasas_abiertas"
+           data-precio="44000" data-precio-local="49000"
+           data-precio-alta="70000" data-precio-alta-local="75000"
            role="group" aria-labelledby="r-op-adulto">
         <div class="quien" id="r-op-adulto"><span data-nombre-menu>Menu Tradiciones</span> <small>Por adulto</small></div>
         <div class="contador">
@@ -123,8 +124,8 @@
 
       <div class="reserva-fila" data-opcion
            data-lista="data-precio:ninos.linea data-precio-local:ninos.local"
-           data-variante="50684218081497" data-precio="19000"
-           data-variante-local="50684218114265" data-precio-local="24000"
+           data-menu="ninos"
+           data-precio="19000" data-precio-local="24000"
            role="group" aria-labelledby="r-op-ninos">
         <div class="quien" id="r-op-ninos">Menu infantil <small>De 4 a 12 anos</small></div>
         <div class="contador">
@@ -145,8 +146,8 @@
            par de siempre este marcada o no. No hace falta ningun "if". -->
       <div class="reserva-fila" data-opcion
            data-lista="data-precio:pequenos.linea data-precio-local:pequenos.local"
-           data-variante="51269453971673" data-precio="6000"
-           data-variante-local="51269454004441" data-precio-local="9000"
+           data-menu="pequenos"
+           data-precio="6000" data-precio-local="9000"
            role="group" aria-labelledby="r-op-pequenos">
         <div class="quien" id="r-op-pequenos">Menu para os pequenos <small>De 0 a 3 anos</small></div>
         <div class="contador">
@@ -393,7 +394,7 @@
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.3.1-.5l.4-.5c.1-.1.2-.3.2-.4 0-.1 0-.3 0-.4-.1-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.5.5.2 1 .4 1.3.5.5.2 1 .1 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
 </a>
 
-<script src="../assets/js/reserva.js?v=4b316db9" defer></script>
+<script src="../assets/js/reserva.js?v=4990666e" defer></script>
 
 </body>
 </html>

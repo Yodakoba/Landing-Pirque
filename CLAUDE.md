@@ -957,8 +957,10 @@ archivo público. En el panel es una variable de entorno de Vercel, del lado
 del servidor, que nunca sale al navegador.
 
 - **Toda la configuración vive en el objeto `CONFIG`** al inicio de
-  `assets/js/reserva.js`: token, dominio, versión de API y la URL del
-  backend. Los precios ya no están ahí: viven en `precios.json`.
+  `assets/js/reserva.js`: **las dos tiendas** (cada una con su dominio, su
+  token y sus IDs de variante), las direcciones que cobran de verdad, la
+  versión de API y la URL del backend. Los precios no están ahí: viven en
+  `precios.json`. Ver "Dos tiendas: la real solo en la dirección real".
 - **`CONFIG.backend` apunta al panel** desde el 2026-10-21:
   `https://landing-pirque-alpha.vercel.app/api/publico/fechas`. Antes era el
   Web App de Apps Script. Si el panel cambia de URL en Vercel, hay que
@@ -975,24 +977,17 @@ del servidor, que nunca sale al navegador.
   cuesta nada y cubre al próximo backend que tenga esa limitación. Sin
   revisarlo, una falla se vería en pantalla como "no hay fechas", que es
   otra cosa y manda a buscar el problema donde no está.
-- **`CONFIG.token` es el interruptor de toda la integración, y está
-  encendido desde el 2026-10-14.** Lo decidió el cliente para poder probar
-  la cadena completa mientras el sitio todavía no se difunde: el token del
-  Storefront es público por diseño, así que vivir en el archivo no es el
-  problema; el problema es a qué tienda apunta. **Apunta a la de
-  desarrollo**, o sea que quien apriete "Terminar reserva" hoy cae en un
-  checkout que no puede cobrarle. Con el token en blanco, en cambio, el
-  botón no llama a la API: avisa y manda a WhatsApp.
-- **Antes de difundir el sitio hay que cambiar las tres cosas juntas**:
-  el token, `CONFIG.dominio` y los IDs de variante del HTML. Cambiar una
-  sola deja el formulario apuntando a medias y falla en el checkout, que es
-  el peor lugar para fallar. **Y antes que eso hay que crear allá el modelo
-  de seis variantes**, que hoy no existe: ver "La tienda de producción,
-  mirada por su catálogo público".
-- **`CONFIG.dominio` apunta hoy a la tienda de desarrollo**
-  (`brasas-de-lo-pirque-development.myshopify.com`). Al salir a producción
-  hay que cambiar esa línea, el token, **y los IDs de variante del HTML**,
-  porque en producción son otros.
+- **El token de cada tienda es el interruptor de la integración, y el de
+  la tienda de prueba está encendido desde el 2026-10-14.** Lo decidió el
+  cliente para poder probar la cadena completa: el token del Storefront es
+  público por diseño, así que vivir en el archivo no es el problema; el
+  problema es a qué tienda apunta. Con el token en blanco el botón no
+  llama a la API: avisa y manda a WhatsApp.
+- **Salir a producción es llenar `CONFIG.tiendas.real`**: dominio, token y
+  los ocho IDs, juntos. Mientras sea `null`, todas las direcciones usan la
+  tienda de prueba —también la real— y la página lo dice. **Antes hay que
+  crear allá el modelo de variantes**, que hoy no existe: ver "La tienda de
+  producción, mirada por su catálogo público".
 - **Las variantes ya no son una por fecha** (cambió el 2026-10-13, con la
   tienda de desarrollo en pie). Antes eran 20: diez fechas × adulto/niño.
   Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
@@ -1012,13 +1007,13 @@ del servidor, que nunca sale al navegador.
   2026-10-14). No hay mínimo de adultos: un pedido de tres menús de niños y
   nada más es válido. Lo único que el formulario no deja es el pedido
   vacío.
-- **Los IDs de variante y los precios viven en el HTML**, no en el JS: cada
-  fila `[data-opcion]` lleva **dos pares** —`data-variante`/`data-precio`
-  para pagar en línea y `data-variante-local`/`data-precio-local` para pagar
-  en el local—. Se hizo así para tener un solo lugar que editar al pasar a
-  producción, donde los IDs son otros. **Los `data-precio*` los escribe
-  `traducir.py` desde `precios.json`** (2026-11-04); los IDs se siguen
-  editando en el HTML.
+- **Los precios viven en el HTML y los IDs de variante en `CONFIG`**: cada
+  fila `[data-opcion]` lleva `data-precio`/`data-precio-local` (los escribe
+  `traducir.py` desde `precios.json`, 2026-11-04) y **dice qué menú es**
+  con `data-menu` —la de adultos también `data-menu-alta`—, con las mismas
+  claves de `precios.json`. Los IDs salen de la tienda de esa página. Hasta
+  el 2026-11-20 los IDs también vivían en el HTML, para tener un solo lugar
+  que editar; con dos tiendas, ese lugar pasó a ser la ficha de cada una.
 - **Las dos modalidades son dos botones, cada uno con su propio total**
   —"Pagar ahora $177.000" / "Solo reservar $197.000"— y no un selector
   (2026-10-14). Así la diferencia de precio se ve sin tener que cambiar
@@ -1145,10 +1140,71 @@ del servidor, que nunca sale al navegador.
   apriete un botón muerto si el archivo no carga. Hay un `<noscript>` que
   manda a WhatsApp.
 
+### Dos tiendas: la real solo en la dirección real (2026-11-20)
+
+Lo pidió el cliente pensando en después del lanzamiento: *"si yo quiero
+hacer un cambio en la versión preview, debería quedar conectado la tienda
+de desarrollo… hay que evitar que se hace una prueba y se hace una
+transacción real"*. Hasta ese día la tienda, el token y los IDs estaban
+escritos en los archivos, que son los mismos en una versión de prueba y en
+producción: después de conectar la tienda real, cualquier versión de prueba
+de un PR habría cobrado de verdad.
+
+**La regla: la tienda real solo en la dirección real; todo lo demás, contra
+la tienda de desarrollo**, que no puede cobrar plata de verdad (Shopify solo
+le deja procesar pagos de prueba).
+
+| Dónde | Tienda | Planilla | ¿Plata real? |
+|---|---|---|---|
+| `brasasdelopirque.cl`, `www` y `brasas-sitio.vercel.app` | real | real | sí |
+| Versión de prueba de un PR (sitio y panel) | desarrollo | Pruebas | no |
+| GitHub Pages y un computador | desarrollo | — | no |
+
+**El sitio** (`assets/js/reserva.js`):
+
+- **`CONFIG.tiendas` trae las dos**, `real` y `prueba`, cada una con su
+  dominio, su token y sus IDs por menú (`tradiciones`, `a_brasas_abiertas`,
+  `ninos`, `pequenos`, cada uno con `linea` y `local`).
+- **`tiendaDeEstaPagina()` elige por `location.hostname`**: la real solo si
+  la dirección está en `CONFIG.direccionesReales` **y** la tienda real ya
+  tiene sus datos. Cualquier otra dirección cae en la de prueba: olvidarse
+  de algo nunca termina en un cobro. `brasas-sitio.vercel.app` está en la
+  lista porque sirve la misma versión que el dominio y ahí se hace la
+  compra de prueba antes de mover el DNS; las versiones de prueba de un PR
+  tienen otra dirección (`brasas-sitio-git-…`) y no calzan.
+- **En la tienda de prueba lo dice arriba del formulario**: *"Tienda de
+  prueba: aquí no se cobra nada."*, en los tres idiomas. Es la misma pieza
+  de los avisos del formulario (`reserva-mensaje aviso`, en dorado), pero
+  fija: la zona de mensajes se borra al apretar un botón.
+- **Una fila cuyo menú no esté en la tienda no crea el carrito**
+  (`faltaVariante()`): avisa y manda a WhatsApp, en vez de mandar un ID
+  vacío.
+- **Comprobado con Playwright** sirviendo la página en seis direcciones,
+  con una tienda real de mentira inyectada: con la real llena, el dominio,
+  `www` y `brasas-sitio.vercel.app` piden a la real, sin aviso; una versión
+  de prueba de un PR, GitHub Pages y `localhost`, a la de desarrollo, con
+  aviso. Con la real en `null`, las seis a la de desarrollo. Subir a A
+  Brasas abiertas y pagar en el local manda las variantes correctas, y un
+  `cartCreate` de verdad contra la tienda de desarrollo devuelve
+  `userErrors: []` con los totales de siempre ($176.000 / $204.000).
+
+**El panel** no necesita código: las tres variables de Shopify
+(`SHOPIFY_DOMINIO`, `SHOPIFY_ADMIN_TOKEN`, `SHOPIFY_WEBHOOK_SECRET`) llevan
+**un valor por entorno**, la tienda real en Production y la de desarrollo
+en Preview. Ver `migracion-team/variables-vercel.md`. El Preview ya escribía
+en la planilla "Pruebas", así que un pedido de prueba nunca llega a la real.
+
+**Los webhooks de la tienda de desarrollo se borran al lanzar.** Una versión
+de prueba no los puede recibir —su dirección cambia y está protegida— y
+producción los rechaza, porque la firma no calza con el secreto de la tienda
+real: esa es la segunda barrera. En una versión de prueba del panel, los
+pedidos de prueba se traen con *Revisar Shopify ahora*.
+
 ### Las variantes de la tienda de desarrollo (2026-10-13)
 
 Las entregó el agente de Shopify del cliente. **Son de la tienda de
-desarrollo, no de producción**: en producción los IDs son otros.
+desarrollo, no de producción**: en producción los IDs son otros. Desde el
+2026-11-20 viven en `CONFIG.tiendas.prueba` de `reserva.js`.
 
 | Menú | Pago directo | Solo reserva |
 |---|---|---|
@@ -1222,7 +1278,7 @@ forma del formulario.
 
 | | Qué es |
 |---|---|
-| Fila 1 | **Los adultos**, con los cuatro IDs de variante: el par de Tradiciones y el de A Brasas abiertas, cada uno con su versión en línea y en el local |
+| Fila 1 | **Los adultos**, con dos menús: `data-menu="tradiciones"` y `data-menu-alta="a_brasas_abiertas"`, cada uno con su variante en línea y en el local (los IDs, en `CONFIG.tiendas`) |
 | La casilla | **Cambia cuál par usa esa fila**, no agrega un pedido |
 | Fila 2 | **El menú de niños**, intacto |
 | Fila 3 | **El menú de pequeños** (desde el 2026-11-02), igual de intacto |
