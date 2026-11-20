@@ -6,10 +6,11 @@
    puro y así debe quedarse.
 
    Cómo funciona:
-   - Las fechas y los IDs de variante viven en el HTML, en los
-     data-* de cada <option>. Así el desplegable sigue siendo
-     correcto aunque este archivo no cargue, y agregar fechas
-     nuevas es editar el HTML en un solo lugar.
+   - Las fechas las entrega el panel (CONFIG.backend); los precios
+     los escribe tools/traducir.py en el HTML desde precios.json.
+   - La tienda, su token y los IDs de variante viven acá, en
+     CONFIG.tiendas: hay DOS tiendas, la real y la de prueba, y
+     se elige por la dirección de la página (ver tiendaDeEstaPagina).
    - Este módulo calcula el total, crea el carrito con la
      mutation cartCreate y manda al checkout de Shopify.
    - Sin token, el botón queda deshabilitado con un aviso. El
@@ -23,30 +24,54 @@
   /* ---------- lo único que hay que tocar para salir a producción ---------- */
 
   var CONFIG = {
-    // Storefront API access token. Es público por diseño (solo lee
-    // catálogo y crea carritos), así que puede vivir en este archivo.
-    // NUNCA pongas acá un token de Admin API: esos empiezan en
-    // "shpat_" y dan acceso a pedidos, clientes y toda la tienda.
+    // LAS DOS TIENDAS (2026-11-20, lo pidió el cliente): la real cobra
+    // plata de verdad; la de prueba es la tienda de desarrollo de
+    // Shopify, que solo acepta pagos de prueba. La real se usa SOLO en
+    // las direcciones de `direccionesReales`; en cualquier otra —la
+    // versión de prueba de un PR, GitHub Pages, un computador— se usa la
+    // de prueba. Así probar un cambio nunca cobra a nadie.
     //
-    // Es el interruptor de toda la integración: vacío, el botón no llama
-    // a la API y manda a WhatsApp.
+    // Cada tienda trae su dominio, su token y sus IDs de variante. Los IDs
+    // van por menú con las mismas claves de precios.json (`tradiciones`,
+    // `a_brasas_abiertas`, `ninos`, `pequenos`) y cada fila del formulario
+    // dice cuál es la suya con data-menu. Hasta el 2026-11-20 los IDs
+    // vivían en el HTML; con dos tiendas, el lugar para editarlos es la
+    // ficha de cada una.
     //
-    // ESTE ES EL TOKEN DE LA TIENDA DE DESARROLLO, encendido el
-    // 2026-10-14 por decisión del cliente para poder probar la cadena
-    // completa de punta a punta mientras el sitio todavía no se difunde.
-    //
-    // OJO AL SALIR A PRODUCCIÓN: hay que cambiar este token, el dominio
-    // de abajo y los IDs de variante del HTML, los tres. Si queda este,
-    // la gente cae en un checkout de una tienda de prueba que no puede
-    // cobrarles.
-    token: 'f7a303e30966d1444ab304747a27031d',
+    // El token de Storefront es público por diseño (solo lee catálogo y
+    // crea carritos), así que puede vivir en este archivo. NUNCA pongas
+    // acá un token de Admin API: esos empiezan en "shpat_" y dan acceso a
+    // pedidos, clientes y toda la tienda. Un token vacío es el interruptor
+    // de la integración: el botón no llama a la API y manda a WhatsApp.
+    tiendas: {
+      // La tienda real (lo-pirque.myshopify.com). EN BLANCO hasta el
+      // lanzamiento: mientras sea null, todas las direcciones usan la de
+      // prueba, incluida la real, y la página lo dice. Llenarla es el PR
+      // de producción: dominio, token y los ocho IDs.
+      real: null,
 
-    // Dominio que sirve la Storefront API.
-    //
-    // Hoy apunta a la TIENDA DE DESARROLLO. Al salir a producción hay
-    // que cambiar esta línea y el token, y además los IDs de variante
-    // del HTML, porque en producción son otros.
-    dominio: 'brasas-de-lo-pirque-development.myshopify.com',
+      // La tienda de DESARROLLO. Su checkout está detrás de la contraseña
+      // de la tienda, y solo cobra pagos de prueba.
+      prueba: {
+        dominio: 'brasas-de-lo-pirque-development.myshopify.com',
+        token: 'f7a303e30966d1444ab304747a27031d',
+        variantes: {
+          tradiciones:       { linea: '50684108013785', local: '50684108046553' },
+          a_brasas_abiertas: { linea: '50684143173849', local: '50684143206617' },
+          ninos:             { linea: '50684218081497', local: '50684218114265' },
+          pequenos:          { linea: '51269453971673', local: '51269454004441' }
+        }
+      }
+    },
+
+    // Las únicas direcciones que cobran de verdad: el dominio, con y sin
+    // www, y la dirección propia del proyecto en Vercel, que sirve la
+    // misma versión que el dominio (ahí se hace la compra de prueba antes
+    // de mover el DNS). Las versiones de prueba de un PR tienen otra
+    // dirección (brasas-sitio-git-…), así que no calzan. Cualquier cosa
+    // que no esté en esta lista cae en la tienda de prueba: olvidarse de
+    // algo nunca termina en un cobro.
+    direccionesReales: ['brasasdelopirque.cl', 'www.brasasdelopirque.cl', 'brasas-sitio.vercel.app'],
 
     // Shopify publica una versión por trimestre y las soporta unos 12
     // meses. La 2026-10 es la estable al 2026-10-20 y está soportada hasta
@@ -78,10 +103,20 @@
     backend: 'https://landing-pirque-alpha.vercel.app/api/publico/fechas'
   };
 
-  // Los precios y los IDs de variante NO están acá: viven en el HTML.
-  // El de cada menú en su <option> de #r-menu, y el de niños en los
-  // data-* del propio widget. Así el formulario sigue siendo correcto
-  // aunque este archivo no cargue, y hay un solo lugar que editar.
+  // Los precios NO están acá: los escribe tools/traducir.py en los data-*
+  // de cada fila del HTML, desde precios.json. Así el formulario muestra el
+  // precio correcto aunque este archivo no cargue.
+
+  // Qué tienda usa esta página. Real solo si la dirección está en la lista
+  // Y la tienda real ya tiene sus datos; todo lo demás, la de prueba.
+  function tiendaDeEstaPagina() {
+    var host = String(window.location.hostname || '').toLowerCase();
+    var real = CONFIG.tiendas.real;
+    if (real && CONFIG.direccionesReales.indexOf(host) !== -1) return real;
+    return CONFIG.tiendas.prueba;
+  }
+  var TIENDA = tiendaDeEstaPagina();
+  var DE_PRUEBA = TIENDA === CONFIG.tiendas.prueba;
 
   /* ---------- idiomas ---------- */
 
@@ -113,7 +148,8 @@
       creando: 'Creando tu reserva\u2026',
       sinPago: 'El sistema de pago todavia no esta conectado. Escribenos por WhatsApp y tomamos tu reserva.',
       falla: 'No pudimos crear tu reserva. Vuelve a intentarlo o escribenos por WhatsApp y la tomamos nosotros.',
-      vistaPrevia: 'Vista previa: el pago se conecta cuando la tienda entregue el token.'
+      vistaPrevia: 'Vista previa: el pago se conecta cuando la tienda entregue el token.',
+      tiendaPrueba: 'Tienda de prueba: aquí no se cobra nada.'
     },
     en: {
       mesAnterior: 'Previous month',
@@ -135,7 +171,8 @@
       creando: 'Creating your booking\u2026',
       sinPago: 'The payment system is not connected yet. Message us on WhatsApp and we will take your booking.',
       falla: 'We could not create your booking. Please try again, or message us on WhatsApp and we will take it.',
-      vistaPrevia: 'Preview: payment connects once the store provides the token.'
+      vistaPrevia: 'Preview: payment connects once the store provides the token.',
+      tiendaPrueba: 'Test store: nothing is charged here.'
     },
     pt: {
       mesAnterior: 'Mês anterior',
@@ -157,7 +194,8 @@
       creando: 'Criando a sua reserva\u2026',
       sinPago: 'O sistema de pagamento ainda nao esta conectado. Fale com a gente no WhatsApp e registramos a sua reserva.',
       falla: 'Nao conseguimos criar a sua reserva. Tente de novo ou fale com a gente no WhatsApp que registramos.',
-      vistaPrevia: 'Previa: o pagamento se conecta quando a loja entregar o token.'
+      vistaPrevia: 'Previa: o pagamento se conecta quando a loja entregar o token.',
+      tiendaPrueba: 'Loja de teste: aqui nada é cobrado.'
     }
   };
 
@@ -226,26 +264,38 @@
   // un solo menú por pedido, lo que dejaba fuera algo tan corriente como
   // tres personas con Tradiciones y dos con A Brasas abiertas.
   //
-  // Los IDs de variante y los precios salen del HTML, no de acá: un solo
-  // lugar que editar al pasar a producción, donde los IDs son otros.
+  // Los precios salen del HTML (los escribe traducir.py desde precios.json)
+  // y los IDs de variante, de la tienda de esta página: cada fila dice con
+  // data-menu cuál es su menú, con las mismas claves de precios.json.
+  //
+  // Una fila cuyo menú no esté en la tienda queda sin variante, y
+  // `faltaVariante()` no deja crear el carrito: mejor un aviso que un
+  // carrito con un ID inventado.
+  function varianteDelMenu(clave, modo) {
+    var m = clave && TIENDA.variantes ? TIENDA.variantes[clave] : null;
+    return m && m[modo] ? m[modo] : '';
+  }
+
   var opciones = [];
   var nodos = caja.querySelectorAll('[data-opcion]');
   for (var i = 0; i < nodos.length; i++) {
     var nodo = nodos[i];
+    var menu = nodo.getAttribute('data-menu');
+    var menuAlto = nodo.getAttribute('data-menu-alta');
     opciones.push({
       nodo: nodo,
       // Cada menú tiene dos variantes en Shopify: la de pagar en línea,
       // con descuento, y la de pagar en el local. No son dos precios de
       // lo mismo: son dos productos distintos de la tienda.
-      variante: nodo.getAttribute('data-variante'),
+      variante: varianteDelMenu(menu, 'linea'),
       precio: parseInt(nodo.getAttribute('data-precio'), 10) || 0,
-      varianteLocal: nodo.getAttribute('data-variante-local'),
+      varianteLocal: varianteDelMenu(menu, 'local'),
       precioLocal: parseInt(nodo.getAttribute('data-precio-local'), 10) || 0,
       // El par de A Brasas abiertas. Solo la fila de adultos lo trae: por
       // eso el menu de ninos no sube con la casilla, y no por un if.
-      varianteAlta: nodo.getAttribute('data-variante-alta'),
+      varianteAlta: varianteDelMenu(menuAlto, 'linea'),
       precioAlta: parseInt(nodo.getAttribute('data-precio-alta'), 10) || 0,
-      varianteAltaLocal: nodo.getAttribute('data-variante-alta-local'),
+      varianteAltaLocal: varianteDelMenu(menuAlto, 'local'),
       precioAltaLocal: parseInt(nodo.getAttribute('data-precio-alta-local'), 10) || 0,
       nombre: nodo.querySelector('[data-nombre-menu]'),
       input: nodo.querySelector('input[type="number"]'),
@@ -708,10 +758,19 @@
     '}'
   ].join('\n');
 
+  // Si alguna fila con gente no tiene variante en la tienda de esta página.
+  // No debería pasar: es la guarda de que a una tienda le falte un menú.
+  function faltaVariante(modo) {
+    for (var i = 0; i < opciones.length; i++) {
+      if (cuantos(opciones[i]) > 0 && !varianteDe(opciones[i], modo)) return true;
+    }
+    return false;
+  }
+
   function reservar(boton) {
     if (!pedidoUsable(boton.modo)) { avisarSobreFecha(); return; }
 
-    if (!CONFIG.token) {
+    if (!TIENDA.token || faltaVariante(boton.modo)) {
       mensaje(T.sinPago, 'error');
       return;
     }
@@ -731,11 +790,11 @@
       recalcular();
     }
 
-    fetch('https://' + CONFIG.dominio + '/api/' + CONFIG.version + '/graphql.json', {
+    fetch('https://' + TIENDA.dominio + '/api/' + CONFIG.version + '/graphql.json', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Shopify-Storefront-Access-Token': CONFIG.token
+        'X-Shopify-Storefront-Access-Token': TIENDA.token
       },
       body: JSON.stringify({
         query: MUTATION,
@@ -803,8 +862,22 @@
   caja.classList.add('reserva-viva');
   cargarFechas();
 
-  if (!CONFIG.token) {
+  if (!TIENDA.token) {
     mensaje(T.vistaPrevia, 'aviso');
+  }
+
+  // En la tienda de prueba lo dice arriba del formulario, y no en la zona de
+  // mensajes: esa se borra al apretar un botón, y esto tiene que quedarse a
+  // la vista. Es la misma pieza (`reserva-mensaje aviso`, en dorado), solo
+  // que fija. En las direcciones reales no aparece.
+  if (DE_PRUEBA) {
+    var avisoPrueba = document.createElement('p');
+    avisoPrueba.className = 'reserva-mensaje aviso reserva-prueba';
+    avisoPrueba.setAttribute('data-tienda-prueba', '');
+    avisoPrueba.textContent = T.tiendaPrueba;
+    var titulo = caja.querySelector('.reserva-titulo');
+    if (titulo) titulo.parentNode.insertBefore(avisoPrueba, titulo.nextSibling);
+    else caja.insertBefore(avisoPrueba, caja.firstChild);
   }
 
   recalcular();
