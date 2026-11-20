@@ -270,6 +270,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'recibe, y el botón para marcarla cuando llegue.',
       'Para exigir las boletas, aprieta 🧾 Sin boleta: quedan solo los que '
       + 'ganaron algo en el periodo y no la han mandado.',
+      'Vendedores y socios se pagan según su documento: con la retención '
+      + 'incluida se transfiere el bruto menos la retención; con factura más '
+      + 'IVA, el total con IVA. Su caja lo dice.',
       'Para una transferencia masiva, arriba está su tarjeta: baja la '
       + 'planilla de sueldos o de propinas, súbela al banco, y cuando esté '
       + 'pagada aprieta Todos pagados.',
@@ -434,13 +437,18 @@ export const AYUDAS: Record<string, Ayuda> = {
     ],
     pasos: [
       'Arriba elige qué mirar: Vendedores o Socios comerciales. Ahí mismo '
-      + 'está + Agregar socio comercial.',
+      + 'está + Agregar vendedor (crea su cuenta) o + Agregar socio comercial, '
+      + 'con su documento y su transferencia de una vez.',
       'Elige mes o semana y muévete con las flechas: vale para toda la lista.',
       'Cada persona es una tarjeta: cerrada dice cuánto le toca en el periodo '
       + 'y si está pagado. Busca por nombre si son muchas.',
       'Ábrela con el +: los azulejos dicen cuánto toca, cuánto se pagó y '
-      + 'cuánto falta, con Pagarle, el detalle de cada venta y su trato.'
-    ]
+      + 'cuánto falta, con Pagarle, el detalle de cada venta y su trato.',
+      'En Documento: boleta o factura, y si lo que gana trae la retención o el '
+      + 'IVA. Eso decide cuánto se le transfiere, aquí y en el informe.'
+    ],
+    ojo: 'Un socio que agrega un vendedor desde la cotización nace con el trato '
+       + 'de partida y queda por confirmar: lo confirma el encargado de pagos.'
   },
 
   asistencia: {

@@ -438,7 +438,7 @@ export default async function Pagina({ params, searchParams }: {
     )();
     const ventas = ventasDe(socio.usuario, presupuestos.map((x) => conCliente(x, clientes)), lineas, cobros, socio, catalogo)
       .map((x) => ({ ...x, folio: folioDe({ id: x.grupo }) }));
-    return <VistaSocio socio={socio} ventas={ventas} pagos={pagos} token={params.token}
+    return <VistaSocio socio={socio} ventas={ventas} pagos={pagos} boletas={boletas} token={params.token}
       p={searchParams?.p} v={searchParams?.v} />;
   }
 
@@ -816,9 +816,9 @@ export default async function Pagina({ params, searchParams }: {
               que se escribe en el SII para recibir el neto. Sigue a la vista
               de arriba —por semana o por mes— y ofrece la otra, porque cada
               uno se arregla con quien le paga. */}
-          {boleta && boleta.neto > 0 && (
+          {boleta && boleta.total > 0 && (
             <div className="mt-5">
-              <CajaBoleta tu cuenta={boleta}
+              <CajaBoleta tu sinPropina cuenta={boleta}
                 titulo={esMes ? `Tu boleta de ${comoSeLlama}` : `Tu boleta del ${comoSeLlama}`}>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {esMes ? (

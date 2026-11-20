@@ -116,7 +116,9 @@ export interface PendienteDescuentoVisto extends Base {
 export interface PendienteCuenta extends Base {
   tipo: 'cuenta';
   /** De qué lista es: decide la ruta y la pantalla de la ficha. */
-  de: 'trabajador' | 'colaborador';
+  de: 'trabajador' | 'colaborador' | 'socio';
+  /** El id del socio (`S-0001`), para abrir su tarjeta en `/vendedores`. */
+  id?: string;
   nombre: string;
   /** Qué cambió, en palabras: *cuenta bancaria, pago por jornada*. */
   que: string;
@@ -252,15 +254,20 @@ export function pendientesDeDescuentoVisto(reservas: Reserva[]): PendienteDescue
  */
 export function pendientesDeCuenta(
   trabajadores: { nombre: string; porConfirmar?: string; activo?: boolean }[],
-  colaboradores: { nombre: string; porConfirmar?: string; activo?: boolean }[]
+  colaboradores: { nombre: string; porConfirmar?: string; activo?: boolean }[],
+  socios: { usuario: string; nombre: string; porConfirmar?: string }[] = []
 ): PendienteCuenta[] {
-  const uno = (de: PendienteCuenta['de']) => (x: { nombre: string; porConfirmar?: string }): PendienteCuenta[] => {
+  const uno = (de: PendienteCuenta['de']) => (x: { nombre: string; porConfirmar?: string; usuario?: string }): PendienteCuenta[] => {
     const m = partesMarca(x.porConfirmar);
     if (!m) return [];
-    return [{ tipo: 'cuenta', clave: `cuenta-${de}-${x.nombre}`, de, nombre: x.nombre, que: m.firma || 'datos de pago',
+    return [{ tipo: 'cuenta', clave: `cuenta-${de}-${x.usuario ?? x.nombre}`, de, nombre: x.nombre, que: m.firma || 'datos de pago',
+      ...(x.usuario ? { id: x.usuario } : {}),
       fecha: m.cuando.slice(0, 10), pide: m.quien || 'alguien', cuando: m.cuando, motivo: '', comentario: '' }];
   };
-  return [...trabajadores.flatMap(uno('trabajador')), ...colaboradores.flatMap(uno('colaborador'))].sort(porFecha) as PendienteCuenta[];
+  // **El trato de un socio que agregó un vendedor** (2026-11-20): llega
+  // igual que una cuenta por confirmar, y se confirma con el mismo botón.
+  return [...trabajadores.flatMap(uno('trabajador')), ...colaboradores.flatMap(uno('colaborador')),
+    ...socios.flatMap(uno('socio'))].sort(porFecha) as PendienteCuenta[];
 }
 
 /** Todo junto, del día más antiguo al más nuevo. */

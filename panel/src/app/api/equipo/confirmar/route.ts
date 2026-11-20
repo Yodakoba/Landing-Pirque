@@ -4,7 +4,9 @@ import { HOJA_TRABAJADORES } from '@/lib/equipo';
 import { HOJA_COLABORADORES } from '@/lib/extras';
 import { normalizar } from '@/lib/columnas';
 import { exigir, quienEs } from '@/lib/permisos';
-import { leerTrabajadores, guardarTrabajadores, leerColaboradores, guardarColaboradores, anotar } from '@/lib/datos';
+import { leerTrabajadores, guardarTrabajadores, leerColaboradores, guardarColaboradores, anotar,
+         leerVendedores, guardarVendedor } from '@/lib/datos';
+import { HOJA_VENDEDORES } from '@/lib/vendedores';
 import { partesMarca } from '@/lib/plata';
 
 export const dynamic = 'force-dynamic';
@@ -15,11 +17,25 @@ export const dynamic = 'force-dynamic';
  * o la de un extra (`de: 'colaborador'`). Borra el *por confirmar* y queda
  * en la bitácora a su nombre. Solo `pagar`.
  */
-export const POST = conLecturas([HOJA_TRABAJADORES, HOJA_COLABORADORES], async function POST(req: Request) {
+export const POST = conLecturas([HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_VENDEDORES], async function POST(req: Request) {
   const no = await exigir(req, 'pagar');
   if (no) return no;
   try {
     const cuerpo = (await req.json().catch(() => ({}))) ?? {};
+    // **El trato de un socio que agregó un vendedor** (2026-11-20): se
+    // confirma igual, por su id (`S-0001`).
+    if (cuerpo.de === 'socio') {
+      const id = String(cuerpo.id ?? '').trim();
+      const fichas = await leerVendedores();
+      const f = fichas.find((x) => x.tipo === 'socio' && normalizar(x.usuario) === normalizar(id));
+      if (!f) return NextResponse.json({ error: 'Ese socio ya no está en la lista.' }, { status: 404 });
+      const m = partesMarca(f.porConfirmar);
+      if (!m) return NextResponse.json({ ok: true, yaEstaba: true });
+      await guardarVendedor({ ...f, porConfirmar: '' });
+      await anotar({ ...(await quienEs(req)), accion: 'Confirmó el trato de un socio comercial',
+        detalle: `${f.nombre} · lo agregó ${m.quien} el ${m.cuando}` });
+      return NextResponse.json({ ok: true });
+    }
     const de = cuerpo.de === 'colaborador' ? 'colaborador' : cuerpo.de === 'trabajador' ? 'trabajador' : '';
     const nombre = String(cuerpo.nombre ?? '').trim();
     if (!de || !nombre) return NextResponse.json({ error: 'Falta a quién confirmar.' }, { status: 400 });

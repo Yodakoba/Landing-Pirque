@@ -19,6 +19,7 @@
  *   cotizaciones de otros en solo lectura (`<fieldset disabled>`).
  */
 import BuscarEnLista from './BuscarEnLista';
+import AgregarVendedor from './AgregarVendedor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import BotonGuardar from './BotonGuardar';
@@ -92,7 +93,7 @@ export interface DatosCotizar {
   usuario: string;
   rol: string;
   /** Los socios comerciales, para *¿Viene por un socio comercial?* (2026-11-12). */
-  socios?: { id: string; nombre: string; activo: boolean }[];
+  socios?: { id: string; nombre: string; activo: boolean; porConfirmar?: boolean }[];
 }
 
 /** El 4 se llamaba *Enviar* y ahí no se manda nada solo: tiene el documento,
@@ -224,6 +225,9 @@ export default function CotizacionDialogo({
   const [socio, setSocio] = useState(p?.socio ?? '');
   /** Si la lista de socios con buscador está abierta. */
   const [buscandoSocio, setBuscandoSocio] = useState(false);
+  /** Los socios recién agregados desde esta ventana (2026-11-20), hasta que la lista se recargue. */
+  const [sociosNuevos, setSociosNuevos] = useState<{ id: string; nombre: string; activo: boolean; porConfirmar?: boolean }[]>([]);
+  const [agregandoSocio, setAgregandoSocio] = useState(false);
   const [notas, setNotas] = useState(p?.notas ?? '');
   const [estado, setEstado] = useState(
     p ? (estadoVisible(p, datos.hoy) === 'Vencida' ? p.estado : estadoVisible(p, datos.hoy))
@@ -1482,8 +1486,12 @@ export default function CotizacionDialogo({
                 directo* y *Por un socio comercial*, que abre la lista con
                 buscador (`BuscarEnLista`). Un desactivado se lista solo si ya
                 era el elegido. */}
-            {(datos.socios ?? []).length > 0 && (() => {
-              const elegido = (datos.socios ?? []).find((x) => x.id === socio);
+            {/* **Agregar un socio nuevo ahí mismo** (2026-11-20, lo pidió el
+                cliente): el vendedor también puede; su trato queda por
+                confirmar hasta que lo confirma el encargado de pagos. */}
+            {((datos.socios ?? []).length > 0 || puede(datos.rol as Rol, 'agregarSocios')) && (() => {
+              const socios = [...(datos.socios ?? []), ...sociosNuevos.filter((n) => !(datos.socios ?? []).some((x) => x.id === n.id))];
+              const elegido = socios.find((x) => x.id === socio);
               return (
                 <div>
                   <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
@@ -1508,17 +1516,31 @@ export default function CotizacionDialogo({
                     <div className="mt-2">
                       <BuscarEnLista etiqueta="Buscar socio comercial" elegido={socio}
                         vacia="No hay socios comerciales activos."
-                        opciones={(datos.socios ?? []).filter((x) => x.activo || x.id === socio)
-                          .map((x) => ({ id: x.id, nombre: x.nombre, detalle: x.activo ? '' : 'desactivado' }))}
+                        opciones={socios.filter((x) => x.activo || x.id === socio)
+                          .map((x) => ({ id: x.id, nombre: x.nombre,
+                            detalle: !x.activo ? 'desactivado' : x.porConfirmar ? 'trato por confirmar' : '' }))}
                         onElegir={(id) => { setSocio(id); setBuscandoSocio(false); }}
-                        onCerrar={() => setBuscandoSocio(false)} />
+                        onCerrar={() => setBuscandoSocio(false)}
+                        pie={puede(datos.rol as Rol, 'agregarSocios') && (
+                          <button type="button" className="boton !min-h-[44px] w-full border-dashed !text-[15px]"
+                            onClick={() => { setBuscandoSocio(false); setAgregandoSocio(true); }}>+ Agregar socio comercial</button>
+                        )} />
                     </div>
                   )}
                   {socio && (
                     <p className="mt-1 text-[13px] text-hueso/70">
                       {elegido?.nombre ?? 'El socio'} cobra su comisión por esta venta, y quien la vende,
                       la parte de la suya que diga su ficha.
+                      {elegido?.porConfirmar && <b className="text-ambar-texto"> Su trato está por confirmar: lo confirma el encargado de pagos.</b>}
                     </p>
+                  )}
+                  {agregandoSocio && (
+                    <AgregarVendedor tipo="socio" desdeCotizacion={!puede(datos.rol as Rol, 'pagar')}
+                      onCerrar={() => setAgregandoSocio(false)}
+                      onCreado={(id, nombre, porConfirmar) => {
+                        setSociosNuevos((l) => [...l, { id, nombre, activo: true, porConfirmar }]);
+                        setSocio(id); setAgregandoSocio(false);
+                      }} />
                   )}
                 </div>
               );

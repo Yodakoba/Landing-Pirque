@@ -33,6 +33,7 @@ import { type Presupuesto, type LineaPresupuesto, ESTADO_PRESUPUESTO, estadoNorm
          lineasDe, cuentasDe } from './presupuestos.ts';
 import type { Menu } from './menus.ts';
 import type { Cobro } from './cobros.ts';
+import type { ComoSeDocumenta, Documento } from './boletas.ts';
 
 export const HOJA_VENDEDORES = 'Vendedores';
 
@@ -60,7 +61,28 @@ export const COL_VENDEDORES = {
   /** El link personal del socio (`/mi/<token>`). Vacío: sin link. */
   token: 'Token de acceso',
   ...COL_BANCO,
-  nota: 'Nota de pago'
+  nota: 'Nota de pago',
+  /**
+   * **Con qué documento se le paga** (2026-11-20): `Boleta` o `Factura`. En
+   * blanco, boleta para un vendedor y factura para un socio comercial.
+   */
+  documento: 'Documento',
+  /**
+   * Si lo que gana ya trae el impuesto: `Incluido` (de partida, lo decidió
+   * el cliente) o `Aparte`. Ver `ComoSeDocumenta` en `boletas.ts`.
+   */
+  impuesto: 'Impuesto',
+  /** Para la factura: a nombre de quién, su RUT, su giro y su dirección. */
+  razonSocial: 'Razón social',
+  rutFactura: 'RUT factura',
+  giro: 'Giro',
+  direccion: 'Dirección',
+  /**
+   * **El trato de un socio que agregó un vendedor**, mientras pagos no lo
+   * confirma (2026-11-20): *cuándo · quién*, como el `Por confirmar` de
+   * `Trabajadores`. Vacío: confirmado.
+   */
+  porConfirmar: 'Por confirmar'
 } as const;
 export const ENCABEZADO_VENDEDORES = Object.values(COL_VENDEDORES);
 
@@ -116,9 +138,33 @@ export interface FichaVendedor {
   montoEvento: number;
   base: BaseComision;
   banco: Banco;
+  /** Con qué documento se le paga: boleta o factura (2026-11-20). */
+  documento: Documento;
+  /** Si lo que gana ya trae la retención o el IVA. De partida, sí. */
+  incluido: boolean;
+  /** Los datos de la factura, si factura. */
+  factura: DatosFactura;
+  /** Si el trato espera la confirmación de pagos: *cuándo · quién*. Vacío, confirmado. */
+  porConfirmar: string;
   /** Fila en la planilla; 0 si todavía no tiene. */
   fila: number;
 }
+
+/** A nombre de quién se emite la factura de un vendedor o un socio. */
+export interface DatosFactura { razonSocial: string; rut: string; giro: string; direccion: string }
+export const facturaVacia = (): DatosFactura => ({ razonSocial: '', rut: '', giro: '', direccion: '' });
+
+/** Lo que le falta a una ficha con factura para poder emitirla. Con boleta, nada. */
+export function faltaParaFacturar(f: Pick<FichaVendedor, 'documento' | 'factura'>): string[] {
+  if (f.documento !== 'factura') return [];
+  const x = f.factura;
+  return [!x.razonSocial.trim() && 'razón social', !x.rut.trim() && 'RUT', !x.giro.trim() && 'giro',
+    !x.direccion.trim() && 'dirección'].filter(Boolean) as string[];
+}
+
+/** Cómo se documenta el pago de esta ficha, para `desgloseDocumento()`. */
+export const comoDe = (f: Pick<FichaVendedor, 'documento' | 'incluido'>): ComoSeDocumenta =>
+  ({ documento: f.documento, incluido: f.incluido });
 
 /** Los cortes de los socios comerciales: de ahí parten las etapas 2 y 3. */
 export const CORTES_SOCIOS = { etapa2: 55, etapa3: 77 } as const;
@@ -127,7 +173,8 @@ export const fichaVacia = (usuario: string, nombre = ''): FichaVendedor => ({
   usuario, nombre, tipo: 'vendedor', activo: true, etapa1Desde: ETAPA1_DESDE, conSocio: CON_SOCIO_DEFECTO, token: '',
   sueldoFijo: 0, comisionPct: 0,
   etapa2Desde: CORTES_SOCIOS.etapa2, etapa2Pct: 0, etapa3Desde: CORTES_SOCIOS.etapa3, etapa3Pct: 0, bonoPuntos: 0,
-  montoEvento: 0, base: 'neto', banco: bancoVacio(), fila: 0
+  montoEvento: 0, base: 'neto', banco: bancoVacio(),
+  documento: 'boleta', incluido: true, factura: facturaVacia(), porConfirmar: '', fila: 0
 });
 
 /**
@@ -139,7 +186,7 @@ export const TRATO_SOCIO = { desde: 22, pct: 5, etapa2Pct: 10, etapa3Pct: 15 } a
 
 export const fichaSocio = (id: string, nombre: string): FichaVendedor => ({
   ...fichaVacia(id, nombre), tipo: 'socio', etapa1Desde: TRATO_SOCIO.desde, comisionPct: TRATO_SOCIO.pct,
-  etapa2Pct: TRATO_SOCIO.etapa2Pct, etapa3Pct: TRATO_SOCIO.etapa3Pct, conSocio: 100
+  etapa2Pct: TRATO_SOCIO.etapa2Pct, etapa3Pct: TRATO_SOCIO.etapa3Pct, conSocio: 100, documento: 'factura'
 });
 
 /** El id del próximo socio: `S-0001`, `S-0002`… */
@@ -195,6 +242,14 @@ export function leerVendedoresDe(filas: string[][]): FichaVendedor[] {
       tipo: en(f, i.tipo).trim(), numero: en(f, i.numero).trim(), correo: en(f, i.correo).trim(),
       nota: en(f, i.nota).trim()
     },
+    // En blanco: boleta el vendedor, factura el socio; y el impuesto incluido.
+    documento: /factura/i.test(en(f, i.documento)) ? 'factura' as const
+      : /boleta/i.test(en(f, i.documento)) ? 'boleta' as const
+      : tipoDe(en(f, i.tipoFicha)) === 'socio' ? 'factura' as const : 'boleta' as const,
+    incluido: !/aparte/i.test(en(f, i.impuesto)),
+    factura: { razonSocial: en(f, i.razonSocial).trim(), rut: en(f, i.rutFactura).trim(),
+      giro: en(f, i.giro).trim(), direccion: en(f, i.direccion).trim() },
+    porConfirmar: en(f, i.porConfirmar).trim(),
     fila: n + 2
   })).filter((v) => v.usuario);
 }
@@ -217,6 +272,11 @@ export function filaVendedor(v: FichaVendedor, enc: string[]): string[] {
   poner(i.titular, v.banco.titular); poner(i.rut, v.banco.rut); poner(i.banco, v.banco.banco);
   poner(i.tipo, v.banco.tipo); poner(i.numero, v.banco.numero); poner(i.correo, v.banco.correo);
   poner(i.nota, v.banco.nota);
+  poner(i.documento, v.documento === 'factura' ? 'Factura' : 'Boleta');
+  poner(i.impuesto, v.incluido ? 'Incluido' : 'Aparte');
+  poner(i.razonSocial, v.factura.razonSocial); poner(i.rutFactura, v.factura.rut);
+  poner(i.giro, v.factura.giro); poner(i.direccion, v.factura.direccion);
+  poner(i.porConfirmar, v.porConfirmar);
   return fila;
 }
 

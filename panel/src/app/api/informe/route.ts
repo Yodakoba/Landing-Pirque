@@ -84,7 +84,8 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
           const nombre = f.nombre || u.nombre || u.usuario;
           return {
             nombre, usuario: u.usuario,
-            ficha: { sueldoFijo: f.sueldoFijo, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
+            ficha: { sueldoFijo: f.sueldoFijo, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base,
+                     documento: f.documento, incluido: f.incluido },
             ventas: ventasDe(u.usuario, conNombre, lineas, cobros, f, menus, u.nombre).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) })),
             tipo: 'vendedor'
           };
@@ -94,7 +95,8 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
       for (const f of fichasV.filter((x) => x.tipo === 'socio')) {
         vendedores.push({
           nombre: f.nombre || f.usuario, usuario: f.usuario, tipo: 'socio',
-          ficha: { sueldoFijo: 0, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base },
+          ficha: { sueldoFijo: 0, comisionPct: f.comisionPct, montoEvento: f.montoEvento, base: f.base,
+                   documento: f.documento, incluido: f.incluido },
           ventas: ventasDe(f.usuario, conNombre, lineas, cobros, f, menus).map((v) => ({ ...v, folio: folioDe({ id: v.grupo }) }))
         });
       }
@@ -113,13 +115,18 @@ export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES
     }
     // **Lo que pagos no ha confirmado** (2026-11-13, `plata.ts`): la cuenta
     // o la tarifa que cambió otro. Solo a quien paga, como las cuentas.
-    const porConfirmar: Record<string, { que: string; quien: string; cuando: string; de: 'trabajador' | 'colaborador' }> = {};
+    const porConfirmar: Record<string, { que: string; quien: string; cuando: string; de: 'trabajador' | 'colaborador' | 'socio'; id?: string }> = {};
     if (puedePagar) {
       for (const [lista, de] of [[gente, 'trabajador'], [colaboradores, 'colaborador']] as const) {
         for (const p of lista) {
           const m = partesMarca(p.porConfirmar);
           if (m) porConfirmar[normalizar(p.nombre)] = { que: m.firma || 'datos de pago', quien: m.quien, cuando: m.cuando, de };
         }
+      }
+      // El trato de un socio que agregó un vendedor (2026-11-20).
+      for (const f of fichasV.filter((x) => x.tipo === 'socio')) {
+        const m = partesMarca(f.porConfirmar);
+        if (m) porConfirmar[normalizar(f.nombre || f.usuario)] = { que: 'su trato', quien: m.quien, cuando: m.cuando, de: 'socio', id: f.usuario };
       }
     }
     // Si esta cuenta puede registrar pagos. Se resuelve en el servidor y
