@@ -508,7 +508,8 @@ export const boletaEnPlanilla = (aplica: boolean, recibida: boolean) =>
  *
  * Es una sola lista para el botón de copiar, la planilla para la
  * transferencia masiva y las columnas del banco de las planillas del
- * informe: cambiarla acá cambia las tres.
+ * informe: cambiarla acá cambia las tres. Los rótulos van en las planillas;
+ * el botón copia solo los valores (`textoTransferencia()`).
  */
 export const ORDEN_TRANSFERENCIA = [
   'titular', 'rut', 'banco', 'tipo', 'numero', 'correo', 'monto', 'glosa'
@@ -541,40 +542,34 @@ export const filaTransferencia = (d: DatosTransferencia): string[] =>
         : String(d[k] ?? ''));
 
 /**
- * Los datos de una transferencia como texto para pegar: **un dato por
- * línea, con el rótulo del formulario del banco**, en su orden.
+ * Los datos de una transferencia como texto para pegar: **solo los valores,
+ * uno por línea**, en el orden del formulario del banco y después el monto y
+ * la glosa.
  *
  * ```
- * Nombre y apellido: Ana Soto
- * RUT: 11.111.111-1
- * Banco: BancoEstado
- * Tipo de cuenta: Cuenta RUT
- * Número de cuenta: 11111111
- * E-mail: ana@correo.cl
- *
- * Monto: 120000
- * Glosa: Sueldo 09/11 al 15/11
+ * Ana Soto
+ * 11.111.111-1
+ * BancoEstado
+ * Cuenta RUT
+ * 11111111
+ * ana@correo.cl
+ * 120000
+ * Sueldo 09/11 al 15/11
  * ```
  *
- * - **Es el formato en que se mandan los datos de transferencia en Chile**,
- *   el que las apps de los bancos reconocen al *pegar datos*. Antes era una
- *   fila separada por tabs, pensando en que un formulario web pasara de un
- *   campo al siguiente; pegar no hace eso: todo caía en el primer campo.
- * - **Sin correo, no va la línea**: en el banco es opcional.
- * - **El monto y la glosa van aparte**, después de una línea en blanco: no
- *   son del destinatario, son de la transferencia.
- * - Los valores son los de `filaTransferencia()`, así que dicen lo mismo que
- *   la planilla para el banco.
+ * - **Sin rótulos** (lo corrigió el cliente el mismo día: *"solo copias Luis
+ *   Contreras… el pagador copia los datos, abre… el banco y copia los datos
+ *   nomás"*): cada línea se pega tal cual en su campo. El primer corte decía
+ *   *Nombre y apellido: Ana Soto*, y eso había que borrarlo al pegar.
+ * - **Siempre ocho líneas, en el mismo lugar**: sin correo, su línea va
+ *   vacía, para que el monto siga siendo la séptima.
+ * - **Es la misma fila de la planilla para el banco** (`filaTransferencia()`),
+ *   una celda por línea: copiar y descargar no pueden decir cosas distintas.
+ *   Antes iba separada por tabs, pensando en que un formulario web pasara de
+ *   un campo al siguiente al pegar; pegar no hace eso.
  */
-export function textoTransferencia(d: DatosTransferencia): string {
-  const fila = filaTransferencia(d);
-  const valor = (k: typeof ORDEN_TRANSFERENCIA[number]) => fila[ORDEN_TRANSFERENCIA.indexOf(k)];
-  const linea = (k: typeof ORDEN_TRANSFERENCIA[number]) =>
-    `${NOMBRE_COLUMNA_TRANSFERENCIA[k]}: ${valor(k)}`;
-  const destinatario = DATOS_DESTINATARIO.filter((k) => k !== 'correo' || valor(k).trim())
-    .map(linea);
-  return [...destinatario, '', linea('monto'), linea('glosa')].join('\n');
-}
+export const textoTransferencia = (d: DatosTransferencia): string =>
+  filaTransferencia(d).join('\n');
 
 /**
  * La glosa de la transferencia: qué es y de qué periodo —*"Sueldo 26/10 al

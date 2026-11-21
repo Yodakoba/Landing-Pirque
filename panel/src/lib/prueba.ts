@@ -3423,16 +3423,17 @@ console.log('\nPagos al equipo');
     banco: 'BancoEstado', tipo: 'Cuenta RUT', numero: '11111111', monto: 120000,
     correo: 'ana@correo.cl', glosa: glosaDe('Sueldo', '2026-11-09', '2026-11-15') };
   const texto = textoTransferencia(ana);
-  ok(texto === ['Nombre y apellido: Ana Soto', 'RUT: 11.111.111-1', 'Banco: BancoEstado',
-       'Tipo de cuenta: Cuenta RUT', 'Número de cuenta: 11111111', 'E-mail: ana@correo.cl',
-       '', 'Monto: 120000', 'Glosa: Sueldo 09/11 al 15/11'].join('\n'),
-     'un dato por línea, con el rótulo y en el orden del formulario del banco; el monto y la glosa aparte');
-  ok(!textoTransferencia({ ...ana, correo: '' }).includes('E-mail'),
-     'sin correo no va la línea: en el banco es opcional');
+  ok(texto === ['Ana Soto', '11.111.111-1', 'BancoEstado', 'Cuenta RUT', '11111111',
+       'ana@correo.cl', '120000', 'Sueldo 09/11 al 15/11'].join('\n'),
+     'solo los valores, uno por línea, en el orden del formulario del banco y después el monto y la glosa');
+  ok(!/Nombre y apellido|RUT:|E-mail/.test(texto), 'sin rótulos: cada línea se pega tal cual en su campo');
+  ok(textoTransferencia({ ...ana, correo: '' }).split('\n')[5] === ''
+     && textoTransferencia({ ...ana, correo: '' }).split('\n')[6] === '120000',
+     'sin correo su línea va vacía: el monto sigue en el mismo lugar');
   ok(JSON.stringify(ORDEN_TRANSFERENCIA.slice(0, 6).map((k) => NOMBRE_COLUMNA_TRANSFERENCIA[k]))
      === JSON.stringify(['Nombre y apellido', 'RUT', 'Banco', 'Tipo de cuenta', 'Número de cuenta', 'E-mail']),
      'las columnas de la planilla para el banco: los mismos rótulos, en el mismo orden');
-  ok(texto.includes('Monto: 120000\n'),
+  ok(texto.split('\n')[6] === '120000',
      'el monto va sin puntos ni signo peso: es lo que un banco acepta pegar');
   ok(glosaDe('Propina', '2026-11-09', '2026-11-15').length <= 30,
      'y la glosa cabe en los 30 caracteres que dejan los bancos');
@@ -3442,8 +3443,8 @@ console.log('\nPagos al equipo');
   ok(filaAna[ORDEN_TRANSFERENCIA.indexOf('rut')] === '9.876.543-K'
      && filaAna[ORDEN_TRANSFERENCIA.indexOf('numero')] === '001234567809',
      'la planilla lleva el RUT con puntos y la cuenta solo con dígitos, con sus ceros de adelante');
-  ok(ORDEN_TRANSFERENCIA.every((k, i) => texto.includes(`${NOMBRE_COLUMNA_TRANSFERENCIA[k]}: ${filaTransferencia(ana)[i]}`)),
-     'copiar y la planilla para el banco dicen lo mismo: salen de la misma fila');
+  ok(texto === filaTransferencia(ana).join('\n'),
+     'copiar y la planilla para el banco dicen lo mismo: es la misma fila, una celda por línea');
   ok(CONCEPTO.propina === 'Propina', 'el concepto propina se llama así en la planilla');
 
   ok(leerPagosDe([ENCABEZADO_PAGOS]).length === 0, 'una pestaña vacía no inventa pagos');

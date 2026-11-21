@@ -260,9 +260,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Mira arriba si quedan turnos sin cerrar: mientras los haya, el total '
       + 'está incompleto.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
-      + 'su propina. Copian los datos en el orden del formulario del banco '
-      + '—nombre y apellido, RUT, banco, tipo de cuenta, número de cuenta y '
-      + 'e-mail— y abajo el monto y la glosa.',
+      + 'su propina. Copian solo los datos, uno por línea, en el orden del '
+      + 'formulario del banco —nombre y apellido, RUT, banco, tipo de cuenta, '
+      + 'número de cuenta y e-mail— y después el monto y la glosa: cada línea '
+      + 'se pega tal cual en su campo.',
       'Si una línea dice ⚠ Por confirmar, alguien que no hace los pagos cambió '
       + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
       + 'Confirmar.',

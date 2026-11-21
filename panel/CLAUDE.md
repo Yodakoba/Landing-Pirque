@@ -4325,12 +4325,15 @@ paso de transferir. Todo vive en `ORDEN_TRANSFERENCIA`,
 `NOMBRE_COLUMNA_TRANSFERENCIA` y `filaTransferencia()` de
 `remuneraciones.ts`, **que formatea el RUT y el número en un solo lugar**.
 
-- **Copiar** da un dato por línea con el rótulo del banco, y el monto y la
-  glosa aparte, después de una línea en blanco. Sin correo no va su línea.
-  **Es el formato en que se mandan los datos de transferencia en Chile**, el
-  que las apps de los bancos reconocen al *pegar datos*. La fila con tabs
-  suponía que un formulario web pasa de campo con cada tab al pegar, y no lo
-  hace: todo caía en el primer campo.
+- **Copiar da solo los valores, uno por línea**, en ese orden: ocho
+  líneas, la misma fila de la planilla (`textoTransferencia()` es
+  `filaTransferencia()` unida por saltos de línea). **Sin rótulos**, lo
+  corrigió el cliente el mismo día: *"solo copias Luis Contreras… el pagador
+  copia los datos, abre… el banco y copia los datos nomás"*; el primer corte
+  decía *Nombre y apellido: Luis Contreras* y eso había que borrarlo al
+  pegar. **Sin correo, su línea va vacía**, para que el monto siga siendo la
+  séptima. La fila con tabs de antes suponía que un formulario web pasa de
+  campo con cada tab al pegar, y no lo hace: todo caía en el primer campo.
 - **La planilla para la transferencia masiva** lleva esas ocho columnas,
   con esos nombres y en ese orden.
 - **Las planillas del informe** (*Solo sueldos*, *Solo propinas*,
