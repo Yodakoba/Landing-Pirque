@@ -133,7 +133,9 @@ export default function CajaBoleta({ titulo, cuenta, tu = false, estado = true, 
         <div className={compacta ? 'lg:col-start-2 lg:row-start-1 lg:[&>*]:mt-0' : ''}>{children}</div>
       )}
 
-      <p className={`mt-2 text-[13px] text-hueso/60 ${compacta ? 'lg:hidden' : ''}`}>
+      {/* En el informe (`compacta`) la nota la dice el `?` de la boleta, también
+          en el celular (2026-11-21, regla *lo que explica va en su ?*). */}
+      <p className={`mt-2 text-[13px] text-hueso/60 ${compacta ? 'hidden' : ''}`}>
         {factura
           ? 'El IVA es el 19%; el neto y el IVA siempre suman el total.'
           : <>{sinPropina && 'Sin propina. '}La retención es la de la ley para el año en que se emite; el SII la calcula del bruto y puede ajustar un peso.</>}

@@ -41,10 +41,7 @@ export default function AvisoSobrecupo({ dias }: { dias: SobrecupoCorto[] }) {
             {d.tomadas} de {d.capacidad} · en riesgo: {d.riesgo.map((r) => `${r.nombre || 'sin nombre'} (${r.personas})`).join(', ')}
           </span>
           {i === 0 && (
-            <AyudaCorta titulo="Sobrecupo">
-              Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia: en el día se decide
-              si se amplía el cupo o se suelta una reserva sin pagar.
-            </AyudaCorta>
+            <AyudaCorta tema="sobrecupo" />
           )}
           <a href={`/dia/${d.fecha}#sobrecupo`} className="boton ml-auto !border-rojo-fuerte font-semibold text-rojo-texto">Decidir →</a>
         </div>

@@ -539,6 +539,53 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Renovar crea uno nuevo y el anterior deja de servir. Quitar link lo apaga.'
     ]
   },
+  // ---------- El día y la recepción ----------
+  cotizadoDia: {
+    titulo: 'Lo cotizado del día',
+    texto: [
+      'Son cotizaciones en curso para este día: no ocupan cupo todavía, así que los números de arriba no las cuentan.',
+      'De cada cotización cuenta una sola alternativa, la de más gente.'
+    ]
+  },
+  contactoTapado: {
+    titulo: 'Contacto reservado',
+    texto: [
+      'El contacto de esta reserva lo ven la administración y quien la atiende.',
+      'Si te toca a ti, pídeselo a la administración.'
+    ]
+  },
+  clienteDeOtro: {
+    titulo: 'Un cliente de otro vendedor',
+    texto: [
+      'Su contacto lo ven la administración y quien lo atiende.',
+      'Si te pide una cotización, + Cotizarle lo deja también en tu lista.'
+    ]
+  },
+  sobrecupo: {
+    titulo: 'Sobrecupo',
+    texto: [
+      'Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia, así que ya están adentro.',
+      'Se decide en el día: ampliar el cupo y traer más equipo, o soltar una reserva sin pagar y avisarle al cliente.'
+    ]
+  },
+  liberarDia: {
+    titulo: 'Liberar el día',
+    texto: [
+      'A cada reserva: avísale con disculpas y ofrécele la devolución completa u otra fecha con un pisco sour de regalo.',
+      'Después anota lo que eligió: cambiar de fecha o cancelar y devolver.'
+    ]
+  },
+  agregadosMesa: {
+    titulo: 'Agregar a la mesa',
+    texto: [
+      'Se suman a la gente del día.',
+      'Un menú agregado se cobra a precio del local; a la carta, lo que consuman.'
+    ]
+  },
+  valorFinal: {
+    titulo: 'El valor final',
+    texto: ['Es el total de la cuenta de esta mesa en Fudo, con lo ya pagado incluido.']
+  },
   // ---------- Turnos ----------
   diasPorCerrar: {
     titulo: 'Días por cerrar',

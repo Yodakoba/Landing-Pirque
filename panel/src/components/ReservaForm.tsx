@@ -28,6 +28,7 @@
  * reserva que se anota a mano.
  */
 import { useMemo, useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import type { Reserva } from '@/lib/tipos';
 import { ESTADO_PAGO } from '@/lib/columnas';
 import { ESTADOS_QUE_LIBERAN, pagoConGlosa, liberaCupo, COMO_VIENE, MEDIOS_RAPIDOS }
@@ -230,9 +231,8 @@ export default function ReservaForm({
               cuál es cuál. Ver `contacto.ts`. */}
           {reserva?.contactoTapado ? (
             <Campo etiqueta="Contacto" ancho>
-              <p className="py-2 text-[14px] text-hueso/70">
-                {reserva.telefono ? `📞 ${reserva.telefono} · ` : ''}El contacto de esta reserva lo ven
-                la administración y quien la atiende.
+              <p className="flex items-center gap-1.5 py-2 text-[14px] text-hueso/70">
+                🔒 {reserva.telefono || 'Contacto reservado'} <AyudaCorta tema="contactoTapado" />
               </p>
             </Campo>
           ) : (<>

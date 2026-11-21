@@ -13,6 +13,7 @@
  * plata—, no solos. Sin permiso o fuera de hora, se leen y no se tocan.
  */
 import { useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import { avisar } from './AvisoFlotante';
 import {
   A_LA_CARTA, leerAgregados, escribirAgregados, limpiarValorFinal, partesMarcaMesa,
@@ -150,11 +151,10 @@ export default function MesaReserva({ r, opciones, editable, onGuardado, compact
 
       {editable && modo === 'agregar' && (
         <div className="mt-2 space-y-2 rounded-xl border-2 border-cielo-fuerte/60 bg-panel p-3">
-          <p className="text-[16px] font-semibold">¿Quién se sumó a la mesa, y qué come?</p>
-          <ElegirAgregados opciones={opciones} valor={borrador} onCambio={setBorrador} />
-          <p className="text-[14px] text-hueso/75">
-            Se suman a la gente del día. Un menú agregado se cobra a precio del local; a la carta, lo que consuman.
+          <p className="flex items-center gap-2 text-[16px] font-semibold">
+            ¿Quién se sumó a la mesa, y qué come? <AyudaCorta tema="agregadosMesa" />
           </p>
+          <ElegirAgregados opciones={opciones} valor={borrador} onCambio={setBorrador} />
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={guardando || escribirAgregados(borrador) === escribirAgregados(lista)}
               className="boton min-h-[48px] flex-1 !border-verde-fuerte bg-verde-fuerte !text-[16px] !font-bold text-tinta disabled:opacity-40"
@@ -170,9 +170,10 @@ export default function MesaReserva({ r, opciones, editable, onGuardado, compact
 
       {editable && modo === 'valor' && (
         <div className="mt-2 space-y-2 rounded-xl border-2 border-oro/60 bg-panel p-3">
-          <label className="block text-[16px] font-semibold" htmlFor={`valor-${r.fila}`}>
-            ¿Cuánto fue la cuenta de la mesa?
-          </label>
+          <p className="flex items-center gap-2 text-[16px] font-semibold">
+            <label htmlFor={`valor-${r.fila}`}>¿Cuánto fue la cuenta de la mesa?</label>
+            <AyudaCorta tema="valorFinal" />
+          </p>
           <div className="flex items-center gap-2">
             <span className="text-[22px] font-bold">$</span>
             <input id={`valor-${r.fila}`} inputMode="numeric" autoFocus value={valorTexto}
@@ -180,9 +181,6 @@ export default function MesaReserva({ r, opciones, editable, onGuardado, compact
               placeholder="264.000"
               className="min-h-[52px] w-full rounded-xl border-2 border-hueso/25 bg-tinta px-3 text-[22px] font-bold tabular-nums" />
           </div>
-          <p className="text-[14px] text-hueso/75">
-            Es el total de la cuenta de esta mesa en Fudo, con lo ya pagado incluido.
-          </p>
           {acordado && (
             <p className="text-[15px] font-semibold text-oro">
               📋 Lo acordado en la cotización N° {acordado.folio}: {pesosCL(acordado.total)} con IVA,

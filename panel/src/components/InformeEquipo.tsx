@@ -601,7 +601,9 @@ function LineaPersona({
                   </div>
                 ))}
               </dl>
-              {nota && <p className="mt-2 text-[13px] text-hueso/70 lg:mt-1">{nota}</p>}
+              {/* La nota de siempre (propina aparte, contratado) ya la dicen
+                  los avisos de arriba: no se repite en cada tarjeta (2026-11-21,
+                  regla *lo que explica va en su ?*). */}
               {/* **El ajuste, en la caja verde en el celular**; en el computador
                   va arriba de la columna del pago (2026-11-21, lo pidió el
                   cliente). Es el mismo bloque, dibujado en uno de los dos lados. */}
@@ -615,9 +617,6 @@ function LineaPersona({
                                   lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-3 lg:px-3 lg:py-2">
                     <p className="text-[15px] font-bold text-ambar-texto lg:text-[14px]">
                       ○ Todavía no suma: {fuera.sinMarcar.length} {fuera.sinMarcar.length === 1 ? 'día' : 'días'} {palabraSinMarcar}
-                    </p>
-                    <p className="mt-1 text-[13px] text-hueso/75 lg:col-start-1 lg:mt-0.5">
-                      Hasta que el encargado de turno marque si vino, esos días no se pagan. Márcalos y vuelve.
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:justify-end">
                       {fuera.sinMarcar.map((f) => (
@@ -1885,22 +1884,9 @@ export default function InformeEquipo() {
         </div>
       </div>
 
-      {sinConfirmar > 0 && (
-        <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
-            Hay {sinConfirmar} actividad{sinConfirmar === 1 ? '' : 'es'} extra
-            sin confirmar en este periodo.
-          </p>
-          <p className="mt-1 text-sm text-hueso/70">
-            Igual que un turno sin cerrar, no suman: mientras nadie diga
-            si el jinete o la pintacaritas llegó, el total está incompleto. Se
-            confirma en{' '}
-            <a href="/extras" className="text-oro hover:underline">
-              actividades extras
-            </a>.
-          </p>
-        </div>
-      )}
+      {/* **Sin aviso de actividades sin confirmar** (2026-11-21), igual que
+          el de los turnos sin cerrar, que el cliente sacó el mismo día: lo
+          dicen el filtro *Sin marcar* (equipo y extras) y cada tarjeta. */}
 
       {lineas.length === 0 && lineasExtras.length === 0 && lineasVendedores.length === 0 ? (
         <p className="text-sm text-hueso/50">
@@ -2385,14 +2371,12 @@ export default function InformeEquipo() {
               </li>
             ))}
           </ul>
-          {/* La distinción que hay que hacer **antes** de apretar. */}
-          <p className="mt-3 text-[14px] text-hueso/70">
-            <strong className="text-hueso/85">Deshacer</strong> es para un pago
-            anotado por error: borra la fila y vuelve a quedar como no pagado.
-            Si de verdad se pagó de más o devolvieron plata, anota un pago en
-            negativo, y así queda el rastro de los dos movimientos.
-          </p>
-          <div className="mt-4 flex justify-end">
+          {/* La distinción que hay que hacer **antes** de apretar, en su `?`
+              (2026-11-21, regla *lo que explica va en su ?*). */}
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <span className="mr-auto flex items-center gap-1.5 text-[13px] text-hueso/65">
+              ¿Deshacer o anotar uno en negativo? <AyudaCorta tema="deshacerPago" />
+            </span>
             <button type="button" onClick={() => setViendoPagos(null)}
               className="boton">Listo</button>
           </div>

@@ -15,6 +15,7 @@
  * solo" en CLAUDE.md).
  */
 import AvisoFijo from './AvisoFijo';
+import AyudaCorta from './AyudaCorta';
 import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
@@ -407,10 +408,8 @@ export default function ClientesEditor() {
                         `privacidad.ts`): llega con el contacto tapado y no
                         se edita. Cotizarle la vuelve suya. */}
                     {c.contactoTapado ? (
-                      <p className="rounded-lg border border-hueso/15 px-3 py-2.5 text-[15px] text-hueso/75">
-                        🔒 Es un cliente de otro vendedor{c.telefono ? ` · ${c.telefono}` : ''}. Su contacto lo ven
-                        la administración y quien lo atiende; si te pide una cotización, <strong>+ Cotizarle</strong> lo
-                        deja también en tu lista.
+                      <p className="flex flex-wrap items-center gap-1.5 rounded-lg border border-hueso/15 px-3 py-2.5 text-[15px] text-hueso/75">
+                        🔒 Es un cliente de otro vendedor{c.telefono ? ` · ${c.telefono}` : ''}. <AyudaCorta tema="clienteDeOtro" />
                       </p>
                     ) : (
                     <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">

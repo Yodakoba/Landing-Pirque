@@ -18,6 +18,7 @@
  * cotización no se suelta acá: se cancela desde su cotización.
  */
 import { BotonMias, BotonTodos } from './BotonMias';
+import AyudaCorta from './AyudaCorta';
 import { useState } from 'react';
 import Dialogo from './Dialogo';
 import { avisar, copiarConAviso } from './AvisoFlotante';
@@ -149,16 +150,20 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
 
   return (
     <section id="sobrecupo" className="mt-6 rounded-xl border-2 border-rojo-fuerte/70 bg-rojo/5 p-4">
-      <h2 className="text-[17px] font-bold text-rojo-texto">
-        ⚠ Sobrecupo: {dia.sobrecupo} {dia.sobrecupo === 1 ? 'persona' : 'personas'} sobre el cupo
-        <span className="font-semibold"> ({dia.tomadas} de {dia.capacidad})</span>
+      <h2 className="flex flex-wrap items-center gap-2 text-[17px] font-bold text-rojo-texto">
+        <span>
+          ⚠ Sobrecupo: {dia.sobrecupo} {dia.sobrecupo === 1 ? 'persona' : 'personas'} sobre el cupo
+          <span className="font-semibold"> ({dia.tomadas} de {dia.capacidad})</span>
+        </span>
+        {/* Por qué pasa, en su `?` (2026-11-21, regla *lo que explica va en su ?*). Lo que hay que decidir queda. */}
+        <AyudaCorta tema="sobrecupo" />
       </h2>
-      <p className="mt-1 text-[15px] text-hueso/85">
-        Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia, así que ya
-        están adentro.{conCupo ? ' Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin '
-          + 'pagar y le avisas al cliente.'
-          : conDias ? ' Pídele al encargado de operaciones ampliar el cupo, o suelta una reserva sin pagar y avísale al cliente.' : ''}
-      </p>
+      {(conCupo || conDias) && (
+        <p className="mt-1 text-[15px] text-hueso/85">
+          {conCupo ? 'Decide: amplías el cupo y traes más equipo, o sueltas una reserva sin pagar y le avisas al cliente.'
+            : 'Pídele al encargado de operaciones ampliar el cupo, o suelta una reserva sin pagar y avísale al cliente.'}
+        </p>
+      )}
 
       {/* **El encargado pide, el gerente amplía** (2026-11-12). */}
       {conDias && !conCupo && ampliar.cupo > dia.capacidad && (
@@ -212,9 +217,6 @@ export default function BloqueSobrecupo({ dia, reservas, capacidadMaxima, rol, u
       {!conDias && (
         <div className="mt-3 rounded-xl border-2 border-oro/60 bg-oro/10 p-3">
           <p className="text-[16px] font-bold">🙋 Esto lo decide la administración</p>
-          <p className="mt-1 text-[14px] text-hueso/85">
-            Tú no amplías el cupo: avísale a la administración y espera qué decide.
-          </p>
           <ol className="mt-3 space-y-2 text-[15px]">
             <li className="flex flex-wrap items-center gap-2">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oro font-bold text-tinta">1</span>

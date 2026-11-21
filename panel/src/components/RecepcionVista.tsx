@@ -329,9 +329,14 @@ export default function RecepcionVista() {
                       </button>
                     );
                   })()}
-                  <p className="mt-2 text-[14px] text-hueso/65">
-                    Si llegaron menos, la reserva no cambia: se le avisa al jefe de turno. Si llegaron más, se suman a la mesa.
-                  </p>
+                  {/* Solo lo que pasa con el número elegido (2026-11-21, regla *lo que explica va en su ?*). */}
+                  {contando.n !== r.personas && (
+                    <p className="mt-2 text-[14px] text-hueso/65">
+                      {contando.n < r.personas
+                        ? 'Llegaron menos: la reserva no cambia y se le avisa al jefe de turno.'
+                        : 'Llegaron más: se suman a la mesa.'}
+                    </p>
+                  )}
                   <button type="button" className="boton mt-2 min-h-[44px]" onClick={() => setContando(null)}>Volver</button>
                 </div>
               ) : avisandoEsta ? (

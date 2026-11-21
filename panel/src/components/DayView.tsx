@@ -6,6 +6,7 @@
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
 import { usarAlDia, BarraAlDia } from './AlDia';
+import AyudaCorta from './AyudaCorta';
 import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
@@ -957,9 +958,9 @@ export default function DayView(
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1 border-t border-hueso/10 pt-2 text-[13px] text-hueso/70">
-                  No ocupan cupo todavía: los números de arriba no los cuentan. De cada cotización
-                  cuenta una sola alternativa, la de más gente.
+                {/* El porqué, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+                <p className="mt-1 flex items-center gap-1.5 border-t border-hueso/10 pt-2 text-[13px] text-hueso/70">
+                  No ocupan cupo todavía. <AyudaCorta tema="cotizadoDia" />
                 </p>
               </div>
             )}
@@ -1009,14 +1010,9 @@ export default function DayView(
                       text-hueso/80">
           <strong className="text-verde-texto">✓ Día cerrado</strong>
           {cierreDe(equipo!.cierres, fecha)?.quien &&
-            <> por {cierreDe(equipo!.cierres, fecha)!.quien}</>}. Las reservas están en
-          solo lectura.{' '}
-          {puedeCorregir
-            ? <>Puedes editar, borrar o anotar una reserva escribiendo el motivo;
-                <em> Vino / No vino</em> se corrige en{' '}
-                <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>
-            : <>Si hay que cambiar algo, pídeselo al encargado de operaciones o a
-                quien hace los pagos.</>}
+            <> por {cierreDe(equipo!.cierres, fecha)!.quien}</>}.{' '}
+          {/* Qué se puede hacer y quién corrige, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+          <AyudaCorta tema="diaCerrado" />
         </p>
       )}
 
@@ -1278,9 +1274,8 @@ export default function DayView(
                         `···· 5678`, así que no hay a quién llamar ni
                         escribir. Se dice quién lo tiene. */}
                     {r.contactoTapado && (
-                      <p className="rounded-lg border border-hueso/15 px-3 py-2 text-[14px] text-hueso/70">
-                        🔒 {r.telefono ? `${r.telefono} · ` : ''}El contacto de esta reserva lo ven la
-                        administración y quien la atiende.
+                      <p className="flex items-center gap-1.5 rounded-lg border border-hueso/15 px-3 py-2 text-[14px] text-hueso/70">
+                        🔒 {r.telefono || 'Contacto reservado'} <AyudaCorta tema="contactoTapado" />
                       </p>
                     )}
                     {!r.contactoTapado && (r.telefono || r.email) && (
