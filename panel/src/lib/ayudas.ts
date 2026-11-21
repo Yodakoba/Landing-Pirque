@@ -600,8 +600,9 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Alternativas',
     texto: [
       'Son versiones de la misma cotización para el mismo cliente: otro menú, otro precio, otro día. Cada una tiene su letra y su total.',
-      'Se mandan todas juntas en un solo link. Cuando el cliente decide, eliges "Se quedó con esta": las otras pasan a "No elegida" y el link muestra solo la elegida.',
-      'Antes de ganarla o de mandar el contrato hay que elegir. En el calendario cuentan una sola vez.'
+      'Crear una copia esta tal cual —menús, precios y descuentos— para que cambies lo que difiere.',
+      'Se mandan todas juntas en un solo link. Ganar una la elige: las otras pasan a "No elegida" y el link muestra solo la ganada.',
+      'En el calendario cuentan una sola vez, la de más gente.'
     ]
   },
   sinFecha: {
@@ -678,11 +679,61 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Se marca ganada con el anticipo pagado, o con el contrato firmado subido. Son las mismas condiciones que imprime el contrato.'
     ]
   },
+  tratoSocio: {
+    titulo: 'El trato de los socios',
+    texto: [
+      '5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto.',
+      'Lo confirma el encargado de pagos; mientras tanto ya se puede cotizar con él.'
+    ]
+  },
+  sujetaAEspacio: {
+    titulo: 'Sujeta a espacio',
+    texto: [
+      'Se ganó sin ningún pago y sin contrato firmado, así que su reserva se trata como una sin pago, igual que una de Shopify.',
+      'Si el día se llena con gente que pagó, esa gente tiene preferencia. Con el primer pago deja de estar sujeta a espacio.'
+    ]
+  },
+  ganada: {
+    titulo: 'Ganada',
+    texto: [
+      'Tiene su reserva en el calendario.',
+      'Si cambias algo acá —la fecha, la gente, los precios—, la reserva se actualiza sola.'
+    ]
+  },
+  invitados: {
+    titulo: 'Los invitados',
+    texto: [
+      'La cantidad de personas completa, adultos y niños.',
+      'Los menús se reparten este número; la once y el desayuno nacen con todos y se ajustan con − y +.'
+    ]
+  },
+  comisionSocio: {
+    titulo: 'Con un socio comercial',
+    texto: [
+      'El socio cobra su comisión por esta venta, y quien la vende, la parte de la suya que diga su ficha.',
+      'Un trato por confirmar lo confirma el encargado de pagos.'
+    ]
+  },
+  exclusivo: {
+    titulo: '¿Exclusivo?',
+    texto: [
+      'Lleva arriendo. Exclusivo: ese día no viene nadie más, y al ganarla deja de venderse.',
+      'Si se negoció que pueda venir otro grupo, no lo es.'
+    ]
+  },
+  liberarParaGanar: {
+    titulo: 'Liberar el día',
+    texto: [
+      'Para ganarla hay que cancelar o cambiar de fecha las reservas que ya hay ese día, con disculpas a cada cliente.',
+      'Eso no se hace solo: lo decide el encargado de operaciones, el de pagos o la gerencia, con Pedir liberar el día.'
+    ]
+  },
   contrato: {
     titulo: 'El contrato',
     texto: [
       'Sale de esta cotización: cliente, fecha, precio línea por línea y condiciones. No se escribe nada dos veces.',
-      'Se imprime, se firma en papel y se sube el firmado. Si después cambias la cotización, el que vale es el papel.'
+      'Se manda, se imprime, se firma en dos ejemplares y se sube el firmado. Si después cambias la cotización, el que vale es el papel.',
+      'Con varias alternativas, el contrato es de la que tienes abierta: si el cliente se quedó con otra, ábrela arriba y manda el contrato desde esa.'
     ]
   },
   mandarContrato: {

@@ -19,6 +19,7 @@
  *   con tarjetas de resumen, filtros y buscador. Ver `ListaCotizaciones`.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import { usarSoloMira } from './SesionCliente';
 import { Aviso } from './CalendarView';
@@ -627,8 +628,8 @@ export default function CotizacionesVista() {
       )}
       {vista === 'sinFecha' && (
         <div>
-          <p className="mb-3 text-[14px] text-hueso/70">
-            Cotizaciones que todavía no tienen día exacto. No ocupan ninguna fecha del calendario.
+          <p className="mb-3 flex items-center gap-1.5 text-[14px] text-hueso/70">
+            No ocupan ninguna fecha del calendario. <AyudaCorta tema="sinFecha" />
           </p>
           {sinFecha.length === 0 ? (
             <p className="rounded border border-dashed border-hueso/20 p-5 text-[15px] text-hueso/60">

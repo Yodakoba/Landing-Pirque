@@ -20,6 +20,7 @@
  * trato queda **por confirmar** y le llega a pagos (lo pidió el cliente).
  */
 import { useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import Dialogo from './Dialogo';
 import DatosBancarios from './DatosBancarios';
 import CamposDocumento, { type CambioDocumento } from './CamposDocumento';
@@ -151,13 +152,12 @@ export default function AgregarVendedor({ tipo, desdeCotizacion = false, onCerra
           )}
           {esVendedor && <p className="text-[13px] text-hueso/70">Se crea su cuenta con el rol Vendedor: cotiza y ve lo suyo.</p>}
           {!esVendedor && desdeCotizacion && (
-            <p className="rounded-lg border-2 border-dashed border-ambar/60 px-3 py-2 text-[14px] text-ambar-texto">
-              Nace con el trato de los socios —5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto—
-              y <b>lo confirma el encargado de pagos</b>. Mientras tanto ya puedes cotizar con él.
+            <p className="flex flex-wrap items-center gap-1.5 rounded-lg border-2 border-dashed border-ambar/60 px-3 py-2 text-[14px] text-ambar-texto">
+              Nace con el trato de los socios, y <b>lo confirma el encargado de pagos</b>. <AyudaCorta tema="tratoSocio" />
             </p>
           )}
           {!esVendedor && !desdeCotizacion && (
-            <p className="text-[13px] text-hueso/70">Nace con el trato de los socios: 5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto.</p>
+            <p className="flex items-center gap-1.5 text-[13px] text-hueso/70">Nace con el trato de los socios. <AyudaCorta tema="tratoSocio" /></p>
           )}
         </section>
 

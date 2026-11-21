@@ -11,6 +11,7 @@
  * elegir.
  */
 import CampoRut from './CampoRut';
+import AyudaCorta from './AyudaCorta';
 import { desgloseDocumento, retencionDelAno, tasaEnTexto, type Documento } from '@/lib/boletas';
 import { faltaParaFacturar, type DatosFactura } from '@/lib/vendedores';
 import { enPesos } from '@/lib/ocupacion';
@@ -59,11 +60,16 @@ export default function CamposDocumento({ documento, incluido, factura, onCambio
             </button>
           ))}
         </div>
-        <p className="mt-2 rounded-lg border border-hueso/15 px-3 py-2 text-[14px] text-hueso/85">
-          Ejemplo: si gana {enPesos(100000)},{' '}
-          {esFactura
-            ? <>factura <b>{enPesos(ej.enDocumento)}</b> (neto {enPesos(ej.neto)} + IVA {tasaEnTexto(ej.tasa)} {enPesos(ej.impuesto)}) y se le transfieren <b>{enPesos(ej.aTransferir)}</b>.</>
-            : <>boletea <b>{enPesos(ej.enDocumento)}</b>, se retienen {enPesos(ej.impuesto)} ({tasaEnTexto(ej.tasa)}) y se le transfieren <b>{enPesos(ej.aTransferir)}</b>.</>}
+        {/* El ejemplo con números, en su `?` (2026-11-21, regla *lo que explica
+            va en su ?*). */}
+        <p className="mt-2 flex items-center gap-1.5 text-[14px] text-hueso/70">
+          Un ejemplo con números
+          <AyudaCorta titulo="Un ejemplo">
+            Si gana {enPesos(100000)},{' '}
+            {esFactura
+              ? <>factura {enPesos(ej.enDocumento)} (neto {enPesos(ej.neto)} + IVA {tasaEnTexto(ej.tasa)} {enPesos(ej.impuesto)}) y se le transfieren {enPesos(ej.aTransferir)}.</>
+              : <>boletea {enPesos(ej.enDocumento)}, se retienen {enPesos(ej.impuesto)} ({tasaEnTexto(ej.tasa)}) y se le transfieren {enPesos(ej.aTransferir)}.</>}
+          </AyudaCorta>
         </p>
       </div>
 

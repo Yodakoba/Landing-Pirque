@@ -144,7 +144,7 @@ function ElegirHorario({ valor, deSiempre, onCambio }: {
         <p className="text-[13px] text-hueso/70">Termina después de medianoche.</p>
       )}
       {!valor.trim() ? (
-        <p className="text-[13px] text-hueso/70">El de siempre, de Configuración. Con − y + lo cambias para este evento.</p>
+        <p className="text-[13px] text-hueso/70">El de siempre (Configuración).</p>
       ) : !propio ? (
         <p className="text-[13px] font-semibold text-ambar-texto">
           Estaba escrito a mano: “{valor}”. Con − y + queda en el formato de siempre.
@@ -975,9 +975,8 @@ export default function CotizacionDialogo({
       <p className="text-[17px] font-bold text-morado-texto">
         🟣 Es exclusivo, y ese día ya hay {otrasPersonas} {otrasPersonas === 1 ? 'persona reservada' : 'personas reservadas'}
       </p>
-      <p className="mt-1 text-hueso/85">
-        Para ganarla hay que liberar el día: cancelar o cambiar de fecha esas reservas, con
-        disculpas a cada cliente. Eso no se hace solo: lo decide el encargado de operaciones, el de pagos o la gerencia.
+      <p className="mt-1 flex items-center gap-1.5 text-hueso/85">
+        Para ganarla hay que liberar el día. <AyudaCorta tema="liberarParaGanar" />
       </p>
       {plazoExcl && !plazoExcl.enPlazo && decisionExcl.estado !== 'aprobada' && (
         <p className="mt-2 font-semibold text-ambar-texto">
@@ -1116,9 +1115,9 @@ export default function CotizacionDialogo({
         ? `⚠ Ganada sin pago ni contrato · sujeta a espacio`
         : `✓ Ganada${firmado ? ' y firmada' : ''} · falta el saldo: ${enPesos(cobrado.falta)}`}
       bajada={ganaSinRespaldo(cobrado.pagado, !!firmado)
-        ? `Se trata como una reserva sin pago: si el día se llena con gente que pagó, esa gente tiene preferencia. Con el primer pago deja de estar sujeta a espacio. Falta ${enPesos(cobrado.falta)}.`
-        : `Lo que falta para completar la reserva. Se paga ${cond.saldoHasta
-        ? `hasta el ${enPalabras(cond.saldoHasta)}` : `${cond.dias} días antes del evento`}; cuando pague, márcalo acá y la reserva queda Pagada.`}>
+        ? `Falta ${enPesos(cobrado.falta)}.`
+        : `Se paga ${cond.saldoHasta
+        ? `hasta el ${enPalabras(cond.saldoHasta)}` : `${cond.dias} días antes del evento`}.`}>
       {puedeEditar && (
         <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
           className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
@@ -1142,8 +1141,7 @@ export default function CotizacionDialogo({
   const hitoEnvio: React.ReactNode = !p || cancelada || noQuedo ? null
     : ganada ? (
       saldo && firmado ? saldo : (
-        <Hito tono="verde" titulo="✓ Ganada · sigue el contrato"
-          bajada="La reserva ya está en el calendario. Lo que sigue es mandarle el contrato y que vuelva firmado.">
+        <Hito tono="verde" titulo="✓ Ganada · sigue el contrato">
           <button type="button" className="boton boton-relleno min-h-[52px] px-6 text-[16px]"
             onClick={() => setPaso(5)}>Ir al paso 5: Contrato →</button>
         </Hito>
@@ -1157,14 +1155,14 @@ export default function CotizacionDialogo({
     ) : !mandada ? (
       <Hito tono="rosa" titulo={enElLink.length > 1 ? `Mándale las ${enElLink.length} alternativas` : 'Mándasela al cliente'}
         bajada={(enElLink.length > 1 ? `Van todas en un solo link: ${resumenLink}. ` : '')
-          + 'WhatsApp y Correo abren el mensaje con el link. Al volver te pregunto si la mandaste: desde ahí corre su vigencia y aparece en el calendario de reservas.'}>
+          + 'Al volver te pregunto si la mandaste.'}>
         <BotonesMandar link={link} whatsapp={whatsapp} correo={correo} onMandar={mandar} grande />
       </Hito>
     ) : (
       <Hito tono="ambar" titulo={`Esperando el anticipo: ${enPesos(cobrado.faltaAnticipo)}`}
         bajada={firmado
           ? 'Ya tiene el contrato firmado: también se puede marcar ganada en el paso 5, Contrato.'
-          : 'Con el anticipo pagado se puede marcar ganada. Si pagó otro monto, anótalo arriba en El pago.'}>
+          : 'Si pagó otro monto, anótalo arriba en El pago.'}>
         {puedeEditar && (
           <button type="button" disabled={guardando}
             onClick={() => void cobrar(cobrado.faltaAnticipo, 'Anticipo')}
@@ -1191,7 +1189,7 @@ export default function CotizacionDialogo({
         </Hito>
       ) : (
         <Hito tono="cielo" titulo="Mándale el contrato"
-          bajada="WhatsApp y Correo abren el mensaje con el link del contrato. Al volver te pregunto si lo mandaste.">
+          bajada="Al volver te pregunto si lo mandaste.">
           <BotonesMandar link={linkContrato} whatsapp={whatsappContrato} correo={correoContrato}
             onMandar={(v) => mandar(v, 'contrato')} ver="Ver el contrato" grande />
           {puedeEditar && <SubirFirmado subiendo={subiendoContrato} onArchivo={(f) => void subirContrato(f)} />}
@@ -1302,24 +1300,22 @@ export default function CotizacionDialogo({
       )}
       {cancelada && (
         <p className="mb-3 rounded border border-rojo-fuerte/60 bg-rojo/10 px-3 py-2 text-[14px]">
-          <strong className="text-rojo-texto">Cancelada.</strong> Su reserva liberó el cupo. Ya no se
-          edita: lo que queda es la devolución, en el paso Condiciones.
+          <strong className="text-rojo-texto">Cancelada.</strong> Lo que queda es la devolución, en el paso 4, Envío.
         </p>
       )}
       {ganada && !cancelada && (ganaSinRespaldo(cobrado.pagado, !!firmado) ? (
         // **Ganada sin un peso y sin contrato** (2026-11-12): se dice arriba,
         // en todos los pasos, porque su reserva no tiene preferencia.
         <div className="mb-3 rounded-lg border-2 border-dashed border-ambar-fuerte/70 bg-ambar/10 px-3 py-2 text-[15px]">
-          <p><strong className="text-ambar-texto">⚠ Ganada sin pago ni contrato: sujeta a espacio.</strong></p>
-          <p className="mt-0.5 text-hueso/85">
-            Su reserva se trata como una sin pago, igual que una de Shopify: si el día se llena con gente que pagó,
-            esa gente tiene preferencia. Con el primer pago deja de estar sujeta a espacio.
+          {/* El porqué, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+          <p className="flex items-center gap-2">
+            <strong className="text-ambar-texto">⚠ Ganada sin pago ni contrato: sujeta a espacio.</strong>
+            <AyudaCorta tema="sujetaAEspacio" />
           </p>
         </div>
       ) : (
-        <p className="mb-3 rounded border border-verde-fuerte/60 bg-verde/10 px-3 py-2 text-[14px]">
-          <strong className="text-verde-texto">Ganada.</strong> Tiene su reserva en el calendario.
-          Si cambias algo acá, la reserva se actualiza sola.
+        <p className="mb-3 flex items-center gap-2 rounded border border-verde-fuerte/60 bg-verde/10 px-3 py-2 text-[14px]">
+          <strong className="text-verde-texto">✓ Ganada.</strong> <AyudaCorta tema="ganada" />
         </p>
       ))}
 
@@ -1465,9 +1461,9 @@ export default function CotizacionDialogo({
                 <button type="button" className="boton h-12 w-12 text-xl"
                   onClick={() => setInvitados(invitados + 1)} aria-label="Uno más">+</button>
               </div>
-              <p className="mt-1 text-[13px] text-hueso/60">
-                La cantidad de personas completa, adultos y niños. Los menús se reparten
-                este número; la once y el desayuno nacen con todos y se ajustan con − y +.
+              {/* Qué cuenta y cómo se reparte, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+              <p className="mt-1 flex items-center gap-1.5 text-[13px] text-hueso/60">
+                Adultos y niños <AyudaCorta tema="invitados" />
               </p>
             </div>
 
@@ -1528,10 +1524,9 @@ export default function CotizacionDialogo({
                     </div>
                   )}
                   {socio && (
-                    <p className="mt-1 text-[13px] text-hueso/70">
-                      {elegido?.nombre ?? 'El socio'} cobra su comisión por esta venta, y quien la vende,
-                      la parte de la suya que diga su ficha.
-                      {elegido?.porConfirmar && <b className="text-ambar-texto"> Su trato está por confirmar: lo confirma el encargado de pagos.</b>}
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-hueso/70">
+                      Comisión de {elegido?.nombre ?? 'el socio'} <AyudaCorta tema="comisionSocio" />
+                      {elegido?.porConfirmar && <b className="text-ambar-texto">Su trato está por confirmar.</b>}
                     </p>
                   )}
                   {agregandoSocio && (
@@ -1617,7 +1612,7 @@ export default function CotizacionDialogo({
                 ))}
                 {show && !publico && esFecha(fechaReal) && !vistas.some((l) => l.concepto === show.nombre) && (
                   <p className="mt-2 text-[13px] text-hueso/70">
-                    Día privado: el show ecuestre es opcional y tiene costo. Agrégalo arriba si va.
+                    Día privado: el show ecuestre va solo si lo agregas.
                   </p>
                 )}
               </div>
@@ -1831,10 +1826,8 @@ export default function CotizacionDialogo({
                 ganarla. */}
             {p && (conArriendo || esExcl) && (
               <div className="rounded-xl border-2 border-morado-fuerte/60 bg-morado/[0.08] p-4">
-                <p className="text-[17px] font-bold text-morado-texto">🟣 ¿El día es exclusivo?</p>
-                <p className="mt-1 text-[14px] text-hueso/80">
-                  Lleva arriendo. Exclusivo: ese día no viene nadie más, y al ganarla deja de venderse.
-                  Si se negoció que pueda venir otro grupo, no lo es.
+                <p className="flex items-center gap-2 text-[17px] font-bold text-morado-texto">
+                  🟣 ¿El día es exclusivo? <AyudaCorta tema="exclusivo" />
                 </p>
                 {ganada ? (
                   <p className="mt-2 text-[15px] font-semibold">
@@ -1878,10 +1871,8 @@ export default function CotizacionDialogo({
                 que es donde se decide si conviene ofrecer otra. */}
             {p && puedeEditar && !grupoGanado && !cancelada && (
               <div className="rounded-xl border-2 border-dashed border-oro/50 bg-oro/[0.05] p-4">
-                <p className="text-[17px] font-bold">¿Le ofreces otra versión?</p>
-                <p className="mt-1 text-[14px] text-hueso/75">
-                  Copia esta tal cual —menús, precios y descuentos— para que cambies lo que difiere.
-                  Se mandan todas juntas en un solo link, y el cliente elige.
+                <p className="flex items-center gap-2 text-[17px] font-bold">
+                  ¿Le ofreces otra versión? <AyudaCorta tema="alternativas" />
                 </p>
                 <button type="button" disabled={guardando} onClick={() => void duplicar(3)}
                   className="boton mt-3 min-h-[52px] w-full !border-oro text-[16px] font-bold sm:w-auto">
@@ -1907,9 +1898,6 @@ export default function CotizacionDialogo({
               {enElLink.length > 1 && !ganada && (
                 <p className="mt-2 rounded-lg border border-oro/40 bg-oro/[0.06] px-3 py-2 text-[15px]">
                   <strong>En el link van {enElLink.length} alternativas:</strong> {resumenLink}.
-                  <span className="block text-[14px] text-hueso/75">
-                    Se mandan juntas; cuando el cliente decida, eliges con cuál se quedó.
-                  </span>
                 </p>
               )}
             </div>
@@ -2268,11 +2256,7 @@ export default function CotizacionDialogo({
                   {p.validoHasta ? <>Vigente hasta el {enPalabras(p.validoHasta)}.</> : null}
                 </p>
               )}
-              {p && !mandada && !ganada && (
-                <p className="text-[14px] text-hueso/75">
-                  Todavía no se manda: no vence y no aparece en el calendario de reservas.
-                </p>
-              )}
+
               {/* Antes de mandarla, los botones están en el próximo paso, grandes;
                   acá aparecen después, para volver a mandarla. Dos veces en la
                   misma pantalla era no saber cuál apretar. */}
@@ -2363,8 +2347,7 @@ export default function CotizacionDialogo({
             {porElegir && (
               <p className="rounded-lg border-2 border-oro/50 bg-oro/[0.06] px-3 py-2 text-[15px]">
                 <strong>Este contrato es de la alternativa {letra}</strong>
-                {' '}({enPesos(cuentas.total)}). Si el cliente se quedó con otra, ábrela arriba y
-                manda el contrato desde esa.
+                {' '}({enPesos(cuentas.total)}).
               </p>
             )}
 
@@ -2393,16 +2376,11 @@ export default function CotizacionDialogo({
                       <span className="ml-2 text-[14px] text-hueso/70">
                         {contratoEnviado
                           ? <>Enviado el {enPalabras(contratoEnviado)}: falta que vuelva firmado.</>
-                          : 'Se manda, se firma en dos ejemplares y se sube el firmado.'}
+                          : <span className="inline-flex items-center gap-1.5">Falta mandarlo <AyudaCorta tema="contrato" /></span>}
                       </span>
                     </p>
                   )}
-                  {firmado && (
-                    <p className="text-[14px] text-hueso/75">
-                      Si cambias la cotización, el contrato del link deja de coincidir con el
-                      firmado: el que vale es el papel.
-                    </p>
-                  )}
+
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {/* Con factura, el RUT y la dirección ya se piden arriba:
@@ -2814,7 +2792,9 @@ function Seccion({ tono, icono, titulo, ayuda, children }: {
 
 /** El bloque del próximo hito: grande, con su color y lo que pasa al apretarlo. */
 function Hito({ tono, titulo, bajada, children }: {
-  tono: 'verde' | 'rosa' | 'ambar' | 'cielo'; titulo: string; bajada: string; children?: React.ReactNode;
+  tono: 'verde' | 'rosa' | 'ambar' | 'cielo'; titulo: string;
+  /** Una frase de lo que pasa o lo que falta. El porqué va en su `?`, no acá. */
+  bajada?: string; children?: React.ReactNode;
 }) {
   const [borde, fondo, texto] = TONOS[tono].split(' ');
   return (
@@ -2822,7 +2802,7 @@ function Hito({ tono, titulo, bajada, children }: {
       <div>
         <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Próximo paso</p>
         <p className={`text-[22px] font-extrabold leading-tight ${texto}`}>{titulo}</p>
-        <p className="mt-1 text-[15px] text-hueso/80">{bajada}</p>
+        {bajada && <p className="mt-1 text-[15px] text-hueso/80">{bajada}</p>}
       </div>
       {children}
     </div>
