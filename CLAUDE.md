@@ -1344,8 +1344,13 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   y `aReserva()` lo descarta a propósito. Al 2026-11-20 vendía hasta el
   domingo 27 de diciembre: **quien compró ahí para una fecha posterior al
   lanzamiento no le descuenta cupo al panel** hasta que alguien lo anote.
-  Y al lanzar, ese producto hay que sacarlo de Tienda online: en `tienda.`
-  el tema viejo lo seguiría vendiendo.
+  **Se anotan a mano en el panel** (lo decidió el cliente el 2026-11-21): no
+  se le enseña al panel a leer el modelo viejo. Y al lanzar, ese producto
+  hay que sacarlo de Tienda online: en `tienda.` el tema viejo lo seguiría
+  vendiendo.
+- **El medio de pago "Pago en el local" ya existe en la tienda real**
+  (confirmado por el cliente el 2026-11-21). Que la regla por SKU oculte el
+  medio que no corresponde se ve en la compra de prueba de cada modalidad.
 
 ### Las variantes de la tienda de desarrollo (2026-10-13)
 
