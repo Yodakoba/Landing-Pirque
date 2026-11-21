@@ -16,7 +16,7 @@
  * llamada directa a la API tiene que obedecer la misma regla.
  */
 import { useMemo, useState } from 'react';
-import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
+import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
 import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
@@ -575,8 +575,7 @@ export default function EquipoDialogo({
              pastilla *Faltan N* y el *+ Agregar…* en ámbar. Los completos
              quedan como estaban. */
           <div key={l.puesto} id={`puesto-${encodeURIComponent(l.puesto)}`}
-            className={`min-w-0 scroll-mt-4 rounded-xl p-2 sm:p-3 ${l.faltan > 0
-              ? 'border-2 border-ambar-fuerte/70 bg-ambar/5' : 'border border-hueso/15'}`}>
+            className={`min-w-0 scroll-mt-4 p-2 sm:p-3 ${marcoGrupo(l.faltan > 0)}`}>
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="px-1 text-[15px] font-semibold">{l.puesto}</h3>
               <span className="flex shrink-0 items-center gap-1.5">

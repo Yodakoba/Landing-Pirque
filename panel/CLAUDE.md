@@ -66,6 +66,7 @@ revisan antes de cada cambio en esta carpeta.
   | Escribirle al cliente por WhatsApp | `BotonWhatsApp` (o `abrirWhatsApp()`), con el saludo de `saludoAlCliente()` |
   | Cuánto boletear: bruto, retención y neto | `CajaBoleta` (link personal e informe) |
   | Una tarjeta de una lista que se abre: el marco, el + / − y el pie *▴ Cerrar* | `marcoTarjeta`, `SignoAbrir`, `PieCerrar` y `LISTA_TARJETAS` de `TarjetaLista` (Informe, Equipo, Extras, Vendedores, Clientes, Productos, Recepción, las reservas del día y las ventanas del equipo y de extras del día) |
+  | Un grupo de tarjetas (un puesto en la ventana del equipo) | `marcoGrupo` de `TarjetaLista` |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -274,6 +275,15 @@ regla *un cambio de diseño se lleva a sus parecidos* (arriba).
   distintos: línea de 1px con un `+` suelto (Equipo, Extras, Clientes,
   Productos), 2px con círculo (Vendedores, Recepción, el día) y 3px (el
   informe).
+- **Los puestos de la ventana del equipo del día son un grupo** (lo pidió el
+  cliente el mismo día, con una foto: *"los bordes de las tarjetas de los
+  distintos puestos aún no siguen esa regla… pueden ayudar a ordenar la
+  vista"*): `marcoGrupo()`, el mismo grosor de 3px pero más claro y con el
+  fondo apenas teñido, para que las tarjetas de adentro se lean encima; el
+  puesto al que le falta gente, en ámbar como antes. Es la misma ventana
+  desde Turnos, desde Reservas y desde la página del día, y su cara
+  *Reservas* (`ReservasDelDia`) también usa la tarjeta, verde si vino y roja
+  si no vino.
 - **El pie *▴ Cerrar*** va en las fichas largas: Informe, Equipo, Extras,
   Vendedores, Clientes y Productos. En la Recepción no, porque la tarjeta
   termina en *Llegó / No vino*. Tampoco en las reservas del día ni en las

@@ -31,6 +31,7 @@ import { POR_DEFECTO_MENUS, type Menu } from '@/lib/menus';
 import Asistencia from './Asistencia';
 import PastillaPago from './PastillaPago';
 import IngresoFudo from './IngresoFudo';
+import { LISTA_TARJETAS, marcoTarjeta } from './TarjetaLista';
 
 /**
  * Un azulejo: el número grande arriba y qué es debajo. La misma forma que
@@ -207,12 +208,15 @@ export default function ReservasDelDia({
               botones compartieran fila con el nombre, el largo del nombre
               decidiría dónde quedan. */}
           <fieldset disabled={modo === 'bloqueado'} className="m-0 min-w-0 border-0 p-0">
-          <ul className="mt-2 space-y-2">
+          <ul className={`mt-2 ${LISTA_TARJETAS}`}>
             {delDia.map((r) => {
               const libero = !ocupaLugar(r);
               return (
+                // La misma tarjeta de las demás listas (`TarjetaLista`):
+                // verde si vino, roja si no vino.
                 <li key={r.fila}
-                  className={`rounded border border-hueso/15 bg-panel p-3 ${
+                  className={`${marcoTarjeta(false, r.asistencia === ASISTENCIA.vino ? 'verde'
+                    : r.asistencia === ASISTENCIA.noVino ? 'rojo' : 'normal', true)} p-3 ${
                     libero ? 'opacity-50' : ''}`}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <span className={`font-semibold ${libero ? 'line-through' : ''}`}>

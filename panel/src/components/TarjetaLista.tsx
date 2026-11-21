@@ -36,6 +36,18 @@ export function marcoTarjeta(abierta: boolean, tono: TonoTarjeta = 'normal', ten
   }
 }
 
+/**
+ * **El marco de un grupo de tarjetas**: un puesto en la ventana del equipo del
+ * día (2026-11-21, lo pidió el cliente: *"los bordes de las tarjetas de los
+ * distintos puestos… también pueden ayudar a ordenar la vista"*). El mismo
+ * grosor de 3px, pero más claro y con el fondo apenas teñido, para que las
+ * tarjetas de adentro se lean encima. Con `falta`, en ámbar: el puesto que no
+ * alcanza se ve desde lejos.
+ */
+export function marcoGrupo(falta = false): string {
+  return `rounded-2xl border-[3px] ${falta ? 'border-ambar-fuerte/70 bg-ambar/5' : 'border-hueso/30 bg-hueso/[0.03]'}`;
+}
+
 /** El espacio entre una tarjeta y la siguiente: 12px, y 8px en el computador. */
 export const LISTA_TARJETAS = 'space-y-3 lg:space-y-2';
 
