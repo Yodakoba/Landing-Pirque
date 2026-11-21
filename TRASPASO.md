@@ -31,10 +31,19 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   lanzamiento, `brasasdelopirque.cl` **cobran de verdad**. Las versiones de
   prueba de un PR, GitHub Pages y `localhost` siguen contra la tienda de
   desarrollo, que no cobra.
-- **No hay PR abierto.** El último, el #285 (todo lo de las últimas horas,
-  sección 4), se mergeó el 21-11-2026 con el OK del cliente, y el panel en
-  producción quedó comprobado: `/login` 200, `/api/publico/fechas` 200 y el
-  webhook sin firma 401.
+- **El PR #285** (todo lo de las últimas horas, sección 4) **se mergeó el
+  21-11-2026** con el OK del cliente, y el panel en producción quedó
+  comprobado: `/login` 200, `/api/publico/fechas` 200 y el webhook sin firma
+  401.
+- **PR #287 está abierto**, en la rama `claude/traspaso-md-resumen-1dc8d5`:
+  el cliente pidió ***"déjalo en preview"***, así que **se mergea solo cuando
+  diga *"mergea"***. Trae la capa 1 de *el computador, más compacto*.
+  https://github.com/ayc-y-blp/aycyblp/pull/287
+- **En curso: compactar las vistas del panel en el computador**, en dos
+  capas. La 1 —el marco común— está en el PR #287. **La 2 —pantalla por
+  pantalla— está propuesta y sin empezar**: se parte cuando el cliente la
+  pida, con capturas de antes y después de cada tanda. El criterio y la
+  lista, en `panel/CLAUDE.md`, "El computador, más compacto".
 - Lo que falta antes y después del lanzamiento está en la sección 7, en
   orden.
 
@@ -466,6 +475,29 @@ cambios en `InformeEquipo`, `CajaBoleta`, `EquipoDialogo`, `ExtrasDialogo`,
 `public/ayuda/`. **Ninguna columna nueva salvo la pestaña `Ajustes
 sueltos`; ningún permiso cambió.**
 
+### PR #287, abierto (el cliente pidió *"déjalo en preview"*)
+
+Lo pidió el cliente el 21-11-2026: *"se puede compactar todas las vistas en
+el computador un poco más, sin perder la regla PlayStation y… el aspecto
+jugable, intuitivo en el panel"*. Se midieron las 15 pantallas a 1280×650:
+el título aparecía recién a los 202–209px. **Lo que sobra es aire entre
+piezas, no tamaño de botones ni de letra.**
+
+- **Capa 1, en este PR**: el marco común, **solo desde 1024px** (`lg:`). La
+  barra baja de 109 a 97px, la tira *¿Primera vez acá?* de 61 a 49px y el
+  margen sobre la página de 32 a 16px; el título de cada pantalla sube unos
+  40px. Los botones del menú siguen en 36px y ninguna letra baja. **El
+  celular y las páginas que se mandan afuera** (link personal, planilla
+  semanal, cotización, contrato, entrada) **quedan igual**: la barra del
+  panel lleva `data-marco="panel"` y el `<main>` sube solo cuando la ve.
+- Toca `layout.tsx`, `Cabecera`, `Recorrido`, `BandaSeccion` y dos márgenes
+  de `CalendarView`. Sin lecturas de Google, sin permisos, sin fotos de la
+  ayuda que rehacer (se sacan a 400px de ancho).
+- **Capa 2, pendiente**: juntar filas en Calendario y en la página del día,
+  los campos de Configuración (77px cada uno), los avisos y filtros de
+  Turnos, Extras y Cotizaciones, y el botón principal y los filtros de 48 a
+  44px —juntos, porque son la misma pieza—.
+
 ---
 
 ## 5. Decisiones tomadas y por qué
@@ -567,6 +599,11 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
   filtro *Sin marcar* y cada tarjeta.
 - **Lo que explica va en su `?`** (21-11-2026): el equipo se capacita y el
   texto constante molesta.
+- **El computador se compacta quitando aire, no achicando** (21-11-2026):
+  solo desde 1024px, se junta lo que ocupa varias filas y se baja la
+  separación; los botones no bajan de 36px (44 lo que se usa seguido) ni la
+  letra de 13. En dos capas, para que el cliente vea cada pantalla antes de
+  seguir.
 - **El encargado de turno no ve cotizaciones; el vendedor ve todo y toca lo
   suyo; el contacto de los clientes se recorta por rol en el servidor**
   (`lib/privacidad.ts`).
@@ -662,18 +699,20 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 
 | # | Qué | Siguiente paso concreto | Quién |
 |---|---|---|---|
-| 1 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
-| 2 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
-| 3 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
-| 4 | **Base en cero** | Copiar la planilla real como respaldo; después *Configuración → Mantención → Dejar la base en cero*, cuando terminen las pruebas | Cliente |
-| 5 | **Pedidos del sitio viejo** | Anotar a mano en el panel los de fechas posteriores al lanzamiento (el producto viejo vendía hasta el 27-12) | Cliente |
-| 6 | **Lanzamiento** (domingo 22-11, en la noche) | En orden: (1) en Shopify, `tienda.` como dominio principal; (2) en Cloudflare, borrar el A de `@`, crear el CNAME a Vercel y cambiar `www`; (3) Vercel muestra *Valid Configuration*; (4) publicar el *Hydrogen Redirect Theme* con Hostname `brasasdelopirque.cl`, sin redirects ni cuentas (**recién después del DNS**); (5) comprobar: `tienda.` lleva al sitio nuevo, el link viejo del producto a reservas, una compra abre el checkout en `tienda.`, *ver pedido* abre; (6) sacar *Menú Tradiciones* de Tienda online; (7) borrar los webhooks de la tienda de desarrollo. **Vuelta atrás**: los registros a sus valores de antes y `brasasdelopirque.cl` de nuevo como principal | Cliente, con Claude |
-| 7 | **Después del lanzamiento** | Links en Maps, Instagram y WhatsApp; enviar el sitemap en Google Search Console; productos en Fudo; mirar en Vercel → Logs que las tres tareas diarias corran en 200 | Cliente |
-| 8 | **Importar el CRM** | El cliente sube el Excel **al chat** (nunca al repo); se diseña un importador en el panel, en un PR *con prueba*, que corre después de la base en cero | Cliente sube; Claude propone |
-| 9 | **Política de privacidad y condiciones de reserva** | No existen; son del negocio y conviene que las vea un abogado. Anotado en la guía *Traspaso a producción* (documento fuera del repo) | Cliente |
-| 10 | **Migración, pasos que quedan** | Pruebas a mano de punta a punta, respaldo de claves en la bóveda y apagar lo de la cuenta personal (`migracion-team/README.md`) | Cliente |
-| 11 | **Decisiones abiertas** | Si un contrato firmado sin pago da preferencia (gerencia); el recargo de pequeños; el mínimo de 25 en venta directa; el nombre del negocio en Maps; el desayuno y la once a $8.000 + IVA | Cliente |
-| 12 | **En pausa por datos** | Video del hero (sigue vivo en el CDN de Shopify, 63 MB); logo en SVG recoloreable; fotos de cabalgatas y de la cancha de beach tenis; Calicanto y el contrato de matrimonio (Fase 5) | Cliente |
+| 1 | **PR #287** (el computador más compacto, capa 1) | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main`. La preview del panel se abre con la sesión de Vercel del equipo | Cliente decide; Claude mergea |
+| 2 | **El computador más compacto, capa 2** | Cuando el cliente la pida: una tanda por grupo de pantallas (Calendario y el día; Turnos, Extras y Cotizaciones; Configuración y las listas), probada primero en el panel de ejemplo y mostrada con capturas de antes y después a 1280×650. La lista y el criterio, en `panel/CLAUDE.md`, "El computador, más compacto" | Claude propone; cliente decide |
+| 3 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
+| 4 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
+| 5 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
+| 6 | **Base en cero** | Copiar la planilla real como respaldo; después *Configuración → Mantención → Dejar la base en cero*, cuando terminen las pruebas | Cliente |
+| 7 | **Pedidos del sitio viejo** | Anotar a mano en el panel los de fechas posteriores al lanzamiento (el producto viejo vendía hasta el 27-12) | Cliente |
+| 8 | **Lanzamiento** (domingo 22-11, en la noche) | En orden: (1) en Shopify, `tienda.` como dominio principal; (2) en Cloudflare, borrar el A de `@`, crear el CNAME a Vercel y cambiar `www`; (3) Vercel muestra *Valid Configuration*; (4) publicar el *Hydrogen Redirect Theme* con Hostname `brasasdelopirque.cl`, sin redirects ni cuentas (**recién después del DNS**); (5) comprobar: `tienda.` lleva al sitio nuevo, el link viejo del producto a reservas, una compra abre el checkout en `tienda.`, *ver pedido* abre; (6) sacar *Menú Tradiciones* de Tienda online; (7) borrar los webhooks de la tienda de desarrollo. **Vuelta atrás**: los registros a sus valores de antes y `brasasdelopirque.cl` de nuevo como principal | Cliente, con Claude |
+| 9 | **Después del lanzamiento** | Links en Maps, Instagram y WhatsApp; enviar el sitemap en Google Search Console; productos en Fudo; mirar en Vercel → Logs que las tres tareas diarias corran en 200 | Cliente |
+| 10 | **Importar el CRM** | El cliente sube el Excel **al chat** (nunca al repo); se diseña un importador en el panel, en un PR *con prueba*, que corre después de la base en cero | Cliente sube; Claude propone |
+| 11 | **Política de privacidad y condiciones de reserva** | No existen; son del negocio y conviene que las vea un abogado. Anotado en la guía *Traspaso a producción* (documento fuera del repo) | Cliente |
+| 12 | **Migración, pasos que quedan** | Pruebas a mano de punta a punta, respaldo de claves en la bóveda y apagar lo de la cuenta personal (`migracion-team/README.md`) | Cliente |
+| 13 | **Decisiones abiertas** | Si un contrato firmado sin pago da preferencia (gerencia); el recargo de pequeños; el mínimo de 25 en venta directa; el nombre del negocio en Maps; el desayuno y la once a $8.000 + IVA | Cliente |
+| 14 | **En pausa por datos** | Video del hero (sigue vivo en el CDN de Shopify, 63 MB); logo en SVG recoloreable; fotos de cabalgatas y de la cancha de beach tenis; Calicanto y el contrato de matrimonio (Fase 5) | Cliente |
 
 ---
 
@@ -736,7 +775,15 @@ PR, documentación—, con tuteo y sin voseo.
   1280×650**.
 - **Las fotos de la ayuda**: `bash pruebas/ejemplo/capturas.sh <escenas>`
   (con el servidor apagado). Si una escena no encuentra lo que busca, la
-  ayuda quedó atrás.
+  ayuda quedó atrás. **Se sacan a 400px de ancho**: un cambio que rige solo
+  desde 1024px (`lg:`) no las cambia.
+- **En una sesión nueva en la nube**, `panel/node_modules` no existe: primero
+  `npm ci` en `panel/`. Playwright es el del entorno, no el del panel: en un
+  script propio se trae con `createRequire('/')('playwright')` y
+  `NODE_PATH=$(npm root -g)`.
+- **Antes de proponer un cambio de cómo se ve**, se puede probar en la copia
+  que arma el panel de ejemplo (`<carpeta>/panel`), que no es el repo: sirve
+  para mandar capturas de antes y después sin haber tocado nada.
 - **El sitio**: `python3 -m http.server` y Playwright; `python3
   tools/traducir.py --revisar`.
 
