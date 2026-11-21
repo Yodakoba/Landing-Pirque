@@ -995,6 +995,8 @@ export default function InformeEquipo() {
    * boletas"*). Un contratado nunca entra en el tercero.
    */
   const [filtro, setFiltro] = useState<'todos' | 'porPagar' | 'sinMarcar' | 'sinBoleta'>('todos');
+  /** Los filtros, para llegar a ellos —y al aviso y la lista de abajo— al filtrar desde el aviso. */
+  const filtros = useRef<HTMLDivElement>(null);
   const soloPorPagar = filtro === 'porPagar';
   /**
    * **Qué sección se ve** (2026-11-12, lo pidió el cliente: *"tres botones
@@ -1886,29 +1888,6 @@ export default function InformeEquipo() {
         </div>
       </div>
 
-      {sinMarcar > 0 && (
-        <div className="mb-4 rounded-xl border-2 border-ambar/50 bg-ambar/5 p-3 sm:p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
-            Hay {sinMarcar} turno{sinMarcar === 1 ? '' : 's'} sin cerrar
-            en este periodo.
-          </p>
-          {/* **Se dice con las palabras de la pantalla** (2026-11-05, lo
-              pidió el cliente): el paso se llama *cerrar el día*, no "pasar
-              lista". Primero qué pasa, después por qué y dónde se arregla. */}
-          <p className="mt-1 text-sm text-hueso/70">
-            Falta que el jefe de turno marque si cada persona vino o no y
-            cierre el día en{' '}
-            <a href="/turnos" className="text-oro hover:underline">Turnos</a>.
-            Mientras tanto esos turnos no suman nada, así que el total de
-            abajo está incompleto.
-          </p>
-          <button type="button" onClick={() => setFiltro('sinMarcar')}
-            className="boton mt-2 min-h-[40px] !border-2 !border-ambar/60 !font-semibold text-ambar-texto">
-            Ver a quiénes les falta →
-          </button>
-        </div>
-      )}
-
       {sinConfirmar > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
           <p className="text-sm font-semibold text-ambar-texto">
@@ -1986,7 +1965,7 @@ export default function InformeEquipo() {
               *Por pagar*, con cuántos hay en cada uno— y el buscador de nombre.
               Filtran las dos listas, equipo y actividades extras; los totales
               de abajo siguen siendo los del periodo entero. */}
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div ref={filtros} className="mb-4 flex scroll-mt-3 flex-col gap-2 sm:flex-row sm:items-center">
             {/* En el celular son tres columnas con el número debajo del
                 rótulo, las tres con la misma forma; en el computador, una
                 fila con el número al lado. */}
@@ -2012,6 +1991,46 @@ export default function InformeEquipo() {
               className="min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
                          text-[15px] focus:border-oro focus:outline-none sm:w-72" />
           </div>
+          {/* **Los turnos sin cerrar, justo arriba de la lista** (2026-11-21,
+              lo pidió el cliente: arriba de la página, *Ver a quiénes les
+              falta* filtraba una lista que quedaba fuera de la pantalla y
+              parecía que no hacía nada). Acá, el filtro cambia lo que está
+              justo debajo, y la página se mueve hasta los filtros: se ve
+              *Sin marcar* apretado, el aviso y la lista. */}
+          {sinMarcar > 0 && (
+            <div className="mb-4 rounded-xl border-2 border-ambar/50 bg-ambar/5 p-3 sm:flex sm:items-center sm:gap-4 sm:p-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ambar-texto">
+                  Hay {sinMarcar} turno{sinMarcar === 1 ? '' : 's'} sin cerrar
+                  en este periodo.
+                </p>
+                {/* **Se dice con las palabras de la pantalla** (2026-11-05, lo
+                    pidió el cliente): el paso se llama *cerrar el día*, no "pasar
+                    lista". Primero qué pasa, después por qué y dónde se arregla. */}
+                <p className="mt-1 text-sm text-hueso/70">
+                  Falta que el jefe de turno marque si cada persona vino o no y
+                  cierre el día en{' '}
+                  <a href="/turnos" className="text-oro hover:underline">Turnos</a>.
+                  Mientras tanto esos turnos no suman nada, así que los totales
+                  están incompletos.
+                </p>
+              </div>
+              {filtro === 'sinMarcar' ? (
+                <button type="button" onClick={() => setFiltro('todos')}
+                  className="boton mt-2 min-h-[40px] shrink-0 !border-2 !font-semibold sm:mt-0">
+                  Ver a todos
+                </button>
+              ) : (
+                <button type="button" onClick={() => {
+                  setFiltro('sinMarcar');
+                  requestAnimationFrame(() => filtros.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+                }}
+                  className="boton mt-2 min-h-[40px] shrink-0 !border-2 !border-ambar/60 !font-semibold text-ambar-texto sm:mt-0">
+                  Ver a quiénes les falta ↓
+                </button>
+              )}
+            </div>
+          )}
           {visiblesEquipo.length === 0 && visiblesExtras.length === 0 && visiblesVendedores.length === 0 && (
             <p className="mb-8 rounded-xl border-2 border-hueso/15 px-4 py-3 text-[15px] text-hueso/70">
               {soloPorPagar && !q

@@ -186,7 +186,11 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
 - **Filtro *Sin marcar (N)***, al lado de *Todos · Por pagar · Sin boleta*:
   quien tiene algún día sin marcar en el periodo (equipo y extras; los
   vendedores no tienen días). El aviso *Hay N turnos sin cerrar* trae **Ver
-  a quiénes les falta →**, que lo activa.
+  a quiénes les falta ↓**, que lo activa. **El aviso va justo arriba de la
+  lista**, bajo los filtros (lo pidió el cliente el mismo día: arriba de la
+  página, el botón filtraba una lista que quedaba fuera de la pantalla y
+  parecía que no hacía nada). Al apretarlo, la página baja hasta el aviso, y
+  con el filtro puesto el botón dice *Ver a todos*.
 - **Dónde empieza y termina cada persona**: borde de **3px y oscuro**
   (`border-hueso/55`), más grueso que cualquier línea de adentro —que van de
   1 a 2px y claras—, una sombra y 12px entre una tarjeta y la otra; abierta,

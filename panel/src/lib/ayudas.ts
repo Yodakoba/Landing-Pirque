@@ -257,8 +257,9 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'Abre en la semana pasada, que es la que se paga. Puedes elegir otra '
       + 'semana, el mes, o dos fechas sueltas.',
-      'Mira arriba si quedan turnos sin cerrar: mientras los haya, el total '
-      + 'está incompleto.',
+      'Justo arriba de la lista sale si quedan turnos sin cerrar: mientras los '
+      + 'haya, los totales están incompletos. Ver a quiénes les falta deja en la '
+      + 'lista solo a esas personas.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
       + 'su propina. Copian solo los datos, uno por línea, en el orden del '
       + 'formulario del banco —nombre y apellido, RUT, banco, tipo de cuenta, '
