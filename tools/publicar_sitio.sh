@@ -22,7 +22,8 @@ cd "$(dirname "$0")/.."
 PUBLICO=(*.html *.pdf robots.txt sitemap.xml assets en pt)
 
 # Dónde queda la tienda de Shopify después del lanzamiento. Recibe los
-# links de clientes del sitio viejo (pedidos, carrito, políticas).
+# links de clientes del sitio viejo que Shopify muestra sin su tema: el
+# estado de un pedido, el checkout y los links de carrito con código.
 TIENDA="https://tienda.brasasdelopirque.cl"
 
 # Las direcciones del sitio viejo, del sitemap de brasasdelopirque.cl
@@ -64,10 +65,20 @@ cp -r "${PUBLICO[@]}" .vercel/output/static/
     printf '    { "src": "^%s/?$", "status": 301, "headers": { "Location": "%s" } },\n' "$viejo" "$nuevo"
   done <<<"$EXACTAS"
 
-  # Lo que era de la tienda sigue siendo de la tienda: el estado de un
-  # pedido, el carrito, la cuenta y las políticas que salen en los correos
-  # que Shopify ya mandó con la dirección vieja.
-  printf '    { "src": "^/((?:[0-9]+/orders|checkouts|cart|account|policies)(?:/.*)?)$", "status": 301, "headers": { "Location": "%s/$1" } },\n' "$TIENDA"
+  # Lo que era de la tienda sigue siendo de la tienda, pero SOLO lo que
+  # Shopify muestra sin su tema (2026-11-21): el estado de un pedido, el
+  # checkout y los links de carrito con código (/cart/c/…, que es por donde
+  # el sitio manda a pagar, y /cart/<variante>:<cantidad>). Esas páginas no
+  # las dibuja el tema, así que el tema de redirección de Shopify no las
+  # toca y no pueden rebotar.
+  printf '    { "src": "^/((?:[0-9]+/orders|checkouts)(?:/.*)?|cart/.+)$", "status": 301, "headers": { "Location": "%s/$1" } },\n' "$TIENDA"
+
+  # Lo que SÍ dibuja el tema —el carrito vacío, la cuenta, las políticas—
+  # no va a la tienda: desde el lanzamiento, en tienda. hay un tema de
+  # redirección que lo devuelve a este sitio con la misma ruta, y mandarlo
+  # de vuelta allá sería un rebote sin fin. Va a su página de acá.
+  printf '    { "src": "^/cart/?$", "status": 301, "headers": { "Location": "/reservas.html" } },\n'
+  printf '    { "src": "^/(?:account|policies)(?:/.*)?$", "status": 301, "headers": { "Location": "/" } },\n'
 
   while read -r prefijo nuevo; do
     [ -n "$prefijo" ] || continue

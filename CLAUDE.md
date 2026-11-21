@@ -564,11 +564,15 @@ viejo, y el reparto lo acordó el cliente:
 - **Cualquier otra `/products/…`, `/collections/…`, `/pages/…` o
   `/blogs/…`** cae en la misma página que su grupo, por si había links que
   el sitemap no listaba.
-- **Lo que era de la tienda sigue yendo a la tienda**: el estado de un
-  pedido (`/<id>/orders/…`), el carrito, la cuenta, `/checkouts/…` y las
-  políticas, que es lo que traen los correos que Shopify ya mandó con la
-  dirección vieja. Van a `TIENDA`, al inicio del script, con el resto de la
-  ruta. **Hoy dice `tienda.brasasdelopirque.cl`**, el nombre propuesto para
+- **Lo que era de la tienda sigue yendo a la tienda, pero solo lo que
+  Shopify muestra sin su tema** (cambió el 2026-11-21): el estado de un
+  pedido (`/<id>/orders/…`), `/checkouts/…` y los links de carrito con código
+  (`/cart/c/…`, por donde el sitio manda a pagar, y `/cart/<variante>:<n>`).
+  Van a `TIENDA`, al inicio del script, con el resto de la ruta. **El carrito
+  vacío (`/cart`) va a `reservas.html`, y `/account` y `/policies` a la
+  portada**: esas las dibuja el tema, y en `tienda.` va a haber un tema de
+  redirección que las devuelve acá con la misma ruta (ver abajo, "El tema
+  de redirección en `tienda.`"). Mandarlas allá sería un rebote sin fin. **Hoy dice `tienda.brasasdelopirque.cl`**, el nombre propuesto para
   el dominio de Shopify después del lanzamiento: si se elige otro, se
   cambia esa línea.
 - **Un 404 sale en su idioma**: `/en/…` con `en/404.html`, `/pt/…` con el
@@ -622,6 +626,28 @@ only*)**: con la naranja, Vercel no puede sacar el certificado.
   dos registros a los valores de la columna *Hoy* y volver a dejar
   `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
   minutos).
+- **El tema de redirección en `tienda.`** (2026-11-21, lo recomendó
+  Shopify): con `tienda.` como dominio principal, la tienda online seguiría
+  mostrando el tema viejo a quien entre directo. Se publica el *Hydrogen
+  Redirect Theme* de Shopify (sirve para cualquier sitio externo, no solo
+  Hydrogen) con **Hostname `brasasdelopirque.cl`**, sin *custom redirects*
+  y sin *customer accounts*. Lo que hace, leído en su código: toda página
+  que dibuja el tema redirige al hostname **con la misma ruta**
+  (`tienda.…/products/almuerzo-y-show-ecuestre-1` → `brasasdelopirque.cl/…`
+  → `reservas.html`), con `noindex`; el checkout y el estado de un pedido no
+  los dibuja el tema, así que no se tocan.
+  - **Se publica recién después de mover el DNS**, cuando
+    `brasasdelopirque.cl` ya muestra el sitio nuevo. Antes sería un rebote:
+    `brasasdelopirque.cl` todavía en Shopify → `tienda.` (el principal) →
+    el tema → `brasasdelopirque.cl` → …
+  - **El tema viejo no se borra**: volver atrás es publicarlo de nuevo.
+  - **El registro de `tienda.` en Cloudflare no se toca**: sigue a Shopify.
+  - **Comprobar al lanzar**: `tienda.brasasdelopirque.cl` lleva al sitio
+    nuevo; el link viejo del producto, a reservas; una compra del sitio
+    nuevo abre el checkout en `tienda.`; el *ver pedido* del correo de
+    confirmación abre; y un link de estado de pedido de un correo viejo
+    (`brasasdelopirque.cl/<id>/orders/…?key=…`) llega a `tienda.` **con su
+    `?key=`**, que es lo que lo abre sin pedir clave.
 - **El sitio quedó sin www** a propósito, al revés de lo que propone Vercel:
   así están escritos los `hreflang` (`SITIO` en `tools/traducir.py`) y las
   redirecciones del sitio viejo.
