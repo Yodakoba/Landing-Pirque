@@ -524,20 +524,12 @@
   }
 
   /* contact */
-  .contact-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-  @media (max-width: 860px){ .contact-grid{ grid-template-columns:1fr; } }
+  /* Una sola tarjeta desde el 2026-11-21: el formulario de novedades se
+     sacó porque no guardaba los correos. Centrada y del ancho de la del sitio. */
+  .contact-solo{ max-width: 684px; }
   .contact-card{ border: 1px solid var(--line); border-radius: 3px; padding: 30px; }
   .contact-card h3{ font-size: 0.98rem; }
   .contact-card p{ font-size: 0.88rem; color: var(--ink-dim); margin: 10px 0 18px; }
-  .newsletter-row{ display:flex; gap: 10px; flex-wrap:wrap; }
-  .newsletter-row input{
-    flex:1; min-width: 180px; font-family: var(--sans); font-size: 0.92rem; padding: 12px 14px;
-    border: 1px solid var(--line); border-radius: 2px; background: var(--bg); color: var(--ink);
-  }
-  .newsletter-row button{
-    border:none; cursor:pointer; font-family: var(--sans); font-weight:600; font-size:0.82rem;
-    text-transform: uppercase; letter-spacing: 0.03em; background: var(--gold); color:#1A1400; padding: 12px 20px; border-radius: 2px;
-   min-height:44px;}
   .fine{ font-size: 0.88rem; color: var(--ink-dim); margin-top: 12px; }
 
   footer{ padding: 40px 0; border-top: 1px solid var(--line); }
@@ -549,7 +541,7 @@
 <link rel="alternate" hreflang="pt" href="https://brasasdelopirque.cl/pt/landing-afiliados.html">
 <link rel="alternate" hreflang="x-default" href="https://brasasdelopirque.cl/landing-afiliados.html">
 <!--/i18n:alternate-->
-<link rel="stylesheet" href="../assets/css/tema.css?v=9de50cad">
+<link rel="stylesheet" href="../assets/css/tema.css?v=45486116">
 <script src="../assets/js/tema.js?v=9398876b"></script>
 <script src="../assets/js/idioma.js?v=30e2a7c2" defer></script>
 </head>
@@ -1051,7 +1043,7 @@
 
 
   <section id="contacto" class="pad">
-    <div class="wrap contact-grid">
+    <div class="wrap contact-solo">
       <div class="contact-card">
         <h3>Let's talk on WhatsApp</h3>
         <p>The quickest way to sort out rates, availability and commission.</p>
@@ -1061,15 +1053,6 @@
         </a>
         <p class="fine">+56 9 3385 8575</p>
         <a href="socios.pdf" class="btn btn-ghost" style="margin-top:14px;" download="Brasas-de-Lo-Pirque-socios-comerciales.pdf">Download PDF</a>
-      </div>
-      <div class="contact-card">
-        <h3>Join the news list</h3>
-        <p>Leave your email to receive the link to this page and future updates.</p>
-        <form class="newsletter-row" onsubmit="return false;">
-          <input type="email" placeholder="tu@email.com" required>
-          <button type="submit">Sign up</button>
-        </form>
-        <p class="fine">For now this form only collects emails — it will connect to your mailing platform once you choose one.</p>
       </div>
     </div>
   </section>

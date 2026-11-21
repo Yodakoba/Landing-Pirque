@@ -105,6 +105,58 @@ revisan antes de cada cambio en esta carpeta.
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
 
+## El token de Shopify de la tienda real (2026-11-21)
+
+Desde el 1 de enero de 2026 **Shopify ya no deja crear apps propias desde
+el admin**. La del panel en la tienda de desarrollo nació así y sigue con su
+token fijo `shpat_`; la de la tienda real, **Reservas Pirque**, se creó en el
+**Dev Dashboard** con `read_orders`. Esas apps no entregan un token fijo:
+entregan un Client ID y un Client secret, y con ellos se pide un token que
+**dura 24 horas** (*client credentials grant*).
+
+- **`tokenDeAcceso()`** en `lib/admin.ts`: si están `SHOPIFY_CLIENT_ID` y
+  `SHOPIFY_CLIENT_SECRET`, hace un POST con formulario a
+  `https://<tienda>/admin/oauth/access_token` (`grant_type=client_credentials`)
+  y guarda el token hasta cinco minutos antes de que venza; si no, usa
+  `SHOPIFY_ADMIN_TOKEN` como siempre. **Las credenciales mandan sobre el
+  token fijo**, así que Production pasa a la real sin borrar nada.
+- **Solo en Production.** Preview no las lleva y sigue con la tienda de
+  desarrollo (regla de las dos tiendas, `CLAUDE.md` de la raíz).
+- **Un 401 olvida el token pedido**, para que la próxima llamada pida otro.
+  **`shop_not_permitted`** —la app y la tienda no son de la misma
+  organización de Shopify— se dice con palabras en el error.
+- **El webhook mira la fecha antes de leer la planilla** (mismo PR): un
+  pedido sin `_booking_date` —los del sitio viejo— se descarta sin gastar
+  lecturas de Google, y deja en los registros de Vercel `[webhook]
+  orders/create pedido #1234: descartado, sin fecha de reserva`, con el
+  número y nunca datos del cliente. Antes leía *Menús* primero (se vio en
+  Observability: lecturas de Google en una ruta que descartaba todo) y no
+  dejaba rastro: un pedido del sitio que llegara sin fecha habría
+  desaparecido en silencio. Lo fija `npm run webhook`.
+- **Lo usan la revisión diaria y *Revisar Shopify ahora***
+  (`/api/shopify/sincronizar`). **Los webhooks no**: se firman con el
+  secreto de Notificaciones y no dependen de ninguna app.
+- **No apretar *Rotar*** en las credenciales de la app: cambia el secreto y
+  el panel deja de pedir el token hasta actualizar la variable.
+- **Lecturas de Google**: ninguna. Pedir el token cuesta una llamada a
+  Shopify por instancia y por día.
+- **Probado con un Shopify falso** (`prueba.ts`): sin credenciales sigue el
+  token fijo sin pedir nada; con ellas pide con `client_credentials`, lo
+  reusa a las 23 horas, pide otro a minutos de vencer y al cambiar de
+  tienda, y `shop_not_permitted` sale con su explicación sin mostrar el
+  secreto. **Contra la tienda real se comprueba en Production** con *Revisar
+  Shopify ahora*: desde este entorno `lo-pirque.myshopify.com` está
+  bloqueado, y el secreto no pasa por el chat.
+- **Comprobado contra la tienda real el 2026-11-21**, desde el computador
+  del cliente con `curl` y las mismas credenciales: el token sale, y un
+  pedido real del sitio viejo responde 200 con nombre, apellido, correo y
+  teléfono. O sea: la app es de la organización de la tienda, tiene
+  `read_orders` y el permiso de datos protegidos.
+- **La trampa de ese día**: un secreto pegado en un campo que no muestra lo
+  que se escribe se pega dos o cuatro veces sin que se note, y Shopify
+  responde *"Missing or invalid client secret"*. El secreto de una app de
+  Shopify empieza con `shpss_` y tiene 38 caracteres.
+
 ## Los ajustes del día: Descontar y Sumar (2026-11-20)
 
 Lo pidió el cliente: en la ventana del equipo del día, un ajuste se anotaba
@@ -212,7 +264,8 @@ prueba**, y falla antes del PR:
 |---|---|
 | `npm run lecturas` | **Cuántas lecturas de Google gasta cada ruta** que abre una pantalla (`pruebas/lecturas/`). Cada ruta se llama en Node contra un Google falso que cuenta las consultas, y tiene su tope en `TOPE`: hoy todas caben en **una** tanda (Productos, dos). Si un cambio se pasa, se junta la lectura nueva en la tanda de la ruta, o se sube el tope a propósito y el PR lo dice. Comprobado rompiéndolo: con tope 0 la ruta falla y nombra lo que leyó |
 | `npm run letra-chica` | **Que nadie sume letra bajo 13px** (`text-xs`, `text-[9px]` a `text-[12px]`). Lo que ya había —80 en 22 archivos— quedó anotado en `HABIA` como punto de partida: solo puede bajar, y cuando baja la prueba pide anotarlo |
-| `npm run revisar` | Las dos de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
+| `npm run webhook` | **El webhook de Shopify** (`pruebas/webhook.mjs`, 2026-11-21): sin firma o con la de otra tienda, 401; un pedido sin `_booking_date` se descarta **sin gastar lecturas** y deja la línea `descartado` con su número y sin datos del cliente; uno con fecha se anota. Comprobado rompiéndolo: contra la ruta de antes falla (gastaba 2 lecturas y no dejaba línea) |
+| `npm run revisar` | Las de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
 
 Y para la pasada con Playwright, **`revisarPlayStation(page)`** de
 `pruebas/playstation.mjs`: devuelve la letra bajo 13px, los botones bajo

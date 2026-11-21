@@ -44,11 +44,23 @@
     // pedidos, clientes y toda la tienda. Un token vacío es el interruptor
     // de la integración: el botón no llama a la API y manda a WhatsApp.
     tiendas: {
-      // La tienda real (lo-pirque.myshopify.com). EN BLANCO hasta el
-      // lanzamiento: mientras sea null, todas las direcciones usan la de
-      // prueba, incluida la real, y la página lo dice. Llenarla es el PR
-      // de producción: dominio, token y los ocho IDs.
-      real: null,
+      // La tienda REAL (lo-pirque.myshopify.com, la misma tienda que
+      // sirve brasasdelopirque.cl): cobra plata de verdad. Llenada el
+      // 2026-11-20, con el token público del canal "Brasas De Lo Pirque
+      // Headless" y los IDs de sus cuatro productos (Tradiciones, A Brasas
+      // Abiertas, Niños y Pequeños, con sus variantes "Pago directo" y
+      // "Solo reserva"). Volver a dejarla en null apaga los cobros de
+      // verdad: todas las direcciones vuelven a la tienda de prueba.
+      real: {
+        dominio: 'lo-pirque.myshopify.com',
+        token: '7d937682f2541d6c464899bb807254a8',
+        variantes: {
+          tradiciones:       { linea: '51261066182713', local: '51261066215481' },
+          a_brasas_abiertas: { linea: '51261066051641', local: '51261066084409' },
+          ninos:             { linea: '51261065691193', local: '51261065723961' },
+          pequenos:          { linea: '51261065887801', local: '51261065920569' }
+        }
+      },
 
       // La tienda de DESARROLLO. Su checkout está detrás de la contraseña
       // de la tienda, y solo cobra pagos de prueba.

@@ -263,6 +263,12 @@ eso, el primer precio nuevo que alguien escribiera directo en el HTML
 volvería a abrir la puerta a los dos precios. Lo mismo con una clave que no
 existe en la lista o una marca mal escrita.
 
+- **El script escribe además `sitemap.xml`** (2026-11-21), con las páginas
+  indexables —`PAGINAS` menos `SIN_ALTERNATE`— en los tres idiomas y sus
+  hreflang, las mismas URL de cada página. Una página nueva entra sola, y
+  `--revisar` avisa si el sitemap quedó viejo. Sin `lastmod`, a propósito:
+  una fecha que nadie mantiene enseña a Google a no creerla. `robots.txt`
+  es fijo y apunta a él.
 - **Es lo segundo que el script escribe en los archivos españoles**,
   después del `?v=` de los assets. `--revisar` nombra las páginas con
   precios viejos como *(precios de la lista)*.
@@ -521,6 +527,8 @@ de "no hay build step" sigue valiendo para el sitio. Comprobado ese día por
 el cliente: `/CLAUDE.md` da 404, y `/`, `/en/` y el calendario de
 `reservas.html` funcionan.
 
+- **`robots.txt` y `sitemap.xml` están en `PUBLICO` desde el 2026-11-21**,
+  para enviar el sitemap a Google Search Console el día del lanzamiento.
 - **Una carpeta o archivo público nuevo en la raíz se agrega a `PUBLICO`**,
   al inicio del script; si no, el sitio publicado no lo tiene. Lo privado
   no hay que anotarlo en ninguna parte: lo que no está en la lista no sale.
@@ -607,10 +615,10 @@ only*)**: con la naranja, Vercel no puede sacar el certificado.
 - **Del lado del dominio, el lanzamiento son tres pasos**: en Shopify,
   `tienda.` pasa a ser el dominio principal; en Cloudflare, se borra el A de
   la raíz y se crea el CNAME `@`, y se cambia el de `www`. **La tienda real
-  va aparte y antes**: crear allá los productos con sus dos modalidades y
-  llenar `CONFIG.tiendas.real` (ver "Dos tiendas" y "La tienda de
-  producción, mirada por su catálogo público"); sin eso el sitio nuevo
-  sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
+  va aparte y antes**: los productos con sus dos modalidades ya están allá y
+  `CONFIG.tiendas.real` está lleno desde el 2026-11-20, en un PR que se
+  mergea con el OK del cliente (ver "La tienda real, conectada"); sin ese
+  merge el sitio nuevo sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
   dos registros a los valores de la columna *Hoy* y volver a dejar
   `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
   minutos).
@@ -1043,9 +1051,9 @@ del servidor, que nunca sale al navegador.
   llama a la API: avisa y manda a WhatsApp.
 - **Salir a producción es llenar `CONFIG.tiendas.real`**: dominio, token y
   los ocho IDs, juntos. Mientras sea `null`, todas las direcciones usan la
-  tienda de prueba —también la real— y la página lo dice. **Antes hay que
-  crear allá el modelo de variantes**, que hoy no existe: ver "La tienda de
-  producción, mirada por su catálogo público".
+  tienda de prueba —también la real— y la página lo dice. **Se llenó el
+  2026-11-20**, con el modelo de variantes ya creado allá: ver "La tienda
+  real, conectada".
 - **Las variantes ya no son una por fecha** (cambió el 2026-10-13, con la
   tienda de desarrollo en pie). Antes eran 20: diez fechas × adulto/niño.
   Ahora son **seis: tres menús × dos modalidades**, y la fecha no elige
@@ -1246,10 +1254,11 @@ le deja procesar pagos de prueba).
   `cartCreate` de verdad contra la tienda de desarrollo devuelve
   `userErrors: []` con los totales de siempre ($176.000 / $204.000).
 
-**El panel** no necesita código: las tres variables de Shopify
-(`SHOPIFY_DOMINIO`, `SHOPIFY_ADMIN_TOKEN`, `SHOPIFY_WEBHOOK_SECRET`) llevan
-**un valor por entorno**, la tienda real en Production y la de desarrollo
-en Preview. Ver `migracion-team/variables-vercel.md`. El Preview ya escribía
+**El panel** elige la tienda por sus variables de Shopify, que llevan
+**un valor por entorno**: la tienda real en Production y la de desarrollo
+en Preview. Desde el 2026-11-21 la real usa `SHOPIFY_CLIENT_ID` y
+`SHOPIFY_CLIENT_SECRET` en vez de `SHOPIFY_ADMIN_TOKEN` (ver "La tienda
+real, conectada"). Ver `migracion-team/variables-vercel.md`. El Preview ya escribía
 en la planilla "Pruebas", así que un pedido de prueba nunca llega a la real.
 
 **Los webhooks de la tienda de desarrollo se borran al lanzar.** Una versión
@@ -1257,6 +1266,101 @@ de prueba no los puede recibir —su dirección cambia y está protegida— y
 producción los rechaza, porque la firma no calza con el secreto de la tienda
 real: esa es la segunda barrera. En una versión de prueba del panel, los
 pedidos de prueba se traen con *Revisar Shopify ahora*.
+
+### La tienda real, conectada (2026-11-20)
+
+`CONFIG.tiendas.real` dejó de ser `null`: dominio `lo-pirque.myshopify.com`
+(shopId 63433277497, la misma tienda que sirve `brasasdelopirque.cl`), el
+token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
+
+| Menú | Pago directo | Solo reserva |
+|---|---|---|
+| Tradiciones | `51261066182713` — $44.000 | `51261066215481` — $49.000 |
+| A Brasas Abiertas | `51261066051641` — $70.000 | `51261066084409` — $75.000 |
+| Niños | `51261065691193` — $19.000 | `51261065723961` — $24.000 |
+| Pequeños | `51261065887801` — $6.000 | `51261065920569` — $9.000 |
+
+- **Los productos los creó el agente de Shopify del cliente**, con nombres
+  y variantes que calzan con lo que el panel lee —el producto sin "Menú"
+  delante (`canonizar()`), la variante `Pago directo` / `Solo reserva`
+  (`tipoPagoDe()`)—. **Inventó SKU nuevos y se cambiaron a los de la tienda
+  de desarrollo** (`pago-directo-<menú>` / `solo-reserva-<menú>`): el sitio
+  y el panel no leen el SKU, pero la regla de medios de pago del checkout
+  va por SKU, y así se copia igual en las dos tiendas.
+- **Publicados solo en el canal Headless, no en Tienda online**: el sitio
+  viejo no los muestra antes del lanzamiento. El token es el **público** de
+  ese canal (API Storefront → Gestionar); el privado no se usa.
+- **Comprobado ese día**: la Storefront API devuelve los cuatro con sus
+  títulos, SKU y precios, en CLP y disponibles; dos `cartCreate` con el
+  payload del sitio dan `userErrors: []`, $176.000 (3 Tradiciones, 2 niños
+  y 1 pequeño, pagando ahora) y $282.000 (los mismos, subidos a A Brasas y
+  solo reservando), con `_booking_date` en cada línea. Y con Playwright, el
+  `reserva.js` de verdad —sin nada inyectado— servido en seis direcciones:
+  el dominio, `www` y `brasas-sitio.vercel.app` piden a la real, sin aviso;
+  una versión de prueba de un PR, GitHub Pages y `localhost`, a la de
+  desarrollo, con aviso.
+- **Desde este entorno, la Storefront API de la real responde en
+  `brasasdelopirque.cl`**, el dominio principal de esa tienda;
+  `lo-pirque.myshopify.com` está bloqueado. Desde el lanzamiento ese
+  dominio es Vercel: para volver a probar la real desde acá hay que agregar
+  `lo-pirque.myshopify.com` a *Allowed domains*.
+- **El checkout sale en el dominio principal de la tienda**: hoy
+  `brasasdelopirque.cl/cart/c/…`, desde el lanzamiento `tienda.`. Si el DNS
+  se moviera antes que el principal, `tools/publicar_sitio.sh` igual manda
+  `/cart/` y `/checkouts/` a la tienda.
+- **La app del panel en la tienda real se creó en el Dev Dashboard**
+  (*Reservas Pirque*, con `read_orders`): desde el 1 de enero de 2026
+  Shopify ya no deja crear apps propias desde el admin. **Esas apps no
+  entregan un token fijo `shpat_`**: entregan un Client ID y un Client
+  secret, y con ellos se pide un token que dura 24 horas (*client
+  credentials grant*, que solo funciona si la app y la tienda son de la
+  misma organización de Shopify). Por eso el panel ganó `tokenDeAcceso()`
+  en `panel/src/lib/admin.ts`, en el mismo PR: con `SHOPIFY_CLIENT_ID` y
+  `SHOPIFY_CLIENT_SECRET` pide el token solo, lo guarda hasta cinco minutos
+  antes de que venza, y esas dos mandan sobre `SHOPIFY_ADMIN_TOKEN`. Van
+  **solo en Production**: Preview sigue con el token fijo de la tienda de
+  desarrollo. **Comprobado el 2026-11-21** con las credenciales de verdad,
+  desde el computador del cliente: el token sale y un pedido real responde
+  con nombre, apellido, correo y teléfono.
+- **Los webhooks de la tienda real ya llegan al panel** (2026-11-20, de
+  noche): el cliente creó los tres en Notificaciones → Webhooks, cambió
+  `SHOPIFY_WEBHOOK_SECRET` de Production por el secreto de firma de la
+  tienda real e hizo Redeploy. La notificación de prueba de Shopify llegó
+  con **200** y User Agent `Shopify-Captain-Hook`. **Adelantarlo no ensucia
+  nada**: el panel acepta la firma y descarta los pedidos del sitio viejo
+  porque no traen `_booking_date`, sin escribir en la planilla. Desde ahí
+  los webhooks de la tienda de desarrollo reciben 401 en producción, que es
+  lo correcto. **Hasta el merge, un aviso descartado no escribe nada en los
+  registros de Vercel**: el 200 se ve en Observability → Functions →
+  `/api/shopify/webhook`, o abriendo la fila de Logs. **Desde el merge**
+  deja la línea `descartado, sin fecha de reserva` con el número del pedido,
+  y ya no lee la planilla para descartarlo (ver `panel/CLAUDE.md`).
+- **Mergear ese PR es del camino *con prueba***: desde el merge,
+  `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
+  El orden: primero las variables de Production del panel —`SHOPIFY_CLIENT_ID`
+  y `SHOPIFY_CLIENT_SECRET`, cargadas el 2026-11-20, y **`SHOPIFY_DOMINIO`
+  con `lo-pirque.myshopify.com`, que es lo único que queda y va justo antes
+  del merge** (con el código de antes, ese dominio se leería con el token
+  de la tienda de desarrollo; una variable nueva rige desde el próximo
+  despliegue, y el merge es el que lo dispara)—, después el merge, y después una compra de prueba en
+  `brasas-sitio.vercel.app` de cada modalidad, que comprueba lo que falta:
+  que `_booking_date` llegue al pedido, que la regla de medios de pago
+  aplique y que el pedido aparezca en el panel. Poner el panel primero no
+  ensucia nada: los pedidos del sitio viejo no traen `_booking_date` y el
+  panel los ignora.
+- **Los pedidos del sitio viejo no entran al panel, y eso tiene una
+  consecuencia.** El producto viejo, *Menú Tradiciones*, vende la fecha en
+  la variante (*"Sábado 28 de Noviembre / Adultos"*), sin `_booking_date`,
+  y `aReserva()` lo descarta a propósito. Al 2026-11-20 vendía hasta el
+  domingo 27 de diciembre: **quien compró ahí para una fecha posterior al
+  lanzamiento no le descuenta cupo al panel** hasta que alguien lo anote.
+  **Se anotan a mano en el panel** (lo decidió el cliente el 2026-11-21): no
+  se le enseña al panel a leer el modelo viejo. Y al lanzar, ese producto
+  hay que sacarlo de Tienda online: en `tienda.` el tema viejo lo seguiría
+  vendiendo.
+- **El medio de pago "Pago en el local" ya existe en la tienda real**
+  (confirmado por el cliente el 2026-11-21). Que la regla por SKU oculte el
+  medio que no corresponde se ve en la compra de prueba de cada modalidad.
 
 ### Las variantes de la tienda de desarrollo (2026-10-13)
 
@@ -1459,7 +1563,8 @@ producción, y cambia lo que hay que preparar.
   —13 fechas × 3 tipos—, que es el modelo viejo de una variante por fecha.
   O sea: **"A Brasas abiertas" no existe como producto publicado en
   producción**, y el modelo de seis variantes (3 menús × 2 modalidades) que
-  usa el sitio nuevo hay que crearlo allá. Hasta que eso exista, el cambio a
+  usa el sitio nuevo hay que crearlo allá. **Creado el 2026-11-20**, solo en
+  el canal Headless: ver "La tienda real, conectada". Hasta que eso exista, el cambio a
   producción no se puede hacer aunque se cambien el token y el dominio.
 - **Los precios de producción hoy**: adultos $44.000, niños (4 a 12)
   $19.000. Coinciden con los del sitio.
@@ -1643,7 +1748,9 @@ sitio:**
   comprobó que sobreviven en el carrito —de nuevo el 2026-10-22, contra la
   API `2026-10`—; falta verlas en un **pedido** real, porque de ahí las lee
   `leerReserva()`. Requiere completar una compra, y para eso primero hay que
-  pasar la contraseña de la tienda.
+  pasar la contraseña de la tienda. **Con la tienda real conectada**
+  (2026-11-20) se comprueba en la compra de prueba de
+  `brasas-sitio.vercel.app`, después del merge.
 - ~~Que el Web App de Apps Script se pueda leer desde el sitio~~ — ya no
   aplica: el sitio le pide las fechas al panel, y **eso quedó probado contra
   el panel de verdad** el 2026-10-22: `reservas.html` corriendo en local
@@ -1709,7 +1816,7 @@ Siempre a la vista:
    `promociones.descuento`): ver "La lista de precios". Hubo un primer corte
    con cuatro etiquetas aparte, bajo la oferta, y **al cliente no le
    gustaron**: el precio con descuento va donde ya está el menú.
-3. Contacto: botón WhatsApp + formulario de email.
+3. Contacto: botón WhatsApp (el formulario de email se sacó el 2026-11-21: no guardaba nada).
 4. Footer.
 
 Dentro de los paneles, en este orden. **En promociones el primero no se
@@ -1928,10 +2035,19 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 
 ## Pendientes de contenido
 
-- **Plataforma de newsletter** — el formulario de email tiene
-  `onsubmit="return false;"` y ningún handler, así que **el email se descarta
-  al enviar: hoy no captura nada**. Hay que resolver al menos la captura
-  (Formspree, Google Forms o un endpoint propio).
+- ~~**Plataforma de newsletter**~~ — **se sacaron los formularios el
+  2026-11-21** (lo decidió el cliente antes del lanzamiento): estaban en
+  `reservas.html`, el dossier, socios y promociones, y descartaban el correo
+  al enviar —quien lo dejaba creía que quedó anotado—. Se borraron con su
+  CSS (`.newsletter-row`, y en el sitio también `.contact-*`, que solo usaba
+  esa sección) y sus siete llaves de los diccionarios. En los landings la
+  tarjeta de WhatsApp quedó sola, centrada (`.contact-solo`, 684px). Cuando
+  haya dónde guardar los correos (Formspree, Google Forms o un endpoint
+  propio), se vuelven a poner.
+- **Política de privacidad y condiciones de reserva** — no existen en el
+  sitio. Son decisiones del negocio (y conviene que las vea un abogado): no
+  se redactan acá. Anotado como recordatorio en la guía *Traspaso a
+  producción* el 2026-11-21.
 - **Fotos de cabalgatas y de la cancha de beach tenis** — son las dos
   únicas actividades que siguen con icono en vez de foto. Castillo
   inflable, pintacaritas y ping-pong/tacataca **ya tienen la suya**: este

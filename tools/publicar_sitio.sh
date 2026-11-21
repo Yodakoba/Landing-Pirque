@@ -19,7 +19,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PUBLICO=(*.html *.pdf assets en pt)
+PUBLICO=(*.html *.pdf robots.txt sitemap.xml assets en pt)
 
 # Dónde queda la tienda de Shopify después del lanzamiento. Recibe los
 # links de clientes del sitio viejo (pedidos, carrito, políticas).

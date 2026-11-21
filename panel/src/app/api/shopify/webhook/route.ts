@@ -19,7 +19,7 @@
 import { NextResponse } from 'next/server';
 import { conLecturas } from '@/lib/sheets';
 import { firmaValida } from '@/lib/firma';
-import { aReserva } from '@/lib/shopify';
+import { aReserva, fechaDe } from '@/lib/shopify';
 import { guardarPedido, leerMenus, leerConfig } from '@/lib/datos';
 import { eventoDe, idDeEvento } from '@/lib/calendario';
 import { guardarEvento, borrarEvento, hayCalendario } from '@/lib/google-calendar';
@@ -45,14 +45,26 @@ export const POST = conLecturas([], async function POST(req: Request) {
 
   try {
     const pedido = JSON.parse(cuerpo);
+
+    // Un pedido sin _booking_date no es una reserva: puede ser cualquier
+    // otra cosa vendida en la tienda, o un pedido del sitio viejo, que
+    // vendía la fecha en la variante. Se responde 200 igual, porque para
+    // Shopify el webhook SÍ se entregó bien; un error haría que lo
+    // reintente para siempre.
+    //
+    // **Se mira ANTES de leer la planilla** (2026-11-21): así un pedido que
+    // se va a descartar no gasta lecturas de Google. Y **queda una línea en
+    // los registros de Vercel** con el número del pedido (nunca datos del
+    // cliente): si algún día un pedido del sitio llegara sin la fecha, el
+    // panel lo descartaría en silencio, y esta línea es la forma de verlo.
+    if (!fechaDe(pedido)) {
+      console.log(`[webhook] ${req.headers.get('x-shopify-topic') ?? 'sin topic'} pedido ${pedido?.name ?? pedido?.id ?? '¿?'}: descartado, sin fecha de reserva`);
+      return NextResponse.json({ ok: true, ignorado: 'sin fecha de reserva' });
+    }
+
     // Con la lista de menus para que el nombre quede canonizado al escribir:
     // "Menu Tradiciones" de la tienda se guarda como "Tradiciones".
     const reserva = aReserva(pedido, await leerMenus());
-
-    // Un pedido sin _booking_date no es una reserva: puede ser cualquier
-    // otra cosa vendida en la tienda. Se responde 200 igual, porque para
-    // Shopify el webhook SÍ se entregó bien; un error haría que lo
-    // reintente para siempre.
     if (!reserva) {
       return NextResponse.json({ ok: true, ignorado: 'sin fecha de reserva' });
     }
