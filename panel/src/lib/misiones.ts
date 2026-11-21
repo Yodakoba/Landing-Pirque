@@ -209,7 +209,7 @@ const PAGOS: Mision[] = [
     puntos: [
       'El periodo: semana, mes, día u otro rango.',
       'La planilla para el banco: sueldos, propinas o completa.',
-      'La transferencia masiva: bajas la planilla, la subes al banco y marcas todos pagados.'
+      'La transferencia masiva va plegada: la abres, bajas la planilla, la subes al banco y marcas todos pagados.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }
   },

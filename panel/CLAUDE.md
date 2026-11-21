@@ -13,7 +13,7 @@ revisan antes de cada cambio en esta carpeta.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px
-  lo que se usa seguido), letra de 13px o más donde hay un dato, se
+  lo que se usa seguido; 40px en el celular, 2026-11-21), letra de 13px o más donde hay un dato, se
   distingue por forma y no solo por color, un solo botón relleno por vista,
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
@@ -156,6 +156,53 @@ entregan un Client ID y un Client secret, y con ellos se pide un token que
   que se escribe se pega dos o cuatro veces sin que se note, y Shopify
   responde *"Missing or invalid client secret"*. El secreto de una app de
   Shopify empieza con `shpss_` y tiene 38 caracteres.
+
+## El informe, ordenado y más compacto (2026-11-21)
+
+Lo pidió el cliente: en el celular *"los botones quedan un 15%, a veces un
+20% muy grandes… es difícil entender dónde empieza un nuevo trabajador,
+hasta dónde llega la tarjeta"*; que la transferencia masiva se pliegue; que
+la lista vaya ordenada —arriba los que tienen plata, al final los que no
+tienen nada— con un filtro *Sin marcar*; y que en el computador las tarjetas
+dejen menos espacio vacío. Se mostró primero como prototipo en el panel de
+ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
+`InformeEquipo.tsx`.
+
+- **El orden de la lista**, en las tres secciones (`enGrupos()`):
+  1. quien tiene **plata en el periodo** —algo que transferir o un pago ya
+     anotado—, sin rótulo;
+  2. **○ Falta marcar si vino · N · todavía no suman**: sin plata, con días
+     sin marcar;
+  3. **Sin nada que pagar en este periodo · N**: solo días que no vino.
+
+  Dentro de cada grupo, el orden de siempre (lo que más se paga primero),
+  **para que la lista no salte mientras se paga**. Antes iba solo por monto,
+  así que alguien con $16.500 por pagar quedaba debajo de dos en $0.
+- **Filtro *Sin marcar (N)***, al lado de *Todos · Por pagar · Sin boleta*:
+  quien tiene algún día sin marcar en el periodo (equipo y extras; los
+  vendedores no tienen días). El aviso *Hay N turnos sin cerrar* trae **Ver
+  a quiénes les falta →**, que lo activa.
+- **Dónde empieza y termina cada persona**: borde de 2px más marcado y una
+  sombra; abierta, el borde dorado entero con un anillo, y un pie **▴ Cerrar
+  · nombre** que dice dónde termina y la cierra sin subir.
+- **En el celular, un 10 a 15% más chico**: los botones de copiar y de pago
+  de 44 a 40px, los grandes de 56 a 48px, nombre y monto un punto menos,
+  márgenes de 12px. El periodo en una fila (*Día · Semana · Mes · Rango*) y
+  las descargas también (*Sueldos · Propinas · Completa*); en el computador
+  dicen lo de siempre. **Esto cambió la regla PlayStation**: 44px lo que se
+  usa seguido en el computador, **40px en el celular** (lo pidió el
+  cliente). La página, con una persona abierta, bajó de 6.026 a unos 5.500px.
+- **La transferencia masiva va plegada**: una fila *🏦 Transferencia masiva
+  · Sueldos $X · Propinas $Y · Abrir ▾*; abierta, lo de siempre.
+- **En el computador, la tarjeta abierta va en dos columnas** (desde 1024px):
+  lo que suma y la boleta a la izquierda, Sueldo y Propina con sus botones a
+  la derecha, uno debajo del otro (lado a lado, *Pagado completo* se
+  cortaba). Con una persona abierta, la página bajó de 3.654 a 3.365px.
+- **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
+- **Ayuda**: el `?` del informe explica el orden y *Sin marcar*, y que la
+  transferencia masiva se abre; la misión del informe también; las fotos del
+  informe (`pag-informe`, `ger-informe`, `ope-informe`, `pag-pagar`,
+  `ger-pagar`) se rehicieron.
 
 ## El ajuste desde el informe (2026-11-21)
 

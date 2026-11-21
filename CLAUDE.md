@@ -72,7 +72,7 @@ más abajo; esto es la lista para revisar.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px
-  lo que se usa seguido), letra de 13px o más donde hay un dato, se
+  lo que se usa seguido; 40px en el celular, 2026-11-21), letra de 13px o más donde hay un dato, se
   distingue por forma y no solo por color, un solo botón relleno por vista,
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de

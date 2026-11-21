@@ -281,7 +281,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Vendedores y socios se pagan según su documento: con la retención '
       + 'incluida se transfiere el bruto menos la retención; con factura más '
       + 'IVA, el total con IVA. Su caja lo dice.',
-      'Para una transferencia masiva, arriba está su tarjeta: baja la '
+      'La lista va en orden: arriba quien tiene plata en el periodo, después '
+      + 'a quien le falta marcar si vino y al final quien no tiene nada que '
+      + 'pagar. Sin marcar deja solo a los que les falta marcar.',
+      'Para una transferencia masiva, ábrela arriba (va plegada): baja la '
       + 'planilla de sueldos o de propinas, súbela al banco, y cuando esté '
       + 'pagada aprieta Todos pagados.',
       'Descarga la planilla: trae si cada pago tiene boleta.'

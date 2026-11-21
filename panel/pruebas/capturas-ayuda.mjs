@@ -41,6 +41,9 @@ const enVentana = (t) => (p) => p.locator('[role=dialog] button').filter({ hasTe
 const campo = (t) => (p) => p.getByPlaceholder(t).first();
 const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeout(900); };
 
+/** La primera descarga del informe (*Sueldos*), dentro de su grupo. */
+const descargas = (p) => p.getByRole('group', { name: 'Descargar planilla' }).getByRole('button').first();
+
 /** Una reserva de la recepción: su fila, que se abre con (+). */
 const filaRecepcion = (n) => (p) => p.locator('li > button[aria-expanded]').nth(n);
 
@@ -115,11 +118,14 @@ const ESCENAS = {
   ...Object.fromEntries(['pag', 'ger'].flatMap((pre) => {
     const rol = pre === 'pag' ? 'pagos' : 'gerencia';
     return [
-      [`${pre}-informe`, { rol, ruta: '/informe', alto: 960, foco: boton(/Solo sueldos/),
-        puntos: [boton(/Por semana/), boton(/Solo sueldos/), texto(/Transferencia masiva/i)] }],
+      // En el celular los botones dicen *Semana* y *Sueldos* (2026-11-21).
+      [`${pre}-informe`, { rol, ruta: '/informe', alto: 960, foco: descargas,
+        puntos: [boton(/Semana/), descargas, texto(/Transferencia masiva/i)] }],
       // Más alto desde el 2026-11-20: entra la caja de la boleta.
-      [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/Sueldo/), alto: 1500,
-        puntos: [boton(/Sueldo/), boton(/Propina/), boton(/Descontar/), texto(/Boleta del/)] }],
+      // *Sueldo $…* y no *Sueldo*: desde el 2026-11-21 la descarga del
+      // celular se llama *Sueldos* y el foco se iba arriba.
+      [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/^Sueldo \$/), alto: 1500,
+        puntos: [boton(/^Sueldo \$/), boton(/^Propina \$/), boton(/Descontar/), texto(/Boleta del/)] }],
       [`${pre}-cobros`, { rol, ruta: '/presupuestos', pasos: abrirEnvio('Andrés Pino'), alto: 900, foco: texto('Pagos del cliente'),
         puntos: [texto(/El pago/), boton(/Anticipo recibido/), texto(/Anticipo 30%/)] }],
       // Desde el 2026-11-20 es una lista de tarjetas: se abre la de Daniela.
