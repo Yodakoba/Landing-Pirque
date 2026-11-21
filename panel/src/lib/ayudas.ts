@@ -125,8 +125,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'quién vino, la propina, las actividades extras. Queda anotado con tu '
       + 'nombre y la hora, y desde ahí el día queda en solo lectura.',
       'Si un día cerrado tiene un error, el administrador o quien hace los '
-      + 'pagos aprieta Corregir este día, arregla lo que haga falta y lo '
-      + 'guarda con el motivo. El día sigue cerrado.'
+      + 'pagos aprieta Corregir este día y arregla lo que haga falta. Abajo '
+      + 'va apareciendo la lista de lo que cambió: se marca la casilla '
+      + 'Confirmo estos cambios y se guarda. Esa lista queda en la bitácora, '
+      + 'con su nombre. El día sigue cerrado.'
     ],
     ojo: 'Planificar un día cerrado no lo abre al público: los turnos no '
        + 'tocan lo que ve el sitio.'
@@ -616,7 +618,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Agregar productos',
     texto: [
       'Aparecen los productos marcados "Se puede cotizar" en Productos, con el precio que proponen: arriba los menús, abajo los extras y el arriendo.',
-      'Cada producto va una sola vez: ya agregado, su botón dice "ya está" y la cantidad se cambia en su línea.',
+      'Cada producto va una sola vez: ya agregado, su botón queda apagado con un ✓ y la cantidad se cambia en su línea.',
       'El precio se cambia en la línea: es parte de la negociación. "Otra línea" es para algo que no está en el catálogo.',
       'En un día privado con poca gente, el show ecuestre tiene un precio mínimo (Configuración → Extras y arriendo). Si no va, quítalo.'
     ]
@@ -1133,7 +1135,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Un día cerrado',
     texto: [
       'Ya no se edita: lo cerró alguien que revisó quién vino y cuánto se paga.',
-      'Si algo quedó mal, el encargado de operaciones o quien hace los pagos lo corrige con un motivo, o lo compensa con un ajuste en la semana siguiente.'
+      'Si algo quedó mal, el encargado de operaciones o quien hace los pagos lo corrige —lo que cambió queda en la bitácora, con su nombre—, o lo compensa con un ajuste en la semana siguiente.'
     ]
   },
   propinaDia: {

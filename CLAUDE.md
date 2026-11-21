@@ -110,6 +110,15 @@ más abajo; esto es la lista para revisar.
   secundario plegado (como un ajuste guardado) o en su `?`. **Si no cabe sin
   romper la regla de arriba** —botones bajo 36px, letra bajo 13px—, gana la
   regla de arriba, y el PR dice que no cupo y cuánto mide.
+  **Lo mide una prueba, no la memoria** (2026-11-21, lo pidió el cliente:
+  *"¿por qué tengo que agregar yo todas las revisiones en los pop-ups… qué
+  habrá que hacer para reforzar esto?"*): `npm run ventanas` abre cada
+  ficha y cada ventana del panel de ejemplo a 1280×650 y **falla** si una
+  que cabía deja de caber, si una anotada crece o si aparece un campo
+  corrido. Va dentro de `npm run revisar`. Lo que todavía no cabe está
+  anotado con su alto en `NO_CABEN` y solo puede bajar. **Una ventana o una
+  ficha nueva se agrega a `ESCENAS` de `pruebas/ventanas.mjs` en el mismo PR
+  que la crea**: lo que no está en la lista no se mide.
 - **Lo que explica va en su `?`, no fijo en la pantalla** (regla del
   cliente, 2026-11-21: *"vamos a capacitar a la gente y entonces después
   molesta mucho texto constante"*). A la vista quedan el dato y la acción;
@@ -125,9 +134,13 @@ más abajo; esto es la lista para revisar.
   nombres miden lo mismo, así que cada campo, cada valor y cada fila de
   botones parte en la misma vertical. Nunca un campo pegado a su nombre solo
   porque la palabra es más corta. Un segundo dato en la misma fila va a la
-  derecha. La pieza: `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia`.
-  **Antes de cerrar un cambio que toque un formulario**, se mira en una
-  captura que los bordes izquierdos calcen.
+  derecha. Las piezas: `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia`;
+  `rejilla-campos` y `fila-ficha` (`globals.css`) para una ficha con varios
+  campos. **Antes de cerrar un cambio que toque un formulario**, se mira en
+  una captura que los bordes izquierdos calcen, y `revisarAlineacion()`
+  —dentro de `npm run ventanas`— avisa de un campo que salta respecto de su
+  vecino, de un nombre partido en dos renglones y de dos bordes que casi
+  calzan.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -144,7 +157,10 @@ más abajo; esto es la lista para revisar.
   a alguien; (7) toca cuentas, roles o links; (8) cambia el nombre de algo
   que otros usan —un producto, una persona, un puesto— o la Configuración,
   que afecta al sitio público. Lo manual pregunta con una ventana que dice
-  qué va a pasar; si pide motivo, queda en la bitácora.
+  qué va a pasar; si pide motivo, queda en la bitácora. **Corregir un día
+  cerrado no pide un motivo escrito** (2026-11-21): el panel arma la lista
+  de lo que cambió, se confirma con una casilla y esa lista es lo que queda
+  en la bitácora.
 - **Las lecturas de Google son un presupuesto**: 60 por minuto para todo el
   panel. Nada nuevo lee la planilla por su cuenta: se suma a la tanda que la
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
@@ -161,11 +177,12 @@ más abajo; esto es la lista para revisar.
   dependiendo del cobro anotado, no del revisado—. El detalle, en
   `panel/CLAUDE.md`.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
-  lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
-  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
-  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR. Y si
-  se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?** Y si
-  tiene campos, **¿parten todos en la misma vertical?**
+  lecturas, letra chica **y las ventanas**: que cada ficha y cada ventana
+  quepa en 1280×650 y tenga sus campos alineados, `npm run ventanas`), una
+  pasada con Playwright a 393 y 1280px con `revisarPlayStation()` de
+  `panel/pruebas/playstation.mjs`, y **¿cambió algo que una ayuda
+  describe?** Si sí, se actualiza en el mismo PR. Y si se creó una ventana
+  o una ficha, **¿está en `ESCENAS`?**
 
 **Sitio público y landings: elegante y sobrio**
 - Fotografía real como protagonista, Fraunces y Work Sans, dorado sobre

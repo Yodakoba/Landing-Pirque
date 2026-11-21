@@ -65,7 +65,9 @@ export const ALINEACION_ACEPTADA = {
 };
 
 const b = await chromium.launch();
+// `VENTANAS_ESCALA=2` para fotos que va a mirar una persona.
 const ctx = await b.newContext({ viewport: { width: ANCHO, height: ALTO },
+  deviceScaleFactor: Number(process.env.VENTANAS_ESCALA) || 1,
   timezoneId: 'America/Santiago', locale: 'es-CL' });
 await ctx.addCookies([{ name: 'sesion', value: SESIONES.admin, url: URL_PANEL }]);
 // El reloj del navegador, a la misma hora que el servidor de ejemplo: si no,

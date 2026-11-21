@@ -31,14 +31,18 @@ const SESIONES = JSON.parse(fs.readFileSync(process.env.AYUDA_SESIONES ?? 'sesio
 const SALIDA = new URL('../public/ayuda/', import.meta.url);
 const ANCHO = 400, ALTO = 760;
 
-// Localizadores cortos.
+// Localizadores cortos. **Siempre el que se ve** (2026-11-21): varias piezas
+// se dibujan dos veces —una para el celular y otra para el computador, en
+// otro lugar de la pantalla— y solo una se ve cada vez. Sin pedir la
+// visible, el primero del HTML podía ser el escondido y la escena fallaba
+// con *el punto no quedó a la vista*.
 const boton = (nombre, n = 0) => (p) => p.getByRole('button', { name: nombre }).nth(n);
 /** Un botón o un enlace que se ve como botón (`.tecla`). */
-const toque = (t, n = 0) => (p) => p.locator('button, a').filter({ hasText: t }).nth(n);
-const texto = (t, n = 0) => (p) => p.getByText(t).nth(n);
+const toque = (t, n = 0) => (p) => p.locator('button:visible, a:visible').filter({ hasText: t }).nth(n);
+const texto = (t, n = 0) => (p) => p.getByText(t).locator('visible=true').nth(n);
 /** Dentro de la ventana abierta. */
-const enVentana = (t) => (p) => p.locator('[role=dialog] button').filter({ hasText: t }).first();
-const campo = (t) => (p) => p.getByPlaceholder(t).first();
+const enVentana = (t) => (p) => p.locator('[role=dialog] button:visible').filter({ hasText: t }).first();
+const campo = (t) => (p) => p.getByPlaceholder(t).locator('visible=true').first();
 const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeout(900); };
 
 /** La primera descarga del informe (*Sueldos*), dentro de su grupo. */

@@ -37,13 +37,16 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   401.
 - **PR #287 está abierto**, en la rama `claude/traspaso-md-resumen-1dc8d5`:
   el cliente pidió ***"déjalo en preview"***, así que **se mergea solo cuando
-  diga *"mergea"***. Trae *el computador, más compacto* —las dos capas— y la
-  regla nueva de los formularios alineados.
+  diga *"mergea"***. Trae *el computador, más compacto* —las dos capas—, los
+  formularios alineados en todo el panel, **las ventanas que caben en la
+  pantalla del computador** (de 21 que no cabían quedan 2) y **corregir un
+  día cerrado con una casilla y la lista de cambios**, sin motivo escrito.
   https://github.com/ayc-y-blp/aycyblp/pull/287
 - **El cliente lo está mirando en la versión de prueba, en su notebook, y
-  va mandando fotos** de lo que quiere más junto o más alineado. Lo que quedó
-  sin tocar está en el pendiente 2 (sección 7) y en `panel/CLAUDE.md`, "El
-  computador, más compacto".
+  va mandando fotos** de lo que quiere más junto o más alineado. Preguntó
+  por qué tenía que pedir él cada revisión: desde ese día **`npm run
+  ventanas` mide cada ficha y cada ventana y es parte de `npm run
+  revisar`** (sección 8). Lo que queda está en el pendiente 2 (sección 7).
 - Lo que falta antes y después del lanzamiento está en la sección 7, en
   orden.
 
@@ -200,7 +203,7 @@ real. Los parámetros del negocio viven en la pestaña `Config`, no en Vercel.
 | `Trabajadores` | una ficha | `Nombre` (es la identidad), `Puesto habitual`, `Activo`, `Token de acceso`, `Modalidad` (*por turno / contratado*), `Pago por jornada`, `Valor hora extra`, `Participa en propina` (en blanco = sí), `Nota de pago` (datos bancarios), `Por confirmar` | `Turnos.Trabajador` por nombre |
 | `Turnos` | una persona un día | `Fecha`, `Trabajador`, `Puesto`, `Asistencia` (*Sí / No* / en blanco = sin marcar), `Modalidad`, `Propina` (su parte), `Pago jornada`, `Horas extra`, `Valor hora`, `Ajuste` (varios con `\|`: `-20000\|5000`), `Motivo del ajuste` (`Adelanto · Transferencia\|Feriado`) | `Trabajadores`, `Cierres` |
 | `Ajustes sueltos` | un ajuste fuera de turno | `ID`, `Fecha`, `Trabajador`, `Monto`, `Motivo`, `Anotado por`, `Cuándo` | se suma al informe como un turno sin día |
-| `Cierres` | un día cerrado | `Fecha`, `Cerrado por`, `Cuándo` | un día cerrado no se edita: se corrige con motivo |
+| `Cierres` | un día cerrado | `Fecha`, `Cerrado por`, `Cuándo` | un día cerrado no se edita: se corrige, y la lista de lo que cambió queda en la bitácora |
 | `Colaboradores` | un colaborador externo | `Nombre`, `Actividad`, `Activo`, `Monto habitual`, `Nota de pago`, `Token de acceso`, `Por confirmar` | `Actividades` |
 | `Actividades` | un colaborador un día | `Fecha`, `Colaborador`, `Actividad`, `Vino`, `Monto`, `Ajuste`, `Motivo del ajuste` (mismo formato que `Turnos`) | `Colaboradores` |
 | `Pagos` | un pago registrado al equipo | `ID`, `Fecha de pago`, `Trabajador`, `Periodo desde`, `Periodo hasta`, `Monto`, `Concepto` (sueldo o propina), `Registrado por` | informe |
@@ -375,8 +378,8 @@ Estados: **Candidato → Borrador → Enviada → Negociación → Ganada / Perd
   los primeros. **Se guarda la parte de cada uno en su turno**, no el pozo.
   **La propina no es sueldo**: no entra en `pagoDe()` ni en el costo del día,
   va en su columna, y nunca en la boleta.
-- **Cerrar el día** lo congela; después se corrige con motivo, a la
-  bitácora.
+- **Cerrar el día** lo congela; después se corrige: el panel arma la lista
+  de lo que cambió, se confirma con una casilla y queda en la bitácora.
 - **El informe** suma por periodo (día, semana, mes, rango); **pagos**
   registra lo transferido (`Pagos`, sueldo y propina por separado) y marca
   boletas.
@@ -511,6 +514,32 @@ piezas, no tamaño de botones ni de letra.**
     también en el celular.
 - **El celular mide lo mismo que antes** en las 15 pantallas. Sin lecturas
   de Google ni permisos; las fotos de la ayuda no cambian.
+- **Los formularios alineados, en todo el panel** (commit `84a6267`): el
+  `?` chico ya no mueve a sus vecinos (se ve de 24px y se aprieta en 36),
+  `rejilla-campos` y `fila-ficha` para las fichas, *Correo comprobante* y
+  *Hora extra* en un renglón, ***sin propina*** y ***sin jornada*** en la
+  línea del día, y **+ Cliente nuevo** arriba en el paso 1 de cotizar.
+- **Las ventanas caben en la pantalla del computador** (commit `0c01035`,
+  *"todas las pestañas se pueden organizar para que queden dentro de una
+  pantalla"*): `Dialogo` parte arriba en el computador; cotizar es ancha,
+  con el paso 3 como tabla y el 4 en tres columnas con lo secundario
+  plegado; el equipo del día en tres columnas parejas; y en columnas la
+  reserva nueva, agregar vendedor, el trato, *Ver como*, *Comentar*,
+  *Dejar la base en cero* y las fichas de cliente, producto y vendedor. La
+  tabla con las medidas está en `panel/CLAUDE.md`, "Las ventanas caben en
+  la pantalla del computador". **No cupieron dos**, las dos del equipo del
+  día: con el formulario de un ajuste abierto (846px) y la cara de
+  reservas, que es una lista (859px).
+- **Corregir un día cerrado sin motivo escrito** (*"haz una casilla,
+  confirmar, y luego la lista de los cambios… y luego guardar"*):
+  `lib/correccion.ts` arma la lista, `PieCorreccion` la muestra con su
+  casilla, y esa lista queda en la bitácora. En el equipo y en los extras.
+- **`npm run ventanas`** (`pruebas/ventanas.mjs` y `alineacion.mjs`): 43
+  escenas a 1280×650. Va dentro de `npm run revisar`.
+- En el celular las ventanas miden lo mismo, salvo tres que bajaron unos
+  pixeles a propósito (la ficha de un producto, el paso 5 de cotizar y la
+  corrección). Sin lecturas de Google ni permisos. Las fotos de la ayuda se
+  rehicieron todas.
 
 ---
 
@@ -623,6 +652,25 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 - **Los nombres de los campos, en una columna de ancho fijo**
   (21-11-2026), en vez de que cada uno mida lo que su palabra: así los
   valores y los botones quedan alineados sin calcular nada.
+- **Una regla que se puede medir es una prueba** (21-11-2026): *cabe en una
+  pantalla* y *los campos van alineados* estaban escritas y dependían de
+  acordarse; el cliente tuvo que marcar las ventanas una por una. Ahora las
+  mide `npm run ventanas`, dentro de `npm run revisar`, y lo que todavía no
+  cabe está anotado con su alto (`NO_CABEN`) y solo puede bajar.
+- **Las ventanas se compactan en columnas y plegando lo que se llena una
+  vez**, no con una barra de desplazamiento adentro: lo que no se ve en una
+  lista con scroll propio se pierde. Si una lista crece más que la pantalla
+  (las líneas de una cotización, la gente de un día), crece la ventana.
+- **Lo plegado en el computador es una clase, no otro flujo**: en el celular
+  los mismos campos siguen a la vista, así que ahí no cambió nada.
+- **Los puestos del equipo se reparten en columnas con una cuenta fija**
+  (`enColumnas()`), no con columnas que se balancean solas: al abrir una
+  línea nada salta de lugar.
+- **La corrección de un día cerrado guarda lo que cambió, no por qué**: cada
+  cambio ya trae su porqué (un ajuste lleva su motivo). El servidor sigue
+  rechazando una corrección sin ese texto.
+- **El `?` chico se ve de 24px y se aprieta en 36**: a 30px agrandaba su
+  renglón y corría el campo de al lado.
 - **El encargado de turno no ve cotizaciones; el vendedor ve todo y toca lo
   suyo; el contacto de los clientes se recorta por rol en el servidor**
   (`lib/privacidad.ts`).
@@ -646,9 +694,19 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 - **Límite de 60 lecturas por minuto** de Google para todo el panel; si
   vuelve a aparecer con uso normal, lo siguiente es pedir más cupo en Google
   Cloud (gratis).
-- **Los `?` chicos miden 30px**, bajo los 36px de la regla:
-  `revisarPlayStation()` los marca siempre y se han aceptado así.
-  **(Por confirmar)** si el cliente los quiere más grandes.
+- **Los `?` chicos se ven de 24px** y se aprietan en 36 (un área invisible
+  alrededor): `revisarPlayStation()` los sigue listando, porque mide lo que
+  se ve. **(Por confirmar)** si el cliente los quiere más grandes a la vista.
+- **Dos ventanas no caben en 1280×650** y están anotadas en `NO_CABEN`: el
+  equipo del día con el formulario de un ajuste abierto, y su cara de
+  reservas. Las dos crecen con lo que tenga el día; con más gente o más
+  puestos que el ejemplo, la de trabajadores también pasa de una pantalla.
+- **Editar o borrar una reserva de un día cerrado sigue pidiendo un motivo
+  escrito**: no se cambió con la corrección del equipo. **(Por confirmar)**
+  con el cliente si también pasa a casilla y lista.
+- **Varias piezas se dibujan dos veces en el HTML** (una para el celular y
+  otra para el computador): en una prueba se pide la que se ve
+  (`button:visible`, `locator('visible=true')`).
 - **Queda letra bajo 13px heredada** en algunos archivos, anotada en `HABIA`
   de `pruebas/letra-chica.mjs`: solo puede bajar.
 - **Las traducciones al inglés y portugués no las revisó un hablante
@@ -718,8 +776,8 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 
 | # | Qué | Siguiente paso concreto | Quién |
 |---|---|---|---|
-| 1 | **PR #287** (el computador más compacto, capa 1) | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main`. La preview del panel se abre con la sesión de Vercel del equipo | Cliente decide; Claude mergea |
-| 2 | **El computador más compacto: lo que quedó** | (a) **Vendedores** y **Estadísticas**: juntar sus filas de controles (viven en bloques separados del código). (b) **La regla de los formularios alineados** en lo que no es la línea del día: fichas de trabajador, colaborador, cliente y vendedor, la ventana de cotizar, el formulario de reserva y el ajuste del informe; uno por uno, con captura. (c) Lo que el cliente siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "El computador, más compacto" | Claude propone; cliente decide |
+| 1 | **PR #287** (el computador más compacto, las ventanas y la corrección) | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main`. La preview del panel se abre con la sesión de Vercel del equipo. **Va por el camino *con prueba***: toca cómo se corrige un día cerrado | Cliente decide; Claude mergea |
+| 2 | **Lo que quedó de las ventanas** | (a) Preguntarle al cliente si **editar y borrar una reserva de un día cerrado** también pasan de motivo escrito a casilla y lista. (b) Las dos de `NO_CABEN` (el ajuste abierto en la línea de una persona, y la cara de reservas): solo si el cliente las marca. (c) Cuentas entre 1024 y 1279px, con la columna del rol angosta. (d) Lo que siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "Las ventanas caben en la pantalla del computador" | Claude propone; cliente decide |
 | 3 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
 | 4 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
 | 5 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
@@ -783,7 +841,19 @@ PR, documentación—, con tuteo y sin voseo.
 **Cómo se prueba**
 
 - `npm run revisar` en `panel/`: tipos, lógica, lecturas de Google, letra
-  chica, comentarios, webhook y ajuste. **Antes de cada PR.**
+  chica, comentarios, webhook, ajuste **y las ventanas**. **Antes de cada
+  PR.** Tarda unos minutos más desde el 21-11-2026, porque levanta el panel
+  de ejemplo.
+- **`npm run ventanas`**: abre las 43 fichas y ventanas del panel de ejemplo
+  a 1280×650 y falla si una no cabe o tiene un campo corrido. **Una ventana
+  o una ficha nueva se agrega a `ESCENAS` de `pruebas/ventanas.mjs` en el
+  mismo PR.** Con el panel de ejemplo ya andando, se corre directo y más
+  rápido: `AYUDA_URL=http://localhost:3125 AYUDA_SESIONES=<carpeta>/sesiones.json
+  node pruebas/ventanas.mjs [escenas]`. `VENTANAS_FOTOS=<carpeta>` deja una
+  foto de cada una (es lo que se mira para reorganizar una ventana);
+  `VENTANAS_ANCHO=393 VENTANAS_ALTO=740 VENTANAS_MEDIDAS=<archivo>` mide en
+  el celular, para comparar antes y después; `VENTANAS_PLAYSTATION=1` lista
+  lo de `revisarPlayStation()`.
 - **El panel de ejemplo**, con una planilla en memoria:
   `AYUDA_TRABAJO=<carpeta> bash pruebas/ejemplo/capturas.sh --servidor` lo
   levanta en el puerto 3125 con las sesiones de cada rol en
@@ -804,8 +874,13 @@ PR, documentación—, con tuteo y sin voseo.
   que arma el panel de ejemplo (`<carpeta>/panel`), que no es el repo: sirve
   para mandar capturas de antes y después sin haber tocado nada.
 - **Un cambio "solo del computador" se comprueba en el celular**: el largo
-  de cada pantalla a 393px tiene que salir igual que antes del cambio. Es la
-  forma rápida de saber que ningún `lg:` se escapó.
+  de cada pantalla y de cada ventana a 393px tiene que salir igual que antes
+  del cambio. Es la forma rápida de saber que ningún `lg:` se escapó. Para
+  las ventanas: medir con `VENTANAS_ANCHO=393`, guardar los cambios con
+  `git stash`, medir de nuevo y comparar los dos archivos.
+- **El reloj del panel de ejemplo está fijo** (viernes 13-11-2026, 14:25 de
+  Chile). Un script propio con Playwright tiene que fijar el del navegador
+  igual (`ctx.clock.install`), o *hoy* no calza y React avisa en rojo.
 - **El panel de ejemplo se apaga solo** si se lanza en segundo plano sin un
   tiempo largo. Las fotos de la ayuda se pueden sacar con el servidor de
   pruebas andando si van por otro puerto (`AYUDA_PUERTO=3126`).
@@ -870,14 +945,16 @@ misma pasada.
   desplegables, una frase que dice qué pasa al seguir.
 - **Una tarjeta abierta cabe en una pantalla**: se mide en 1280×650 (y,
   donde se pueda, 393×740). Si no cabe sin romper la regla de arriba, gana
-  la de arriba y el PR dice cuánto mide.
+  la de arriba y el PR dice cuánto mide. **Lo mide `npm run ventanas`**, y
+  una ventana nueva se agrega a sus escenas en el mismo PR.
 - **Lo que explica va en su `?`**, no fijo en la pantalla. A la vista, el
   dato y la acción; un texto que se lee una vez puede ser `AvisoFijo` (con
   ✕).
 - **Los formularios van alineados** (21-11-2026): los nombres de los campos
   en una columna y los valores en otra, todos partiendo en la misma
   vertical; nunca un campo pegado a su nombre porque la palabra es más
-  corta. Se mira con una captura antes de cerrar el cambio.
+  corta. Se mira con una captura antes de cerrar el cambio, y lo mide
+  `revisarAlineacion()` dentro de `npm run ventanas`.
 - **Elegir de una lista que crece se hace con buscador** (`BuscarEnLista`):
   el botón directo y otro que abre la lista. Nunca un botón por persona.
 - **Autoguardado por defecto**, con *Guardando… / ✓ Guardado /
@@ -894,9 +971,10 @@ misma pasada.
   quien corresponde; **confirmar** (revisado, pagado, devuelto) es del
   permiso `pagar`, a su nombre. Sin frenar el trabajo de los demás. No se
   cambia un permiso de plata sin que el cliente lo diga.
-- **Antes del PR**: `npm run revisar`, Playwright a 393 y 1280 con
-  `revisarPlayStation()`, *¿cambió algo que una ayuda describe?*, *¿cabe
-  abierta en 1280×650?* y *¿parten los campos en la misma vertical?*
+- **Antes del PR**: `npm run revisar` (con las ventanas adentro),
+  Playwright a 393 y 1280 con `revisarPlayStation()`, *¿cambió algo que una
+  ayuda describe?* y, si se creó una ventana o una ficha, *¿está en
+  `ESCENAS`?*
 
 ### Sitio y landings: elegante y sobrio
 
