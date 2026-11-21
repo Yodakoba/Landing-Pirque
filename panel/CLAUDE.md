@@ -409,7 +409,7 @@ computador.
 |---|---|---|---|
 | Cotizar · 2 Evento | 807 | 423 | Dos columnas: cuándo y cuántos · qué es, por quién viene y las notas |
 | Cotizar · 3 Productos | 1.417 | 533 | Los productos para agregar en dos filas con su nombre a la izquierda; **las líneas como una tabla**, una fila por producto con el nombre de cada columna una vez arriba (`subgrid`); las cuentas en una fila |
-| Cotizar · 4 Envío | 1.970 | 634 | Tres columnas: el documento con el próximo paso debajo, el pago, y el seguimiento. Lo que se llena una vez va plegado |
+| Cotizar · 4 Envío | 1.970 | 627 | Tres columnas: el documento con el próximo paso debajo, el pago, y el seguimiento. Lo que se llena una vez va plegado |
 | Cotizar · 5 Contrato | 1.565 | 622 | El contrato ocupa dos tercios, con lo suyo en dos columnas, y el próximo paso a su derecha |
 | El equipo del día, con una línea abierta | 1.272 | 621 | Tres columnas parejas de puestos; las dos caras y el resumen, en la línea del título; la propina y el resumen, en el pie |
 | Un día cerrado | 1.092 | 621 | Lo mismo |
