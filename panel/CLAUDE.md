@@ -172,9 +172,45 @@ termina en **− Descontar** y **+ Sumar**, que abren la ventana
   que ya tenía. El link del trabajador, la boleta, la planilla y la ventana
   del día lo leen igual que uno anotado en Turnos.
 - **El día** se elige con un botón por cada día que **vino** en el periodo
-  que se mira (`diasParaAjustar()`). Parte en el último. El ajuste suma en
-  el periodo de esa fecha. Un día que no vino o sin marcar no se ofrece: su
-  turno no suma, y el ajuste tampoco sumaría.
+  que se mira (`diasParaAjustar()`), más **Hoy**. Parte en el último que
+  vino. El ajuste suma en el periodo de esa fecha. Un día que no vino o sin
+  marcar no se ofrece: su turno no suma, y el ajuste tampoco sumaría.
+- **Hoy, fuera de turno** (lo pidió el cliente el mismo día: *"puede ser que
+  un trabajador pida un adelanto en otro momento, que no sea un día de
+  turno"*). Si hoy no tiene un turno marcado *Vino*, el ajuste va a una
+  pestaña propia, **`Ajustes sueltos`** (ID · Fecha · Trabajador · Monto ·
+  Motivo · Anotado por · Cuándo), que nace con el primero.
+  - **No va a `Turnos` a propósito**: una fila de `Turnos` es un día
+    trabajado, y la leen el planificador, la planilla semanal, el cierre y
+    **el reparto de la propina**. Un turno inventado le habría quitado
+    propina a los que sí vinieron.
+  - **Las cuentas de plata lo leen igual**: `/api/informe` y el link
+    personal lo mandan con los turnos, con forma de turno y marcado
+    `suelto` (`comoTurno()`). `informeDelPeriodo()` le suma el monto **sin
+    contarlo como día**, `pagoDelTurno()` lo cuenta tal cual, también
+    negativo (`pagoDe()` no baja de cero por día, y un adelanto de un día sin
+    turno nunca se habría descontado). La boleta lo cuenta como un ajuste de
+    turno: un *Adelanto* no la baja y un *Rompió algo* sí.
+  - **Dónde se ve**: en la línea de la persona, *Fuera de turno · vie 13 nov
+    −$20.000 · Adelanto · Transferencia*, con **✕ Quitar**, que pregunta
+    antes (`DELETE /api/equipo/ajuste?id=…`, con `pagar` y a la bitácora). En
+    el link personal, en el *día por día*, con *fuera de turno* en vez del
+    puesto. En las planillas, una fila *Ajuste fuera de turno* con su monto.
+  - **Mirando otra semana**, la ventana lo dice: *Se anota hoy, viernes 13 de
+    noviembre, fuera de turno: no cambia lo que ves, suma en la semana del 9
+    – 15 de noviembre*.
+  - **Una semana con solo un adelanto queda en negativo**: el sueldo dice
+    *−$20.000* y no hay nada que transferir, hasta que sus turnos de esa
+    semana se cierran y lo cubren.
+  - **El nombre tiene que estar en el equipo**: sin turno, la ruta lo busca
+    en `Trabajadores`.
+- **La ventana cabe sin scroll** (lo pidió el cliente el mismo día: *"en el
+  computador queda un poco grande"*). En el computador va en dos columnas
+  (`max-w-2xl`), con la frase al lado del botón. En el celular es una sola
+  columna, con los días sin el mes (*sáb 7*, *Hoy · vie 13*) y la ventana más
+  arriba (`arriba` de `Dialogo`, solo en esta). Medida con Playwright de
+  360×640 a 1920×1080: 418px de alto en el computador y 600px en el celular
+  más chico, sin scroll en ninguno.
 - **Es plata, así que se confirma a mano**: la ventana dice *Se anota en su
   turno del domingo 8 de noviembre. Su sueldo de 2 – 8 de noviembre pasa de
   $102.000 a $98.000*, y el botón relleno, *− Descontar $4.000*. Pide monto
@@ -196,10 +232,15 @@ termina en **− Descontar** y **+ Sumar**, que abren la ventana
 - **La pantalla no recarga**: cambia ese turno en lo que tiene, y el sueldo,
   el botón 📋 de copiar, lo que falta pagar y la boleta se recalculan solos.
 - **Ruta**: `POST /api/equipo/ajuste` (`{fecha, trabajador, tipo, monto,
-  razon, medio, nota}`). **Lecturas de Google**: cuatro a lo más. Son la
-  tanda de la ruta (Cierres y Turnos), Turnos fresca antes de escribir, el
-  encabezado de la bitácora y, la primera vez de cada instancia, la lista
-  de pestañas. Lo fija `npm run ajuste`.
+  razon, medio, nota}`) y `DELETE` para uno fuera de turno. **Lecturas de
+  Google**: cuatro a lo más. Son la tanda de la ruta (Cierres, Turnos y
+  Trabajadores), la pestaña donde escribe leída fresca, el encabezado de la
+  bitácora y, la primera vez de cada instancia, la lista de pestañas. Lo
+  fija `npm run ajuste`. **El informe y el link personal** suman `Ajustes
+  sueltos` a su tanda: ninguna lectura más. **Mientras la pestaña no
+  exista**, cada visita gasta una más —el panel vuelve a mirar la lista de
+  pestañas antes de darla por inexistente—; deja de pasar con el primer
+  ajuste fuera de turno.
 - **Solo el equipo del restaurante**: los extras y los vendedores no tienen
   ajustes por día en el informe.
 - **Ayuda**: un paso nuevo en el `?` del informe, el `?` chico al lado de
@@ -320,7 +361,7 @@ prueba**, y falla antes del PR:
 | `npm run lecturas` | **Cuántas lecturas de Google gasta cada ruta** que abre una pantalla (`pruebas/lecturas/`). Cada ruta se llama en Node contra un Google falso que cuenta las consultas, y tiene su tope en `TOPE`: hoy todas caben en **una** tanda (Productos, dos). Si un cambio se pasa, se junta la lectura nueva en la tanda de la ruta, o se sube el tope a propósito y el PR lo dice. Comprobado rompiéndolo: con tope 0 la ruta falla y nombra lo que leyó |
 | `npm run letra-chica` | **Que nadie sume letra bajo 13px** (`text-xs`, `text-[9px]` a `text-[12px]`). Lo que ya había —80 en 22 archivos— quedó anotado en `HABIA` como punto de partida: solo puede bajar, y cuando baja la prueba pide anotarlo |
 | `npm run webhook` | **El webhook de Shopify** (`pruebas/webhook.mjs`, 2026-11-21): sin firma o con la de otra tienda, 401; un pedido sin `_booking_date` se descarta **sin gastar lecturas** y deja la línea `descartado` con su número y sin datos del cliente; uno con fecha se anota. Comprobado rompiéndolo: contra la ruta de antes falla (gastaba 2 lecturas y no dejaba línea) |
-| `npm run ajuste` | **El ajuste desde el informe** (`pruebas/ajuste.mjs`, 2026-11-21): el encargado recibe 403; pagos escribe una sola fila de `Turnos` y solo sus dos celdas de ajuste, sumado a lo que había; en un día cerrado entra como corrección; sin turno, 404; un día que no vino, 409; cuatro lecturas a lo más |
+| `npm run ajuste` | **El ajuste desde el informe** (`pruebas/ajuste.mjs`, 2026-11-21): el encargado recibe 403; pagos escribe una sola fila de `Turnos` y solo sus dos celdas de ajuste, sumado a lo que había; en un día cerrado entra como corrección; sin turno, 404; un día que no vino, 409; **hoy sin turno va a `Ajustes sueltos` sin tocar `Turnos`**, a alguien fuera del equipo 404, y quitarlo pide `pagar`; cuatro lecturas a lo más |
 | `npm run revisar` | Las de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
 
 Y para la pasada con Playwright, **`revisarPlayStation(page)`** de

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { partesMarca } from '@/lib/plata';
 import { conLecturas } from '@/lib/sheets';
-import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
+import { HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_AJUSTES_SUELTOS, comoTurno } from '@/lib/equipo';
 import { HOJA_ACTIVIDADES, HOJA_COLABORADORES } from '@/lib/extras';
 import { HOJA_BOLETAS, HOJA_PAGOS } from '@/lib/remuneraciones';
-import { leerTurnos, leerTrabajadores, leerExtras, leerColaboradores,
+import { leerTurnos, leerAjustesSueltos, leerTrabajadores, leerExtras, leerColaboradores,
          leerPagosEquipo, anotarPagoEquipo, anotarPagosEquipo, borrarPagoEquipo, leerBoletas,
          anotar } from '@/lib/datos';
 import { exigir, exigirVer, quienEs } from '@/lib/permisos';
@@ -55,14 +55,19 @@ export const dynamic = 'force-dynamic';
  * Es una ruta de solo lectura: el informe no escribe nada.
  */
 export const GET = conLecturas([HOJA_TURNOS, HOJA_ACTIVIDADES, HOJA_TRABAJADORES, HOJA_COLABORADORES, HOJA_PAGOS, HOJA_BOLETAS,
-  HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_COBROS, HOJA_CLIENTES, HOJA_MENUS], async function GET(req: Request) {
+  HOJA_USUARIOS, HOJA_VENDEDORES, HOJA_PRESUPUESTOS, HOJA_LINEAS, HOJA_COBROS, HOJA_CLIENTES, HOJA_MENUS,
+  HOJA_AJUSTES_SUELTOS], async function GET(req: Request) {
   const no = await exigirVer(req, 'informe');
   if (no) return no;
   try {
-    const [turnos, extras, gente, colaboradores, pagos, boletas] = await Promise.all([
+    const [delEquipo, extras, gente, colaboradores, pagos, boletas, sueltos] = await Promise.all([
       leerTurnos(), leerExtras(), leerTrabajadores(), leerColaboradores(),
-      leerPagosEquipo(), leerBoletas()
+      leerPagosEquipo(), leerBoletas(), leerAjustesSueltos()
     ]);
+    // **Los ajustes fuera de turno viajan con los turnos** (2026-11-21), con
+    // forma de turno y marcados `suelto`: las cuentas de la pantalla los
+    // suman con la misma función, sin contarlos como días.
+    const turnos = [...delEquipo, ...sueltos.map(comoTurno)];
     const { rol } = await quienEs(req);
     const puedePagar = puede(rol, 'pagar');
     // **El equipo de ventas** (2026-11-12): solo para quien ve a los

@@ -42,7 +42,8 @@ import {
   HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS, ENCABEZADO_TURNOS,
   leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
   leerTurnosDe, filaTurno, normalizarPlan, COL_TURNOS, escribirAjustes,
-  POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno, type Ajuste
+  HOJA_AJUSTES_SUELTOS, ENCABEZADO_AJUSTES_SUELTOS, leerAjustesSueltosDe, filaAjusteSuelto,
+  POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno, type Ajuste, type AjusteSuelto
 } from './equipo.ts';
 import {
   HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
@@ -493,6 +494,44 @@ export async function agregarAjusteAlTurno(
   fila[i.motivo] = motivos;
   await escribirFila(HOJA_TURNOS, turno.fila, fila);
   return { ...turno, ajustes };
+}
+
+/**
+ * **Los ajustes fuera de turno** (2026-11-21): un adelanto pedido un día que
+ * no trabajó. Ver `HOJA_AJUSTES_SUELTOS`. Sin la pestaña, ninguno.
+ */
+export async function leerAjustesSueltos(): Promise<AjusteSuelto[]> {
+  try {
+    return leerAjustesSueltosDe(await leerHoja(HOJA_AJUSTES_SUELTOS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/** Anota uno; la pestaña nace con el primero. Devuelve el ajuste con su fila. */
+export async function agregarAjusteSuelto(a: Omit<AjusteSuelto, 'id' | 'fila'>): Promise<AjusteSuelto> {
+  const filas = await asegurarEncabezado(HOJA_AJUSTES_SUELTOS, ENCABEZADO_AJUSTES_SUELTOS);
+  const id = `AJ-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
+  const nuevo = { ...a, id };
+  await agregarFila(HOJA_AJUSTES_SUELTOS, filaAjusteSuelto(filas[0] ?? ENCABEZADO_AJUSTES_SUELTOS, nuevo));
+  return { ...nuevo, fila: filas.length + 1 };
+}
+
+/**
+ * Quita uno por su ID, leyendo la pestaña fresca para no borrar una fila que
+ * se movió. Devuelve el que quitó, o `null` si ya no estaba.
+ */
+export async function quitarAjusteSuelto(id: string): Promise<AjusteSuelto | null> {
+  let filas: string[][];
+  try { filas = await leerHoja(HOJA_AJUSTES_SUELTOS, true); } catch (e) {
+    if (esPestanaQueNoExiste(e)) return null;
+    throw e;
+  }
+  const a = leerAjustesSueltosDe(filas).find((x) => x.id === id);
+  if (!a) return null;
+  await borrarFila(HOJA_AJUSTES_SUELTOS, a.fila);
+  return a;
 }
 
 /* ---------- Las actividades extras ---------- */

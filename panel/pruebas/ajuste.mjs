@@ -9,6 +9,8 @@
  * - se suma a los ajustes que ya tenía, como en Turnos;
  * - un día cerrado entra como corrección y la bitácora lo dice;
  * - sin turno ese día, 404; un día que no vino, 409;
+ * - **hoy sin turno** va a `Ajustes sueltos` y no toca `Turnos`; se quita
+ *   con `DELETE`, que también pide `pagar`;
  * - cuántas lecturas de Google gasta: cuatro, contando la lista de pestañas.
  *
  *   npm run ajuste
@@ -88,6 +90,40 @@ r = await pedir('admin', { ...descuento, fecha: '2026-11-08' });
 ok(r.status === 409, 'un día que no vino: 409, un ajuste ahí no sumaría');
 r = await pedir('admin', { ...descuento, razon: '' });
 ok(r.status === 400, 'sin motivo: 400');
+
+// --- Hoy, fuera de turno (2026-11-21): un adelanto de un día que no trabajó.
+const { hoy } = await import(new URL('../src/lib/fechas.ts', import.meta.url).href);
+store.set('Trabajadores', [['Nombre', 'Teléfono', 'Puesto habitual', 'Activo'], ['Luis Contreras', '', 'Parrilla', 'Sí']]);
+store.set('Cierres', [ENCABEZADO_CIERRES]);
+store.set('Bitácora', []);
+store.delete('Ajustes sueltos');
+const turnosAntes = JSON.stringify(store.get('Turnos'));
+lecturas.length = 0; escrituras.length = 0;
+r = await pedir('pagos', { ...descuento, fecha: hoy(), monto: 20000, nota: 'lo pidió por WhatsApp' });
+const jh = await r.json();
+const sueltos = store.get('Ajustes sueltos') ?? [];
+ok(r.status === 200 && !!jh.turno?.suelto && jh.turno.ajustes[0].monto === -20000,
+   `hoy sin turno: 200 y vuelve marcado como fuera de turno (${r.status})`);
+ok(JSON.stringify(store.get('Turnos')) === turnosAntes, 'no toca Turnos: no es un día trabajado ni entra a la propina');
+ok(sueltos.length === 2 && sueltos[0][0] === 'ID' && sueltos[1][1] === hoy() && sueltos[1][2] === 'Luis Contreras'
+   && sueltos[1][3] === '-20000' && sueltos[1][4] === 'Adelanto · Transferencia · lo pidió por WhatsApp',
+   `la pestaña Ajustes sueltos nace con el primero: ${JSON.stringify(sueltos[1])}`);
+ok(/fuera de turno/.test((store.get('Bitácora') ?? []).flat().join(' ')), 'la bitácora dice que fue fuera de turno');
+ok(lecturas.length <= 4, `lecturas de Google: ${lecturas.length} de 4 (${lecturas.join(', ')})`);
+r = await pedir('pagos', { ...descuento, fecha: hoy(), trabajador: 'Nadie Inventado' });
+ok(r.status === 404 && (store.get('Ajustes sueltos') ?? []).length === 2, 'a alguien que no está en el equipo: 404');
+
+// Quitarlo, por si se anotó mal.
+const { DELETE } = await import(new URL('equipo/ajuste/route.ts', API).href);
+const quitar = async (rol, id) => DELETE(new Request(`http://localhost/api/equipo/ajuste?id=${encodeURIComponent(id)}`,
+  { method: 'DELETE', headers: { cookie: await cookie(rol) } }));
+r = await quitar('encargado', jh.turno.suelto);
+ok(r.status === 403 && (store.get('Ajustes sueltos') ?? []).length === 2, 'quitarlo: el encargado no puede, 403');
+r = await quitar('pagos', jh.turno.suelto);
+ok(r.status === 200 && (store.get('Ajustes sueltos') ?? []).length === 1, 'pagos lo quita: la fila se borra');
+ok(/Quitó un ajuste fuera de turno/.test((store.get('Bitácora') ?? []).flat().join(' ')), 'y queda en la bitácora');
+r = await quitar('pagos', jh.turno.suelto);
+ok(r.status === 404, 'quitarlo dos veces: 404');
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: el ajuste desde el informe toca solo lo suyo.');
 process.exit(fallos ? 1 : 0);

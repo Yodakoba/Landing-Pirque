@@ -47,7 +47,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, enPalabras, enCorto, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
-import { totalAjustes, motivosDe, diasQueNoSuman, diasParaAjustar, type TipoAjuste } from '@/lib/equipo';
+import { totalAjustes, motivosDe, diasQueNoSuman, diasParaAjustar, pagoDelTurno, type TipoAjuste } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe,
          type Banco } from '@/lib/banco';
 import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, pagosEnPeriodo,
@@ -279,7 +279,8 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, cuentan, fuera, marcarEn, palabraSinMarcar, nota, sinCuenta,
   boleta, tituloBoleta, desglose = true, sinPropina = false, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar,
-  onPagarCompleto, onBoleta, anotados, onVerPagos, porConfirmar, onConfirmar, onAjustar
+  onPagarCompleto, onBoleta, anotados, onVerPagos, porConfirmar, onConfirmar, onAjustar,
+  sueltos = [], onQuitarSuelto
 }: {
   nombre: string;
   detalle: string;
@@ -341,12 +342,18 @@ function LineaPersona({
    * paga y solo con algún día que vino en el periodo. Ver `AjusteInforme`.
    */
   onAjustar?: (tipo: TipoAjuste) => void;
+  /** Los ajustes fuera de turno del periodo (2026-11-21), cada uno con *Quitar*. */
+  sueltos?: { id: string; fecha: string; monto: number; motivo: string }[];
+  onQuitarSuelto?: (id: string) => Promise<void>;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
   // Qué parte se está guardando con "Pagado completo": mientras tanto el
   // botón se apaga, para que dos toques seguidos no anoten dos pagos.
   const [enviando, setEnviando] = useState<Concepto | null>(null);
   const [confirmando, setConfirmando] = useState(false);
+  /** El ajuste fuera de turno que pregunta si se quita, y el que se está quitando. */
+  const [quitando, setQuitando] = useState<string | null>(null);
+  const [borrando, setBorrando] = useState<string | null>(null);
   const estadoPill = (e: EstadoPago, falta: number) => (
     <span className={`whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${
       e === 'pagado' ? 'border-verde/60 text-verde-texto'
@@ -510,6 +517,40 @@ function LineaPersona({
                   </button>
                   <AyudaCorta tema="ajusteInforme" />
                 </div>
+              )}
+              {/* **Los de fuera de turno, a la vista** (2026-11-21): no están
+                  en ningún día de Turnos, así que se quitan desde acá, y
+                  pregunta antes. */}
+              {onQuitarSuelto && sueltos.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {sueltos.map((x) => (
+                    <li key={x.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]">
+                      <span className="font-semibold">Fuera de turno · {enCorto(x.fecha)}</span>
+                      <span className={`font-semibold tabular-nums ${x.monto < 0 ? 'text-rojo-texto' : 'text-verde-texto'}`}>
+                        {x.monto < 0 ? '−' : '+'}{enPesos(Math.abs(x.monto))}
+                      </span>
+                      <span className="text-hueso/70">{x.motivo}</span>
+                      {quitando === x.id ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[13px] text-hueso/80">¿Quitarlo?</span>
+                          <button type="button" disabled={borrando === x.id}
+                            onClick={() => {
+                              setBorrando(x.id);
+                              void onQuitarSuelto(x.id).finally(() => { setBorrando(null); setQuitando(null); });
+                            }}
+                            className="boton min-h-[36px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto disabled:opacity-40">
+                            {borrando === x.id ? 'Quitando…' : 'Sí, quitar'}
+                          </button>
+                          <button type="button" onClick={() => setQuitando(null)} className="boton min-h-[36px]">No</button>
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => setQuitando(x.id)}
+                          aria-label={`Quitar el ajuste fuera de turno del ${enCorto(x.fecha)}`}
+                          className="boton min-h-[36px] hover:border-rojo/60 hover:text-rojo-texto">✕ Quitar</button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
             {(fuera.sinMarcar.length > 0 || fuera.noVino.length > 0) && (
@@ -1206,6 +1247,19 @@ export default function InformeEquipo() {
       : c?.exacta ? `Boleta de ${quien} corregida` : `Boleta de ${quien} marcada`);
   }
 
+  /** Quita un ajuste fuera de turno (2026-11-21), y lo saca de la pantalla. */
+  async function quitarSuelto(id: string, quien: string) {
+    try {
+      const r = await fetch(`/api/equipo/ajuste?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error ?? `Error ${r.status}`);
+      setTurnos((antes) => (antes ?? []).filter((t) => t.suelto !== id));
+      avisar(`Ajuste fuera de turno de ${quien} quitado`);
+    } catch (e) {
+      avisar((e as Error).message, 'atencion');
+    }
+  }
+
   /** Copia los datos de la transferencia de una parte, con lo que falta. */
   function copiarTransferencia(quien: string, o: Opcion) {
     const b = cuentaDe(quien);
@@ -1451,6 +1505,10 @@ export default function InformeEquipo() {
    * completa, y el pago **solo en la primera fila de cada persona**.
    */
   function exportar(cual: 'completa' | 'sueldos' | 'propinas' = 'completa') {
+    // **Un ajuste fuera de turno** (2026-11-21) va en su fila, con su monto
+    // —también negativo— y diciendo qué es: no es un día que vino.
+    const puestoEnPlanilla = (t: Turno) => (t.suelto ? 'Ajuste fuera de turno' : t.puesto);
+    const vinoEnPlanilla = (t: Turno) => (t.suelto ? '' : t.asistencia || 'sin marcar');
     const delPeriodo = (turnos ?? [])
       .filter((t) => t.fecha >= desde && t.fecha <= hasta)
       .sort((a, b) => a.trabajador.localeCompare(b.trabajador)
@@ -1503,10 +1561,10 @@ export default function InformeEquipo() {
         const l = lineaDe(t.trabajador);
         const primera = primeraDe(delPeriodo, i, (x) => x.trabajador);
         return [
-          'Equipo', t.trabajador, t.fecha, t.puesto, t.modalidad, t.asistencia || 'sin marcar',
+          'Equipo', t.trabajador, t.fecha, puestoEnPlanilla(t), t.modalidad, vinoEnPlanilla(t),
           esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
           t.horasExtra || '', t.valorHora || '',
-          totalAjustes(t.ajustes) || '', motivosDe(t.ajustes), pagoDe(t),
+          totalAjustes(t.ajustes) || '', motivosDe(t.ajustes), pagoDelTurno(t),
           ...parteEnFila(t.trabajador, l?.total ?? 0, l?.propina ?? 0, 'sueldo', primera),
           primera ? boletaEnPlanilla(pideBoleta('equipo', esContratado(l?.modalidad ?? '')), boletaRecibida(t.trabajador)) : '',
           ...columnasBanco(t.trabajador)
@@ -1555,14 +1613,14 @@ export default function InformeEquipo() {
         [
           ...delPeriodo.map((t, i) => [
             'Equipo',
-            t.trabajador, t.fecha, t.puesto, t.modalidad,
-            t.asistencia || 'sin marcar',
+            t.trabajador, t.fecha, puestoEnPlanilla(t), t.modalidad,
+            vinoEnPlanilla(t),
             // Un contratado va en blanco, no en cero: cero se lee como "se le
             // pagó cero", y lo que pasa es que esa columna no le aplica.
             esContratado(t.modalidad) ? '' : (t.pagoJornada || ''),
             t.horasExtra || '', t.valorHora || '',
             totalAjustes(t.ajustes) || '', motivosDe(t.ajustes),
-            pagoDe(t),
+            pagoDelTurno(t),
             // Aparte del total, igual que en pantalla: la propina no es
             // sueldo, y quien reciba esta planilla tiene que poder sumar una
             // cosa sin arrastrar la otra.
@@ -1875,7 +1933,7 @@ export default function InformeEquipo() {
                             ? (l.ajustes < 0 ? '−' : '') + enPesos(Math.abs(l.ajustes))
                             : '—',
                           tono: l.ajustes < 0 ? 'rojo' : undefined },
-                        { que: 'Sueldo', valor: enPesos(l.total), tono: 'fuerte' },
+                        { que: 'Sueldo', valor: (l.total < 0 ? '−' : '') + enPesos(Math.abs(l.total)), tono: 'fuerte' },
                         { que: 'Propina (aparte)', valor: l.propina ? enPesos(l.propina) : '—' }
                       ]}
                       sinCuenta={!sePuedeTransferir(cuentaDe(l.trabajador))}
@@ -1898,10 +1956,15 @@ export default function InformeEquipo() {
                       })}
                       onPagarCompleto={(o) => pagarCompleto(l.trabajador, o,
                         aplica && faltaB(l.trabajador))}
-                      onAjustar={puedePagar && diasParaAjustar(turnos ?? [], l.trabajador, desde, hasta).length
+                      onAjustar={puedePagar
                         ? (tipo) => setAjustando({ quien: l.trabajador, tipo, sueldo: l.total,
                             dias: diasParaAjustar(turnos ?? [], l.trabajador, desde, hasta) })
-                        : undefined} />
+                        : undefined}
+                      sueltos={(turnos ?? []).filter((t) => t.suelto && t.fecha >= desde && t.fecha <= hasta
+                          && normalizar(t.trabajador) === normalizar(l.trabajador))
+                        .map((t) => ({ id: t.suelto!, fecha: t.fecha, monto: totalAjustes(t.ajustes),
+                          motivo: motivosDe(t.ajustes) }))}
+                      onQuitarSuelto={puedePagar ? (id) => quitarSuelto(id, l.trabajador) : undefined} />
                   );
                 })}
               </ul>
@@ -2142,19 +2205,21 @@ export default function InformeEquipo() {
           No hay una casilla "pagado": se deduce de que la suma cubra lo que
           hay que transferir. Ver `remuneraciones.ts`. */}
       {ajustando && (
-        <Dialogo titulo={`Ajuste · ${ajustando.quien}`}
+        <Dialogo titulo={`Ajuste · ${ajustando.quien}`} ancho="max-w-2xl" arriba="mt-2 sm:mt-10"
           onCerrar={() => setAjustando(null)}>
           <AjusteInforme nombre={ajustando.quien} dias={ajustando.dias} tipoInicial={ajustando.tipo}
+            hoy={hoy()} desde={desde} hasta={hasta}
             sueldo={ajustando.sueldo} periodo={rangoEnPalabras([desde, hasta])}
             onCancelar={() => setAjustando(null)}
             onListo={(t) => {
               // Se cambia ese turno en lo que hay en pantalla: el sueldo, la
               // boleta y lo que falta pagar se recalculan solos.
-              setTurnos((antes) => (antes ?? []).map((x) =>
-                x.fecha === t.fecha && normalizar(x.trabajador) === normalizar(t.trabajador) ? t : x));
+              // Uno fuera de turno se agrega aparte.
+              setTurnos((antes) => t.suelto ? [...(antes ?? []), t] : (antes ?? []).map((x) =>
+                !x.suelto && x.fecha === t.fecha && normalizar(x.trabajador) === normalizar(t.trabajador) ? t : x));
               const ultimo = t.ajustes[t.ajustes.length - 1];
               avisar(`${ultimo.monto < 0 ? 'Descuento' : 'Suma'} de ${enPesos(Math.abs(ultimo.monto))} `
-                     + `anotado a ${ajustando.quien} · ${enCorto(t.fecha)}`);
+                     + `anotado a ${ajustando.quien} · ${t.suelto ? 'hoy, fuera de turno' : enCorto(t.fecha)}`);
               setAjustando(null);
             }} />
         </Dialogo>

@@ -265,8 +265,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'número de cuenta y e-mail— y después el monto y la glosa: cada línea '
       + 'se pega tal cual en su campo.',
       'Para descontar o sumar algo sin ir a Turnos, abre su línea: en lo que '
-      + 'suma están − Descontar y + Sumar. Eliges el día que vino, el monto y el '
-      + 'motivo, y suma en el periodo de ese día.',
+      + 'suma están − Descontar y + Sumar. Eliges el día que vino —u Hoy, para '
+      + 'un adelanto pedido un día sin turno—, el monto y el motivo, y suma en el '
+      + 'periodo de ese día. Uno de hoy fuera de turno aparece en su línea, con ✕ '
+      + 'Quitar por si se anotó mal.',
       'Si una línea dice ⚠ Por confirmar, alguien que no hace los pagos cambió '
       + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
       + 'Confirmar.',
@@ -981,7 +983,8 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Descontar o sumar desde acá',
     texto: [
       'Es el mismo ajuste de Turnos: va en el turno del día que elijas, así que suma en el periodo de esa fecha, y lo ven su link y su boleta.',
-      'Solo en un día que vino. Si el día ya está cerrado, queda como corrección en la bitácora, a tu nombre.'
+      'Hoy sirve para un adelanto pedido un día sin turno: queda fuera de turno, suma en la semana de hoy y no cuenta como día trabajado. Se quita desde su línea.',
+      'Si el día ya está cerrado, queda como corrección en la bitácora, a tu nombre.'
     ]
   },
   transferenciaMasiva: {

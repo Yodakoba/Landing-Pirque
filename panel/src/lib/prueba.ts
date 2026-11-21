@@ -106,6 +106,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
          partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno, ajusteDelCuerpo, diasParaAjustar,
+         comoTurno, pagoDelTurno, leerAjustesSueltosDe, filaAjusteSuelto, ENCABEZADO_AJUSTES_SUELTOS,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
@@ -3139,6 +3140,34 @@ ok(celdasAjustes[0] === '-4000|10000' && celdasAjustes[1] === 'Adelanto · Efect
     tur('2026-11-07', 'Luis', 'Sí')], 'Ana Soto', '2026-11-02', '2026-11-08');
   ok(JSON.stringify(dias) === JSON.stringify(['2026-11-07', '2026-11-08']),
      'informe: se ajusta en los días que vino dentro del periodo, en orden; no en los que no vino ni sin marcar');
+}
+
+// **Fuera de turno** (2026-11-21): un adelanto de un día que no trabajó.
+{
+  const a = { id: 'AJ-1', fecha: '2026-11-11', trabajador: 'Ana Soto', monto: -20000,
+    motivo: 'Adelanto · Transferencia', quien: 'pagos', cuando: '2026-11-11T15:00:00Z' };
+  const filas = [ENCABEZADO_AJUSTES_SUELTOS, filaAjusteSuelto(ENCABEZADO_AJUSTES_SUELTOS, a)];
+  const vuelta = leerAjustesSueltosDe(filas);
+  ok(vuelta.length === 1 && vuelta[0].monto === -20000 && vuelta[0].motivo === 'Adelanto · Transferencia' && vuelta[0].fila === 2,
+     'fuera de turno: la pestaña se escribe y se lee igual, con el monto con signo');
+  const tur = (fecha: string, jornada: number) => ({ fecha, trabajador: 'Ana Soto', puesto: 'Garzón', asistencia: 'Sí',
+    modalidad: 'Por turno', pagoJornada: jornada, horasExtra: 0, valorHora: 0, ajustes: [], propina: 5000, fila: 2 });
+  const suelto = comoTurno(vuelta[0]);
+  const linea = informeDelPeriodo([tur('2026-11-14', 45000), tur('2026-11-15', 45000), suelto], '2026-11-09', '2026-11-15')[0];
+  ok(linea.dias === 2 && linea.total === 70000 && linea.ajustes === -20000 && linea.propina === 10000 && linea.modalidad === 'Por turno',
+     'fuera de turno: el adelanto baja el sueldo de la semana, sin contar como día ni tocar la propina');
+  const solo = informeDelPeriodo([suelto], '2026-11-09', '2026-11-15')[0];
+  ok(solo.dias === 0 && solo.total === -20000, 'fuera de turno: solo, la semana queda en negativo; pagoDe() no lo habría descontado');
+  ok(pagoDelTurno(suelto) === -20000 && pagoDelTurno(tur('2026-11-14', 45000)) === 45000,
+     'fuera de turno: pagoDelTurno() es su monto tal cual, y en un turno es pagoDe()');
+  const { paraBoletaDeTurno } = await import('./boletas.ts');
+  ok(paraBoletaDeTurno(suelto) === 0
+     && paraBoletaDeTurno(comoTurno({ ...vuelta[0], monto: -8000, motivo: 'Rompió algo' })) === -8000,
+     'fuera de turno: un adelanto no baja la boleta; un Rompió algo sí, aunque no haya turno');
+  ok(diasParaAjustar([tur('2026-11-14', 45000), suelto], 'Ana Soto', '2026-11-09', '2026-11-15').join() === '2026-11-14',
+     'fuera de turno: no es un día para ajustar en Turnos');
+  ok(diasQueNoSuman([suelto], '2026-11-09', '2026-11-15', (t) => t.trabajador, (t) => t.asistencia).size === 0,
+     'fuera de turno: no aparece como día sin marcar');
 }
 
 // Un ajuste en cero y sin motivo es una fila que alguien abrió y no llenó.

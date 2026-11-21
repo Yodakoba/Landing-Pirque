@@ -219,7 +219,7 @@ const PAGOS: Mision[] = [
     puntos: [
       'Copia el sueldo: los datos del banco, uno por línea, y el monto, para pegarlos en el banco.',
       'La propina va en otra transferencia.',
-      'Descontar o Sumar: el mismo ajuste de Turnos, en el día que elijas.',
+      'Descontar o Sumar: el mismo ajuste de Turnos, en un día que vino, u hoy para un adelanto fuera de turno.',
       'Su boleta: el bruto que escribe en el SII y el neto que recibe. Márcala cuando llegue.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }
