@@ -180,7 +180,8 @@ plataforma, no de la idea.
 | Variable | De dónde sale |
 |---|---|
 | `SHOPIFY_DOMINIO` | el `*.myshopify.com` de la tienda |
-| `SHOPIFY_ADMIN_TOKEN` | el token de la app "Google Sheets Reservas", empieza en `shpat_` |
+| `SHOPIFY_ADMIN_TOKEN` | el token de la app "Google Sheets Reservas", empieza en `shpat_` (tienda de desarrollo) |
+| `SHOPIFY_CLIENT_ID` y `SHOPIFY_CLIENT_SECRET` | las credenciales de la app **Reservas Pirque** del Dev Dashboard (tienda real, solo Production). Si están, mandan sobre `SHOPIFY_ADMIN_TOKEN`: el panel pide con ellas un token que dura 24 horas (`tokenDeAcceso()` en `lib/admin.ts`) |
 | `SHOPIFY_VERSION` | `2026-10` (estable al 2026-10-20, soportada hasta oct. 2027) |
 | `SHOPIFY_WEBHOOK_SECRET` | el **secreto de firma** de Configuración → Notificaciones → Webhooks (no el Client secret de la app) |
 | `CRON_SECRET` | una cadena larga al azar, para la tarea programada |

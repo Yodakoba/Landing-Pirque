@@ -55,7 +55,7 @@ export const GET = conLecturas([], async function GET(req: Request) {
 
   if (!configurado()) {
     return NextResponse.json(
-      { error: 'Shopify no está configurado: faltan SHOPIFY_DOMINIO o SHOPIFY_ADMIN_TOKEN.' },
+      { error: 'Shopify no está configurado: faltan SHOPIFY_DOMINIO y SHOPIFY_ADMIN_TOKEN (o SHOPIFY_CLIENT_ID y SHOPIFY_CLIENT_SECRET).' },
       { status: 503 }
     );
   }

@@ -105,6 +105,41 @@ revisan antes de cada cambio en esta carpeta.
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
 
+## El token de Shopify de la tienda real (2026-11-21)
+
+Desde el 1 de enero de 2026 **Shopify ya no deja crear apps propias desde
+el admin**. La del panel en la tienda de desarrollo nació así y sigue con su
+token fijo `shpat_`; la de la tienda real, **Reservas Pirque**, se creó en el
+**Dev Dashboard** con `read_orders`. Esas apps no entregan un token fijo:
+entregan un Client ID y un Client secret, y con ellos se pide un token que
+**dura 24 horas** (*client credentials grant*).
+
+- **`tokenDeAcceso()`** en `lib/admin.ts`: si están `SHOPIFY_CLIENT_ID` y
+  `SHOPIFY_CLIENT_SECRET`, hace un POST con formulario a
+  `https://<tienda>/admin/oauth/access_token` (`grant_type=client_credentials`)
+  y guarda el token hasta cinco minutos antes de que venza; si no, usa
+  `SHOPIFY_ADMIN_TOKEN` como siempre. **Las credenciales mandan sobre el
+  token fijo**, así que Production pasa a la real sin borrar nada.
+- **Solo en Production.** Preview no las lleva y sigue con la tienda de
+  desarrollo (regla de las dos tiendas, `CLAUDE.md` de la raíz).
+- **Un 401 olvida el token pedido**, para que la próxima llamada pida otro.
+  **`shop_not_permitted`** —la app y la tienda no son de la misma
+  organización de Shopify— se dice con palabras en el error.
+- **Lo usan la revisión diaria y *Revisar Shopify ahora***
+  (`/api/shopify/sincronizar`). **Los webhooks no**: se firman con el
+  secreto de Notificaciones y no dependen de ninguna app.
+- **No apretar *Rotar*** en las credenciales de la app: cambia el secreto y
+  el panel deja de pedir el token hasta actualizar la variable.
+- **Lecturas de Google**: ninguna. Pedir el token cuesta una llamada a
+  Shopify por instancia y por día.
+- **Probado con un Shopify falso** (`prueba.ts`): sin credenciales sigue el
+  token fijo sin pedir nada; con ellas pide con `client_credentials`, lo
+  reusa a las 23 horas, pide otro a minutos de vencer y al cambiar de
+  tienda, y `shop_not_permitted` sale con su explicación sin mostrar el
+  secreto. **Contra la tienda real se comprueba en Production** con *Revisar
+  Shopify ahora*: desde este entorno `lo-pirque.myshopify.com` está
+  bloqueado, y el secreto no pasa por el chat.
+
 ## Los ajustes del día: Descontar y Sumar (2026-11-20)
 
 Lo pidió el cliente: en la ventana del equipo del día, un ajuste se anotaba

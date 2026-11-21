@@ -116,7 +116,7 @@ export default function PasoAProduccion() {
                   <p className="mt-1 text-[14px]">
                     La revisión diaria con Shopify vuelve a traer los pedidos de los últimos 10 días
                     de la tienda a la que está conectado. Cambia primero la tienda en Vercel
-                    (<code>SHOPIFY_DOMINIO</code> y el token) y después borra.
+                    (<code>SHOPIFY_DOMINIO</code> y las credenciales de la app) y después borra.
                   </p>
                 </div>
               )}

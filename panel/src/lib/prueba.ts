@@ -5671,5 +5671,57 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
      'la pestaña Boletas guarda el neto, y una planilla de antes se lee sin él');
 }
 
+// ===== El token de Shopify con las credenciales del Dev Dashboard (2026-11-21) =====
+{
+  const A = await import('./admin.ts');
+  const antes = { ...process.env };
+  const llamadas: { url: string; cuerpo: string }[] = [];
+  let respuesta: () => Response = () => new Response(JSON.stringify({ access_token: 'tok-1', scope: 'read_orders', expires_in: 86399 }));
+  const pedir = (async (url: string, init?: RequestInit) => {
+    llamadas.push({ url: String(url), cuerpo: String(init?.body ?? '') });
+    return respuesta();
+  }) as unknown as typeof fetch;
+
+  process.env.SHOPIFY_DOMINIO = 'https://lo-pirque.myshopify.com/';
+  process.env.SHOPIFY_ADMIN_TOKEN = 'shpat_viejo';
+  delete process.env.SHOPIFY_CLIENT_ID; delete process.env.SHOPIFY_CLIENT_SECRET;
+  A.olvidarToken();
+  ok(await A.tokenDeAcceso(0, pedir) === 'shpat_viejo' && llamadas.length === 0 && A.configurado(),
+     'sin credenciales del Dev Dashboard sigue el token fijo, sin pedir nada (la tienda de desarrollo)');
+
+  process.env.SHOPIFY_CLIENT_ID = 'id-app '; process.env.SHOPIFY_CLIENT_SECRET = ' secreto';
+  const t1 = await A.tokenDeAcceso(1000, pedir);
+  const c = new URLSearchParams(llamadas[0]?.cuerpo ?? '');
+  ok(t1 === 'tok-1' && llamadas[0]?.url === 'https://lo-pirque.myshopify.com/admin/oauth/access_token'
+     && c.get('grant_type') === 'client_credentials' && c.get('client_id') === 'id-app' && c.get('client_secret') === 'secreto',
+     'con las credenciales, mandan sobre el token fijo: lo pide a la tienda con client_credentials');
+  ok(await A.tokenDeAcceso(1000 + 23 * 3600 * 1000, pedir) === 'tok-1' && llamadas.length === 1,
+     'el token pedido se reusa mientras sirve: no se pide uno por llamada');
+  respuesta = () => new Response(JSON.stringify({ access_token: 'tok-2', expires_in: 86399 }));
+  ok(await A.tokenDeAcceso(1000 + 86399 * 1000 - 60 * 1000, pedir) === 'tok-2' && llamadas.length === 2,
+     'unos minutos antes de vencer se pide uno nuevo');
+
+  process.env.SHOPIFY_DOMINIO = 'brasas-de-lo-pirque-development.myshopify.com';
+  const deOtra = await A.tokenDeAcceso(2000, pedir);
+  ok(deOtra === 'tok-2' && llamadas.length === 3, 'si cambia la tienda no se usa el token de la otra: se pide uno');
+
+  A.olvidarToken();
+  respuesta = () => new Response('{"error":"shop_not_permitted","error_description":"Client credentials cannot be performed on this shop."}', { status: 400 });
+  let error = '';
+  try { await A.tokenDeAcceso(3000, pedir); } catch (e) { error = (e as Error).message; }
+  ok(/misma organización/.test(error) && !error.includes('secreto'),
+     'shop_not_permitted dice que la app y la tienda tienen que ser de la misma organización, sin mostrar el secreto');
+
+  respuesta = () => new Response('{}');
+  error = '';
+  try { await A.tokenDeAcceso(4000, pedir); } catch (e) { error = (e as Error).message; }
+  ok(/sin token/.test(error), 'una respuesta sin access_token es un error, no un token vacío');
+
+  for (const k of ['SHOPIFY_DOMINIO', 'SHOPIFY_ADMIN_TOKEN', 'SHOPIFY_CLIENT_ID', 'SHOPIFY_CLIENT_SECRET']) {
+    if (antes[k] === undefined) delete process.env[k]; else process.env[k] = antes[k];
+  }
+  A.olvidarToken();
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

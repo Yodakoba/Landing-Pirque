@@ -1246,10 +1246,11 @@ le deja procesar pagos de prueba).
   `cartCreate` de verdad contra la tienda de desarrollo devuelve
   `userErrors: []` con los totales de siempre ($176.000 / $204.000).
 
-**El panel** no necesita código: las tres variables de Shopify
-(`SHOPIFY_DOMINIO`, `SHOPIFY_ADMIN_TOKEN`, `SHOPIFY_WEBHOOK_SECRET`) llevan
-**un valor por entorno**, la tienda real en Production y la de desarrollo
-en Preview. Ver `migracion-team/variables-vercel.md`. El Preview ya escribía
+**El panel** elige la tienda por sus variables de Shopify, que llevan
+**un valor por entorno**: la tienda real en Production y la de desarrollo
+en Preview. Desde el 2026-11-21 la real usa `SHOPIFY_CLIENT_ID` y
+`SHOPIFY_CLIENT_SECRET` en vez de `SHOPIFY_ADMIN_TOKEN` (ver "La tienda
+real, conectada"). Ver `migracion-team/variables-vercel.md`. El Preview ya escribía
 en la planilla "Pruebas", así que un pedido de prueba nunca llega a la real.
 
 **Los webhooks de la tienda de desarrollo se borran al lanzar.** Una versión
@@ -1299,10 +1300,25 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   `brasasdelopirque.cl/cart/c/…`, desde el lanzamiento `tienda.`. Si el DNS
   se moviera antes que el principal, `tools/publicar_sitio.sh` igual manda
   `/cart/` y `/checkouts/` a la tienda.
+- **La app del panel en la tienda real se creó en el Dev Dashboard**
+  (*Reservas Pirque*, con `read_orders`): desde el 1 de enero de 2026
+  Shopify ya no deja crear apps propias desde el admin. **Esas apps no
+  entregan un token fijo `shpat_`**: entregan un Client ID y un Client
+  secret, y con ellos se pide un token que dura 24 horas (*client
+  credentials grant*, que solo funciona si la app y la tienda son de la
+  misma organización de Shopify). Por eso el panel ganó `tokenDeAcceso()`
+  en `panel/src/lib/admin.ts`, en el mismo PR: con `SHOPIFY_CLIENT_ID` y
+  `SHOPIFY_CLIENT_SECRET` pide el token solo, lo guarda hasta cinco minutos
+  antes de que venza, y esas dos mandan sobre `SHOPIFY_ADMIN_TOKEN`. Van
+  **solo en Production**: Preview sigue con el token fijo de la tienda de
+  desarrollo.
 - **Mergear ese PR es del camino *con prueba***: desde el merge,
-  `brasas-sitio.vercel.app` cobra de verdad. El orden: primero el panel
-  —las tres variables de Shopify de Production con los datos de la real y
-  sus webhooks—, después el merge, y después una compra de prueba en
+  `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
+  El orden: primero las variables de Production del panel —`SHOPIFY_DOMINIO`
+  con `lo-pirque.myshopify.com`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`
+  y el `SHOPIFY_WEBHOOK_SECRET` de la real— y sus webhooks, justo antes del
+  merge (una variable nueva rige desde el próximo despliegue, y el merge es
+  el que lo dispara), después el merge, y después una compra de prueba en
   `brasas-sitio.vercel.app` de cada modalidad, que comprueba lo que falta:
   que `_booking_date` llegue al pedido, que la regla de medios de pago
   aplique y que el pedido aparezca en el panel. Poner el panel primero no
