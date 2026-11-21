@@ -266,6 +266,51 @@ export function tipoDeAjuste(a: Ajuste): TipoAjuste {
 export const montoConSigno = (n: number, tipo: TipoAjuste) =>
   tipo === 'resta' ? -Math.abs(Math.round(n)) : Math.abs(Math.round(n));
 
+/**
+ * **Un ajuste anotado desde el informe** (2026-11-21, lo pidió el cliente:
+ * *"el encargado de pagos, y para arriba… en informe en la tarjeta del
+ * trabajador también agregar un ajuste. Mismo ajuste que se puede agregar en
+ * turnos. Y claramente con su fecha"*).
+ *
+ * Valida lo que manda la ventana y lo deja como un ajuste de Turnos —monto
+ * con signo y motivo *"Adelanto · Transferencia · nota"*—, para que el link
+ * del trabajador, la boleta y la planilla lo lean igual que uno anotado en la
+ * ventana del día. **Más estricto que la ventana del día**, porque es plata
+ * anotada después: el monto tiene que ser más que cero y el motivo no puede
+ * quedar en blanco (*Otro* pide qué fue).
+ */
+export function ajusteDelCuerpo(c: unknown): { ajuste: Ajuste } | { error: string } {
+  const x = (c ?? {}) as Record<string, unknown>;
+  const tipo: TipoAjuste | '' = x.tipo === 'resta' || x.tipo === 'suma' ? x.tipo : '';
+  if (!tipo) return { error: 'Falta decir si es un descuento o una suma.' };
+  const monto = aEntero(x.monto);
+  if (monto <= 0) return { error: 'Escribe el monto, sin signo: el botón dice si descuenta o suma.' };
+  const razon = String(x.razon ?? '').trim();
+  if (razon && !MOTIVOS_AJUSTE[tipo].includes(razon)) {
+    return { error: `"${razon}" no es un motivo de ${tipo === 'resta' ? 'descuento' : 'suma'}.` };
+  }
+  const medio = String(x.medio ?? '').trim();
+  if (medio && !MEDIOS_AJUSTE.includes(medio)) return { error: `"${medio}" no es un medio de pago.` };
+  const nota = String(x.nota ?? '').trim().slice(0, 200);
+  if (!razon && !nota) return { error: 'Elige el motivo.' };
+  if (razon === 'Otro' && !nota) return { error: 'Con "Otro", escribe qué fue.' };
+  return { ajuste: { monto: montoConSigno(monto, tipo), motivo: motivoDePartes({ razon, medio, nota }) } };
+}
+
+/**
+ * **Los días en que se le puede anotar un ajuste desde el informe**: los que
+ * vino, dentro del periodo que se mira, en orden. El ajuste va en el turno de
+ * ese día —el mismo lugar que en Turnos—, así que suma en el periodo de esa
+ * fecha. Un día que no vino no suma, y un ajuste ahí tampoco sumaría.
+ */
+export function diasParaAjustar(turnos: Turno[], trabajador: string, desde: Fecha, hasta: Fecha): Fecha[] {
+  const quien = normalizar(trabajador);
+  return [...new Set(turnos
+    .filter((t) => normalizar(t.trabajador) === quien && t.asistencia === VINO.si
+      && t.fecha >= desde && t.fecha <= hasta)
+    .map((t) => t.fecha))].sort();
+}
+
 /** Lo que separa un ajuste del siguiente dentro de la celda. */
 const SEPARADOR = '|';
 

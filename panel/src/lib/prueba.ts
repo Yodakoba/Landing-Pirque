@@ -105,7 +105,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          semanasEntre, etiquetaSemana, escaleraDeSemanas,
          repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
-         partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno,
+         partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno, ajusteDelCuerpo, diasParaAjustar,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
@@ -3118,6 +3118,28 @@ const vueltaConTipos = leerAjustes(celdasAjustes[0], celdasAjustes[1]);
 ok(celdasAjustes[0] === '-4000|10000' && celdasAjustes[1] === 'Adelanto · Efectivo|Feriado'
    && totalAjustes(vueltaConTipos) === 6000,
    'ajustes: en la planilla queda igual que antes —monto con signo y motivo de texto— y el tipo no se guarda');
+
+// **El ajuste desde el informe** (2026-11-21): el mismo dato que Turnos.
+{
+  const r = ajusteDelCuerpo({ tipo: 'resta', monto: '4.000', razon: 'Adelanto', medio: 'Transferencia', nota: 'lo pidió el jueves' });
+  ok('ajuste' in r && r.ajuste.monto === -4000 && r.ajuste.motivo === 'Adelanto · Transferencia · lo pidió el jueves',
+     'informe: un descuento queda como uno de Turnos, con signo y el motivo en sus tres partes');
+  const s = ajusteDelCuerpo({ tipo: 'suma', monto: 10000, razon: 'Feriado' });
+  ok('ajuste' in s && s.ajuste.monto === 10000 && s.ajuste.motivo === 'Feriado', 'informe: una suma, positiva');
+  ok('error' in ajusteDelCuerpo({ tipo: 'resta', monto: 0, razon: 'Adelanto' }), 'informe: sin monto no se anota');
+  ok('error' in ajusteDelCuerpo({ tipo: 'resta', monto: 4000 }), 'informe: sin motivo tampoco: es plata anotada después');
+  ok('error' in ajusteDelCuerpo({ tipo: 'suma', monto: 4000, razon: 'Otro' }), 'informe: con Otro pide qué fue');
+  ok('error' in ajusteDelCuerpo({ tipo: 'suma', monto: 4000, razon: 'Adelanto' }), 'informe: un motivo de descuento no vale para una suma');
+  ok('error' in ajusteDelCuerpo({ tipo: 'suma', monto: 4000, razon: 'Mérito', medio: 'Cheque' }), 'informe: el medio, uno de los botones');
+  ok('error' in ajusteDelCuerpo({ monto: 4000, razon: 'Mérito' }), 'informe: sin decir si descuenta o suma, no');
+  const tur = (fecha: string, trabajador: string, asistencia: string) => ({ fecha, trabajador, puesto: '', asistencia,
+    modalidad: '', pagoJornada: 0, horasExtra: 0, valorHora: 0, ajustes: [], propina: 0, fila: 2 });
+  const dias = diasParaAjustar([tur('2026-11-08', 'Ana Soto', 'Sí'), tur('2026-11-07', 'ana soto', 'Sí'),
+    tur('2026-11-06', 'Ana Soto', 'No'), tur('2026-11-05', 'Ana Soto', ''), tur('2026-11-01', 'Ana Soto', 'Sí'),
+    tur('2026-11-07', 'Luis', 'Sí')], 'Ana Soto', '2026-11-02', '2026-11-08');
+  ok(JSON.stringify(dias) === JSON.stringify(['2026-11-07', '2026-11-08']),
+     'informe: se ajusta en los días que vino dentro del periodo, en orden; no en los que no vino ni sin marcar');
+}
 
 // Un ajuste en cero y sin motivo es una fila que alguien abrió y no llenó.
 ok(escribirAjustes([{ monto: 0, motivo: '' }])[0] === '',

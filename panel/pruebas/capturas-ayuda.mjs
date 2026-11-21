@@ -119,7 +119,7 @@ const ESCENAS = {
         puntos: [boton(/Por semana/), boton(/Solo sueldos/), texto(/Transferencia masiva/i)] }],
       // Más alto desde el 2026-11-20: entra la caja de la boleta.
       [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/Sueldo/), alto: 1500,
-        puntos: [boton(/Sueldo/), boton(/Propina/), texto(/Boleta del/)] }],
+        puntos: [boton(/Sueldo/), boton(/Propina/), boton(/Descontar/), texto(/Boleta del/)] }],
       [`${pre}-cobros`, { rol, ruta: '/presupuestos', pasos: abrirEnvio('Andrés Pino'), alto: 900, foco: texto('Pagos del cliente'),
         puntos: [texto(/El pago/), boton(/Anticipo recibido/), texto(/Anticipo 30%/)] }],
       // Desde el 2026-11-20 es una lista de tarjetas: se abre la de Daniela.

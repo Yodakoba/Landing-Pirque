@@ -217,8 +217,9 @@ const PAGOS: Mision[] = [
     id: 'pagar', emoji: '💸', titulo: 'Pagarle a cada uno', escena: 'pag-pagar',
     intro: 'Aprieta la línea de una persona y se abre lo suyo, listo para transferir.',
     puntos: [
-      'Copia el sueldo: la cuenta y el monto, para pegarlos en el banco.',
+      'Copia el sueldo: los datos del banco, uno por línea, y el monto, para pegarlos en el banco.',
       'La propina va en otra transferencia.',
+      'Descontar o Sumar: el mismo ajuste de Turnos, en el día que elijas.',
       'Su boleta: el bruto que escribe en el SII y el neto que recibe. Márcala cuando llegue.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }

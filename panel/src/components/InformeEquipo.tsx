@@ -47,7 +47,7 @@ import { enPesos } from '@/lib/ocupacion';
 import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, enPalabras, enCorto, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
-import { totalAjustes, motivosDe, diasQueNoSuman } from '@/lib/equipo';
+import { totalAjustes, motivosDe, diasQueNoSuman, diasParaAjustar, type TipoAjuste } from '@/lib/equipo';
 import { bancoVacio, sePuedeTransferir, titularDe,
          type Banco } from '@/lib/banco';
 import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, pagosEnPeriodo,
@@ -56,6 +56,7 @@ import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, pagosEnPeriodo,
          type PagoEquipo, type Boleta, type Concepto, type Parte,
          type EstadoPago } from '@/lib/remuneraciones';
 import Dialogo from './Dialogo';
+import AjusteInforme from './AjusteInforme';
 import Campo from './Campo';
 import { copiarConAviso, avisar } from './AvisoFlotante';
 
@@ -278,7 +279,7 @@ interface Dato { que: string; valor: string; tono?: 'rojo' | 'ambar' | 'fuerte' 
 function LineaPersona({
   nombre, detalle, aTransferir, estado, partes, datos, cuentan, fuera, marcarEn, palabraSinMarcar, nota, sinCuenta,
   boleta, tituloBoleta, desglose = true, sinPropina = false, puedePagar, puedeBoleta = puedePagar, abierta, onAbrir, onCopiar, onPagar,
-  onPagarCompleto, onBoleta, anotados, onVerPagos, porConfirmar, onConfirmar
+  onPagarCompleto, onBoleta, anotados, onVerPagos, porConfirmar, onConfirmar, onAjustar
 }: {
   nombre: string;
   detalle: string;
@@ -335,6 +336,11 @@ function LineaPersona({
    */
   porConfirmar?: { que: string; quien: string; cuando: string; de?: string } | null;
   onConfirmar?: () => Promise<void>;
+  /**
+   * **Descontar o sumar desde acá** (2026-11-21): solo el equipo, solo quien
+   * paga y solo con algún día que vino en el periodo. Ver `AjusteInforme`.
+   */
+  onAjustar?: (tipo: TipoAjuste) => void;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
   // Qué parte se está guardando con "Pagado completo": mientras tanto el
@@ -489,6 +495,22 @@ function LineaPersona({
                 ))}
               </dl>
               {nota && <p className="mt-2 text-[13px] text-hueso/70">{nota}</p>}
+              {/* **El mismo ajuste de Turnos, desde acá** (2026-11-21, lo pidió
+                  el cliente): quien paga descuenta o suma sin ir al día. Va
+                  dentro de lo que suma, porque es eso lo que cambia. */}
+              {onAjustar && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hueso/15 pt-3">
+                  <button type="button" onClick={() => onAjustar('resta')}
+                    className="tecla boton min-h-[44px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto">
+                    − Descontar
+                  </button>
+                  <button type="button" onClick={() => onAjustar('suma')}
+                    className="tecla boton min-h-[44px] !border-verde-fuerte/60 !font-semibold text-verde-texto">
+                    + Sumar
+                  </button>
+                  <AyudaCorta tema="ajusteInforme" />
+                </div>
+              )}
             </div>
             {(fuera.sinMarcar.length > 0 || fuera.noVino.length > 0) && (
               <div className="space-y-3">
@@ -861,6 +883,8 @@ export default function InformeEquipo() {
   const [busca, setBusca] = useState('');
   // Qué "todos pagados" se está confirmando.
   const [marcando, setMarcando] = useState<'sueldos' | 'propinas' | null>(null);
+  /** El ajuste que se está anotando desde una tarjeta (2026-11-21). */
+  const [ajustando, setAjustando] = useState<{ quien: string; tipo: TipoAjuste; dias: string[]; sueldo: number } | null>(null);
   const [error, setError] = useState('');
   const [sinPermiso, setSinPermiso] = useState(false);
   // **Abre en la semana pasada** (2026-11-04): se paga el lunes la semana
@@ -1873,7 +1897,11 @@ export default function InformeEquipo() {
                         boletaPendiente: aplica && faltaB(l.trabajador)
                       })}
                       onPagarCompleto={(o) => pagarCompleto(l.trabajador, o,
-                        aplica && faltaB(l.trabajador))} />
+                        aplica && faltaB(l.trabajador))}
+                      onAjustar={puedePagar && diasParaAjustar(turnos ?? [], l.trabajador, desde, hasta).length
+                        ? (tipo) => setAjustando({ quien: l.trabajador, tipo, sueldo: l.total,
+                            dias: diasParaAjustar(turnos ?? [], l.trabajador, desde, hasta) })
+                        : undefined} />
                   );
                 })}
               </ul>
@@ -2113,6 +2141,25 @@ export default function InformeEquipo() {
 
           No hay una casilla "pagado": se deduce de que la suma cubra lo que
           hay que transferir. Ver `remuneraciones.ts`. */}
+      {ajustando && (
+        <Dialogo titulo={`Ajuste · ${ajustando.quien}`}
+          onCerrar={() => setAjustando(null)}>
+          <AjusteInforme nombre={ajustando.quien} dias={ajustando.dias} tipoInicial={ajustando.tipo}
+            sueldo={ajustando.sueldo} periodo={rangoEnPalabras([desde, hasta])}
+            onCancelar={() => setAjustando(null)}
+            onListo={(t) => {
+              // Se cambia ese turno en lo que hay en pantalla: el sueldo, la
+              // boleta y lo que falta pagar se recalculan solos.
+              setTurnos((antes) => (antes ?? []).map((x) =>
+                x.fecha === t.fecha && normalizar(x.trabajador) === normalizar(t.trabajador) ? t : x));
+              const ultimo = t.ajustes[t.ajustes.length - 1];
+              avisar(`${ultimo.monto < 0 ? 'Descuento' : 'Suma'} de ${enPesos(Math.abs(ultimo.monto))} `
+                     + `anotado a ${ajustando.quien} · ${enCorto(t.fecha)}`);
+              setAjustando(null);
+            }} />
+        </Dialogo>
+      )}
+
       {marcando && (
         <Dialogo titulo={`Marcar pagados · ${marcando}`} ancho="max-w-xl"
           onCerrar={() => setMarcando(null)}>

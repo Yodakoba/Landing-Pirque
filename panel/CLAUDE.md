@@ -157,6 +157,61 @@ entregan un Client ID y un Client secret, y con ellos se pide un token que
   responde *"Missing or invalid client secret"*. El secreto de una app de
   Shopify empieza con `shpss_` y tiene 38 caracteres.
 
+## El ajuste desde el informe (2026-11-21)
+
+Lo pidió el cliente: *"el encargado de pagos, y para arriba, debería tener
+la posibilidad en informe en la tarjeta del trabajador también agregar un
+ajuste. Mismo ajuste que se puede agregar en turnos. Y claramente con su
+fecha"*. Al abrir la línea de una persona del equipo, la caja verde *✓ Suma*
+termina en **− Descontar** y **+ Sumar**, que abren la ventana
+`AjusteInforme.tsx`.
+
+- **Es el mismo dato que Turnos**: el monto sin signo, el motivo y cómo se
+  pagó con los botones de `MOTIVOS_AJUSTE` y `MEDIOS_AJUSTE`, y una nota. Va
+  **al turno de ese día**, en `Ajuste` y `Motivo del ajuste`, sumado a los
+  que ya tenía. El link del trabajador, la boleta, la planilla y la ventana
+  del día lo leen igual que uno anotado en Turnos.
+- **El día** se elige con un botón por cada día que **vino** en el periodo
+  que se mira (`diasParaAjustar()`). Parte en el último. El ajuste suma en
+  el periodo de esa fecha. Un día que no vino o sin marcar no se ofrece: su
+  turno no suma, y el ajuste tampoco sumaría.
+- **Es plata, así que se confirma a mano**: la ventana dice *Se anota en su
+  turno del domingo 8 de noviembre. Su sueldo de 2 – 8 de noviembre pasa de
+  $102.000 a $98.000*, y el botón relleno, *− Descontar $4.000*. Pide monto
+  y motivo, y con *Otro*, qué fue (`ajusteDelCuerpo()`, la misma regla en la
+  pantalla y en el servidor).
+- **Quién**: el permiso `pagar`, o sea pagos, la gerencia y el
+  administrador. El encargado de operaciones ve el informe, pero sin estos
+  botones, y la ruta le responde 403.
+- **Un día cerrado se corrige**: casi todo lo que se paga ya está cerrado,
+  así que entra como corrección (`guardaDelDia()`), con el ajuste como
+  motivo. Los tres roles con `pagar` tienen también `corregir`. En la
+  bitácora queda *Descontó desde el informe* o *Sumó desde el informe*, con
+  el día, la persona y el monto, y *día cerrado: queda como corrección* si
+  lo estaba.
+- **Toca una sola fila y solo sus dos celdas** (`agregarAjusteAlTurno()` en
+  `datos.ts`): no pasa por `guardarEquipoDelDia()`, que borra y reescribe el
+  día entero. Lo demás de la fila se escribe tal como se leyó, incluso una
+  columna que el panel no conoce.
+- **La pantalla no recarga**: cambia ese turno en lo que tiene, y el sueldo,
+  el botón 📋 de copiar, lo que falta pagar y la boleta se recalculan solos.
+- **Ruta**: `POST /api/equipo/ajuste` (`{fecha, trabajador, tipo, monto,
+  razon, medio, nota}`). **Lecturas de Google**: cuatro a lo más. Son la
+  tanda de la ruta (Cierres y Turnos), Turnos fresca antes de escribir, el
+  encabezado de la bitácora y, la primera vez de cada instancia, la lista
+  de pestañas. Lo fija `npm run ajuste`.
+- **Solo el equipo del restaurante**: los extras y los vendedores no tienen
+  ajustes por día en el informe.
+- **Ayuda**: un paso nuevo en el `?` del informe, el `?` chico al lado de
+  los botones (`ajusteInforme`) y un punto en la misión *Pagarle a cada uno*,
+  con su foto rehecha (`pag-pagar` y `ger-pagar`).
+- **Probado en el panel de ejemplo** a 1280 y 393. Pagos le descuenta
+  $4.000 a Luis Contreras el domingo 8 por *Adelanto · Transferencia*: la
+  planilla queda con `-4000` · `Adelanto · Transferencia` en ese turno, el
+  sueldo baja de $102.000 a $98.000 y la bitácora lo anota a su nombre.
+  Operaciones no ve los botones. `revisarPlayStation()` solo marca los `?`
+  de 30px de siempre.
+
 ## Los ajustes del día: Descontar y Sumar (2026-11-20)
 
 Lo pidió el cliente: en la ventana del equipo del día, un ajuste se anotaba
@@ -265,6 +320,7 @@ prueba**, y falla antes del PR:
 | `npm run lecturas` | **Cuántas lecturas de Google gasta cada ruta** que abre una pantalla (`pruebas/lecturas/`). Cada ruta se llama en Node contra un Google falso que cuenta las consultas, y tiene su tope en `TOPE`: hoy todas caben en **una** tanda (Productos, dos). Si un cambio se pasa, se junta la lectura nueva en la tanda de la ruta, o se sube el tope a propósito y el PR lo dice. Comprobado rompiéndolo: con tope 0 la ruta falla y nombra lo que leyó |
 | `npm run letra-chica` | **Que nadie sume letra bajo 13px** (`text-xs`, `text-[9px]` a `text-[12px]`). Lo que ya había —80 en 22 archivos— quedó anotado en `HABIA` como punto de partida: solo puede bajar, y cuando baja la prueba pide anotarlo |
 | `npm run webhook` | **El webhook de Shopify** (`pruebas/webhook.mjs`, 2026-11-21): sin firma o con la de otra tienda, 401; un pedido sin `_booking_date` se descarta **sin gastar lecturas** y deja la línea `descartado` con su número y sin datos del cliente; uno con fecha se anota. Comprobado rompiéndolo: contra la ruta de antes falla (gastaba 2 lecturas y no dejaba línea) |
+| `npm run ajuste` | **El ajuste desde el informe** (`pruebas/ajuste.mjs`, 2026-11-21): el encargado recibe 403; pagos escribe una sola fila de `Turnos` y solo sus dos celdas de ajuste, sumado a lo que había; en un día cerrado entra como corrección; sin turno, 404; un día que no vino, 409; cuatro lecturas a lo más |
 | `npm run revisar` | Las de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
 
 Y para la pasada con Playwright, **`revisarPlayStation(page)`** de

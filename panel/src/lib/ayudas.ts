@@ -264,6 +264,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'formulario del banco —nombre y apellido, RUT, banco, tipo de cuenta, '
       + 'número de cuenta y e-mail— y después el monto y la glosa: cada línea '
       + 'se pega tal cual en su campo.',
+      'Para descontar o sumar algo sin ir a Turnos, abre su línea: en lo que '
+      + 'suma están − Descontar y + Sumar. Eliges el día que vino, el monto y el '
+      + 'motivo, y suma en el periodo de ese día.',
       'Si una línea dice ⚠ Por confirmar, alguien que no hace los pagos cambió '
       + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
       + 'Confirmar.',
@@ -972,6 +975,13 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     texto: [
       'Lo que se paga a cada uno es el neto. La retención de sus boletas la paga la empresa aparte, en el F29: por eso el costo real es el bruto.',
       'Es la suma de las boletas del periodo, sin los contratados ni los socios comerciales, que facturan.'
+    ]
+  },
+  ajusteInforme: {
+    titulo: 'Descontar o sumar desde acá',
+    texto: [
+      'Es el mismo ajuste de Turnos: va en el turno del día que elijas, así que suma en el periodo de esa fecha, y lo ven su link y su boleta.',
+      'Solo en un día que vino. Si el día ya está cerrado, queda como corrección en la bitácora, a tu nombre.'
     ]
   },
   transferenciaMasiva: {
