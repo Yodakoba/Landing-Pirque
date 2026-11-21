@@ -26,6 +26,9 @@ import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, estaAbonada, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
+import Dialogo from './Dialogo';
+import { PieCorreccion } from './Correccion';
+import { cambioDeBorrarReserva, textoDeCambios } from '@/lib/correccion';
 import PastillaPago from './PastillaPago';
 import RectificarReserva from './RectificarReserva';
 import { partirAviso } from './AvisosRecepcion';
@@ -228,6 +231,11 @@ export default function DayView(
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [editando, setEditando] = useState<Reserva | null>(null);
+  /** La reserva de un día cerrado que se está por borrar, con su casilla. */
+  const [borrando, setBorrando] = useState<Reserva | null>(null);
+  const [borrarConfirmado, setBorrarConfirmado] = useState(false);
+  const [borrandoYa, setBorrandoYa] = useState(false);
+  const [errorBorrar, setErrorBorrar] = useState('');
   const [creando, setCreando] = useState(false);
   /** El ganado del socio que se está pasando al panel, si hay alguno. */
   const [anotandoCRM, setAnotandoCRM] = useState<EventoCRM | null>(null);
@@ -476,22 +484,30 @@ export default function DayView(
     void cargar();
   }
 
-  async function borrar(r: Reserva) {
+  /**
+   * **Borrar una reserva.** En un día abierto pregunta y borra. **En un día
+   * cerrado, borrar es corregirlo** (2026-11-21, lo decidió el cliente: igual
+   * que la corrección del equipo): en vez de escribir un motivo se abre una
+   * ventana con lo que se borra, la casilla que lo confirma y *Borrar la
+   * reserva*. Esa línea es lo que queda en la bitácora.
+   */
+  function borrar(r: Reserva) {
+    if (diaCerrado) { setBorrarConfirmado(false); setErrorBorrar(''); setBorrando(r); return; }
     if (!confirm(`¿Borrar la reserva de ${r.nombre || r.id}? No se puede deshacer.`)) return;
-    // En un día cerrado, borrar es corregirlo: va con su motivo.
-    let correccion: { motivo: string } | undefined;
-    if (diaCerrado) {
-      const m = prompt('El día está cerrado. ¿Por qué se borra esta reserva?');
-      if (!m || !m.trim()) return;
-      correccion = { motivo: m.trim() };
-    }
+    void mandarBorrado(r);
+  }
+  async function mandarBorrado(r: Reserva, cambios?: string[]) {
+    setBorrandoYa(true);
     const res = await fetch(`/api/reservas/${r.fila}`, {
       method: 'DELETE',
-      ...(correccion ? { headers: { 'content-type': 'application/json' },
-                         body: JSON.stringify({ correccion }) } : {})
+      ...(cambios ? { headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ correccion: { motivo: textoDeCambios(cambios) } }) } : {})
     });
-    const d = await res.json();
-    if (d.error) alert(d.error); else cargar();
+    const d = await res.json().catch(() => ({ error: 'No se pudo borrar.' }));
+    setBorrandoYa(false);
+    if (d.error) { if (cambios) setErrorBorrar(d.error); else alert(d.error); return; }
+    setBorrando(null);
+    cargar();
   }
 
   if (error) return <Aviso error={error} />;
@@ -1401,13 +1417,30 @@ export default function DayView(
           onListo={() => { setRectificando(null); void cargar(); }} />
       )}
 
+      {borrando && (() => {
+        const cambios = [cambioDeBorrarReserva({ ...borrando, menu: menuEfectivo(borrando), personas: personasEfectivas(borrando) })];
+        return (
+          <Dialogo titulo={`Borrar la reserva · ${borrando.nombre || 'sin nombre'}`} ancho="max-w-lg"
+            onCerrar={() => { if (!borrandoYa) setBorrando(null); }}>
+            <p className="mt-2 text-[15px] text-hueso/80">
+              El día está cerrado: borrarla es corregirlo. <strong>No se puede deshacer.</strong>
+            </p>
+            {errorBorrar && <p className="mt-2 text-[14px] font-semibold text-rojo-texto">{errorBorrar}</p>}
+            <PieCorreccion modo="apilado" cambios={cambios} confirmado={borrarConfirmado} onConfirmado={setBorrarConfirmado}
+              guardarDice="Borrar la reserva" guardandoDice="Borrando…" guardando={borrandoYa}
+              onCancelar={() => setBorrando(null)}
+              onGuardar={() => void mandarBorrado(borrando, cambios)} />
+          </Dialogo>
+        );
+      })()}
+
       {(creando || editando || anotandoCRM) && (
         <ReservaForm
           fecha={fecha}
           menusConocidos={conocidos}
           catalogo={catalogo}
           reserva={editando}
-          pideMotivo={diaCerrado}
+          diaCerrado={diaCerrado}
           desdeCRM={anotandoCRM
             ? { id: anotandoCRM.id, nombre: anotandoCRM.nombre,
                 personas: anotandoCRM.invitados }

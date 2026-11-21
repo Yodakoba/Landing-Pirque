@@ -115,7 +115,17 @@ export const ESCENAS = {
   'ficha-cliente-nuevo': async () => { await ir('/clientes'); await clic(boton(/Nuevo cliente/)); },
   // Reservas y días.
   'v-reserva-nueva': async () => { await ir('/'); await clic(boton('Agregar reserva')); },
-  'v-reserva-editar': async () => { await ir('/dia/2026-11-14'); await abrirPrimera(); await clic(boton(/^Editar/)); },
+  // *✎ Editar* es el de la reserva: con /^Editar/ la escena abría *Editar
+  // actividades* —la ventana de los extras— y el formulario quedó sin medir.
+  'v-reserva-editar': async () => { await ir('/dia/2026-11-14'); await abrirPrimera(); await clic(boton(/^✎ Editar$/)); },
+  // Un día cerrado: editar o borrar una reserva es corregirlo, con la lista de cambios y su casilla.
+  // La anotada a mano y pagada es la más larga —los tres botones del pago y
+  // cómo pagó—, y con un cambio hecho la lista ya tiene su línea.
+  'v-reserva-editar-dia-cerrado': async () => {
+    await ir('/dia/2026-11-07'); await clic(p.locator('main button[aria-expanded]', { hasText: 'Familia Toro' }));
+    await clic(boton(/^✎ Editar$/)); await clic(ventana().getByRole('button', { name: 'Agregar uno de Tradiciones' }));
+  },
+  'v-reserva-borrar-dia-cerrado': async () => { await ir('/dia/2026-11-07'); await abrirPrimera(); await clic(boton('Borrar', true)); },
   'v-fecha-nueva': async () => { await ir('/'); await clic(boton('Agregar fecha')); },
   'v-fecha-editar': async () => { await ir('/'); await clic(boton(/Editar/)); },
   // El equipo y los extras de un día.

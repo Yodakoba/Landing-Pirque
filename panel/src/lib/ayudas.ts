@@ -89,6 +89,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Editar abre la reserva para corregir un teléfono, un menú o el estado '
       + 'del pago. Marcarla Pagada o Abonada le avisa al encargado de pagos, '
       + 'que la revisa.',
+      'Con el día cerrado, editar o borrar una reserva es corregirlo: el panel '
+      + 'muestra la lista de lo que cambia, marcas la casilla que la confirma y '
+      + 'guardas. Esa lista queda en la bitácora, con tu nombre.',
       'La mesa, en cada reserva abierta: quién se sumó en el día —con su menú '
       + 'o a la carta— y el valor final de la cuenta en Fudo. Se anota desde la '
       + 'hora de apertura. Arriba, Las mesas suma los valores finales del día y '

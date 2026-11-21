@@ -186,7 +186,7 @@ export function corregirDiaCerrado(
   const m = typeof motivo === 'string' ? motivo.trim() : '';
   if (!m) {
     return { ok: false, status: 400, error:
-      'Para corregir un día cerrado hay que escribir el motivo.' };
+      'Para corregir un día cerrado hay que confirmar la lista de cambios.' };
   }
   return { ok: true, correccion: m };
 }

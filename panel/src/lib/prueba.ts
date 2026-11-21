@@ -5923,6 +5923,32 @@ console.log('\nLas estadísticas del equipo');
      'corrección: una lista muy larga se corta en un cambio entero y dice cuántos más hubo');
   ok(C.textoDeCambios(['a', 'b']) === 'a; b' && C.textoDeCambios([]) === '',
      'corrección: la lista corta va entera, y sin cambios no hay texto');
+  // Una reserva de un día cerrado (2026-11-21): editarla, anotarla y borrarla.
+  const r0 = { fecha: '2026-11-07', nombre: 'Gonzalo Contreras', menu: '2 × Tradiciones', personas: 2, monto: 98000,
+               estadoPago: 'pending', abonado: null, notaPago: '', telefono: '+56 9 1111 2222', email: 'g@ejemplo.cl' };
+  ok(C.cambiosDeLaReserva(r0, { ...r0 }).length === 0, 'corrección de una reserva: sin cambios, la lista queda vacía');
+  ok(C.cambiosDeLaReserva(r0, { ...r0, menu: '3 × Tradiciones + 1 × Niños', personas: 4, monto: 151000,
+       estadoPago: 'paid', notaPago: 'Transferencia', telefono: '+56 9 3333 4444' }).join(' / ') === [
+    'Reserva de Gonzalo Contreras: menús de 2 × Tradiciones a 3 × Tradiciones + 1 × Niños (de 2 personas a 4 personas)',
+    'Reserva de Gonzalo Contreras: monto de $98.000 a $151.000',
+    'Reserva de Gonzalo Contreras: pago de Por pagar a Pagada',
+    'Reserva de Gonzalo Contreras: nota de pago: Transferencia',
+    'Reserva de Gonzalo Contreras: cambió el teléfono'
+  ].join(' / '), 'corrección de una reserva: los menús con su gente, el monto, el pago y su nota; el teléfono, sin su valor');
+  ok(C.cambiosDeLaReserva(r0, { ...r0, fecha: '2026-11-08', nombre: 'Gonzalo Contreras Soto', estadoPago: 'partially_paid', abonado: 30000 })
+       .join(' / ') === [
+    'Reserva de Gonzalo Contreras: el nombre pasa a Gonzalo Contreras Soto',
+    'Reserva de Gonzalo Contreras: se mueve del sábado 7 de noviembre al domingo 8 de noviembre',
+    'Reserva de Gonzalo Contreras: pago de Por pagar a Abonada',
+    'Reserva de Gonzalo Contreras: abono de sin monto a $30.000'
+  ].join(' / '), 'corrección de una reserva: el nombre, el día y el abono');
+  ok(C.cambiosDeLaReserva(null, r0).join() === 'Se agrega la reserva de Gonzalo Contreras: 2 personas · 2 × Tradiciones · $98.000 · Por pagar',
+     'corrección: anotar una reserva en un día cerrado es un solo cambio, con lo que es');
+  ok(C.cambioDeBorrarReserva({ ...r0, nombre: ' ', monto: null, personas: 1, menu: '1 × Niños' })
+       === 'Se borra la reserva de sin nombre: 1 persona · 1 × Niños · Por pagar',
+     'corrección: borrar una reserva dice lo que era, también sin nombre ni monto');
+  ok(!/1111|ejemplo\.cl/.test([...C.cambiosDeLaReserva(r0, { ...r0, telefono: '', email: '' }), C.cambioDeBorrarReserva(r0)].join()),
+     'corrección de una reserva: el teléfono y el correo nunca van escritos en la lista');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

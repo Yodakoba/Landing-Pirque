@@ -20,6 +20,8 @@
  */
 import { VINO, type Ajuste, type Turno } from './equipo.ts';
 import { ajustesDe, type Extra } from './extras.ts';
+import { enPalabras } from './fechas.ts';
+import { pagoEnEspanol } from './pagos.ts';
 
 const pesos = (n: number) => '$' + Math.abs(Math.round(n)).toLocaleString('es-CL');
 const llano = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
@@ -132,6 +134,67 @@ export function cambiosDeExtras(antes: ExtraDelDia[], despues: ExtraDelDia[]): s
 /** La asistencia de una reserva que se cambió durante la corrección. */
 export const cambioDeReserva = (quien: string, antes: string, despues: string) =>
   `Reserva de ${quien || 'sin nombre'}: de ${asistenciaEnPalabras(antes)} a ${asistenciaEnPalabras(despues)}`;
+
+/**
+ * **Una reserva de un día cerrado, antes y después** (2026-11-21, lo decidió
+ * el cliente: lo mismo que la corrección del equipo, también al editar y al
+ * borrar una reserva). Lo que el formulario de una reserva puede cambiar.
+ *
+ * `menu` viene ya compuesto (*"2 × Tradiciones + 1 × Niños"*) de la misma
+ * forma en los dos lados: el formulario lo arma con `componerMenu()`.
+ */
+export type ReservaEnCorreccion = {
+  fecha: string; nombre: string; menu: string; personas: number; monto: number | null;
+  estadoPago: string; abonado?: number | null; notaPago?: string;
+  telefono?: string; email?: string;
+};
+
+const quienDe = (r: { nombre: string }) => r.nombre.trim() || 'sin nombre';
+const montoEnPalabras = (n: number | null | undefined) => (n ? pesos(n) : 'sin monto');
+const gente = (n: number) => `${n} ${n === 1 ? 'persona' : 'personas'}`;
+/** *4 personas · 2 × Tradiciones + 2 × Niños · $126.000 · Por pagar*. */
+const reservaEnPalabras = (r: ReservaEnCorreccion) => [
+  gente(r.personas), r.menu.trim(), r.monto ? pesos(r.monto) : '', pagoEnEspanol(r.estadoPago)
+].filter(Boolean).join(' · ');
+
+/**
+ * Qué cambia al guardar el formulario de una reserva en un día cerrado. Sin
+ * `antes`, la reserva es nueva y es un solo cambio.
+ *
+ * **El teléfono y el correo se nombran sin su valor**: la lista queda en la
+ * bitácora, y el contacto de un cliente no lo ve cualquier cuenta
+ * (`privacidad.ts`).
+ */
+export function cambiosDeLaReserva(antes: ReservaEnCorreccion | null, despues: ReservaEnCorreccion): string[] {
+  if (!antes) return [`Se agrega la reserva de ${quienDe(despues)}: ${reservaEnPalabras(despues)}`];
+  const c: string[] = [];
+  const igual = (a?: string, b?: string) => (a ?? '').trim() === (b ?? '').trim();
+  if (!igual(antes.nombre, despues.nombre)) c.push(`el nombre pasa a ${quienDe(despues)}`);
+  if (antes.fecha !== despues.fecha) c.push(`se mueve del ${enPalabras(antes.fecha)} al ${enPalabras(despues.fecha)}`);
+  if (!igual(antes.menu, despues.menu)) {
+    c.push(`menús de ${antes.menu.trim() || 'ninguno'} a ${despues.menu.trim() || 'ninguno'}`
+         + (antes.personas !== despues.personas ? ` (de ${gente(antes.personas)} a ${gente(despues.personas)})` : ''));
+  } else if (antes.personas !== despues.personas) c.push(`de ${gente(antes.personas)} a ${gente(despues.personas)}`);
+  if ((antes.monto ?? 0) !== (despues.monto ?? 0)) {
+    c.push(`monto de ${montoEnPalabras(antes.monto)} a ${montoEnPalabras(despues.monto)}`);
+  }
+  if (!igual(antes.estadoPago, despues.estadoPago)) {
+    c.push(`pago de ${pagoEnEspanol(antes.estadoPago)} a ${pagoEnEspanol(despues.estadoPago)}`);
+  }
+  if ((antes.abonado ?? 0) !== (despues.abonado ?? 0)) {
+    c.push(`abono de ${montoEnPalabras(antes.abonado)} a ${montoEnPalabras(despues.abonado)}`);
+  }
+  if (!igual(antes.notaPago, despues.notaPago)) {
+    c.push(despues.notaPago?.trim() ? `nota de pago: ${despues.notaPago.trim()}` : 'se borró la nota de pago');
+  }
+  if (!igual(antes.telefono, despues.telefono)) c.push('cambió el teléfono');
+  if (!igual(antes.email, despues.email)) c.push('cambió el correo');
+  return c.map((x) => `Reserva de ${quienDe(antes)}: ${x}`);
+}
+
+/** Borrar una reserva de un día cerrado: un solo cambio, con lo que era. */
+export const cambioDeBorrarReserva = (r: ReservaEnCorreccion) =>
+  `Se borra la reserva de ${quienDe(r)}: ${reservaEnPalabras(r)}`;
 
 /** Hasta cuánto texto de cambios se manda y se guarda en la bitácora. */
 export const LARGO_MAXIMO_CAMBIOS = 900;
