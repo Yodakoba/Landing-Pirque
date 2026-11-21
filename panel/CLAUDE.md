@@ -182,9 +182,13 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
   quien tiene algún día sin marcar en el periodo (equipo y extras; los
   vendedores no tienen días). El aviso *Hay N turnos sin cerrar* trae **Ver
   a quiénes les falta →**, que lo activa.
-- **Dónde empieza y termina cada persona**: borde de 2px más marcado y una
-  sombra; abierta, el borde dorado entero con un anillo, y un pie **▴ Cerrar
-  · nombre** que dice dónde termina y la cierra sin subir.
+- **Dónde empieza y termina cada persona**: borde de **3px y oscuro**
+  (`border-hueso/55`), más grueso que cualquier línea de adentro —que van de
+  1 a 2px y claras—, una sombra y 12px entre una tarjeta y la otra; abierta,
+  el borde dorado entero con un anillo ancho, y un pie **▴ Cerrar · nombre**
+  que dice dónde termina y la cierra sin subir. Partió en 2px y el cliente
+  lo pidió más marcado el mismo día: *"que realmente se distinguen de las
+  otras líneas… dentro de la tarjeta sobre todo"*.
 - **En el celular, un 10 a 15% más chico**: los botones de copiar y de pago
   de 44 a 40px, los grandes de 56 a 48px, nombre y monto un punto menos,
   márgenes de 12px. El periodo en una fila (*Día · Semana · Mes · Rango*) y
@@ -198,6 +202,21 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
   lo que suma y la boleta a la izquierda, Sueldo y Propina con sus botones a
   la derecha, uno debajo del otro (lado a lado, *Pagado completo* se
   cortaba). Con una persona abierta, la página bajó de 3.654 a 3.365px.
+- **Y se distingue más del celular** (lo pidió el cliente el mismo día, al
+  ver la propuesta: *"achicar un poco la parte de la boleta, un poco
+  nomás, y sacar los botones descontar o sumar del cuadro verde y ponerlos
+  encima de la columna de la derecha"*). Solo desde 1024px:
+  - **− Descontar y + Sumar** van en su fila, *Ajustar el sueldo:*, arriba de
+    Sueldo y Propina, con los ajustes fuera de turno debajo. En el celular
+    siguen al pie de la caja verde. Es el mismo bloque dibujado en un lado o
+    en el otro (`bloqueAjuste()`), no una copia.
+  - **La boleta, más chica** (`CajaBoleta` con `compacta`): *Falta la
+    boleta* sube a la fila del título, bruto, retención y neto van lado a
+    lado, el bruto a 20px, y la nota del pie se va (la dice su `?`). Los
+    mismos datos con las mismas palabras: en el link personal no cambia.
+  - **Sueldo y Propina en dos filas**: el monto al lado del concepto, y
+    *Copiar datos · Pagado completo · Pago parcial* en una fila de 48px.
+  - La tarjeta abierta bajó de 606 a 552px de alto.
 - **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
 - **Ayuda**: el `?` del informe explica el orden y *Sin marcar*, y que la
   transferencia masiva se abre; la misión del informe también; las fotos del
@@ -209,9 +228,9 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
 Lo pidió el cliente: *"el encargado de pagos, y para arriba, debería tener
 la posibilidad en informe en la tarjeta del trabajador también agregar un
 ajuste. Mismo ajuste que se puede agregar en turnos. Y claramente con su
-fecha"*. Al abrir la línea de una persona del equipo, la caja verde *✓ Suma*
-termina en **− Descontar** y **+ Sumar**, que abren la ventana
-`AjusteInforme.tsx`.
+fecha"*. Al abrir la línea de una persona del equipo están **− Descontar** y
+**+ Sumar** —en el celular al pie de la caja verde *✓ Suma*; en el
+computador arriba de los pagos—, que abren la ventana `AjusteInforme.tsx`.
 
 - **Es el mismo dato que Turnos**: el monto sin signo, el motivo y cómo se
   pagó con los botones de `MOTIVOS_AJUSTE` y `MEDIOS_AJUSTE`, y una nota. Va

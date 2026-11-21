@@ -365,15 +365,78 @@ function LineaPersona({
     </span>
   );
 
+  /**
+   * **Descontar o sumar, y los ajustes fuera de turno.** En el celular va al
+   * pie de la caja verde; en el computador, arriba de la columna del pago
+   * (2026-11-21, lo pidió el cliente: separa más las dos vistas).
+   */
+  const bloqueAjuste = (enCaja: boolean) => (
+    <>
+              {/* **El mismo ajuste de Turnos, desde acá** (2026-11-21, lo pidió
+                  el cliente): quien paga descuenta o suma sin ir al día. Va
+                  dentro de lo que suma, porque es eso lo que cambia. */}
+              {onAjustar && (
+                <div className={`flex flex-wrap items-center gap-2 ${enCaja ? 'mt-3 border-t border-hueso/15 pt-3' : ''}`}>
+                  {!enCaja && <span className="text-[14px] font-semibold text-hueso/75">Ajustar el sueldo:</span>}
+                  <button type="button" onClick={() => onAjustar('resta')}
+                    className="tecla boton min-h-[44px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto">
+                    − Descontar
+                  </button>
+                  <button type="button" onClick={() => onAjustar('suma')}
+                    className="tecla boton min-h-[44px] !border-verde-fuerte/60 !font-semibold text-verde-texto">
+                    + Sumar
+                  </button>
+                  <AyudaCorta tema="ajusteInforme" />
+                </div>
+              )}
+              {/* **Los de fuera de turno, a la vista** (2026-11-21): no están
+                  en ningún día de Turnos, así que se quitan desde acá, y
+                  pregunta antes. */}
+              {onQuitarSuelto && sueltos.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {sueltos.map((x) => (
+                    <li key={x.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]">
+                      <span className="font-semibold">Fuera de turno · {enCorto(x.fecha)}</span>
+                      <span className={`font-semibold tabular-nums ${x.monto < 0 ? 'text-rojo-texto' : 'text-verde-texto'}`}>
+                        {x.monto < 0 ? '−' : '+'}{enPesos(Math.abs(x.monto))}
+                      </span>
+                      <span className="text-hueso/70">{x.motivo}</span>
+                      {quitando === x.id ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-[13px] text-hueso/80">¿Quitarlo?</span>
+                          <button type="button" disabled={borrando === x.id}
+                            onClick={() => {
+                              setBorrando(x.id);
+                              void onQuitarSuelto(x.id).finally(() => { setBorrando(null); setQuitando(null); });
+                            }}
+                            className="boton min-h-[36px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto disabled:opacity-40">
+                            {borrando === x.id ? 'Quitando…' : 'Sí, quitar'}
+                          </button>
+                          <button type="button" onClick={() => setQuitando(null)} className="boton min-h-[36px]">No</button>
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => setQuitando(x.id)}
+                          aria-label={`Quitar el ajuste fuera de turno del ${enCorto(x.fecha)}`}
+                          className="boton min-h-[36px] hover:border-rojo/60 hover:text-rojo-texto">✕ Quitar</button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+                </>
+  );
+
   return (
     <>
     {antes}
     {/* **Dónde empieza y dónde termina cada persona** (2026-11-21, lo pidió
-        el cliente): borde más marcado y una sombra; abierta, borde dorado
-        entero con un anillo, la cabecera teñida y un pie para cerrarla. */}
-    <li className={`rounded-2xl border-2 bg-panel shadow-sm ${
-      abierta ? 'border-oro shadow-md ring-2 ring-oro/25' : estado === 'pagado' && aTransferir > 0
-        ? 'border-verde/50' : 'border-hueso/30'}`}>
+        el cliente dos veces: *"el borde de la tarjeta realmente más
+        marcado"*). Borde de 3px y oscuro, más grueso que cualquier línea de
+        adentro (que van de 1 a 2px y claras), y una sombra; abierta, borde
+        dorado entero con un anillo ancho y un pie para cerrarla. */}
+    <li className={`rounded-2xl border-[3px] bg-panel shadow-md ${
+      abierta ? 'border-oro shadow-lg ring-4 ring-oro/25' : estado === 'pagado' && aTransferir > 0
+        ? 'border-verde-fuerte/80' : 'border-hueso/55'}`}>
       {/* **En el celular son dos filas**: arriba quién es y cuánto, abajo
           los botones de copiar a todo el ancho, para el dedo. **En una
           pantalla ancha es una sola fila**: los botones van entre el nombre
@@ -510,56 +573,10 @@ function LineaPersona({
                 ))}
               </dl>
               {nota && <p className="mt-2 text-[13px] text-hueso/70">{nota}</p>}
-              {/* **El mismo ajuste de Turnos, desde acá** (2026-11-21, lo pidió
-                  el cliente): quien paga descuenta o suma sin ir al día. Va
-                  dentro de lo que suma, porque es eso lo que cambia. */}
-              {onAjustar && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hueso/15 pt-3">
-                  <button type="button" onClick={() => onAjustar('resta')}
-                    className="tecla boton min-h-[44px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto">
-                    − Descontar
-                  </button>
-                  <button type="button" onClick={() => onAjustar('suma')}
-                    className="tecla boton min-h-[44px] !border-verde-fuerte/60 !font-semibold text-verde-texto">
-                    + Sumar
-                  </button>
-                  <AyudaCorta tema="ajusteInforme" />
-                </div>
-              )}
-              {/* **Los de fuera de turno, a la vista** (2026-11-21): no están
-                  en ningún día de Turnos, así que se quitan desde acá, y
-                  pregunta antes. */}
-              {onQuitarSuelto && sueltos.length > 0 && (
-                <ul className="mt-2 space-y-1.5">
-                  {sueltos.map((x) => (
-                    <li key={x.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]">
-                      <span className="font-semibold">Fuera de turno · {enCorto(x.fecha)}</span>
-                      <span className={`font-semibold tabular-nums ${x.monto < 0 ? 'text-rojo-texto' : 'text-verde-texto'}`}>
-                        {x.monto < 0 ? '−' : '+'}{enPesos(Math.abs(x.monto))}
-                      </span>
-                      <span className="text-hueso/70">{x.motivo}</span>
-                      {quitando === x.id ? (
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-[13px] text-hueso/80">¿Quitarlo?</span>
-                          <button type="button" disabled={borrando === x.id}
-                            onClick={() => {
-                              setBorrando(x.id);
-                              void onQuitarSuelto(x.id).finally(() => { setBorrando(null); setQuitando(null); });
-                            }}
-                            className="boton min-h-[36px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto disabled:opacity-40">
-                            {borrando === x.id ? 'Quitando…' : 'Sí, quitar'}
-                          </button>
-                          <button type="button" onClick={() => setQuitando(null)} className="boton min-h-[36px]">No</button>
-                        </span>
-                      ) : (
-                        <button type="button" onClick={() => setQuitando(x.id)}
-                          aria-label={`Quitar el ajuste fuera de turno del ${enCorto(x.fecha)}`}
-                          className="boton min-h-[36px] hover:border-rojo/60 hover:text-rojo-texto">✕ Quitar</button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {/* **El ajuste, en la caja verde en el celular**; en el computador
+                  va arriba de la columna del pago (2026-11-21, lo pidió el
+                  cliente). Es el mismo bloque, dibujado en uno de los dos lados. */}
+              <div className="lg:hidden">{bloqueAjuste(true)}</div>
             </div>
             {(fuera.sinMarcar.length > 0 || fuera.noVino.length > 0) && (
               <div className="space-y-3">
@@ -633,7 +650,7 @@ function LineaPersona({
             ) : null;
             return desglose ? (
               <CajaBoleta titulo={doc === 'factura' ? tituloBoleta.replace(/^Boleta/, 'Factura') : tituloBoleta}
-                cuenta={boleta} estado={!puedeBoleta} sinPropina={sinPropina}>{botones}</CajaBoleta>
+                cuenta={boleta} estado={!puedeBoleta} sinPropina={sinPropina} compacta>{botones}</CajaBoleta>
             ) : botones ?? (
               <p className={`text-[14px] font-semibold ${boleta.falta === 0 ? 'text-verde-texto' : 'text-ambar-texto'}`}>
                 {boleta.falta === 0 ? `✓ ${doc === 'factura' ? 'Factura recibida' : 'Boleta recibida'}` : `Falta la ${doc}`}
@@ -643,6 +660,9 @@ function LineaPersona({
 
         </div>
         <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3 lg:mt-0">
+          {(onAjustar || sueltos.length > 0) && (
+            <div className="hidden rounded-xl border-2 border-hueso/20 px-3 py-2 lg:block">{bloqueAjuste(false)}</div>
+          )}
           <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-1">
           {partes.filter((o) => o.parte.debe > 0).map((o) => (
             <div key={o.concepto} className={`rounded-xl border-2 p-2.5 sm:p-3 ${tinteDe(o.concepto).caja}`}>
@@ -651,10 +671,14 @@ function LineaPersona({
                                   tracking-widest ${tinteDe(o.concepto).texto}`}>
                   <span aria-hidden className={`h-3 w-3 rounded-full ${tinteDe(o.concepto).punto}`} />
                   {o.concepto}
+                  {/* En el computador, el monto en la misma fila del concepto. */}
+                  <span className="ml-1 hidden text-[20px] font-bold normal-case tracking-normal text-hueso tabular-nums lg:inline">
+                    {enPesos(o.parte.debe)}
+                  </span>
                 </span>
                 {estadoPill(o.parte.estado, o.parte.falta)}
               </div>
-              <p className="mt-0.5 text-[20px] font-bold tabular-nums sm:text-[24px]">{enPesos(o.parte.debe)}</p>
+              <p className="mt-0.5 text-[20px] font-bold tabular-nums sm:text-[24px] lg:hidden">{enPesos(o.parte.debe)}</p>
               {fuera.sinMarcar.length > 0 && (
                 <p className="text-[13px] font-semibold text-ambar-texto">
                   Sin {fuera.sinMarcar.length === 1 ? 'el día' : `los ${fuera.sinMarcar.length} días`} {palabraSinMarcar}: si vino, después se le debe más.
@@ -668,7 +692,7 @@ function LineaPersona({
                   que se pagó. Copiar va primero y delineado; registrar,
                   relleno, porque es lo que cierra. */}
               {puedePagar && o.parte.falta > 0 && (
-                <div className="mt-2 grid gap-2">
+                <div className="mt-2 grid gap-2 lg:grid-cols-[1.2fr_1fr_1fr]">
                   {sinCuenta ? (
                     <p className="rounded-xl border-2 border-ambar/50 px-3 py-2 text-center
                                   text-[14px] font-semibold text-ambar-texto">
@@ -678,9 +702,10 @@ function LineaPersona({
                     <button type="button" onClick={() => onCopiar(o)}
                       className="tecla flex min-h-[42px] w-full items-center justify-center gap-2
                                  rounded-xl border-2 border-oro/70 bg-panel text-[14px]
-                                 font-bold hover:border-oro sm:min-h-[48px] sm:text-[15px]">
+                                 font-bold hover:border-oro sm:min-h-[48px] sm:text-[15px] lg:text-[14px]">
                       <span aria-hidden>📋</span>
-                      Copiar datos de transferencia
+                      <span className="lg:hidden">Copiar datos de transferencia</span>
+                      <span className="hidden lg:inline">Copiar datos</span>
                     </button>
                   )}
                   {/* **Completo o parcial, dos botones** (2026-11-04, lo pidió el
@@ -688,14 +713,14 @@ function LineaPersona({
                       todo, y entonces es un toque: *Pagado completo* anota lo
                       que falta sin abrir ninguna ventana. *Pago parcial* abre
                       la ventana con el campo del monto ya listo. */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 lg:contents">
                     <button type="button" disabled={enviando === o.concepto}
                       onClick={() => {
                         setEnviando(o.concepto);
                         void onPagarCompleto(o).finally(() => setEnviando(null));
                       }}
                       className="tecla flex min-h-[48px] flex-col items-center justify-center
-                                 rounded-xl border-2 border-oro bg-oro px-1 text-tinta sm:min-h-[56px]">
+                                 rounded-xl border-2 border-oro bg-oro px-1 text-tinta sm:min-h-[56px] lg:min-h-[48px]">
                       <span className="whitespace-nowrap text-[14px] font-bold">
                         {enviando === o.concepto ? 'Guardando…' : '✓ Pagado completo'}
                       </span>
@@ -705,7 +730,7 @@ function LineaPersona({
                     </button>
                     <button type="button" onClick={() => onPagar(o.concepto)}
                       className="tecla flex min-h-[48px] flex-col items-center justify-center
-                                 rounded-xl border-2 border-oro/70 px-2 hover:border-oro sm:min-h-[56px]">
+                                 rounded-xl border-2 border-oro/70 px-2 hover:border-oro sm:min-h-[56px] lg:min-h-[48px]">
                       <span className="text-[14px] font-bold sm:text-[15px]">Pago parcial</span>
                       <span className="text-[13px] text-hueso/65">escribes cuánto</span>
                     </button>
@@ -1979,7 +2004,7 @@ export default function InformeEquipo() {
             <p className="mb-8 text-[14px] text-hueso/60">Sin turnos anotados en este periodo.</p>
           ) : visiblesEquipo.length === 0 ? null : (
             <>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {ordenEquipo.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.trabajador, l.total, l.propina);
                   const aplica = pideBoleta('equipo', esContratado(l.modalidad));
@@ -2066,7 +2091,7 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 Actividades extras
               </h2>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {ordenExtras.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.colaborador, l.total, 0);
                   return (
@@ -2130,7 +2155,7 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 {haySocios ? 'Vendedores y socios comerciales' : 'Vendedores'}
               </h2>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {ordenVendedores.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.nombre, l.aTransferir, 0);
                   const clave = 'v-' + l.nombre;

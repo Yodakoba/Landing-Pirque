@@ -266,8 +266,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'se pega tal cual en su campo.',
       'Para ver lo que costó el equipo por puesto, las propinas y cuánto fue '
       + 'de las ventas, aprieta 📊 Estadísticas del equipo, arriba.',
-      'Para descontar o sumar algo sin ir a Turnos, abre su línea: en lo que '
-      + 'suma están − Descontar y + Sumar. Eliges el día que vino —u Hoy, para '
+      'Para descontar o sumar algo sin ir a Turnos, abre su línea: − Descontar '
+      + 'y + Sumar están al pie de lo que suma en el celular, y arriba de los '
+      + 'pagos en el computador. Eliges el día que vino —u Hoy, para '
       + 'un adelanto pedido un día sin turno—, el monto y el motivo, y suma en el '
       + 'periodo de ese día. Uno de hoy fuera de turno aparece en su línea, con ✕ '
       + 'Quitar por si se anotó mal.',
