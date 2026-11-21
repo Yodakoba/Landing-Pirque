@@ -136,16 +136,26 @@ export default function UsuariosEditor() {
           </thead>
           <tbody>
             {lista.map((u, i) => (
-              <tr key={i} className="border-b border-hueso/5">
+              <tr key={i} className="border-b border-hueso/5 align-top">
+                {/* **Todo lo de una cuenta parte a la misma altura** (2026-11-21,
+                    regla *los formularios van alineados*): la celda del rol
+                    es más alta —lleva el resumen debajo— y lo demás iba
+                    centrado contra ella, 10px más abajo que el rol. Ahora la
+                    fila va arriba y cada dato ocupa una banda de 40px, la del
+                    botón *Vista gerencia*. */}
                 <td className="py-2 pr-3">
+                  <div className="flex min-h-[40px] items-center">
                   <input type="text" value={u.nombre} className={ENTRADA}
                     placeholder="Nombre y apellido"
                     onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
+                  </div>
                 </td>
                 <td className="py-2 pr-3">
+                  <div className="flex min-h-[40px] items-center">
                   <input type="text" value={u.usuario} className={ENTRADA}
                     placeholder="sin espacios"
                     onChange={(e) => cambiar(i, 'usuario', e.target.value)} />
+                  </div>
                 </td>
                 {/* **Desde 1280px, el rol y *Vista gerencia* van en una
                     fila** y la línea que resume el rol, debajo, a lo ancho
@@ -153,7 +163,7 @@ export default function UsuariosEditor() {
                     renglones y cada cuenta medía hasta 190px. */}
                 <td className="py-2 pr-3">
                   <div className="xl:flex xl:flex-wrap xl:items-center xl:gap-x-3">
-                  <div className="flex items-center xl:w-72">
+                  <div className="flex min-h-[40px] items-center xl:w-72">
                     <select value={u.rol} className={ENTRADA}
                       onChange={(e) => cambiar(i, 'rol', e.target.value)}>
                       {ROLES_DE_CUENTA.map((r) => (
@@ -185,12 +195,15 @@ export default function UsuariosEditor() {
                   </div>
                 </td>
                 <td className="py-2 pr-3">
+                  <div className="flex min-h-[40px] items-center">
                   <input type="checkbox" checked={u.activo}
                     aria-label={`${u.usuario || 'Sin usuario'} puede entrar`}
                     className="h-4 w-4 accent-oro"
                     onChange={(e) => cambiar(i, 'activo', e.target.checked)} />
+                  </div>
                 </td>
                 <td className="py-2 pr-3 text-xs">
+                  <div className="flex min-h-[40px] items-center">
                   {sucio ? (
                     <span className="text-hueso/40">Guarda la lista primero</span>
                   ) : (
@@ -205,11 +218,14 @@ export default function UsuariosEditor() {
                       </button>
                     </>
                   )}
+                  </div>
                 </td>
                 <td className="whitespace-nowrap py-2 text-right">
+                  <div className="flex min-h-[40px] items-center justify-end">
                   <button
                     onClick={() => { setLista(lista.filter((_, k) => k !== i)); setSucio(true); }}
                     className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
+                  </div>
                 </td>
               </tr>
             ))}

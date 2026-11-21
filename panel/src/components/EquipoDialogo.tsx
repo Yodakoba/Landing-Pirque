@@ -633,7 +633,7 @@ export default function EquipoDialogo({
                             {esContratado(t.modalidad) ? (
                               <p className="flex items-center gap-1.5">
                                 <span className={`${ROTULO_LADO} ${COLUMNA_ROTULO}`}>Jornada</span>
-                                <span className="text-[13px] text-hueso/60">contratado · no aplica</span>
+                                <span className="text-[13px] text-hueso/60" title="Es contratado: su sueldo no sale de la caja de este día">sin jornada</span>
                               </p>
                             ) : (
                               <CampoAlLado rotulo="Jornada">
@@ -661,8 +661,8 @@ export default function EquipoDialogo({
                           <TotalDelDia
                             propina={repartida[i]?.propina
                               ? enPesos(repartida[i].propina)
-                              : t.asistencia === VINO.si && !participa(t.trabajador)
-                                ? <span className="text-hueso/60">no participa</span>
+                              : !participa(t.trabajador)
+                                ? <span className="text-hueso/60">sin propina</span>
                                 : <span className="text-hueso/45">—</span>}
                             total={t.asistencia === VINO.si
                               ? <strong className="text-[17px]">{enPesos(total)}</strong>
@@ -780,7 +780,7 @@ export default function EquipoDialogo({
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded border
                           border-hueso/15 bg-panel px-3 py-2">
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-hueso/70">Propina del día</span>
+              <span className="shrink-0 whitespace-nowrap text-hueso/70">Propina del día</span>
               <input type="number" min={0} step={1000}
                 className={`${ENTRADA} w-32`} value={propina || ''} placeholder="0"
                 autoFocus={enfocarPropina}

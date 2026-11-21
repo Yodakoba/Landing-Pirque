@@ -475,7 +475,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
               return (
                 <div className="flex flex-col items-start gap-2 border-t border-hueso/10 pt-3 sm:flex-row sm:items-center sm:gap-3">
                   <div className="min-w-0 flex-1 text-[15px] leading-relaxed">
-                    <span className="block text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:inline sm:text-[15px] sm:font-normal sm:normal-case sm:tracking-normal sm:text-hueso/70">Documento: </span>
+                    <span className="block text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:inline-block sm:w-[7.5rem] sm:text-[15px] sm:font-normal sm:normal-case sm:tracking-normal sm:text-hueso/70">Documento: </span>
                     <span className="inline-flex items-center gap-1 rounded-full border-2 border-oro/50 px-2 text-[14px] font-bold">
                       🧾 {f.documento === 'factura' ? 'Factura' : 'Boleta de honorarios'} · {f.documento === 'factura'
                         ? (f.incluido ? 'IVA incluido' : 'más IVA') : (f.incluido ? 'retención incluida' : 'retención aparte')}
@@ -503,7 +503,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             {(datos.puedeEditar || esVendedor) && (
               <div className="flex flex-col items-start gap-2 border-t border-hueso/10 pt-3 sm:flex-row sm:items-center sm:gap-3">
                 <p className="min-w-0 flex-1 text-[15px] leading-relaxed">
-                  <span className="block text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:inline sm:text-[15px] sm:font-normal sm:normal-case sm:tracking-normal sm:text-hueso/70">Transferencia: </span>
+                  <span className="block text-[13px] font-semibold uppercase tracking-widest text-hueso/65 sm:inline-block sm:w-[7.5rem] sm:text-[15px] sm:font-normal sm:normal-case sm:tracking-normal sm:text-hueso/70">Transferencia: </span>
                   {listoBanco ? (
                     <span className="inline-flex items-center gap-1 rounded-full border-2 border-verde-fuerte/60 px-2 text-[14px] font-bold text-verde-texto">
                       ✓ {[banco.banco, banco.tipo, terminacion].filter(Boolean).join(' · ')}
@@ -567,15 +567,25 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                 <div className="space-y-3">
                   <div>
                     <p className="flex items-center gap-1.5 text-[15px] font-bold">Bono en menús premium <AyudaCorta tema="vendBono" /></p>
-                    <Paso etiqueta="Bono premium" valor={ficha.bonoPuntos} paso={0.5} sufijo="% más"
-                      onCambio={(v) => cambiar('bonoPuntos', v)} />
+                    {/* En la misma caja y la misma columna que las etapas
+                        (2026-11-21, regla *los formularios van alineados*): el
+                        − y el + del bono y del socio iban sueltos, 58px a la
+                        izquierda de los de las etapas. */}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border-2 border-hueso/15 p-2.5">
+                      <span className="w-16 text-[13px] font-bold uppercase tracking-widest text-oro">Bono</span>
+                      <Paso etiqueta="Bono premium" valor={ficha.bonoPuntos} paso={0.5} sufijo="% más"
+                        onCambio={(v) => cambiar('bonoPuntos', v)} />
+                    </div>
                     <p className="mt-1 text-[13px] text-hueso/70">Sobre las líneas de los productos con ★ <a href="/menus" className="text-oro underline">Bono vendedor</a>.</p>
                   </div>
                   {!esSocio && (
                     <div>
                       <p className="flex items-center gap-1.5 text-[15px] font-bold">¿Y si la venta viene con un socio comercial? <AyudaCorta tema="vendConSocio" /></p>
-                      <Paso etiqueta="Con socio cobra" valor={ficha.conSocio ?? CON_SOCIO_DEFECTO} paso={5} sufijo="% de su comisión"
-                        onCambio={(v) => cambiar('conSocio', Math.min(100, v))} />
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border-2 border-hueso/15 p-2.5">
+                        <span className="w-16 text-[13px] font-bold uppercase tracking-widest text-oro">Socio</span>
+                        <Paso etiqueta="Con socio cobra" valor={ficha.conSocio ?? CON_SOCIO_DEFECTO} paso={5} sufijo="% de su comisión"
+                          onCambio={(v) => cambiar('conSocio', Math.min(100, v))} />
+                      </div>
                     </div>
                   )}
                   <div className={`grid gap-3 ${esSocio ? '' : 'sm:grid-cols-2'}`}>
@@ -689,7 +699,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   const cuantos = { vendedores: datos.vendedores?.length ?? 0, socios: datos.socios?.length ?? 0 };
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="max-w-4xl space-y-5 lg:space-y-3">
       <div>
         <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
         <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar y el encargado de pagos lo revisó.</AvisoFijo>
@@ -746,6 +756,17 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
           <button type="button" aria-label="Periodo siguiente" className="boton h-11 w-11 shrink-0 !p-0 text-[18px]"
             onClick={() => irA(esMes ? moverMes(periodo, 1) : sumarDias(semanaDe(periodo), 7))}>▶</button>
         </div>
+        {/* **En el computador el buscador va en esta fila**, al lado del
+            periodo (2026-11-21, el computador más compacto: eran tres filas de
+            controles). En el celular sigue en la suya, sobre la lista. Es el
+            mismo dato escrito, dibujado en los dos lugares. */}
+        {!esVendedor && delGrupo.length > 0 && (
+          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+            placeholder={grupo === 'socios' ? 'Buscar socio comercial' : 'Buscar vendedor'}
+            aria-label={grupo === 'socios' ? 'Buscar socio comercial' : 'Buscar vendedor'}
+            className="hidden min-h-[44px] min-w-0 flex-1 rounded-xl border-2 border-hueso/20 bg-tinta px-3
+                       text-[15px] focus:border-oro focus:outline-none lg:block" />
+        )}
       </div>
 
       {/* 3. La lista: una tarjeta por persona, como en Equipo y el informe.
@@ -757,7 +778,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
               placeholder={grupo === 'socios' ? 'Buscar socio comercial' : 'Buscar vendedor'}
               aria-label={grupo === 'socios' ? 'Buscar socio comercial' : 'Buscar vendedor'}
               className="mb-3 min-h-[44px] w-full rounded-xl border-2 border-hueso/20 bg-tinta px-3
-                         text-[15px] focus:border-oro focus:outline-none sm:max-w-md" />
+                         text-[15px] focus:border-oro focus:outline-none sm:max-w-md lg:hidden" />
           )}
           <MostrarDesactivados cuantos={inactivos} visible={verInactivos} onCambio={setVerInactivos} />
           {delGrupo.length === 0 ? (

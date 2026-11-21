@@ -246,13 +246,29 @@ export default function Estadisticas() {
     setRango(rangoDe(m, ancla));
   };
 
+  /**
+   * *Día · Semana · Mes · Personalizado*. **En el computador va en la fila de
+   * arriba**, a la derecha de *Volver* y de las dos vistas (2026-11-21, el
+   * computador más compacto: eran tres filas de controles antes del primer
+   * número). En el celular sigue en su propia fila. Se dibuja en los dos
+   * lugares y se ve en uno.
+   */
+  const modos = (clase: string) => (
+    <div className={clase} role="group" aria-label="Periodo">
+      {([['dia', 'Día'], ['semana', 'Semana'], ['mes', 'Mes'], ['personalizado', 'Personalizado']] as const).map(([m, t]) => (
+        <button key={m} type="button" aria-pressed={modo === m} onClick={() => elegirModo(m)}
+          className={`boton min-h-[44px] ${modo === m ? ELEGIDO : ''}`}>{t}</button>
+      ))}
+    </div>
+  );
+
   const cabecera = (
     <>
       <BandaSeccion tono="oro" icono="📊" seccion={vista === 'equipo' && datos?.equipo ? 'Equipo' : 'Reservas'} titulo="Estadísticas"
         ayuda={<Ayuda tema="estadisticas" />}>
         Solo para mirar
       </BandaSeccion>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 lg:mb-2">
         {vista === 'equipo' && datos?.equipo
           ? <a href="/informe" className="boton inline-flex min-h-[40px] items-center">← Volver al informe</a>
           : <a href="/" className="boton inline-flex min-h-[40px] items-center">← Volver al calendario</a>}
@@ -268,6 +284,7 @@ export default function Estadisticas() {
             ))}
           </div>
         )}
+        {modos('hidden lg:ml-auto lg:flex lg:flex-wrap lg:items-center lg:gap-2')}
       </div>
     </>
   );
@@ -286,13 +303,8 @@ export default function Estadisticas() {
       {cabecera}
 
       {/* Cuándo, por qué fecha y qué: una sola franja arriba de todo. */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Periodo">
-        {([['dia', 'Día'], ['semana', 'Semana'], ['mes', 'Mes'], ['personalizado', 'Personalizado']] as const).map(([m, t]) => (
-          <button key={m} type="button" aria-pressed={modo === m} onClick={() => elegirModo(m)}
-            className={`boton min-h-[44px] ${modo === m ? ELEGIDO : ''}`}>{t}</button>
-        ))}
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      {modos('flex flex-wrap items-center gap-2 lg:hidden')}
+      <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-0">
         {modo === 'personalizado' ? (
           <div className="flex flex-wrap items-end gap-2">
             {(['desde', 'hasta'] as const).map((k) => (

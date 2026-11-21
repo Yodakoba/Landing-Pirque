@@ -309,12 +309,12 @@ export default function MenusEditor() {
 
                 {m.sitioPublico && (
                   <div className="flex flex-wrap items-end gap-3">
-                    <Campo etiqueta="Reserva: pagando en línea" ancho="w-48">
+                    <Campo etiqueta="Reserva: pagando en línea" ancho="w-full sm:w-[17rem]">
                       <input type="number" min={0} step={1000} className={ENTRADA}
                         value={m.precioEnLinea || ''} placeholder="sin poner"
                         onChange={(e) => cambiar(i, { precioEnLinea: aMonto(e.target.value) })} />
                     </Campo>
-                    <Campo etiqueta="Reserva: pagando en el local" ancho="w-48">
+                    <Campo etiqueta="Reserva: pagando en el local" ancho="w-full sm:w-[17rem]">
                       <input type="number" min={0} step={1000} className={ENTRADA}
                         value={m.precioEnLocal || ''} placeholder="sin poner"
                         onChange={(e) => cambiar(i, { precioEnLocal: aMonto(e.target.value) })} />
@@ -341,7 +341,7 @@ export default function MenusEditor() {
                     </div>
                     <div className="flex flex-wrap items-end gap-4">
                       <Campo etiqueta={`Precio que propone${m.cobro === COBRO.porPersona
-                        ? ' (por persona)' : ''}`} ancho="w-48">
+                        ? ' (por persona)' : ''}`} ancho="w-full sm:w-[19rem]">
                         <input type="text" inputMode="decimal" className={ENTRADA}
                           defaultValue={m.precioCotizacion ? String(m.precioCotizacion).replace('.', ',') : ''}
                           placeholder={m.moneda === MONEDA.uf ? 'ej. 2,61' : 'ej. 45000'}

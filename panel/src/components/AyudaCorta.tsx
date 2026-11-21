@@ -58,10 +58,23 @@ export default function AyudaCorta({ tema, titulo, children }: {
       <button type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAbierta(true); }}
         aria-label={`Qué es esto: ${t}`}
-        className="ml-1.5 inline-flex h-[30px] w-[30px] shrink-0 items-center
-                   justify-center rounded-full border border-hueso/30 align-middle
-                   text-[14px] font-bold normal-case leading-none tracking-normal
-                   text-hueso/70 hover:border-oro hover:text-oro">
+        /* **El `?` no mueve lo que tiene al lado** (2026-11-21, lo vio el
+           cliente en la ficha de un trabajador: *"generas, por el signo de
+           interrogación, saltos verticales, donde debería estar alineado
+           todo"*). Medía 30px dentro de un renglón de 13px de letra, así que
+           el nombre que lo llevaba quedaba 11px más alto que los de al lado,
+           y su campo, 11px más abajo.
+
+           Ahora el círculo mide **24px a la vista**, con un margen negativo
+           que lo deja ocupando 16px del renglón: nunca lo agranda. **Lo que
+           se aprieta mide 36px** —el `::before` lo extiende 6px a cada lado,
+           más hacia arriba que hacia abajo, para no tapar el campo que va
+           debajo—: antes eran 30. Vale para los 101 lugares que lo usan. */
+        className="relative -my-1 ml-1.5 inline-flex h-6 w-6 shrink-0 items-center
+                   justify-center rounded-full border-[1.5px] border-hueso/40 align-middle
+                   text-[13px] font-bold normal-case leading-none tracking-normal
+                   text-hueso/75 hover:border-oro hover:text-oro
+                   before:absolute before:-inset-x-1.5 before:-bottom-1 before:-top-2 before:content-['']">
         ?
       </button>
 

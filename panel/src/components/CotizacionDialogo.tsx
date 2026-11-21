@@ -1338,10 +1338,25 @@ export default function CotizacionDialogo({
             )}
             {!nuevoCliente && (
               <>
-                <input type="search" value={busqueda} autoFocus={!cliente}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Buscar cliente por nombre, empresa, teléfono o correo"
-                  aria-label="Buscar cliente" className={`${ENTRADA} min-h-[48px]`} />
+                {/* ***+ Cliente nuevo* va arriba y se nota** (2026-11-21, lo pidió
+                    el cliente: *"tiene que estar arriba y un botón notable, y
+                    luego la lista y búsqueda"*). Iba al final, bajo la lista,
+                    con el mismo peso que un botón cualquiera: con muchos
+                    clientes había que bajar para encontrarlo. No va relleno
+                    —el relleno de esta ventana es *Ir al paso 2*—: va grande
+                    y con borde dorado. Lo escrito en el buscador pasa a ser
+                    el nombre del cliente nuevo. */}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button type="button"
+                    className="boton min-h-[48px] shrink-0 !border-2 !border-oro px-5 !text-[15px] !font-bold !text-oro hover:bg-oro/10"
+                    onClick={() => setNuevoCliente({ nombre: busqueda, telefono: '', correo: '', empresa: '' })}>
+                    + Cliente nuevo
+                  </button>
+                  <input type="search" value={busqueda} autoFocus={!cliente}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar cliente por nombre, empresa, teléfono o correo"
+                    aria-label="Buscar cliente" className={`${ENTRADA} min-h-[48px] sm:flex-1`} />
+                </div>
                 <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {encontrados.map((c) => (
                     <li key={c.id}>
@@ -1356,10 +1371,6 @@ export default function CotizacionDialogo({
                     </li>
                   ))}
                 </ul>
-                <button type="button" className="boton min-h-[44px]"
-                  onClick={() => setNuevoCliente({ nombre: busqueda, telefono: '', correo: '', empresa: '' })}>
-                  + Cliente nuevo
-                </button>
               </>
             )}
             {nuevoCliente && (

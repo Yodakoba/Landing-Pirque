@@ -33,12 +33,12 @@ const HABIA = {
     "src/components/EquipoDialogo.tsx": 1,
     "src/components/UsuariosEditor.tsx": 3,
     "src/components/ReservaForm.tsx": 10,
-    "src/components/FichaColaborador.tsx": 3,
+    "src/components/FichaColaborador.tsx": 1,
     "src/components/CalendarView.tsx": 0,
     "src/components/TarjetaDia.tsx": 1,
     "src/components/Ayuda.tsx": 1,
     "src/components/ExtrasDialogo.tsx": 0,
-    "src/components/FichaTrabajador.tsx": 4,
+    "src/components/FichaTrabajador.tsx": 1,
     "src/app/bitacora/page.tsx": 2,
     "src/app/semana/[token]/page.tsx": 2
   };
