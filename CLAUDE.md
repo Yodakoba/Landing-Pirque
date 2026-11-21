@@ -263,6 +263,12 @@ eso, el primer precio nuevo que alguien escribiera directo en el HTML
 volvería a abrir la puerta a los dos precios. Lo mismo con una clave que no
 existe en la lista o una marca mal escrita.
 
+- **El script escribe además `sitemap.xml`** (2026-11-21), con las páginas
+  indexables —`PAGINAS` menos `SIN_ALTERNATE`— en los tres idiomas y sus
+  hreflang, las mismas URL de cada página. Una página nueva entra sola, y
+  `--revisar` avisa si el sitemap quedó viejo. Sin `lastmod`, a propósito:
+  una fecha que nadie mantiene enseña a Google a no creerla. `robots.txt`
+  es fijo y apunta a él.
 - **Es lo segundo que el script escribe en los archivos españoles**,
   después del `?v=` de los assets. `--revisar` nombra las páginas con
   precios viejos como *(precios de la lista)*.
@@ -521,6 +527,8 @@ de "no hay build step" sigue valiendo para el sitio. Comprobado ese día por
 el cliente: `/CLAUDE.md` da 404, y `/`, `/en/` y el calendario de
 `reservas.html` funcionan.
 
+- **`robots.txt` y `sitemap.xml` están en `PUBLICO` desde el 2026-11-21**,
+  para enviar el sitemap a Google Search Console el día del lanzamiento.
 - **Una carpeta o archivo público nuevo en la raíz se agrega a `PUBLICO`**,
   al inicio del script; si no, el sitio publicado no lo tiene. Lo privado
   no hay que anotarlo en ninguna parte: lo que no está en la lista no sale.
@@ -1808,7 +1816,7 @@ Siempre a la vista:
    `promociones.descuento`): ver "La lista de precios". Hubo un primer corte
    con cuatro etiquetas aparte, bajo la oferta, y **al cliente no le
    gustaron**: el precio con descuento va donde ya está el menú.
-3. Contacto: botón WhatsApp + formulario de email.
+3. Contacto: botón WhatsApp (el formulario de email se sacó el 2026-11-21: no guardaba nada).
 4. Footer.
 
 Dentro de los paneles, en este orden. **En promociones el primero no se
@@ -2027,10 +2035,19 @@ que sí rige, hay que devolverlo a cinco lugares del sitio público.
 
 ## Pendientes de contenido
 
-- **Plataforma de newsletter** — el formulario de email tiene
-  `onsubmit="return false;"` y ningún handler, así que **el email se descarta
-  al enviar: hoy no captura nada**. Hay que resolver al menos la captura
-  (Formspree, Google Forms o un endpoint propio).
+- ~~**Plataforma de newsletter**~~ — **se sacaron los formularios el
+  2026-11-21** (lo decidió el cliente antes del lanzamiento): estaban en
+  `reservas.html`, el dossier, socios y promociones, y descartaban el correo
+  al enviar —quien lo dejaba creía que quedó anotado—. Se borraron con su
+  CSS (`.newsletter-row`, y en el sitio también `.contact-*`, que solo usaba
+  esa sección) y sus siete llaves de los diccionarios. En los landings la
+  tarjeta de WhatsApp quedó sola, centrada (`.contact-solo`, 684px). Cuando
+  haya dónde guardar los correos (Formspree, Google Forms o un endpoint
+  propio), se vuelven a poner.
+- **Política de privacidad y condiciones de reserva** — no existen en el
+  sitio. Son decisiones del negocio (y conviene que las vea un abogado): no
+  se redactan acá. Anotado como recordatorio en la guía *Traspaso a
+  producción* el 2026-11-21.
 - **Fotos de cabalgatas y de la cancha de beach tenis** — son las dos
   únicas actividades que siguen con icono en vez de foto. Castillo
   inflable, pintacaritas y ping-pong/tacataca **ya tienen la suya**: este

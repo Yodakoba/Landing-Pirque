@@ -508,10 +508,6 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .paso p{ font-size:0.88rem; color: var(--ink-dim); margin-top:6px; }
 
 /* ---------- contacto ---------- */
-.contact-grid{ display:grid; grid-template-columns:1fr 1fr; gap:40px; }
-/* la reserva es la via principal: WhatsApp queda como salida discreta bajo
-   el formulario, no como bloque con boton verde compitiendo con el */
-.contact-solo{ max-width:620px; }
 /* qué incluye la reserva: va bajo el formulario, con el mismo ancho, para
    que se lea como una sola columna. Las fotos hacen el trabajo: la lista
    de texto que habia antes era correcta pero se leia como un contrato. */
@@ -548,21 +544,6 @@ details.menu-details summary:hover .menu-cta{ background: rgba(201,162,39,0.10);
 .alternativa{ margin-top:44px; max-width:620px; font-size:0.85rem; color: var(--ink-faint); }
 .alternativa a{ color: var(--ink-dim); text-underline-offset:3px; }
 .alternativa a:hover{ color: var(--ink); }
-@media (max-width: 860px){ .contact-grid{ grid-template-columns:1fr; } }
-.contact-card{ border:1px solid var(--line); border-radius:3px; padding:32px; background: var(--bg-panel); }
-.contact-card h3{ font-size:1rem; }
-.contact-card p{ font-size:0.9rem; color: var(--ink-dim); margin:10px 0 20px; }
-.newsletter-row{ display:flex; gap:10px; flex-wrap:wrap; }
-.newsletter-row input{
-  flex:1 1 200px; background: var(--bg); border:1px solid var(--line); color: var(--ink);
-  padding:13px 15px; border-radius:2px; font-family:var(--sans); font-size:0.9rem;
-}
-.newsletter-row input:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
-.newsletter-row button{
-  background: var(--gold); color:#1A1400; border:none; padding:13px 24px; border-radius:2px;
-  font-family:var(--sans); font-weight:600; font-size:0.85rem; text-transform:uppercase;
-  letter-spacing:0.04em; cursor:pointer;
- min-height:44px;}
 
 /* ---------- reserva en línea (maqueta, sin Shopify todavía) ----------
    Reproduce los campos del widget actual de Shopify en nuestro diseño.

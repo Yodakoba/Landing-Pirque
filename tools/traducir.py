@@ -648,6 +648,34 @@ def dossier_pdf_desfasado():
     return viejos
 
 
+def sitemap():
+    """El sitemap.xml del sitio (2026-11-21): cada página indexable en los
+    tres idiomas, con sus hreflang, para Google Search Console.
+
+    Sale de PAGINAS menos SIN_ALTERNATE —las que van con noindex—, y con las
+    mismas URL de los hreflang de cada página, así que no puede decir otra
+    cosa que las páginas. Una página nueva entra sola al agregarla a
+    PAGINAS. Sin fecha de modificación a propósito: una fecha que nadie
+    mantiene le enseña a Google a no creerla."""
+    filas = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+             '        xmlns:xhtml="http://www.w3.org/1999/xhtml">']
+    for pagina in PAGINAS:
+        if pagina in SIN_ALTERNATE:
+            continue
+        for idioma in IDIOMAS:
+            filas.append('  <url>')
+            filas.append('    <loc>%s/%s</loc>' % (SITIO, ruta_relativa(pagina, 'es', idioma)))
+            for otro in IDIOMAS:
+                filas.append('    <xhtml:link rel="alternate" hreflang="%s" href="%s/%s"/>'
+                             % (otro, SITIO, ruta_relativa(pagina, 'es', otro)))
+            filas.append('    <xhtml:link rel="alternate" hreflang="x-default" href="%s/%s"/>'
+                         % (SITIO, pagina))
+            filas.append('  </url>')
+    filas.append('</urlset>')
+    return '\n'.join(filas) + '\n'
+
+
 def main():
     ap = argparse.ArgumentParser(
         description='Genera en/ y pt/ a partir del español de la raíz.')
@@ -725,6 +753,20 @@ def main():
         declaradas = {k for k in traducir.dicc if not k.startswith('_')}
         for llave in sorted(declaradas - traducir.usadas):
             sobrantes.append((idioma, llave))
+
+    # El sitemap.xml, que sale de la misma lista de páginas.
+    ruta_sitemap = os.path.join(RAIZ, 'sitemap.xml')
+    mapa = sitemap()
+    actual = None
+    if os.path.exists(ruta_sitemap):
+        with open(ruta_sitemap, encoding='utf-8') as f:
+            actual = f.read()
+    if actual != mapa:
+        if args.revisar:
+            desfasados.append('sitemap.xml')
+        else:
+            with open(ruta_sitemap, 'w', encoding='utf-8') as f:
+                f.write(mapa)
 
     for p in problemas:
         print('PROBLEMA  ' + p, file=sys.stderr)

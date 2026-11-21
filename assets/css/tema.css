@@ -102,7 +102,7 @@ html[data-tema="dia"] .fullbleed .bg img{ filter: brightness(0.75); }
 /* Ojo: :is() toma la especificidad de su argumento más fuerte, así que
    los botones delineados y los de WhatsApp se excluyen acá y no con una
    regla posterior, que perdería. */
-html[data-tema="dia"] :is(.btn:not(.btn-ghost):not(.btn-wa):not(.btn-whatsapp), .nav a.nav-reserva, .sugerencia-ir, .contact-card button, .dcto){
+html[data-tema="dia"] :is(.btn:not(.btn-ghost):not(.btn-wa):not(.btn-whatsapp), .nav a.nav-reserva, .sugerencia-ir, .dcto){
   background: var(--gold); border-color: var(--gold); color: var(--sobre-oro);
 }
 html[data-tema="dia"] :is(.btn:not(.btn-ghost):not(.btn-wa):not(.btn-whatsapp), .nav a.nav-reserva, .sugerencia-ir):hover{

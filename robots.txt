@@ -1,0 +1,5 @@
+# Brasas de Lo Pirque. Todo el sitio se puede indexar; el mapa, abajo.
+User-agent: *
+Allow: /
+
+Sitemap: https://brasasdelopirque.cl/sitemap.xml
