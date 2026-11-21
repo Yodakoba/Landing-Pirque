@@ -18,8 +18,16 @@ import { MOTIVOS_AJUSTE, MEDIOS_AJUSTE, ajusteDelCuerpo, type TipoAjuste, type T
 import { enCorto, enPalabras, rangoEnPalabras, semanaDe, sumarDias, type Fecha } from '@/lib/fechas';
 import { enPesos } from '@/lib/ocupacion';
 
-const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/65';
-const ELEGIDO = 'border-oro bg-oro/15 font-semibold';
+/**
+ * **El rótulo se lee menos que los botones** (2026-11-21, lo pidió el cliente:
+ * *"achica un poco las letras de qué día… y el por qué. Dale más énfasis a
+ * los botones"*). Sin mayúsculas ni espaciado, en gris: dice qué se pregunta
+ * y se aparta. 13px es el piso de la regla PlayStation.
+ */
+const ROTULO = 'mb-1 block text-[13px] font-medium text-hueso/60';
+/** Las opciones: borde de 2px, letra de 15px en negrita. Elegida, rellena en dorado. */
+const OPCION = 'boton boton-angosto min-h-[40px] !border-2 !border-hueso/30 !px-2.5 !text-[15px] !font-semibold !text-hueso';
+const ELEGIDO = '!border-oro !bg-oro/20';
 /** *sáb 7*: sin el mes, para que los días y Hoy quepan en una fila del celular. La frase de abajo dice la fecha entera. */
 const diaCorto = (f: Fecha) => enCorto(f).replace(/ \S+$/, '');
 
@@ -116,20 +124,20 @@ export default function AjusteInforme({ nombre, dias, hoy, desde, hasta, tipoIni
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="De qué día">
               {dias.map((f) => (
                 <button key={f} type="button" aria-pressed={dia === f} onClick={() => setDia(f)}
-                  className={`boton boton-angosto min-h-[40px] ${dia === f ? ELEGIDO : ''}`}>
+                  className={`${OPCION} ${dia === f ? ELEGIDO : ''}`}>
                   {dia === f && '✓ '}{f === hoy ? 'Hoy · ' : ''}{diaCorto(f)}
                 </button>
               ))}
               {conHoy && (
                 <button type="button" aria-pressed={dia === hoy} onClick={() => setDia(hoy)}
-                  className={`boton boton-angosto min-h-[40px] border-dashed ${dia === hoy ? ELEGIDO : ''}`}>
+                  className={`${OPCION} !border-dashed ${dia === hoy ? ELEGIDO : ''}`}>
                   {dia === hoy && '✓ '}Hoy · {diaCorto(hoy)}
                 </button>
               )}
             </div>
           </div>
           <label className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold uppercase tracking-wide text-hueso/65">Monto</span>
+            <span className="text-[13px] font-medium text-hueso/60">Monto</span>
             <span aria-hidden className={`text-[22px] font-bold ${resta ? 'text-rojo-texto' : 'text-verde-texto'}`}>
               {resta ? '−' : '+'}
             </span>
@@ -148,17 +156,17 @@ export default function AjusteInforme({ nombre, dias, hoy, desde, hasta, tipoIni
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Por qué">
               {MOTIVOS_AJUSTE[tipo].map((m) => (
                 <button key={m} type="button" aria-pressed={razon === m} onClick={() => setRazon(razon === m ? '' : m)}
-                  className={`boton boton-angosto min-h-[40px] ${razon === m ? ELEGIDO : ''}`}>
+                  className={`${OPCION} ${razon === m ? ELEGIDO : ''}`}>
                   {razon === m && '✓ '}{m}
                 </button>
               ))}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Cómo">
-            <span className="text-[13px] font-semibold text-hueso/65">Cómo:</span>
+            <span className="text-[13px] font-medium text-hueso/60">Cómo</span>
             {MEDIOS_AJUSTE.map((m) => (
               <button key={m} type="button" aria-pressed={medio === m} onClick={() => setMedio(medio === m ? '' : m)}
-                className={`boton boton-angosto min-h-[40px] ${medio === m ? ELEGIDO : ''}`}>
+                className={`${OPCION} ${medio === m ? ELEGIDO : ''}`}>
                 {medio === m && '✓ '}{m}
               </button>
             ))}
