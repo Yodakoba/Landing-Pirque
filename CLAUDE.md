@@ -1314,13 +1314,25 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   desarrollo. **Comprobado el 2026-11-21** con las credenciales de verdad,
   desde el computador del cliente: el token sale y un pedido real responde
   con nombre, apellido, correo y teléfono.
+- **Los webhooks de la tienda real ya llegan al panel** (2026-11-20, de
+  noche): el cliente creó los tres en Notificaciones → Webhooks, cambió
+  `SHOPIFY_WEBHOOK_SECRET` de Production por el secreto de firma de la
+  tienda real e hizo Redeploy. La notificación de prueba de Shopify llegó
+  con **200** y User Agent `Shopify-Captain-Hook`. **Adelantarlo no ensucia
+  nada**: el panel acepta la firma y descarta los pedidos del sitio viejo
+  porque no traen `_booking_date`, sin escribir en la planilla. Desde ahí
+  los webhooks de la tienda de desarrollo reciben 401 en producción, que es
+  lo correcto. **Un aviso descartado no escribe nada en los registros de
+  Vercel**: el 200 solo se ve abriendo la fila, y la primera después de un
+  despliegue aparece por el aviso `DEP0169` de Node al arrancar.
 - **Mergear ese PR es del camino *con prueba***: desde el merge,
   `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
-  El orden: primero las variables de Production del panel —`SHOPIFY_DOMINIO`
-  con `lo-pirque.myshopify.com`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`
-  y el `SHOPIFY_WEBHOOK_SECRET` de la real— y sus webhooks, justo antes del
-  merge (una variable nueva rige desde el próximo despliegue, y el merge es
-  el que lo dispara), después el merge, y después una compra de prueba en
+  El orden: primero las variables de Production del panel —`SHOPIFY_CLIENT_ID`
+  y `SHOPIFY_CLIENT_SECRET`, cargadas el 2026-11-20, y **`SHOPIFY_DOMINIO`
+  con `lo-pirque.myshopify.com`, que es lo único que queda y va justo antes
+  del merge** (con el código de antes, ese dominio se leería con el token
+  de la tienda de desarrollo; una variable nueva rige desde el próximo
+  despliegue, y el merge es el que lo dispara)—, después el merge, y después una compra de prueba en
   `brasas-sitio.vercel.app` de cada modalidad, que comprueba lo que falta:
   que `_booking_date` llegue al pedido, que la regla de medios de pago
   aplique y que el pedido aparezca en el panel. Poner el panel primero no
