@@ -15,6 +15,7 @@
  * solo" en CLAUDE.md).
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { useEffect, useMemo, useState } from 'react';
@@ -326,21 +327,19 @@ export default function ClientesEditor() {
             : `Nadie calza con “${busqueda}”.`}
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className={LISTA_TARJETAS}>
           {visibles.map((c) => {
             const n = cotizaciones[c.id] ?? 0;
             const abiertaEsta = abierta === c.id && edicion;
             const cambiaNombre = !!abiertaEsta && edicion!.nombre.trim() !== c.nombre;
             const { estado, error: falla } = fichas.estadoDe(c.id);
             return (
-              <li key={c.id} className="overflow-hidden rounded border border-hueso/15 bg-panel">
+              <li key={c.id} className={`overflow-hidden ${marcoTarjeta(!!abiertaEsta)}`}>
                 <div className="flex items-center gap-2 pr-2">
                   <button type="button" aria-expanded={!!abiertaEsta} onClick={() => abrir(c)}
                     className="flex min-h-[52px] min-w-0 flex-1 flex-wrap items-center gap-x-3
                                gap-y-1 px-3 py-2.5 text-left hover:bg-hueso/5">
-                    <span aria-hidden className="w-3 text-base leading-none text-hueso/50">
-                      {abiertaEsta ? '−' : '+'}
-                    </span>
+                    <SignoAbrir abierta={!!abiertaEsta} tamano="h-6 w-6 text-[14px]" />
                     <span className="text-[16px] font-semibold">{c.nombre}</span>
                     {c.empresa && <span className="text-[14px] text-hueso/70">{c.empresa}</span>}
                     <span className="text-[14px] text-hueso/70">{c.telefono || c.correo}</span>
@@ -359,7 +358,7 @@ export default function ClientesEditor() {
                 </div>
 
                 {abiertaEsta && (
-                  <div className="border-t border-hueso/10 p-4">
+                  <div className={`${CUERPO_ABIERTO} p-4`}>
                     {/* **Su historial de cotizaciones** (Fase 2): todas, con la
                         ganada en verde y las alternativas marcadas. Un cliente
                         que pide varias, o dos opciones, las ve juntas acá. */}
@@ -445,6 +444,7 @@ export default function ClientesEditor() {
                     </div>
                   </div>
                 )}
+                {abiertaEsta && <PieCerrar nombre={c.nombre} onCerrar={() => abrir(c)} />}
               </li>
             );
           })}

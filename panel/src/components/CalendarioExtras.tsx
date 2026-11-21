@@ -18,6 +18,7 @@
  * evidente.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { avisar, copiarConAviso } from './AvisoFlotante';
@@ -517,7 +518,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       <MostrarDesactivados visible={verInactivos} onCambio={(v) => { setVerInactivos(v); setAbierta(null); }}
         cuantos={(colaboradores ?? []).filter((c) => !c.activo).length} />
       <fieldset disabled={soloMira} className="m-0 mt-3 min-w-0 border-0 p-0">
-      <ul className="space-y-3">
+      <ul className={LISTA_TARJETAS}>
         {(colaboradores ?? [])
           .map((c, i) => ({ c, i }))
           .sort((a, b) => {
@@ -535,10 +536,10 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
             (e) => normalizar(e.colaborador) === normalizar(c.nombre));
           const abiertaEsta = abierta === i;
           return (
+            // La misma tarjeta del informe y de Equipo (`TarjetaLista`).
             <li key={i}
-              className={`overflow-hidden rounded border ${c.activo
-                ? 'border-hueso/15 bg-panel'
-                : 'border-hueso/10 bg-transparent opacity-60'}`}>
+              className={`overflow-hidden ${marcoTarjeta(abiertaEsta, c.activo ? 'normal' : 'apagada')} ${
+                c.activo ? '' : 'opacity-70'}`}>
 
               {/* **Cerrada es una línea**, como la ficha de un trabajador:
                   nombre, actividad, teléfono y lo que falta para pagarle. A la
@@ -548,9 +549,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                   onClick={() => setAbierta(abiertaEsta ? null : i)}
                   className="flex min-h-[44px] min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1
                              px-3 py-2.5 text-left hover:bg-hueso/5">
-                  <span aria-hidden className="w-3 text-base leading-none text-hueso/40">
-                    {abiertaEsta ? '−' : '+'}
-                  </span>
+                  <SignoAbrir abierta={abiertaEsta} tamano="h-6 w-6 text-[14px]" />
                   <span className="font-semibold">
                     {c.nombre.trim() || <span className="text-hueso/40">Sin nombre</span>}
                   </span>
@@ -588,7 +587,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
               </div>
 
               {abiertaEsta && (
-              <div className="border-t border-hueso/10 p-3">
+              <div className={`${CUERPO_ABIERTO} p-3`}>
               <div className="flex flex-wrap items-start gap-3">
                 <Campo etiqueta="Nombre" ancho="w-52">
                   <input type="text" value={nombreEscrito[i] ?? c.nombre} className={ENTRADA}
@@ -668,6 +667,9 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                 </div>
               )}
               </div>
+              )}
+              {abiertaEsta && (
+                <PieCerrar nombre={c.nombre.trim()} onCerrar={() => setAbierta(null)} />
               )}
             </li>
           );

@@ -16,6 +16,7 @@
  * llamada directa a la API tiene que obedecer la misma regla.
  */
 import { useMemo, useState } from 'react';
+import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
@@ -594,7 +595,7 @@ export default function EquipoDialogo({
             </div>
 
             {l.asignados.length > 0 ? (
-              <ul className="mt-2 space-y-2">
+              <ul className={`mt-2 ${LISTA_TARJETAS}`}>
                 {l.asignados.map((nombre) => {
                   const i = plan.findIndex(
                     (x) => normalizar(x.trabajador) === normalizar(nombre));
@@ -619,23 +620,15 @@ export default function EquipoDialogo({
                        así que los dos botones quedan siempre en el mismo
                        lugar, se llame como se llame. */
                     <li key={nombre}
-                      className={`rounded-xl border-2 ${
-                        abierta ? 'border-oro/70'
-                        : t?.asistencia === VINO.si ? 'border-verde/30 bg-verde/5'
-                        : t?.asistencia === VINO.no ? 'border-rojo/30 bg-rojo/5'
-                        : 'border-hueso/15 bg-panel'}`}>
+                      className={marcoTarjeta(abierta, t?.asistencia === VINO.si ? 'verde'
+                        : t?.asistencia === VINO.no ? 'rojo' : 'normal', true)}>
                       <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
                         <button type="button" aria-expanded={abierta}
                           onClick={() => setAbierto(abierta ? '' : normalizar(nombre))}
                           title={abierta ? 'Cerrar' : `Montos, ajustes y ficha de ${nombre}`}
                           className="tecla flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5
                                      rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
-                          <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center
-                                                       justify-center rounded-full border-2
-                                                       text-[14px] font-bold ${abierta
-                            ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                            {abierta ? '−' : '+'}
-                          </span>
+                          <SignoAbrir abierta={abierta} tamano="h-6 w-6 text-[14px]" />
                           <span className="min-w-0">
                             <span className={`block truncate text-[15px] font-semibold ${
                               t?.asistencia === VINO.no ? 'text-hueso/45 line-through' : ''}`}>

@@ -27,6 +27,7 @@
 import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 
 /** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
 const llano = (t: string) =>
@@ -448,10 +449,10 @@ function LineaPersona({
         el cliente dos veces: *"el borde de la tarjeta realmente más
         marcado"*). Borde de 3px y oscuro, más grueso que cualquier línea de
         adentro (que van de 1 a 2px y claras), y una sombra; abierta, borde
-        dorado entero con un anillo ancho y un pie para cerrarla. */}
-    <li ref={tarjeta} className={`scroll-my-2 rounded-2xl border-[3px] bg-panel shadow-md ${
-      abierta ? 'border-oro shadow-lg ring-4 ring-oro/25' : estado === 'pagado' && aTransferir > 0
-        ? 'border-verde-fuerte/80' : 'border-hueso/55'}`}>
+        dorado entero con un anillo ancho y un pie para cerrarla. Es la pieza
+        de todas las listas que se abren (`TarjetaLista`). */}
+    <li ref={tarjeta} className={`scroll-my-2 ${marcoTarjeta(abierta,
+      estado === 'pagado' && aTransferir > 0 ? 'verde' : 'normal')}`}>
       {/* **En el celular son dos filas**: arriba quién es y cuánto, abajo
           los botones de copiar a todo el ancho, para el dedo. **En una
           pantalla ancha es una sola fila**: los botones van entre el nombre
@@ -493,11 +494,7 @@ function LineaPersona({
                    focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro
                    sm:gap-3 sm:px-4 sm:pb-2 sm:pt-3 order-1 md:min-w-0 md:flex-1 md:items-center md:pb-2.5 md:pt-2.5
                    lg:py-1.5">
-        <span aria-hidden className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center
-                                     rounded-full border-2 text-[14px] font-bold sm:h-7 sm:w-7 lg:mt-0 lg:h-6 lg:w-6 ${
-          abierta ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-          {abierta ? '−' : '+'}
-        </span>
+        <SignoAbrir abierta={abierta} tamano="mt-0.5 h-6 w-6 text-[14px] sm:h-7 sm:w-7 lg:mt-0 lg:h-6 lg:w-6" />
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-bold leading-tight sm:text-[17px] lg:truncate lg:text-[15px]">{nombre}</span>
           <span className="block text-[13px] text-hueso/65">
@@ -583,7 +580,7 @@ function LineaPersona({
         // al lado y el pie más bajo. Medida con Playwright: entra en
         // 1280×650 con un día sin marcar. Al abrirla, la página se mueve lo
         // justo para verla entera (`useEffect` de arriba).
-        <div className="border-t-2 border-oro/30 px-3 pb-2 pt-2.5 sm:px-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:pb-1 lg:pt-2">
+        <div className={`${CUERPO_ABIERTO} px-3 pb-2 pt-2.5 sm:px-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:pb-1 lg:pt-2`}>
         <div className="space-y-2.5 sm:space-y-3 lg:space-y-2">
           {/* **Qué se paga, como un recibo** (2026-11-12): lo que suma con su
               cuenta, y después lo que no suma y por qué. Antes era una grilla
@@ -794,11 +791,7 @@ function LineaPersona({
           {anotados > 0 && <AyudaCorta tema="deshacerPago" />}
         </div>
           {/* El pie: dónde termina esta persona, y cerrarla sin subir. */}
-          <button type="button" onClick={onAbrir}
-            className="mt-2 flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border-t-2
-                       border-oro/30 text-[14px] font-semibold text-oro lg:col-span-2 lg:mt-1 lg:min-h-[36px]">
-            ▴ Cerrar · {nombre}
-          </button>
+          <PieCerrar nombre={nombre} onCerrar={onAbrir} className="mt-2 lg:col-span-2 lg:mt-1" />
         </div>
       )}
     </li>
@@ -2038,7 +2031,7 @@ export default function InformeEquipo() {
             <p className="mb-8 text-[14px] text-hueso/60">Sin turnos anotados en este periodo.</p>
           ) : visiblesEquipo.length === 0 ? null : (
             <>
-              <ul className="space-y-3 lg:space-y-2">
+              <ul className={LISTA_TARJETAS}>
                 {ordenEquipo.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.trabajador, l.total, l.propina);
                   const aplica = pideBoleta('equipo', esContratado(l.modalidad));
@@ -2125,7 +2118,7 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 Actividades extras
               </h2>
-              <ul className="space-y-3 lg:space-y-2">
+              <ul className={LISTA_TARJETAS}>
                 {ordenExtras.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.colaborador, l.total, 0);
                   return (
@@ -2189,7 +2182,7 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 {haySocios ? 'Vendedores y socios comerciales' : 'Vendedores'}
               </h2>
-              <ul className="space-y-3 lg:space-y-2">
+              <ul className={LISTA_TARJETAS}>
                 {ordenVendedores.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.nombre, l.aTransferir, 0);
                   const clave = 'v-' + l.nombre;

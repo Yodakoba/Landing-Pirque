@@ -35,6 +35,7 @@
  * alguien marcó desde otro lado.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import MesaReserva, { ElegirAgregados } from './MesaReserva';
 import { leerAgregados, escribirAgregados, cuantosAgregados, pesosCL, type Agregado } from '@/lib/mesa';
 import IngresoFudo, { IconoFudo, MarcaAcordado } from './IngresoFudo';
@@ -224,20 +225,17 @@ export default function RecepcionVista() {
           // Una marcada vuelve a ofrecer Llegó / No vino solo con *Cambiar*.
           const cambiandoEsta = abierta === r.fila;
           return (
-            <li key={r.fila} className={`min-w-0 overflow-hidden rounded-2xl border-2 ${vino
-              ? 'border-verde/50 bg-verde/[0.06]' : noVino ? 'border-rojo/40 bg-rojo/[0.05]'
-              : abiertaEsta ? 'border-oro bg-panel' : 'border-hueso/20 bg-panel'}`}>
+            // La misma tarjeta de las demás listas (`TarjetaLista`), con el
+            // fondo teñido si llegó o no vino.
+            <li key={r.fila} className={`min-w-0 overflow-hidden ${marcoTarjeta(abiertaEsta,
+              vino ? 'verde' : noVino ? 'rojo' : 'normal', true)}`}>
               {/* **El primer piso: la misma fila de la página del día**, más
                   grande porque se usa de pie y con un tablet. (+), quién y qué
                   menú, el círculo de Fudo y la gente. */}
               <button type="button" aria-expanded={abiertaEsta} onClick={() => alternar(r.fila)}
                 className={`tecla flex min-h-[60px] w-full items-center gap-3 px-3 py-2 text-left
                             ${abiertaEsta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
-                <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                                             border-2 text-[17px] font-bold ${abiertaEsta
-                  ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                  {abiertaEsta ? '−' : '+'}
-                </span>
+                <SignoAbrir abierta={abiertaEsta} tamano="h-8 w-8 text-[17px]" />
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate text-[18px] font-bold ${noVino ? 'line-through opacity-70' : ''}`}>
                     {r.nombre || 'Sin nombre'}
@@ -268,7 +266,7 @@ export default function RecepcionVista() {
 
               {/* Abierta con (+): cómo ingresarla en Fudo y Avisar. */}
               {abiertaEsta && !contandoEsta && !avisandoEsta && (
-                <div className="space-y-2 border-t border-hueso/10 px-3 py-2.5">
+                <div className={`space-y-2 ${CUERPO_ABIERTO} px-3 py-2.5`}>
                   {!noVino && <IngresoFudo ingreso={r.ingreso} />}
                   {vino && (
                     <MesaReserva r={r} opciones={r.opciones ?? []} editable={!bloqueada} onGuardado={() => void cargar()} acordado={r.ingreso?.acordado} />

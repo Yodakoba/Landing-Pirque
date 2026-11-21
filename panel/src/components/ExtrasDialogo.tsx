@@ -12,6 +12,7 @@
  * reparte entre el equipo que atiende, no entre quien vino a hacer un show.
  */
 import { useState } from 'react';
+import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import AvisoGuardado from './AvisoGuardado';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
@@ -189,28 +190,20 @@ export default function ExtrasDialogo({
            ahora la línea cerrada es lo que se hace en el día —marcar si
            vino— y apretando el nombre se abre lo demás: actividad, monto,
            ajuste con su motivo, total, ficha y sacar. Una a la vez. */
-        <ul className="mt-4 space-y-2">
+        <ul className={`mt-4 ${LISTA_TARJETAS}`}>
           {lista.map((e, i) => {
             const abierta = abierto === normalizar(e.colaborador);
             return (
               <li key={e.colaborador}
-                className={`rounded-xl border-2 ${
-                  abierta ? 'border-oro/70'
-                  : e.estado === VINO.si ? 'border-verde/30 bg-verde/5'
-                  : e.estado === VINO.no ? 'border-rojo/30 bg-rojo/5'
-                  : 'border-hueso/15 bg-panel'}`}>
+                className={marcoTarjeta(abierta, e.estado === VINO.si ? 'verde'
+                  : e.estado === VINO.no ? 'rojo' : 'normal', true)}>
                 <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
                   <button type="button" aria-expanded={abierta}
                     onClick={() => setAbierto(abierta ? '' : normalizar(e.colaborador))}
                     title={abierta ? 'Cerrar' : `Actividad, monto y ficha de ${e.colaborador}`}
                     className="tecla flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5
                                rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
-                    <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center
-                                                 justify-center rounded-full border-2
-                                                 text-[14px] font-bold ${abierta
-                      ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                      {abierta ? '−' : '+'}
-                    </span>
+                    <SignoAbrir abierta={abierta} tamano="h-6 w-6 text-[14px]" />
                     <span className="min-w-0">
                       <span className={`block truncate text-[15px] font-semibold ${
                         e.estado === VINO.no ? 'text-hueso/45 line-through' : ''}`}>

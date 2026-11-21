@@ -46,7 +46,10 @@ revisan antes de cada cambio en esta carpeta.
   pantalla y con la misma importancia; una pantalla puede variar el tamaño o
   cuánto muestra según su espacio, **no el formato**. Antes de dibujar algo
   se busca la pieza que ya lo muestra; si hay dos formas del mismo dato, se
-  unifican. **Las piezas compartidas, hoy**:
+  unifican. **Y un cambio de diseño se lleva a sus parecidos** (regla del
+  cliente, 2026-11-21, está en la raíz): se cambia en todas las pantallas
+  que usan esa pieza en el mismo PR, o, si hay duda, se le pregunta al
+  cliente nombrando cuáles. **Las piezas compartidas, hoy**:
 
   | Dato | Pieza |
   |---|---|
@@ -62,6 +65,7 @@ revisan antes de cada cambio en esta carpeta.
   | Elegir de una lista que crece | `BuscarEnLista` |
   | Escribirle al cliente por WhatsApp | `BotonWhatsApp` (o `abrirWhatsApp()`), con el saludo de `saludoAlCliente()` |
   | Cuánto boletear: bruto, retención y neto | `CajaBoleta` (link personal e informe) |
+  | Una tarjeta de una lista que se abre: el marco, el + / − y el pie *▴ Cerrar* | `marcoTarjeta`, `SignoAbrir`, `PieCerrar` y `LISTA_TARJETAS` de `TarjetaLista` (Informe, Equipo, Extras, Vendedores, Clientes, Productos, Recepción, las reservas del día y las ventanas del equipo y de extras del día) |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -246,6 +250,40 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
   transferencia masiva se abre; la misión del informe también; las fotos del
   informe (`pag-informe`, `ger-informe`, `ope-informe`, `pag-pagar`,
   `ger-pagar`) se rehicieron.
+
+## La tarjeta de las listas, una sola pieza (2026-11-21)
+
+Lo pidió el cliente después de ver los bordes nuevos del informe: *"aplica
+los bordes más marcados en todos lados… se debería sentir en cada pestaña de
+forma similar si mostramos información similar"*. De ahí salió también la
+regla *un cambio de diseño se lleva a sus parecidos* (arriba).
+
+- **`TarjetaLista.tsx`** reúne lo que el informe tenía dibujado a mano:
+  - `marcoTarjeta(abierta, tono, teñida)`: el borde de 3px y oscuro con
+    sombra, y abierta el borde dorado con el anillo;
+  - los tonos: `verde` (pagada, o llegó), `rojo` (no vino, o con un aviso de
+    la recepción) y `apagada` (desactivada, con el borde cortado, por forma y
+    no solo por color);
+  - `SignoAbrir`, el círculo + / −;
+  - `PieCerrar`, el pie *▴ Cerrar · nombre*;
+  - `LISTA_TARJETAS`, 12px entre tarjetas y 8px en el computador;
+  - `CUERPO_ABIERTO`, la línea dorada bajo la cabecera.
+- **Dónde está**: Informe, Equipo, Extras, Vendedores, Clientes,
+  Productos, la Recepción, las reservas de la página del día y las ventanas
+  del equipo y de las actividades extras del día. Antes eran cuatro dibujos
+  distintos: línea de 1px con un `+` suelto (Equipo, Extras, Clientes,
+  Productos), 2px con círculo (Vendedores, Recepción, el día) y 3px (el
+  informe).
+- **El pie *▴ Cerrar*** va en las fichas largas: Informe, Equipo, Extras,
+  Vendedores, Clientes y Productos. En la Recepción no, porque la tarjeta
+  termina en *Llegó / No vino*. Tampoco en las reservas del día ni en las
+  ventanas del día, que son cortas.
+- **Lo que se mantuvo de cada pantalla**: la distribución (en Equipo, el
+  cliente dijo que en el computador estaba bien), los fondos teñidos de la
+  Recepción y del día (con `teñida`), y lo que dice cada línea.
+- **Ninguna lectura de Google más, ningún permiso cambió.** Las fotos de la
+  ayuda de la Recepción, el día, cerrar y corregir un día y Vendedores se
+  rehicieron.
 
 ## El ajuste desde el informe (2026-11-21)
 

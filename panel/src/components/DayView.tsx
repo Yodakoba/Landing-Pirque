@@ -6,6 +6,7 @@
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
 import { usarAlDia, BarraAlDia } from './AlDia';
+import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
 import { grupoDe, principalDe } from '@/lib/cotizar';
@@ -1077,7 +1078,7 @@ export default function DayView(
            la tabla de siete columnas, que en un teléfono había que correr de
            lado. Lo que no puede quedar escondido —un aviso de la recepción,
            un pedido repetido— lleva su marca también en la línea cerrada. */
-        <ul className="mt-5 space-y-2">
+        <ul className={`mt-5 ${LISTA_TARJETAS}`}>
           {visibles.map((r) => {
             // **El mismo pedido anotado dos veces en la planilla.** El panel
             // ya lo cuenta una sola vez —ver `leerReservasDe()`— así que esto
@@ -1102,9 +1103,8 @@ export default function DayView(
             const aviso = (r.avisoRecepcion ?? '').trim();
             return (
               <li key={r.fila} id={`reserva-${r.fila}`}
-                className={`scroll-mt-24 overflow-hidden rounded-2xl border-2 transition-colors ${
-                aviso ? 'bg-rojo/[0.07]' : 'bg-panel'} ${
-                abierta ? 'border-oro shadow-md' : aviso ? 'border-rojo-fuerte/60' : 'border-hueso/15'} ${
+                className={`scroll-mt-24 overflow-hidden transition-colors ${
+                marcoTarjeta(abierta, aviso ? 'rojo' : 'normal', true)} ${
                 libera ? 'opacity-50' : ''} ${destello === r.fila ? 'destello' : ''}`}>
                 {/* La línea cerrada: quién, su número, cómo va el pago (solo
                     el ícono) y cuánta gente. Lo que no puede quedar escondido
@@ -1115,11 +1115,7 @@ export default function DayView(
                   className={`tecla flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left
                               focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro
                               ${abierta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
-                  <span aria-hidden className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                                               border-2 text-[15px] font-bold ${abierta
-                    ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                    {abierta ? '−' : '+'}
-                  </span>
+                  <SignoAbrir abierta={abierta} />
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-[16px] font-bold ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}

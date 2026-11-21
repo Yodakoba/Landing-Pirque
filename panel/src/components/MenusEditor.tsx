@@ -17,6 +17,7 @@
  * panel es enterarse cuando dejan de estarlo. Ver src/lib/menus.ts.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import BotonGuardar from './BotonGuardar';
 import AyudaCorta from './AyudaCorta';
 import { useEffect, useMemo, useState } from 'react';
@@ -186,18 +187,15 @@ export default function MenusEditor() {
 
       <MostrarDesactivados cuantos={menus.filter((m) => !m.activo).length}
         visible={verInactivos} onCambio={(v) => { setVerInactivos(v); setAbierta(null); }} />
-      <ul className="space-y-2">
+      <ul className={LISTA_TARJETAS}>
         {menus.map((m, i) => (!m.activo && !verInactivos) ? null : (
-          <li key={i} className={`overflow-hidden rounded border ${m.activo
-            ? 'border-hueso/15 bg-panel' : 'border-hueso/10 bg-transparent'}`}>
+          <li key={i} className={`overflow-hidden ${marcoTarjeta(abierta === i, m.activo ? 'normal' : 'apagada')}`}>
             <div className="flex items-center gap-2 pr-2">
               <button type="button" aria-expanded={abierta === i}
                 onClick={() => setAbierta(abierta === i ? null : i)}
                 className={`flex min-h-[52px] min-w-0 flex-1 flex-wrap items-center gap-x-3
                            gap-y-1 px-3 py-2.5 text-left hover:bg-hueso/5 ${m.activo ? '' : 'opacity-60'}`}>
-                <span aria-hidden className="w-3 text-base leading-none text-hueso/50">
-                  {abierta === i ? '−' : '+'}
-                </span>
+                <SignoAbrir abierta={abierta === i} tamano="h-6 w-6 text-[14px]" />
                 <span className="text-[16px] font-semibold">
                   {m.nombre.trim() || <span className="text-hueso/50">Sin nombre</span>}
                 </span>
@@ -261,7 +259,7 @@ export default function MenusEditor() {
 
             {abierta === i && (
               <fieldset disabled={soloMira}
-                className="m-0 min-w-0 space-y-5 border-0 border-t border-hueso/10 p-4">
+                className={`m-0 min-w-0 space-y-5 border-0 ${CUERPO_ABIERTO} p-4`}>
                 <Campo etiqueta="Nombre" ancho="w-full sm:max-w-md">
                   <input type="text" value={m.nombre} className={ENTRADA}
                     placeholder="Si es un menú: como se llama en Shopify"
@@ -367,6 +365,7 @@ export default function MenusEditor() {
                 {sucio && <div className="flex justify-end">{botonGuardar}</div>}
               </fieldset>
             )}
+            {abierta === i && <PieCerrar nombre={m.nombre.trim()} onCerrar={() => setAbierta(null)} />}
           </li>
         ))}
       </ul>

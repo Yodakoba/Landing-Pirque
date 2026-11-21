@@ -15,6 +15,7 @@
  * que el panel diera consejos que nadie dio.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import BotonGuardar from './BotonGuardar';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
@@ -595,7 +596,7 @@ export default function EquipoEditor() {
           **Las fichas sin nombre van al final**, que es donde está el botón
           de agregar: una recién creada que saltara al principio se perdería
           de vista justo después de apretarlo. */}
-      <ul className="space-y-3">
+      <ul className={LISTA_TARJETAS}>
         {gente
           .map((t, i) => ({ t, i }))
           .sort((a, b) => {
@@ -613,10 +614,11 @@ export default function EquipoEditor() {
           if (!calza(t) && abierta !== i) return null;
           const turnos = turnosDe.get(normalizar(t.nombre)) ?? 0;
           return (
+            // La misma tarjeta del informe (`TarjetaLista`); desactivada, con
+            // el borde cortado.
             <li key={i}
-              className={`overflow-hidden rounded border ${t.activo
-                ? 'border-hueso/15 bg-panel'
-                : 'border-hueso/10 bg-transparent opacity-60'}`}>
+              className={`overflow-hidden ${marcoTarjeta(abierta === i, t.activo ? 'normal' : 'apagada')} ${
+                t.activo ? '' : 'opacity-70'}`}>
 
               {/* **La ficha cerrada es una línea.** Nombre, puesto y teléfono
                   alcanzan para encontrar a alguien; lo demás —el sueldo, la
@@ -632,9 +634,7 @@ export default function EquipoEditor() {
                   onClick={() => setAbierta(abierta === i ? null : i)}
                   className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1
                              px-3 py-2.5 text-left hover:bg-hueso/5">
-                  <span aria-hidden className="w-3 text-base leading-none text-hueso/40">
-                    {abierta === i ? '−' : '+'}
-                  </span>
+                  <SignoAbrir abierta={abierta === i} tamano="h-6 w-6 text-[14px]" />
                   <span className="font-semibold">
                     {t.nombre.trim() || <span className="text-hueso/40">Sin nombre</span>}
                   </span>
@@ -702,7 +702,7 @@ export default function EquipoEditor() {
               </div>
 
               {abierta === i && (
-                <div className="border-t border-hueso/10 p-3">
+                <div className={`${CUERPO_ABIERTO} p-3`}>
                 <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
 
                 {/* Quién es, y cómo se entra a su link. */}
@@ -905,6 +905,9 @@ export default function EquipoEditor() {
                 )}
                 </fieldset>
                 </div>
+              )}
+              {abierta === i && (
+                <PieCerrar nombre={t.nombre.trim()} onCerrar={() => setAbierta(null)} />
               )}
             </li>
           );

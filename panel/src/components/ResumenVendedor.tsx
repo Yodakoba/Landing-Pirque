@@ -34,6 +34,7 @@
  *    se confirman.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
@@ -768,20 +769,17 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
               {q ? <>Nadie calza con “{busca.trim()}”.</> : 'Todos están desactivados.'}
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className={LISTA_TARJETAS}>
               {visibles.map((x) => {
                 const abierta = x.usuario === usuario;
                 return (
                   <li key={x.usuario} id={`v-${x.usuario}`}
-                    className={`scroll-mt-4 rounded-2xl border-2 bg-panel ${abierta ? 'border-oro/70'
-                      : x.total > 0 && x.falta <= 0 ? 'border-verde/40' : 'border-hueso/15'} ${x.activo || abierta ? '' : 'opacity-70'}`}>
+                    className={`scroll-mt-4 ${marcoTarjeta(abierta, !x.activo ? 'apagada'
+                      : x.total > 0 && x.falta <= 0 ? 'verde' : 'normal')} ${x.activo || abierta ? '' : 'opacity-70'}`}>
                     <button type="button" aria-expanded={abierta} onClick={() => abrir(x.usuario)}
                       className="tecla flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none
                                  focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro">
-                      <span aria-hidden className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                                                   border-2 text-[15px] font-bold ${abierta ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                        {abierta ? '−' : '+'}
-                      </span>
+                      <SignoAbrir abierta={abierta} tamano="mt-0.5 h-7 w-7 text-[15px]" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-[17px] font-bold leading-tight">{x.nombre}</span>
                         <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-hueso/70">
@@ -814,10 +812,11 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                       </span>
                     </button>
                     {abierta && (
-                      <div className="border-t-2 border-hueso/10 px-3 pb-4 pt-4 sm:px-4">
+                      <div className={`${CUERPO_ABIERTO} px-3 pb-4 pt-4 sm:px-4`}>
                         {detalle ?? <p className="text-[15px] text-hueso/60">Cargando…</p>}
                       </div>
                     )}
+                    {abierta && <PieCerrar nombre={x.nombre} onCerrar={() => abrir(x.usuario)} />}
                   </li>
                 );
               })}

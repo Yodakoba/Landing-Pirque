@@ -59,6 +59,22 @@ más abajo; esto es la lista para revisar.
   Reservas—, **no el formato**. Antes de dibujar algo se busca la pieza que
   ya lo muestra y se reutiliza; si aparecen dos formas del mismo dato, se
   unifican en una. En el panel, la lista de piezas está en `panel/CLAUDE.md`.
+- **Un cambio de diseño se lleva a sus parecidos** (regla del cliente,
+  2026-11-21: *"que siempre revisas si se hacen cambios de diseño en
+  secciones que… muestran similar información en similar formato, que se
+  adaptan estos cambios también, o que por lo menos me acuerdas"*). Antes
+  de cerrar un cambio de cómo se ve algo, se buscan las otras pantallas que
+  muestran lo mismo —con la lista de piezas de `panel/CLAUDE.md`, o
+  buscando la clase o el componente en el código— y:
+  - si es claramente la misma pieza, **se cambia ahí también, en el mismo
+    PR**, y el PR lo dice;
+  - si hay duda —otra pantalla, otro público, otro uso—, **se le pregunta
+    al cliente con nombre y apellido**: *"cambiamos esto en Informe, ¿lo
+    llevo también a Equipo y Extras, que muestran lo mismo?"*.
+
+  Lo que mejor cumple esta regla es una pieza compartida: el cambio llega
+  solo a todas partes. Si dos pantallas tienen el mismo dibujo copiado, se
+  pasa a una pieza la primera vez que hay que cambiarlo.
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13: *"siempre
   mantener las ayudas al día de cualquier cambio, cueste lo que cueste…
   gráficas hay que adaptar, lógicas"*). Un cambio que altera algo que una
