@@ -121,8 +121,11 @@ export default function AgregarVendedor({ tipo, desdeCotizacion = false, onCerra
   }
 
   return (
-    <Dialogo titulo={esVendedor ? 'Agregar vendedor' : 'Agregar socio comercial'} onCerrar={onCerrar} ancho="max-w-2xl">
-      <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); if (listo && !guardando) void crear(); }}>
+    <Dialogo titulo={esVendedor ? 'Agregar vendedor' : 'Agregar socio comercial'} onCerrar={onCerrar}
+      ancho="max-w-2xl lg:max-w-6xl">
+      {/* En el computador, los tres pasos van lado a lado (2026-11-21, regla
+          *una tarjeta abierta cabe en una pantalla*): apilados medían 870px. */}
+      <form className="space-y-6 lg:grid lg:grid-cols-3 lg:items-start lg:gap-x-8 lg:gap-y-3 lg:space-y-0" onSubmit={(e) => { e.preventDefault(); if (listo && !guardando) void crear(); }}>
         <section className="space-y-2">
           <h3 className="text-[13px] font-semibold uppercase tracking-widest text-oro">1 · Quién</h3>
           <label className="block text-[14px] font-semibold">
@@ -172,11 +175,11 @@ export default function AgregarVendedor({ tipo, desdeCotizacion = false, onCerra
           <DatosBancarios banco={banco} nombre={nombre.trim()} onCambio={setBanco} />
         </section>
 
-        {error && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px]">{error}</p>}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" className="boton !min-h-[48px] !text-[15px]" onClick={onCerrar}>Cancelar</button>
+        {error && <p className="rounded border border-rojo-fuerte/60 bg-rojo/10 p-3 text-[15px] lg:col-span-3">{error}</p>}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end lg:col-span-3">
+          <button type="button" className="boton !min-h-[48px] !text-[15px] lg:!min-h-[44px]" onClick={onCerrar}>Cancelar</button>
           <button type="submit" disabled={!listo || guardando}
-            className="boton boton-relleno !min-h-[56px] !px-8 !text-[17px] !font-bold">
+            className="boton boton-relleno !min-h-[56px] !px-8 !text-[17px] !font-bold lg:!min-h-[48px]">
             {guardando ? 'Creando…' : esVendedor ? 'Crear el vendedor' : 'Crear el socio'}
           </button>
         </div>

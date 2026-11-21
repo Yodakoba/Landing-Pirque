@@ -76,18 +76,20 @@ export function partesDelDia(d: Ocupacion | undefined, preparacion = false) {
   return { texto, clase, punto: punto ?? (d ? PUNTO_TARJETA(d) : '🟤') };
 }
 
-export default function PuntoDia({ d, preparacion = false }: {
+export default function PuntoDia({ d, preparacion = false, enLinea = false }: {
   /** La ocupación del día, o `undefined` si ese día no recibe público. */
   d?: Ocupacion;
   /** Si ese día tiene equipo y no abre: entonces es de preparación. */
   preparacion?: boolean;
+  /** En el computador, el punto al lado de la palabra: ver `PuntoYPalabra`. */
+  enLinea?: boolean;
 }) {
   const estado = estadoDia(d, preparacion);
   // Un día sin ocupación y sin equipo no es ningún estado: no hay nada que
   // decir de él, y una palabra ahí sería ruido en todas las celdas vacías.
   if (!estado) return null;
   const { texto, clase, punto } = PALABRA[estado];
-  return <PuntoYPalabra punto={punto ?? (d ? PUNTO_TARJETA(d) : '🟤')} texto={texto} clase={clase} />;
+  return <PuntoYPalabra punto={punto ?? (d ? PUNTO_TARJETA(d) : '🟤')} texto={texto} clase={clase} enLinea={enLinea} />;
 }
 
 /**
@@ -95,12 +97,19 @@ export default function PuntoDia({ d, preparacion = false }: {
  * decir. Lo usa `PuntoDia`, y las cotizaciones para un día que no trae
  * ocupación (uno cerrado sin reservas, o fuera del calendario): así se ve
  * igual que los demás en vez de una palabra suelta.
+ *
+ * **`enLinea`** (2026-11-21, el computador más compacto): desde 1024px el
+ * punto va **al lado** de su palabra y no encima, en las tarjetas de los
+ * calendarios de Reservas y de Cotizaciones. Son el mismo punto y la misma
+ * palabra; lo que cambia es que ocupan una línea en vez de dos.
  */
-export function PuntoYPalabra({ punto, texto, clase }: { punto: string; texto: string; clase: string }) {
+export function PuntoYPalabra({ punto, texto, clase, enLinea = false }: {
+  punto: string; texto: string; clase: string; enLinea?: boolean;
+}) {
   return (
-    <span className="flex shrink-0 flex-col items-end leading-none">
+    <span className={`flex shrink-0 flex-col items-end leading-none ${enLinea ? 'lg:ml-auto lg:flex-row lg:items-center lg:gap-1' : ''}`}>
       <span aria-hidden className="text-[15px]">{punto}</span>
-      <span className={`mt-1 text-[13px] font-semibold uppercase tracking-wide ${clase}`}>
+      <span className={`mt-1 text-[13px] font-semibold uppercase tracking-wide ${enLinea ? 'lg:mt-0' : ''} ${clase}`}>
         {texto}
       </span>
     </span>

@@ -27,7 +27,7 @@
  * corregir encima: un grupo con un acuerdo distinto es justamente el tipo de
  * reserva que se anota a mano.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import type { Reserva } from '@/lib/tipos';
 import { ESTADO_PAGO } from '@/lib/columnas';
@@ -40,9 +40,11 @@ import { precioDe, aMonto, type Menu } from '@/lib/menus';
 import Dialogo from './Dialogo';
 import CampoTelefono from './CampoTelefono';
 import { correoNormal, avisoCorreo } from '@/lib/contacto';
+import { cambiosDeLaReserva, textoDeCambios } from '@/lib/correccion';
+import { PieCorreccion } from './Correccion';
 
 export default function ReservaForm({
-  fecha, reserva, menusConocidos, catalogo, pideMotivo = false, desdeCRM,
+  fecha, reserva, menusConocidos, catalogo, diaCerrado = false, desdeCRM,
   onListo, onCancelar
 }: {
   fecha: string;
@@ -60,11 +62,14 @@ export default function ReservaForm({
   menusConocidos: string[];
   catalogo: Menu[];
   /**
-   * Si el día está cerrado y esto es una **corrección** (2026-11-03): pide
-   * el motivo y no deja guardar sin él. El servidor lo exige igual; acá se
-   * pide para que el error no aparezca recién al apretar Guardar.
+   * El día está cerrado y esto es una **corrección** (2026-11-03). **No pide
+   * un motivo escrito** (2026-11-21, lo decidió el cliente: igual que la
+   * corrección del equipo): el pie muestra **la lista de lo que cambia**, una
+   * casilla para confirmarla y *Guardar corrección*. Esa lista es lo que
+   * queda en la bitácora (`lib/correccion.ts`). El servidor sigue exigiendo
+   * ese texto y el permiso `corregir`.
    */
-  pideMotivo?: boolean;
+  diaCerrado?: boolean;
   onListo: () => void;
   onCancelar: () => void;
 }) {
@@ -133,7 +138,31 @@ export default function ReservaForm({
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
-  const [motivo, setMotivo] = useState('');
+
+  // **Lo que cambia, para la corrección de un día cerrado.** Se compara lo
+  // guardado con lo que este formulario va a escribir —los menús, compuestos
+  // igual en los dos lados—, así que la lista dice lo que de verdad queda.
+  const cuentaInicial = useRef(cuenta);
+  const abonoQueQueda = f.estadoPago === ESTADO_PAGO.abonado ? aMonto(f.abonado) || null : null;
+  const cambios = useMemo(() => {
+    if (!diaCerrado) return [];
+    const tapado = !!reserva?.contactoTapado;
+    const despues = {
+      fecha: f.fecha, nombre: f.nombre, menu: componerMenu(cuenta), personas,
+      monto: monto > 0 ? monto : null, estadoPago: f.estadoPago, abonado: abonoQueQueda, notaPago: f.notaPago,
+      telefono: tapado ? reserva?.telefono : f.telefono, email: tapado ? reserva?.email : f.email
+    };
+    return cambiosDeLaReserva(reserva ? {
+      fecha: reserva.fecha, nombre: reserva.nombre, menu: componerMenu(cuentaInicial.current),
+      personas: reserva.personas, monto: reserva.monto,
+      estadoPago: reserva.estadoPago || ESTADO_PAGO.pendiente, abonado: reserva.abonado ?? null,
+      notaPago: reserva.notaPago, telefono: reserva.telefono, email: reserva.email
+    } : null, despues);
+  }, [diaCerrado, reserva, f, cuenta, personas, monto, abonoQueQueda]);
+  // La casilla confirma **esa** lista: si cambia, se suelta sola.
+  const [confirmado, setConfirmado] = useState(false);
+  const huella = cambios.join('\n');
+  useEffect(() => { setConfirmado(false); }, [huella]);
 
   const campo = (k: keyof typeof f) => ({
     value: f[k],
@@ -166,8 +195,8 @@ export default function ReservaForm({
 
   async function guardar() {
     setError('');
-    if (pideMotivo && !motivo.trim()) {
-      return setError('El día está cerrado: escribe el motivo de la corrección.');
+    if (diaCerrado && (!cambios.length || !confirmado)) {
+      return setError('El día está cerrado: marca la casilla que confirma los cambios.');
     }
     if (!f.nombre.trim()) return setError('Falta el nombre.');
     if (personas < 1) return setError('Tiene que haber al menos una persona en algún menú.');
@@ -185,7 +214,7 @@ export default function ReservaForm({
       // De qué ganado del socio sale, para que deje de aparecer como
       // pendiente y el día no cuente esa gente dos veces.
       ...(desdeCRM ? { eventoCRM: desdeCRM.id } : {}),
-      ...(pideMotivo ? { correccion: { motivo: motivo.trim() } } : {})
+      ...(diaCerrado ? { correccion: { motivo: textoDeCambios(cambios) } } : {})
     };
     const res = reserva
       ? await fetch(`/api/reservas/${reserva.fila}`,
@@ -203,7 +232,7 @@ export default function ReservaForm({
     <Dialogo
       titulo={desdeCRM ? 'Anotar el evento del CRM'
                        : reserva ? 'Editar reserva' : 'Agregar reserva'}
-      onCerrar={onCancelar}>
+      onCerrar={onCancelar} ancho="max-w-lg lg:max-w-4xl">
       <>
         {/* Lo que el socio sabe, dicho una vez y arriba: el nombre ya está
             puesto abajo, y la gente es el número que hay que repartir en los
@@ -219,9 +248,21 @@ export default function ReservaForm({
           </p>
         )}
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Campo etiqueta="Fecha" ancho><input type="date" {...campo('fecha')} className={ENTRADA} /></Campo>
-          <Campo etiqueta="Nombre" ancho>
+        {/* **En el computador, dos columnas** (2026-11-21, regla *una tarjeta
+            abierta cabe en una pantalla*): a la izquierda quién, cuándo y cómo
+            viene el pago; a la derecha los menús y el monto. En una columna
+            medía 910px. */}
+        <div className="lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-x-8">
+        {/* **Para que quepa también la más larga** —una anotada a mano y
+            pagada, en un día cerrado, con su lista de cambios— (2026-11-21;
+            medía 760px y nadie la había medido: la escena de la prueba abría
+            otra ventana). Solo en el computador: la fecha con el nombre en
+            una fila, igual que el teléfono con el correo; *La reserva se
+            cayó…* sube a la línea de *¿Cómo viene el pago?*; y *¿Cómo
+            pagó?* lleva sus botones en su misma línea. */}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[9.5rem_minmax(0,1fr)]">
+          <Campo etiqueta="Fecha" ancho enFilaPc><input type="date" {...campo('fecha')} className={ENTRADA} /></Campo>
+          <Campo etiqueta="Nombre" ancho enFilaPc>
             <input type="text" {...campo('nombre')} className={ENTRADA} autoFocus />
           </Campo>
           {/* El teléfono y el correo se ordenan al salir del campo: una
@@ -258,13 +299,22 @@ export default function ReservaForm({
               Shopify y de las cotizaciones. "La reserva se cayó" va aparte:
               es lo raro, y es lo que libera el cupo. */}
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs uppercase tracking-wide text-hueso/60">¿Cómo viene el pago?</p>
+            <div className="lg:mb-2 lg:flex lg:items-center lg:gap-x-2">
+            <p className="mb-1 shrink-0 text-xs uppercase tracking-wide text-hueso/60 lg:mb-0">¿Cómo viene el pago?</p>
             {reserva && (
-              <p className="mb-2 text-[13px] text-hueso/70">
+              <p className="mb-2 text-[13px] text-hueso/70 lg:mb-0 lg:min-w-0 lg:flex-1">
                 {origenDe(reserva)}
                 {deShopify && ' — el pago lo pone la tienda: acá solo se marca si la reserva se cayó.'}
               </p>
             )}
+            {/* En el computador, *La reserva se cayó…* va acá y no al pie. */}
+            {!(liberaCupo(f.estadoPago) || seCayo) && (
+              <button type="button" onClick={() => setSeCayo(true)}
+                className="boton ml-auto hidden min-h-[36px] shrink-0 !border-rojo-fuerte/60 text-rojo-texto lg:inline-flex">
+                La reserva se cayó…
+              </button>
+            )}
+            </div>
             {!liberaCupo(f.estadoPago) && !deShopify && (
               <div className="grid grid-cols-3 gap-2">
                 {COMO_VIENE.map((o) => {
@@ -309,8 +359,8 @@ export default function ReservaForm({
                 sigue libre para el detalle. Los medios los confirmó el
                 cliente; uno distinto se escribe. */}
             {(f.estadoPago === ESTADO_PAGO.pagado || f.estadoPago === ESTADO_PAGO.abonado) && !deShopify && (
-              <div className="mt-3">
-                <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">¿Cómo pagó?</span>
+              <div className="mt-3 lg:flex lg:flex-wrap lg:items-center lg:gap-x-2">
+                <span className="mb-1 block shrink-0 text-xs uppercase tracking-wide text-hueso/60 lg:mb-2">¿Cómo pagó?</span>
                 <div className="mb-2 flex flex-wrap gap-2">
                   {MEDIOS_RAPIDOS.map((m) => {
                     const ya = f.notaPago.toLowerCase().startsWith(m.toLowerCase());
@@ -325,7 +375,7 @@ export default function ReservaForm({
                     );
                   })}
                 </div>
-                <input type="text" {...campo('notaPago')} className={ENTRADA}
+                <input type="text" {...campo('notaPago')} className={`${ENTRADA} lg:basis-full`}
                   placeholder="Transferencia 28/10, efectivo en el mesón…" />
               </div>
             )}
@@ -356,7 +406,7 @@ export default function ReservaForm({
               </div>
             ) : (
               <button type="button" onClick={() => setSeCayo(true)}
-                className="boton mt-3 min-h-[44px] !border-rojo-fuerte/60 text-rojo-texto">
+                className="boton mt-3 min-h-[44px] !border-rojo-fuerte/60 text-rojo-texto lg:hidden">
                 La reserva se cayó…
               </button>
             )}
@@ -375,9 +425,10 @@ export default function ReservaForm({
           )}
         </div>
 
+        <div className="lg:mt-4">
         {/* Los menús, con un contador cada uno. Las personas salen de acá:
             no hay un campo aparte que pueda no calzar. */}
-        <div className="mt-5 border-t border-hueso/10 pt-4">
+        <div className="mt-5 border-t border-hueso/10 pt-4 lg:mt-0 lg:border-t-0 lg:pt-0">
           <div className="flex items-baseline justify-between">
             <span className="text-xs uppercase tracking-wide text-hueso/60">Menús</span>
             <span className="text-sm">
@@ -446,17 +497,16 @@ export default function ReservaForm({
             )}
           </p>
         </div>
-        {pideMotivo && (
-          <label className="mt-4 block rounded border border-ambar/50 p-3 text-[13px]
-                            font-semibold text-ambar-texto">
-            Este día está cerrado. Motivo de la corrección
-            <input value={motivo} onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej.: la reserva era de 6, no de 4"
-              className={`${ENTRADA} mt-1 font-normal text-hueso`} />
-          </label>
-        )}
+        </div>
+        </div>
         {error && <p className="mt-3 text-sm font-semibold text-rojo-texto">{error}</p>}
 
+        {diaCerrado ? (
+          // Un día cerrado se corrige: la lista de lo que cambia, la casilla
+          // y *Guardar corrección*. La misma pieza de la ventana del equipo.
+          <PieCorreccion modo="dosFilas" cambios={cambios} confirmado={confirmado} onConfirmado={setConfirmado}
+            onCancelar={onCancelar} onGuardar={guardar} guardando={guardando} />
+        ) : (
         <div className="mt-5 flex gap-3">
           <button onClick={guardar} disabled={guardando}
             className="boton boton-relleno min-h-[48px] text-[15px] disabled:opacity-40">
@@ -465,6 +515,7 @@ export default function ReservaForm({
           <button onClick={onCancelar}
             className="boton">Cancelar</button>
         </div>
+        )}
       </>
     </Dialogo>
   );
@@ -474,11 +525,14 @@ const ENTRADA =
   'w-full rounded border border-hueso/20 bg-tinta px-3 py-2 text-sm ' +
   'focus:border-oro focus:outline-none';
 
-function Campo({ etiqueta, ancho, children }: {
-  etiqueta: string; ancho?: boolean; children: React.ReactNode;
+function Campo({ etiqueta, ancho, enFilaPc, children }: {
+  etiqueta: string; ancho?: boolean;
+  /** En el computador comparte la fila con su vecino, aunque sea ancho en el celular. */
+  enFilaPc?: boolean;
+  children: React.ReactNode;
 }) {
   return (
-    <label className={`block ${ancho ? 'sm:col-span-2' : ''}`}>
+    <label className={`block ${ancho ? 'sm:col-span-2' : ''} ${enFilaPc ? 'lg:col-span-1' : ''}`}>
       <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">{etiqueta}</span>
       {children}
     </label>

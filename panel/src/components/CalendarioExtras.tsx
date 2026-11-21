@@ -310,7 +310,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           Ver `BandaSeccion.tsx`. */}
       <BandaSeccion tono="anil" icono="🎠" seccion="Extras" titulo="Actividades extras"
         ayuda={<Ayuda tema="extras" />} />
-      <AvisoFijo clave="extras-intro" className="mb-5 max-w-2xl">
+      <AvisoFijo clave="extras-intro" className="mb-5 max-w-2xl lg:mb-4">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
         castillo inflable. <strong>Apreta un día</strong> para agregar lo que
         venga, marcar si llegó y anotar cuánto se le paga. Va aparte del
@@ -564,8 +564,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                                      text-[13px] font-semibold text-hueso/60">inactivo</span>
                   )}
                   {verSueldos && c.nombre.trim() && !sePuedeTransferir(c.banco) && (
-                    <span className="rounded-full border border-ambar/50 px-2 py-0.5
-                                     text-[13px] font-semibold text-ambar-texto">falta su cuenta</span>
+                    <Pastilla tipo="falta">falta su cuenta</Pastilla>
                   )}
                 </button>
                 {/* Quitar solo a quien no tiene días contratados, igual que
@@ -589,26 +588,30 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
               {abiertaEsta && (
               <div className={`${CUERPO_ABIERTO} p-3`}>
-              <div className="flex flex-wrap items-start gap-3">
-                <Campo etiqueta="Nombre" ancho="w-52">
+              {/* La misma rejilla que la ficha de un trabajador (2026-11-21,
+                  regla *los formularios van alineados*): ver `EquipoEditor`. */}
+              <div className="fila-ficha">
+                <span className="rotulo-ficha">Datos</span>
+                <div className="caja-campos"><div className="rejilla-campos">
+                <Campo etiqueta="Nombre" ancho="campo-2">
                   <input type="text" value={nombreEscrito[i] ?? c.nombre} className={ENTRADA}
                     placeholder="Nombre o empresa"
                     aria-label={`Nombre del colaborador ${i + 1}`}
                     onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
                 </Campo>
-                <Campo etiqueta="Actividad" ancho="w-44">
+                <Campo etiqueta="Actividad">
                   <input type="text" value={c.actividad} className={ENTRADA}
                     list="actividades-de-fichas" placeholder="show ecuestre…"
                     aria-label={`Actividad de ${c.nombre || 'esta persona'}`}
                     onChange={(e) => cambiar(i, 'actividad', e.target.value)} />
                 </Campo>
-                <Campo etiqueta="Teléfono" ancho="w-44">
+                <Campo etiqueta="Teléfono">
                   <CampoTelefono valor={c.telefono} className={ENTRADA}
                     etiqueta={`Teléfono de ${c.nombre || 'esta persona'}`}
                     onCambio={(v) => cambiar(i, 'telefono', v)} />
                 </Campo>
                 {verSueldos && (
-                  <Campo etiqueta="Monto habitual" ancho="w-32">
+                  <Campo etiqueta="Monto habitual">
                     <input type="number" min={0} step={1000} className={ENTRADA}
                       value={c.monto || ''} placeholder="—" disabled={soloSueldos}
                       aria-label={`Monto habitual de ${c.nombre || 'esta persona'}`}
@@ -616,22 +619,22 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                   </Campo>
                 )}
 
-                <span className="flex-1" />
-
-                <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-[13px]">
+                <div className="campo-todo flex flex-wrap items-center justify-end gap-3 text-[13px] empty:hidden">
                   {guardarEnTarjeta(i)}
                 </div>
+                </div></div>
               </div>
 
               {verLinks && (
                 <div className="mt-3 border-t border-hueso/10 pt-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="w-36 whitespace-nowrap text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
-                      Link personal
-                    </span>
+                  <div className="fila-ficha sm:items-center">
                     {/* Qué abre el link, en su `?` (2026-11-21, regla *lo que
-                        explica va en su ?*). */}
-                    <AyudaCorta tema="linkColaborador" />
+                        explica va en su ?*). Va con el rótulo, en su columna:
+                        así los botones parten donde parten los campos. */}
+                    <span className="rotulo-ficha flex items-center whitespace-nowrap">
+                      Link personal<AyudaCorta tema="linkColaborador" />
+                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
                     {!c.nombre.trim() || (nombreEscrito[i] !== undefined && nombreEscrito[i].trim() !== c.nombre) ? (
                       <span className="text-[13px] text-ambar-texto/85">Guarda el nombre para administrar su link.</span>
                     ) : (
@@ -648,16 +651,16 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                         )}
                       </>
                     )}
+                    </div>
                   </div>
                 </div>
               )}
 
               {verSueldos && (
                 <div className="mt-3 border-t border-hueso/10 pt-3">
-                  <div className="flex flex-wrap items-start gap-3">
-                    <span className="w-36 pt-4 text-[13px] font-semibold uppercase tracking-widest
-                                     text-hueso/60">Transferencia</span>
-                    <div className="min-w-[20rem] flex-1">
+                  <div className="fila-ficha">
+                    <span className="rotulo-ficha">Transferencia</span>
+                    <div className="min-w-0">
                       <fieldset disabled={soloSueldos} className="m-0 min-w-0 border-0 p-0">
                       <DatosBancarios
                         banco={c.banco} nombre={c.nombre}

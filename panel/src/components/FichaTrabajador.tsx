@@ -18,6 +18,7 @@ import { useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
+import ElegirPuesto from './ElegirPuesto';
 import CampoTelefono from './CampoTelefono';
 import DatosBancarios from './DatosBancarios';
 import { usarSoloMira } from './SesionCliente';
@@ -29,8 +30,10 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function FichaTrabajador({
-  ficha, puesto = '', nombreSugerido = '', verSueldos, onListo, onCancelar
+  ficha, puesto = '', puestos, nombreSugerido = '', verSueldos, onListo, onCancelar
 }: {
+  /** Los puestos que existen, para elegir el habitual. */
+  puestos: string[];
   /** La ficha a editar, o `undefined` para crear una nueva. */
   ficha?: Trabajador;
   /** Con qué nombre nace, para la ficha que le falta a alguien ya asignado. */
@@ -88,8 +91,11 @@ export default function FichaTrabajador({
         ) : null}
       </p>
 
-      <div className="mt-4 flex flex-wrap items-start gap-3">
-        <Campo etiqueta="Nombre" ancho="w-60">
+      {/* En la rejilla de los campos (2026-11-21, regla *los formularios van
+          alineados*): las tres secciones —quién es, cómo se le paga, dónde se
+          le transfiere— usan las mismas columnas, así que sus campos calzan. */}
+      <div className="caja-campos mt-4"><div className="rejilla-campos">
+        <Campo etiqueta="Nombre" ancho="campo-2">
           {creando ? (
             <input type="text" value={nombre} autoFocus className={ENTRADA}
               placeholder="Nombre y apellido" aria-label="Nombre del trabajador"
@@ -100,33 +106,33 @@ export default function FichaTrabajador({
             </p>
           )}
         </Campo>
-        <Campo etiqueta="Teléfono" ancho="w-44">
+        <Campo etiqueta="Teléfono">
           <CampoTelefono valor={telefono} className={ENTRADA}
             etiqueta={`Teléfono de ${nombre || 'esta persona'}`}
             onCambio={setTelefono} />
         </Campo>
-        <Campo etiqueta="Puesto habitual" ancho="w-44">
-          <input type="text" value={habitual} className={ENTRADA}
-            placeholder="garzón, parrillero…"
-            aria-label={`Puesto habitual de ${nombre || 'esta persona'}`}
-            onChange={(e) => setHabitual(e.target.value)} />
+        <Campo etiqueta="Puesto habitual">
+          {/* Se elige de los puestos que existen (2026-11-21): escrito a mano
+              podía no calzar con ninguno y no preseleccionar a nadie. */}
+          <ElegirPuesto valor={habitual} puestos={puestos} quien={nombre}
+            className={ENTRADA} onCambio={setHabitual} />
         </Campo>
         {!creando && (
-          <label className="flex items-center gap-2 self-center pt-4">
+          <label className="campo-todo flex min-h-[30px] items-center gap-2">
             <input type="checkbox" checked={activo} className="h-4 w-4 accent-oro"
               aria-label={`${ficha!.nombre} sigue en el equipo`}
               onChange={(e) => setActivo(e.target.checked)} />
-            <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+            <span className="text-[13px] text-hueso/70">
               Activo
             </span>
           </label>
         )}
-      </div>
+      </div></div>
 
       {verSueldos && (
         <fieldset disabled={soloSueldos}
           className="m-0 mt-4 min-w-0 border-0 border-t border-hueso/10 p-0 pt-4">
-          <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
+          <p className="rotulo-ficha mb-2">
             Pago
           </p>
           {/* **Esto es lo de siempre, no lo de un día**, y conviene decirlo
@@ -138,8 +144,8 @@ export default function FichaTrabajador({
               anota en su turno. */}
           {/* Que esto es lo de costumbre y lo de un día va en el día, en el
               `?` de Modalidad (2026-11-21, regla *lo que explica va en su ?*). */}
-          <div className="flex flex-wrap items-start gap-3">
-            <Campo etiqueta="Modalidad" ancho="w-52" ayuda="modalidad">
+          <div className="caja-campos"><div className="rejilla-campos">
+            <Campo etiqueta="Modalidad" ayuda="modalidad">
               <select value={modalidad} className={ENTRADA}
                 aria-label={`Cómo se le paga a ${nombre || 'esta persona'}`}
                 onChange={(e) => setModalidad(e.target.value)}>
@@ -147,25 +153,26 @@ export default function FichaTrabajador({
                 <option value={MODALIDAD.contratado}>Contratado (tiene sueldo)</option>
               </select>
             </Campo>
-            <Campo etiqueta="Jornada" ancho="w-32">
+            <Campo etiqueta="Jornada">
               {/* A un contratado no se le paga por jornada: un monto acá no
                   lo usaría ninguna cuenta y haría creer que sí. */}
               <input type="number" min={0} step={1000} className={ENTRADA}
                 value={contratado ? '' : pagoJornada} disabled={contratado}
-                placeholder={contratado ? 'no aplica' : '—'}
+                placeholder={contratado ? 'sin jornada' : '—'}
                 aria-label={`Jornada de ${nombre || 'esta persona'}`}
                 onChange={(e) => setPagoJornada(e.target.value)} />
             </Campo>
             {/* El rótulo es corto a propósito: "Valor de la hora extra" se
                 partía en dos líneas y empujaba el campo hacia abajo,
                 desalineándolo de los de al lado. */}
-            <Campo etiqueta="Valor hora extra" ancho="w-36">
+            <Campo etiqueta="Hora extra">
               <input type="number" min={0} step={500} className={ENTRADA}
                 value={valorHora} placeholder="—"
                 aria-label={`Valor de la hora extra de ${nombre || 'esta persona'}`}
                 onChange={(e) => setValorHora(e.target.value)} />
             </Campo>
-            <label className="flex items-center gap-2 self-center pt-4">
+            <div className="campo-2 flex min-h-[30px] items-center self-end">
+            <label className="flex items-center gap-2">
               <input type="checkbox" checked={propina} className="h-4 w-4 accent-oro"
                 aria-label={`${nombre || 'Esta persona'} entra en el reparto de propina`}
                 onChange={(e) => setPropina(e.target.checked)} />
@@ -173,15 +180,16 @@ export default function FichaTrabajador({
                 Entra en la propina
               </span>
             </label>
-            <span className="self-center pt-4"><AyudaCorta tema="propinaFicha" /></span>
-          </div>
+            <AyudaCorta tema="propinaFicha" />
+            </div>
+          </div></div>
         </fieldset>
       )}
 
       {verSueldos && (
         <fieldset disabled={soloSueldos}
           className="m-0 mt-4 min-w-0 border-0 border-t border-hueso/10 p-0 pt-4">
-          <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
+          <p className="rotulo-ficha mb-2">
             Transferencia
           </p>
           <DatosBancarios banco={banco} nombre={nombre} onCambio={setBanco} />

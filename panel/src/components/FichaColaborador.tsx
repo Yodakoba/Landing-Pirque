@@ -82,8 +82,10 @@ export default function FichaColaborador({
         {creando ? 'Queda en la lista de actividades extras, y asignado a este día.' : null}
       </p>
 
-      <div className="mt-4 flex flex-wrap items-start gap-3">
-        <Campo etiqueta="Nombre" ancho="w-60">
+      {/* En la rejilla de los campos (2026-11-21, regla *los formularios van
+          alineados*), como la ficha de un trabajador. */}
+      <div className="caja-campos mt-4"><div className="rejilla-campos">
+        <Campo etiqueta="Nombre" ancho="campo-2">
           {creando ? (
             <input type="text" value={nombre} autoFocus className={ENTRADA}
               placeholder="Nombre y apellido, o la empresa"
@@ -98,19 +100,19 @@ export default function FichaColaborador({
             </p>
           )}
         </Campo>
-        <Campo etiqueta="Actividad" ancho="w-52">
+        <Campo etiqueta="Actividad">
           <input type="text" value={actividad} className={ENTRADA}
             placeholder="show ecuestre, pintacaritas…"
             aria-label={`Actividad de ${nombre || 'esta persona'}`}
             onChange={(e) => setActividad(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Teléfono" ancho="w-44">
+        <Campo etiqueta="Teléfono">
           <CampoTelefono valor={telefono} className={ENTRADA}
             etiqueta={`Teléfono de ${nombre || 'esta persona'}`}
             onCambio={setTelefono} />
         </Campo>
         {verSueldos && (
-          <Campo etiqueta="Monto habitual" ancho="w-32">
+          <Campo etiqueta="Monto habitual">
             <input type="number" min={0} step={1000} value={monto}
               className={ENTRADA} placeholder="—" disabled={soloSueldos}
               aria-label={`Monto habitual de ${nombre || 'esta persona'}`}
@@ -118,21 +120,21 @@ export default function FichaColaborador({
           </Campo>
         )}
         {!creando && (
-          <label className="flex items-center gap-2 self-center pt-4">
+          <label className="campo-todo flex min-h-[30px] items-center gap-2">
             <input type="checkbox" checked={activo} className="h-4 w-4 accent-oro"
               aria-label={`${ficha!.nombre} se sigue contratando`}
               onChange={(e) => setActivo(e.target.checked)} />
-            <span className="text-[10px] uppercase tracking-wide text-hueso/35">
+            <span className="text-[13px] text-hueso/70">
               Activo
             </span>
           </label>
         )}
-      </div>
+      </div></div>
 
       {verSueldos && (
         <fieldset disabled={soloSueldos}
           className="m-0 mt-4 min-w-0 border-0 border-t border-hueso/10 p-0 pt-4">
-          <p className="mb-2 text-[10px] uppercase tracking-widest text-hueso/35">
+          <p className="rotulo-ficha mb-2">
             Transferencia
           </p>
           <DatosBancarios banco={banco} nombre={nombre} onCambio={setBanco} />

@@ -63,7 +63,7 @@ export default function BuscarEnLista({ opciones, elegido = '', onElegir, onCerr
             <button type="button" onClick={() => onElegir(o.id)} aria-pressed={o.id === elegido}
               className={`tecla flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg px-3 text-left hover:bg-oro/10
                 ${o.id === elegido ? 'bg-oro/15 text-oro' : ''}`}>
-              <span className="truncate text-[15px] font-semibold">{o.id === elegido ? '✓ ' : ''}{o.nombre}</span>
+              <span className="min-w-0 break-words py-1 text-[15px] font-semibold leading-tight">{o.id === elegido ? '✓ ' : ''}{o.nombre}</span>
               {o.detalle && <span className="shrink-0 text-[13px] text-hueso/65">{o.detalle}</span>}
             </button>
           </li>

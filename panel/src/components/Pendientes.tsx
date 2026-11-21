@@ -45,13 +45,22 @@ const CAJA: Record<TonoPendiente, string> = {
   neutro: 'border-hueso/20 bg-panel'
 };
 
-export default function Pendientes({ items, titulo = 'Pendientes' }: { items: Pendiente[]; titulo?: string }) {
+/*
+ * `enFila` (2026-11-21, el computador más compacto): desde 1024px las
+ * pastillas van en la fila de botones de la pantalla —la pantalla la arma con
+ * `lg:flex lg:flex-wrap`— y la lista que se abre, debajo, a todo el ancho.
+ * La caja de esta pieza desaparece (`lg:contents`) y sus dos partes pasan a
+ * ser de esa fila. En el celular no cambia nada.
+ */
+export default function Pendientes({ items, titulo = 'Pendientes', enFila = false }: {
+  items: Pendiente[]; titulo?: string; enFila?: boolean;
+}) {
   const [abierta, setAbierta] = useState('');
   if (!items.length) return null;
   const abiertaItem = items.find((x) => x.clave === abierta);
   return (
-    <div className="mb-4">
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={titulo}>
+    <div className={`mb-4 ${enFila ? 'lg:contents' : 'lg:mb-3'}`}>
+      <div className={`flex flex-wrap items-center gap-2 ${enFila ? 'lg:order-2' : ''}`} role="group" aria-label={titulo}>
         <span className="text-[13px] font-semibold uppercase tracking-widest text-hueso/65">{titulo}</span>
         {items.map((x) => (
           <button key={x.clave} type="button" aria-expanded={abierta === x.clave}
@@ -65,7 +74,7 @@ export default function Pendientes({ items, titulo = 'Pendientes' }: { items: Pe
         ))}
       </div>
       {abiertaItem && (
-        <div className={`mt-2 rounded-xl border-2 p-2 ${CAJA[abiertaItem.tono]}`}>
+        <div className={`mt-2 rounded-xl border-2 p-2 ${enFila ? 'lg:order-6 lg:mt-0 lg:basis-full' : ''} ${CAJA[abiertaItem.tono]}`}>
           {/* Qué hacer con estos, en su `?` (2026-11-21, regla *lo que explica
               va en su ?*). */}
           {abiertaItem.ayuda && (

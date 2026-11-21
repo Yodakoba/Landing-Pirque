@@ -193,7 +193,9 @@ export default function ClientesEditor() {
   /** Los campos de una ficha, iguales para crear y para editar. */
   const formulario = (d: DatosCliente, poner: (k: keyof DatosCliente, v: string) => void,
                       quien: string) => (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    // En el computador, cuatro campos por fila (2026-11-21): con dos, la ficha
+    // abierta no entraba en la pantalla.
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Campo etiqueta="Nombre" ancho="w-full">
         <input type="text" value={d.nombre} className={ENTRADA}
           placeholder="Nombre y apellido, o de la empresa"
@@ -231,7 +233,7 @@ export default function ClientesEditor() {
           placeholder="Lo pide la factura"
           onChange={(e) => poner('giro', e.target.value)} />
       </Campo>
-      <Campo etiqueta="Notas" ancho="w-full sm:col-span-2">
+      <Campo etiqueta="Notas" ancho="w-full sm:col-span-2 lg:col-span-4">
         <textarea value={d.notas} rows={2} className={ENTRADA}
           placeholder="Lo que conviene saber: cómo llegó, qué le importa"
           onChange={(e) => poner('notas', e.target.value)} />
@@ -276,7 +278,8 @@ export default function ClientesEditor() {
       </div>
 
       {nuevo && (
-        <div className="mb-5 rounded border border-oro/50 bg-panel p-4">
+        // `data-ficha`: así la encuentra `npm run ventanas`, que mide si cabe.
+        <div data-ficha="nueva" className="mb-5 rounded border border-oro/50 bg-panel p-4">
           <h2 className="mb-3 text-[15px] font-bold uppercase tracking-wide">Nuevo cliente</h2>
           {formulario(nuevo, (k, v) => setNuevo({ ...nuevo, [k]: v }), 'el cliente nuevo')}
 

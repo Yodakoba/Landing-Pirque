@@ -122,7 +122,12 @@ export default function FormularioComentario({ pantalla, onCerrar, onMandado, ti
       </p>
 
       <p className="mt-4 text-[14px] font-semibold">1 · Qué es</p>
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2" role="group" aria-label="Qué es">
+      {/* Los cuatro tipos van en una fila cuando la ventana da el ancho
+          (`tipos-en-fila`, en `globals.css`): así entra entera en la pantalla
+          del computador. Depende del ancho de la caja, no de la pantalla: este
+          formulario también se abre desde la ayuda, en una ventana angosta. */}
+      <div className="caja-campos">
+      <div className="tipos-en-fila mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2" role="group" aria-label="Qué es">
         {TIPOS_COMENTARIO.map((t) => {
           const elegido = tipo === t;
           return (
@@ -137,6 +142,7 @@ export default function FormularioComentario({ pantalla, onCerrar, onMandado, ti
             </button>
           );
         })}
+      </div>
       </div>
 
       <label htmlFor={`texto-${pantalla}`} className="mt-4 block text-[14px] font-semibold">

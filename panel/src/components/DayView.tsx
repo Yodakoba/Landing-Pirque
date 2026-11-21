@@ -26,6 +26,9 @@ import { aCSV } from '@/lib/csv';
 import { ocupaLugar, faltaCobrar, estaAbonada, enPesos } from '@/lib/ocupacion';
 import { Aviso } from './CalendarView';
 import ReservaForm from './ReservaForm';
+import Dialogo from './Dialogo';
+import { PieCorreccion } from './Correccion';
+import { cambioDeBorrarReserva, textoDeCambios } from '@/lib/correccion';
 import PastillaPago from './PastillaPago';
 import RectificarReserva from './RectificarReserva';
 import { partirAviso } from './AvisosRecepcion';
@@ -90,10 +93,10 @@ function Azulejo({ n, titulo, nota, color, borde }: {
  * pone el piso en 13 y reserva las opacidades bajas para lo de verdad
  * secundario: un rótulo que nombra la fila que se vino a mirar no lo es.
  */
-function Rotulo({ children }: { children: React.ReactNode }) {
+function Rotulo({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className="mt-5 text-[13px] font-semibold uppercase tracking-widest
-                  text-hueso/60">{children}</p>
+    <p className={`mt-5 text-[13px] font-semibold uppercase tracking-widest
+                  text-hueso/60 ${className}`}>{children}</p>
   );
 }
 
@@ -228,6 +231,11 @@ export default function DayView(
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [editando, setEditando] = useState<Reserva | null>(null);
+  /** La reserva de un día cerrado que se está por borrar, con su casilla. */
+  const [borrando, setBorrando] = useState<Reserva | null>(null);
+  const [borrarConfirmado, setBorrarConfirmado] = useState(false);
+  const [borrandoYa, setBorrandoYa] = useState(false);
+  const [errorBorrar, setErrorBorrar] = useState('');
   const [creando, setCreando] = useState(false);
   /** El ganado del socio que se está pasando al panel, si hay alguno. */
   const [anotandoCRM, setAnotandoCRM] = useState<EventoCRM | null>(null);
@@ -476,22 +484,30 @@ export default function DayView(
     void cargar();
   }
 
-  async function borrar(r: Reserva) {
+  /**
+   * **Borrar una reserva.** En un día abierto pregunta y borra. **En un día
+   * cerrado, borrar es corregirlo** (2026-11-21, lo decidió el cliente: igual
+   * que la corrección del equipo): en vez de escribir un motivo se abre una
+   * ventana con lo que se borra, la casilla que lo confirma y *Borrar la
+   * reserva*. Esa línea es lo que queda en la bitácora.
+   */
+  function borrar(r: Reserva) {
+    if (diaCerrado) { setBorrarConfirmado(false); setErrorBorrar(''); setBorrando(r); return; }
     if (!confirm(`¿Borrar la reserva de ${r.nombre || r.id}? No se puede deshacer.`)) return;
-    // En un día cerrado, borrar es corregirlo: va con su motivo.
-    let correccion: { motivo: string } | undefined;
-    if (diaCerrado) {
-      const m = prompt('El día está cerrado. ¿Por qué se borra esta reserva?');
-      if (!m || !m.trim()) return;
-      correccion = { motivo: m.trim() };
-    }
+    void mandarBorrado(r);
+  }
+  async function mandarBorrado(r: Reserva, cambios?: string[]) {
+    setBorrandoYa(true);
     const res = await fetch(`/api/reservas/${r.fila}`, {
       method: 'DELETE',
-      ...(correccion ? { headers: { 'content-type': 'application/json' },
-                         body: JSON.stringify({ correccion }) } : {})
+      ...(cambios ? { headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ correccion: { motivo: textoDeCambios(cambios) } }) } : {})
     });
-    const d = await res.json();
-    if (d.error) alert(d.error); else cargar();
+    const d = await res.json().catch(() => ({ error: 'No se pudo borrar.' }));
+    setBorrandoYa(false);
+    if (d.error) { if (cambios) setErrorBorrar(d.error); else alert(d.error); return; }
+    setBorrando(null);
+    cargar();
   }
 
   if (error) return <Aviso error={error} />;
@@ -551,18 +567,35 @@ export default function DayView(
 
   return (
     <FirmaWhatsApp value={{ quien: usuario, empresa }}>
-      <a href="/" className="tecla boton">← Calendario</a>
-      <h1 className="mt-3 text-xl font-bold uppercase tracking-wide">
-        {enPalabras(fecha)}<Ayuda tema="dia" />
-      </h1>
-      <Clima c={pronostico.get(fecha)} grande />
-      <BarraAlDia {...alDia} />
-      <p className="text-[15px] text-hueso/70">
-        {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
-        {noShows > 0 && (
-          <span className="text-rojo-texto"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
-        )}
-      </p>
+      {/* **En el computador, el encabezado del día es un solo campo**
+          (2026-11-21, lo pidió el cliente con una foto de su notebook: *"se
+          gasta un montón de espacio… esto puede ser una fila en el
+          computador, un campo bien organizado con el botón actualizar"*).
+          A la izquierda, el día: volver, la fecha, el tiempo, cuántas
+          reservas y *Al día* con su botón. A la derecha, *Qué preparar* y
+          *Cómo viene el pago*, lado a lado. Eran seis filas apiladas con
+          media pantalla libre al lado; ahora es una. En el celular sigue una
+          cosa debajo de la otra, en el orden de siempre: todo va con `lg:`. */}
+      <div className="lg:flex lg:flex-wrap lg:items-start lg:gap-x-8 lg:gap-y-3 lg:rounded-xl
+                      lg:border lg:border-hueso/15 lg:bg-panel lg:p-3">
+        {/* El día. En el computador es una grilla: la fecha arriba; debajo,
+            el tiempo y las reservas en una línea; al pie, *Al día*. */}
+        <div className="lg:grid lg:shrink-0 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-x-3 lg:gap-y-1.5">
+          <div className="lg:col-span-2 lg:flex lg:items-center lg:gap-3">
+            <a href="/" className="tecla boton">← Calendario</a>
+            <h1 className="mt-3 text-xl font-bold uppercase tracking-wide lg:mt-0">
+              {enPalabras(fecha)}<Ayuda tema="dia" />
+            </h1>
+          </div>
+          <Clima c={pronostico.get(fecha)} grande />
+          <BarraAlDia {...alDia} className="mb-4 lg:order-last lg:col-span-2 lg:mb-0" />
+          <p className="text-[15px] text-hueso/70">
+            {visibles.length} reserva{visibles.length === 1 ? '' : 's'} · {personas} personas
+            {noShows > 0 && (
+              <span className="text-rojo-texto"> · {noShows} no {noShows === 1 ? 'llegó' : 'llegaron'}</span>
+            )}
+          </p>
+        </div>
 
       {/* **Los avisos de la recepción, arriba de todo** (2026-11-13, lo pidió
           el cliente: *"guiar más al usuario"*). Rojo suave —ámbar ya es
@@ -570,7 +603,7 @@ export default function DayView(
           ella y la abre. Desaparece al resolver el último. */}
       {conAviso.length > 0 && (
         <div role="status" className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border-2 border-rojo-fuerte/50
-                                      bg-rojo/[0.08] px-3 py-2">
+                                      bg-rojo/[0.08] px-3 py-2 lg:order-first lg:mt-0 lg:basis-full">
           <span className="text-[15px] font-bold text-rojo-texto">
             📣 {conAviso.length === 1 ? '1 aviso' : `${conAviso.length} avisos`} de la recepción por resolver:
           </span>
@@ -587,23 +620,26 @@ export default function DayView(
       {/* Lo que hay que preparar. Va arriba y GRANDE porque es el dato por el
           que se abre esta página el sábado en la mañana: no compite con el
           equipo ni con las actividades, que son cajas de una línea. */}
+      {/* En el computador las dos filas de azulejos van lado a lado, dentro
+          del campo del día: tienen la misma forma y sobra ancho. */}
+      <div className="lg:flex lg:min-w-0 lg:flex-1 lg:flex-wrap lg:gap-x-8 lg:gap-y-2">
       {menus.length > 0 && (
-        <>
-          <Rotulo>Qué preparar</Rotulo>
+        <div>
+          <Rotulo className="lg:mt-0">Qué preparar</Rotulo>
           <div className="mt-1.5 flex flex-wrap gap-2">
             {menus.map(({ menu, cantidad }) => (
               <Azulejo key={menu} n={cantidad} titulo={menu} />
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {/* La segunda fila, en la misma forma: cuánta gente ya pagó y a cuánta
           hay que cobrarle. Es la otra pregunta del mesón, y hasta ahora había
           que leerla fila por fila en la tabla. */}
       {cuentan.length > 0 && (
-        <>
-          <Rotulo>Cómo viene el pago</Rotulo>
+        <div>
+          <Rotulo className="lg:mt-0">Cómo viene el pago</Rotulo>
           <div className="mt-1.5 flex flex-wrap gap-2">
             <Azulejo n={gente(pagadas)} titulo="Pagadas" nota={cuantas(pagadas)}
               color="text-verde-texto" borde="border-verde/40" />
@@ -619,8 +655,10 @@ export default function DayView(
                 color="text-rojo-texto" borde="border-rojo/30" />
             )}
           </div>
-        </>
+        </div>
       )}
+      </div>
+      </div>
 
       {/* **Las mesas** (2026-11-17, lo pidió el cliente): el valor final de
           cada mesa y la gente que se sumó, para que la gerencia lo compare
@@ -721,13 +759,18 @@ export default function DayView(
           dejaba un "Nadie asignado todavía" sobre un día que sí tiene
           equipo, que no es que falte: es que ese dato no es suyo. */}
       {conEquipo && (
-      <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      /* En el computador el equipo y la propina comparten la fila; lo que
+         costó el día va debajo, a todo el ancho (2026-11-21, el computador
+         más compacto: eran tres filas). */
+      <div className="mt-3 rounded border border-hueso/15 bg-panel px-3 py-2 lg:flex lg:flex-wrap lg:items-center lg:gap-x-4">
+        {/* En el computador esta fila no se parte: los nombres ocupan lo que
+            sobra y se doblan adentro, y el botón queda a su derecha. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:min-w-0 lg:flex-1 lg:flex-nowrap">
           <RotuloBloque>Equipo</RotuloBloque>
           {conGente.length === 0 ? (
             <span className="text-sm text-hueso/55">Nadie asignado todavía.</span>
           ) : (
-            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm lg:min-w-0 lg:flex-1">
               {conGente.map((l) => (
                 <li key={l.puesto}>
                   <span className="text-hueso/50">{l.puesto}:</span>{' '}
@@ -749,7 +792,7 @@ export default function DayView(
               ))}
             </ul>
           )}
-          <span className="flex-1" />
+          <span className={`flex-1 ${conGente.length > 0 ? 'lg:hidden' : ''}`} />
           {faltan > 0 && (
             <Pendiente>
               <span className="whitespace-nowrap">{faltan === 1 ? 'Falta' : 'Faltan'} {faltan}:</span>{' '}
@@ -771,7 +814,7 @@ export default function DayView(
             antes de eso el total sería cero y se leería como "no se pagó
             nada", que es otra cosa que "todavía no se sabe". */}
         {turnosDelDia.length > 0 && sinMarcar < turnosDelDia.length && (
-          <p className="mt-2 border-t border-hueso/10 pt-2 text-[13px]">
+          <p className="mt-2 border-t border-hueso/10 pt-2 text-[13px] lg:order-last lg:basis-full">
             <strong className="text-base tabular-nums text-oro">{enPesos(costo)}</strong>
             <span className="text-hueso/65"> en el equipo de este día · </span>
             <span className="text-hueso/65">{vinieron} vinieron</span>
@@ -793,7 +836,8 @@ export default function DayView(
             por él. */}
         {turnosDelDia.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1
-                          border-t border-hueso/10 pt-2 text-[13px]">
+                          border-t border-hueso/10 pt-2 text-[13px]
+                          lg:mt-0 lg:shrink-0 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
             <span className="text-hueso/65">Propina del día:</span>
             {propina > 0 ? (
               <span>
@@ -1113,7 +1157,7 @@ export default function DayView(
                               ${abierta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
                   <SignoAbrir abierta={abierta} />
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-[16px] font-bold ${libera ? 'line-through' : ''}`}>
+                    <span className={`block break-words text-[16px] font-bold leading-tight ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}
                     </span>
                     {/* **≠ Acordado** (2026-11-20): viene de una cotización con
@@ -1373,13 +1417,30 @@ export default function DayView(
           onListo={() => { setRectificando(null); void cargar(); }} />
       )}
 
+      {borrando && (() => {
+        const cambios = [cambioDeBorrarReserva({ ...borrando, menu: menuEfectivo(borrando), personas: personasEfectivas(borrando) })];
+        return (
+          <Dialogo titulo={`Borrar la reserva · ${borrando.nombre || 'sin nombre'}`} ancho="max-w-lg"
+            onCerrar={() => { if (!borrandoYa) setBorrando(null); }}>
+            <p className="mt-2 text-[15px] text-hueso/80">
+              El día está cerrado: borrarla es corregirlo. <strong>No se puede deshacer.</strong>
+            </p>
+            {errorBorrar && <p className="mt-2 text-[14px] font-semibold text-rojo-texto">{errorBorrar}</p>}
+            <PieCorreccion modo="apilado" cambios={cambios} confirmado={borrarConfirmado} onConfirmado={setBorrarConfirmado}
+              guardarDice="Borrar la reserva" guardandoDice="Borrando…" guardando={borrandoYa}
+              onCancelar={() => setBorrando(null)}
+              onGuardar={() => void mandarBorrado(borrando, cambios)} />
+          </Dialogo>
+        );
+      })()}
+
       {(creando || editando || anotandoCRM) && (
         <ReservaForm
           fecha={fecha}
           menusConocidos={conocidos}
           catalogo={catalogo}
           reserva={editando}
-          pideMotivo={diaCerrado}
+          diaCerrado={diaCerrado}
           desdeCRM={anotandoCRM
             ? { id: anotandoCRM.id, nombre: anotandoCRM.nombre,
                 personas: anotandoCRM.invitados }

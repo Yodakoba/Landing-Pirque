@@ -53,7 +53,7 @@ export const MARCO_HOY = 'fondo-hoy relative z-[1] outline outline-[3px] outline
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 /** El número según dónde va: la tarjeta, la tarjeta achicada, la celda de Turnos o un aviso. */
-const NUMERO = { tarjeta: 'text-[28px]', chica: 'text-[20px]', celda: 'text-[18px]', aviso: 'text-[15px]' } as const;
+const NUMERO = { tarjeta: 'text-[28px] lg:text-[22px]', chica: 'text-[20px]', celda: 'text-[18px]', aviso: 'text-[15px]' } as const;
 
 export default function FechaDia({ fecha, tamano = 'tarjeta', chica = false, conMes = false, apagada = false }: {
   fecha: string;

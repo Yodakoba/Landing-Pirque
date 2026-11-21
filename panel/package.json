@@ -8,11 +8,12 @@
     "start": "next start",
     "prueba": "node --experimental-strip-types src/lib/prueba.ts",
     "tipos": "tsc --noEmit",
-    "revisar": "npm run tipos && npm run prueba && npm run lecturas && npm run letra-chica && npm run comentarios && npm run webhook && npm run ajuste",
+    "revisar": "npm run tipos && npm run prueba && npm run lecturas && npm run letra-chica && npm run comentarios && npm run webhook && npm run ajuste && npm run ventanas",
     "lecturas": "node --no-warnings --experimental-strip-types --import ./pruebas/lecturas/registrar.mjs pruebas/lecturas/presupuesto.mjs",
     "letra-chica": "node pruebas/letra-chica.mjs",
     "comentarios": "NODE_ENV=development node --no-warnings --experimental-strip-types --import ./pruebas/lecturas/registrar.mjs pruebas/comentarios.mjs",
     "webhook": "NODE_ENV=development node --no-warnings --experimental-strip-types --import ./pruebas/lecturas/registrar.mjs pruebas/webhook.mjs",
+    "ventanas": "bash pruebas/ejemplo/capturas.sh --ventanas",
     "ajuste": "NODE_ENV=development node --no-warnings --experimental-strip-types --import ./pruebas/lecturas/registrar.mjs pruebas/ajuste.mjs"
   },
   "dependencies": {

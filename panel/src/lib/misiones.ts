@@ -182,10 +182,10 @@ const OPERACIONES: Mision[] = [
   { ...TURNOS, escena: 'ope-turnos' },
   {
     id: 'corregir', emoji: '✏️', titulo: 'Corregir un día cerrado', escena: 'ope-corregir',
-    intro: 'Un día cerrado queda en solo lectura. Tú lo puedes corregir, con un motivo que queda en la bitácora.',
+    intro: 'Un día cerrado queda en solo lectura. Tú lo puedes corregir: lo que cambias queda en la bitácora, con tu nombre.',
     puntos: [
       'Quién lo cerró y cuándo.',
-      'Corregir este día: arreglas lo que haga falta y guardas con el motivo. El día sigue cerrado.',
+      'Corregir este día: arreglas lo que haga falta, marcas la casilla que confirma la lista de cambios y guardas. El día sigue cerrado.',
       'Las dos caras: trabajadores y reservas.'
     ],
     probar: { texto: 'Abrir Turnos', url: '/turnos' }

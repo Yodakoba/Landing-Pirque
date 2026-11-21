@@ -133,18 +133,21 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           Cotizaciones, su propio tono. Ver `BandaSeccion.tsx`. */}
       <BandaSeccion tono="cielo" icono="👥" seccion="Turnos" titulo="Calendario del equipo"
         ayuda={<Ayuda tema="turnos" />} />
-      <AvisoFijo clave="turnos-intro" className="mb-3 max-w-2xl">
+      {/* En el computador los dos avisos van lado a lado (2026-11-21). */}
+      <div className="lg:flex lg:items-start lg:gap-3">
+      <AvisoFijo clave="turnos-intro" className="mb-3 max-w-2xl lg:mb-4 lg:flex-1">
         El mes completo, para asignar equipo <strong>cualquier día</strong>,
         incluidos los que no reciben público: los de preparación, montaje o
         cierre. <strong>Apreta el día</strong> —el que sea— y asígnale equipo;
         ahí mismo se marca quién llegó.
       </AvisoFijo>
-      <AvisoFijo clave="turnos-cerrado" className="mb-5 max-w-2xl">
+      <AvisoFijo clave="turnos-cerrado" className="mb-5 max-w-2xl lg:mb-4 lg:flex-1">
         Planificar un día cerrado <strong>no lo abre al público</strong>, así
         que un día de preparación no necesita nada más. Abrir un día para
         recibir reservas se sigue haciendo en el{' '}
         <a href="/" className="text-oro hover:underline">calendario</a>.
       </AvisoFijo>
+      </div>
 
       {/* **Lo que falta por cerrar, arriba y no escondido en una celda.**
           Lo pidió el cliente así: una vez que el día pasó, el panel avisa
@@ -152,7 +155,7 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           ahí se cierra. Un día que todavía no llega no aparece: nadie puede
           decir quién vino a un sábado que no ha ocurrido. */}
       {porCerrar.length > 0 && (
-        <div className="mb-5 rounded border border-ambar/50 bg-ambar/5 p-4">
+        <div className="mb-5 rounded border border-ambar/50 bg-ambar/5 p-4 lg:mb-4 lg:p-3">
           {/* **El porqué, en su `?`** (2026-11-21, lo pidió el cliente: *"vamos
               a capacitar a la gente y después molesta mucho texto
               constante"*). A la vista queda cuántos son y cuáles. */}

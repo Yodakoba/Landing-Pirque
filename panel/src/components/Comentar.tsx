@@ -28,7 +28,7 @@ export default function Comentar() {
       </button>
 
       {abierta && (
-        <Dialogo titulo="Coméntame" onCerrar={() => setAbierta(false)}>
+        <Dialogo titulo="Coméntame" onCerrar={() => setAbierta(false)} ancho="max-w-lg lg:max-w-3xl">
           <p className="mt-2 text-[14px] text-hueso/70">
             Errores, dudas, ideas y, sobre todo, lo que te falta para tu trabajo.
           </p>

@@ -15,6 +15,7 @@
 # sobre cada foto para revisarlas a ojo.
 #
 #   panel/pruebas/ejemplo/capturas.sh --servidor   # solo levanta el panel de ejemplo
+#   panel/pruebas/ejemplo/capturas.sh --ventanas   # mide las fichas y las ventanas
 #
 # deja el panel de ejemplo andando en el 3125 —con las sesiones en
 # <copia>/sesiones.json— para probar a mano o con Playwright, hasta que se
@@ -80,6 +81,15 @@ if [ "${1:-}" = "--servidor" ]; then
   echo "Panel de ejemplo en http://localhost:$PUERTO · sesiones en $W/sesiones.json"
   wait
   exit 0
+fi
+
+# `--ventanas`: en vez de las fotos, mide cada ficha y cada ventana en un
+# notebook de 1280×650 (`pruebas/ventanas.mjs`, `npm run ventanas`).
+if [ "${1:-}" = "--ventanas" ]; then
+  shift
+  AYUDA_URL="http://localhost:$PUERTO" AYUDA_SESIONES="$W/sesiones.json" AYUDA_RELOJ="$RELOJ" \
+    node pruebas/ventanas.mjs "$@"
+  exit $?
 fi
 
 # 4. Las fotos.

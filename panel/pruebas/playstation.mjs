@@ -9,6 +9,9 @@
  * - **letra bajo 13px** en un texto visible (salvo lo oculto a la vista);
  * - **botones bajo 34px de alto** —lo que se aprieta mide para el dedo—;
  * - **la página corrida de lado** (más ancha que la pantalla).
+ * - **un texto cortado con "…"** (2026-11-21, lo decidió el cliente: los
+ *   nombres *"se doblan en vez de cortarse"*): algo con `truncate` al que de
+ *   verdad no le cabe su texto en ese ancho.
  *
  * No mira el color ni el contraste: eso sigue siendo del ojo.
  */
@@ -36,6 +39,10 @@ export async function revisarPlayStation(page) {
       if (!visible(el)) continue;
       const alto = el.getBoundingClientRect().height;
       if (alto < 34) problemas.push(`botón de ${Math.round(alto)}px de alto: "${nombre(el)}"`);
+    }
+    for (const el of document.querySelectorAll('body *')) {
+      if (!visible(el) || getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      if (el.scrollWidth > el.clientWidth + 1) problemas.push(`texto cortado con "…": "${nombre(el)}"`);
     }
     const { scrollWidth, clientWidth } = document.documentElement;
     if (scrollWidth > clientWidth) problemas.push(`la página se corre de lado: ${scrollWidth}px en ${clientWidth}px`);

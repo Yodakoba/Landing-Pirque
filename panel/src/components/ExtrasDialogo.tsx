@@ -11,8 +11,8 @@
  * **Lo que no tiene es propina**, y eso no es un olvido: la propina se
  * reparte entre el equipo que atiende, no entre quien vino a hacer un show.
  */
-import { useState } from 'react';
-import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
+import { useEffect, useMemo, useState } from 'react';
+import { LISTA_TARJETAS, SignoAbrir, TITULO_GRUPO, marcoGrupo, marcoTarjeta } from './TarjetaLista';
 import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, ENTRADA_DIA, TotalDelDia } from './LineaDelDia';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
@@ -30,6 +30,7 @@ import Asistencia from './Asistencia';
 import BuscarPersona from './BuscarPersona';
 
 import { AvisoCierre, PieCorreccion } from './Correccion';
+import { cambiosDeExtras, textoDeCambios } from '@/lib/correccion';
 import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 import type { Cierre } from '@/lib/cierres';
 
@@ -64,7 +65,8 @@ export default function ExtrasDialogo({
   // Un día cerrado: solo lectura, salvo una corrección con motivo que se
   // manda entera con un botón. Igual que la ventana del equipo.
   const [corrigiendo, setCorrigiendo] = useState(false);
-  const [motivo, setMotivo] = useState('');
+  /** La casilla que confirma la lista de cambios de la corrección. */
+  const [confirmado, setConfirmado] = useState(false);
   const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
   /** Vista gerencia sin el permiso de las extras: se mira y no se toca. */
   const soloMira = usarSoloMira('extras');
@@ -127,9 +129,15 @@ export default function ExtrasDialogo({
     return d.error || undefined;
   }, 600, !cerrado && !soloMira);
 
+  /** Lo que cambió en esta corrección, con palabras: lo que se confirma y va a la bitácora. */
+  const cambios = useMemo(() => (corrigiendo ? cambiosDeExtras(inicial, lista) : []), [corrigiendo, inicial, lista]);
+  const firmaDeCambios = cambios.join('\n');
+  useEffect(() => { setConfirmado(false); }, [firmaDeCambios]);
+
   async function guardarCorreccion() {
-    const m = motivo.trim();
-    if (!m) return;
+    // Lo que queda en la bitácora es la lista de cambios, no un texto libre.
+    const m = textoDeCambios(cambios);
+    if (!m || !confirmado) return;
     setGuardandoCorreccion(true);
     setError('');
     try {
@@ -178,7 +186,7 @@ export default function ExtrasDialogo({
         <div className="flex items-baseline justify-between gap-2">
           {/* Qué es, que sin confirmar no suma y dónde va una diferencia, en
               su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
-          <h3 className="flex items-center gap-2 px-1 text-[15px] font-semibold">
+          <h3 className={`flex items-center gap-2 px-1 ${TITULO_GRUPO}`}>
             Actividades del día <AyudaCorta tema="actividadesDia" />
           </h3>
           <span className="px-1 text-[13px] font-semibold tabular-nums text-hueso/60">{lista.length}</span>
@@ -192,7 +200,7 @@ export default function ExtrasDialogo({
             return (
               <li key={e.colaborador}
                 className={marcoTarjeta(abierta, e.estado === VINO.si ? 'verde'
-                  : e.estado === VINO.no ? 'rojo' : 'normal', true)}>
+                  : e.estado === VINO.no ? 'rojo' : 'normal', true, true)}>
                 <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
                   <button type="button" aria-expanded={abierta}
                     onClick={() => setAbierto(abierta ? '' : normalizar(e.colaborador))}
@@ -201,13 +209,13 @@ export default function ExtrasDialogo({
                                rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
                     <SignoAbrir abierta={abierta} tamano="h-6 w-6 text-[14px]" />
                     <span className="min-w-0">
-                      <span className={`block truncate text-[15px] font-semibold ${
+                      <span className={`block break-words text-[15px] font-semibold leading-tight ${
                         e.estado === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                         {e.colaborador}
                       </span>
                       {/* Qué hace y, si vino, cuánto: el estado ya lo dicen
                           los botones de al lado (ver la ventana del equipo). */}
-                      <span className="block truncate text-[13px] text-hueso/65">
+                      <span className="block break-words text-[13px] leading-tight text-hueso/65">
                         {e.actividad || 'sin actividad'}
                         {e.estado === VINO.si && <> · {enPesos(costoDeExtra(e))}</>}
                         {ajustesDe(e).length > 0 && <> · {ajustesDe(e).length} {ajustesDe(e).length === 1 ? 'ajuste' : 'ajustes'}</>}
@@ -275,8 +283,11 @@ export default function ExtrasDialogo({
         </ul>
       )}
 
-        {/* Se busca escribiendo el nombre, como en el equipo. */}
-        <div className="mt-2">
+        {/* Se busca escribiendo el nombre, como en el equipo. En el
+            computador, *+ Agregar…* y *+ Nuevo colaborador* van lado a lado,
+            igual que en la ventana del equipo. */}
+        <div className="lg:flex lg:flex-wrap lg:gap-x-2">
+        <div className="mt-2 lg:min-w-0 lg:flex-1 lg:basis-[45%] lg:[&:has(input)]:basis-full">
           <BuscarPersona etiqueta="Agregar una actividad a este día"
             opciones={libres.map((c) => ({ nombre: c.nombre, detalle: c.actividad }))}
             onElegir={(nombre) => {
@@ -284,7 +295,10 @@ export default function ExtrasDialogo({
               if (c) agregar(c);
             }} />
         </div>
+        <div className="lg:min-w-0 lg:flex-1 lg:basis-[45%]">
         <BotonNuevaPersona texto="+ Nuevo colaborador" onClick={() => setFicha({})} />
+        </div>
+        </div>
       </div>
       </div>
 
@@ -345,8 +359,8 @@ export default function ExtrasDialogo({
         )}
       </div>
       {corrigiendo && (
-        <PieCorreccion motivo={motivo} onMotivo={setMotivo}
-          onCancelar={() => { setLista(inicial); setMotivo(''); setCorrigiendo(false); }}
+        <PieCorreccion cambios={cambios} confirmado={confirmado} onConfirmado={setConfirmado}
+          onCancelar={() => { setLista(inicial); setConfirmado(false); setCorrigiendo(false); }}
           onGuardar={() => void guardarCorreccion()}
           guardando={guardandoCorreccion} />
       )}

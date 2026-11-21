@@ -16,16 +16,25 @@ import AyudaCorta from './AyudaCorta';
  * se iba al vacío. Así se rompió `/equipo` el día que pasó a tarjetas, y el
  * síntoma no se parece en nada a su causa.
  */
-export default function Campo({ etiqueta, ancho, ayuda, children }: {
+export default function Campo({ etiqueta, ancho = '', ayuda, rotuloClase = '', children }: {
   etiqueta: string;
   /** Una llave de `AYUDAS_CORTAS`: pone el `?` chico al lado del rótulo. */
   ayuda?: string;
-  /** Clases de ancho; en una ventana angosta suele ser `w-full`. */
-  ancho: string;
+  /** Un ancho (`w-44`) o, dentro de una `rejilla-campos` de `globals.css`,
+   * cuántas columnas ocupa (`campo-2`, `campo-resto`, `campo-todo`). Sin
+   * nada, una columna. */
+  ancho?: string;
+  /**
+   * Clases de más para el nombre (2026-11-21). Sirve para una tabla de
+   * líneas en el computador, donde el nombre va una vez arriba de la columna:
+   * con `lg:sr-only` el de cada línea deja de verse y el campo conserva su
+   * nombre para un lector de pantalla.
+   */
+  rotuloClase?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className={`block ${ancho}`}>
+    <label className={`block min-w-0 ${ancho}`}>
       {/* **13px al 60%, no 10 al 35** (2026-11-01). Era el rótulo más chico
           del panel y está en el lugar donde menos corresponde: es lo único
           que dice qué se está escribiendo en esa caja. La regla pone el piso
@@ -35,8 +44,8 @@ export default function Campo({ etiqueta, ancho, ayuda, children }: {
 
           Vale para las cuatro pantallas que lo usan de una vez, que es la
           gracia de que esto viva en un archivo. */}
-      <span className="mb-1 block text-[13px] font-medium uppercase
-                       tracking-wide text-hueso/60">
+      <span className={`mb-1 block text-[13px] font-medium uppercase
+                        tracking-wide text-hueso/60 ${rotuloClase}`}>
         {etiqueta}
         {ayuda && <AyudaCorta tema={ayuda} />}
       </span>

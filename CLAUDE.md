@@ -110,12 +110,55 @@ más abajo; esto es la lista para revisar.
   secundario plegado (como un ajuste guardado) o en su `?`. **Si no cabe sin
   romper la regla de arriba** —botones bajo 36px, letra bajo 13px—, gana la
   regla de arriba, y el PR dice que no cupo y cuánto mide.
+  **Lo mide una prueba, no la memoria** (2026-11-21, lo pidió el cliente:
+  *"¿por qué tengo que agregar yo todas las revisiones en los pop-ups… qué
+  habrá que hacer para reforzar esto?"*): `npm run ventanas` abre cada
+  ficha y cada ventana del panel de ejemplo a 1280×650 y **falla** si una
+  que cabía deja de caber, si una anotada crece o si aparece un campo
+  corrido. Va dentro de `npm run revisar`. Lo que todavía no cabe está
+  anotado con su alto en `NO_CABEN` y solo puede bajar. **Una ventana o una
+  ficha nueva se agrega a `ESCENAS` de `pruebas/ventanas.mjs` en el mismo PR
+  que la crea**: lo que no está en la lista no se mide.
 - **Lo que explica va en su `?`, no fijo en la pantalla** (regla del
   cliente, 2026-11-21: *"vamos a capacitar a la gente y entonces después
   molesta mucho texto constante"*). A la vista quedan el dato y la acción;
   el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
   Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
   frase que dice qué pasa al apretar un botón sí se queda.
+- **Los formularios van alineados** (regla del cliente, 2026-11-21: *"se
+  podría alinear los campos para que los títulos estén en un orden vertical
+  y los valores también, o los botones… esto también debería ser una regla
+  que se revise siempre, para que se vean de forma profesional todos estos
+  formularios"*). En una tarjeta, una ventana o una ficha con varios campos,
+  **los nombres van en una columna y los valores en otra**: todos los
+  nombres miden lo mismo, así que cada campo, cada valor y cada fila de
+  botones parte en la misma vertical. Nunca un campo pegado a su nombre solo
+  porque la palabra es más corta. Un segundo dato en la misma fila va a la
+  derecha. Las piezas: `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia`;
+  `rejilla-campos` y `fila-ficha` (`globals.css`) para una ficha con varios
+  campos. **Antes de cerrar un cambio que toque un formulario**, se mira en
+  una captura que los bordes izquierdos calcen, y `revisarAlineacion()`
+  —dentro de `npm run ventanas`— avisa de un campo que salta respecto de su
+  vecino, de un nombre partido en dos renglones y de dos bordes que casi
+  calzan.
+- **El marco de la tarjeta manda sobre lo de adentro** (regla del cliente,
+  2026-11-21: *"debería ser más grueso el marco de la tarjeta que los marcos
+  de los botones e informaciones dentro de la tarjeta… para identificar bien
+  a buena vista, aquí estoy dentro de una tarjeta. Entonces el marco
+  principal y luego adentro los marcos son menos"*). El borde de afuera es el
+  más grueso y el más oscuro, y **su título va en negrita**; lo de adentro
+  —otra tarjeta, un botón, un campo, un aviso— va siempre con menos. Una
+  caja que contiene tarjetas usa `marcoGrupo` y `TITULO_GRUPO`, y sus
+  tarjetas, `marcoTarjeta(…, dentro)` (`TarjetaLista`). Y **un aviso no se
+  dibuja como botón**: lo que no se aprieta va sin borde grueso ni esquinas
+  de botón (`Pastilla tipo="falta"` para *falta su cuenta*).
+- **Un nombre se dobla, no se corta con "…"** (lo decidió el cliente,
+  2026-11-21: *"se doblan en vez de cortarse"*). En una lista, el nombre de
+  una persona, de un cliente o de un producto ocupa los renglones que
+  necesite: *Matías P…* no dice quién es. Los botones de la fila no se
+  mueven —el nombre ocupa lo que sobra— y la fila crece. Con "…" quedan solo
+  un título entre flechas, un código y el texto de un botón.
+  `revisarPlayStation()` avisa de un texto cortado.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -132,7 +175,11 @@ más abajo; esto es la lista para revisar.
   a alguien; (7) toca cuentas, roles o links; (8) cambia el nombre de algo
   que otros usan —un producto, una persona, un puesto— o la Configuración,
   que afecta al sitio público. Lo manual pregunta con una ventana que dice
-  qué va a pasar; si pide motivo, queda en la bitácora.
+  qué va a pasar; si pide motivo, queda en la bitácora. **Corregir un día
+  cerrado no pide un motivo escrito** (2026-11-21): el panel arma la lista
+  de lo que cambió, se confirma con una casilla y esa lista es lo que queda
+  en la bitácora. Vale para el equipo, los extras y **editar o borrar una
+  reserva** de ese día.
 - **Las lecturas de Google son un presupuesto**: 60 por minuto para todo el
   panel. Nada nuevo lee la planilla por su cuenta: se suma a la tanda que la
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
@@ -149,10 +196,12 @@ más abajo; esto es la lista para revisar.
   dependiendo del cobro anotado, no del revisado—. El detalle, en
   `panel/CLAUDE.md`.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
-  lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
-  `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
-  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR. Y si
-  se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
+  lecturas, letra chica **y las ventanas**: que cada ficha y cada ventana
+  quepa en 1280×650 y tenga sus campos alineados, `npm run ventanas`), una
+  pasada con Playwright a 393 y 1280px con `revisarPlayStation()` de
+  `panel/pruebas/playstation.mjs`, y **¿cambió algo que una ayuda
+  describe?** Si sí, se actualiza en el mismo PR. Y si se creó una ventana
+  o una ficha, **¿está en `ESCENAS`?**
 
 **Sitio público y landings: elegante y sobrio**
 - Fotografía real como protagonista, Fraunces y Work Sans, dorado sobre

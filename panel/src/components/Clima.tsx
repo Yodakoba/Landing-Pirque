@@ -56,14 +56,14 @@ const CAJA: Record<Tamano, string> = {
   chico: 'gap-1 text-[12px] leading-none',
   // Pastilla: el pronóstico deja de ser un apéndice de la fecha y pasa a ser
   // una cosa con borde, que es lo que lo hace encontrable de un vistazo.
-  tarjeta: 'gap-1.5 rounded-lg border border-hueso/10 bg-hueso/[0.04] px-2 py-1',
+  tarjeta: 'gap-1.5 rounded-lg border border-hueso/10 bg-hueso/[0.04] px-2 py-1 lg:gap-1 lg:px-1.5 lg:py-0',
   grande: 'gap-1 text-sm'
 };
 const ICONO: Record<Tamano, string> = {
-  chico: '', tarjeta: 'text-[22px] leading-none', grande: ''
+  chico: '', tarjeta: 'text-[22px] leading-none lg:text-[18px]', grande: ''
 };
 const GRADO: Record<Tamano, string> = {
-  chico: '', tarjeta: 'text-[15px] font-semibold tabular-nums text-hueso/85', grande: ''
+  chico: '', tarjeta: 'text-[15px] font-semibold tabular-nums text-hueso/85 lg:text-[14px]', grande: ''
 };
 
 export default function Clima({ c, grande = false, tamano }: {

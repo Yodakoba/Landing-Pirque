@@ -324,13 +324,19 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
           perdió. */}
       <BandaSeccion tono="oro" icono="📅" seccion="Reservas" titulo="Fechas abiertas"
         ayuda={<Ayuda tema="calendario" onRecorrido={verRecorrido} />} />
-      <BarraAlDia {...alDia} />
+      {/* **En el computador, *Al día* va en la fila de los botones**
+          (2026-11-21, el computador más compacto: eran tres filas —esta, la
+          frase y los botones— antes de la primera semana). En el celular
+          sigue acá, en su fila. */}
+      <div className="lg:hidden"><BarraAlDia {...alDia} /></div>
       {/* Quien sube el cupo lo ve en la bandeja, con *Ampliar* de un toque;
           los demás roles, el aviso de siempre. */}
       {!conCupo && <AvisoSobrecupo dias={sobrecupo} />}
       <BandejaAprobaciones pendientes={pendientes} onCambio={() => void cargar()} />
       {conAvisos && <AvisosRecepcion reservas={reservas} />}
-      <p className="text-hueso/60 text-sm mb-6">
+      {/* En el computador la frase no va: *toca un día* lo dice el `?`, y el
+          rango con su enlace pasa a la fila de los botones. */}
+      <p className="text-hueso/60 text-sm mb-6 lg:hidden">
         Toca un día para ver quiénes vienen.{' '}
         {dias.length > 0 && (
           <span className="text-hueso/40">
@@ -343,17 +349,17 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
       {/* También está en la vista de cada día, pero ahí hay que entrar
           primero. Una reserva que llega por teléfono se anota sin saber
           todavía de qué día es: la fecha se elige en el formulario. */}
-      <div className="mb-6 flex flex-wrap gap-3">
+      <div className="mb-6 flex flex-wrap gap-3 lg:mb-3">
         {puede(rol as Rol, 'anotar') ? (
           <button onClick={() => setCreando(true)}
-            className="boton boton-relleno min-h-[48px] text-[15px]">
+            className="boton boton-relleno min-h-[48px] text-[15px] lg:min-h-[44px]">
             Agregar reserva
           </button>
         ) : puede(rol as Rol, 'presupuestos') && (
           // **El vendedor no anota directo** (2026-11-12, lo pidió el
           // cliente): su reserva pasa por Cotizaciones y nace al ganarla.
           <span className="flex flex-wrap items-center gap-3">
-            <a href="/presupuestos" className="tecla boton boton-relleno min-h-[48px] text-[15px]">
+            <a href="/presupuestos" className="tecla boton boton-relleno min-h-[48px] text-[15px] lg:min-h-[44px]">
               + Cotizar una reserva
             </a>
             <span className="text-[14px] text-hueso/75">
@@ -371,6 +377,13 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
         {puedeVer(rol as Rol, 'estadisticas', gerencia) && (
           <a href="/estadisticas" className="tecla boton inline-flex items-center">📊 Estadísticas</a>
         )}
+        {/* Solo en el computador: el rango y *Al día*, en esta misma fila. */}
+        <p className="hidden self-center text-[14px] text-hueso/60 lg:block">
+          {dias.length > 0 && <>{dias.length} días, hasta {enPalabras(dias[dias.length - 1].fecha)}.{' '}</>}
+          <a href="/config" className="text-oro hover:underline">Cambiar el rango</a>.
+        </p>
+        <span className="hidden flex-1 lg:block" />
+        <div className="hidden self-center lg:block"><BarraAlDia {...alDia} className="" /></div>
       </div>
 
       {avisoPlanilla && (
@@ -385,7 +398,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
           creada —antes no hay nada que renovar— y en letra chica, porque es
           lo que casi nunca hay que apretar. */}
       {conPlanilla && cfg.tokenPlanilla && (
-        <p className="mb-5 flex items-center text-[13px] text-hueso/50">
+        <p className="mb-5 flex items-center text-[13px] text-hueso/50 lg:mb-3">
           Link de la planilla semanal:{' '}
           <button onClick={renovarPlanilla} className="ml-1 underline hover:text-oro"
             title="Las copias que andan dando vueltas dejan de servir al instante">
@@ -483,7 +496,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
           {estrena && (
             /* Separador sutil: una línea y el mes en chico. No un título
                grande, que competiría con el dato de cada día. */
-            <div className={`mb-3 flex items-center gap-3 ${i > 0 ? 'mt-8' : ''}`}>
+            <div className={`mb-3 flex items-center gap-3 lg:mb-2 ${i > 0 ? 'mt-8 lg:mt-5' : ''}`}>
               <h2 className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
                 {mesEnPalabras(mes)}
               </h2>
@@ -501,9 +514,9 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               lo que agrupa: una grilla corrida bajo un título de mes no dice
               dónde termina un fin de semana y empieza el otro. */}
           <div
-            className={`mb-4 rounded-lg border p-3 ${TONO_SECCION.oro.caja}`}>
+            className={`mb-4 rounded-lg border p-3 lg:mb-3 lg:p-2 ${TONO_SECCION.oro.caja}`}>
             <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1
-                            border-b border-hueso/10 pb-2">
+                            border-b border-hueso/10 pb-2 lg:mb-2 lg:pb-1.5">
               <strong className="text-sm">
                 {rangoEnPalabras(deLaSemana.map((x) => x.fecha))}
               </strong>
@@ -536,14 +549,14 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
               )}
             </div>
             {chica ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {deLaSemana.map((d) => (
                   <DiaCompacto key={d.fecha} d={d} onAbrir={alternar}
                     cambio={marcas.delta[d.fecha] ? { delta: marcas.delta[d.fecha], desde: marcas.desde } : undefined} />
                 ))}
               </div>
             ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2 xl:grid-cols-5">
             {deLaSemana.map((d) => (
               <TarjetaDia key={d.fecha} d={d} clima={pronostico.get(d.fecha)}
                 delSocio={delSocio[d.fecha]}

@@ -304,6 +304,18 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
  */
 .pie-tarjeta { container-type: inline-size; }
 .pie-botones { display: flex; align-items: center; gap: .5rem; width: 100%; }
+/*
+ * **Las tres pastillas del pago de la tarjeta del día** (pagadas · abonadas ·
+ * sin pagar). Columnas parejas, como siempre. Desde 1024px la tarjeta es más
+ * angosta (2026-11-21, el computador más compacto) y con tres tramos *sin
+ * pagar* se partía en dos renglones: ahí cada columna mide lo que pide su
+ * palabra y se reparten lo que sobra.
+ */
+.tramos-pago { grid-template-columns: repeat(var(--tramos, 1), minmax(0, 1fr)); }
+@media (min-width: 1024px) {
+  .tramos-pago { grid-template-columns: repeat(var(--tramos, 1), auto); }
+  .pie-botones { gap: .375rem; }
+}
 .pie-botones > .pie-hueco { flex: 1; }
 @container (max-width: 21rem) {
   .pie-botones { display: grid; grid-template-columns: 1fr 1fr; }
@@ -348,6 +360,74 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
   border-radius: .75rem;
   justify-content: center;
 }
+}
+
+/**
+ * **LA REJILLA DE LOS CAMPOS** — la regla *los formularios van alineados*
+ * hecha clase (2026-11-21).
+ *
+ * Las fichas (trabajador, colaborador, los datos del banco) eran filas de
+ * campos con el ancho de cada uno escrito a mano —`w-56`, `w-44`, `w-32`—,
+ * que se acomodaban como cayeran: en una fila los campos partían en 277, 529
+ * y 717px; en la siguiente, en 277, 497 y 637. Ninguna columna calzaba con la
+ * de arriba, y eso es lo que el cliente llamó *"falencias de diseño"*.
+ *
+ * Acá todos los campos de un formulario caen en **las mismas columnas**: dos
+ * en un teléfono, cuatro en una ventana, seis en una ficha a todo el ancho.
+ * Cada campo ocupa una columna, o dos (`campo-2`), o lo que queda de la fila
+ * (`campo-resto`), o la fila entera (`campo-todo`). Como todas las filas de
+ * una ficha usan la misma rejilla, sus bordes calzan solos.
+ *
+ * **Mira el ancho de su caja, no el de la pantalla** (`caja-campos`,
+ * *container query*): la misma ficha se dibuja a todo el ancho en Equipo y en
+ * una ventana angosta desde Turnos, y en las dos tiene que verse ordenada.
+ *
+ * Los campos se alinean **arriba**: los nombres miden un renglón —el `?` ya
+ * no los agranda— y un aviso bajo un campo crece hacia abajo sin mover a los
+ * vecinos. Un nombre que se parte en dos sí los mueve: lo delata
+ * `pruebas/alineacion.mjs`.
+ */
+.caja-campos { container-type: inline-size; min-width: 0; }
+.rejilla-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem .75rem;
+  align-items: start;
+}
+.rejilla-campos > .campo-2,
+.rejilla-campos > .campo-resto { grid-column: span 2; }
+.rejilla-campos > .campo-todo { grid-column: 1 / -1; }
+@container (min-width: 30rem) {
+  .rejilla-campos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .rejilla-campos > .campo-resto { grid-column: 1 / -1; }
+}
+@container (min-width: 52rem) {
+  .rejilla-campos { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .rejilla-campos > .campo-resto { grid-column: span 4; }
+}
+
+/**
+ * **Una fila de la ficha**: el nombre de la sección —Datos, Link personal,
+ * Pago, Transferencia— en su columna, y lo suyo a la derecha. La columna
+ * mide lo mismo en todas las filas, así que los campos y los botones de
+ * todas parten en la misma vertical. En un teléfono, el nombre va arriba.
+ */
+/* Los cuatro tipos de un comentario (`FormularioComentario`): en una fila
+   cuando su caja da el ancho, para que la ventana entre en la pantalla del
+   computador. Va por el ancho de la caja y no de la pantalla, porque el
+   mismo formulario se abre desde la ayuda en una ventana angosta. */
+@container (min-width: 40rem) { .tipos-en-fila { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.fila-ficha { display: grid; gap: .5rem .75rem; align-items: start; }
+@media (min-width: 640px) {
+  .fila-ficha { grid-template-columns: 11rem minmax(0, 1fr); }
+}
+.rotulo-ficha {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: rgb(var(--hueso) / .6);
 }
 
 /* ---------- El presupuesto impreso ---------- */

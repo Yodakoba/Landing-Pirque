@@ -100,17 +100,21 @@ export default function UsuariosEditor() {
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
         Cuentas<Ayuda tema="cuentas" />
       </h1>
-      <AvisoFijo clave="usuarios-intro" className="mb-3 max-w-2xl">
+      {/* En el computador los dos avisos van lado a lado (2026-11-21, el
+          computador más compacto). */}
+      <div className="lg:flex lg:items-start lg:gap-3">
+      <AvisoFijo clave="usuarios-intro" className="mb-3 max-w-2xl lg:mb-4 lg:flex-1">
         Quién entra al panel y con qué permisos. <strong>Cada acción queda
         firmada con el nombre de esta lista</strong>, así que conviene una
         cuenta por persona y no una compartida — una línea de bitácora que
         diga "encargado" no sirve para preguntarle a nadie.
       </AvisoFijo>
-      <AvisoFijo clave="usuarios-emergencia" className="mb-6 max-w-2xl">
+      <AvisoFijo clave="usuarios-emergencia" className="mb-6 max-w-2xl lg:mb-4 lg:flex-1">
         <strong>Tu cuenta de administrador de Vercel sigue funcionando</strong>{' '}
         aunque esta lista quede vacía: es la puerta de emergencia para el día
         en que la planilla no responda.
       </AvisoFijo>
+      </div>
 
       {aviso && (
         <p className="mb-5 rounded border border-hueso/20 bg-panel px-3 py-2 text-sm">
@@ -124,7 +128,7 @@ export default function UsuariosEditor() {
             <tr className="border-b border-hueso/10">
               <th className="py-2 pr-3">Nombre</th>
               <th className="w-40 py-2 pr-3">Usuario</th>
-              <th className="w-64 py-2 pr-3">Rol <RolesExplicados /></th>
+              <th className="w-64 py-2 pr-3 xl:w-[31rem]">Rol <RolesExplicados /></th>
               <th className="w-20 py-2 pr-3">Activo</th>
               <th className="w-44 py-2 pr-3">Contraseña</th>
               <th className="w-20 py-2" />
@@ -132,19 +136,34 @@ export default function UsuariosEditor() {
           </thead>
           <tbody>
             {lista.map((u, i) => (
-              <tr key={i} className="border-b border-hueso/5">
+              <tr key={i} className="border-b border-hueso/5 align-top">
+                {/* **Todo lo de una cuenta parte a la misma altura** (2026-11-21,
+                    regla *los formularios van alineados*): la celda del rol
+                    es más alta —lleva el resumen debajo— y lo demás iba
+                    centrado contra ella, 10px más abajo que el rol. Ahora la
+                    fila va arriba y cada dato ocupa una banda de 40px, la del
+                    botón *Vista gerencia*. */}
                 <td className="py-2 pr-3">
+                  <div className="flex min-h-[40px] items-center">
                   <input type="text" value={u.nombre} className={ENTRADA}
                     placeholder="Nombre y apellido"
                     onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
+                  </div>
                 </td>
                 <td className="py-2 pr-3">
+                  <div className="flex min-h-[40px] items-center">
                   <input type="text" value={u.usuario} className={ENTRADA}
                     placeholder="sin espacios"
                     onChange={(e) => cambiar(i, 'usuario', e.target.value)} />
+                  </div>
                 </td>
+                {/* **Desde 1280px, el rol y *Vista gerencia* van en una
+                    fila** y la línea que resume el rol, debajo, a lo ancho
+                    (2026-11-21): la columna angosta la partía en cinco
+                    renglones y cada cuenta medía hasta 190px. */}
                 <td className="py-2 pr-3">
-                  <div className="flex items-center">
+                  <div className="xl:flex xl:flex-wrap xl:items-center xl:gap-x-3">
+                  <div className="flex min-h-[40px] items-center xl:w-72">
                     <select value={u.rol} className={ENTRADA}
                       onChange={(e) => cambiar(i, 'rol', e.target.value)}>
                       {ROLES_DE_CUENTA.map((r) => (
@@ -156,14 +175,14 @@ export default function UsuariosEditor() {
                   {/* La línea corta, siempre a la vista: es lo que se lee al
                       elegir. El detalle está detrás del `?`. */}
                   {RESUMEN_ROL[u.rol] && (
-                    <p className="mt-1 text-[13px] leading-snug text-hueso/65">
+                    <p className="mt-1 text-[13px] leading-snug text-hueso/65 xl:order-3 xl:basis-full">
                       {RESUMEN_ROL[u.rol]}
                     </p>
                   )}
                   {/* **Vista gerencia** (2026-11-11): un agregado a la cuenta,
                       no un rol. Al administrador no le suma nada. */}
                   {u.rol !== 'admin' && (
-                    <div className="mt-2 flex items-center">
+                    <div className="mt-2 flex items-center xl:order-2 xl:mt-0">
                       <button type="button" aria-pressed={!!u.gerencia}
                         onClick={() => cambiar(i, 'gerencia', !u.gerencia)}
                         className={`boton min-h-[40px] ${u.gerencia
@@ -173,14 +192,18 @@ export default function UsuariosEditor() {
                       <AyudaCorta tema="vistaGerencia" />
                     </div>
                   )}
+                  </div>
                 </td>
                 <td className="py-2 pr-3">
+                  <div className="flex min-h-[40px] items-center">
                   <input type="checkbox" checked={u.activo}
                     aria-label={`${u.usuario || 'Sin usuario'} puede entrar`}
                     className="h-4 w-4 accent-oro"
                     onChange={(e) => cambiar(i, 'activo', e.target.checked)} />
+                  </div>
                 </td>
                 <td className="py-2 pr-3 text-xs">
+                  <div className="flex min-h-[40px] items-center">
                   {sucio ? (
                     <span className="text-hueso/40">Guarda la lista primero</span>
                   ) : (
@@ -195,11 +218,14 @@ export default function UsuariosEditor() {
                       </button>
                     </>
                   )}
+                  </div>
                 </td>
                 <td className="whitespace-nowrap py-2 text-right">
+                  <div className="flex min-h-[40px] items-center justify-end">
                   <button
                     onClick={() => { setLista(lista.filter((_, k) => k !== i)); setSucio(true); }}
                     className="text-hueso/60 hover:text-rojo-texto">Quitar</button>
+                  </div>
                 </td>
               </tr>
             ))}

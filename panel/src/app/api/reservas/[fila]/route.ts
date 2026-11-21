@@ -232,7 +232,7 @@ export const PATCH = conLecturas([], async function PATCH(req: Request, { params
            cambios.valorFinal !== undefined ? (cambios.valorFinal == null ? 'sin valor final'
              : 'valor final ' + pesosCL(Number(cambios.valorFinal))) : ''].filter(Boolean).join(' · ')
         : `fila ${fila} · ${Object.keys(cambios).join(', ')}`) +
-               (guarda.motivo ? ` · motivo: ${guarda.motivo}` : '') });
+               (guarda.motivo ? ` · cambios: ${guarda.motivo}` : '') });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
@@ -275,7 +275,7 @@ export const DELETE = conLecturas([], async function DELETE(req: Request, { para
       accion: guarda.motivo ? 'Borró una reserva de un día cerrado' : 'Borró una reserva',
       detalle: (antes ? `${antes.nombre} · ${antes.fecha} · ${antes.personas} personas`
                       : `fila ${fila}`) +
-               (guarda.motivo ? ` · motivo: ${guarda.motivo}` : '') });
+               (guarda.motivo ? ` · cambios: ${guarda.motivo}` : '') });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

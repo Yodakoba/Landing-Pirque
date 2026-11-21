@@ -23,6 +23,7 @@ import AgregarVendedor from './AgregarVendedor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import BotonGuardar from './BotonGuardar';
+import { rutValido } from '@/lib/banco';
 import AvisoGuardado from './AvisoGuardado';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
@@ -286,6 +287,11 @@ export default function CotizacionDialogo({
   /** El id de la alternativa que se va a marcar ganada, o '' si no se pregunta. */
   const [confirmandoGanar, setConfirmandoGanar] = useState('');
   const [corrigiendo, setCorrigiendo] = useState(false);
+  // Lo plegado en el computador (ver `camposFactura`, más abajo).
+  const [facturaAbierta, setFacturaAbierta] = useState(false);
+  const [condAbiertas, setCondAbiertas] = useState(false);
+  const [cancelAbierto, setCancelAbierto] = useState(false);
+  const [recordarAbierto, setRecordarAbierto] = useState(false);
   /** El día en que se le mandó el contrato (lo pone el servidor). */
   const [contratoEnviado, setContratoEnviado] = useState(p?.contratoEnviado ?? '');
   const [cancelando, setCancelando] = useState(false);
@@ -1121,7 +1127,7 @@ export default function CotizacionDialogo({
       {puedeEditar && (
         <button type="button" disabled={guardando} onClick={() => void cobrar(cobrado.falta, 'Saldo')}
           className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
-                     font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50">
+                     font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50 lg:min-h-[48px]">
           ✓ Pagó el saldo · {enPesos(cobrado.falta)}
         </button>
       )}
@@ -1138,6 +1144,95 @@ export default function CotizacionDialogo({
   /** Si el próximo paso del 4 es mandarla: ese cuadro va arriba, no al final. */
   const mandarPrimero = !!p && !cancelada && !noQuedo && !ganada
     && !(anticipoPagado || (mandada && cond.pct === 0) || grupoListo) && !mandada;
+  /**
+   * **Lo que se llena una vez, plegado en el computador** (2026-11-21, regla
+   * *una tarjeta abierta cabe en una pantalla*: "lo secundario plegado, como
+   * un ajuste guardado"). Las condiciones de pago y los recordatorios se leen
+   * en una frase con su *✎ Cambiar*, y se abren al apretarlo; los datos de la
+   * factura se leen en dos renglones y se cambian en una ventanita. **En el
+   * celular no cambia nada**: ahí los campos siguen a la vista (el pliegue va
+   * con `lg:`).
+   */
+  const faltaFactura = faltaParaFactura(facturacion);
+  const rutMalo = !!facturacion.rut.trim() && !rutValido(facturacion.rut);
+  /** Los cuatro campos de la factura: en línea en el celular, en su ventana en el computador. */
+  const camposFactura = (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {([
+        ['empresa', 'Razón social', 'Como aparece en el SII'],
+        ['rut', 'RUT', '76.123.456-7'],
+        ['giro', 'Giro', 'Actividad de la empresa'],
+        ['domicilio', 'Dirección', 'Calle, número, comuna']
+      ] as const).map(([k, etiqueta, ejemplo]) => (
+        <label key={k} className="block">
+          <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+            {etiqueta}
+          </span>
+          {k === 'rut' ? (
+            <CampoRut valor={facturacion.rut} placeholder={ejemplo} className={ENTRADA}
+              onCambio={(v) => setFacturacion({ ...facturacion, rut: v })} />
+          ) : (
+            <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
+              onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
+          )}
+        </label>
+      ))}
+    </div>
+  );
+  /** Guardar a mano, corregir la ganada y borrar: abajo en el celular, en el pie en el computador. */
+  const secundarios = (
+    <>
+      {ganada && !cancelada && puedeEditar && (
+        <span className="inline-flex items-center">
+          <button type="button" disabled={guardando} onClick={() => setCorrigiendo(true)}
+            className="boton">Corregir la ganada</button>
+          <AyudaCorta tema="corregirGanada" />
+        </span>
+      )}
+      {p && !ganada && puedeEditar && (
+        <button type="button" onClick={() => void borrar()}
+          className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
+          Borrar
+        </button>
+      )}
+    </>
+  );
+
+  /** Lo mismo, del paso 5: corregir la ganada y cancelar el evento. */
+  const secundariosContrato = (
+    <>
+      {ganada && !cancelada && puedeEditar && (
+        <span className="inline-flex items-center">
+          <button type="button" disabled={guardando} onClick={() => setCorrigiendo(true)}
+            className="boton">Corregir la ganada</button>
+          <AyudaCorta tema="corregirGanada" />
+        </span>
+      )}
+      {ganada && !cancelada && puedeEditar && (
+        <span className="inline-flex items-center">
+          <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
+            className="boton hover:!border-rojo-fuerte hover:text-rojo-texto">
+            Cancelar evento
+          </button>
+          <AyudaCorta tema="cancelarEvento" />
+        </span>
+      )}
+    </>
+  );
+
+  /** Que los menús sumen los invitados: en verde si calzan, en ámbar si no. No bloquea. */
+  const avisoMenus = invitados > 0 && enMenus > 0 && enMenus !== invitados ? (
+    <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px] font-semibold text-ambar-texto lg:py-1">
+      Los menús suman {enMenus} {enMenus === 1 ? 'persona' : 'personas'} y los
+      invitados son {invitados}.{' '}
+      {enMenus > invitados ? 'Baja la cantidad de algún menú.' : `Faltan ${invitados - enMenus} en los menús.`}
+    </p>
+  ) : invitados > 0 && enMenus === invitados ? (
+    <p className="text-[14px] font-semibold text-verde-texto">
+      ✓ Los menús suman los {invitados} invitados.
+    </p>
+  ) : null;
+
   const hitoEnvio: React.ReactNode = !p || cancelada || noQuedo ? null
     : ganada ? (
       saldo && firmado ? saldo : (
@@ -1167,7 +1262,7 @@ export default function CotizacionDialogo({
           <button type="button" disabled={guardando}
             onClick={() => void cobrar(cobrado.faltaAnticipo, 'Anticipo')}
             className="tecla min-h-[56px] w-full rounded-xl border-2 border-verde-fuerte px-5 text-[17px]
-                       font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50">
+                       font-bold text-verde-texto hover:bg-verde/10 disabled:opacity-50 lg:min-h-[48px]">
             ✓ Anticipo recibido · {enPesos(cobrado.faltaAnticipo)}
           </button>
         )}
@@ -1211,17 +1306,48 @@ export default function CotizacionDialogo({
       + ` N° ${folioDe({ id: grupoDe(p) })}${letra ? ` · Alternativa ${letra}` : ''}`
     : 'Nueva cotización';
 
+  /**
+   * **Para quién es, al lado del título** (2026-11-21, solo en el
+   * computador): el cliente, el día, los invitados y el total, en la línea
+   * del N°. Reemplaza ahí a la línea *Para …* y al resumen que abría los
+   * pasos 4 y 5: decían lo mismo en tres renglones más.
+   */
+  const resumenArriba = cliente && paso !== 1 ? (
+    <p className="text-[15px]">
+      Para <strong>{cliente.nombre}</strong>
+      {fechaReal ? <> · <span className="inline-block first-letter:uppercase">{enPalabras(fechaReal)}</span></>
+        : periodo ? <> · {periodo}</> : null}
+      {invitados > 0 && <> · {invitados} invitados</>}
+      {tipoEvento && <> · {tipoEvento}</>}
+      {p && cuentas.total > 0 && <> · <strong className="text-oro">{enPesos(cuentas.total)}</strong></>}
+      {/* *✓ Guardado*, también arriba: en cada paso iba al pie, en su propia fila. */}
+      {autoActivo && paso >= 3 && !cancelada && (
+        <span className="ml-4 inline-block align-baseline">
+          <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
+        </span>
+      )}
+    </p>
+  ) : null;
+
   return (
-    <Dialogo titulo={titulo} onCerrar={() => void cerrar()} ancho="max-w-3xl">
+    <Dialogo titulo={titulo} onCerrar={() => void cerrar()} ancho="max-w-3xl lg:max-w-[73rem]"
+      alLado={resumenArriba}>
+      {/* **La ventana entera cabe en la pantalla del computador** (2026-11-21,
+          lo pidió el cliente: *"todas las pestañas se pueden organizar para que
+          queden dentro de una pantalla"*). Desde 1024px la ventana es ancha:
+          los pasos y las alternativas van en una fila, y cada paso reparte lo
+          suyo en columnas. En el celular, lo de siempre. */}
+      <div className="lg:mb-2 lg:mt-1.5 lg:flex lg:items-stretch lg:gap-2">
       {/* Los cinco pasos, como botones: se ve dónde se está y se puede saltar.
           Desde el 2026-11-11 son cinco: el envío y el contrato son dos
           conversaciones con el cliente, cada una con su hito al final. */}
-      <nav ref={arriba} aria-label="Pasos" className="mb-4 grid grid-cols-5 gap-1">
+      <nav ref={arriba} aria-label="Pasos" className="mb-4 grid grid-cols-5 gap-1 lg:mb-0 lg:min-w-0 lg:flex-1">
         {PASOS.map((nombre, i) => (
           <button key={nombre} type="button" onClick={() => void irA(i + 1)}
             aria-current={paso === i + 1 ? 'step' : undefined}
             className={`tecla flex min-h-[48px] flex-col items-center justify-center rounded
-                        border px-1 text-[13px] font-semibold ${paso === i + 1
+                        border px-1 text-[13px] font-semibold lg:min-h-[44px] lg:flex-row lg:gap-1.5
+                        lg:text-[14px] ${paso === i + 1
               ? 'border-oro bg-oro text-tinta' : 'border-hueso/20 text-hueso/80'}`}>
             <span className="text-[16px] leading-none">{i + 1}</span>
             <span>{nombre}</span>
@@ -1233,7 +1359,8 @@ export default function CotizacionDialogo({
           pestaña por alternativa y *+ Otra alternativa*, en vez de dos
           cotizaciones sueltas con dos números. */}
       {p && paso >= 2 && (
-        <div className="mb-4 rounded-xl border border-hueso/15 bg-panel p-2">
+        <div className="mb-4 rounded-xl border border-hueso/15 bg-panel p-2 lg:mb-0 lg:max-w-[58%] lg:shrink-0
+                        lg:px-1.5 lg:py-[3px]">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex items-center text-[13px] font-medium uppercase tracking-wide text-hueso/60">
               {alts.length > 1 ? 'Alternativas' : 'Una sola versión'}
@@ -1245,7 +1372,7 @@ export default function CotizacionDialogo({
               return (
                 <button key={a.id} type="button" aria-pressed={a.id === p.id}
                   onClick={() => { if (a.id !== p.id) void abrirAlternativa(a.id); }}
-                  className={`boton min-h-[48px] min-w-[48px] gap-1.5 ${a.id === p.id ? '!border-oro bg-oro/15 font-semibold' : ''}
+                  className={`boton min-h-[48px] min-w-[48px] gap-1.5 lg:min-h-[36px] ${a.id === p.id ? '!border-oro bg-oro/15 font-semibold' : ''}
                               ${fuera ? 'opacity-60' : ''}`}>
                   <span className={`text-[17px] font-bold ${fuera ? 'line-through' : ''}`}>{letraDe(a, alternativas)}</span>
                   <span className="text-[13px] font-normal text-hueso/75">{enPesos(totalAlt(a))}</span>
@@ -1256,7 +1383,7 @@ export default function CotizacionDialogo({
             })}
             {puedeEditar && !grupoGanado && !cancelada && (
               <button type="button" disabled={guardando} onClick={() => void duplicar(paso >= 3 ? 3 : 2)}
-                className="boton min-h-[48px] border-dashed">+ Crear alternativa {siguienteLetra}</button>
+                className="boton min-h-[48px] border-dashed lg:min-h-[36px]">+ Crear alternativa {siguienteLetra}</button>
             )}
           </div>
           {noQuedo && laElegida && (
@@ -1283,8 +1410,10 @@ export default function CotizacionDialogo({
       )}
 
       {/* Para quién es, a la vista en los cuatro pasos. */}
+      </div>
+
       {cliente && paso !== 1 && (
-        <p className="mb-3 text-[15px]">
+        <p className="mb-3 text-[15px] lg:hidden">
           Para <strong>{cliente.nombre}</strong>
           {fechaReal && <> · <span className="first-letter:uppercase inline-block">{enPalabras(fechaReal)}</span></>}
           {!fechaReal && periodo && <> · {periodo}</>}
@@ -1338,10 +1467,25 @@ export default function CotizacionDialogo({
             )}
             {!nuevoCliente && (
               <>
-                <input type="search" value={busqueda} autoFocus={!cliente}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Buscar cliente por nombre, empresa, teléfono o correo"
-                  aria-label="Buscar cliente" className={`${ENTRADA} min-h-[48px]`} />
+                {/* ***+ Cliente nuevo* va arriba y se nota** (2026-11-21, lo pidió
+                    el cliente: *"tiene que estar arriba y un botón notable, y
+                    luego la lista y búsqueda"*). Iba al final, bajo la lista,
+                    con el mismo peso que un botón cualquiera: con muchos
+                    clientes había que bajar para encontrarlo. No va relleno
+                    —el relleno de esta ventana es *Ir al paso 2*—: va grande
+                    y con borde dorado. Lo escrito en el buscador pasa a ser
+                    el nombre del cliente nuevo. */}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button type="button"
+                    className="boton min-h-[48px] shrink-0 !border-2 !border-oro px-5 !text-[15px] !font-bold !text-oro hover:bg-oro/10"
+                    onClick={() => setNuevoCliente({ nombre: busqueda, telefono: '', correo: '', empresa: '' })}>
+                    + Cliente nuevo
+                  </button>
+                  <input type="search" value={busqueda} autoFocus={!cliente}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar cliente por nombre, empresa, teléfono o correo"
+                    aria-label="Buscar cliente" className={`${ENTRADA} min-h-[48px] sm:flex-1`} />
+                </div>
                 <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {encontrados.map((c) => (
                     <li key={c.id}>
@@ -1356,10 +1500,6 @@ export default function CotizacionDialogo({
                     </li>
                   ))}
                 </ul>
-                <button type="button" className="boton min-h-[44px]"
-                  onClick={() => setNuevoCliente({ nombre: busqueda, telefono: '', correo: '', empresa: '' })}>
-                  + Cliente nuevo
-                </button>
               </>
             )}
             {nuevoCliente && (
@@ -1416,7 +1556,10 @@ export default function CotizacionDialogo({
 
         {/* ---------- 2. Evento ---------- */}
         {paso === 2 && (
-          <div className="space-y-4">
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:space-y-0">
+            {/* En el computador, dos columnas: a la izquierda cuándo y cuántos;
+                a la derecha qué es, por quién viene y las notas. */}
+            <div className="space-y-4 lg:space-y-3">
             <div className="flex flex-wrap items-end gap-3">
               {!sinFecha && (
                 <Campo etiqueta="Fecha del evento" ancho="w-56">
@@ -1466,7 +1609,9 @@ export default function CotizacionDialogo({
                 Adultos y niños <AyudaCorta tema="invitados" />
               </p>
             </div>
+            </div>
 
+            <div className="space-y-4 lg:space-y-3">
             <div>
               <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                 Tipo de evento
@@ -1554,12 +1699,13 @@ export default function CotizacionDialogo({
                 </button>
               </div>
             )}
+            </div>
           </div>
         )}
 
         {/* ---------- 3. Productos ---------- */}
         {paso === 3 && (
-          <div className="space-y-4">
+          <div className="space-y-4 lg:space-y-2">
             {cotizables.length === 0 ? (
               <p className="rounded border border-ambar/50 bg-ambar/5 p-3 text-[14px]">
                 Ningún producto está marcado “se puede cotizar”. Márcalos en <a href="/menus"
@@ -1567,7 +1713,7 @@ export default function CotizacionDialogo({
               </p>
             ) : (
               <div>
-                <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:hidden">
                   Agregar <AyudaCorta tema="agregarProducto" />
                 </p>
                 {/* **Menús en una fila, extras en otra** (2026-11-20, lo pidió el
@@ -1578,10 +1724,17 @@ export default function CotizacionDialogo({
                 {[
                   { titulo: 'Menús', lista: cotizables.filter((m) => m.tipo === TIPO_PRODUCTO.menu), otra: false },
                   { titulo: 'Extras y arriendo', lista: cotizables.filter((m) => m.tipo !== TIPO_PRODUCTO.menu), otra: true }
-                ].filter((g) => g.lista.length > 0 || g.otra).map((g) => (
-                  <div key={g.titulo} className="mb-3 last:mb-0">
-                    <p className="mb-1.5 text-[13px] font-semibold text-hueso/75">{g.titulo}</p>
-                    <div className="flex flex-wrap gap-2">
+                ].filter((g) => g.lista.length > 0 || g.otra).map((g, n) => (
+                  // En el computador, el nombre del grupo va a la izquierda, en
+                  // su columna, y los botones a su derecha: dos filas en vez de
+                  // seis. El `?` de *Agregar* va con el primer grupo.
+                  <div key={g.titulo} className="mb-3 last:mb-0 lg:mb-1.5 lg:flex lg:items-start lg:gap-2">
+                    <p className="mb-1.5 text-[13px] font-semibold text-hueso/75 lg:mb-0 lg:flex lg:min-h-[44px]
+                                  lg:w-[9.5rem] lg:shrink-0 lg:items-center">
+                      {g.titulo}
+                      {n === 0 && <span className="hidden lg:inline"><AyudaCorta tema="agregarProducto" /></span>}
+                    </p>
+                    <div className="flex flex-wrap gap-2 lg:gap-1.5">
                       {g.lista.map((m) => {
                         // **Ya agregado, el botón se apaga y lo dice** (2026-11-12):
                         // un producto va una sola vez; la cantidad se cambia en su línea.
@@ -1589,9 +1742,9 @@ export default function CotizacionDialogo({
                         return (
                           <button key={m.nombre} type="button" onClick={() => agregar(m)} disabled={ya}
                             title={ya ? 'Ya está en la cotización: cambia la cantidad en su línea' : undefined}
-                            className={`boton min-h-[48px] text-[14px] ${ya ? 'border-verde-fuerte/50 text-verde-texto' : ''}`}>
+                            className={`boton min-h-[48px] text-[14px] lg:min-h-[44px] ${ya ? 'border-verde-fuerte/50 text-verde-texto' : ''}`}>
                             {ya ? '✓' : '+'} {m.nombre}
-                            <span className="ml-1 text-hueso/60">
+                            <span className={`ml-1 text-hueso/60 ${ya ? 'lg:hidden' : ''}`}>
                               {ya ? '· ya está'
                                 : m.moneda === MONEDA.uf ? `${String(m.precioCotizacion).replace('.', ',')} UF`
                                 : precioParaCotizar(m) ? enPesos(precioParaCotizar(m)) : ''}
@@ -1600,7 +1753,7 @@ export default function CotizacionDialogo({
                         );
                       })}
                       {g.otra && (
-                        <button type="button" className="boton min-h-[48px] text-[14px]"
+                        <button type="button" className="boton min-h-[48px] text-[14px] lg:min-h-[44px]"
                           onClick={() => setLineas([...vistas, {
                             presupuesto: p?.id ?? '', concepto: 'Otro', cantidad: 1, precio: 0,
                             personas: 0, descuento: 0, ivaIncluido: true, sigue: false, precioUF: 0 }])}>
@@ -1623,7 +1776,23 @@ export default function CotizacionDialogo({
                 Todavía no hay nada cotizado.
               </p>
             ) : (
-              <ul className="space-y-2">
+              // **En el computador, una tabla** (2026-11-21): el nombre de cada
+              // columna va una vez arriba y cada línea ocupa una fila —producto,
+              // cantidad, precio, descuento, total y *Quitar*—, todas con las
+              // mismas columnas (`subgrid`). Cada línea medía 170px; ahora 54.
+              // Los nombres de cada campo siguen ahí para un lector de pantalla.
+              <ul className="space-y-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] lg:gap-x-4
+                             lg:gap-y-1.5 lg:space-y-0">
+                <li aria-hidden className="hidden border border-transparent px-3 text-[13px] font-medium uppercase
+                                           tracking-wide text-hueso/60 lg:col-span-full lg:grid lg:grid-cols-subgrid
+                                           lg:items-center">
+                  <span>Producto</span>
+                  <span>Cantidad</span>
+                  <span className="flex items-center">Precio c/u <AyudaCorta tema="precioLinea" /></span>
+                  <span className="flex items-center">Descuento <AyudaCorta tema="descuentoLinea" /></span>
+                  <span className="text-right">Total</span>
+                  <span />
+                </li>
                 {vistas.map((l, i) => {
                   const prod = productoDe(l.concepto, datos.menus);
                   const esShowIncluido = publico && prod?.tipo === TIPO_PRODUCTO.show;
@@ -1631,8 +1800,10 @@ export default function CotizacionDialogo({
                   const showMinimo = prod?.tipo === TIPO_PRODUCTO.show && showConMinimo && datos.reglaShow
                     ? datos.reglaShow : null;
                   return (
-                    <li key={i} className="rounded border border-hueso/15 bg-panel p-3">
-                      <div className="flex flex-wrap items-center gap-2">
+                    <li key={i} className="rounded border border-hueso/15 bg-panel p-3 lg:col-span-full lg:grid
+                                           lg:min-h-[46px] lg:grid-cols-subgrid lg:items-center lg:py-1">
+                      <div className="flex flex-wrap items-center gap-2 lg:contents">
+                        <span className="flex min-w-0 flex-wrap items-center gap-2 lg:col-start-1 lg:row-start-1">
                         {prod ? (
                           <span className="text-[16px] font-semibold">{l.concepto}</span>
                         ) : (
@@ -1644,24 +1815,27 @@ export default function CotizacionDialogo({
                           <span className="rounded-full border border-hueso/25 px-2 py-0.5 text-[13px]
                                            text-hueso/70">{prod.tipo}</span>
                         )}
-                        <span className="flex-1" />
+                        </span>
+                        <span className="flex-1 lg:hidden" />
                         {esShowIncluido ? (
                           <span className="rounded-full border border-verde-fuerte/60 px-2 py-0.5
-                                           text-[13px] font-semibold text-verde-texto">
+                                           text-[13px] font-semibold text-verde-texto lg:col-start-2 lg:col-end-7
+                                           lg:row-start-1 lg:justify-self-end">
                             incluido: día público
                           </span>
                         ) : (
-                          <button type="button" className="boton hover:border-rojo-fuerte hover:text-rojo-texto"
+                          <button type="button" className="boton hover:border-rojo-fuerte hover:text-rojo-texto
+                                                           lg:col-start-6 lg:row-start-1"
                             onClick={() => setLineas(vistas.filter((_, k) => k !== i))}>Quitar</button>
                         )}
                       </div>
                       {!esShowIncluido && (
-                        <div className="mt-2 flex flex-wrap items-end gap-3">
+                        <div className="mt-2 flex flex-wrap items-end gap-3 lg:contents">
                           {/* **Un monto fijo no tiene cantidad** (2026-11-11): el
                               arriendo o el show van o no van. Lo por persona —menús,
                               la once, el desayuno— se ajusta con − y +. */}
                           {(!prod || prod.cobro !== COBRO.fijo) && (
-                          <Campo etiqueta="Cantidad" ancho="w-auto">
+                          <Campo etiqueta="Cantidad" ancho="w-auto lg:col-start-2 lg:row-start-1" rotuloClase="lg:sr-only">
                             {/* − y + grandes, y el número se puede escribir. En un
                                 menú, lo que sube se le resta al primero
                                 (`cambiarCantidad()`). */}
@@ -1678,7 +1852,8 @@ export default function CotizacionDialogo({
                           </Campo>
                           )}
                           {l.precioUF > 0 ? (
-                            <Campo etiqueta={`Precio en UF${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-auto" ayuda="precioLinea">
+                            <Campo etiqueta={`Precio en UF${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`}
+                              ancho="w-auto lg:col-start-3 lg:row-start-1" ayuda="precioLinea" rotuloClase="lg:sr-only">
                               <input type="text" inputMode="decimal" defaultValue={String(l.precioUF).replace('.', ',')}
                                 onBlur={(e) => cambiarLinea(i, { precioUF: aPrecio(e.target.value) || l.precioUF })}
                                 className={`${ENTRADA} !w-28`} />
@@ -1688,7 +1863,8 @@ export default function CotizacionDialogo({
                               </p>
                             </Campo>
                           ) : (
-                          <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`} ancho="w-48" ayuda="precioLinea">
+                          <Campo etiqueta={`Precio${l.ivaIncluido ? ' (con IVA)' : ' (+ IVA)'}`}
+                            ancho="w-48 lg:col-start-3 lg:row-start-1 lg:w-32" ayuda="precioLinea" rotuloClase="lg:sr-only">
                             {showMinimo && reglaShow ? (
                               // Con mínimo, el precio se aplica al salir del campo: así
                               // se puede escribir un número entero sin que el mínimo
@@ -1713,8 +1889,8 @@ export default function CotizacionDialogo({
                             )}
                           </Campo>
                           )}
-                          <div>
-                            <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                          <div className="lg:col-start-4 lg:row-start-1">
+                            <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:hidden">
                               Descuento <AyudaCorta tema="descuentoLinea" />
                             </p>
                             <div className="flex gap-1.5">
@@ -1727,7 +1903,8 @@ export default function CotizacionDialogo({
                               ))}
                             </div>
                           </div>
-                          <span className="ml-auto text-[16px] font-bold tabular-nums">
+                          <span className="ml-auto text-[16px] font-bold tabular-nums lg:col-start-5 lg:row-start-1
+                                           lg:ml-0 lg:text-right">
                             {enPesos(totalDeLinea(l))}
                             <span className="ml-1 text-[13px] font-normal text-hueso/60">
                               {l.ivaIncluido ? 'con IVA' : '+ IVA'}
@@ -1740,7 +1917,8 @@ export default function CotizacionDialogo({
                           salida. A la gerencia y al administrador, que pueden
                           pasar por encima, se les dice el mínimo sin forzarlo. */}
                       {showMinimo && (
-                        <p className={`mt-2 rounded border px-3 py-2 text-[14px] font-semibold ${reglaShow
+                        <p className={`mt-2 rounded border px-3 py-2 text-[14px] font-semibold lg:col-span-full lg:row-start-2
+                                       lg:mb-1 lg:mt-1 lg:py-1 ${reglaShow
                           ? 'border-ambar/50 bg-ambar/5 text-ambar-texto' : 'border-hueso/20 text-hueso/75'}`}>
                           🐎 Día privado con menos de {showMinimo.desde} personas: el show se cobra, mínimo{' '}
                           {enPesos(showMinimo.minimo)} + IVA.{' '}
@@ -1775,23 +1953,15 @@ export default function CotizacionDialogo({
             {/* **Los menús tienen que sumar los invitados** (2026-11-10). Cada
                 menú nuevo toma solo los que faltan; si igual no calzan, se
                 dice en ámbar, sin bloquear: puede que cambien los invitados. */}
-            {invitados > 0 && enMenus > 0 && enMenus !== invitados && (
-              <p className="rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
-                            font-semibold text-ambar-texto">
-                Los menús suman {enMenus} {enMenus === 1 ? 'persona' : 'personas'} y los
-                invitados son {invitados}.{' '}
-                {enMenus > invitados ? 'Baja la cantidad de algún menú.' : `Faltan ${invitados - enMenus} en los menús.`}
-              </p>
-            )}
-            {invitados > 0 && enMenus === invitados && (
-              <p className="text-[14px] font-semibold text-verde-texto">
-                ✓ Los menús suman los {invitados} invitados.
-              </p>
-            )}
+            {/* En el computador este aviso va en el pie, junto a *volver*. */}
+            {avisoMenus && <div className="lg:hidden">{avisoMenus}</div>}
 
             {/* Las cuentas, como en una cotización: neto, descuento, IVA y total. */}
-            <div className="rounded border border-oro/40 p-3">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="rounded border border-oro/40 p-3 lg:flex lg:flex-wrap lg:items-center lg:gap-x-5 lg:gap-y-1
+                            lg:py-1.5">
+              {/* En el computador, las cuentas van en una fila: el
+                  descuento sobre el total, y neto, IVA y total. */}
+              <div className="mb-2 flex flex-wrap items-center gap-2 lg:mb-0">
                 <span className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                   Descuento sobre el total
                 </span>
@@ -1804,17 +1974,19 @@ export default function CotizacionDialogo({
                   </button>
                 ))}
               </div>
-              <dl className="ml-auto max-w-xs space-y-1 text-[15px] tabular-nums">
-                <div className="flex justify-between"><dt>Neto</dt><dd>{enPesos(cuentas.subtotal)}</dd></div>
+              <dl className="ml-auto max-w-xs space-y-1 text-[15px] tabular-nums lg:flex lg:max-w-none lg:items-baseline
+                             lg:gap-x-5 lg:space-y-0">
+                <div className="flex justify-between lg:gap-2"><dt>Neto</dt><dd>{enPesos(cuentas.subtotal)}</dd></div>
                 {cuentas.descuento > 0 && (
-                  <div className="flex justify-between text-rojo-texto">
+                  <div className="flex justify-between text-rojo-texto lg:gap-2">
                     <dt>Descuento {descuento}%</dt><dd>−{enPesos(cuentas.descuento)}</dd>
                   </div>
                 )}
-                <div className="flex justify-between">
+                <div className="flex justify-between lg:gap-2">
                   <dt>IVA {Math.round(IVA * 100)}%</dt><dd>{enPesos(cuentas.iva)}</dd>
                 </div>
-                <div className="flex justify-between border-t border-hueso/20 pt-1 text-[20px] font-bold">
+                <div className="flex justify-between border-t border-hueso/20 pt-1 text-[20px] font-bold lg:gap-2
+                                lg:border-0 lg:pt-0">
                   <dt>Total</dt><dd className="text-oro">{enPesos(cuentas.total)}</dd>
                 </div>
               </dl>
@@ -1825,7 +1997,8 @@ export default function CotizacionDialogo({
                 puede venir otro grupo—. Exclusivo llega así al calendario al
                 ganarla. */}
             {p && (conArriendo || esExcl) && (
-              <div className="rounded-xl border-2 border-morado-fuerte/60 bg-morado/[0.08] p-4">
+              <div className="rounded-xl border-2 border-morado-fuerte/60 bg-morado/[0.08] p-4 lg:flex lg:flex-wrap
+                              lg:items-center lg:gap-x-4 lg:gap-y-1 lg:px-3 lg:py-1.5 lg:[&>*]:mt-0">
                 <p className="flex items-center gap-2 text-[17px] font-bold text-morado-texto">
                   🟣 ¿El día es exclusivo? <AyudaCorta tema="exclusivo" />
                 </p>
@@ -1841,7 +2014,7 @@ export default function CotizacionDialogo({
                         <button key={v} type="button" aria-pressed={marcado} disabled={!puedeEditar}
                           onClick={() => setExclusivo(marcado ? '' : v)}
                           className={`tecla min-h-[48px] rounded-xl border-2 px-4 text-[16px] font-bold
-                                      disabled:cursor-not-allowed ${marcado
+                                      disabled:cursor-not-allowed lg:min-h-[44px] lg:text-[15px] ${marcado
                             ? 'border-morado-fuerte bg-morado-fuerte text-tinta'
                             : 'border-hueso/30 text-hueso/85 hover:border-morado-fuerte/70'}`}>
                           {marcado ? '✓ ' : ''}{texto}
@@ -1860,7 +2033,7 @@ export default function CotizacionDialogo({
               </div>
             )}
 
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className={`flex flex-wrap justify-end gap-2 ${autoActivo ? 'lg:hidden' : ''}`}>
               {p && puedeEditar && (autoActivo
                 ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
                 : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
@@ -1870,7 +2043,9 @@ export default function CotizacionDialogo({
                 una alternativa esté más presente). Al final de los productos,
                 que es donde se decide si conviene ofrecer otra. */}
             {p && puedeEditar && !grupoGanado && !cancelada && (
-              <div className="rounded-xl border-2 border-dashed border-oro/50 bg-oro/[0.05] p-4">
+              // En el computador no va: *+ Crear alternativa* está arriba, a la
+              // vista, en la misma pantalla.
+              <div className="rounded-xl border-2 border-dashed border-oro/50 bg-oro/[0.05] p-4 lg:hidden">
                 <p className="flex items-center gap-2 text-[17px] font-bold">
                   ¿Le ofreces otra versión? <AyudaCorta tema="alternativas" />
                 </p>
@@ -1885,8 +2060,11 @@ export default function CotizacionDialogo({
 
         {/* ---------- 4. Enviar ---------- */}
         {paso === 4 && (
-          <div className="space-y-4">
-            <div className="rounded border border-hueso/15 bg-panel p-3 text-[15px]">
+          <div className="space-y-4 lg:space-y-2">
+            {/* En el computador este resumen va arriba, al lado del N°; acá
+                queda solo el aviso de las alternativas que van en el link. */}
+            <div className={`rounded border border-hueso/15 bg-panel p-3 text-[15px] lg:border-0 lg:bg-transparent lg:p-0
+                             lg:[&>p:not(.del-link)]:hidden ${enElLink.length > 1 && !ganada ? '' : 'lg:hidden'}`}>
               <p className="font-semibold">{cliente?.nombre ?? 'Sin cliente'}</p>
               <p className="text-hueso/75">
                 {fechaReal ? <span className="first-letter:uppercase inline-block">{enPalabras(fechaReal)}</span>
@@ -1896,7 +2074,7 @@ export default function CotizacionDialogo({
               </p>
               <p className="mt-1 text-[20px] font-bold text-oro">{enPesos(cuentas.total)}</p>
               {enElLink.length > 1 && !ganada && (
-                <p className="mt-2 rounded-lg border border-oro/40 bg-oro/[0.06] px-3 py-2 text-[15px]">
+                <p className="del-link mt-2 rounded-lg border border-oro/40 bg-oro/[0.06] px-3 py-2 text-[15px] lg:mt-0 lg:py-1">
                   <strong>En el link van {enElLink.length} alternativas:</strong> {resumenLink}.
                 </p>
               )}
@@ -1915,59 +2093,85 @@ export default function CotizacionDialogo({
 
 
 
+            {/* **Tres columnas en el computador** (2026-11-21): el documento con
+                el próximo paso debajo, el pago, y el seguimiento. Apiladas
+                medían 1.770px; así entran en la pantalla. */}
+            <div className="space-y-4 lg:grid lg:grid-cols-3 lg:items-start lg:gap-2 lg:space-y-0">
+            <div className="space-y-4 lg:space-y-2">
             <fieldset disabled={cancelada} className="min-w-0 space-y-4">
             {/* ---------- Documento ---------- */}
-            <Seccion tono="neutro" icono="🧾" titulo="Documento">
+            <Seccion tono="neutro" icono="🧾" titulo="Documento" ayudaPc="documento">
             {/* **El documento de la venta** (2026-11-10). Nace por definir;
                 apretar el elegido lo vuelve a dejar por definir. Por ahora
                 no cambia el precio. Con factura pide los datos de
                 facturación, que se guardan en la ficha del cliente. */}
             <div>
-              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:hidden">
                 Documento de la venta <AyudaCorta tema="documento" />
               </p>
               <Elegir etiqueta="Documento de la venta" opciones={Object.values(DOCUMENTO)}
                 valor={documento} onElegir={(v) => setDocumento(documentoDe(v))} />
               {!documento && <p className="mt-1.5 text-[14px] text-hueso/70">Por definir.</p>}
+              {/* En el computador, los datos de la factura en dos renglones y
+                  su botón; se escriben en una ventanita (`facturaAbierta`). */}
               {documento === DOCUMENTO.factura && (
-                <div className="mt-3 rounded border border-hueso/15 bg-panel p-3">
+                <div className="mt-2 hidden rounded border border-hueso/15 bg-panel px-3 py-2 text-[14px] lg:block">
+                  {facturacion.empresa.trim() || facturacion.rut.trim() ? (
+                    <p><strong>{facturacion.empresa || 'Sin razón social'}</strong>
+                      {facturacion.rut.trim() && <> · RUT {facturacion.rut}</>}</p>
+                  ) : null}
+                  {(facturacion.giro.trim() || facturacion.domicilio.trim()) && (
+                    <p className="text-hueso/75">{[facturacion.giro, facturacion.domicilio].filter((x) => x.trim()).join(' · ')}</p>
+                  )}
+                  {(faltaFactura.length > 0 || rutMalo) && (
+                    <p className="font-semibold text-ambar-texto">
+                      {faltaFactura.length > 0 ? <>Para facturarle falta: {faltaFactura.join(', ')}.</> : null}
+                      {rutMalo ? ' El RUT no calza: revísalo.' : null}
+                    </p>
+                  )}
+                  <button type="button" className="boton mt-1.5" onClick={() => setFacturaAbierta(true)}>
+                    ✎ {faltaFactura.length > 0 ? 'Completar' : 'Cambiar'} los datos de facturación
+                  </button>
+                </div>
+              )}
+              {documento === DOCUMENTO.factura && (
+                <div className="mt-3 rounded border border-hueso/15 bg-panel p-3 lg:hidden">
                   <p className="mb-2 text-[14px] text-hueso/75">
                     Datos de facturación. Se guardan en la ficha del cliente.
                   </p>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {([
-                      ['empresa', 'Razón social', 'Como aparece en el SII'],
-                      ['rut', 'RUT', '76.123.456-7'],
-                      ['giro', 'Giro', 'Actividad de la empresa'],
-                      ['domicilio', 'Dirección', 'Calle, número, comuna']
-                    ] as const).map(([k, etiqueta, ejemplo]) => (
-                      <label key={k} className="block">
-                        <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
-                          {etiqueta}
-                        </span>
-                        {k === 'rut' ? (
-                          <CampoRut valor={facturacion.rut} placeholder={ejemplo} className={ENTRADA}
-                            onCambio={(v) => setFacturacion({ ...facturacion, rut: v })} />
-                        ) : (
-                          <input value={facturacion[k]} placeholder={ejemplo} className={ENTRADA}
-                            onChange={(e) => setFacturacion({ ...facturacion, [k]: e.target.value })} />
-                        )}
-                      </label>
-                    ))}
-                  </div>
-                  {faltaParaFactura(facturacion).length > 0 && (
+                  {camposFactura}
+                  {faltaFactura.length > 0 && (
                     <p className="mt-3 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
                                   font-semibold text-ambar-texto">
-                      Para facturarle falta: {faltaParaFactura(facturacion).join(', ')}.
+                      Para facturarle falta: {faltaFactura.join(', ')}.
                     </p>
                   )}
                 </div>
+              )}
+              {facturaAbierta && (
+                <Dialogo titulo="Datos de facturación" onCerrar={() => setFacturaAbierta(false)} ancho="max-w-xl">
+                  <p className="mb-3 mt-2 text-[14px] text-hueso/75">Se guardan en la ficha del cliente.</p>
+                  {camposFactura}
+                  {faltaFactura.length > 0 && (
+                    <p className="mt-3 rounded border border-ambar/50 bg-ambar/5 px-3 py-2 text-[14px]
+                                  font-semibold text-ambar-texto">
+                      Para facturarle falta: {faltaFactura.join(', ')}.
+                    </p>
+                  )}
+                  <div className="mt-4 flex justify-end">
+                    <button type="button" className="boton boton-relleno min-h-[44px] px-5"
+                      onClick={() => setFacturaAbierta(false)}>✓ Listo</button>
+                  </div>
+                </Dialogo>
               )}
             </div>
 
 
             </Seccion>
             </fieldset>
+            {/* El próximo paso, en el computador: bajo el documento, siempre a la vista. */}
+            {p && !cancelada && hitoEnvio && <div className="hidden lg:block">{hitoEnvio}</div>}
+            </div>
 
             {/* ---------- El pago: condiciones y cobros ---------- */}
             <Seccion tono="verde" icono="💰" titulo="El pago">
@@ -1976,13 +2180,17 @@ export default function CotizacionDialogo({
                 Configuración; cada cotización las puede negociar. Las
                 calcula `condicionesDe()`, la misma que usa el documento. */}
             <div>
-              <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+              <p className="mb-2 flex items-center text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:mb-1">
                 Condiciones <AyudaCorta tema="condicionesPago" />
+                <button type="button" aria-expanded={condAbiertas} onClick={() => setCondAbiertas(!condAbiertas)}
+                  className="boton ml-auto hidden normal-case tracking-normal lg:inline-flex">
+                  {condAbiertas ? '✓ Listo' : '✎ Cambiar'}
+                </button>
               </p>
-              <div className="flex flex-wrap items-end gap-3">
+              <div className={`flex flex-wrap items-end gap-3 lg:gap-2 ${condAbiertas ? '' : 'lg:hidden'}`}>
                 <label className="block">
                   <span className="mb-1 block text-[13px] text-hueso/70">Anticipo %</span>
-                  <input type="number" min={0} max={100} value={anticipoTxt} className={`${ENTRADA} w-24`}
+                  <input type="number" min={0} max={100} value={anticipoTxt} className={`${ENTRADA} w-24 lg:w-20`}
                     placeholder={String(datos.condiciones?.anticipoPct ?? 30)} disabled={cond.fijo}
                     onChange={(e) => setAnticipoTxt(e.target.value)} />
                 </label>
@@ -1993,7 +2201,7 @@ export default function CotizacionDialogo({
                   <span className="flex items-center gap-1">
                     <span className="text-[15px] text-hueso/70">$</span>
                     <input inputMode="numeric" value={anticipoMontoTxt ? Number(anticipoMontoTxt).toLocaleString('es-CL') : ''}
-                      className={`${ENTRADA} w-36`} placeholder="ej. 500.000"
+                      className={`${ENTRADA} w-36 lg:w-32`} placeholder="ej. 500.000"
                       onChange={(e) => setAnticipoMontoTxt(e.target.value.replace(/[^\d]/g, ''))} />
                     {cond.fijo && (
                       <button type="button" className="boton min-h-[44px]" onClick={() => setAnticipoMontoTxt('')}>
@@ -2009,12 +2217,12 @@ export default function CotizacionDialogo({
                 </button>
                 <label className="block">
                   <span className="mb-1 block text-[13px] text-hueso/70">Saldo, días antes</span>
-                  <input type="number" min={0} max={365} value={saldoTxt} className={`${ENTRADA} w-24`}
+                  <input type="number" min={0} max={365} value={saldoTxt} className={`${ENTRADA} w-24 lg:w-20`}
                     placeholder={String(datos.condiciones?.saldoDias ?? 3)}
                     onChange={(e) => setSaldoTxt(e.target.value)} />
                 </label>
               </div>
-              <p className="mt-2 text-[15px]">
+              <p className="mt-2 text-[15px] lg:mt-1 lg:text-[14px]">
                 {cond.pct > 0
                   ? <>Anticipo {cond.fijo ? 'acordado' : `${cond.pct}%`}: <strong>{enPesos(cond.anticipo)}</strong> para reservar la fecha · Saldo <strong>{enPesos(cond.saldo)}</strong></>
                   : <>Sin anticipo · Todo <strong>{enPesos(cond.saldo)}</strong></>}
@@ -2029,7 +2237,7 @@ export default function CotizacionDialogo({
                 casilla. Lo normal es un toque —anticipo recibido, o todo—;
                 otro monto abre un campo. Un cobro anotado por error se
                 deshace. */}
-            <div className="border-t border-verde/25 pt-3">
+            <div className="border-t border-verde/25 pt-3 lg:pt-2">
               <p className="text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                 Pagos del cliente <AyudaCorta tema="pagosCliente" />
               </p>
@@ -2129,10 +2337,10 @@ export default function CotizacionDialogo({
                                                text-[14px] font-semibold text-rojo-texto">{errorPagos}</p>
                   )}
                   {puedeEditar && !cancelada && cobrado.falta > 0 && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 space-y-2 lg:mt-2">
                       <input value={medio} onChange={(e) => setMedio(e.target.value)}
                         placeholder="Cómo pagó: transferencia, efectivo… (opcional)"
-                        className={`${ENTRADA} sm:w-96`} />
+                        className={`${ENTRADA} sm:w-96 lg:w-full`} />
                       <div className="flex flex-wrap gap-2">
                         {cobrado.faltaAnticipo > 0 && (
                           <button type="button" disabled={guardando}
@@ -2178,7 +2386,7 @@ export default function CotizacionDialogo({
             {/* **Primero el documento y el pago; al final, mandarla y el seguimiento**
                 (2026-11-12, lo pidió el cliente). Mientras no se mande, el cuadro
                 de mandarla va antes del seguimiento, que recién corre después. */}
-            {mandarPrimero && hitoEnvio}
+            {mandarPrimero && hitoEnvio && <div className="lg:hidden">{hitoEnvio}</div>}
 
             {/* ---------- Seguimiento ---------- */}
             {!cancelada && (
@@ -2213,7 +2421,7 @@ export default function CotizacionDialogo({
                                    font-semibold text-ambar-texto">En negociación</span>
                 )}
                 {estado === ESTADO_PRESUPUESTO.enviado && (
-                  <button type="button" className="boton min-h-[44px]"
+                  <button type="button" className="boton min-h-[44px] lg:min-h-[40px]"
                     onClick={() => setEstado(ESTADO_PRESUPUESTO.negociacion)}>Están negociando</button>
                 )}
                 {/* **Deshacer un "Sí, la mandé" apretado por error** (2026-11-12,
@@ -2222,14 +2430,14 @@ export default function CotizacionDialogo({
                     envío y la vigencia: corren de nuevo cuando de verdad se
                     mande. */}
                 {estado === ESTADO_PRESUPUESTO.enviado && (
-                  <button type="button" className="boton min-h-[44px]"
+                  <button type="button" className="boton min-h-[44px] lg:min-h-[40px]"
                     onClick={() => {
                       if (confirm('¿Todavía no se mandó? Vuelve a Borrador: deja de contar en el calendario y su vigencia corre de nuevo cuando la mandes.')) {
                         setEstado(ESTADO_PRESUPUESTO.borrador);
                       }
                     }}>Todavía no se mandó</button>
                 )}
-                <button type="button" className="boton min-h-[44px] hover:!border-rojo-fuerte hover:text-rojo-texto"
+                <button type="button" className="boton min-h-[44px] hover:!border-rojo-fuerte hover:text-rojo-texto lg:min-h-[40px]"
                   onClick={() => setEstado(ESTADO_PRESUPUESTO.rechazado)}>Se perdió…</button>
                 <AyudaCorta tema="estadoCotizacion" />
               </div>
@@ -2270,10 +2478,20 @@ export default function CotizacionDialogo({
               )}
               {!ganada && !cancelada && (
                 <div>
-                  <p className="mb-1 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                  <p className="mb-1 flex items-center text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                     Recordarme
+                    <button type="button" aria-expanded={recordarAbierto} onClick={() => setRecordarAbierto(!recordarAbierto)}
+                      className="boton ml-auto hidden normal-case tracking-normal lg:inline-flex">
+                      {recordarAbierto ? '✓ Listo' : '✎ Cambiar'}
+                    </button>
                   </p>
-                  <div className="flex flex-wrap items-end gap-3">
+                  {!recordarAbierto && (
+                    <p className="hidden text-[14px] lg:block">
+                      A los <strong>{segTxt || (datos.seguimiento?.dias ?? 5)}</strong> días sin respuesta y{' '}
+                      <strong>{avisoTxt || (datos.seguimiento?.antesEvento ?? 14)}</strong> días antes del evento.
+                    </p>
+                  )}
+                  <div className={`flex flex-wrap items-end gap-3 ${recordarAbierto ? '' : 'lg:hidden'}`}>
                     {([
                       ['Sin respuesta, a los días', segTxt, setSegTxt, datos.seguimiento?.dias ?? 5, 'seguimientoDias'],
                       ['Días antes del evento', avisoTxt, setAvisoTxt, datos.seguimiento?.antesEvento ?? 14, 'avisoEvento']
@@ -2285,7 +2503,7 @@ export default function CotizacionDialogo({
                       </label>
                     ))}
                   </div>
-                  <p className="mt-1 text-[13px] text-hueso/65">En blanco rige Configuración. En 0 no pregunta.</p>
+                  <p className={`mt-1 text-[13px] text-hueso/65 ${recordarAbierto ? '' : 'lg:hidden'}`}>En blanco rige Configuración. En 0 no pregunta.</p>
                 </div>
               )}
             </Seccion>
@@ -2295,28 +2513,18 @@ export default function CotizacionDialogo({
                 cliente: *"primero hacemos el seguimiento, los datos… y de ahí
                 te ofrezco marcar como ganado"*). Cada uno de los dos pasos
                 del final —Envío y Contrato— cierra con el suyo. */}
-            {p && !cancelada && !mandarPrimero && hitoEnvio}
+            {p && !cancelada && !mandarPrimero && hitoEnvio && <div className="lg:hidden">{hitoEnvio}</div>}
+            </div>
 
             {/* **Lo secundario va abajo, chico y separado**: guardar ya es
-                solo y borrar es peligroso. Nunca al lado del hito. */}
-            <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
+                solo y borrar es peligroso. Nunca al lado del hito. En el
+                computador va en el pie, junto a *volver*. */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3 lg:hidden">
               {!cancelada && (autoActivo
                 ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
                 : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
               <span className="flex-1" />
-              {ganada && !cancelada && puedeEditar && (
-                <span className="inline-flex items-center">
-                  <button type="button" disabled={guardando} onClick={() => setCorrigiendo(true)}
-                    className="boton">Corregir la ganada</button>
-                  <AyudaCorta tema="corregirGanada" />
-                </span>
-              )}
-              {p && !ganada && puedeEditar && (
-                <button type="button" onClick={() => void borrar()}
-                  className="boton hover:border-rojo-fuerte hover:text-rojo-texto">
-                  Borrar
-                </button>
-              )}
+              {secundarios}
             </div>
           </div>
         )}
@@ -2325,8 +2533,9 @@ export default function CotizacionDialogo({
             Lo pidió el cliente: separar la cotización del contrato, que son
             dos conversaciones con el cliente. Termina en su propio hito. */}
         {paso === 5 && (
-          <div className="space-y-4">
-            <div className="rounded border border-hueso/15 bg-panel p-3 text-[15px]">
+          <div className="space-y-4 lg:space-y-2">
+            {/* En el computador este resumen va arriba, al lado del N°. */}
+            <div className="rounded border border-hueso/15 bg-panel p-3 text-[15px] lg:hidden">
               <p className="font-semibold">{cliente?.nombre ?? 'Sin cliente'}</p>
               <p className="text-hueso/75">
                 {fechaReal ? <span className="first-letter:uppercase inline-block">{enPalabras(fechaReal)}</span>
@@ -2345,13 +2554,16 @@ export default function CotizacionDialogo({
                 es mandar el de la B, y ganarla —con el anticipo o con ese
                 contrato firmado— la elige y deja las otras No elegida. */}
             {porElegir && (
-              <p className="rounded-lg border-2 border-oro/50 bg-oro/[0.06] px-3 py-2 text-[15px]">
+              <p className="rounded-lg border-2 border-oro/50 bg-oro/[0.06] px-3 py-2 text-[15px] lg:py-1">
                 <strong>Este contrato es de la alternativa {letra}</strong>
                 {' '}({enPesos(cuentas.total)}).
               </p>
             )}
 
-            <fieldset disabled={cancelada} className="min-w-0 space-y-4">
+            {/* **En el computador**, el contrato ocupa dos tercios, con lo suyo
+                repartido en dos columnas, y el próximo paso va a su derecha. */}
+            <div className="space-y-4 lg:grid lg:grid-cols-3 lg:items-start lg:gap-2 lg:space-y-0">
+            <fieldset disabled={cancelada} className="min-w-0 space-y-4 lg:col-span-2">
             {/* **El contrato** (Fase 4, 2026-11-10). Sale de la cotización:
                 el precio, las condiciones de pago y el cliente de su ficha.
                 Se firma en papel y se sube el firmado, que va a Drive. Lo
@@ -2360,7 +2572,8 @@ export default function CotizacionDialogo({
               {!p ? (
                 <p className="mt-1 text-[14px] text-hueso/70">Guarda la cotización para armar su contrato.</p>
               ) : (
-                <div className="mt-2 space-y-3">
+                <div className="mt-2 space-y-3 lg:mt-0 lg:columns-2 lg:gap-x-5 lg:space-y-0 lg:[&>*]:!mb-2
+                                lg:[&>*]:break-inside-avoid">
                   {firmado ? (
                     <p className="text-[15px]">
                       <span className="rounded-full border border-verde-fuerte bg-verde/15 px-2.5 py-1
@@ -2416,6 +2629,7 @@ export default function CotizacionDialogo({
                       : 'El RUT y el domicilio se guardan en la ficha del cliente.'}
                   </p>
 
+                  <div className="flex flex-wrap items-center gap-y-1 lg:flex-nowrap">
                   <button type="button" aria-pressed={ley20393} onClick={() => setLey20393(!ley20393)}
                     className={`boton min-h-[44px] h-auto max-w-full !whitespace-normal py-2 text-left
                       ${ley20393 ? '!border-oro bg-oro/15 font-semibold' : ''}`}>
@@ -2425,6 +2639,7 @@ export default function CotizacionDialogo({
                     </span>
                   </button>
                   <AyudaCorta tema="ley20393" />
+                  </div>
 
                   <label className="block">
                     <span className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-hueso/60">
@@ -2438,11 +2653,17 @@ export default function CotizacionDialogo({
                   {/* **Cambios de fecha y cancelación** (2026-11-11): lo que
                       se negocia con el cliente. En blanco rige Configuración.
                       El contrato lo imprime y *Cancelar evento* lo aplica. */}
-                  <div className="rounded-lg border border-ambar/40 bg-ambar/5 p-3">
-                    <p className="mb-2 text-[14px] font-bold uppercase tracking-wide text-ambar-texto">
+                  <div className="rounded-lg border border-ambar/40 bg-ambar/5 p-3 lg:px-3 lg:py-2">
+                    <p className="mb-2 flex items-center text-[14px] font-bold uppercase tracking-wide text-ambar-texto lg:mb-1">
                       Cambios de fecha y cancelación
+                      {/* En el computador se lee en la frase y los tres números se
+                          abren con *Cambiar* (ver `condAbiertas`). */}
+                      <button type="button" aria-expanded={cancelAbierto} onClick={() => setCancelAbierto(!cancelAbierto)}
+                        className="boton ml-auto hidden font-medium normal-case tracking-normal text-hueso lg:inline-flex">
+                        {cancelAbierto ? '✓ Listo' : '✎ Cambiar'}
+                      </button>
                     </p>
-                    <div className="flex flex-wrap items-end gap-3">
+                    <div className={`flex flex-wrap items-end gap-3 ${cancelAbierto ? '' : 'lg:hidden'}`}>
                       {([
                         ['Cambios de fecha', cambiosTxt, setCambiosTxt, 10, datos.contrato?.tranquilidad?.cambiosFecha ?? 2, 'cambiosFecha'],
                         ['Cancela hasta, días antes', cancelTxt, setCancelTxt, 365, datos.contrato?.tranquilidad?.cancelacionDias ?? 60, 'cancelacionDias'],
@@ -2523,28 +2744,15 @@ export default function CotizacionDialogo({
             </fieldset>
 
             {p && !cancelada && hitoContrato}
+            </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3">
+            {/* En el computador esto va en el pie, junto a *volver*. */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3 lg:hidden">
               {!cancelada && (autoActivo
                 ? <AvisoGuardado estado={auto.estado} error={auto.error} onReintentar={() => void auto.reintentar()} />
                 : <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />)}
               <span className="flex-1" />
-              {ganada && !cancelada && puedeEditar && (
-                <span className="inline-flex items-center">
-                  <button type="button" disabled={guardando} onClick={() => setCorrigiendo(true)}
-                    className="boton">Corregir la ganada</button>
-                  <AyudaCorta tema="corregirGanada" />
-                </span>
-              )}
-              {ganada && !cancelada && puedeEditar && (
-                <span className="inline-flex items-center">
-                  <button type="button" disabled={guardando} onClick={() => setCancelando(true)}
-                    className="boton hover:!border-rojo-fuerte hover:text-rojo-texto">
-                    Cancelar evento
-                  </button>
-                  <AyudaCorta tema="cancelarEvento" />
-                </span>
-              )}
+              {secundariosContrato}
             </div>
           </div>
         )}
@@ -2558,13 +2766,22 @@ export default function CotizacionDialogo({
             : !p ? 'Al seguir, se crea la cotización.'
             : estado === ESTADO_PRESUPUESTO.candidato ? 'Al seguir, deja de ser candidato y pasa a borrador.'
             : ''}
+          medio={paso === 3 ? avisoMenus
+            : paso === 4 ? <>
+                {!cancelada && !autoActivo && <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />}
+                {secundarios}
+              </> : null}
           onVolver={() => void irA(paso - 1)} onSeguir={() => void irA(paso + 1)} />
       )}
       {paso === 5 && (
-        <div className="mt-4 flex border-t border-hueso/10 pt-3">
-          <button type="button" className="boton min-h-[48px]" onClick={() => void irA(4)}>
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-hueso/10 pt-3 lg:mt-2 lg:pt-2">
+          <button type="button" className="boton min-h-[48px] lg:min-h-[44px]" onClick={() => void irA(4)}>
             ← 4 · {PASOS[3]}
           </button>
+          <div className="hidden min-w-0 flex-wrap items-center gap-2 lg:ml-2 lg:flex">
+            {!cancelada && !autoActivo && <BotonGuardar sucio={sucio} guardando={guardando} onClick={() => void guardar()} />}
+            {secundariosContrato}
+          </div>
         </div>
       )}
 
@@ -2734,26 +2951,35 @@ export default function CotizacionDialogo({
  *   pasar de Evento a Productos guarda (`irA()`), y eso se dice antes.
  * - **A la izquierda, volver**, delineado.
  */
-function PieDePaso({ paso, guardando, puede, porQueNo, aviso, onVolver, onSeguir }: {
+function PieDePaso({ paso, guardando, puede, porQueNo, aviso, medio, onVolver, onSeguir }: {
   paso: number; guardando: boolean; puede: boolean; porQueNo: string; aviso: string;
+  /** Lo que va en el pie **solo en el computador**, entre *volver* y *seguir*. */
+  medio?: React.ReactNode;
   onVolver: () => void; onSeguir: () => void;
 }) {
   return (
-    <div className="mt-4 border-t border-hueso/10 pt-3">
+    <div className="mt-4 border-t border-hueso/10 pt-3 lg:mt-2 lg:pt-2">
       <div className="flex flex-wrap items-center gap-2">
         {paso > 1 && (
-          <button type="button" className="boton min-h-[48px]" onClick={onVolver}>
+          <button type="button" className="boton min-h-[48px] lg:min-h-[44px]" onClick={onVolver}>
             ← {paso - 1} · {PASOS[paso - 2]}
           </button>
         )}
+        {medio && <div className="hidden min-w-0 flex-wrap items-center gap-2 lg:ml-2 lg:flex">{medio}</div>}
         <span className="flex-1" />
+        {/* En el computador, la frase va en la fila, antes del botón. */}
+        {(aviso || !puede) && (
+          <span className={`hidden text-[14px] lg:inline ${puede ? 'text-hueso/70' : 'font-semibold text-ambar-texto'}`}>
+            {puede ? aviso : porQueNo}
+          </span>
+        )}
         <button type="button" disabled={guardando || !puede} onClick={onSeguir}
-          className="boton boton-relleno min-h-[52px] px-5 text-[16px] disabled:opacity-50">
+          className="boton boton-relleno min-h-[52px] px-5 text-[16px] disabled:opacity-50 lg:min-h-[44px]">
           {guardando ? 'Guardando…' : <>Ir al paso {paso + 1}: {PASOS[paso]} →</>}
         </button>
       </div>
       {(aviso || !puede) && (
-        <p className={`mt-2 text-right text-[14px] ${puede ? 'text-hueso/70' : 'font-semibold text-ambar-texto'}`}>
+        <p className={`mt-2 text-right text-[14px] lg:hidden ${puede ? 'text-hueso/70' : 'font-semibold text-ambar-texto'}`}>
           {puede ? aviso : porQueNo}
         </p>
       )}
@@ -2775,15 +3001,19 @@ const TONOS = {
   ambar: 'border-ambar/45 bg-ambar/[0.07] text-ambar-texto',
   neutro: 'border-hueso/15 bg-panel text-hueso/80'
 } as const;
-function Seccion({ tono, icono, titulo, ayuda, children }: {
-  tono: keyof typeof TONOS; icono: string; titulo: string; ayuda?: string; children: React.ReactNode;
+function Seccion({ tono, icono, titulo, ayuda, ayudaPc, children }: {
+  tono: keyof typeof TONOS; icono: string; titulo: string; ayuda?: string;
+  /** Un `?` que va en el título solo en el computador (en el celular está junto a su campo). */
+  ayudaPc?: string;
+  children: React.ReactNode;
 }) {
   const [borde, fondo, texto] = TONOS[tono].split(' ');
   return (
-    <section className={`space-y-4 rounded-xl border-2 ${borde} ${fondo} p-4`}>
+    <section className={`space-y-4 rounded-xl border-2 ${borde} ${fondo} p-4 lg:space-y-1.5 lg:p-3`}>
       <h3 className={`flex items-center text-[15px] font-bold uppercase tracking-wide ${texto}`}>
         <span aria-hidden className="mr-2 text-[18px]">{icono}</span>{titulo}
         {ayuda && <AyudaCorta tema={ayuda} />}
+        {ayudaPc && <span className="hidden lg:inline"><AyudaCorta tema={ayudaPc} /></span>}
       </h3>
       {children}
     </section>
@@ -2798,11 +3028,11 @@ function Hito({ tono, titulo, bajada, children }: {
 }) {
   const [borde, fondo, texto] = TONOS[tono].split(' ');
   return (
-    <div className={`space-y-3 rounded-2xl border-2 ${borde} ${fondo} p-4`}>
+    <div className={`space-y-3 rounded-2xl border-2 ${borde} ${fondo} p-4 lg:space-y-2 lg:p-3`}>
       <div>
         <p className="text-[13px] font-semibold uppercase tracking-widest text-hueso/60">Próximo paso</p>
-        <p className={`text-[22px] font-extrabold leading-tight ${texto}`}>{titulo}</p>
-        {bajada && <p className="mt-1 text-[15px] text-hueso/80">{bajada}</p>}
+        <p className={`text-[22px] font-extrabold leading-tight lg:text-[19px] ${texto}`}>{titulo}</p>
+        {bajada && <p className="mt-1 text-[15px] text-hueso/80 lg:text-[14px]">{bajada}</p>}
       </div>
       {children}
     </div>
@@ -2816,7 +3046,7 @@ function Camino({ pasos }: { pasos: { nombre: string; listo: boolean }[] }) {
     <ol aria-label="Por dónde va" className="flex flex-wrap items-center gap-1.5">
       {pasos.map((x, i) => (
         <li key={x.nombre} className="flex items-center gap-1.5">
-          <span className={`rounded-full border-2 px-3 py-1 text-[14px] font-semibold ${x.listo
+          <span className={`rounded-full border-2 px-3 py-1 text-[14px] font-semibold lg:py-0.5 ${x.listo
             ? 'border-verde-fuerte bg-verde-fuerte text-tinta'
             : i === actual ? 'border-oro text-oro' : 'border-hueso/20 text-hueso/55'}`}>
             {x.listo ? '✓ ' : i === actual ? '● ' : ''}{x.nombre}
@@ -2836,7 +3066,7 @@ function BotonesMandar({ link, whatsapp, correo, onMandar, grande = false, ver =
   /** Qué dice el botón que abre el documento. */
   ver?: string;
 }) {
-  const clase = grande ? 'boton min-h-[56px] flex-1 text-[16px] font-semibold' : 'boton min-h-[44px]';
+  const clase = grande ? 'boton min-h-[56px] flex-1 text-[16px] font-semibold lg:min-h-[48px]' : 'boton min-h-[44px] lg:min-h-[40px]';
   return (
     <div className="flex flex-wrap gap-2">
       {whatsapp ? (

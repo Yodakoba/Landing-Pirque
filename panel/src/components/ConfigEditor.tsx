@@ -103,7 +103,7 @@ export default function ConfigEditor() {
     nombre: string, titulo: string, ayuda: string, entrada: React.ReactNode
   ) => (
     <div key={nombre} className="border-t border-hueso/10 py-4 first:border-t-0
-                                 sm:grid sm:grid-cols-[1fr_14rem] sm:gap-6">
+                                 sm:grid sm:grid-cols-[1fr_14rem] sm:gap-6 lg:py-2">
       {/* **La explicación de cada campo, en su `?`** (2026-11-21, regla *lo que
           explica va en su ?*): a la vista, el nombre del campo y su caja. */}
       <div className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export default function ConfigEditor() {
       id: 'mantencion', titulo: 'Mantención',
       para: 'Lo que se toca cuando algo parece faltar, no a diario.',
       cuerpo: (
-        <div className="py-4">
+        <div className="py-4 lg:col-span-2 lg:py-3">
           <div className="flex flex-wrap items-center gap-3">
             <button onClick={revisarShopify} disabled={revisando} className="boton min-h-[44px]">
               {revisando ? 'Revisando…' : 'Revisar Shopify ahora'}
@@ -336,23 +336,29 @@ export default function ConfigEditor() {
       </AvisoFijo>
 
       {/* El índice: un botón por sección, para no recorrer la página entera. */}
-      <nav aria-label="Secciones" className="mb-6 flex flex-wrap gap-2">
+      <nav aria-label="Secciones" className="mb-6 flex flex-wrap gap-2 lg:mb-4">
         {secciones.map((x) => (
           <a key={x.id} href={`#${x.id}`} className="boton tecla min-h-[40px]">{x.titulo}</a>
         ))}
       </nav>
 
-      <div className="space-y-6">
+      <div className="space-y-6 lg:space-y-4">
         {secciones.map((x) => (
           <section key={x.id} id={x.id} aria-labelledby={`t-${x.id}`}
-            className="scroll-mt-4 rounded-lg border border-hueso/15 bg-panel px-4 pt-4 sm:px-5">
+            className="scroll-mt-4 rounded-lg border border-hueso/15 bg-panel px-4 pt-4 sm:px-5 lg:pt-3">
             {/* Para qué sirve la sección, en su `?`. */}
             <h2 id={`t-${x.id}`} className="flex items-center gap-2 text-base font-bold uppercase tracking-wide text-oro">
               {x.titulo} <AyudaCorta titulo={x.titulo}>{x.para}</AyudaCorta>
             </h2>
             {/* Con vista gerencia, los campos se ven apagados: `fieldset
                 disabled` los apaga todos de una vez. */}
-            <fieldset disabled={soloMira} className="m-0 mt-2 min-w-0 border-0 border-t border-hueso/15 p-0">
+            {/* **En el computador, los campos van en dos columnas** (2026-11-21,
+                el computador más compacto): cada uno es un nombre y una caja
+                angosta, y a todo el ancho la página medía el doble. La segunda
+                columna parte sin línea arriba, como la primera. */}
+            <fieldset disabled={soloMira}
+              className="m-0 mt-2 min-w-0 border-0 border-t border-hueso/15 p-0
+                         lg:grid lg:grid-cols-2 lg:gap-x-10 lg:[&>*:nth-child(2)]:border-t-0">
               {x.cuerpo}
             </fieldset>
           </section>

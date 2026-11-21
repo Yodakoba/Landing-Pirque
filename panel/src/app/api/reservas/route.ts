@@ -180,7 +180,7 @@ export const POST = conLecturas([], async function POST(req: Request) {
     await anotar({ ...quien,
       accion: guarda.motivo ? 'Anotó una reserva en un día cerrado' : 'Anotó una reserva',
       detalle: `${b.nombre} · ${b.fecha} · ${b.personas} personas · ${b.menu ?? 'sin menú'}` +
-               (guarda.motivo ? ` · motivo: ${guarda.motivo}` : '') });
+               (guarda.motivo ? ` · cambios: ${guarda.motivo}` : '') });
 
     return NextResponse.json({ id });
   } catch (e) {

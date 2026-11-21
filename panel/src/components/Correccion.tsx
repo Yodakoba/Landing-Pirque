@@ -9,8 +9,8 @@
  * - `AvisoCierre`: arriba, dice que el día está cerrado, quién lo cerró y qué
  *   se puede hacer —corregirlo, o a quién pedírselo—. Mientras se corrige,
  *   dice eso.
- * - `PieCorreccion`: abajo, el motivo obligatorio y los dos botones,
- *   descartar o guardar.
+ * - `PieCorreccion`: abajo, la lista de lo que cambió, la casilla que la
+ *   confirma y los dos botones, descartar o guardar.
  *
  * La regla de fondo vive en `corregirDiaCerrado()` y la comprueba el
  * servidor; esto es solo cómo se ve.
@@ -26,8 +26,10 @@ export function AvisoCierre({ cierre, puedeCorregir, corrigiendo, onCorregir }: 
 }) {
   if (corrigiendo) {
     return (
+      // En el computador lo dice el pie de la corrección, que está a la vista
+      // en la misma pantalla: una fila menos.
       <p className="mt-3 rounded border border-ambar/60 bg-ambar/10 px-3 py-2
-                    text-sm text-ambar-texto">
+                    text-sm text-ambar-texto lg:hidden">
         <strong>Estás corrigiendo un día cerrado.</strong> Se guarda con
         <em> Guardar corrección</em>.
       </p>
@@ -55,48 +57,96 @@ export function AvisoCierre({ cierre, puedeCorregir, corrigiendo, onCorregir }: 
 }
 
 /**
- * El pie mientras se corrige. *Guardar corrección* es el único relleno, y
- * se apaga sin motivo: el motivo es lo que se va a preguntar un mes
- * después, sobre todo si ese día ya se pagó, y queda en la bitácora.
+ * El pie mientras se corrige: **la lista de lo que cambió, una casilla para
+ * confirmarla y guardar** (2026-11-21, lo pidió el cliente: *"sobra este
+ * motivo de la corrección… haz una casilla, confirmar, y luego la lista de
+ * los cambios que aplicaste. Y luego guardar"*).
+ *
+ * Antes pedía escribir un motivo. Cada cambio ya trae su porqué —un ajuste
+ * lleva su motivo y cómo se pagó—, así que la lista la arma el panel
+ * (`lib/correccion.ts`) y es eso lo que queda en la bitácora, a nombre de
+ * quien corrigió. *Guardar corrección* es el único relleno y se apaga hasta
+ * que haya algún cambio y la casilla esté marcada. Si después de marcarla
+ * se cambia algo más, la casilla se suelta sola: lo confirmado era otra
+ * lista.
  */
 export function PieCorreccion({
-  motivo, onMotivo, onCancelar, onGuardar, guardando, porQueNo
+  cambios, confirmado, onConfirmado, onCancelar, onGuardar, guardando, porQueNo,
+  guardarDice = 'Guardar corrección', guardandoDice = 'Guardando…', modo = 'fila'
 }: {
-  motivo: string;
-  onMotivo: (m: string) => void;
+  /** Lo que cambió respecto del día como estaba cerrado, con palabras. */
+  cambios: string[];
+  confirmado: boolean;
+  onConfirmado: (v: boolean) => void;
   onCancelar: () => void;
   onGuardar: () => void;
   guardando: boolean;
   /** Otro motivo para no poder guardar todavía, dicho en pantalla. */
   porQueNo?: string;
+  /** Lo que dice el botón relleno: *Borrar la reserva* al borrar una de un día cerrado. */
+  guardarDice?: string;
+  guardandoDice?: string;
+  /**
+   * **Cómo se acomoda en el computador**, según el ancho de su ventana (en el
+   * celular va siempre igual: la lista, la casilla y los botones, apilados).
+   * - `fila` —la ventana del equipo, que es ancha—: la lista a la izquierda y
+   *   la casilla con los botones a la derecha, en una fila.
+   * - `dosFilas` —el formulario de una reserva—: la lista arriba, en dos
+   *   columnas, y debajo la casilla y los botones en una fila. En una sola
+   *   fila la lista quedaba en una columna de doscientos pixeles.
+   * - `apilado` —una ventana angosta, como borrar una reserva—: como en el
+   *   celular.
+   */
+  modo?: 'fila' | 'dosFilas' | 'apilado';
 }) {
-  const sinMotivo = !motivo.trim();
+  const sinCambios = cambios.length === 0;
+  const fila = modo === 'fila', dos = modo === 'dosFilas', ancho = fila || dos;
   return (
-    <div className="mt-4 rounded border border-ambar/50 p-3">
-      <label className="block text-[13px] font-semibold text-hueso/70">
-        Motivo de la corrección
-        <input value={motivo} onChange={(e) => onMotivo(e.target.value)}
-          placeholder="Ej.: faltó anotar la propina, Juan sí vino"
-          className="mt-1 w-full rounded border border-hueso/20 bg-tinta px-2 py-2
-                     text-sm focus:border-oro focus:outline-none" />
-      </label>
-      <div className="mt-3 flex flex-nowrap items-center gap-2">
-        <span className="flex-1" />
-        <button onClick={onCancelar} disabled={guardando} className="boton whitespace-nowrap">
-          Cancelar<span className="hidden sm:inline"> corrección</span>
-        </button>
-        <button onClick={onGuardar} disabled={guardando || sinMotivo || !!porQueNo}
-          className="boton boton-relleno boton-hito whitespace-nowrap">
-          {guardando ? 'Guardando…' : 'Guardar corrección'}
-        </button>
-      </div>
-      {(sinMotivo || porQueNo) && (
-        <p className="mt-2 text-[13px] text-hueso/60">
-          {sinMotivo
-            ? 'Para guardar, escribe el motivo: queda en la bitácora con tu nombre.'
-            : porQueNo}
+    <div className={`mt-4 rounded border border-ambar/50 p-3 ${
+      ancho ? 'lg:mt-2 lg:bg-ambar/[0.06] lg:px-3 lg:py-2' : ''} ${fila ? 'lg:flex lg:items-center lg:gap-4' : ''}`}>
+      <div className={`min-w-0 ${fila ? 'lg:flex-1' : ''}`}>
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-hueso/70">
+          {ancho && <span className="hidden text-ambar-texto lg:inline">Estás corrigiendo un día cerrado · </span>}
+          Lo que cambia<span className={ancho ? 'lg:hidden' : ''}> en este día cerrado</span>
         </p>
-      )}
+        {sinCambios ? (
+          <p className="mt-1 text-[14px] text-hueso/60">Todavía no cambiaste nada.</p>
+        ) : (
+          <ul className={`mt-1 list-disc space-y-0.5 pl-5 text-[14px] ${
+            ancho && cambios.length > 1 ? 'lg:columns-2 lg:gap-x-8' : ''}`}>
+            {cambios.map((c, i) => <li key={`${i}-${c}`} className="break-inside-avoid">{c}</li>)}
+          </ul>
+        )}
+      </div>
+      <div className={fila ? 'lg:shrink-0' : dos ? 'lg:mt-2 lg:flex lg:items-center lg:justify-end lg:gap-3' : ''}>
+        <div className={ancho ? 'lg:flex lg:items-center lg:gap-2' : ''}>
+        <label className={`mt-3 flex min-h-[44px] items-center gap-2.5 rounded-lg border-2 px-3 text-[15px]
+                           font-semibold ${ancho ? 'lg:mt-0' : ''} ${sinCambios ? 'border-hueso/15 text-hueso/45'
+            : confirmado ? 'cursor-pointer border-verde-fuerte bg-verde/10 text-verde-texto'
+            : 'cursor-pointer border-ambar-fuerte/70 text-hueso'}`}>
+          <input type="checkbox" checked={confirmado} disabled={sinCambios || guardando}
+            onChange={(e) => onConfirmado(e.target.checked)}
+            className="h-5 w-5 shrink-0 accent-[rgb(var(--verde-fuerte))]" />
+          Confirmo {cambios.length === 1 ? 'este cambio' : 'estos cambios'}
+        </label>
+        <div className={`mt-3 flex flex-nowrap items-center gap-2 ${ancho ? 'lg:mt-0' : ''}`}>
+          <span className="flex-1" />
+          <button onClick={onCancelar} disabled={guardando} className="boton whitespace-nowrap">
+            Cancelar{guardarDice === 'Guardar corrección' && <span className="hidden sm:inline"> corrección</span>}
+          </button>
+          <button onClick={onGuardar} disabled={guardando || sinCambios || !confirmado || !!porQueNo}
+            className="boton boton-relleno boton-hito whitespace-nowrap">
+            {guardando ? guardandoDice : guardarDice}
+          </button>
+        </div>
+        </div>
+        {(porQueNo || (!sinCambios && !confirmado)) && (
+          <p className={`mt-2 text-[13px] text-hueso/60 ${fila ? 'lg:mt-1 lg:text-right'
+            : dos ? 'lg:order-first lg:mt-0 lg:min-w-0 lg:flex-1' : ''}`}>
+            {porQueNo ?? `Marca la casilla para ${guardarDice === 'Guardar corrección' ? 'guardar' : 'seguir'}: queda en la bitácora con tu nombre.`}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

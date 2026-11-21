@@ -20,6 +20,12 @@ import type { ReactNode } from 'react';
 import type { AvisoCerrable } from '@/lib/avisos';
 import { usarAvisoCerrable } from './usarAvisoCerrable';
 
+/*
+ * **En el computador el aviso es más ancho y más bajo** (2026-11-21, el
+ * computador más compacto): hasta 60rem —los que piden `max-w-2xl` se
+ * partían en tres o cuatro renglones con media pantalla libre al lado— y con
+ * un poco menos de relleno. El ✕ sigue en 36px.
+ */
 export default function AvisoFijo({ clave, className = '', children, delServidor }: {
   clave: AvisoCerrable;
   className?: string;
@@ -31,8 +37,8 @@ export default function AvisoFijo({ clave, className = '', children, delServidor
   if (leido) return null;
   return (
     <div role="note"
-      className={`flex items-start gap-2 rounded-xl border border-hueso/15 bg-hueso/[0.03] py-1.5 pl-3 pr-1.5 ${className}`}>
-      <div className="min-w-0 flex-1 py-2 text-[14px] leading-snug text-hueso/75">{children}</div>
+      className={`flex items-start gap-2 rounded-xl border border-hueso/15 bg-hueso/[0.03] py-1.5 pl-3 pr-1.5 lg:max-w-[60rem] lg:py-1 ${className}`}>
+      <div className="min-w-0 flex-1 py-2 text-[14px] leading-snug text-hueso/75 lg:py-1.5">{children}</div>
       <button type="button" onClick={() => void cerrar()}
         aria-label="Cerrar este aviso: ya lo leí, no mostrarlo más" title="Ya lo leí: no mostrar más"
         className="tecla flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2

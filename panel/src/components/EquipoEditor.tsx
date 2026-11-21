@@ -15,12 +15,14 @@
  * que el panel diera consejos que nadie dio.
  */
 import AvisoFijo from './AvisoFijo';
+import ElegirPuesto from './ElegirPuesto';
 import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import BotonGuardar from './BotonGuardar';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { avisar } from './AvisoFlotante';
 import AyudaCorta from './AyudaCorta';
+import { Pastilla } from './Pastilla';
 import MostrarDesactivados from './MostrarDesactivados';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
@@ -487,7 +489,10 @@ export default function EquipoEditor() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+      {/* En el computador, el título y *Ver el mes completo* en una línea; el
+          aviso, debajo (2026-11-21, el computador más compacto). */}
+      <div className="lg:flex lg:flex-wrap lg:items-center lg:gap-x-3">
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide lg:order-1">
         Equipo<Ayuda tema="equipo" />
       </h1>
       {/* **Dos frases y un link** (2026-11-01, lo pidió el cliente: *"los
@@ -504,13 +509,14 @@ export default function EquipoEditor() {
           quien de verdad tiene ese bloque: el administrador y quien paga
           (permiso `links`). Al encargado no se le muestra, porque
           prometerle algo que no va a encontrar es peor que no decir nada. */}
-      <AvisoFijo clave="equipo-intro" className="mb-4 max-w-2xl">
+      <AvisoFijo clave="equipo-intro" className="mb-4 max-w-2xl lg:order-3 lg:mb-3 lg:basis-full">
         Acá puedes agregar y editar trabajadores.
         {verLinks && <> Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.</>}
       </AvisoFijo>
-      <p className="mb-6">
+      <p className="mb-6 lg:order-2 lg:mb-1 lg:ml-auto">
         <a href="/turnos" className="tecla boton">Ver el mes completo</a>
       </p>
+      </div>
 
       {sinFicha.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
@@ -650,10 +656,7 @@ export default function EquipoEditor() {
                       cerrada**: adentro ya lo avisa `DatosBancarios`, pero
                       cerrada es donde se mira la lista antes de pagar. */}
                   {verSueldos && t.nombre.trim() && !sePuedeTransferir(t.banco) && (
-                    <span className="rounded-full border border-ambar/50 px-2 py-0.5
-                                     text-[13px] font-semibold text-ambar-texto">
-                      falta su cuenta
-                    </span>
+                    <Pastilla tipo="falta">falta su cuenta</Pastilla>
                   )}
                 </button>
 
@@ -705,36 +708,36 @@ export default function EquipoEditor() {
                 <div className={`${CUERPO_ABIERTO} p-3`}>
                 <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
 
-                {/* Quién es, y cómo se entra a su link. */}
-                <div className="flex flex-wrap items-start gap-3">
-                  <Campo etiqueta="Nombre" ancho="w-56">
+                {/* Quién es, y cómo se entra a su link.
+
+                    **Toda la ficha, en la misma rejilla** (2026-11-21, regla
+                    *los formularios van alineados*): cada fila es el nombre
+                    de la sección en su columna —Datos, Link personal, Pago,
+                    Transferencia— y sus campos en las mismas columnas que
+                    los de las otras filas (`fila-ficha` y `rejilla-campos`,
+                    en `globals.css`). Antes cada campo traía su ancho y
+                    ninguna columna calzaba con la de arriba. */}
+                <div className="fila-ficha">
+                  <span className="rotulo-ficha">Datos</span>
+                  <div className="caja-campos"><div className="rejilla-campos">
+                  <Campo etiqueta="Nombre" ancho="campo-2">
                     <input type="text" value={nombreEscrito[i] ?? t.nombre} className={ENTRADA}
                       placeholder="Nombre y apellido"
                       aria-label={`Nombre de la persona ${i + 1}`}
                       onChange={(e) => cambiarPersona(i, 'nombre', e.target.value)} />
                   </Campo>
-                  <Campo etiqueta="Teléfono" ancho="w-44">
+                  <Campo etiqueta="Teléfono">
                     <CampoTelefono valor={t.telefono} className={ENTRADA}
                       etiqueta={`Teléfono de ${t.nombre || 'esta persona'}`}
                       onCambio={(v) => cambiarPersona(i, 'telefono', v)} />
                   </Campo>
-                  <Campo etiqueta="Puesto habitual" ancho="w-44">
-                    {/* Un select y no texto libre: el puesto habitual solo
+                  <Campo etiqueta="Puesto habitual">
+                    {/* Una lista y no texto libre: el puesto habitual solo
                         preselecciona en el planificador, y si está escrito de
-                        otra forma no preselecciona nada. */}
-                    <select value={t.puesto} className={ENTRADA}
-                      aria-label={`Puesto habitual de ${t.nombre || 'esta persona'}`}
-                      onChange={(e) => cambiarPersona(i, 'puesto', e.target.value)}>
-                      <option value="">—</option>
-                      {puestos.map((p) => (
-                        <option key={p.nombre} value={p.nombre}>{p.nombre}</option>
-                      ))}
-                      {/* Si tiene uno que ya no está en la lista, igual se
-                          muestra: si no, guardar lo borraría sin avisar. */}
-                      {t.puesto && !puestos.some((p) => p.nombre === t.puesto) && (
-                        <option value={t.puesto}>{t.puesto} (ya no existe)</option>
-                      )}
-                    </select>
+                        otra forma no preselecciona nada. Es la misma pieza de
+                        la ficha que se abre desde el equipo del día. */}
+                    <ElegirPuesto valor={t.puesto} puestos={puestos.map((p) => p.nombre)} quien={t.nombre}
+                      className={ENTRADA} onCambio={(v) => cambiarPersona(i, 'puesto', v)} />
                   </Campo>
                   {/* **La casilla "Activo" se sacó de acá adentro** (2026-10-30):
                       con el botón *Desactivar* en la línea de la persona eran
@@ -742,14 +745,13 @@ export default function EquipoEditor() {
                       distinto peso. Uno de los dos tenía que irse, y el que
                       se queda es el que se ve sin abrir la ficha. */}
 
-                  <span className="flex-1" />
-
-                  <div className="flex flex-wrap items-center gap-3 self-center pt-4 text-[13px]">
+                  <div className="campo-2 flex min-h-[30px] flex-wrap items-center justify-end gap-3 self-end text-[13px]">
                     {guardarEnTarjeta(i)}
                     {/* Dar de baja vive **en la línea de la persona**, abierta
                         o cerrada: ver arriba. Acá adentro quedaban los dos
                         controles a dos centímetros y con el mismo peso. */}
                   </div>
+                  </div></div>
                 </div>
 
                 {/* **El link personal, con el peso que tiene** (2026-11-01, lo
@@ -775,15 +777,16 @@ export default function EquipoEditor() {
                     sin explicación. */}
                 {verLinks && (
                   <div className="mt-3 border-t border-hueso/10 pt-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {/* **El `?` va fuera del rótulo.** Adentro le comía 30px
-                          a la caja y "LINK PERSONAL" se partía en dos líneas
-                          mientras "PAGO" y "TRANSFERENCIA" iban en una. */}
-                      <span className="w-36 whitespace-nowrap text-[13px] font-semibold
-                                       uppercase tracking-widest text-hueso/60">
-                        Link personal
+                    <div className="fila-ficha sm:items-center">
+                      {/* **El `?` va con el rótulo, en su columna** (2026-11-21).
+                          Iba suelto, antes del botón, y corría los botones
+                          56px respecto de los campos de las otras filas. La
+                          columna mide 11rem para que *Link personal* y su `?`
+                          quepan en una línea. */}
+                      <span className="rotulo-ficha flex items-center whitespace-nowrap">
+                        Link personal<Ayuda tema="link" />
                       </span>
-                      <Ayuda tema="link" />
+                      <div className="flex flex-wrap items-center gap-3">
                       {!t.nombre.trim() ? (
                         <span className="text-[13px] text-hueso/55">
                           Ponle nombre y guarda para poder crearle su link.
@@ -838,6 +841,7 @@ export default function EquipoEditor() {
                           )}
                         </>
                       )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -846,10 +850,10 @@ export default function EquipoEditor() {
                 {verSueldos && (
                   <fieldset disabled={soloMira || soloSueldos}
                     className="m-0 mt-3 min-w-0 border-0 border-t border-hueso/10 p-0 pt-3">
-                    <div className="flex flex-wrap items-start gap-3">
-                      <span className="w-36 pt-4 text-[13px] font-semibold uppercase
-                                       tracking-widest text-hueso/60">Pago</span>
-                      <Campo etiqueta="Modalidad" ancho="w-48" ayuda="modalidad">
+                    <div className="fila-ficha">
+                      <span className="rotulo-ficha">Pago</span>
+                      <div className="caja-campos"><div className="rejilla-campos">
+                      <Campo etiqueta="Modalidad" ayuda="modalidad">
                         <select value={t.modalidad} className={ENTRADA}
                           aria-label={`Cómo se le paga a ${t.nombre || 'esta persona'}`}
                           onChange={(e) => cambiarPersona(i, 'modalidad', e.target.value)}>
@@ -857,24 +861,26 @@ export default function EquipoEditor() {
                           <option value={MODALIDAD.contratado}>Contratado</option>
                         </select>
                       </Campo>
-                      <Campo etiqueta="Jornada" ancho="w-32">
+                      <Campo etiqueta="Jornada">
                         {/* A un contratado no se le paga por jornada, así que
                             el campo no se deja escribir: un monto ahí no se
                             usaría en ninguna cuenta y haría creer que sí. */}
                         <input type="number" min={0} step={1000} className={ENTRADA}
                           value={esContratado(t.modalidad) ? '' : (t.pagoJornada || '')}
-                          placeholder={esContratado(t.modalidad) ? 'no aplica' : '—'}
+                          placeholder={esContratado(t.modalidad) ? 'sin jornada' : '—'}
                           disabled={esContratado(t.modalidad)}
                           aria-label={`Jornada de ${t.nombre || 'esta persona'}`}
                           onChange={(e) => cambiarPersona(i, 'pagoJornada', e.target.value)} />
                       </Campo>
-                      <Campo etiqueta="Hora extra" ancho="w-32">
+                      <Campo etiqueta="Hora extra">
                         <input type="number" min={0} step={500} className={ENTRADA}
                           value={t.valorHora || ''} placeholder="—"
                           aria-label={`Valor de la hora extra de ${t.nombre || 'esta persona'}`}
                           onChange={(e) => cambiarPersona(i, 'valorHora', e.target.value)} />
                       </Campo>
-                      <label className="flex items-center gap-2 self-center pt-4">
+                      {/* La casilla, a la altura de los campos de su fila. */}
+                      <div className="campo-2 flex min-h-[30px] items-center self-end">
+                      <label className="flex items-center gap-2">
                         <input type="checkbox" checked={t.propina}
                           className="h-4 w-4 accent-oro"
                           aria-label={`${t.nombre || 'Esta persona'} entra en el reparto de propina`}
@@ -883,7 +889,9 @@ export default function EquipoEditor() {
                           Entra en la propina
                         </span>
                       </label>
-                      <span className="self-center pt-4"><AyudaCorta tema="propinaFicha" /></span>
+                      <AyudaCorta tema="propinaFicha" />
+                      </div>
+                      </div></div>
                     </div>
                   </fieldset>
                 )}
@@ -892,14 +900,11 @@ export default function EquipoEditor() {
                 {verSueldos && (
                   <fieldset disabled={soloMira || soloSueldos}
                     className="m-0 mt-3 min-w-0 border-0 border-t border-hueso/10 p-0 pt-3">
-                    <div className="flex flex-wrap items-start gap-3">
-                      <span className="w-36 pt-4 text-[13px] font-semibold uppercase
-                                       tracking-widest text-hueso/60">Transferencia</span>
-                      <div className="min-w-[20rem] flex-1">
-                        <DatosBancarios
-                          banco={t.banco} nombre={t.nombre}
-                          onCambio={(b) => cambiarBanco(i, b)} />
-                      </div>
+                    <div className="fila-ficha">
+                      <span className="rotulo-ficha">Transferencia</span>
+                      <DatosBancarios
+                        banco={t.banco} nombre={t.nombre}
+                        onCambio={(b) => cambiarBanco(i, b)} />
                     </div>
                   </fieldset>
                 )}

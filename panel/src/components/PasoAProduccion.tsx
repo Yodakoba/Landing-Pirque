@@ -88,7 +88,7 @@ export default function PasoAProduccion() {
       </button>
 
       {abierta && (
-        <Dialogo titulo="Dejar la base en cero" ancho="max-w-2xl" onCerrar={() => setAbierta(false)}>
+        <Dialogo titulo="Dejar la base en cero" ancho="max-w-2xl lg:max-w-6xl" onCerrar={() => setAbierta(false)}>
           {!estado && !error && <p className="mt-3 text-[15px] text-hueso/70">Contando lo que hay en la planilla…</p>}
 
           {listo ? (
@@ -105,9 +105,14 @@ export default function PasoAProduccion() {
               </div>
             </div>
           ) : estado && (
-            <>
+            // **En el computador, dos columnas** (2026-11-21, regla *una tarjeta
+            // abierta cabe en una pantalla*): a la izquierda qué se borra y qué
+            // se conserva; a la derecha el aviso de Shopify y los dos pasos.
+            // Apilado medía 993px y el botón de borrar quedaba fuera de la
+            // pantalla. Las advertencias son las mismas, con las mismas palabras.
+            <div className="lg:grid lg:grid-flow-row-dense lg:grid-cols-[1fr_1fr] lg:items-start lg:gap-x-5">
               {(estado.tienda.desarrollo) && (
-                <div className="mt-3 rounded-xl border-2 border-ambar-fuerte bg-ambar/10 p-3">
+                <div className="mt-3 rounded-xl border-2 border-ambar-fuerte bg-ambar/10 p-3 lg:col-start-2">
                   <p className="text-[15px] font-bold text-ambar-texto">
                     ⚠ {estado.tienda.dominio
                       ? <>Shopify sigue en la tienda de desarrollo ({estado.tienda.dominio})</>
@@ -121,7 +126,7 @@ export default function PasoAProduccion() {
                 </div>
               )}
 
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:col-start-1 lg:row-span-4 lg:row-start-1">
                 <div className="rounded-xl border-2 border-rojo-fuerte/60 p-3">
                   <p className="text-[15px] font-bold text-rojo-texto">✕ Se borra</p>
                   <ul className="mt-2 space-y-1 text-[14px]">
@@ -154,7 +159,7 @@ export default function PasoAProduccion() {
                   </ul>
                 </div>
               </div>
-              <p className="mt-2 text-[14px] text-hueso/70">
+              <p className="mt-2 text-[14px] text-hueso/70 lg:col-start-2 lg:mt-3">
                 Las pestañas quedan con su encabezado: la planilla sigue sirviendo.{' '}
                 <strong className="text-hueso">Los días de la regla se vuelven a abrir solos</strong>
                 {' '}({estado.regla.dias} de los próximos {estado.regla.hasta} días, públicos y con cupo{' '}
@@ -162,7 +167,7 @@ export default function PasoAProduccion() {
                 desde la portada.
               </p>
 
-              <div className="mt-4 rounded-xl border-2 border-oro/50 p-3">
+              <div className="mt-4 rounded-xl border-2 border-oro/50 p-3 lg:col-start-2 lg:mt-3">
                 <p className="text-[15px] font-bold">1. Haz una copia de la planilla</p>
                 <p className="mt-1 text-[14px] text-hueso/75">
                   En la planilla: <strong>Archivo → Hacer una copia</strong>. Si algo sale mal, de ahí
@@ -179,14 +184,14 @@ export default function PasoAProduccion() {
                 </div>
               </div>
 
-              <label className="mt-3 block rounded-xl border-2 border-oro/50 p-3">
-                <span className="text-[15px] font-bold">2. Escribe {estado.palabra}</span>
+              <label className="mt-3 block rounded-xl border-2 border-oro/50 p-3 lg:col-start-2 lg:flex lg:items-center lg:gap-3">
+                <span className="shrink-0 text-[15px] font-bold">2. Escribe {estado.palabra}</span>
                 <input value={palabra} onChange={(e) => setPalabra(e.target.value)} autoComplete="off"
                   aria-label={`Escribe ${estado.palabra}`}
                   className="mt-2 block w-full max-w-xs min-h-[44px] rounded border border-hueso/20 bg-tinta px-3 py-2
-                             text-[16px] uppercase tracking-wide focus:border-oro focus:outline-none" />
+                             text-[16px] uppercase tracking-wide focus:border-oro focus:outline-none lg:mt-0" />
               </label>
-            </>
+            </div>
           )}
 
           {error && <p role="alert" className="mt-3 text-[15px] font-semibold text-rojo-texto">{error}</p>}

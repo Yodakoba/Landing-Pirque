@@ -399,28 +399,28 @@ export default function CotizacionesVista() {
          (`FechaDia`), lo reservado en grande con la misma barra (`BarraDia`)
          y el botón en un pie separado por una línea. Encima de eso, lo que es
          propio de Cotizaciones: las pastillas de lo cotizado. */
-      <div key={f} className={`flex h-full min-w-0 flex-col rounded border p-4 ${occ ? COLOR_TARJETA(occ) : 'border-hueso/15 bg-panel'}
+      <div key={f} className={`flex h-full min-w-0 flex-col rounded border p-4 lg:p-2.5 ${occ ? COLOR_TARJETA(occ) : 'border-hueso/15 bg-panel'}
         ${abiertaEsta ? 'ring-2 ring-oro' : ''} ${f === hoy ? MARCO_HOY : ''}`}>
         <button type="button" onClick={() => setDiaAbierto(abiertaEsta ? null : f)}
           aria-expanded={abiertaEsta}
-          className="tecla flex flex-1 flex-col items-stretch gap-3 rounded text-left">
-          <span className="flex w-full items-start justify-between gap-2">
+          className="tecla flex flex-1 flex-col items-stretch gap-3 rounded text-left lg:gap-1.5">
+          <span className="flex w-full items-start justify-between gap-2 lg:flex-wrap lg:items-center lg:gap-y-0.5">
             <FechaDia fecha={f} />
             {/* El punto y su palabra debajo, como en los demás calendarios. */}
-            {occ ? <PuntoDia d={occ} /> : <PuntoYPalabra {...palabra} />}
+            {occ ? <PuntoDia d={occ} enLinea /> : <PuntoYPalabra {...palabra} enLinea />}
           </span>
           {/* **Lo ya reservado**, como en Reservas: el número grande y la
               barra. Para saber antes de cotizar si el día está tomado. */}
           {occ && occ.capacidad > 0 && (
             <span className="block">
-              <span className="block text-[26px] font-bold leading-none">
+              <span className="block text-[26px] font-bold leading-none lg:text-[22px]">
                 <span className={occ.quedan <= 0 ? 'text-rojo-texto' : ''}>{occ.tomadas}</span>
                 <span className="text-hueso/45">/{occ.capacidad}</span>
                 <span className="ml-1.5 text-[13px] font-medium text-hueso/70">
                   reservadas{occ.quedan <= 0 ? ' · sin cupo' : ''}
                 </span>
               </span>
-              <BarraDia d={occ} className="mt-2.5" />
+              <BarraDia d={occ} className="mt-2.5 lg:mt-1.5" />
             </span>
           )}
           {/* **Todo lo cotizado en pastillas**, con la misma forma que la
@@ -441,7 +441,7 @@ export default function CotizacionesVista() {
           </span>
         </button>
         {!soloMira && (
-          <div className="mt-auto border-t border-hueso/10 pt-3">
+          <div className="mt-auto border-t border-hueso/10 pt-3 lg:pt-2">
             <button type="button" onClick={() => setAbierta({ p: null, fecha: f })}
               className="boton w-full min-h-[44px]">+ Cotizar este día</button>
           </div>
@@ -481,20 +481,27 @@ export default function CotizacionesVista() {
           cliente: le gusta que esté presente, pero ocupa mucho para estar
           siempre). Antes iba dentro de la banda, y al cerrarlo la banda
           quedaba y parecía que no se había cerrado. Ver `AvisoFijo`. */}
-      <AvisoFijo clave="cotizaciones-cupo" delServidor={datos.avisosLeidos} className="-mt-2 mb-4">
+      <AvisoFijo clave="cotizaciones-cupo" delServidor={datos.avisosLeidos} className="-mt-2 mb-4 lg:mb-3">
         Lo cotizado no ocupa cupo: recién al marcarla ganada se vuelve reserva.
       </AvisoFijo>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      {/* **En el computador, una sola fila**: *+ Cotizar*, los pendientes y
+          los filtros (2026-11-21, el computador más compacto: eran dos filas
+          con el centro vacío). El aviso de sobrecupo y la lista de un
+          pendiente abierto van debajo, a todo el ancho. En el celular, como
+          siempre: `lg:contents` deshace la caja de los botones solo desde
+          1024px. */}
+      <div className="lg:mb-3 lg:flex lg:flex-wrap lg:items-center lg:gap-2">
+      <div className="mb-4 flex flex-wrap gap-2 lg:contents">
         {!soloMira && (
           <button type="button" onClick={() => setAbierta({ p: null })}
-            className="boton boton-relleno min-h-[48px] px-5 text-[15px]">+ Cotizar</button>
+            className="boton boton-relleno min-h-[48px] px-5 text-[15px] lg:order-1 lg:min-h-[44px]">+ Cotizar</button>
         )}
-        <span className="flex-1" />
+        <span className="flex-1 lg:order-3" />
         {/* El mismo *Mías* de todo el panel (`BotonMias`, 2026-11-13). **En
             la Lista, el vendedor ve lo suyo** (2026-11-17): ahí no va. */}
         {!(vista === 'lista' && !veElEquipo(datos.rol)) && (
-          <div className="flex items-center gap-2" role="group" aria-label="De quién">
+          <div className="flex items-center gap-2 lg:order-4" role="group" aria-label="De quién">
             <BotonMias cuantas={agrupar(mias).length} elegido={soloMias} onClick={() => elegirDe('mias')} />
             <BotonTodos texto="De todos" cuantas={agrupar(datos.presupuestos).length} elegido={!soloMias}
               onClick={() => elegirDe('todos')} />
@@ -511,18 +518,18 @@ export default function CotizacionesVista() {
           ['lista', '📋 Lista']
         ] as const).map(([k, texto]) => (
           <button key={k} type="button" onClick={() => setVista(vista === k ? 'calendario' : k)} aria-pressed={vista === k}
-            className={`boton min-h-[48px] ${vista === k ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
+            className={`boton min-h-[48px] lg:order-4 lg:min-h-[44px] ${vista === k ? 'border-oro bg-oro/15 font-semibold' : ''}`}>
             {texto}
           </button>
         ))}
       </div>
 
-      <AvisoSobrecupo dias={datos.sobrecupo ?? []} />
+      <div className="lg:order-5 lg:basis-full"><AvisoSobrecupo dias={datos.sobrecupo ?? []} /></div>
       {/* **Los pendientes, en una fila de pastillas** (2026-11-13, lo pidió
           el cliente: los avisos apilados *"se anotan como lista Excel"* y
           empujaban el calendario). Una pastilla por tipo, en orden de
           urgencia —la plata primero—; se abre una lista a la vez. */}
-      <Pendientes titulo="Tus pendientes" items={[
+      <Pendientes enFila titulo="Tus pendientes" items={[
         ...(porDevolver.length ? [{
           clave: 'devolver', icono: '↩', tono: 'rojo' as const,
           texto: porDevolver.length === 1 ? '1 devolución por hacer' : `${porDevolver.length} devoluciones por hacer`,
@@ -589,9 +596,10 @@ export default function CotizacionesVista() {
             <FilaPendiente key={p.id} quien={p.cliente} dato={`N° ${folioDe(p)}`} onAbrir={() => setAbierta({ p })} />))}</div>
         }] : [])
       ]} />
+      </div>
 
       {vista === 'calendario' && (
-        <div className="space-y-4">
+        <div className="space-y-4 lg:space-y-3">
           {cajas.length === 0 && (
             <p className="rounded border border-dashed border-hueso/20 p-5 text-[15px] text-hueso/60">
               No hay días abiertos ni cotizaciones en estas semanas. Usa “+ Cotizar” para elegir cualquier fecha.
@@ -599,14 +607,14 @@ export default function CotizacionesVista() {
           )}
           {cajas.map((c) => (
             /* La caja de la semana, igual que en Reservas. */
-            <div key={c.lunes} className={`rounded-lg border p-3 ${TONO.rosa.caja}`}>
-              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hueso/10 pb-2">
+            <div key={c.lunes} className={`rounded-lg border p-3 lg:p-2 ${TONO.rosa.caja}`}>
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hueso/10 pb-2 lg:mb-2 lg:pb-1.5">
                 <strong className="text-sm">
                   {rangoEnPalabras(Array.from({ length: 7 }, (_, d) => sumarDias(c.lunes, d)))}
                 </strong>
                 {c.lunes === inicio && <MarcaAhora>esta semana</MarcaAhora>}
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2 xl:grid-cols-5">
                 {c.dias.map(tarjeta)}
               </div>
               {franjaDelDia(c.dias)}

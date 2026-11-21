@@ -160,7 +160,7 @@ export default function MenusEditor() {
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
         Productos<Ayuda tema="menus" />
       </h1>
-      <AvisoFijo clave="menus-intro" className="mb-6 max-w-2xl">
+      <AvisoFijo clave="menus-intro" className="mb-6 max-w-2xl lg:mb-4">
         Todo lo que se vende y se cotiza. <strong>El nombre de un menú tiene que
         ser exactamente el mismo acá y en Shopify</strong>: solo se perdonan
         mayúsculas, tildes y espacios de sobra.
@@ -259,7 +259,14 @@ export default function MenusEditor() {
 
             {abierta === i && (
               <fieldset disabled={soloMira}
-                className={`m-0 min-w-0 space-y-5 border-0 ${CUERPO_ABIERTO} p-4`}>
+                className={`m-0 min-w-0 space-y-5 border-0 ${CUERPO_ABIERTO} p-4 lg:space-y-3 lg:p-3`}>
+                {/* **En el computador la ficha entra en la pantalla** (2026-11-21,
+                    regla *una tarjeta abierta cabe en una pantalla*): el nombre y
+                    *Qué es* en una fila, los tres interruptores en otra, y los
+                    precios de la reserva al lado de los de la cotización.
+                    Apilada medía 788px. */}
+                <div className="space-y-5 lg:flex lg:items-start lg:gap-8 lg:space-y-0">
+                <div className="space-y-2 lg:w-[28rem] lg:shrink-0">
                 <Campo etiqueta="Nombre" ancho="w-full sm:max-w-md">
                   <input type="text" value={m.nombre} className={ENTRADA}
                     placeholder="Si es un menú: como se llama en Shopify"
@@ -269,7 +276,7 @@ export default function MenusEditor() {
                 {/* Renombrar uno usado sería quitarlo: lo vendido y lo
                     cotizado guardan el nombre que tenía. */}
                 {usados.has(normalizar(m.nombre)) && (
-                  <p className="-mt-3 flex items-center text-[13px] text-hueso/70">
+                  <p className="flex items-center text-[13px] text-hueso/70">
                     🔒 Ya se vendió o se cotizó: el nombre no se cambia.
                     <AyudaCorta titulo="El nombre no se cambia">
                       Lo vendido y lo cotizado guardan el nombre que tenía. Si
@@ -277,9 +284,10 @@ export default function MenusEditor() {
                     </AyudaCorta>
                   </p>
                 )}
+                </div>
 
                 <div>
-                  <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                  <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:mb-1">
                     Qué es
                     <AyudaCorta titulo="Qué es">
                       Solo los de tipo Menú suman invitados. La once o el show no son gente nueva.
@@ -288,8 +296,9 @@ export default function MenusEditor() {
                   <Elegir etiqueta="Tipo de producto" valores={Object.values(TIPO_PRODUCTO)}
                     valor={m.tipo} onElegir={(v) => cambiar(i, { tipo: v })} />
                 </div>
+                </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <Interruptor encendido={m.sitioPublico}
                     onCambio={(b) => cambiar(i, { sitioPublico: b })}
                     texto="Se vende en el sitio y en las reservas"
@@ -307,14 +316,16 @@ export default function MenusEditor() {
                     ayuda="Sus líneas ganan los puntos de bono de la ficha de cada vendedor." />
                 </div>
 
+                {(m.sitioPublico || m.cotizacion) && (
+                <div className="space-y-5 lg:flex lg:items-start lg:gap-8 lg:space-y-0">
                 {m.sitioPublico && (
-                  <div className="flex flex-wrap items-end gap-3">
-                    <Campo etiqueta="Reserva: pagando en línea" ancho="w-48">
+                  <div className="flex flex-wrap items-end gap-3 lg:shrink-0">
+                    <Campo etiqueta="Reserva: pagando en línea" ancho="w-full sm:w-[17rem] lg:w-64">
                       <input type="number" min={0} step={1000} className={ENTRADA}
                         value={m.precioEnLinea || ''} placeholder="sin poner"
                         onChange={(e) => cambiar(i, { precioEnLinea: aMonto(e.target.value) })} />
                     </Campo>
-                    <Campo etiqueta="Reserva: pagando en el local" ancho="w-48">
+                    <Campo etiqueta="Reserva: pagando en el local" ancho="w-full sm:w-[17rem] lg:w-64">
                       <input type="number" min={0} step={1000} className={ENTRADA}
                         value={m.precioEnLocal || ''} placeholder="sin poner"
                         onChange={(e) => cambiar(i, { precioEnLocal: aMonto(e.target.value) })} />
@@ -324,7 +335,7 @@ export default function MenusEditor() {
                 )}
 
                 {m.cotizacion && (
-                  <div className="space-y-4 rounded border border-rosa/30 p-3">
+                  <div className="space-y-4 rounded border border-rosa/30 p-3 lg:min-w-0 lg:flex-1 lg:space-y-1.5 lg:px-3 lg:py-2">
                     <p className="flex items-center text-[13px] font-semibold uppercase tracking-wide text-rosa-texto">
                       En una cotización
                       <AyudaCorta titulo="En una cotización">
@@ -332,37 +343,41 @@ export default function MenusEditor() {
                         aplicarle un descuento.
                       </AyudaCorta>
                     </p>
+                    <div className="space-y-4 lg:flex lg:flex-wrap lg:items-end lg:gap-x-5 lg:gap-y-2 lg:space-y-0">
                     <div>
-                      <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                      <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:mb-1">
                         Cómo se cobra <AyudaCorta tema="cobro" />
                       </p>
                       <Elegir etiqueta="Cómo se cobra" valores={Object.values(COBRO)}
                         valor={m.cobro} onElegir={(v) => cambiar(i, { cobro: v })} />
                     </div>
-                    <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-wrap items-end gap-4 lg:contents">
                       <Campo etiqueta={`Precio que propone${m.cobro === COBRO.porPersona
-                        ? ' (por persona)' : ''}`} ancho="w-48">
+                        ? ' (por persona)' : ''}`} ancho="w-full sm:w-[19rem]">
                         <input type="text" inputMode="decimal" className={ENTRADA}
                           defaultValue={m.precioCotizacion ? String(m.precioCotizacion).replace('.', ',') : ''}
                           placeholder={m.moneda === MONEDA.uf ? 'ej. 2,61' : 'ej. 45000'}
                           onBlur={(e) => cambiar(i, { precioCotizacion: aPrecio(e.target.value) })} />
                       </Campo>
                       <div>
-                        <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                        <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:mb-1">
                           Moneda <AyudaCorta tema="moneda" />
                         </p>
                         <Elegir etiqueta="Moneda" valores={Object.values(MONEDA)}
                           valor={m.moneda} onElegir={(v) => cambiar(i, { moneda: v })} />
                       </div>
                       <div>
-                        <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
+                        <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60 lg:mb-1">
                           El precio <AyudaCorta tema="ivaProducto" />
                         </p>
                         <Elegir etiqueta="IVA del precio" valores={Object.values(IVA_PRECIO)}
                           valor={m.iva} onElegir={(v) => cambiar(i, { iva: v })} />
                       </div>
                     </div>
+                    </div>
                   </div>
+                )}
+                </div>
                 )}
 
                 {sucio && <div className="flex justify-end">{botonGuardar}</div>}

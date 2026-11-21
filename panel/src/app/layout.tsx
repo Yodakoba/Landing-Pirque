@@ -55,7 +55,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* El rol y la vista gerencia, para que cada pantalla sepa qué se
             mira y qué se toca (ver `usarSoloMira()`). */}
         <SesionCliente rol={sesion?.rol ?? ''} gerencia={sesion?.gerencia === true} avisos={sesion?.avisos ?? []}>
-          <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+          {/* **En el computador, la página parte más arriba** (2026-11-21):
+              16px en vez de 32 bajo la barra, solo desde 1024px y solo en las
+              pantallas del panel —las que llevan la barra entera, que se
+              marca con `data-marco="panel"` en `Cabecera`—. El `<main>` es
+              hermano de esa barra, y por eso alcanza con `peer`. */}
+          <main className="mx-auto max-w-7xl px-5 py-8 lg:peer-data-[marco=panel]:pt-4">{children}</main>
         </SesionCliente>
         <AvisoFlotante />
       </body>
