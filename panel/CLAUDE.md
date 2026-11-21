@@ -18,6 +18,22 @@ revisan antes de cada cambio en esta carpeta.
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
   desplegables, una frase que dice qué pasa al seguir.
+- **Una tarjeta abierta cabe en una pantalla** (regla del cliente,
+  2026-11-21: *"ojalá que una tarjeta siempre cae en una página… en muchos
+  casos sí se puede seguir con la misma regla y a la vez que siempre se ve
+  todo en una pantalla"*). Al diseñar una tarjeta, una ventana o una línea
+  que se abre, se mide con Playwright que entre entera en un notebook
+  —1280×650, lo que queda con la barra del navegador— y, donde se pueda, en
+  un teléfono de 393×740: menos aire, el nombre al lado del campo, lo
+  secundario plegado (como un ajuste guardado) o en su `?`. **Si no cabe sin
+  romper la regla de arriba** —botones bajo 36px, letra bajo 13px—, gana la
+  regla de arriba, y el PR dice que no cupo y cuánto mide.
+- **Lo que explica va en su `?`, no fijo en la pantalla** (regla del
+  cliente, 2026-11-21: *"vamos a capacitar a la gente y entonces después
+  molesta mucho texto constante"*). A la vista quedan el dato y la acción;
+  el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
+  Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
+  frase que dice qué pasa al apretar un botón sí se queda.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -54,7 +70,7 @@ revisan antes de cada cambio en esta carpeta.
   | Dato | Pieza |
   |---|---|
   | El título de una sección | `BandaSeccion` (con su tono) |
-  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` (*HOY* relleno) y `MARCO_HOY` alrededor de la tarjeta o celda de hoy |
+  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` (*HOY* relleno) y `MARCO_HOY` alrededor de la tarjeta o celda de hoy, con el fondo apenas iluminado (`.fondo-hoy`) |
   | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
   | Lo cotizado (solo lo mandado) y la gente posible, ganadas, esperando, lo tuyo sin mandar | `Pastilla` / `PastillaCotizado` |
   | En las celdas de Turnos y Extras: el equipo del día (👥, dorado) y las actividades y su costo (🎠, añil) | `Pastilla` tipo `equipo` / `extras` |
@@ -110,6 +126,7 @@ revisan antes de cada cambio en esta carpeta.
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
+  Y si se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
 
 ## El token de Shopify de la tienda real (2026-11-21)
 
@@ -301,6 +318,17 @@ regla *un cambio de diseño se lleva a sus parecidos* (arriba).
   ayuda de la Recepción, el día, cerrar y corregir un día y Vendedores se
   rehicieron.
 
+## Hoy, con el fondo iluminado (2026-11-21)
+
+Lo pidió el cliente: *"el marco fuerte de hoy está muy bien… ilumina el fondo
+un poquito, para que resalte un poquito más"*. `MARCO_HOY` ganó la clase
+`.fondo-hoy` (`globals.css`): una capa encima del fondo de la tarjeta y debajo
+del texto —una luz cálida de sol de día (`--hoy-luz`, 22%) y un blanco tenue
+de noche (9%)—. Es la misma pieza en los cuatro calendarios (Reservas,
+Cotizaciones, Turnos y Extras), así que cambió en los cuatro. Va en un
+pseudoelemento y no como fondo para no pelear con el color del estado del
+día ni con la sombra o el anillo de la tarjeta.
+
 ## La línea del día, una sola pieza para el equipo y los extras (2026-11-21)
 
 Lo pidió el cliente en dos pasos el mismo día. Primero, con una foto de la
@@ -316,9 +344,18 @@ parecidos"*, y que los extras también tengan los ajustes.
   - `CampoAlLado`: cada dato con su nombre a la izquierda, en una fila. Los
     rótulos en mayúsculas encima de cada campo se fueron.
   - `AjustesDelDia`: *Ajustes* con **− Descontar** y **+ Sumar** en la misma
-    fila; cada ajuste es una tarjeta con el signo, la palabra, el monto y la
-    ✕ en una fila, el motivo y *Cómo* con botones de 36px y letra de 13px
-    (los cuatro motivos caben en una fila), y la nota.
+    fila. **Un ajuste se anota y se guarda con un botón** (lo pidió el
+    cliente el mismo día: *"ingresar el número, luego la razón y luego
+    guardar… y después lo dejas colapsar"*): abierto es una tarjeta de su
+    color con el monto, el motivo y *Cómo* con botones de 36px y letra de
+    13px (los cuatro motivos caben en una fila), la nota y **✓ Guardar
+    −$4.000**, que se apaga hasta que haya monto y motivo (`ajusteListo()`),
+    con *Cancelar* y, si ya existía, *✕ Quitar*. **Guardado se pliega a una
+    fila**: *− Descuento $4.000 · Adelanto · Transferencia ✎*, y tocarla lo
+    vuelve a abrir. Lo escrito vive en un borrador hasta *Guardar*; recién
+    ahí pasa al día, que la ventana guarda sola como siempre. Uno a la vez:
+    mientras se anota uno, *Descontar* y *Sumar* se apagan. Con un ajuste
+    guardado, la línea abierta mide 292px en el computador.
   - `TotalDelDia`: propina (en el equipo) y total del día, en una línea.
   - `BotonesDeLaLinea`: *Ficha* y *Sacar del día* (pregunta antes).
   - `BotonNuevaPersona`: *+ Nuevo trabajador* / *+ Nuevo colaborador*.

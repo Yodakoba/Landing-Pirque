@@ -45,9 +45,10 @@ export function MarcaAhora({ children, relleno = false }: { children: ReactNode;
  * hoy, **el mismo en los cuatro calendarios** (Reservas, Cotizaciones,
  * Turnos y Extras). Neutro a propósito: el dorado ya quiere decir *el día
  * que abriste*. Es `outline`, así que no mueve nada de lugar, y va encima
- * de las celdas vecinas.
+ * de las celdas vecinas. **Con el fondo apenas iluminado** (`.fondo-hoy`,
+ * 2026-11-21): una luz cálida de día y un blanco tenue de noche.
  */
-export const MARCO_HOY = 'relative z-[1] outline outline-[3px] outline-offset-1 outline-hueso';
+export const MARCO_HOY = 'fondo-hoy relative z-[1] outline outline-[3px] outline-offset-1 outline-hueso';
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];

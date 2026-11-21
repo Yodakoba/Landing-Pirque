@@ -119,7 +119,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Escribe la jornada, los ajustes y la propina del día. Un ajuste es '
       + '− Descontar (adelanto, llegó tarde, rompió algo) o + Sumar (hora extra, '
       + 'mérito, feriado): el monto va sin signo, el motivo con un botón y '
-      + 'cómo se pagó, en efectivo o por transferencia.',
+      + 'cómo se pagó, en efectivo o por transferencia, y se anota con ✓ '
+      + 'Guardar. Guardado queda en una fila; tocarla lo vuelve a abrir.',
       'Cerrar el día pregunta antes y muestra lo que estás declarando: '
       + 'quién vino, la propina, las actividades extras. Queda anotado con tu '
       + 'nombre y la hora, y desde ahí el día queda en solo lectura.',
@@ -200,8 +201,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Apreta un día del mes para agendar a quien venga.',
       'Marca Vino o No vino cuando ya pasó el día.',
       'Con el + de su línea cambias la actividad o el monto, y con − Descontar '
-      + 'o + Sumar anotas un ajuste con su motivo y cómo se pagó, igual que en '
-      + 'el equipo.',
+      + 'o + Sumar anotas un ajuste con su motivo y cómo se pagó, y ✓ Guardar, '
+      + 'igual que en el equipo.',
       'Abajo, la lista de colaboradores guarda a los que se repiten, con su '
       + 'monto habitual y su cuenta. Si cambias una cuenta o un monto y no '
       + 'haces los pagos, queda por confirmar hasta que el encargado de pagos '

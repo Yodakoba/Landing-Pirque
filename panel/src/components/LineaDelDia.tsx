@@ -51,10 +51,34 @@ export function CampoAlLado({ rotulo, children }: { rotulo: string; children: Re
   );
 }
 
+/** Lo que dice un ajuste guardado, en una línea: el motivo, cómo y la nota. */
+const resumenDe = (a: Ajuste) => {
+  const p = partesDeMotivo(a.motivo);
+  return [p.razon, p.medio, p.nota].filter(Boolean).join(' · ');
+};
+
+/** Si un ajuste se puede guardar: con monto y motivo, y con *Otro*, qué fue. */
+export const ajusteListo = (a: Ajuste) => {
+  const p = partesDeMotivo(a.motivo);
+  return Math.abs(a.monto) > 0 && !!p.razon && (p.razon !== 'Otro' || !!p.nota.trim());
+};
+
 /**
  * **Los ajustes de una persona en un día.** El rótulo y los dos botones van
- * en una fila, y cada ajuste es una tarjeta de su color: arriba qué es, el
- * monto y la ✕; debajo el motivo y cómo se pagó con botones, y una nota.
+ * en una fila.
+ *
+ * **Se anota y se guarda con un botón** (2026-11-21, lo pidió el cliente:
+ * *"ingresar el número, luego que ponga la razón y luego guardar… uno espera
+ * un botón guardar… después lo dejas colapsar y solo muestras descuento,
+ * monto"*). Es plata, y quien descuenta espera confirmarlo:
+ * - **Abierto**, el ajuste es una tarjeta de su color con el monto, el
+ *   motivo y cómo con botones, la nota, y **✓ Guardar** (se apaga hasta que
+ *   tenga monto y motivo), *Cancelar* y, si ya existía, *Quitar*.
+ * - **Guardado**, se pliega a una fila: el signo, la palabra, el monto y el
+ *   motivo. Tocarla lo vuelve a abrir.
+ *
+ * Lo que se escribe vive en un borrador hasta apretar *Guardar*: recién ahí
+ * pasa al día, que la ventana guarda sola como siempre.
  */
 export function AjustesDelDia({ ajustes, quien, onCambio }: {
   ajustes: Ajuste[];
@@ -62,29 +86,105 @@ export function AjustesDelDia({ ajustes, quien, onCambio }: {
   quien: string;
   onCambio: (ajustes: Ajuste[]) => void;
 }) {
-  // El recién agregado se trae el cursor una vez.
-  const [recien, setRecien] = useState<number | null>(null);
-  const copia = () => ajustes.map((a) => ({ ...a }));
-  const agregar = (tipo: TipoAjuste) => {
-    setRecien(ajustes.length);
-    onCambio([...copia(), { monto: 0, motivo: '', tipo }]);
+  /** Cuál se edita: el número de uno guardado, o `nuevo`. */
+  const [editando, setEditando] = useState<number | 'nuevo' | null>(null);
+  const [borrador, setBorrador] = useState<Ajuste | null>(null);
+  const abrir = (k: number | 'nuevo', a: Ajuste) => { setEditando(k); setBorrador({ ...a, tipo: tipoDeAjuste(a) }); };
+  const cerrar = () => { setEditando(null); setBorrador(null); };
+  const guardar = () => {
+    if (!borrador || !ajusteListo(borrador)) return;
+    onCambio(editando === 'nuevo' ? [...ajustes, borrador]
+      : ajustes.map((a, k) => (k === editando ? borrador : a)));
+    cerrar();
   };
-  const quitar = (k: number) => onCambio(ajustes.filter((_, x) => x !== k));
+  const quitar = (k: number) => { onCambio(ajustes.filter((_, x) => x !== k)); cerrar(); };
   // El monto se escribe sin signo: lo pone el tipo (`montoConSigno()`).
-  const cambiarMonto = (k: number, valor: string) => {
-    const c = copia();
+  const cambiarMonto = (valor: string) => {
+    if (!borrador) return;
     const n = Number(String(valor).replace(/[^\d]/g, ''));
-    c[k].tipo = tipoDeAjuste(c[k]);
-    c[k].monto = montoConSigno(Number.isFinite(n) ? n : 0, c[k].tipo);
-    onCambio(c);
+    const tipo = tipoDeAjuste(borrador);
+    setBorrador({ ...borrador, tipo, monto: montoConSigno(Number.isFinite(n) ? n : 0, tipo) });
   };
-  const cambiarPartes = (k: number, cambio: Partial<PartesAjuste>) => {
-    const c = copia();
-    c[k].tipo = tipoDeAjuste(c[k]);
-    c[k].motivo = motivoDePartes({ ...partesDeMotivo(c[k].motivo), ...cambio });
-    onCambio(c);
+  const cambiarPartes = (cambio: Partial<PartesAjuste>) => {
+    if (!borrador) return;
+    setBorrador({ ...borrador, motivo: motivoDePartes({ ...partesDeMotivo(borrador.motivo), ...cambio }) });
   };
   const total = totalAjustes(ajustes);
+
+  /** La tarjeta abierta de un ajuste: el borrador. */
+  const editor = (a: Ajuste, k: number | 'nuevo') => {
+    const tipo = tipoDeAjuste(a);
+    const resta = tipo === 'resta';
+    const partes = partesDeMotivo(a.motivo);
+    const n = k === 'nuevo' ? ajustes.length + 1 : k + 1;
+    const listo = ajusteListo(a);
+    return (
+      <div key={`editor-${k}`} className={`mb-1.5 rounded-lg border-2 p-2 ${resta
+        ? 'border-rojo-fuerte/60 bg-rojo/[0.04]' : 'border-verde-fuerte/60 bg-verde/[0.04]'}`}>
+        {/* Qué es y cuánto, en una fila. El signo va adelante, grande y de su
+            color: se distingue por forma, no solo por color. */}
+        <div className="flex items-center gap-1.5">
+          <span aria-hidden className={`w-4 shrink-0 text-center text-[22px] font-bold leading-none ${resta
+            ? 'text-rojo-texto' : 'text-verde-texto'}`}>{resta ? '−' : '+'}</span>
+          <span className={`text-[14px] font-bold ${resta ? 'text-rojo-texto' : 'text-verde-texto'}`}>
+            {resta ? 'Descuento' : 'Suma'}
+          </span>
+          <span className="ml-1 shrink-0 text-[15px] font-bold">$</span>
+          <input type="number" min={0} step={1000} inputMode="numeric" autoFocus
+            className={`${ENTRADA_DIA} w-28 min-w-0`}
+            value={Math.abs(a.monto) || ''} placeholder="4000"
+            aria-label={`${resta ? 'Descuento' : 'Suma'} ${n} de ${quien}`}
+            onChange={(e) => cambiarMonto(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') guardar(); }} />
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-1" role="group" aria-label="Por qué">
+          {MOTIVOS_AJUSTE[tipo].map((m) => (
+            <button key={m} type="button" aria-pressed={partes.razon === m}
+              onClick={() => cambiarPartes({ razon: partes.razon === m ? '' : m })}
+              className={`${OPCION} ${partes.razon === m ? ELEGIDO : ''}`}>
+              {partes.razon === m && '✓ '}{m}
+            </button>
+          ))}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label="Cómo">
+          <span className="mr-0.5 text-[13px] font-semibold text-hueso/65">Cómo:</span>
+          {MEDIOS_AJUSTE.map((m) => (
+            <button key={m} type="button" aria-pressed={partes.medio === m}
+              onClick={() => cambiarPartes({ medio: partes.medio === m ? '' : m })}
+              className={`${OPCION} ${partes.medio === m ? ELEGIDO : ''}`}>
+              {partes.medio === m && '✓ '}{m}
+            </button>
+          ))}
+        </div>
+        <input type="text" className={`${ENTRADA_DIA} mt-1 w-full !text-[14px]`}
+          value={partes.nota}
+          placeholder={partes.razon === 'Otro' ? 'qué fue' : 'nota (opcional)'}
+          aria-label={`Nota del ajuste ${n} de ${quien}`}
+          onChange={(e) => cambiarPartes({ nota: e.target.value })}
+          onKeyDown={(e) => { if (e.key === 'Enter') guardar(); }} />
+        {/* Guardar, verde y con el monto: lo que pasa al apretarlo. */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <button type="button" disabled={!listo} onClick={guardar}
+            className="tecla flex min-h-[40px] items-center gap-1.5 rounded-lg border-2 border-verde-fuerte
+                       bg-verde/15 px-3 text-[14px] font-bold text-verde-texto disabled:opacity-40">
+            ✓ Guardar{listo ? ` ${resta ? '−' : '+'}${enPesos(Math.abs(a.monto))}` : ''}
+          </button>
+          <button type="button" onClick={cerrar} className="boton min-h-[36px] !px-2.5">Cancelar</button>
+          {k !== 'nuevo' && (
+            <button type="button" onClick={() => quitar(k)}
+              className="boton min-h-[36px] !px-2.5 hover:border-rojo/60 hover:text-rojo-texto"
+              aria-label={`Quitar el ajuste ${n} de ${quien}`}>✕ Quitar</button>
+          )}
+          {!listo && (
+            <span className="text-[13px] text-hueso/60">
+              {Math.abs(a.monto) > 0 ? 'Elige el motivo' : 'Escribe el monto'}
+              {Math.abs(a.monto) > 0 && partes.razon === 'Otro' ? ' y qué fue' : ''}.
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -96,69 +196,40 @@ export function AjustesDelDia({ ajustes, quien, onCambio }: {
             suman {total < 0 ? '−' : '+'}{enPesos(Math.abs(total))}
           </span>
         )}
-        <button type="button" onClick={() => agregar('resta')}
-          className="boton min-h-[36px] !border-rojo-fuerte/60 !px-2.5 !font-semibold text-rojo-texto">
+        {/* Mientras se anota uno, no se abre otro: uno a la vez. */}
+        <button type="button" disabled={editando !== null} onClick={() => abrir('nuevo', { monto: 0, motivo: '', tipo: 'resta' })}
+          className="boton min-h-[36px] !border-rojo-fuerte/60 !px-2.5 !font-semibold text-rojo-texto disabled:opacity-40">
           − Descontar
         </button>
-        <button type="button" onClick={() => agregar('suma')}
-          className="boton min-h-[36px] !border-verde-fuerte/60 !px-2.5 !font-semibold text-verde-texto">
+        <button type="button" disabled={editando !== null} onClick={() => abrir('nuevo', { monto: 0, motivo: '', tipo: 'suma' })}
+          className="boton min-h-[36px] !border-verde-fuerte/60 !px-2.5 !font-semibold text-verde-texto disabled:opacity-40">
           + Sumar
         </button>
       </div>
       {ajustes.map((a, k) => {
-        const tipo = tipoDeAjuste(a);
-        const resta = tipo === 'resta';
-        const partes = partesDeMotivo(a.motivo);
+        if (editando === k && borrador) return editor(borrador, k);
+        const resta = tipoDeAjuste(a) === 'resta';
+        const texto = resumenDe(a);
         return (
-          <div key={k} className={`mb-1.5 rounded-lg border-2 p-2 ${resta
-            ? 'border-rojo-fuerte/50 bg-rojo/[0.04]' : 'border-verde-fuerte/50 bg-verde/[0.04]'}`}>
-            {/* Qué es, cuánto y la ✕, en una fila. El signo va adelante,
-                grande y de su color: se distingue por forma, no solo por color. */}
-            <div className="flex items-center gap-1.5">
-              <span aria-hidden className={`w-4 shrink-0 text-center text-[22px] font-bold leading-none ${resta
-                ? 'text-rojo-texto' : 'text-verde-texto'}`}>{resta ? '−' : '+'}</span>
-              <span className={`text-[14px] font-bold ${resta ? 'text-rojo-texto' : 'text-verde-texto'}`}>
-                {resta ? 'Descuento' : 'Suma'}
-              </span>
-              <span className="ml-1 shrink-0 text-[15px] font-bold">$</span>
-              <input type="number" min={0} step={1000} inputMode="numeric"
-                className={`${ENTRADA_DIA} w-28 min-w-0`}
-                value={Math.abs(a.monto) || ''} placeholder="4000"
-                aria-label={`${resta ? 'Descuento' : 'Suma'} ${k + 1} de ${quien}`}
-                ref={(el) => { if (el && recien === k) { setRecien(null); el.focus(); } }}
-                onChange={(e) => cambiarMonto(k, e.target.value)} />
-              <span className="flex-1" />
-              <button type="button" onClick={() => quitar(k)}
-                className="boton shrink-0 !px-2.5 hover:border-rojo/60 hover:text-rojo-texto"
-                aria-label={`Quitar el ajuste ${k + 1} de ${quien}`} title="Quitar este ajuste">✕</button>
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-1" role="group" aria-label="Por qué">
-              {MOTIVOS_AJUSTE[tipo].map((m) => (
-                <button key={m} type="button" aria-pressed={partes.razon === m}
-                  onClick={() => cambiarPartes(k, { razon: partes.razon === m ? '' : m })}
-                  className={`${OPCION} ${partes.razon === m ? ELEGIDO : ''}`}>
-                  {partes.razon === m && '✓ '}{m}
-                </button>
-              ))}
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label="Cómo">
-              <span className="mr-0.5 text-[13px] font-semibold text-hueso/65">Cómo:</span>
-              {MEDIOS_AJUSTE.map((m) => (
-                <button key={m} type="button" aria-pressed={partes.medio === m}
-                  onClick={() => cambiarPartes(k, { medio: partes.medio === m ? '' : m })}
-                  className={`${OPCION} ${partes.medio === m ? ELEGIDO : ''}`}>
-                  {partes.medio === m && '✓ '}{m}
-                </button>
-              ))}
-            </div>
-            <input type="text" className={`${ENTRADA_DIA} mt-1 w-full !text-[14px]`}
-              value={partes.nota}
-              placeholder={partes.razon === 'Otro' ? 'qué fue' : 'nota (opcional)'}
-              aria-label={`Nota del ajuste ${k + 1} de ${quien}`}
-              onChange={(e) => cambiarPartes(k, { nota: e.target.value })} />
-          </div>
+          // **Guardado, una fila**: tocarla lo vuelve a abrir.
+          <button key={k} type="button" disabled={editando !== null} onClick={() => abrir(k, a)}
+            aria-label={`Editar el ajuste ${k + 1} de ${quien}`}
+            className={`tecla mb-1.5 flex min-h-[40px] w-full items-center gap-1.5 rounded-lg border-2 px-2
+                        text-left disabled:opacity-60 ${resta
+              ? 'border-rojo-fuerte/50 bg-rojo/[0.04] hover:border-rojo-fuerte'
+              : 'border-verde-fuerte/50 bg-verde/[0.04] hover:border-verde-fuerte'}`}>
+            <span aria-hidden className={`w-4 shrink-0 text-center text-[20px] font-bold leading-none ${resta
+              ? 'text-rojo-texto' : 'text-verde-texto'}`}>{resta ? '−' : '+'}</span>
+            <span className={`shrink-0 text-[14px] font-bold ${resta ? 'text-rojo-texto' : 'text-verde-texto'}`}>
+              {resta ? 'Descuento' : 'Suma'}
+            </span>
+            <span className="shrink-0 text-[15px] font-bold tabular-nums">{enPesos(Math.abs(a.monto))}</span>
+            <span className="min-w-0 flex-1 truncate text-[13px] text-hueso/70">{texto && `· ${texto}`}</span>
+            <span aria-hidden className="shrink-0 text-[13px] font-semibold text-hueso/55">✎</span>
+          </button>
         );
       })}
+      {editando === 'nuevo' && borrador && editor(borrador, 'nuevo')}
     </div>
   );
 }

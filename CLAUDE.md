@@ -93,6 +93,22 @@ más abajo; esto es la lista para revisar.
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
   desplegables, una frase que dice qué pasa al seguir.
+- **Una tarjeta abierta cabe en una pantalla** (regla del cliente,
+  2026-11-21: *"ojalá que una tarjeta siempre cae en una página… en muchos
+  casos sí se puede seguir con la misma regla y a la vez que siempre se ve
+  todo en una pantalla"*). Al diseñar una tarjeta, una ventana o una línea
+  que se abre, se mide con Playwright que entre entera en un notebook
+  —1280×650, lo que queda con la barra del navegador— y, donde se pueda, en
+  un teléfono de 393×740: menos aire, el nombre al lado del campo, lo
+  secundario plegado (como un ajuste guardado) o en su `?`. **Si no cabe sin
+  romper la regla de arriba** —botones bajo 36px, letra bajo 13px—, gana la
+  regla de arriba, y el PR dice que no cupo y cuánto mide.
+- **Lo que explica va en su `?`, no fijo en la pantalla** (regla del
+  cliente, 2026-11-21: *"vamos a capacitar a la gente y entonces después
+  molesta mucho texto constante"*). A la vista quedan el dato y la acción;
+  el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
+  Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
+  frase que dice qué pasa al apretar un botón sí se queda.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -128,7 +144,8 @@ más abajo; esto es la lista para revisar.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
-  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR.
+  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR. Y si
+  se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
 
 **Sitio público y landings: elegante y sobrio**
 - Fotografía real como protagonista, Fraunces y Work Sans, dorado sobre
