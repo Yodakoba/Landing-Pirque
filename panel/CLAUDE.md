@@ -423,7 +423,7 @@ computador.
 | Comentar | 662 | 623 | Los cuatro tipos en una fila (`tipos-en-fila`, por el ancho de la caja) |
 | Dejar la base en cero | 993 | 594 | Qué se borra y qué se conserva a la izquierda; el aviso y los dos pasos a la derecha |
 | Ficha de un producto | 788 | 494 | El nombre y *Qué es* en una fila, los tres interruptores en otra, los precios de la reserva al lado de los de la cotización |
-| Ficha de un cliente | 692 | 540 | Cuatro campos por fila |
+| Ficha de un cliente | 692 | 516 | Cuatro campos por fila |
 | Ficha de un vendedor | 740 | 501 | Dos columnas desde 1280px, y la página a todo el ancho |
 | Agregar fecha · ficha de trabajador · trabajador nuevo · pago | 617–629 | 605–621 | Solo con la pieza común |
 
