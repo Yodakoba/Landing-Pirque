@@ -41,6 +41,9 @@ const enVentana = (t) => (p) => p.locator('[role=dialog] button').filter({ hasTe
 const campo = (t) => (p) => p.getByPlaceholder(t).first();
 const clic = (loc) => async (p) => { await loc(p).click(); await p.waitForTimeout(900); };
 
+/** La primera descarga del informe (*Sueldos*), dentro de su grupo. */
+const descargas = (p) => p.getByRole('group', { name: 'Descargar planilla' }).getByRole('button').first();
+
 /** Una reserva de la recepción: su fila, que se abre con (+). */
 const filaRecepcion = (n) => (p) => p.locator('li > button[aria-expanded]').nth(n);
 
@@ -62,7 +65,10 @@ const ESCENAS = {
   'anf-recepcion': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
     puntos: [texto('personas llegaron'), campo(/Buscar por nombre/), boton(/Llegó/)] },
   'anf-llego': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(boton(/Llegó/))], foco: texto(/¿Llegaron las/),
-    puntos: [boton(/Sí, las/), (p) => p.getByRole('button', { name: 'Una más', exact: true }), texto(/Si llegaron menos/)] },
+    // El tercer punto, *si llegaron menos*, va en el − (2026-11-21: la frase
+    // fija se sacó; ahora sale solo la que aplica al número elegido).
+    puntos: [boton(/Sí, las/), (p) => p.getByRole('button', { name: 'Una más', exact: true }),
+      (p) => p.getByRole('button', { name: 'Una menos', exact: true })] },
   // **La mesa** (2026-11-17): una reserva que ya llegó, abierta con su (+).
   'anf-mesa': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
     pasos: [clic((p) => p.locator('li > button[aria-expanded]').filter({ hasText: 'Valentina Castro' }))],
@@ -108,18 +114,22 @@ const ESCENAS = {
     puntos: [(p) => p.locator('[role=dialog]').getByText(/Día cerrado/).first(),
       enVentana(/Corregir este día/), enVentana(/Trabajadores/)], alto: 820 },
   // El foco va en lo que falta cerrar (2026-11-20): así entra el filtro
-  // 🧾 Sin boleta, que va debajo de las tres secciones.
-  'ope-informe': { rol: 'gerente', ruta: '/informe', foco: texto(/turnos? sin cerrar/),
-    alto: 900, puntos: [texto(/turnos? sin cerrar/), boton(/Trabajadores/), boton(/Sin boleta/)] },
+  // 🧾 Sin boleta, que va debajo de las tres secciones. Desde el 2026-11-21
+  // lo que falta cerrar es el filtro Sin marcar: el aviso se sacó.
+  'ope-informe': { rol: 'gerente', ruta: '/informe', foco: boton(/^Sin marcar/),
+    alto: 900, puntos: [boton(/^Sin marcar/), boton(/Trabajadores/), boton(/Sin boleta/)] },
 
   ...Object.fromEntries(['pag', 'ger'].flatMap((pre) => {
     const rol = pre === 'pag' ? 'pagos' : 'gerencia';
     return [
-      [`${pre}-informe`, { rol, ruta: '/informe', alto: 960, foco: boton(/Solo sueldos/),
-        puntos: [boton(/Por semana/), boton(/Solo sueldos/), texto(/Transferencia masiva/i)] }],
+      // En el celular los botones dicen *Semana* y *Sueldos* (2026-11-21).
+      [`${pre}-informe`, { rol, ruta: '/informe', alto: 960, foco: descargas,
+        puntos: [boton(/Semana/), descargas, texto(/Transferencia masiva/i)] }],
       // Más alto desde el 2026-11-20: entra la caja de la boleta.
-      [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/Sueldo/), alto: 1500,
-        puntos: [boton(/Sueldo/), boton(/Propina/), texto(/Boleta del/)] }],
+      // *Sueldo $…* y no *Sueldo*: desde el 2026-11-21 la descarga del
+      // celular se llama *Sueldos* y el foco se iba arriba.
+      [`${pre}-pagar`, { rol, ruta: '/informe', pasos: [clic(texto('sin pagar'))], foco: boton(/^Sueldo \$/), alto: 1500,
+        puntos: [boton(/^Sueldo \$/), boton(/^Propina \$/), boton(/Descontar/), texto(/Boleta del/)] }],
       [`${pre}-cobros`, { rol, ruta: '/presupuestos', pasos: abrirEnvio('Andrés Pino'), alto: 900, foco: texto('Pagos del cliente'),
         puntos: [texto(/El pago/), boton(/Anticipo recibido/), texto(/Anticipo 30%/)] }],
       // Desde el 2026-11-20 es una lista de tarjetas: se abre la de Daniela.

@@ -9,6 +9,7 @@
  * la decisión de cambiar un cupo se toma mirando la ocupación, que es
  * justamente lo que muestra el calendario.
  */
+import AyudaCorta from './AyudaCorta';
 import { Fragment, useState } from 'react';
 import { limiteSinAprobar } from '@/lib/cupo';
 import { avisar } from './AvisoFlotante';
@@ -154,13 +155,16 @@ export default function DiaEditor({
       onCerrar={onCancelar}>
       <>
         {nueva ? (
-          <p className="mt-2 text-sm text-hueso/60">
-            Para abrir un día que no cae en el horario de siempre: un feriado,
-            una fecha especial o un evento privado. También para anotar un día
-            de preparación, en que no entra nadie y se trabaja igual.
+          <p className="mt-2 flex items-center text-[14px] text-hueso/70">
+            Un día fuera del horario de siempre.
+            <AyudaCorta titulo="Agregar fecha">
+              Para abrir un día que no cae en el horario de siempre: un feriado,
+              una fecha especial o un evento privado. También para anotar un día
+              de preparación, en que no entra nadie y se trabaja igual.
+            </AyudaCorta>
           </p>
         ) : (
-          <p className="mt-2 text-sm text-hueso/60">
+          <p className="mt-2 text-[14px] text-hueso/70">
             {dia!.tomadas > 0
               ? `${dia!.tomadas} personas ya reservaron este día.`
               : 'Todavía no hay reservas este día.'}
@@ -170,7 +174,7 @@ export default function DiaEditor({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {nueva && (
             <label className="block sm:col-span-2">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
+              <span className="mb-1 block text-[13px] uppercase tracking-wide text-hueso/60">
                 Fecha
               </span>
               <input type="date" className={ENTRADA} value={f.fecha} autoFocus
@@ -184,7 +188,7 @@ export default function DiaEditor({
           )}
           {!esPreparacion && (
           <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
+            <span className="mb-1 block text-[13px] uppercase tracking-wide text-hueso/60">
               Cupo
             </span>
             <input type="number" min={0} step={1} className={ENTRADA}
@@ -194,7 +198,7 @@ export default function DiaEditor({
           )}
           {!esPreparacion && (
           <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
+            <span className="mb-1 block text-[13px] uppercase tracking-wide text-hueso/60">
               Hora de apertura
             </span>
             <input type="text" className={ENTRADA} value={f.apertura}
@@ -203,14 +207,12 @@ export default function DiaEditor({
           )}
           {!esPreparacion && (
           <label className="block sm:col-span-2">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-hueso/60">
+            <span className="mb-1 block text-[13px] uppercase tracking-wide text-hueso/60">
               Nota
+              <AyudaCorta titulo="Nota">Se ve en el calendario del panel. El visitante no la ve.</AyudaCorta>
             </span>
             <input type="text" className={ENTRADA} value={f.notas} placeholder="—"
               onChange={(e) => setF({ ...f, notas: e.target.value })} />
-            <span className="mt-1 block text-xs text-hueso/50">
-              Se ve en el calendario del panel. El visitante no la ve.
-            </span>
           </label>
           )}
         </div>
@@ -257,21 +259,25 @@ export default function DiaEditor({
             ser "quién puede reservar" —a eso la preparación contestaría
             "nadie", que no es lo que dice— y pasó a ser qué día es. */}
         <fieldset className="mt-5">
-          <legend className="mb-2 text-xs uppercase tracking-wide text-hueso/60">
+          <legend className="mb-2 flex items-center text-[13px] uppercase tracking-wide text-hueso/60">
             Qué día es
+            <AyudaCorta titulo="Qué día es">
+              <p><strong>Abierta al público</strong>: aparece en el calendario del sitio y cualquiera puede reservar.</p>
+              <p><strong>Privado</strong>: no aparece en el sitio. Para un evento privado o algo vendido aparte:
+                se ve acá con su cupo y sus reservas, y nadie puede comprar un lugar. Marca <strong>completo y en
+                exclusiva</strong> solo si ese día no cabe otro evento; sin marcar pueden correr dos eventos a la vez,
+                que es lo normal.</p>
+              <p><strong>Cerrada</strong>: no se ofrece ni se atiende. Las reservas que ya hubiera no se borran.</p>
+              {ofrecePreparacion && <p><strong>Día de preparación</strong>: no entra nadie y se trabaja igual —montar
+                un matrimonio, dejar la carne lista—. Se le asigna equipo, y con eso queda.</p>}
+            </AyudaCorta>
           </legend>
           <div className="space-y-2">
             {([
-              [ESTADO_DIA.abierta, 'Abierta al público',
-               'Aparece en el calendario del sitio y cualquiera puede reservar.'],
-              [ESTADO_DIA.privada, 'Privado',
-               'No aparece en el sitio. Para un evento privado o algo vendido aparte: ' +
-               'se ve acá con su cupo y sus reservas, y nadie puede comprar un lugar.'],
-              [ESTADO_DIA.cerrada, 'Cerrada',
-               'No se ofrece ni se atiende. Las reservas que ya hubiera no se borran.'],
-              ...(ofrecePreparacion ? [[PREPARACION, 'Día de preparación',
-                   'No entra nadie y se trabaja igual: montar un matrimonio, dejar ' +
-                   'la carne lista. Se le asigna equipo, y con eso queda.'] as const]
+              [ESTADO_DIA.abierta, 'Abierta al público', 'Sale en el sitio'],
+              [ESTADO_DIA.privada, 'Privado', 'No sale en el sitio'],
+              [ESTADO_DIA.cerrada, 'Cerrada', 'No se atiende'],
+              ...(ofrecePreparacion ? [[PREPARACION, 'Día de preparación', 'No entra nadie, se trabaja'] as const]
                 : [])
             ] as const).map(([valor, titulo, ayuda]) => (
               <Fragment key={valor}>
@@ -282,8 +288,8 @@ export default function DiaEditor({
                     checked={valor === ESTADO_DIA.privada ? esPrivado : f.estado === valor}
                     onChange={() => setF({ ...f, estado: valor })} />
                   <span>
-                    <span className="block text-sm">{titulo}</span>
-                    <span className="block text-xs text-hueso/50">{ayuda}</span>
+                    <span className="block text-[15px]">{titulo}</span>
+                    <span className="block text-[13px] text-hueso/60">{ayuda}</span>
                   </span>
                 </label>
                 {valor === ESTADO_DIA.privada && esPrivado && (
@@ -296,10 +302,8 @@ export default function DiaEditor({
                       <span className="block text-sm">
                         El recinto se arrendó <strong>completo y en exclusiva</strong>
                       </span>
-                      <span className="block text-xs text-hueso/60">
-                        Márcala solo si ese día <strong>no cabe otro evento</strong>.
-                        Sin marcar, el día es privado pero no exclusivo: pueden correr
-                        dos eventos a la vez, que es lo normal.
+                      <span className="block text-[13px] text-hueso/60">
+                        Solo si ese día no cabe otro evento.
                       </span>
                     </span>
                   </label>

@@ -28,8 +28,8 @@ export function AvisoCierre({ cierre, puedeCorregir, corrigiendo, onCorregir }: 
     return (
       <p className="mt-3 rounded border border-ambar/60 bg-ambar/10 px-3 py-2
                     text-sm text-ambar-texto">
-        <strong>Estás corrigiendo un día cerrado.</strong> Nada se guarda hasta que
-        aprietes <em>Guardar corrección</em>, y el día sigue cerrado después.
+        <strong>Estás corrigiendo un día cerrado.</strong> Se guarda con
+        <em> Guardar corrección</em>.
       </p>
     );
   }
@@ -39,11 +39,9 @@ export function AvisoCierre({ cierre, puedeCorregir, corrigiendo, onCorregir }: 
       <p className="flex-1 text-sm text-hueso/80">
         <strong className="text-verde-texto">✓ Día cerrado</strong>
         {cierre?.quien && <> por {cierre.quien}</>}
-        {cierre?.cuando && <>, {cierre.cuando}</>}.{' '}
-        {puedeCorregir
-          ? <>Está en solo lectura. Si hay que cambiar algo, corrígelo con un motivo.</>
-          : <>Está en solo lectura. Si hay que cambiar algo, pídeselo al
-              administrador o a quien hace los pagos.</>}
+        {cierre?.cuando && <>, {cierre.cuando}</>}.
+        {/* Qué quiere decir y quién lo corrige, en su `?` (2026-11-21, regla
+            *lo que explica va en su ?*). */}
       </p>
       <AyudaCorta tema="diaCerrado" />
       {puedeCorregir && (

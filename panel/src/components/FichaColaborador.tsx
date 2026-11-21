@@ -78,10 +78,8 @@ export default function FichaColaborador({
   return (
     <Dialogo titulo={creando ? 'Nuevo colaborador' : `Ficha de ${ficha!.nombre}`}
              onCerrar={onCancelar} ancho="max-w-3xl">
-      <p className="mt-3 text-sm text-hueso/60">
-        {creando
-          ? 'Queda en la lista de actividades extras, y asignado a este día.'
-          : 'Lo que no cambia de un día a otro: cómo ubicarlo y dónde se le paga.'}
+      <p className="mt-3 text-sm text-hueso/60 empty:hidden">
+        {creando ? 'Queda en la lista de actividades extras, y asignado a este día.' : null}
       </p>
 
       <div className="mt-4 flex flex-wrap items-start gap-3">
@@ -138,10 +136,6 @@ export default function FichaColaborador({
             Transferencia
           </p>
           <DatosBancarios banco={banco} nombre={nombre} onCambio={setBanco} />
-          <p className="mt-2 text-xs text-hueso/45">
-            Es lo que sale en la planilla que descarga quien paga. Se puede
-            dejar para después, pero es justo lo que después cuesta juntar.
-          </p>
         </fieldset>
       )}
 

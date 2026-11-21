@@ -6,6 +6,8 @@
  * no hace falta un viaje al servidor para algo que ya está en pantalla.
  */
 import { usarAlDia, BarraAlDia } from './AlDia';
+import AyudaCorta from './AyudaCorta';
+import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
 import { grupoDe, principalDe } from '@/lib/cotizar';
@@ -956,9 +958,9 @@ export default function DayView(
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1 border-t border-hueso/10 pt-2 text-[13px] text-hueso/70">
-                  No ocupan cupo todavía: los números de arriba no los cuentan. De cada cotización
-                  cuenta una sola alternativa, la de más gente.
+                {/* El porqué, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+                <p className="mt-1 flex items-center gap-1.5 border-t border-hueso/10 pt-2 text-[13px] text-hueso/70">
+                  No ocupan cupo todavía. <AyudaCorta tema="cotizadoDia" />
                 </p>
               </div>
             )}
@@ -1008,14 +1010,9 @@ export default function DayView(
                       text-hueso/80">
           <strong className="text-verde-texto">✓ Día cerrado</strong>
           {cierreDe(equipo!.cierres, fecha)?.quien &&
-            <> por {cierreDe(equipo!.cierres, fecha)!.quien}</>}. Las reservas están en
-          solo lectura.{' '}
-          {puedeCorregir
-            ? <>Puedes editar, borrar o anotar una reserva escribiendo el motivo;
-                <em> Vino / No vino</em> se corrige en{' '}
-                <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>
-            : <>Si hay que cambiar algo, pídeselo al encargado de operaciones o a
-                quien hace los pagos.</>}
+            <> por {cierreDe(equipo!.cierres, fecha)!.quien}</>}.{' '}
+          {/* Qué se puede hacer y quién corrige, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+          <AyudaCorta tema="diaCerrado" />
         </p>
       )}
 
@@ -1077,7 +1074,7 @@ export default function DayView(
            la tabla de siete columnas, que en un teléfono había que correr de
            lado. Lo que no puede quedar escondido —un aviso de la recepción,
            un pedido repetido— lleva su marca también en la línea cerrada. */
-        <ul className="mt-5 space-y-2">
+        <ul className={`mt-5 ${LISTA_TARJETAS}`}>
           {visibles.map((r) => {
             // **El mismo pedido anotado dos veces en la planilla.** El panel
             // ya lo cuenta una sola vez —ver `leerReservasDe()`— así que esto
@@ -1102,9 +1099,8 @@ export default function DayView(
             const aviso = (r.avisoRecepcion ?? '').trim();
             return (
               <li key={r.fila} id={`reserva-${r.fila}`}
-                className={`scroll-mt-24 overflow-hidden rounded-2xl border-2 transition-colors ${
-                aviso ? 'bg-rojo/[0.07]' : 'bg-panel'} ${
-                abierta ? 'border-oro shadow-md' : aviso ? 'border-rojo-fuerte/60' : 'border-hueso/15'} ${
+                className={`scroll-mt-24 overflow-hidden transition-colors ${
+                marcoTarjeta(abierta, aviso ? 'rojo' : 'normal', true)} ${
                 libera ? 'opacity-50' : ''} ${destello === r.fila ? 'destello' : ''}`}>
                 {/* La línea cerrada: quién, su número, cómo va el pago (solo
                     el ícono) y cuánta gente. Lo que no puede quedar escondido
@@ -1115,11 +1111,7 @@ export default function DayView(
                   className={`tecla flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left
                               focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro
                               ${abierta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
-                  <span aria-hidden className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                                               border-2 text-[15px] font-bold ${abierta
-                    ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                    {abierta ? '−' : '+'}
-                  </span>
+                  <SignoAbrir abierta={abierta} />
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-[16px] font-bold ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}
@@ -1282,9 +1274,8 @@ export default function DayView(
                         `···· 5678`, así que no hay a quién llamar ni
                         escribir. Se dice quién lo tiene. */}
                     {r.contactoTapado && (
-                      <p className="rounded-lg border border-hueso/15 px-3 py-2 text-[14px] text-hueso/70">
-                        🔒 {r.telefono ? `${r.telefono} · ` : ''}El contacto de esta reserva lo ven la
-                        administración y quien la atiende.
+                      <p className="flex items-center gap-1.5 rounded-lg border border-hueso/15 px-3 py-2 text-[14px] text-hueso/70">
+                        🔒 {r.telefono || 'Contacto reservado'} <AyudaCorta tema="contactoTapado" />
                       </p>
                     )}
                     {!r.contactoTapado && (r.telefono || r.email) && (

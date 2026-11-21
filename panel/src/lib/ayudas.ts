@@ -119,7 +119,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Escribe la jornada, los ajustes y la propina del día. Un ajuste es '
       + '− Descontar (adelanto, llegó tarde, rompió algo) o + Sumar (hora extra, '
       + 'mérito, feriado): el monto va sin signo, el motivo con un botón y '
-      + 'cómo se pagó, en efectivo o por transferencia.',
+      + 'cómo se pagó, en efectivo o por transferencia, y se anota con ✓ '
+      + 'Guardar. Guardado queda en una fila; tocarla lo vuelve a abrir.',
       'Cerrar el día pregunta antes y muestra lo que estás declarando: '
       + 'quién vino, la propina, las actividades extras. Queda anotado con tu '
       + 'nombre y la hora, y desde ahí el día queda en solo lectura.',
@@ -199,6 +200,9 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'Apreta un día del mes para agendar a quien venga.',
       'Marca Vino o No vino cuando ya pasó el día.',
+      'Con el + de su línea cambias la actividad o el monto, y con − Descontar '
+      + 'o + Sumar anotas un ajuste con su motivo y cómo se pagó, y ✓ Guardar, '
+      + 'igual que en el equipo.',
       'Abajo, la lista de colaboradores guarda a los que se repiten, con su '
       + 'monto habitual y su cuenta. Si cambias una cuenta o un monto y no '
       + 'haces los pagos, queda por confirmar hasta que el encargado de pagos '
@@ -257,10 +261,22 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'Abre en la semana pasada, que es la que se paga. Puedes elegir otra '
       + 'semana, el mes, o dos fechas sueltas.',
-      'Mira arriba si quedan turnos sin cerrar: mientras los haya, el total '
-      + 'está incompleto.',
+      'El filtro Sin marcar dice cuántas personas tienen días sin cerrar y deja '
+      + 'solo a ellas: esos días no suman, así que mientras haya, los totales '
+      + 'están incompletos.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
-      + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',
+      + 'su propina. Copian solo los datos, uno por línea, en el orden del '
+      + 'formulario del banco —nombre y apellido, RUT, banco, tipo de cuenta, '
+      + 'número de cuenta y e-mail— y después el monto y la glosa: cada línea '
+      + 'se pega tal cual en su campo.',
+      'Para ver lo que costó el equipo por puesto, las propinas y cuánto fue '
+      + 'de las ventas, aprieta 📊 Estadísticas del equipo, arriba.',
+      'Para descontar o sumar algo sin ir a Turnos, abre su línea: − Descontar '
+      + 'y + Sumar están al pie de lo que suma en el celular, y arriba de los '
+      + 'pagos en el computador. Eliges el día que vino —u Hoy, para '
+      + 'un adelanto pedido un día sin turno—, el monto y el motivo, y suma en el '
+      + 'periodo de ese día. Uno de hoy fuera de turno aparece en su línea, con ✕ '
+      + 'Quitar por si se anotó mal.',
       'Si una línea dice ⚠ Por confirmar, alguien que no hace los pagos cambió '
       + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
       + 'Confirmar.',
@@ -273,7 +289,10 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Vendedores y socios se pagan según su documento: con la retención '
       + 'incluida se transfiere el bruto menos la retención; con factura más '
       + 'IVA, el total con IVA. Su caja lo dice.',
-      'Para una transferencia masiva, arriba está su tarjeta: baja la '
+      'La lista va en orden: arriba quien tiene plata en el periodo, después '
+      + 'a quien le falta marcar si vino y al final quien no tiene nada que '
+      + 'pagar. Sin marcar deja solo a los que les falta marcar.',
+      'Para una transferencia masiva, ábrela arriba (va plegada): baja la '
       + 'planilla de sueldos o de propinas, súbela al banco, y cuando esté '
       + 'pagada aprieta Todos pagados.',
       'Descarga la planilla: trae si cada pago tiene boleta.'
@@ -350,10 +369,14 @@ export const AYUDAS: Record<string, Ayuda> = {
   },
 
   estadisticas: {
-    titulo: 'Las estadísticas de reservas',
+    titulo: 'Las estadísticas',
     cuerpo: [
       'Los números de las reservas en grandes rasgos, para mirar: cuántas, '
       + 'si vinieron, cuánta plata y de dónde vienen. Acá no se cambia nada.',
+      'Quien ve el informe tiene además 👥 Equipo: lo que costó el equipo por '
+      + 'puesto, las propinas y su relación con las ventas, con el mismo '
+      + 'periodo. Hasta dos semanas va por día; más largo, por semana. Se llega '
+      + 'también desde el informe, con 📊 Estadísticas del equipo.',
       'Arriba eliges el periodo —un día, una semana, un mes o dos fechas— y '
       + 'por qué fecha se cuenta: la de la visita o la del día en que se '
       + 'reservó. Todo · Visitas · Eventos separa las reservas de Shopify y '
@@ -500,13 +523,86 @@ export interface AyudaCorta {
 }
 
 export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
+  // ---------- Actividades extras ----------
+  actividadesDia: {
+    titulo: 'Las actividades del día',
+    texto: [
+      'Lo que se contrata aparte del equipo: jinetes, pintacaritas, el castillo inflable.',
+      'Una actividad sin confirmar no suma: agendar no es pagar. Se marca Vino o No vino desde el mismo día.',
+      'El monto se propone de la ficha y se puede corregir: lo que queda es lo que se le pagó ese día. Una diferencia por un acuerdo aparte va como ajuste, con su motivo.'
+    ]
+  },
+  linkColaborador: {
+    titulo: 'El link personal',
+    texto: [
+      'Una dirección propia de esa persona, sin contraseña: ve sus días, lo que ganó y lo que se le pagó. Se la mandas por WhatsApp.',
+      'Renovar crea uno nuevo y el anterior deja de servir. Quitar link lo apaga.'
+    ]
+  },
+  // ---------- El día y la recepción ----------
+  cotizadoDia: {
+    titulo: 'Lo cotizado del día',
+    texto: [
+      'Son cotizaciones en curso para este día: no ocupan cupo todavía, así que los números de arriba no las cuentan.',
+      'De cada cotización cuenta una sola alternativa, la de más gente.'
+    ]
+  },
+  contactoTapado: {
+    titulo: 'Contacto reservado',
+    texto: [
+      'El contacto de esta reserva lo ven la administración y quien la atiende.',
+      'Si te toca a ti, pídeselo a la administración.'
+    ]
+  },
+  clienteDeOtro: {
+    titulo: 'Un cliente de otro vendedor',
+    texto: [
+      'Su contacto lo ven la administración y quien lo atiende.',
+      'Si te pide una cotización, + Cotizarle lo deja también en tu lista.'
+    ]
+  },
+  sobrecupo: {
+    titulo: 'Sobrecupo',
+    texto: [
+      'Entraron reservas pagadas sobre reservas sin pagar. Quien paga tiene preferencia, así que ya están adentro.',
+      'Se decide en el día: ampliar el cupo y traer más equipo, o soltar una reserva sin pagar y avisarle al cliente.'
+    ]
+  },
+  liberarDia: {
+    titulo: 'Liberar el día',
+    texto: [
+      'A cada reserva: avísale con disculpas y ofrécele la devolución completa u otra fecha con un pisco sour de regalo.',
+      'Después anota lo que eligió: cambiar de fecha o cancelar y devolver.'
+    ]
+  },
+  agregadosMesa: {
+    titulo: 'Agregar a la mesa',
+    texto: [
+      'Se suman a la gente del día.',
+      'Un menú agregado se cobra a precio del local; a la carta, lo que consuman.'
+    ]
+  },
+  valorFinal: {
+    titulo: 'El valor final',
+    texto: ['Es el total de la cuenta de esta mesa en Fudo, con lo ya pagado incluido.']
+  },
+  // ---------- Turnos ----------
+  diasPorCerrar: {
+    titulo: 'Días por cerrar',
+    texto: [
+      'Un día cerrado es uno donde alguien ya confirmó quién vino, anotó la propina y revisó los montos.',
+      'Mientras no se cierre, el informe de ese periodo está incompleto.',
+      'Después de cerrarlo, solo el encargado de operaciones, quien hace los pagos o la gerencia lo puede corregir.'
+    ]
+  },
   // ---------- La ventana de cotizar ----------
   alternativas: {
     titulo: 'Alternativas',
     texto: [
       'Son versiones de la misma cotización para el mismo cliente: otro menú, otro precio, otro día. Cada una tiene su letra y su total.',
-      'Se mandan todas juntas en un solo link. Cuando el cliente decide, eliges "Se quedó con esta": las otras pasan a "No elegida" y el link muestra solo la elegida.',
-      'Antes de ganarla o de mandar el contrato hay que elegir. En el calendario cuentan una sola vez.'
+      'Crear una copia esta tal cual —menús, precios y descuentos— para que cambies lo que difiere.',
+      'Se mandan todas juntas en un solo link. Ganar una la elige: las otras pasan a "No elegida" y el link muestra solo la ganada.',
+      'En el calendario cuentan una sola vez, la de más gente.'
     ]
   },
   sinFecha: {
@@ -583,11 +679,61 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Se marca ganada con el anticipo pagado, o con el contrato firmado subido. Son las mismas condiciones que imprime el contrato.'
     ]
   },
+  tratoSocio: {
+    titulo: 'El trato de los socios',
+    texto: [
+      '5% desde 22 personas, 10% desde 55 y 15% desde 77, sobre el neto.',
+      'Lo confirma el encargado de pagos; mientras tanto ya se puede cotizar con él.'
+    ]
+  },
+  sujetaAEspacio: {
+    titulo: 'Sujeta a espacio',
+    texto: [
+      'Se ganó sin ningún pago y sin contrato firmado, así que su reserva se trata como una sin pago, igual que una de Shopify.',
+      'Si el día se llena con gente que pagó, esa gente tiene preferencia. Con el primer pago deja de estar sujeta a espacio.'
+    ]
+  },
+  ganada: {
+    titulo: 'Ganada',
+    texto: [
+      'Tiene su reserva en el calendario.',
+      'Si cambias algo acá —la fecha, la gente, los precios—, la reserva se actualiza sola.'
+    ]
+  },
+  invitados: {
+    titulo: 'Los invitados',
+    texto: [
+      'La cantidad de personas completa, adultos y niños.',
+      'Los menús se reparten este número; la once y el desayuno nacen con todos y se ajustan con − y +.'
+    ]
+  },
+  comisionSocio: {
+    titulo: 'Con un socio comercial',
+    texto: [
+      'El socio cobra su comisión por esta venta, y quien la vende, la parte de la suya que diga su ficha.',
+      'Un trato por confirmar lo confirma el encargado de pagos.'
+    ]
+  },
+  exclusivo: {
+    titulo: '¿Exclusivo?',
+    texto: [
+      'Lleva arriendo. Exclusivo: ese día no viene nadie más, y al ganarla deja de venderse.',
+      'Si se negoció que pueda venir otro grupo, no lo es.'
+    ]
+  },
+  liberarParaGanar: {
+    titulo: 'Liberar el día',
+    texto: [
+      'Para ganarla hay que cancelar o cambiar de fecha las reservas que ya hay ese día, con disculpas a cada cliente.',
+      'Eso no se hace solo: lo decide el encargado de operaciones, el de pagos o la gerencia, con Pedir liberar el día.'
+    ]
+  },
   contrato: {
     titulo: 'El contrato',
     texto: [
       'Sale de esta cotización: cliente, fecha, precio línea por línea y condiciones. No se escribe nada dos veces.',
-      'Se imprime, se firma en papel y se sube el firmado. Si después cambias la cotización, el que vale es el papel.'
+      'Se manda, se imprime, se firma en dos ejemplares y se sube el firmado. Si después cambias la cotización, el que vale es el papel.',
+      'Con varias alternativas, el contrato es de la que tienes abierta: si el cliente se quedó con otra, ábrela arriba y manda el contrato desde esa.'
     ]
   },
   mandarContrato: {
@@ -732,6 +878,48 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     texto: [
       'El valor final que anota la mesa (el total de la cuenta en Fudo, con lo prepagado) dividido por la gente de esas mesas.',
       'Debajo, cuánto más que lo reservado se consumió por persona: lo que se pidió de más en la mesa. Solo cuentan las mesas que anotaron su valor final.'
+    ]
+  },
+  estEqCosto: {
+    titulo: 'Costo del equipo',
+    texto: [
+      'Lo que costaron los turnos que vinieron —jornadas, horas extra y ajustes— y las actividades extras confirmadas. Son los mismos montos del informe.',
+      'No incluye el sueldo de los contratados, las comisiones de los vendedores, la retención de las boletas ni los adelantos fuera de turno.'
+    ]
+  },
+  estEqPropinas: {
+    titulo: 'Propinas',
+    texto: [
+      'La propina de los turnos del periodo. Va aparte del costo: es plata de los clientes que pasa por el negocio.',
+      'En el gráfico, toca una columna para ver cuánto fue por persona atendida.'
+    ]
+  },
+  estEqPorPersona: {
+    titulo: 'Por persona atendida',
+    texto: [
+      'El costo del equipo dividido por la gente de las reservas que siguieron en pie y ya pasaron (la rectificada, si se rectificó).',
+      'Sirve para comparar semanas con distinta cantidad de gente.'
+    ]
+  },
+  estEqPorcentaje: {
+    titulo: 'Equipo sobre ventas',
+    texto: [
+      'Qué parte de las ventas se llevó el equipo. Las ventas son el valor final que anotó la mesa y, si no se anotó, el monto de la reserva.',
+      'No es el dato de Fudo: faltan las ventas sin reserva y el detalle de la cuenta. Se compara en puntos.'
+    ]
+  },
+  estEqPuestos: {
+    titulo: 'Sueldos por puesto',
+    texto: [
+      'Cada columna es lo que costó el equipo ese día o esa semana; cada color, un puesto, y arriba el total en miles de pesos.',
+      'Un puesto tiene siempre el mismo color, en el orden de la lista de puestos. Toca una columna para ver los montos, o abre la tabla.'
+    ]
+  },
+  estEqVentas: {
+    titulo: 'Ventas y costo del equipo',
+    texto: [
+      'El fondo claro son las ventas y la barra azul, lo que costó el equipo; arriba, qué porcentaje fue.',
+      'Las ventas son el valor final de la mesa o, si no se anotó, el monto de la reserva.'
     ]
   },
   estSerie: {
@@ -928,7 +1116,8 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Por turno o contratado',
     texto: [
       'Por turno: se le paga la jornada de cada día que viene.',
-      'Contratado: su sueldo va por liquidación, fuera del panel. Acá solo se le suman horas extra y ajustes del día.'
+      'Contratado: su sueldo va por liquidación, fuera del panel. Acá solo se le suman horas extra y ajustes del día.',
+      'Esto es lo que gana de costumbre. Lo de un día —cuántas horas extra hizo, un atraso, un adelanto, un feriado— se anota en ese día, con su motivo.'
     ]
   },
   propinaFicha: {
@@ -971,10 +1160,19 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
       'Es la suma de las boletas del periodo, sin los contratados ni los socios comerciales, que facturan.'
     ]
   },
+  ajusteInforme: {
+    titulo: 'Descontar o sumar desde acá',
+    texto: [
+      'Es el mismo ajuste de Turnos: va en el turno del día que elijas, así que suma en el periodo de esa fecha, y lo ven su link y su boleta.',
+      'Hoy sirve para un adelanto pedido un día sin turno: queda fuera de turno, suma en la semana de hoy y no cuenta como día trabajado. Se quita desde su línea.',
+      'Si el día ya está cerrado, queda como corrección en la bitácora, a tu nombre.'
+    ]
+  },
   transferenciaMasiva: {
     titulo: 'Transferencia masiva',
     texto: [
       'La planilla trae a quien le falta pago y tiene su cuenta completa. "Todos pagados" marca exactamente a esa misma gente.',
+      'Las columnas van con los nombres y en el orden del formulario del banco, con el RUT con puntos, y al final el monto y la glosa.',
       'Sueldos y propinas van por separado: son dos pagos.'
     ]
   },

@@ -18,6 +18,7 @@
  * después la página se recarga desde la portada: así el menú, el middleware y
  * cada pantalla se arman con el rol nuevo, igual que al entrar.
  */
+import AyudaCorta from './AyudaCorta';
 import { useState } from 'react';
 import Dialogo from './Dialogo';
 import { avisar } from './AvisoFlotante';
@@ -55,12 +56,14 @@ export function BotonVerComo() {
             un toque a administrador.
           </p>
           <div className="mt-3 rounded-xl border-2 border-ambar-fuerte/60 bg-ambar/10 p-3 text-[14px] text-hueso/90">
-            <p className="font-bold text-ambar-texto">✋ Es para revisar, no para pasarle el aparato a alguien</p>
-            <p className="mt-1">
-              Desde esta vista cualquiera vuelve a administrador con un toque. Si la anfitriona o un
-              vendedor va a usar este teléfono, que entre con su propia cuenta.
+            <p className="flex items-center font-bold text-ambar-texto">
+              ✋ Es para revisar, no para pasarle el aparato a alguien
+              <AyudaCorta titulo="Es para revisar">
+                <p>Desde esta vista cualquiera vuelve a administrador con un toque. Si la anfitriona o un
+                  vendedor va a usar este teléfono, que entre con su propia cuenta.</p>
+                <p>La vista se cierra sola en una hora, y para seguir hay que entrar de nuevo.</p>
+              </AyudaCorta>
             </p>
-            <p className="mt-1">La vista se cierra sola en una hora, y para seguir hay que entrar de nuevo.</p>
           </div>
           <div className="mt-4 grid gap-2">
             {ROLES.map(({ rol, icono }) => (

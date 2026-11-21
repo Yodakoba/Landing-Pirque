@@ -227,30 +227,33 @@ export default function UsuariosEditor() {
         <BotonGuardar sucio={sucio} guardando={guardando} onClick={guardar} />
       </div>
 
-      <p className="mt-6 max-w-2xl text-xs text-hueso/50">
-        <strong>Desmarcar "activo" cierra la puerta, quitar borra la cuenta.</strong>{' '}
-        Lo primero es lo que corresponde cuando alguien deja el equipo: sus
-        líneas de la bitácora siguen diciendo quién fue.{' '}
-        <strong>Ojo:</strong> una sesión abierta sigue viva hasta que caduca
-        (7 días). Para echar a alguien ya mismo hay que cambiar{' '}
-        <code>PANEL_CLAVE</code> en Vercel, que cierra todas las sesiones.
+      <p className="mt-6 flex items-center text-[14px] text-hueso/70">
+        Desactivar o quitar una cuenta
+        <AyudaCorta titulo="Desactivar o quitar una cuenta">
+          <p><strong>Desmarcar "activo" cierra la puerta, quitar borra la cuenta.</strong>{' '}
+            Lo primero es lo que corresponde cuando alguien deja el equipo: sus
+            líneas de la bitácora siguen diciendo quién fue.</p>
+          <p><strong>Ojo:</strong> una sesión abierta sigue viva hasta que caduca
+            (7 días). Para echar a alguien ya mismo hay que cambiar{' '}
+            <code>PANEL_CLAVE</code> en Vercel, que cierra todas las sesiones.</p>
+        </AyudaCorta>
       </p>
 
       {poniendoClave && (
         <Dialogo titulo={`Contraseña de ${poniendoClave}`}
                  onCerrar={() => setPoniendoClave(null)}>
-          <p className="mt-3 text-sm text-hueso/60">
-            Al menos {LARGO_MINIMO_CLAVE} caracteres. <strong>Larga antes que
-            rara</strong>: tres o cuatro palabras pegadas aguantan más que ocho
-            caracteres con símbolos, y se pueden dictar por teléfono.
+          <p className="mt-3 flex items-center text-[14px] text-hueso/70">
+            Al menos {LARGO_MINIMO_CLAVE} caracteres.
+            <AyudaCorta titulo="La contraseña">
+              <p><strong>Larga antes que rara</strong>: tres o cuatro palabras pegadas aguantan más que ocho
+                caracteres con símbolos, y se pueden dictar por teléfono.</p>
+              <p>No queda guardada en ninguna parte legible, ni siquiera para ti:
+                la planilla solo guarda una huella. Si se pierde, se pone una nueva.</p>
+            </AyudaCorta>
           </p>
           <input type="password" value={clave} autoFocus className={`${ENTRADA} mt-4`}
             placeholder="nueva contraseña"
             onChange={(e) => setClave(e.target.value)} />
-          <p className="mt-2 text-xs text-hueso/45">
-            No queda guardada en ninguna parte legible, ni siquiera para ti:
-            la planilla solo guarda una huella. Si se pierde, se pone una nueva.
-          </p>
           <div className="mt-5 flex items-center gap-3">
             <span className="flex-1" />
             <button onClick={() => setPoniendoClave(null)}

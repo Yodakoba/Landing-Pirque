@@ -15,6 +15,7 @@
  * que el panel diera consejos que nadie dio.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import BotonGuardar from './BotonGuardar';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
@@ -513,15 +514,15 @@ export default function EquipoEditor() {
 
       {sinFicha.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
+          <p className="flex items-center text-[15px] font-semibold text-ambar-texto">
             Hay {sinFicha.length === 1 ? 'alguien asignado' : 'gente asignada'} a
             turnos que no está en esta lista.
-          </p>
-          <p className="mt-1 text-sm text-hueso/70">
-            Pasa al renombrar a una persona que ya tenía turnos: los turnos
-            viejos siguen con el nombre anterior. Agrégala abajo con ese
-            nombre exacto, o corrige el nombre en la pestaña{' '}
-            <code>Turnos</code> de la planilla.
+            <AyudaCorta titulo="Un nombre que no está en la lista">
+              Pasa al renombrar a una persona que ya tenía turnos: los turnos
+              viejos siguen con el nombre anterior. Agrégala con ese
+              nombre exacto, o corrige el nombre en la pestaña{' '}
+              <code>Turnos</code> de la planilla.
+            </AyudaCorta>
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {sinFicha.map((n) => (
@@ -595,7 +596,7 @@ export default function EquipoEditor() {
           **Las fichas sin nombre van al final**, que es donde está el botón
           de agregar: una recién creada que saltara al principio se perdería
           de vista justo después de apretarlo. */}
-      <ul className="space-y-3">
+      <ul className={LISTA_TARJETAS}>
         {gente
           .map((t, i) => ({ t, i }))
           .sort((a, b) => {
@@ -613,10 +614,11 @@ export default function EquipoEditor() {
           if (!calza(t) && abierta !== i) return null;
           const turnos = turnosDe.get(normalizar(t.nombre)) ?? 0;
           return (
+            // La misma tarjeta del informe (`TarjetaLista`); desactivada, con
+            // el borde cortado.
             <li key={i}
-              className={`overflow-hidden rounded border ${t.activo
-                ? 'border-hueso/15 bg-panel'
-                : 'border-hueso/10 bg-transparent opacity-60'}`}>
+              className={`overflow-hidden ${marcoTarjeta(abierta === i, t.activo ? 'normal' : 'apagada')} ${
+                t.activo ? '' : 'opacity-70'}`}>
 
               {/* **La ficha cerrada es una línea.** Nombre, puesto y teléfono
                   alcanzan para encontrar a alguien; lo demás —el sueldo, la
@@ -632,9 +634,7 @@ export default function EquipoEditor() {
                   onClick={() => setAbierta(abierta === i ? null : i)}
                   className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1
                              px-3 py-2.5 text-left hover:bg-hueso/5">
-                  <span aria-hidden className="w-3 text-base leading-none text-hueso/40">
-                    {abierta === i ? '−' : '+'}
-                  </span>
+                  <SignoAbrir abierta={abierta === i} tamano="h-6 w-6 text-[14px]" />
                   <span className="font-semibold">
                     {t.nombre.trim() || <span className="text-hueso/40">Sin nombre</span>}
                   </span>
@@ -702,7 +702,7 @@ export default function EquipoEditor() {
               </div>
 
               {abierta === i && (
-                <div className="border-t border-hueso/10 p-3">
+                <div className={`${CUERPO_ABIERTO} p-3`}>
                 <fieldset disabled={soloMira} className="m-0 min-w-0 border-0 p-0">
 
                 {/* Quién es, y cómo se entra a su link. */}
@@ -906,6 +906,9 @@ export default function EquipoEditor() {
                 </fieldset>
                 </div>
               )}
+              {abierta === i && (
+                <PieCerrar nombre={t.nombre.trim()} onCerrar={() => setAbierta(null)} />
+              )}
             </li>
           );
         })}
@@ -999,23 +1002,19 @@ export default function EquipoEditor() {
       {verPuestos && (
         <Dialogo titulo="Puestos" ancho="max-w-3xl"
                  onCerrar={() => setVerPuestos(false)}>
-          {!editarPuestos && (
-            <p className="mt-3 max-w-2xl text-sm text-hueso/60">
-              Los puestos y su regla los cambian el administrador y quien
-              hace los pagos. Acá se ven para poder asignar turnos.
-            </p>
-          )}
-          <p className="mt-3 max-w-2xl text-sm text-hueso/60">
-            <strong>Uno cada N personas</strong> es cuánta gente hace falta en
-            ese puesto según cuántos comensales haya. Con 10 en garzón, un día
-            de 44 personas sugiere 5. <strong>En blanco el panel no opina</strong>,
-            que es lo correcto mientras el número no lo hayas puesto tú.
-          </p>
           {/* **El orden de esta lista es el orden del planificador**, así que
-              se puede acomodar al orden en que se arma un turno. */}
-          <p className="mt-2 max-w-2xl text-[13px] text-hueso/70">
-            El orden manda: así salen en la ventana de planificar un día.
-            Muévelos con las flechas.
+              se puede acomodar al orden en que se arma un turno. Lo que
+              explica la regla va en el `?` (regla del cliente, 2026-11-21). */}
+          <p className="mt-3 flex max-w-2xl items-center text-[14px] text-hueso/70">
+            El orden manda: así salen al planificar un día.{editarPuestos ? ' Muévelos con las flechas.' : ''}
+            <AyudaCorta titulo="Los puestos">
+              <p><strong>Uno cada N personas</strong> es cuánta gente hace falta en
+                ese puesto según cuántos comensales haya. Con 10 en garzón, un día
+                de 44 personas sugiere 5. <strong>En blanco el panel no opina</strong>,
+                que es lo correcto mientras el número no lo hayas puesto tú.</p>
+              <p>Los puestos y su regla los cambian el administrador y quien
+                hace los pagos. Los demás los ven para poder asignar turnos.</p>
+            </AyudaCorta>
           </p>
 
           <div className="mt-4 overflow-x-auto">

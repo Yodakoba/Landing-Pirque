@@ -182,9 +182,13 @@ export const esAdelanto = (a: Pick<Ajuste, 'monto' | 'motivo' | 'tipo'>) =>
  * contratado pone cero: su sueldo no va con boleta.
  */
 export function paraBoletaDeTurno(t: Pick<Turno,
-  'asistencia' | 'modalidad' | 'pagoJornada' | 'horasExtra' | 'valorHora' | 'ajustes'>): number {
-  if (t.asistencia !== VINO.si || esContratado(t.modalidad)) return 0;
+  'asistencia' | 'modalidad' | 'pagoJornada' | 'horasExtra' | 'valorHora' | 'ajustes'> & Pick<Partial<Turno>, 'suelto'>): number {
   const ajustes = (t.ajustes ?? []).filter((a) => !esAdelanto(a)).reduce((n, a) => n + (a.monto || 0), 0);
+  // **Un ajuste fuera de turno** (2026-11-21) cuenta tal cual, también
+  // negativo: un *Rompió algo* un día sin turno baja la boleta del periodo.
+  // Un adelanto no, igual que en un turno.
+  if (t.suelto) return Math.round(ajustes);
+  if (t.asistencia !== VINO.si || esContratado(t.modalidad)) return 0;
   return Math.max(0, Math.round((t.pagoJornada || 0) + (t.horasExtra || 0) * (t.valorHora || 0) + ajustes));
 }
 
@@ -196,9 +200,13 @@ export function montosDeTurnos(turnos: Turno[], nombre: string): MontoDelDia[] {
 }
 
 /** Lo mismo para una actividad extra: monto y ajuste, sin restar un adelanto. */
-export function paraBoletaDeExtra(e: { estado: string; monto: number; ajuste: number; motivo: string }): number {
+export function paraBoletaDeExtra(e: { estado: string; monto: number; ajuste: number; motivo: string; ajustes?: Ajuste[] }): number {
   if (e.estado !== VINO.si) return 0;
-  const ajuste = esAdelanto({ monto: e.ajuste || 0, motivo: e.motivo }) ? 0 : (e.ajuste || 0);
+  // Con la lista (2026-11-21), cada ajuste por separado, como en un turno: un
+  // *Adelanto* no baja la boleta y lo demás sí. Sin ella, el ajuste de siempre.
+  const ajuste = e.ajustes
+    ? e.ajustes.reduce((n, a) => n + (esAdelanto(a) ? 0 : (a.monto || 0)), 0)
+    : esAdelanto({ monto: e.ajuste || 0, motivo: e.motivo }) ? 0 : (e.ajuste || 0);
   return Math.max(0, Math.round((e.monto || 0) + ajuste));
 }
 

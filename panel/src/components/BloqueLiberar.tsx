@@ -20,6 +20,7 @@
  * plata o un lugar pregunta antes**, en la misma tarjeta.
  */
 import { useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import { avisar } from './AvisoFlotante';
 import PastillaPago from './PastillaPago';
 import type { Reserva } from '@/lib/tipos';
@@ -118,9 +119,9 @@ export default function BloqueLiberar({ fecha, reservas, cotizacion, deCotizacio
                 className="tecla boton boton-relleno mt-2 min-h-[48px]">Abrir la cotización N° {folio} →</a>
             </div>
           )}
-          <p className="mt-2 text-[14px] text-hueso/75">
-            A cada una: avísale con disculpas y ofrécele la devolución completa u otra fecha con un pisco
-            sour de regalo. Después anota lo que eligió.
+          {/* Qué ofrecerle a cada una, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+          <p className="mt-2 flex items-center gap-1.5 text-[14px] text-hueso/75">
+            Qué ofrecerle a cada reserva <AyudaCorta tema="liberarDia" />
           </p>
         </>
       )}

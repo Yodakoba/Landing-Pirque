@@ -105,12 +105,13 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          semanasEntre, etiquetaSemana, escaleraDeSemanas,
          repartirPropina, propinaDelDia, porNombre,
          totalAjustes, motivosDe, leerAjustes, escribirAjustes,
-         partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno,
+         partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno, ajusteDelCuerpo, diasParaAjustar,
+         comoTurno, pagoDelTurno, leerAjustesSueltosDe, filaAjusteSuelto, ENCABEZADO_AJUSTES_SUELTOS,
          POR_DEFECTO_PUESTOS, esPreparacion,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
          leerExtrasDe, filaExtra, normalizarExtras, extrasDelDia,
-         costoExtrasDelDia, costoDeExtra, informeDeExtras,
+         costoExtrasDelDia, costoDeExtra, informeDeExtras, ajustesDe, conAjustes as ajustesJuntos,
          COL_COLABORADORES, COL_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
          type Colaborador, type Extra } from './extras.ts';
 import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
@@ -130,7 +131,7 @@ import { tieneArriendo, esExclusivo, marcaExclusividad, exclusividadDe, plazoPar
 import { firmaDe, personasPorDia, diferencias, siguienteIntervalo, REVISAR_CADA,
          REVISAR_COMO_MAXIMO } from './cambios.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
-         sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
+         sePuedeTransferir, titularDe, rutLimpio, rutConPuntos, numeroDeCuenta, TIPOS_CUENTA, COL_BANCO,
          type Banco, rutValido, avisoRut } from './banco.ts';
 
 let fallos = 0;
@@ -2598,6 +2599,30 @@ ok(fila.length === filasDias[0].length && fila[2] === '2026-11-21'
 ok(fila[4] === '' && fila[5] === '',
    'una columna que el panel no conoce se deja en blanco, no se pisa');
 
+// **Varios ajustes por actividad, como en un turno** (2026-11-21): las mismas
+// dos celdas, con los montos y los motivos separados por `|`.
+{
+  const conDos = leerExtrasDe([filasDias[0],
+    ['Pedro Soto', '50000', '2026-11-14', 'Sí', '', '-20000|5000', 'Adelanto · Transferencia|Feriado', 'Show ecuestre']]);
+  ok(conDos[0].ajustes?.length === 2 && conDos[0].ajuste === -15000
+     && conDos[0].motivo === 'Adelanto · Transferencia · Feriado',
+     'extras: dos ajustes en una celda se leen uno por uno, y suman');
+  ok(costoDeExtra(conDos[0]) === 35000, 'extras: el costo del día suma los dos');
+  const vuelta = filaExtra(filasDias[0], { ...conDos[0] });
+  ok(vuelta[5] === '-20000|5000' && vuelta[6] === 'Adelanto · Transferencia|Feriado',
+     'extras: y se escriben igual que se leyeron');
+  ok(dias[0].ajustes?.length === 1 && dias[0].ajustes[0].monto === 10000,
+     'extras: uno solo, escrito antes, se lee como siempre');
+  const aMano = { ajuste: -4000, motivo: 'llegó tarde' };
+  ok(ajustesDe(aMano).length === 1 && ajustesDe({ ajuste: 0, motivo: '' }).length === 0,
+     'extras: una línea a la antigua, sin lista, vale como un ajuste');
+  const viejo = filaExtra(filasDias[0], { fecha: '2026-11-21', colaborador: 'X', actividad: '',
+    estado: '', monto: 0, ...aMano });
+  ok(viejo[5] === '-4000' && viejo[6] === 'llegó tarde', 'extras: y se escribe como siempre');
+  const c = ajustesJuntos([{ monto: -3000, motivo: 'Rompió algo' }, { monto: 0, motivo: '' }]);
+  ok(c.ajuste === -3000 && c.motivo === 'Rompió algo', 'extras: lo que suma y los motivos salen de la lista');
+}
+
 ok(extrasDelDia(dias, '2026-11-14').length === 2, 'el día trae sus dos actividades');
 ok(costoExtrasDelDia(dias, '2026-11-14') === 60000,
    'y cuesta solo lo confirmado: la de Carla todavía no cuenta');
@@ -2678,6 +2703,13 @@ ok(rutLimpio('  7.654.321-0 ') === '7654321-0', 'los espacios de los bordes no c
 ok(rutLimpio('no es un rut') === 'no es un rut',
    'lo que no parece un RUT se devuelve tal cual, sin inventar');
 ok(rutLimpio('') === '', 'y un RUT vacío sigue vacío');
+ok(rutConPuntos('12345678-9') === '12.345.678-9' && rutConPuntos('9876543k') === '9.876.543-K',
+   'para el banco, el RUT va con puntos y guion (00.000.000-0)');
+ok(rutConPuntos('no es un rut') === 'no es un rut' && rutConPuntos('') === '',
+   'y lo que no parece un RUT sale tal cual');
+ok(numeroDeCuenta(' 00-123 456.78 ') === '0012345678' && numeroDeCuenta('') === '',
+   'el número de cuenta va solo con dígitos, sin perder los ceros de adelante');
+
 
 // **El tipo de cuenta es una lista cerrada.** Un valor inventado llegaría
 // hasta la planilla del banco, así que se descarta en el servidor.
@@ -3112,6 +3144,56 @@ ok(celdasAjustes[0] === '-4000|10000' && celdasAjustes[1] === 'Adelanto · Efect
    && totalAjustes(vueltaConTipos) === 6000,
    'ajustes: en la planilla queda igual que antes —monto con signo y motivo de texto— y el tipo no se guarda');
 
+// **El ajuste desde el informe** (2026-11-21): el mismo dato que Turnos.
+{
+  const r = ajusteDelCuerpo({ tipo: 'resta', monto: '4.000', razon: 'Adelanto', medio: 'Transferencia', nota: 'lo pidió el jueves' });
+  ok('ajuste' in r && r.ajuste.monto === -4000 && r.ajuste.motivo === 'Adelanto · Transferencia · lo pidió el jueves',
+     'informe: un descuento queda como uno de Turnos, con signo y el motivo en sus tres partes');
+  const s = ajusteDelCuerpo({ tipo: 'suma', monto: 10000, razon: 'Feriado' });
+  ok('ajuste' in s && s.ajuste.monto === 10000 && s.ajuste.motivo === 'Feriado', 'informe: una suma, positiva');
+  ok('error' in ajusteDelCuerpo({ tipo: 'resta', monto: 0, razon: 'Adelanto' }), 'informe: sin monto no se anota');
+  ok('error' in ajusteDelCuerpo({ tipo: 'resta', monto: 4000 }), 'informe: sin motivo tampoco: es plata anotada después');
+  ok('error' in ajusteDelCuerpo({ tipo: 'suma', monto: 4000, razon: 'Otro' }), 'informe: con Otro pide qué fue');
+  ok('error' in ajusteDelCuerpo({ tipo: 'suma', monto: 4000, razon: 'Adelanto' }), 'informe: un motivo de descuento no vale para una suma');
+  ok('error' in ajusteDelCuerpo({ tipo: 'suma', monto: 4000, razon: 'Mérito', medio: 'Cheque' }), 'informe: el medio, uno de los botones');
+  ok('error' in ajusteDelCuerpo({ monto: 4000, razon: 'Mérito' }), 'informe: sin decir si descuenta o suma, no');
+  const tur = (fecha: string, trabajador: string, asistencia: string) => ({ fecha, trabajador, puesto: '', asistencia,
+    modalidad: '', pagoJornada: 0, horasExtra: 0, valorHora: 0, ajustes: [], propina: 0, fila: 2 });
+  const dias = diasParaAjustar([tur('2026-11-08', 'Ana Soto', 'Sí'), tur('2026-11-07', 'ana soto', 'Sí'),
+    tur('2026-11-06', 'Ana Soto', 'No'), tur('2026-11-05', 'Ana Soto', ''), tur('2026-11-01', 'Ana Soto', 'Sí'),
+    tur('2026-11-07', 'Luis', 'Sí')], 'Ana Soto', '2026-11-02', '2026-11-08');
+  ok(JSON.stringify(dias) === JSON.stringify(['2026-11-07', '2026-11-08']),
+     'informe: se ajusta en los días que vino dentro del periodo, en orden; no en los que no vino ni sin marcar');
+}
+
+// **Fuera de turno** (2026-11-21): un adelanto de un día que no trabajó.
+{
+  const a = { id: 'AJ-1', fecha: '2026-11-11', trabajador: 'Ana Soto', monto: -20000,
+    motivo: 'Adelanto · Transferencia', quien: 'pagos', cuando: '2026-11-11T15:00:00Z' };
+  const filas = [ENCABEZADO_AJUSTES_SUELTOS, filaAjusteSuelto(ENCABEZADO_AJUSTES_SUELTOS, a)];
+  const vuelta = leerAjustesSueltosDe(filas);
+  ok(vuelta.length === 1 && vuelta[0].monto === -20000 && vuelta[0].motivo === 'Adelanto · Transferencia' && vuelta[0].fila === 2,
+     'fuera de turno: la pestaña se escribe y se lee igual, con el monto con signo');
+  const tur = (fecha: string, jornada: number) => ({ fecha, trabajador: 'Ana Soto', puesto: 'Garzón', asistencia: 'Sí',
+    modalidad: 'Por turno', pagoJornada: jornada, horasExtra: 0, valorHora: 0, ajustes: [], propina: 5000, fila: 2 });
+  const suelto = comoTurno(vuelta[0]);
+  const linea = informeDelPeriodo([tur('2026-11-14', 45000), tur('2026-11-15', 45000), suelto], '2026-11-09', '2026-11-15')[0];
+  ok(linea.dias === 2 && linea.total === 70000 && linea.ajustes === -20000 && linea.propina === 10000 && linea.modalidad === 'Por turno',
+     'fuera de turno: el adelanto baja el sueldo de la semana, sin contar como día ni tocar la propina');
+  const solo = informeDelPeriodo([suelto], '2026-11-09', '2026-11-15')[0];
+  ok(solo.dias === 0 && solo.total === -20000, 'fuera de turno: solo, la semana queda en negativo; pagoDe() no lo habría descontado');
+  ok(pagoDelTurno(suelto) === -20000 && pagoDelTurno(tur('2026-11-14', 45000)) === 45000,
+     'fuera de turno: pagoDelTurno() es su monto tal cual, y en un turno es pagoDe()');
+  const { paraBoletaDeTurno } = await import('./boletas.ts');
+  ok(paraBoletaDeTurno(suelto) === 0
+     && paraBoletaDeTurno(comoTurno({ ...vuelta[0], monto: -8000, motivo: 'Rompió algo' })) === -8000,
+     'fuera de turno: un adelanto no baja la boleta; un Rompió algo sí, aunque no haya turno');
+  ok(diasParaAjustar([tur('2026-11-14', 45000), suelto], 'Ana Soto', '2026-11-09', '2026-11-15').join() === '2026-11-14',
+     'fuera de turno: no es un día para ajustar en Turnos');
+  ok(diasQueNoSuman([suelto], '2026-11-09', '2026-11-15', (t) => t.trabajador, (t) => t.asistencia).size === 0,
+     'fuera de turno: no aparece como día sin marcar');
+}
+
 // Un ajuste en cero y sin motivo es una fila que alguien abrió y no llenó.
 ok(escribirAjustes([{ monto: 0, motivo: '' }])[0] === '',
    'un ajuste vacío no se guarda');
@@ -3411,25 +3493,33 @@ console.log('\nPagos al equipo');
      && boletaEnPlanilla(false, false) === 'No aplica',
      'en la planilla: Sí, en blanco si no llegó, y No aplica para un contratado');
 
-  /* --- Copiar los datos de la transferencia --- */
-  const texto = textoTransferencia({ titular: 'Ana Soto', rut: '11111111-1',
+  /* --- Copiar los datos de la transferencia: el formulario del banco (2026-11-21) --- */
+  const ana = { titular: 'Ana Soto', rut: '11111111-1',
     banco: 'BancoEstado', tipo: 'Cuenta RUT', numero: '11111111', monto: 120000,
-    correo: 'ana@correo.cl', glosa: glosaDe('Sueldo', '2026-11-09', '2026-11-15') });
-  ok(texto.split('\t').length === ORDEN_TRANSFERENCIA.length,
-     'un campo por tabulación, en el orden de ORDEN_TRANSFERENCIA');
-  ok(texto.split('\t')[ORDEN_TRANSFERENCIA.indexOf('monto')] === '120000',
+    correo: 'ana@correo.cl', glosa: glosaDe('Sueldo', '2026-11-09', '2026-11-15') };
+  const texto = textoTransferencia(ana);
+  ok(texto === ['Ana Soto', '11.111.111-1', 'BancoEstado', 'Cuenta RUT', '11111111',
+       'ana@correo.cl', '120000', 'Sueldo 09/11 al 15/11'].join('\n'),
+     'solo los valores, uno por línea, en el orden del formulario del banco y después el monto y la glosa');
+  ok(!/Nombre y apellido|RUT:|E-mail/.test(texto), 'sin rótulos: cada línea se pega tal cual en su campo');
+  ok(textoTransferencia({ ...ana, correo: '' }).split('\n')[5] === ''
+     && textoTransferencia({ ...ana, correo: '' }).split('\n')[6] === '120000',
+     'sin correo su línea va vacía: el monto sigue en el mismo lugar');
+  ok(JSON.stringify(ORDEN_TRANSFERENCIA.slice(0, 6).map((k) => NOMBRE_COLUMNA_TRANSFERENCIA[k]))
+     === JSON.stringify(['Nombre y apellido', 'RUT', 'Banco', 'Tipo de cuenta', 'Número de cuenta', 'E-mail']),
+     'las columnas de la planilla para el banco: los mismos rótulos, en el mismo orden');
+  ok(texto.split('\n')[6] === '120000',
      'el monto va sin puntos ni signo peso: es lo que un banco acepta pegar');
-  ok(texto.endsWith('Sueldo 09/11 al 15/11'),
-     'y la glosa dice qué es y de qué semana, corta y sin guiones largos ni tildes');
   ok(glosaDe('Propina', '2026-11-09', '2026-11-15').length <= 30,
-     'y cabe en los 30 caracteres que dejan los bancos');
+     'y la glosa cabe en los 30 caracteres que dejan los bancos');
   ok(ORDEN_TRANSFERENCIA.every((k) => !!NOMBRE_COLUMNA_TRANSFERENCIA[k]),
      'cada columna de la planilla para el banco tiene su nombre');
-  ok(textoTransferencia({ titular: 'A', rut: '1-9', banco: 'B', tipo: 'T', numero: '7',
-       monto: 5, correo: 'c', glosa: 'G' })
-     === filaTransferencia({ titular: 'A', rut: '1-9', banco: 'B', tipo: 'T', numero: '7',
-       monto: 5, correo: 'c', glosa: 'G' }).join('\t'),
-     'copiar y la planilla para el banco salen del mismo orden: se cambia una vez y vale para los dos');
+  const filaAna = filaTransferencia({ ...ana, rut: '9.876.543-k', numero: '00-123-45678-09' });
+  ok(filaAna[ORDEN_TRANSFERENCIA.indexOf('rut')] === '9.876.543-K'
+     && filaAna[ORDEN_TRANSFERENCIA.indexOf('numero')] === '001234567809',
+     'la planilla lleva el RUT con puntos y la cuenta solo con dígitos, con sus ceros de adelante');
+  ok(texto === filaTransferencia(ana).join('\n'),
+     'copiar y la planilla para el banco dicen lo mismo: es la misma fila, una celda por línea');
   ok(CONCEPTO.propina === 'Propina', 'el concepto propina se llama así en la planilla');
 
   ok(leerPagosDe([ENCABEZADO_PAGOS]).length === 0, 'una pestaña vacía no inventa pagos');
@@ -5590,6 +5680,9 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
   ok(B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -20000, motivo: 'Adelanto' }) === 60000
      && B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -5000, motivo: 'Rompió algo' }) === 55000,
      'en una actividad extra, lo mismo: el adelanto no baja la boleta');
+  ok(B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -25000, motivo: '',
+    ajustes: [{ monto: -20000, motivo: 'Adelanto · Efectivo' }, { monto: -5000, motivo: 'Rompió algo' }] }) === 55000,
+     'y con varios ajustes, cada uno por separado: solo el adelanto queda fuera');
 
   const montos = ['2026-11-07', '2026-11-08', '2026-11-14', '2026-11-15', '2026-11-21', '2026-11-22', '2026-11-28', '2026-11-29']
     .map((fecha) => ({ fecha, monto: 40000 }));
@@ -5721,6 +5814,62 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
     if (antes[k] === undefined) delete process.env[k]; else process.env[k] = antes[k];
   }
   A.olvidarToken();
+}
+
+// ---------------------------------------------------------------------------
+console.log('\nLas estadísticas del equipo');
+{
+  const E = await import('./estadisticasEquipo.ts');
+  const tur = (fecha: string, puesto: string, asistencia: string, jornada: number, propina = 0, extra: Partial<Turno> = {}) => ({
+    fecha, trabajador: 'X', puesto, asistencia, modalidad: 'Por turno', pagoJornada: jornada, horasExtra: 0,
+    valorHora: 0, ajustes: [], propina, fila: 2, ...extra }) as Turno;
+  const res = (fecha: string, personas: number, monto: number | null, valorFinal: number | null, estado = 'paid') => ({
+    id: fecha + personas, fecha, nombre: 'C', email: '', telefono: '', menu: 'Tradiciones', personas, monto,
+    tipoPago: '', estadoPago: estado, asistencia: '', notaPago: '', valorFinal, fila: 2 }) as unknown as Reserva & { valorFinal: number | null };
+  const turnos = [
+    tur('2026-11-07', 'Parrilla', 'Sí', 45000, 10000), tur('2026-11-07', 'Garzón', 'Sí', 35000, 12000),
+    tur('2026-11-08', 'Garzón', 'Sí', 35000, 8000), tur('2026-11-08', 'Cocina', 'No', 40000),
+    tur('2026-11-08', 'Cocina', '', 40000),
+    tur('2026-11-08', '', 'Sí', 0, 0, { ajustes: [{ monto: -20000, motivo: 'Adelanto' }], suelto: 'AJ-1' }),
+    tur('2026-10-31', 'Parrilla', 'Sí', 45000)
+  ];
+  const extras = [{ fecha: '2026-11-08', colaborador: 'J', actividad: 'Show', estado: 'Sí', monto: 250000, ajuste: 0, motivo: '', fila: 2 },
+                  { fecha: '2026-11-07', colaborador: 'P', actividad: 'Pinta', estado: '', monto: 60000, ajuste: 0, motivo: '', fila: 3 }] as Extra[];
+  const reservas = [res('2026-11-07', 10, 440000, 520000), res('2026-11-08', 4, 176000, null),
+                    res('2026-11-08', 6, 264000, null, 'cancelled'), res('2026-11-20', 30, 1320000, null)];
+  const dias = E.estadisticasPorDia({ turnos, extras, reservas, desde: '2026-11-02', hasta: '2026-11-08', hoy: '2026-11-13' });
+  const sab = dias.find((d) => d.fecha === '2026-11-07')!;
+  const dom = dias.find((d) => d.fecha === '2026-11-08')!;
+  ok(dias.length === 2 && sab.porPuesto.Parrilla === 45000 && sab.porPuesto['Garzón'] === 35000 && sab.propina === 22000,
+     'estadísticas: el sueldo de cada turno que vino, por su puesto, y la propina aparte');
+  ok(!dom.porPuesto.Cocina && dom.porPuesto[E.EXTRAS] === 250000 && !sab.porPuesto[E.EXTRAS],
+     'estadísticas: no cuentan los que no vinieron ni los sin marcar; las actividades extras confirmadas son un puesto más');
+  ok(E.costoDelDia(dom) === 285000, 'estadísticas: un ajuste fuera de turno (un adelanto) no es costo del día');
+  ok(sab.ventas === 520000 && sab.ventasAnotadas === 520000 && dom.ventas === 176000 && dom.ventasAnotadas === 0
+     && dom.reservas === 1 && dom.personas === 4,
+     'estadísticas: ventas con el valor final si se anotó, si no el monto; una cancelada no cuenta');
+  ok(!E.estadisticasPorDia({ turnos, extras, reservas, desde: '2026-11-16', hasta: '2026-11-22', hoy: '2026-11-13' }).length,
+     'estadísticas: una reserva que todavía no llega no vendió nada');
+  const semanas = E.agrupar(dias, 'semana', '2026-10-26', '2026-11-08');
+  ok(semanas.length === 2 && semanas[0].desde === '2026-10-26' && E.costoDelDia(semanas[0]) === 0
+     && E.costoDelDia(semanas[1]) === 365000 && semanas[1].jornadas['Garzón'] === 2,
+     'estadísticas: por semana, de lunes a domingo, con las semanas vacías incluidas');
+  ok(E.agrupar(dias, 'dia', '2026-11-02', '2026-11-08').length === 7, 'estadísticas: por día, los siete aunque estén vacíos');
+  const nov = E.agrupar(dias, 'semana', '2026-11-01', '2026-11-30');
+  ok(nov[0].desde === '2026-11-01' && nov[0].hasta === '2026-11-01' && nov[1].desde === '2026-11-02'
+     && nov[nov.length - 1].hasta === '2026-11-30',
+     'estadísticas: una semana cortada por el periodo se nombra por su primer día adentro');
+  const r = E.resumenDe(semanas);
+  ok(r.costo === 365000 && r.propinas === 30000 && r.ventas === 696000 && r.personas === 14
+     && r.porPersona === Math.round(365000 / 14) && r.porcentaje === 52 && r.reservasConValor === 1 && r.reservas === 2,
+     'estadísticas: el resumen suma el costo, las propinas y las ventas, y saca costo por persona y % de las ventas');
+  ok(E.resumenDe([]).porPersona === null && E.resumenDe([]).porcentaje === null, 'estadísticas: sin gente ni ventas, sin división por cero');
+  const filas = E.porPuesto(semanas);
+  ok(filas[0].puesto === E.EXTRAS && filas.find((f) => f.puesto === 'Garzón')!.promedio === 35000
+     && filas.reduce((s, f) => s + f.costo, 0) === 365000,
+     'estadísticas: por puesto, del que más cuesta al que menos, con el promedio por jornada');
+  ok(E.ordenDePuestos(['Parrilla', 'Cocina', 'Garzón'], ['Garzón', 'Barra', E.EXTRAS, 'Parrilla']).join() === 'Parrilla,Cocina,Garzón,Barra,' + E.EXTRAS,
+     'estadísticas: el color sigue al puesto: el orden de la pestaña Puestos, los nuevos después y los extras al final');
 }
 
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');

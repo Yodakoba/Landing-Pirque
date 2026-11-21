@@ -10,6 +10,7 @@
  * cero, vas a ver que vuelve a 60: eso no es un error, es la validación.
  */
 import AvisoFijo from './AvisoFijo';
+import AyudaCorta from './AyudaCorta';
 import { useEffect, useState } from 'react';
 import Ayuda from './Ayuda';
 import PasoAProduccion from './PasoAProduccion';
@@ -103,9 +104,11 @@ export default function ConfigEditor() {
   ) => (
     <div key={nombre} className="border-t border-hueso/10 py-4 first:border-t-0
                                  sm:grid sm:grid-cols-[1fr_14rem] sm:gap-6">
-      <div>
-        <div className="text-[15px] font-semibold">{titulo}</div>
-        {ayuda && <p className="mt-1 max-w-xl text-[13px] text-hueso/65">{ayuda}</p>}
+      {/* **La explicación de cada campo, en su `?`** (2026-11-21, regla *lo que
+          explica va en su ?*): a la vista, el nombre del campo y su caja. */}
+      <div className="flex items-center gap-2">
+        <span className="text-[15px] font-semibold">{titulo}</span>
+        {ayuda && <AyudaCorta titulo={titulo}>{ayuda}</AyudaCorta>}
       </div>
       <div className="mt-2 sm:mt-0">
         {entrada}
@@ -304,15 +307,15 @@ export default function ConfigEditor() {
       para: 'Lo que se toca cuando algo parece faltar, no a diario.',
       cuerpo: (
         <div className="py-4">
-          <p className="max-w-2xl text-[14px] text-hueso/75">
-            Las reservas llegan solas apenas se paga en Shopify, y una vez al día se revisa
-            que no falte ninguna. Este botón hace esa revisión ahora: sirve si sospechas que
-            una reserva no apareció. Apretarlo de más no duplica nada.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button onClick={revisarShopify} disabled={revisando} className="boton min-h-[44px]">
               {revisando ? 'Revisando…' : 'Revisar Shopify ahora'}
             </button>
+            <AyudaCorta titulo="Revisar Shopify ahora">
+              Las reservas llegan solas apenas se paga en Shopify, y una vez al día se revisa que no falte
+              ninguna. Este botón hace esa revisión ahora: sirve si sospechas que una reserva no apareció.
+              Apretarlo de más no duplica nada.
+            </AyudaCorta>
             {resumen && <span className="text-[14px] text-hueso/70">{resumen}</span>}
           </div>
           <PasoAProduccion />
@@ -343,10 +346,10 @@ export default function ConfigEditor() {
         {secciones.map((x) => (
           <section key={x.id} id={x.id} aria-labelledby={`t-${x.id}`}
             className="scroll-mt-4 rounded-lg border border-hueso/15 bg-panel px-4 pt-4 sm:px-5">
-            <h2 id={`t-${x.id}`} className="text-base font-bold uppercase tracking-wide text-oro">
-              {x.titulo}
+            {/* Para qué sirve la sección, en su `?`. */}
+            <h2 id={`t-${x.id}`} className="flex items-center gap-2 text-base font-bold uppercase tracking-wide text-oro">
+              {x.titulo} <AyudaCorta titulo={x.titulo}>{x.para}</AyudaCorta>
             </h2>
-            <p className="mt-1 max-w-2xl text-[14px] text-hueso/70">{x.para}</p>
             {/* Con vista gerencia, los campos se ven apagados: `fieldset
                 disabled` los apaga todos de una vez. */}
             <fieldset disabled={soloMira} className="m-0 mt-2 min-w-0 border-0 border-t border-hueso/15 p-0">

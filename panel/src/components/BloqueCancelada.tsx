@@ -8,6 +8,7 @@
  * comprobante y su revisión como cualquier otro cobro (`faltaDevolver()`).
  */
 import { useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 import { avisar } from './AvisoFlotante';
 import { enPesos } from '@/lib/ocupacion';
 import { faltaDevolver } from '@/lib/cancelacion';
@@ -95,8 +96,12 @@ export default function BloqueCancelada({ p, cobros, puedePagar, onCobros }: {
                   className="boton min-h-[44px]">Anotar</button>
               </div>
             )}
-            <p className="text-[14px] text-hueso/70">
-              Queda en los pagos del cliente, en negativo. Ahí se le sube el comprobante.
+            {/* Dónde queda, en su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+            <p className="flex items-center gap-1.5 text-[14px] text-hueso/70">
+              Dónde queda la devolución
+              <AyudaCorta titulo="La devolución">
+                Queda en los pagos del cliente, en negativo. Ahí se le sube el comprobante.
+              </AyudaCorta>
             </p>
           </div>
         )}

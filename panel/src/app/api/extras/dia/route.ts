@@ -4,6 +4,7 @@ import { exigir, quienEs } from '@/lib/permisos';
 import { guardarExtrasDelDia, leerExtras, anotar } from '@/lib/datos';
 import { esFecha, hoy } from '@/lib/fechas';
 import { yaLlego } from '@/lib/cierres';
+import { conAjustes } from '@/lib/extras';
 import { aEntero } from '@/lib/equipo';
 import { guardaDelDia } from '@/lib/guardaCierre';
 
@@ -51,9 +52,16 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
       actividad: String(e?.actividad ?? '').trim(),
       estado: llego ? String(e?.estado ?? '').trim() : '',
       monto: aEntero(e?.monto),
-      // Con signo: un descuento es justamente un número negativo.
-      ajuste: aEntero(e?.ajuste, true),
-      motivo: String(e?.motivo ?? '').trim()
+      // **Varios ajustes, cada uno con su motivo** (2026-11-21), igual que un
+      // turno: con signo, y los que quedan en cero y sin motivo se descartan.
+      // Uno mandado a la antigua —un número y un motivo— cuenta como uno.
+      ...conAjustes((Array.isArray(e?.ajustes) ? e.ajustes
+        : [{ monto: e?.ajuste, motivo: e?.motivo }])
+        .map((a: unknown) => ({
+          monto: aEntero((a as Record<string, unknown>)?.monto, true),
+          motivo: String((a as Record<string, unknown>)?.motivo ?? '').trim()
+        }))
+        .filter((a: { monto: number; motivo: string }) => a.monto || a.motivo))
     })));
 
     // Se devuelve lo que quedó guardado y no lo que se mandó: si algo se

@@ -30,6 +30,7 @@
 import { aEntero } from './equipo.ts';
 import { normalizar } from './columnas.ts';
 import { esFecha, type Fecha } from './fechas.ts';
+import { rutConPuntos, numeroDeCuenta } from './banco.ts';
 
 export const HOJA_PAGOS = 'Pagos';
 
@@ -495,47 +496,80 @@ export const boletaEnPlanilla = (aplica: boolean, recibida: boolean) =>
 /* ---------- Copiar los datos de la transferencia (2026-11-04) ---------- */
 
 /**
- * **El orden en que se copian los datos de una transferencia.**
+ * **El orden de los datos de una transferencia: el del formulario del
+ * banco** (2026-11-21).
  *
- * Lo pidió el cliente: un botón que copie los datos de una persona con el
- * monto, para pegarlos en el panel del banco. **El orden exacto todavía no
- * está confirmado** —cada banco pide los campos a su manera, y hay que
- * probarlo con el del cliente—, así que vive en una sola lista: cambiar el
- * orden es mover una línea acá y nada más.
+ * Lo fijó el cliente con una captura del formulario de *nuevo destinatario*
+ * que usa el encargado de pagos: **Nombre y apellido · RUT · Banco · Tipo de
+ * cuenta · Número de cuenta · E-mail (opcional)**. Después van el monto y la
+ * glosa, que el banco pide en el paso de transferir. Hasta ese día era
+ * titular, RUT, banco, tipo, número, **monto, correo**, glosa —el orden
+ * estaba sin confirmar— y los nombres no eran los del banco.
  *
- * Se copian **separados por tabulación**: pegado en una planilla cae un
- * campo por celda, y en un formulario web muchos bancos pasan de un campo
- * al siguiente con cada tab.
+ * Es una sola lista para el botón de copiar, la planilla para la
+ * transferencia masiva y las columnas del banco de las planillas del
+ * informe: cambiarla acá cambia las tres. Los rótulos van en las planillas;
+ * el botón copia solo los valores (`textoTransferencia()`).
  */
 export const ORDEN_TRANSFERENCIA = [
-  'titular', 'rut', 'banco', 'tipo', 'numero', 'monto', 'correo', 'glosa'
+  'titular', 'rut', 'banco', 'tipo', 'numero', 'correo', 'monto', 'glosa'
 ] as const;
+
+/** Lo que pide el formulario de *nuevo destinatario*, en su orden. */
+export const DATOS_DESTINATARIO = ['titular', 'rut', 'banco', 'tipo', 'numero', 'correo'] as const;
 
 export interface DatosTransferencia {
   titular: string; rut: string; banco: string; tipo: string; numero: string;
   monto: number; correo: string; glosa: string;
 }
 
-/** El nombre de cada columna en la planilla para el banco. */
+/** El nombre de cada dato: el mismo rótulo del formulario del banco. */
 export const NOMBRE_COLUMNA_TRANSFERENCIA: Record<typeof ORDEN_TRANSFERENCIA[number], string> = {
-  titular: 'Nombre del titular', rut: 'RUT', banco: 'Banco', tipo: 'Tipo de cuenta',
-  numero: 'N° de cuenta', monto: 'Monto', correo: 'Correo', glosa: 'Glosa'
+  titular: 'Nombre y apellido', rut: 'RUT', banco: 'Banco', tipo: 'Tipo de cuenta',
+  numero: 'Número de cuenta', correo: 'E-mail', monto: 'Monto', glosa: 'Glosa'
 };
 
-/** Una transferencia como fila, en el orden de `ORDEN_TRANSFERENCIA`. */
+/**
+ * Una transferencia como fila, en el orden de `ORDEN_TRANSFERENCIA`, **ya en
+ * el formato del banco**: el RUT con puntos y guion (`12.345.678-9`) y el
+ * número de cuenta solo con dígitos. Se formatea acá y no en cada botón,
+ * para que copiar y las planillas no puedan salir distintos.
+ */
 export const filaTransferencia = (d: DatosTransferencia): string[] =>
-  ORDEN_TRANSFERENCIA.map((k) => String(d[k] ?? ''));
+  ORDEN_TRANSFERENCIA.map((k) =>
+    k === 'rut' ? rutConPuntos(d.rut)
+      : k === 'numero' ? numeroDeCuenta(d.numero)
+        : String(d[k] ?? ''));
 
 /**
- * Los datos de una transferencia como texto para pegar.
+ * Los datos de una transferencia como texto para pegar: **solo los valores,
+ * uno por línea**, en el orden del formulario del banco y después el monto y
+ * la glosa.
  *
- * **Es la misma fila que la planilla para el banco**, separada por tabs: el
- * botón de copiar y la transferencia masiva salen del mismo orden, así que
- * cuando se confirme lo que pide el banco se cambia una vez y vale para los
- * dos.
+ * ```
+ * Ana Soto
+ * 11.111.111-1
+ * BancoEstado
+ * Cuenta RUT
+ * 11111111
+ * ana@correo.cl
+ * 120000
+ * Sueldo 09/11 al 15/11
+ * ```
+ *
+ * - **Sin rótulos** (lo corrigió el cliente el mismo día: *"solo copias Luis
+ *   Contreras… el pagador copia los datos, abre… el banco y copia los datos
+ *   nomás"*): cada línea se pega tal cual en su campo. El primer corte decía
+ *   *Nombre y apellido: Ana Soto*, y eso había que borrarlo al pegar.
+ * - **Siempre ocho líneas, en el mismo lugar**: sin correo, su línea va
+ *   vacía, para que el monto siga siendo la séptima.
+ * - **Es la misma fila de la planilla para el banco** (`filaTransferencia()`),
+ *   una celda por línea: copiar y descargar no pueden decir cosas distintas.
+ *   Antes iba separada por tabs, pensando en que un formulario web pasara de
+ *   un campo al siguiente al pegar; pegar no hace eso.
  */
-export const textoTransferencia = (d: DatosTransferencia) =>
-  filaTransferencia(d).join('\t');
+export const textoTransferencia = (d: DatosTransferencia): string =>
+  filaTransferencia(d).join('\n');
 
 /**
  * La glosa de la transferencia: qué es y de qué periodo —*"Sueldo 26/10 al

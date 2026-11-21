@@ -13,11 +13,27 @@ revisan antes de cada cambio en esta carpeta.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px
-  lo que se usa seguido), letra de 13px o más donde hay un dato, se
+  lo que se usa seguido; 40px en el celular, 2026-11-21), letra de 13px o más donde hay un dato, se
   distingue por forma y no solo por color, un solo botón relleno por vista,
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
   desplegables, una frase que dice qué pasa al seguir.
+- **Una tarjeta abierta cabe en una pantalla** (regla del cliente,
+  2026-11-21: *"ojalá que una tarjeta siempre cae en una página… en muchos
+  casos sí se puede seguir con la misma regla y a la vez que siempre se ve
+  todo en una pantalla"*). Al diseñar una tarjeta, una ventana o una línea
+  que se abre, se mide con Playwright que entre entera en un notebook
+  —1280×650, lo que queda con la barra del navegador— y, donde se pueda, en
+  un teléfono de 393×740: menos aire, el nombre al lado del campo, lo
+  secundario plegado (como un ajuste guardado) o en su `?`. **Si no cabe sin
+  romper la regla de arriba** —botones bajo 36px, letra bajo 13px—, gana la
+  regla de arriba, y el PR dice que no cupo y cuánto mide.
+- **Lo que explica va en su `?`, no fijo en la pantalla** (regla del
+  cliente, 2026-11-21: *"vamos a capacitar a la gente y entonces después
+  molesta mucho texto constante"*). A la vista quedan el dato y la acción;
+  el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
+  Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
+  frase que dice qué pasa al apretar un botón sí se queda.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -46,12 +62,15 @@ revisan antes de cada cambio en esta carpeta.
   pantalla y con la misma importancia; una pantalla puede variar el tamaño o
   cuánto muestra según su espacio, **no el formato**. Antes de dibujar algo
   se busca la pieza que ya lo muestra; si hay dos formas del mismo dato, se
-  unifican. **Las piezas compartidas, hoy**:
+  unifican. **Y un cambio de diseño se lleva a sus parecidos** (regla del
+  cliente, 2026-11-21, está en la raíz): se cambia en todas las pantallas
+  que usan esa pieza en el mismo PR, o, si hay duda, se le pregunta al
+  cliente nombrando cuáles. **Las piezas compartidas, hoy**:
 
   | Dato | Pieza |
   |---|---|
   | El título de una sección | `BandaSeccion` (con su tono) |
-  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` (*HOY* relleno) y `MARCO_HOY` alrededor de la tarjeta o celda de hoy |
+  | La fecha de un día, y *hoy* / *esta semana* | `FechaDia` + `MarcaAhora` (*HOY* relleno) y `MARCO_HOY` alrededor de la tarjeta o celda de hoy, con el fondo apenas iluminado (`.fondo-hoy`) |
   | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
   | Lo cotizado (solo lo mandado) y la gente posible, ganadas, esperando, lo tuyo sin mandar | `Pastilla` / `PastillaCotizado` |
   | En las celdas de Turnos y Extras: el equipo del día (👥, dorado) y las actividades y su costo (🎠, añil) | `Pastilla` tipo `equipo` / `extras` |
@@ -62,6 +81,9 @@ revisan antes de cada cambio en esta carpeta.
   | Elegir de una lista que crece | `BuscarEnLista` |
   | Escribirle al cliente por WhatsApp | `BotonWhatsApp` (o `abrirWhatsApp()`), con el saludo de `saludoAlCliente()` |
   | Cuánto boletear: bruto, retención y neto | `CajaBoleta` (link personal e informe) |
+  | Una tarjeta de una lista que se abre: el marco, el + / − y el pie *▴ Cerrar* | `marcoTarjeta`, `SignoAbrir`, `PieCerrar` y `LISTA_TARJETAS` de `TarjetaLista` (Informe, Equipo, Extras, Vendedores, Clientes, Productos, Recepción, las reservas del día y las ventanas del equipo y de extras del día) |
+  | Un grupo de tarjetas (un puesto en la ventana del equipo) | `marcoGrupo` de `TarjetaLista` |
+  | Lo de adentro de la línea de una persona en un día: campos, ajustes, total, *Ficha / Sacar del día*, *+ Nuevo …* | `CampoAlLado`, `AjustesDelDia`, `TotalDelDia`, `BotonesDeLaLinea` y `BotonNuevaPersona` de `LineaDelDia` (ventana del equipo y de las actividades extras) |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -104,6 +126,7 @@ revisan antes de cada cambio en esta carpeta.
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
+  Y si se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
 
 ## El token de Shopify de la tienda real (2026-11-21)
 
@@ -156,6 +179,364 @@ entregan un Client ID y un Client secret, y con ellos se pide un token que
   que se escribe se pega dos o cuatro veces sin que se note, y Shopify
   responde *"Missing or invalid client secret"*. El secreto de una app de
   Shopify empieza con `shpss_` y tiene 38 caracteres.
+
+## Lo que explica, a su `?`: la pasada por todo el panel (2026-11-21)
+
+Lo pidió el cliente mirando Turnos: *"este texto… debería ser un botón de
+ayuda nomás también… revisa si hay otros lugares… vamos a capacitar a la
+gente y entonces después molesta mucho texto constante"*. De ahí salió la
+regla *lo que explica va en su `?`* (arriba). Se recorrió el panel entero en
+cuatro tandas, un commit cada una.
+
+**El criterio, para seguir aplicándolo**:
+
+- **Queda a la vista**: el dato, la acción, una advertencia de estado (*Hay
+  menús vendidos que no están en esta lista*, *el día queda sobrevendido*) y
+  la frase que dice qué pasa al apretar (*Se guarda con 120 y se le pide
+  150*).
+- **Va al `?`**: el porqué, el cómo funciona, los ejemplos, de dónde sale un
+  número y qué hacer si algo no calza. Con `AyudaCorta` y `tema` si el texto
+  se repite (va a `AYUDAS_CORTAS`), o con `titulo` + `children` si depende de
+  datos de la pantalla.
+- **Se borra**: lo que ya dice otra pieza (*se guarda solo* al lado de
+  `AvisoGuardado`), lo repetido y lo que solo sirve la primera vez sin un
+  `AvisoFijo` que lo pueda cerrar.
+- **No se tocó, a propósito**: las ventanas que preguntan antes de algo
+  manual —dicen qué va a pasar, que es lo que la regla del autoguardado
+  pide—, *Dejar la base en cero* (`PasoAProduccion`, se usa una vez y cada
+  línea es una advertencia) y los `AvisoFijo`, que ya tienen su ✕.
+
+**Dónde cambió**:
+
+| Tanda | Pantallas |
+|---|---|
+| 1 | Turnos (*Hay N días por cerrar*), la ventana del equipo y la de extras del día, las fichas de trabajador y colaborador, Extras (link del colaborador) |
+| 2 | Informe (avisos de sin marcar y extras sin confirmar, la nota de cada tarjeta, *Todavía no suma*, la ventana de deshacer un pago), la página del día (cotizado, día cerrado, contacto tapado), la recepción, el formulario de reserva, Clientes, Sobrecupo y Liberar el día, la mesa |
+| 3 | Cotizaciones (*Sin fecha*, pendientes) y la ventana de cotizar: las bajadas de los hitos, los avisos de cancelada, sujeta a espacio y ganada, invitados, comisión del socio, exclusivo, alternativas, contrato, liberar para ganar; *Agregar vendedor* y los campos del documento |
+| 4 | Configuración (la ayuda de cada campo y de cada sección, *Revisar Shopify ahora*), Cuentas (desactivar o quitar, la contraseña), *Ver como*, la franja *Vista gerencia*, el link de la planilla semanal, *Agregar fecha* (qué día es, la nota), los avisos de nombres que no están en la lista (Equipo, Extras, Productos), la ventana de Puestos, Productos (*Qué es*, *En una cotización*, el nombre que no se cambia), Vendedores (etapas, con socio, el documento), Estadísticas y la Bitácora |
+
+- **Estadísticas conserva a la vista *Datos del panel, no de Fudo***, en
+  negrita: el cliente pidió que se dijera; el detalle de qué suma y qué no,
+  en su `?`.
+- **De paso subió letra**: los rótulos de *Agregar fecha* y las opciones de
+  *Qué día es* pasaron de 12 a 13-15px, y el link de renovar la planilla
+  semanal de 12 a 13. `HABIA` de `letra-chica` bajó en CalendarView (1→0),
+  DiaEditor (9→1), UsuariosEditor (5→3), la bitácora (3→2), y antes en
+  EquipoDialogo, ExtrasDialogo y las fichas.
+- **Lecturas de Google**: ninguna. **Ningún permiso cambió.**
+- **Ayuda**: el `?` de Turnos, Extras e Informe y las misiones se
+  revisaron; las fotos se rehicieron en cada tanda (la última: `adm-cuentas`,
+  `adm-config`, `adm-bitacora`, `adm-vercomo`, `ven-resumen`,
+  `pag-vendedores`, `ger-vendedores`).
+
+## El informe, ordenado y más compacto (2026-11-21)
+
+Lo pidió el cliente: en el celular *"los botones quedan un 15%, a veces un
+20% muy grandes… es difícil entender dónde empieza un nuevo trabajador,
+hasta dónde llega la tarjeta"*; que la transferencia masiva se pliegue; que
+la lista vaya ordenada —arriba los que tienen plata, al final los que no
+tienen nada— con un filtro *Sin marcar*; y que en el computador las tarjetas
+dejen menos espacio vacío. Se mostró primero como prototipo en el panel de
+ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
+`InformeEquipo.tsx`.
+
+- **El orden de la lista**, en las tres secciones (`enGrupos()`):
+  1. quien tiene **plata en el periodo** —algo que transferir o un pago ya
+     anotado—, sin rótulo;
+  2. **○ Falta marcar si vino · N · todavía no suman**: sin plata, con días
+     sin marcar;
+  3. **Sin nada que pagar en este periodo · N**: solo días que no vino.
+
+  Dentro de cada grupo, el orden de siempre (lo que más se paga primero),
+  **para que la lista no salte mientras se paga**. Antes iba solo por monto,
+  así que alguien con $16.500 por pagar quedaba debajo de dos en $0.
+- **Filtro *Sin marcar (N)***, al lado de *Todos · Por pagar · Sin boleta*:
+  quien tiene algún día sin marcar en el periodo (equipo y extras; los
+  vendedores no tienen días). **Ya no hay aviso *Hay N turnos sin
+  cerrar***: lo decidió el cliente el mismo día (*"basta con el botón Sin
+  marcar"*). Tenía un botón *Ver a quiénes les falta →* que activaba este
+  mismo filtro y, arriba de la página, filtraba una lista que quedaba fuera
+  de la pantalla. Lo que el aviso decía lo dicen el filtro, con cuántos son,
+  y el *⚠ sin marcar: no suma* de cada tarjeta; el `?` del informe y su
+  misión dicen que esos días no suman.
+- **Dónde empieza y termina cada persona**: borde de **3px y oscuro**
+  (`border-hueso/55`), más grueso que cualquier línea de adentro —que van de
+  1 a 2px y claras—, una sombra y 12px entre una tarjeta y la otra; abierta,
+  el borde dorado entero con un anillo ancho, y un pie **▴ Cerrar · nombre**
+  que dice dónde termina y la cierra sin subir. Partió en 2px y el cliente
+  lo pidió más marcado el mismo día: *"que realmente se distinguen de las
+  otras líneas… dentro de la tarjeta sobre todo"*.
+- **En el celular, un 10 a 15% más chico**: los botones de copiar y de pago
+  de 44 a 40px, los grandes de 56 a 48px, nombre y monto un punto menos,
+  márgenes de 12px. El periodo en una fila (*Día · Semana · Mes · Rango*) y
+  las descargas también (*Sueldos · Propinas · Completa*); en el computador
+  dicen lo de siempre. **Esto cambió la regla PlayStation**: 44px lo que se
+  usa seguido en el computador, **40px en el celular** (lo pidió el
+  cliente). La página, con una persona abierta, bajó de 6.026 a unos 5.500px.
+- **La transferencia masiva va plegada**: una fila *🏦 Transferencia masiva
+  · Sueldos $X · Propinas $Y · Abrir ▾*; abierta, lo de siempre.
+- **En el computador, la tarjeta abierta va en dos columnas** (desde 1024px):
+  lo que suma y la boleta a la izquierda, Sueldo y Propina con sus botones a
+  la derecha, uno debajo del otro (lado a lado, *Pagado completo* se
+  cortaba). Con una persona abierta, la página bajó de 3.654 a 3.365px.
+- **Y se distingue más del celular** (lo pidió el cliente el mismo día, al
+  ver la propuesta: *"achicar un poco la parte de la boleta, un poco
+  nomás, y sacar los botones descontar o sumar del cuadro verde y ponerlos
+  encima de la columna de la derecha"*). Solo desde 1024px:
+  - **− Descontar y + Sumar** van en su fila, *Ajustar el sueldo:*, arriba de
+    Sueldo y Propina, con los ajustes fuera de turno debajo. En el celular
+    siguen al pie de la caja verde. Es el mismo bloque dibujado en un lado o
+    en el otro (`bloqueAjuste()`), no una copia.
+  - **La boleta, más chica** (`CajaBoleta` con `compacta`): *Falta la
+    boleta* sube a la fila del título, bruto, retención y neto van lado a
+    lado, el bruto a 20px, y la nota del pie se va (la dice su `?`). Los
+    mismos datos con las mismas palabras: en el link personal no cambia.
+  - **Sueldo y Propina en dos filas**: el monto al lado del concepto, y
+    *Copiar datos · Pagado completo · Pago parcial* en una fila de 48px.
+  - La tarjeta abierta bajó de 606 a 552px de alto.
+- **En el computador, una línea por persona** (lo pidió el cliente el mismo
+  día, con una foto de su notebook: *"se ven solo 3 trabajadores en una
+  pantalla… es mucho"*). Lo que alargaba cada tarjeta era la fila aparte
+  de *⚠ 1 sin marcar*. Desde 1024px la fila cerrada tiene menos aire, el
+  nombre a 15px, el total a 17px con su estado al lado (en columna, con
+  ancho fijo) y 8px entre tarjetas; **desde 1280px el aviso de los sin
+  marcar sube a la línea del nombre**, a 36px (tamaño secundario). Los
+  botones de copiar siguen en 44px: son lo que se usa seguido. Cada tarjeta
+  cerrada mide **62px** (antes unos 90, y 140 con el aviso): en una pantalla
+  de 1440×780 caben 9 personas enteras, y 8 en una de 1280×720. Entre 1024 y
+  1279px el aviso sigue en su línea, bajo el nombre (106px). En el celular,
+  igual que antes.
+- **Abierta, cabe entera en la pantalla del computador** (lo pidió el
+  cliente el mismo día, con otra foto: *"que una tarjeta cabe completamente
+  en la pantalla… con los espacios vacíos"*). Desde 1024px: 8px entre cajas
+  y menos aire adentro, *○ Todavía no suma* con su botón *Marcar el …* al
+  lado del texto, la boleta con menos relleno, los botones de pagar y de la
+  boleta en 44px (eran 48) y el pie *▴ Cerrar* en 36px. Con un día sin
+  marcar, la tarjeta abierta bajó de 658 a **555px**: entra en una pantalla
+  de 1280×650, que es lo que deja un notebook con la barra del navegador y
+  los marcadores. **Al abrirla, la página se mueve lo justo para verla
+  entera** (`scrollIntoView` con `block: 'nearest'`, solo desde 1024px): si
+  ya se veía no se mueve, y si quedó cortada abajo sube hasta su pie. En el
+  celular no, porque ahí la tarjeta es más larga que la pantalla.
+- **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
+- **Ayuda**: el `?` del informe explica el orden y *Sin marcar*, y que la
+  transferencia masiva se abre; la misión del informe también; las fotos del
+  informe (`pag-informe`, `ger-informe`, `ope-informe`, `pag-pagar`,
+  `ger-pagar`) se rehicieron.
+
+## La tarjeta de las listas, una sola pieza (2026-11-21)
+
+Lo pidió el cliente después de ver los bordes nuevos del informe: *"aplica
+los bordes más marcados en todos lados… se debería sentir en cada pestaña de
+forma similar si mostramos información similar"*. De ahí salió también la
+regla *un cambio de diseño se lleva a sus parecidos* (arriba).
+
+- **`TarjetaLista.tsx`** reúne lo que el informe tenía dibujado a mano:
+  - `marcoTarjeta(abierta, tono, teñida)`: el borde de 3px y oscuro con
+    sombra, y abierta el borde dorado con el anillo;
+  - los tonos: `verde` (pagada, o llegó), `rojo` (no vino, o con un aviso de
+    la recepción) y `apagada` (desactivada, con el borde cortado, por forma y
+    no solo por color);
+  - `SignoAbrir`, el círculo + / −;
+  - `PieCerrar`, el pie *▴ Cerrar · nombre*;
+  - `LISTA_TARJETAS`, 12px entre tarjetas y 8px en el computador;
+  - `CUERPO_ABIERTO`, la línea dorada bajo la cabecera.
+- **Dónde está**: Informe, Equipo, Extras, Vendedores, Clientes,
+  Productos, la Recepción, las reservas de la página del día y las ventanas
+  del equipo y de las actividades extras del día. Antes eran cuatro dibujos
+  distintos: línea de 1px con un `+` suelto (Equipo, Extras, Clientes,
+  Productos), 2px con círculo (Vendedores, Recepción, el día) y 3px (el
+  informe).
+- **Los puestos de la ventana del equipo del día son un grupo** (lo pidió el
+  cliente el mismo día, con una foto: *"los bordes de las tarjetas de los
+  distintos puestos aún no siguen esa regla… pueden ayudar a ordenar la
+  vista"*): `marcoGrupo()`, el mismo grosor de 3px pero más claro y con el
+  fondo apenas teñido, para que las tarjetas de adentro se lean encima; el
+  puesto al que le falta gente, en ámbar como antes. Es la misma ventana
+  desde Turnos, desde Reservas y desde la página del día, y su cara
+  *Reservas* (`ReservasDelDia`) también usa la tarjeta, verde si vino y roja
+  si no vino.
+- **El pie *▴ Cerrar*** va en las fichas largas: Informe, Equipo, Extras,
+  Vendedores, Clientes y Productos. En la Recepción no, porque la tarjeta
+  termina en *Llegó / No vino*. Tampoco en las reservas del día ni en las
+  ventanas del día, que son cortas.
+- **Lo que se mantuvo de cada pantalla**: la distribución (en Equipo, el
+  cliente dijo que en el computador estaba bien), los fondos teñidos de la
+  Recepción y del día (con `teñida`), y lo que dice cada línea.
+- **Ninguna lectura de Google más, ningún permiso cambió.** Las fotos de la
+  ayuda de la Recepción, el día, cerrar y corregir un día y Vendedores se
+  rehicieron.
+
+## Hoy, con el fondo iluminado (2026-11-21)
+
+Lo pidió el cliente: *"el marco fuerte de hoy está muy bien… ilumina el fondo
+un poquito, para que resalte un poquito más"*. `MARCO_HOY` ganó la clase
+`.fondo-hoy` (`globals.css`): una capa encima del fondo de la tarjeta y debajo
+del texto —una luz cálida de sol de día (`--hoy-luz`, 22%) y un blanco tenue
+de noche (9%)—. Es la misma pieza en los cuatro calendarios (Reservas,
+Cotizaciones, Turnos y Extras), así que cambió en los cuatro. Va en un
+pseudoelemento y no como fondo para no pelear con el color del estado del
+día ni con la sombra o el anillo de la tarjeta.
+
+## La línea del día, una sola pieza para el equipo y los extras (2026-11-21)
+
+Lo pidió el cliente en dos pasos el mismo día. Primero, con una foto de la
+ventana del equipo: *"esta sección la tienes que compactar… se gasta mucho
+espacio en espacio libre… los botones son muy grandes"*. Después, con una de
+la ventana de las actividades: *"este pop-up sigue completamente otra lógica
+de diseño y de distribución… la tarjeta adentro del extra tiene
+completamente otro diseño… donde mostramos cosas parecidas usamos diseños
+parecidos"*, y que los extras también tengan los ajustes.
+
+- **`LineaDelDia.tsx`**: lo de adentro de la línea abierta de una persona,
+  igual en las dos ventanas (`EquipoDialogo` y `ExtrasDialogo`):
+  - `CampoAlLado`: cada dato con su nombre a la izquierda, en una fila. Los
+    rótulos en mayúsculas encima de cada campo se fueron.
+  - `AjustesDelDia`: *Ajustes* con **− Descontar** y **+ Sumar** en la misma
+    fila. **Un ajuste se anota y se guarda con un botón** (lo pidió el
+    cliente el mismo día: *"ingresar el número, luego la razón y luego
+    guardar… y después lo dejas colapsar"*): abierto es una tarjeta de su
+    color con el monto, el motivo y *Cómo* con botones de 36px y letra de
+    13px (los cuatro motivos caben en una fila), la nota y **✓ Guardar
+    −$4.000**, que se apaga hasta que haya monto y motivo (`ajusteListo()`),
+    con *Cancelar* y, si ya existía, *✕ Quitar*. **Guardado se pliega a una
+    fila**: *− Descuento $4.000 · Adelanto · Transferencia ✎*, y tocarla lo
+    vuelve a abrir. Lo escrito vive en un borrador hasta *Guardar*; recién
+    ahí pasa al día, que la ventana guarda sola como siempre. Uno a la vez:
+    mientras se anota uno, *Descontar* y *Sumar* se apagan. Con un ajuste
+    guardado, la línea abierta mide 292px en el computador.
+  - `TotalDelDia`: propina (en el equipo) y total del día, en una línea.
+  - `BotonesDeLaLinea`: *Ficha* y *Sacar del día* (pregunta antes).
+  - `BotonNuevaPersona`: *+ Nuevo trabajador* / *+ Nuevo colaborador*.
+- **Compacta**: la línea abierta del equipo bajó de 350 a 246px, y con un
+  ajuste de 601 a 427px en el computador (643 a 506 en el celular). La
+  jornada y las horas extra van en una fila desde 1024px; más angosto, una
+  debajo de la otra, porque en una fila la jornada no se leía entera.
+- **La ventana de las actividades se arma como la del equipo**: un grupo
+  *Actividades del día* con el marco de un puesto (`marcoGrupo`), del ancho
+  de una columna, con las tarjetas adentro y al pie *+ Agregar…* y *+ Nuevo
+  colaborador* a todo el ancho. En la línea abierta, la actividad va en su
+  fila y el monto debajo, donde el equipo tiene la jornada.
+- **Los extras tienen varios ajustes, como un turno**: `Extra.ajustes`, que
+  se guarda en las mismas dos columnas de `Actividades` con el formato de
+  `Turnos` —`-20000|5000` · `Adelanto · Transferencia|Feriado`—
+  (`leerAjustes()` / `escribirAjustes()`). **Ninguna columna nueva**, y una
+  celda con un solo ajuste se lee y se escribe como siempre.
+  - `ajuste` (lo que suman) y `motivo` (los motivos juntos) siguen
+    existiendo y salen de la lista (`conAjustes()`): el costo del día, el
+    informe, la planilla y el link personal los leen igual que antes.
+  - **La boleta** cuenta cada ajuste por separado, como en un turno: un
+    *Adelanto* no la baja y lo demás sí (`paraBoletaDeExtra()`).
+  - `/api/extras/dia` recibe `ajustes` y los limpia como la ruta de los
+    turnos; uno mandado a la antigua —un número y un motivo— cuenta como uno.
+  - Una línea armada sin la lista (pruebas, código viejo) vale como un ajuste
+    (`ajustesDe()`).
+- **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
+- **Ayuda**: el `?` de Extras dice cómo se ajusta; las fotos de cerrar y
+  corregir un día se rehicieron.
+- **Probado** en el panel de ejemplo a 1280 y 393: con un ajuste, la del
+  equipo mide 427px y la de un extra 470 en el computador (la actividad va
+  en su fila), y las dos 506 en el celular. Dos ajustes en un extra quedan
+  en la planilla como `-20000|5000` · `Adelanto · Transferencia|Feriado`. Las pruebas de lógica fijan la
+  lectura y escritura de dos ajustes en un extra, el costo, la línea a la
+  antigua y la boleta con un adelanto. `revisarPlayStation()` no marca nada
+  nuevo.
+
+## El ajuste desde el informe (2026-11-21)
+
+Lo pidió el cliente: *"el encargado de pagos, y para arriba, debería tener
+la posibilidad en informe en la tarjeta del trabajador también agregar un
+ajuste. Mismo ajuste que se puede agregar en turnos. Y claramente con su
+fecha"*. Al abrir la línea de una persona del equipo están **− Descontar** y
+**+ Sumar** —en el celular al pie de la caja verde *✓ Suma*; en el
+computador arriba de los pagos—, que abren la ventana `AjusteInforme.tsx`.
+
+- **Es el mismo dato que Turnos**: el monto sin signo, el motivo y cómo se
+  pagó con los botones de `MOTIVOS_AJUSTE` y `MEDIOS_AJUSTE`, y una nota. Va
+  **al turno de ese día**, en `Ajuste` y `Motivo del ajuste`, sumado a los
+  que ya tenía. El link del trabajador, la boleta, la planilla y la ventana
+  del día lo leen igual que uno anotado en Turnos.
+- **El día** se elige con un botón por cada día que **vino** en el periodo
+  que se mira (`diasParaAjustar()`), más **Hoy**. Parte en el último que
+  vino. El ajuste suma en el periodo de esa fecha. Un día que no vino o sin
+  marcar no se ofrece: su turno no suma, y el ajuste tampoco sumaría.
+- **Hoy, fuera de turno** (lo pidió el cliente el mismo día: *"puede ser que
+  un trabajador pida un adelanto en otro momento, que no sea un día de
+  turno"*). Si hoy no tiene un turno marcado *Vino*, el ajuste va a una
+  pestaña propia, **`Ajustes sueltos`** (ID · Fecha · Trabajador · Monto ·
+  Motivo · Anotado por · Cuándo), que nace con el primero.
+  - **No va a `Turnos` a propósito**: una fila de `Turnos` es un día
+    trabajado, y la leen el planificador, la planilla semanal, el cierre y
+    **el reparto de la propina**. Un turno inventado le habría quitado
+    propina a los que sí vinieron.
+  - **Las cuentas de plata lo leen igual**: `/api/informe` y el link
+    personal lo mandan con los turnos, con forma de turno y marcado
+    `suelto` (`comoTurno()`). `informeDelPeriodo()` le suma el monto **sin
+    contarlo como día**, `pagoDelTurno()` lo cuenta tal cual, también
+    negativo (`pagoDe()` no baja de cero por día, y un adelanto de un día sin
+    turno nunca se habría descontado). La boleta lo cuenta como un ajuste de
+    turno: un *Adelanto* no la baja y un *Rompió algo* sí.
+  - **Dónde se ve**: en la línea de la persona, *Fuera de turno · vie 13 nov
+    −$20.000 · Adelanto · Transferencia*, con **✕ Quitar**, que pregunta
+    antes (`DELETE /api/equipo/ajuste?id=…`, con `pagar` y a la bitácora). En
+    el link personal, en el *día por día*, con *fuera de turno* en vez del
+    puesto. En las planillas, una fila *Ajuste fuera de turno* con su monto.
+  - **Mirando otra semana**, la ventana lo dice: *Se anota hoy, viernes 13 de
+    noviembre, fuera de turno: no cambia lo que ves, suma en la semana del 9
+    – 15 de noviembre*.
+  - **Una semana con solo un adelanto queda en negativo**: el sueldo dice
+    *−$20.000* y no hay nada que transferir, hasta que sus turnos de esa
+    semana se cierran y lo cubren.
+  - **El nombre tiene que estar en el equipo**: sin turno, la ruta lo busca
+    en `Trabajadores`.
+- **La ventana cabe sin scroll** (lo pidió el cliente el mismo día: *"en el
+  computador queda un poco grande"*). En el computador va en dos columnas
+  (`max-w-2xl`), con la frase al lado del botón. En el celular es una sola
+  columna, con los días sin el mes (*sáb 7*, *Hoy · vie 13*) y la ventana más
+  arriba (`arriba` de `Dialogo`, solo en esta). Medida con Playwright de
+  360×640 a 1920×1080: 418px de alto en el computador y 600px en el celular
+  más chico, sin scroll en ninguno.
+- **Es plata, así que se confirma a mano**: la ventana dice *Se anota en su
+  turno del domingo 8 de noviembre. Su sueldo de 2 – 8 de noviembre pasa de
+  $102.000 a $98.000*, y el botón relleno, *− Descontar $4.000*. Pide monto
+  y motivo, y con *Otro*, qué fue (`ajusteDelCuerpo()`, la misma regla en la
+  pantalla y en el servidor).
+- **Quién**: el permiso `pagar`, o sea pagos, la gerencia y el
+  administrador. El encargado de operaciones ve el informe, pero sin estos
+  botones, y la ruta le responde 403.
+- **Un día cerrado se corrige**: casi todo lo que se paga ya está cerrado,
+  así que entra como corrección (`guardaDelDia()`), con el ajuste como
+  motivo. Los tres roles con `pagar` tienen también `corregir`. En la
+  bitácora queda *Descontó desde el informe* o *Sumó desde el informe*, con
+  el día, la persona y el monto, y *día cerrado: queda como corrección* si
+  lo estaba.
+- **Toca una sola fila y solo sus dos celdas** (`agregarAjusteAlTurno()` en
+  `datos.ts`): no pasa por `guardarEquipoDelDia()`, que borra y reescribe el
+  día entero. Lo demás de la fila se escribe tal como se leyó, incluso una
+  columna que el panel no conoce.
+- **La pantalla no recarga**: cambia ese turno en lo que tiene, y el sueldo,
+  el botón 📋 de copiar, lo que falta pagar y la boleta se recalculan solos.
+- **Ruta**: `POST /api/equipo/ajuste` (`{fecha, trabajador, tipo, monto,
+  razon, medio, nota}`) y `DELETE` para uno fuera de turno. **Lecturas de
+  Google**: cuatro a lo más. Son la tanda de la ruta (Cierres, Turnos y
+  Trabajadores), la pestaña donde escribe leída fresca, el encabezado de la
+  bitácora y, la primera vez de cada instancia, la lista de pestañas. Lo
+  fija `npm run ajuste`. **El informe y el link personal** suman `Ajustes
+  sueltos` a su tanda: ninguna lectura más. **Mientras la pestaña no
+  exista**, cada visita gasta una más —el panel vuelve a mirar la lista de
+  pestañas antes de darla por inexistente—; deja de pasar con el primer
+  ajuste fuera de turno.
+- **Solo el equipo del restaurante**: los extras y los vendedores no tienen
+  ajustes por día en el informe.
+- **Ayuda**: un paso nuevo en el `?` del informe, el `?` chico al lado de
+  los botones (`ajusteInforme`) y un punto en la misión *Pagarle a cada uno*,
+  con su foto rehecha (`pag-pagar` y `ger-pagar`).
+- **Probado en el panel de ejemplo** a 1280 y 393. Pagos le descuenta
+  $4.000 a Luis Contreras el domingo 8 por *Adelanto · Transferencia*: la
+  planilla queda con `-4000` · `Adelanto · Transferencia` en ese turno, el
+  sueldo baja de $102.000 a $98.000 y la bitácora lo anota a su nombre.
+  Operaciones no ve los botones. `revisarPlayStation()` solo marca los `?`
+  de 30px de siempre.
 
 ## Los ajustes del día: Descontar y Sumar (2026-11-20)
 
@@ -265,6 +646,7 @@ prueba**, y falla antes del PR:
 | `npm run lecturas` | **Cuántas lecturas de Google gasta cada ruta** que abre una pantalla (`pruebas/lecturas/`). Cada ruta se llama en Node contra un Google falso que cuenta las consultas, y tiene su tope en `TOPE`: hoy todas caben en **una** tanda (Productos, dos). Si un cambio se pasa, se junta la lectura nueva en la tanda de la ruta, o se sube el tope a propósito y el PR lo dice. Comprobado rompiéndolo: con tope 0 la ruta falla y nombra lo que leyó |
 | `npm run letra-chica` | **Que nadie sume letra bajo 13px** (`text-xs`, `text-[9px]` a `text-[12px]`). Lo que ya había —80 en 22 archivos— quedó anotado en `HABIA` como punto de partida: solo puede bajar, y cuando baja la prueba pide anotarlo |
 | `npm run webhook` | **El webhook de Shopify** (`pruebas/webhook.mjs`, 2026-11-21): sin firma o con la de otra tienda, 401; un pedido sin `_booking_date` se descarta **sin gastar lecturas** y deja la línea `descartado` con su número y sin datos del cliente; uno con fecha se anota. Comprobado rompiéndolo: contra la ruta de antes falla (gastaba 2 lecturas y no dejaba línea) |
+| `npm run ajuste` | **El ajuste desde el informe** (`pruebas/ajuste.mjs`, 2026-11-21): el encargado recibe 403; pagos escribe una sola fila de `Turnos` y solo sus dos celdas de ajuste, sumado a lo que había; en un día cerrado entra como corrección; sin turno, 404; un día que no vino, 409; **hoy sin turno va a `Ajustes sueltos` sin tocar `Turnos`**, a alguien fuera del equipo 404, y quitarlo pide `pagar`; cuatro lecturas a lo más |
 | `npm run revisar` | Las de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
 
 Y para la pasada con Playwright, **`revisarPlayStation(page)`** de
@@ -2783,6 +3165,8 @@ pueda ver también números en grandes rasgos"*. Aprobó la propuesta entera
 
 - **La tarjeta de un número es una pieza compartida** (`TarjetaNumero.tsx`):
   nació en la Lista de cotizaciones y ganó la línea de comparación.
+- **Desde el 2026-11-21 tiene una segunda vista, *👥 Equipo***, para quien
+  ve el informe: ver *Las estadísticas del equipo*, más abajo.
 - **Los gráficos van con un solo tono** (dorado) y barras finas con la
   punta redondeada; cada valor está también en texto o en la tabla, así que
   nada depende solo del color.
@@ -2799,6 +3183,74 @@ pueda ver también números en grandes rasgos"*. Aprobó la propuesta entera
   en que se reservó (la ocupación dice *solo por fecha de la visita*) y los
   tres tipos. `revisarPlayStation()` solo marca los `?` de 30px, la pieza de
   siempre.
+
+## Las estadísticas del equipo (2026-11-21)
+
+Lo pidió el cliente: *"agregar al informe un botón estadísticas… cuánto
+fueron los sueldos, las propinas, en gráficas de las últimas 4 semanas,
+filtrable de la semana pasada… relacionar al valor de reservas… no tenemos
+todos los datos que tiene Fudo… hay que anunciar que falta el detalle… si
+hay una gráfica con palos, mostrar el monto total en un palo, pero la
+relación entre los distintos puestos en distintos colores"*. Aprobó la
+propuesta; lo ven **los mismos que ven el informe**.
+
+- **No es una página nueva**: es la segunda vista de **`/estadisticas`**, la
+  de reservas del 2026-11-19, con un botón **📅 Reservas · 👥 Equipo** (regla
+  de coherencia: el mismo periodo —día, semana, mes o personalizado, con ◀
+  ▶—, las mismas `TarjetaNumero` con la comparación con el periodo
+  anterior, las mismas columnas finas con tooltip y *Ver en tabla*). El
+  informe tiene **📊 Estadísticas del equipo**, que abre
+  `/estadisticas?vista=equipo`; desde ahí, *← Volver al informe*. En la
+  vista Equipo se esconden los filtros que son solo de reservas (*por qué
+  fecha* y *Todo · Visitas · Eventos*).
+- **Quién**: el botón *👥 Equipo* y los datos llegan solo a quien puede ver
+  el informe (`puedeVer(rol, 'informe')`), que hoy son los mismos de
+  `estadisticas`: operaciones, pagos, gerencia y administrador.
+- **Los datos** (`lib/estadisticasEquipo.ts`, puro y con pruebas):
+  `/api/estadisticas` suma `equipo: { dias, puestos }`, **montos por día y
+  por puesto, sin un solo nombre**. Por día: el costo de cada turno que vino
+  (`pagoDe()`, el mismo del informe) por su puesto, las actividades extras
+  confirmadas como *Actividades extras*, la propina, la gente y las reservas
+  que siguieron en pie y ya pasaron, y las **ventas**: el valor final de la
+  mesa si se anotó y, si no, el monto de la reserva (y cuánto de eso es
+  valor final anotado). No entran los adelantos fuera de turno, las
+  comisiones ni la retención de las boletas.
+- **Cuatro números**: costo del equipo, propinas (aparte: no son costo del
+  negocio), costo por persona atendida y **equipo sobre ventas** (en %, y se
+  compara en puntos). Debajo, siempre, el aviso **Datos del panel, no de
+  Fudo**: en cuántas reservas se anotó el valor final, que faltan las ventas
+  sin reserva y el detalle de Fudo, y qué no incluye el costo.
+- **La columna apilada por puesto** (*Sueldos por semana / por día*): un
+  tramo por puesto con 2px de separación y la punta redondeada, el total
+  arriba en miles de pesos, leyenda con los nombres, tooltip con los montos
+  y *Ver en tabla*. **Hasta dos semanas va por día; más largo, por semana**
+  (el sueldo se paga por semana); una semana cortada por el periodo se
+  nombra por su primer día adentro (*1 nov*). Debajo, la tabla **Cada
+  puesto**: jornadas, costo, por jornada y qué parte del total.
+- **Ventas y costo**: las ventas de fondo, suaves, y el costo del equipo
+  angosto adelante (como el cupo y las personas de Reservas), con el % arriba
+  (no aparece si todavía no hay costo, como una semana sin cerrar).
+  **Propinas** en dorado, con cuánto fue por persona en el tooltip.
+- **Los colores de los puestos** (`--serie-1` a `--serie-8` en `globals.css`):
+  la paleta categórica de referencia de dataviz, **validada** en los dos
+  temas (diferencia para daltónicos entre vecinos ≥ 8,4; de lectura normal ≥
+  19). En orden fijo: el de la pestaña *Puestos*, los que no estén ahí
+  después, y las actividades extras al final (`ordenDePuestos()`), así **el
+  color sigue al puesto** mire uno el periodo que mire. En el tema claro tres
+  quedan bajo 3:1 sobre blanco, y por eso todo gráfico con ellos lleva
+  leyenda con nombres y tabla. El costo del equipo va en el celeste del
+  sueldo del informe y la propina en su dorado.
+- **Lecturas de Google**: ninguna más. `/api/estadisticas` sigue en una
+  tanda: sumó `Turnos`, `Actividades` y `Puestos` (`npm run lecturas`: 1 de
+  1). Cambiar el periodo no lee nada.
+- **Ayuda**: el `?` de Estadísticas explica la vista Equipo, cada número y
+  gráfico tiene su `?` (`estEq…`), y el `?` del informe nombra el botón.
+- **Probado en el panel de ejemplo** a 393 y 1280, claro y oscuro: desde el
+  informe se llega a la vista Equipo; noviembre va por semana y la semana
+  del 2 al 8 por día, con el tooltip de un día; *📅 Reservas* vuelve con sus
+  filtros. Operaciones y la gerencia la ven; el encargado y el vendedor
+  reciben 403 y no ven el botón. `revisarPlayStation()` sin hallazgos (salvo
+  los `?` de 30px).
 
 ## El paso a producción: dejar la base en cero (2026-11-18)
 
@@ -4211,8 +4663,8 @@ para quien paga.
 - **Quien no tiene la cuenta completa queda fuera y el aviso lo nombra**,
   en ámbar: una fila a medias suele hacer rechazar el archivo entero.
 - **Las columnas salen del mismo `ORDEN_TRANSFERENCIA` que el botón de
-  copiar** (`filaTransferencia()`): cuando se confirme lo que pide el banco
-  se cambia una vez y vale para los dos.
+  copiar** (`filaTransferencia()`): el orden y los rótulos del formulario
+  del banco (ver *Los datos, como los pide el banco*).
 
 El aviso flotante ganó un segundo tono para esto: **ámbar con "!"** cuando
 no pasó lo esperado —no se descargó nada, quedó alguien fuera—. Un ✓ verde
@@ -4302,19 +4754,53 @@ siguen aparte.
   Lo pagado de cada parte sale de `desglosePago()`, la misma cuenta de la
   pantalla. Sin filas, avisa en vez de bajar un archivo vacío.
 
-#### El orden de los datos copiados todavía no está confirmado
+#### Los datos, como los pide el banco (2026-11-21)
 
-Hoy es **titular, RUT, banco, tipo, número, monto, correo, glosa**, y vive
-en una sola lista, `ORDEN_TRANSFERENCIA` en `remuneraciones.ts`: **cambiarlo
-es mover una línea ahí**. Falta probarlo con el panel del banco del cliente,
-que es lo que dirá el orden en que pega bien campo por campo.
+Lo pidió el cliente con una captura del formulario de *nuevo destinatario*
+que usa el encargado de pagos: *"en las descargas de las planillas de pago
+y en los botones cuando se copian los datos para la transferencia… que los
+recibe en este formato, en este orden"*. Hasta ese día el orden estaba sin
+confirmar —titular, RUT, banco, tipo, número, **monto, correo**, glosa—,
+copiado como una fila separada por tabs y con rótulos propios.
 
-- **El monto va pelado** —`60000`, sin puntos ni signo peso—, que es lo que
-  un formulario de banco acepta pegar.
+| Formulario del banco | Sale como |
+|---|---|
+| Nombre y apellido | el titular de la cuenta, o la persona si está en blanco (`titularDe()`) |
+| RUT | **con puntos y guion**, `12.345.678-9` (`rutConPuntos()`) |
+| Banco | tal cual |
+| Tipo de cuenta | tal cual |
+| Número de cuenta | **solo dígitos**, con sus ceros de adelante (`numeroDeCuenta()`) |
+| E-mail (opcional) | el correo para el comprobante |
+
+Después van **Monto** (pelado, `60000`) y **Glosa**, que el banco pide en el
+paso de transferir. Todo vive en `ORDEN_TRANSFERENCIA`,
+`NOMBRE_COLUMNA_TRANSFERENCIA` y `filaTransferencia()` de
+`remuneraciones.ts`, **que formatea el RUT y el número en un solo lugar**.
+
+- **Copiar da solo los valores, uno por línea**, en ese orden: ocho
+  líneas, la misma fila de la planilla (`textoTransferencia()` es
+  `filaTransferencia()` unida por saltos de línea). **Sin rótulos**, lo
+  corrigió el cliente el mismo día: *"solo copias Luis Contreras… el pagador
+  copia los datos, abre… el banco y copia los datos nomás"*; el primer corte
+  decía *Nombre y apellido: Luis Contreras* y eso había que borrarlo al
+  pegar. **Sin correo, su línea va vacía**, para que el monto siga siendo la
+  séptima. La fila con tabs de antes suponía que un formulario web pasa de
+  campo con cada tab al pegar, y no lo hace: todo caía en el primer campo.
+- **La planilla para la transferencia masiva** lleva esas ocho columnas,
+  con esos nombres y en ese orden.
+- **Las planillas del informe** (*Solo sueldos*, *Solo propinas*,
+  *Completa*) llevan los seis datos del banco con los mismos rótulos y el
+  mismo formato, y después la *Nota de pago*.
+- **Lo que se guarda no cambió**: el RUT sigue sin puntos en la planilla
+  (`rutLimpio()`), que es lo que sirve para comparar; los puntos se ponen
+  al copiar y al descargar.
 - **La glosa es corta y sin símbolos**: *"Sueldo 26/10 al 01/11"*. La
   primera versión decía *"26 de octubre – 1 de noviembre"*, y los bancos
   cortan la glosa a unos 30 caracteres y varios rechazan el guion largo y
   las tildes.
+- **Ojo con Excel**: al abrir el CSV, un número de cuenta que empieza con
+  cero pierde los ceros de adelante en la celda. El archivo los trae; es
+  Excel el que los saca al mostrarlo como número.
 
 #### La boleta
 

@@ -34,6 +34,7 @@
  *    se confirman.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
@@ -547,7 +548,6 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
                 <div>
                   <p className="flex items-center gap-1.5 text-[15px] font-bold">Comisión por personas del evento <AyudaCorta tema="vendEtapas" /></p>
-                  <p className="text-[13px] text-hueso/70">Rige la etapa más alta que alcance. Bajo la etapa 1 no hay comisión (de partida, 22 personas).</p>
                   <div className="mt-2 space-y-2">
                     {([
                       { n: 1, desde: 'etapa1Desde', pct: 'comisionPct' },
@@ -574,9 +574,6 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                   {!esSocio && (
                     <div>
                       <p className="flex items-center gap-1.5 text-[15px] font-bold">¿Y si la venta viene con un socio comercial? <AyudaCorta tema="vendConSocio" /></p>
-                      <p className="mb-1 text-[13px] text-hueso/75">
-                        El socio cobra su comisión completa, aparte. El vendedor cobra este % de <b>su propia</b> comisión.
-                      </p>
                       <Paso etiqueta="Con socio cobra" valor={ficha.conSocio ?? CON_SOCIO_DEFECTO} paso={5} sufijo="% de su comisión"
                         onCambio={(v) => cambiar('conSocio', Math.min(100, v))} />
                     </div>
@@ -647,7 +644,12 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             <Dialogo titulo={`Documento · ${datos.nombre}`} onCerrar={() => { void fichas.forzar(); setVentana(''); }} ancho="max-w-xl">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[14px] text-hueso/75">Se guarda solo. Cambia lo que se le transfiere desde este periodo, también en el informe.</p>
+                  <p className="flex items-center text-[14px] text-hueso/75">
+                    Con qué cobra
+                    <AyudaCorta titulo="Con qué cobra">
+                      Cambia lo que se le transfiere desde este periodo, también en el informe.
+                    </AyudaCorta>
+                  </p>
                   <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(datos.usuario)} />
                 </div>
                 <CamposDocumento documento={ficha.documento} incluido={ficha.incluido} factura={ficha.factura} onCambio={cambiarDocumento} />
@@ -768,20 +770,17 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
               {q ? <>Nadie calza con “{busca.trim()}”.</> : 'Todos están desactivados.'}
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className={LISTA_TARJETAS}>
               {visibles.map((x) => {
                 const abierta = x.usuario === usuario;
                 return (
                   <li key={x.usuario} id={`v-${x.usuario}`}
-                    className={`scroll-mt-4 rounded-2xl border-2 bg-panel ${abierta ? 'border-oro/70'
-                      : x.total > 0 && x.falta <= 0 ? 'border-verde/40' : 'border-hueso/15'} ${x.activo || abierta ? '' : 'opacity-70'}`}>
+                    className={`scroll-mt-4 ${marcoTarjeta(abierta, !x.activo ? 'apagada'
+                      : x.total > 0 && x.falta <= 0 ? 'verde' : 'normal')} ${x.activo || abierta ? '' : 'opacity-70'}`}>
                     <button type="button" aria-expanded={abierta} onClick={() => abrir(x.usuario)}
                       className="tecla flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none
                                  focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro">
-                      <span aria-hidden className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                                                   border-2 text-[15px] font-bold ${abierta ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
-                        {abierta ? '−' : '+'}
-                      </span>
+                      <SignoAbrir abierta={abierta} tamano="mt-0.5 h-7 w-7 text-[15px]" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-[17px] font-bold leading-tight">{x.nombre}</span>
                         <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-hueso/70">
@@ -814,10 +813,11 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                       </span>
                     </button>
                     {abierta && (
-                      <div className="border-t-2 border-hueso/10 px-3 pb-4 pt-4 sm:px-4">
+                      <div className={`${CUERPO_ABIERTO} px-3 pb-4 pt-4 sm:px-4`}>
                         {detalle ?? <p className="text-[15px] text-hueso/60">Cargando…</p>}
                       </div>
                     )}
+                    {abierta && <PieCerrar nombre={x.nombre} onCerrar={() => abrir(x.usuario)} />}
                   </li>
                 );
               })}

@@ -65,7 +65,7 @@ function soltarElFondo(id: string) {
 }
 
 export default function Dialogo({
-  titulo, onCerrar, children, ancho = 'max-w-lg'
+  titulo, onCerrar, children, ancho = 'max-w-lg', arriba = 'mt-10'
 }: {
   titulo: string;
   onCerrar: () => void;
@@ -77,6 +77,12 @@ export default function Dialogo({
    * siempre.
    */
   ancho?: string;
+  /**
+   * Cuánto aire deja arriba, como clase de Tailwind (2026-11-21). Casi todas
+   * van con el de siempre; una ventana corta que tiene que caber entera en un
+   * celular chico —la del ajuste del informe— sube un poco ahí.
+   */
+  arriba?: string;
 }) {
   const fondo = useRef<HTMLDivElement>(null);
   const empezoEnElFondo = useRef(false);
@@ -141,7 +147,7 @@ export default function Dialogo({
           NEGRITA, que además de feo es ilegible en tres párrafos. Se arregla
           acá y no sacando el `?` del título, porque cualquier ventana que se
           abra mañana desde otro lugar tendría el mismo problema. */}
-      <div className={`mx-auto mt-10 ${ancho} rounded border border-hueso/15
+      <div className={`mx-auto ${arriba} ${ancho} rounded border border-hueso/15
                        bg-panel p-5 font-normal normal-case tracking-normal`}>
         <h2 className="text-sm font-bold uppercase tracking-widest text-oro">{titulo}</h2>
         {children}

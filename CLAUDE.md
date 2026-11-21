@@ -1,5 +1,12 @@
 # Brasas de Lo Pirque — sitio web
 
+> **Empieza por `TRASPASO.md`**: el mapa del proyecto entero —qué es, cómo
+> está armado, los flujos, el estado, los pendientes en orden y las reglas—
+> para retomarlo en una sesión nueva. Se carga junto con este archivo, y se
+> actualiza al terminar cada etapa.
+
+@TRASPASO.md
+
 Dos entregables para **Brasas de Lo Pirque** (brasasdelopirque.cl), un
 restaurante campestre y centro de eventos en Chile:
 
@@ -59,6 +66,22 @@ más abajo; esto es la lista para revisar.
   Reservas—, **no el formato**. Antes de dibujar algo se busca la pieza que
   ya lo muestra y se reutiliza; si aparecen dos formas del mismo dato, se
   unifican en una. En el panel, la lista de piezas está en `panel/CLAUDE.md`.
+- **Un cambio de diseño se lleva a sus parecidos** (regla del cliente,
+  2026-11-21: *"que siempre revisas si se hacen cambios de diseño en
+  secciones que… muestran similar información en similar formato, que se
+  adaptan estos cambios también, o que por lo menos me acuerdas"*). Antes
+  de cerrar un cambio de cómo se ve algo, se buscan las otras pantallas que
+  muestran lo mismo —con la lista de piezas de `panel/CLAUDE.md`, o
+  buscando la clase o el componente en el código— y:
+  - si es claramente la misma pieza, **se cambia ahí también, en el mismo
+    PR**, y el PR lo dice;
+  - si hay duda —otra pantalla, otro público, otro uso—, **se le pregunta
+    al cliente con nombre y apellido**: *"cambiamos esto en Informe, ¿lo
+    llevo también a Equipo y Extras, que muestran lo mismo?"*.
+
+  Lo que mejor cumple esta regla es una pieza compartida: el cambio llega
+  solo a todas partes. Si dos pantallas tienen el mismo dibujo copiado, se
+  pasa a una pieza la primera vez que hay que cambiarlo.
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13: *"siempre
   mantener las ayudas al día de cualquier cambio, cueste lo que cueste…
   gráficas hay que adaptar, lógicas"*). Un cambio que altera algo que una
@@ -72,11 +95,27 @@ más abajo; esto es la lista para revisar.
 
 **Panel (`panel/`): lúdico, estilo PlayStation**
 - **Lo que se aprieta se ve que se aprieta**: botones de 36px o más (44px
-  lo que se usa seguido), letra de 13px o más donde hay un dato, se
+  lo que se usa seguido; 40px en el celular, 2026-11-21), letra de 13px o más donde hay un dato, se
   distingue por forma y no solo por color, un solo botón relleno por vista,
   y tres tamaños: hito, acción y secundario.
 - **Flujos simples**: pocos pasos, botones a la vista en vez de
   desplegables, una frase que dice qué pasa al seguir.
+- **Una tarjeta abierta cabe en una pantalla** (regla del cliente,
+  2026-11-21: *"ojalá que una tarjeta siempre cae en una página… en muchos
+  casos sí se puede seguir con la misma regla y a la vez que siempre se ve
+  todo en una pantalla"*). Al diseñar una tarjeta, una ventana o una línea
+  que se abre, se mide con Playwright que entre entera en un notebook
+  —1280×650, lo que queda con la barra del navegador— y, donde se pueda, en
+  un teléfono de 393×740: menos aire, el nombre al lado del campo, lo
+  secundario plegado (como un ajuste guardado) o en su `?`. **Si no cabe sin
+  romper la regla de arriba** —botones bajo 36px, letra bajo 13px—, gana la
+  regla de arriba, y el PR dice que no cupo y cuánto mide.
+- **Lo que explica va en su `?`, no fijo en la pantalla** (regla del
+  cliente, 2026-11-21: *"vamos a capacitar a la gente y entonces después
+  molesta mucho texto constante"*). A la vista quedan el dato y la acción;
+  el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
+  Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
+  frase que dice qué pasa al apretar un botón sí se queda.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -112,7 +151,8 @@ más abajo; esto es la lista para revisar.
 - **Antes del PR**: `npm run revisar` (tipos, lógica, presupuesto de
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
-  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR.
+  algo que una ayuda describe?** Si sí, se actualiza en el mismo PR. Y si
+  se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
 
 **Sitio público y landings: elegante y sobrio**
 - Fotografía real como protagonista, Fraunces y Work Sans, dorado sobre
@@ -620,9 +660,9 @@ only*)**: con la naranja, Vercel no puede sacar el certificado.
   `tienda.` pasa a ser el dominio principal; en Cloudflare, se borra el A de
   la raíz y se crea el CNAME `@`, y se cambia el de `www`. **La tienda real
   va aparte y antes**: los productos con sus dos modalidades ya están allá y
-  `CONFIG.tiendas.real` está lleno desde el 2026-11-20, en un PR que se
-  mergea con el OK del cliente (ver "La tienda real, conectada"); sin ese
-  merge el sitio nuevo sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
+  `CONFIG.tiendas.real` está lleno desde el 2026-11-20 y **se mergeó esa
+  misma noche** (PR #283, ver "La tienda real, conectada"): desde ahí
+  `brasas-sitio.vercel.app` cobra de verdad. **La vuelta atrás** es devolver los
   dos registros a los valores de la columna *Hoy* y volver a dejar
   `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
   minutos).
@@ -1361,7 +1401,8 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   `/api/shopify/webhook`, o abriendo la fila de Logs. **Desde el merge**
   deja la línea `descartado, sin fecha de reserva` con el número del pedido,
   y ya no lee la planilla para descartarlo (ver `panel/CLAUDE.md`).
-- **Mergear ese PR es del camino *con prueba***: desde el merge,
+- **Mergear ese PR era del camino *con prueba*, y se mergeó el 2026-11-20
+  a las 23:16** (PR #283), con el OK del cliente. Desde el merge,
   `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
   El orden: primero las variables de Production del panel —`SHOPIFY_CLIENT_ID`
   y `SHOPIFY_CLIENT_SECRET`, cargadas el 2026-11-20, y **`SHOPIFY_DOMINIO`

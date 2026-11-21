@@ -41,8 +41,9 @@ import {
 import {
   HOJA_PUESTOS, HOJA_TRABAJADORES, HOJA_TURNOS, ENCABEZADO_TURNOS,
   leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
-  leerTurnosDe, filaTurno, normalizarPlan, COL_TURNOS,
-  POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno
+  leerTurnosDe, filaTurno, normalizarPlan, COL_TURNOS, escribirAjustes,
+  HOJA_AJUSTES_SUELTOS, ENCABEZADO_AJUSTES_SUELTOS, leerAjustesSueltosDe, filaAjusteSuelto,
+  POR_DEFECTO_PUESTOS, type Puesto, type Trabajador, type Turno, type Ajuste, type AjusteSuelto
 } from './equipo.ts';
 import {
   HOJA_PRESUPUESTOS, HOJA_LINEAS, ENCABEZADO_PRESUPUESTOS, ENCABEZADO_LINEAS,
@@ -460,6 +461,77 @@ export async function guardarEquipoDelDia(
   // los índices de las viejas y se borrarían las equivocadas.
   await borrarFilas(HOJA_TURNOS, previas);
   await agregarFilas(HOJA_TURNOS, nuevos.map((t) => filaTurno(enc, t)));
+}
+
+/**
+ * **Suma un ajuste al turno de una persona en un día** (2026-11-21, desde el
+ * informe). Devuelve el turno ya con el ajuste, o `null` si esa persona no
+ * tiene turno ese día.
+ *
+ * **Toca una sola fila y solo sus dos celdas de ajuste** (`Ajuste` y `Motivo
+ * del ajuste`); lo demás de la fila se escribe tal como se leyó. No pasa por
+ * `guardarEquipoDelDia()`, que borra y reescribe el día entero: para anotar
+ * un monto, mover las filas de todos sería arriesgar lo que no se tocó.
+ * Se lee la pestaña fresca, para no escribir sobre una fila que se movió.
+ */
+export async function agregarAjusteAlTurno(
+  fecha: Fecha, trabajador: string, ajuste: Ajuste
+): Promise<Turno | null> {
+  const filas = await leerHoja(HOJA_TURNOS, true);
+  const turno = leerTurnosDe(filas).find((t) =>
+    t.fecha === fecha && normalizar(t.trabajador) === normalizar(trabajador));
+  if (!turno) return null;
+  const i = indices(filas[0] ?? [], COL_TURNOS);
+  if (i.ajuste === -1 || i.motivo === -1) {
+    throw new Error('La pestaña Turnos no tiene las columnas Ajuste y Motivo del ajuste.');
+  }
+  const ajustes = [...turno.ajustes, ajuste];
+  const [montos, motivos] = escribirAjustes(ajustes);
+  const previa = filas[turno.fila - 1] ?? [];
+  const fila = Array.from({ length: Math.max(previa.length, i.ajuste + 1, i.motivo + 1) },
+    (_, k) => (previa[k] ?? ''));
+  fila[i.ajuste] = montos;
+  fila[i.motivo] = motivos;
+  await escribirFila(HOJA_TURNOS, turno.fila, fila);
+  return { ...turno, ajustes };
+}
+
+/**
+ * **Los ajustes fuera de turno** (2026-11-21): un adelanto pedido un día que
+ * no trabajó. Ver `HOJA_AJUSTES_SUELTOS`. Sin la pestaña, ninguno.
+ */
+export async function leerAjustesSueltos(): Promise<AjusteSuelto[]> {
+  try {
+    return leerAjustesSueltosDe(await leerHoja(HOJA_AJUSTES_SUELTOS));
+  } catch (e) {
+    if (esPestanaQueNoExiste(e)) return [];
+    throw e;
+  }
+}
+
+/** Anota uno; la pestaña nace con el primero. Devuelve el ajuste con su fila. */
+export async function agregarAjusteSuelto(a: Omit<AjusteSuelto, 'id' | 'fila'>): Promise<AjusteSuelto> {
+  const filas = await asegurarEncabezado(HOJA_AJUSTES_SUELTOS, ENCABEZADO_AJUSTES_SUELTOS);
+  const id = `AJ-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
+  const nuevo = { ...a, id };
+  await agregarFila(HOJA_AJUSTES_SUELTOS, filaAjusteSuelto(filas[0] ?? ENCABEZADO_AJUSTES_SUELTOS, nuevo));
+  return { ...nuevo, fila: filas.length + 1 };
+}
+
+/**
+ * Quita uno por su ID, leyendo la pestaña fresca para no borrar una fila que
+ * se movió. Devuelve el que quitó, o `null` si ya no estaba.
+ */
+export async function quitarAjusteSuelto(id: string): Promise<AjusteSuelto | null> {
+  let filas: string[][];
+  try { filas = await leerHoja(HOJA_AJUSTES_SUELTOS, true); } catch (e) {
+    if (esPestanaQueNoExiste(e)) return null;
+    throw e;
+  }
+  const a = leerAjustesSueltosDe(filas).find((x) => x.id === id);
+  if (!a) return null;
+  await borrarFila(HOJA_AJUSTES_SUELTOS, a.fila);
+  return a;
 }
 
 /* ---------- Las actividades extras ---------- */

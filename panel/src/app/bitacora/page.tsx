@@ -11,6 +11,7 @@
  * atrás — con el buscador de Sheets, que para esto es mejor que cualquier
  * filtro que pudiéramos escribir acá.
  */
+import AyudaCorta from '@/components/AyudaCorta';
 import AvisoFijo from '@/components/AvisoFijo';
 import { headers } from 'next/headers';
 import Ayuda from '@/components/Ayuda';
@@ -86,10 +87,11 @@ export default async function Pagina() {
         </div>
       )}
 
-      <p className="mt-6 max-w-2xl text-xs text-hueso/50">
-        Las {lineas.length} últimas. Para ir más atrás, la pestaña{' '}
-        <code>Bitácora</code> de la planilla las tiene todas y se puede buscar
-        ahí.
+      <p className="mt-6 flex items-center text-[14px] text-hueso/70">
+        Las {lineas.length} últimas.
+        <AyudaCorta titulo="Más atrás">
+          Para ir más atrás, la pestaña <code>Bitácora</code> de la planilla las tiene todas y se puede buscar ahí.
+        </AyudaCorta>
       </p>
     </section>
   );

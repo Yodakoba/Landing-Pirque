@@ -194,7 +194,7 @@ const OPERACIONES: Mision[] = [
     id: 'informe', emoji: '📊', titulo: 'El informe: lo que cuesta el equipo', escena: 'ope-informe',
     intro: 'Por persona: cuántos días vino, sus jornadas, ajustes y total, y cuánto tiene que boletear. El periodo se elige arriba: día, semana, mes u otro rango.',
     puntos: [
-      'Si falta cerrar un turno, el total está incompleto.',
+      'Sin marcar: quién tiene días sin cerrar. Esos días no suman: el total está incompleto.',
       'Trabajadores y extras, cada uno con lo que falta.',
       '🧾 Sin boleta: a quién le falta mandarla. Abre su línea y ves el bruto para el SII y el neto.'
     ],
@@ -209,7 +209,7 @@ const PAGOS: Mision[] = [
     puntos: [
       'El periodo: semana, mes, día u otro rango.',
       'La planilla para el banco: sueldos, propinas o completa.',
-      'La transferencia masiva: bajas la planilla, la subes al banco y marcas todos pagados.'
+      'La transferencia masiva va plegada: la abres, bajas la planilla, la subes al banco y marcas todos pagados.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }
   },
@@ -217,8 +217,9 @@ const PAGOS: Mision[] = [
     id: 'pagar', emoji: '💸', titulo: 'Pagarle a cada uno', escena: 'pag-pagar',
     intro: 'Aprieta la línea de una persona y se abre lo suyo, listo para transferir.',
     puntos: [
-      'Copia el sueldo: la cuenta y el monto, para pegarlos en el banco.',
+      'Copia el sueldo: los datos del banco, uno por línea, y el monto, para pegarlos en el banco.',
       'La propina va en otra transferencia.',
+      'Descontar o Sumar: el mismo ajuste de Turnos, en un día que vino, u hoy para un adelanto fuera de turno.',
       'Su boleta: el bruto que escribe en el SII y el neto que recibe. Márcala cuando llegue.'
     ],
     probar: { texto: 'Abrir el informe', url: '/informe' }

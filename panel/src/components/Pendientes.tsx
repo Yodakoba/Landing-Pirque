@@ -13,6 +13,7 @@
  *   *Abrir →*.
  */
 import { useState } from 'react';
+import AyudaCorta from './AyudaCorta';
 
 export type TonoPendiente = 'rojo' | 'ambar' | 'verde' | 'rosa' | 'neutro';
 
@@ -65,7 +66,13 @@ export default function Pendientes({ items, titulo = 'Pendientes' }: { items: Pe
       </div>
       {abiertaItem && (
         <div className={`mt-2 rounded-xl border-2 p-2 ${CAJA[abiertaItem.tono]}`}>
-          {abiertaItem.ayuda && <p className="px-1 pb-2 text-[14px] text-hueso/80">{abiertaItem.ayuda}</p>}
+          {/* Qué hacer con estos, en su `?` (2026-11-21, regla *lo que explica
+              va en su ?*). */}
+          {abiertaItem.ayuda && (
+            <p className="flex items-center gap-1.5 px-1 pb-2 text-[14px] font-semibold">
+              {abiertaItem.texto} <AyudaCorta titulo={abiertaItem.texto}>{abiertaItem.ayuda}</AyudaCorta>
+            </p>
+          )}
           {abiertaItem.lista}
         </div>
       )}

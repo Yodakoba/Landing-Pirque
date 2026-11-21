@@ -266,6 +266,51 @@ export function tipoDeAjuste(a: Ajuste): TipoAjuste {
 export const montoConSigno = (n: number, tipo: TipoAjuste) =>
   tipo === 'resta' ? -Math.abs(Math.round(n)) : Math.abs(Math.round(n));
 
+/**
+ * **Un ajuste anotado desde el informe** (2026-11-21, lo pidió el cliente:
+ * *"el encargado de pagos, y para arriba… en informe en la tarjeta del
+ * trabajador también agregar un ajuste. Mismo ajuste que se puede agregar en
+ * turnos. Y claramente con su fecha"*).
+ *
+ * Valida lo que manda la ventana y lo deja como un ajuste de Turnos —monto
+ * con signo y motivo *"Adelanto · Transferencia · nota"*—, para que el link
+ * del trabajador, la boleta y la planilla lo lean igual que uno anotado en la
+ * ventana del día. **Más estricto que la ventana del día**, porque es plata
+ * anotada después: el monto tiene que ser más que cero y el motivo no puede
+ * quedar en blanco (*Otro* pide qué fue).
+ */
+export function ajusteDelCuerpo(c: unknown): { ajuste: Ajuste } | { error: string } {
+  const x = (c ?? {}) as Record<string, unknown>;
+  const tipo: TipoAjuste | '' = x.tipo === 'resta' || x.tipo === 'suma' ? x.tipo : '';
+  if (!tipo) return { error: 'Falta decir si es un descuento o una suma.' };
+  const monto = aEntero(x.monto);
+  if (monto <= 0) return { error: 'Escribe el monto, sin signo: el botón dice si descuenta o suma.' };
+  const razon = String(x.razon ?? '').trim();
+  if (razon && !MOTIVOS_AJUSTE[tipo].includes(razon)) {
+    return { error: `"${razon}" no es un motivo de ${tipo === 'resta' ? 'descuento' : 'suma'}.` };
+  }
+  const medio = String(x.medio ?? '').trim();
+  if (medio && !MEDIOS_AJUSTE.includes(medio)) return { error: `"${medio}" no es un medio de pago.` };
+  const nota = String(x.nota ?? '').trim().slice(0, 200);
+  if (!razon && !nota) return { error: 'Elige el motivo.' };
+  if (razon === 'Otro' && !nota) return { error: 'Con "Otro", escribe qué fue.' };
+  return { ajuste: { monto: montoConSigno(monto, tipo), motivo: motivoDePartes({ razon, medio, nota }) } };
+}
+
+/**
+ * **Los días en que se le puede anotar un ajuste desde el informe**: los que
+ * vino, dentro del periodo que se mira, en orden. El ajuste va en el turno de
+ * ese día —el mismo lugar que en Turnos—, así que suma en el periodo de esa
+ * fecha. Un día que no vino no suma, y un ajuste ahí tampoco sumaría.
+ */
+export function diasParaAjustar(turnos: Turno[], trabajador: string, desde: Fecha, hasta: Fecha): Fecha[] {
+  const quien = normalizar(trabajador);
+  return [...new Set(turnos
+    .filter((t) => normalizar(t.trabajador) === quien && t.asistencia === VINO.si && !t.suelto
+      && t.fecha >= desde && t.fecha <= hasta)
+    .map((t) => t.fecha))].sort();
+}
+
 /** Lo que separa un ajuste del siguiente dentro de la celda. */
 const SEPARADOR = '|';
 
@@ -359,7 +404,105 @@ export interface Turno {
   propina: number;
   /** Fila en la planilla, para poder borrarla. */
   fila: number;
+  /**
+   * **Un ajuste fuera de turno, presentado como turno** (2026-11-21): el ID
+   * de su fila en `Ajustes sueltos`. No es un día trabajado —no suma días ni
+   * jornada ni entra al reparto de la propina—, solo su ajuste. Ver
+   * `comoTurno()`. Vive solo en las cuentas de plata: el informe, el link
+   * personal, la boleta y las planillas. `Turnos` nunca lo tiene.
+   */
+  suelto?: string;
 }
+
+/* ---------- Los ajustes fuera de turno (2026-11-21) ---------- */
+
+/**
+ * **Un adelanto pedido un día que no trabajó** (lo pidió el cliente: *"debería
+ * haber otro botón que dice hoy, porque puede ser que un trabajador pida un
+ * adelanto en otro momento, que no sea un día de turno"*).
+ *
+ * Va en su propia pestaña y no en `Turnos` a propósito: una fila de `Turnos`
+ * es un día trabajado, y la leen el planificador, la planilla semanal, el
+ * cierre y **el reparto de la propina**. Un turno inventado para guardar un
+ * adelanto le habría sacado una parte de la propina a los que sí vinieron.
+ * Acá lo que no sabe de esta pestaña simplemente no la ve.
+ */
+export const HOJA_AJUSTES_SUELTOS = 'Ajustes sueltos';
+
+export const COL_AJUSTES_SUELTOS = {
+  id: 'ID',
+  fecha: 'Fecha',
+  trabajador: 'Trabajador',
+  monto: 'Monto',
+  motivo: 'Motivo',
+  quien: 'Anotado por',
+  cuando: 'Cuándo'
+} as const;
+
+export const ENCABEZADO_AJUSTES_SUELTOS: string[] = Object.values(COL_AJUSTES_SUELTOS);
+
+export interface AjusteSuelto {
+  id: string;
+  fecha: Fecha;
+  trabajador: string;
+  /** Con signo, como en `Turnos`: un descuento es negativo. */
+  monto: number;
+  /** *"Adelanto · Transferencia · lo pidió el jueves"*, como en `Turnos`. */
+  motivo: string;
+  quien: string;
+  cuando: string;
+  fila: number;
+}
+
+/** La pestaña, por nombre de columna. Una fila sin fecha, nombre o monto no cuenta. */
+export function leerAjustesSueltosDe(filas: string[][]): AjusteSuelto[] {
+  if (filas.length < 2) return [];
+  const i = indices(filas[0], COL_AJUSTES_SUELTOS);
+  if (i.fecha === -1 || i.trabajador === -1 || i.monto === -1) return [];
+  const en = (f: string[], k: number) => (k === -1 ? '' : String(f[k] ?? '').trim());
+  const salida: AjusteSuelto[] = [];
+  for (let n = 1; n < filas.length; n++) {
+    const f = filas[n];
+    const fecha = en(f, i.fecha).slice(0, 10);
+    const trabajador = en(f, i.trabajador);
+    const monto = aEntero(en(f, i.monto), true);
+    if (!esFecha(fecha) || !trabajador || !monto) continue;
+    salida.push({ id: en(f, i.id) || `fila-${n + 1}`, fecha, trabajador, monto,
+      motivo: en(f, i.motivo), quien: en(f, i.quien), cuando: en(f, i.cuando), fila: n + 1 });
+  }
+  return salida;
+}
+
+/** Un ajuste suelto como fila, cada valor en su columna según el encabezado. */
+export function filaAjusteSuelto(encabezado: string[], a: Omit<AjusteSuelto, 'fila'>): string[] {
+  const i = indices(encabezado, COL_AJUSTES_SUELTOS);
+  const fila = new Array(Math.max(encabezado.length, ENCABEZADO_AJUSTES_SUELTOS.length)).fill('');
+  const poner = (k: number, v: string) => { if (k !== -1) fila[k] = v; };
+  poner(i.id, a.id); poner(i.fecha, a.fecha); poner(i.trabajador, a.trabajador);
+  poner(i.monto, String(a.monto)); poner(i.motivo, a.motivo.replace(/\|/g, ' '));
+  poner(i.quien, a.quien); poner(i.cuando, a.cuando);
+  return fila;
+}
+
+/**
+ * Un ajuste suelto **con forma de turno**, para que las cuentas de plata lo
+ * sumen con la misma función de siempre (`informeDelPeriodo()`,
+ * `montosDeTurnos()`). Lleva `suelto` para que nada lo confunda con un día
+ * trabajado.
+ */
+export const comoTurno = (a: AjusteSuelto): Turno => ({
+  fecha: a.fecha, trabajador: a.trabajador, puesto: '', asistencia: VINO.si, modalidad: '',
+  pagoJornada: 0, horasExtra: 0, valorHora: 0, ajustes: [{ monto: a.monto, motivo: a.motivo }],
+  propina: 0, fila: a.fila, suelto: a.id
+});
+
+/**
+ * Lo que suma un turno en plata: `pagoDe()`, salvo un ajuste suelto, que es
+ * su monto tal cual —**también negativo**—. `pagoDe()` no baja de cero por
+ * día, y con eso un adelanto de un día sin turno no se descontaría nunca.
+ */
+export const pagoDelTurno = (t: Turno) =>
+  t.suelto ? Math.round(totalAjustes(t.ajustes)) : pagoDe(t);
 
 /**
  * Lo que suma un turno: jornada + horas extra + ajuste.
@@ -1025,6 +1168,12 @@ export function informeDelPeriodo(
         propina: 0, total: 0
       };
       porPersona.set(clave, l);
+    }
+    // Un ajuste suelto no es un día: suma su monto y nada más.
+    if (t.suelto) {
+      l.ajustes += totalAjustes(t.ajustes);
+      l.total += pagoDelTurno(t);
+      continue;
     }
     l.modalidad = t.modalidad;
 

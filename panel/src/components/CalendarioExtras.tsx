@@ -18,6 +18,7 @@
  * evidente.
  */
 import AvisoFijo from './AvisoFijo';
+import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { avisar, copiarConAviso } from './AvisoFlotante';
@@ -25,6 +26,7 @@ import MostrarDesactivados from './MostrarDesactivados';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
+import AyudaCorta from './AyudaCorta';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -461,14 +463,14 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
       {huerfanos.length > 0 && (
         <div className="mt-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
+          <p className="flex items-center text-[15px] font-semibold text-ambar-texto">
             Hay actividades contratadas a nombre de alguien que no está en la lista.
-          </p>
-          <p className="mt-1 text-sm text-hueso/70">
-            Pasa al renombrar a alguien que ya tenía días: los días viejos
-            siguen con el nombre anterior. Agrégalo abajo con ese nombre
-            exacto, o corrige el nombre en la pestaña{' '}
-            <code className="text-hueso/90">Actividades</code> de la planilla.
+            <AyudaCorta titulo="Un nombre que no está en la lista">
+              Pasa al renombrar a alguien que ya tenía días: los días viejos
+              siguen con el nombre anterior. Agrégalo con ese nombre
+              exacto, o corrige el nombre en la pestaña{' '}
+              <code>Actividades</code> de la planilla.
+            </AyudaCorta>
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {huerfanos.map((n) => (
@@ -517,7 +519,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
       <MostrarDesactivados visible={verInactivos} onCambio={(v) => { setVerInactivos(v); setAbierta(null); }}
         cuantos={(colaboradores ?? []).filter((c) => !c.activo).length} />
       <fieldset disabled={soloMira} className="m-0 mt-3 min-w-0 border-0 p-0">
-      <ul className="space-y-3">
+      <ul className={LISTA_TARJETAS}>
         {(colaboradores ?? [])
           .map((c, i) => ({ c, i }))
           .sort((a, b) => {
@@ -535,10 +537,10 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
             (e) => normalizar(e.colaborador) === normalizar(c.nombre));
           const abiertaEsta = abierta === i;
           return (
+            // La misma tarjeta del informe y de Equipo (`TarjetaLista`).
             <li key={i}
-              className={`overflow-hidden rounded border ${c.activo
-                ? 'border-hueso/15 bg-panel'
-                : 'border-hueso/10 bg-transparent opacity-60'}`}>
+              className={`overflow-hidden ${marcoTarjeta(abiertaEsta, c.activo ? 'normal' : 'apagada')} ${
+                c.activo ? '' : 'opacity-70'}`}>
 
               {/* **Cerrada es una línea**, como la ficha de un trabajador:
                   nombre, actividad, teléfono y lo que falta para pagarle. A la
@@ -548,9 +550,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                   onClick={() => setAbierta(abiertaEsta ? null : i)}
                   className="flex min-h-[44px] min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1
                              px-3 py-2.5 text-left hover:bg-hueso/5">
-                  <span aria-hidden className="w-3 text-base leading-none text-hueso/40">
-                    {abiertaEsta ? '−' : '+'}
-                  </span>
+                  <SignoAbrir abierta={abiertaEsta} tamano="h-6 w-6 text-[14px]" />
                   <span className="font-semibold">
                     {c.nombre.trim() || <span className="text-hueso/40">Sin nombre</span>}
                   </span>
@@ -588,7 +588,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
               </div>
 
               {abiertaEsta && (
-              <div className="border-t border-hueso/10 p-3">
+              <div className={`${CUERPO_ABIERTO} p-3`}>
               <div className="flex flex-wrap items-start gap-3">
                 <Campo etiqueta="Nombre" ancho="w-52">
                   <input type="text" value={nombreEscrito[i] ?? c.nombre} className={ENTRADA}
@@ -629,6 +629,9 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                     <span className="w-36 whitespace-nowrap text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
                       Link personal
                     </span>
+                    {/* Qué abre el link, en su `?` (2026-11-21, regla *lo que
+                        explica va en su ?*). */}
+                    <AyudaCorta tema="linkColaborador" />
                     {!c.nombre.trim() || (nombreEscrito[i] !== undefined && nombreEscrito[i].trim() !== c.nombre) ? (
                       <span className="text-[13px] text-ambar-texto/85">Guarda el nombre para administrar su link.</span>
                     ) : (
@@ -646,9 +649,6 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                       </>
                     )}
                   </div>
-                  <p className="mt-1 text-[13px] text-hueso/65">
-                    Abre sus días, lo que ganó y lo que se le pagó, sin contraseña. Mándaselo por WhatsApp.
-                  </p>
                 </div>
               )}
 
@@ -668,6 +668,9 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                 </div>
               )}
               </div>
+              )}
+              {abiertaEsta && (
+                <PieCerrar nombre={c.nombre.trim()} onCerrar={() => setAbierta(null)} />
               )}
             </li>
           );

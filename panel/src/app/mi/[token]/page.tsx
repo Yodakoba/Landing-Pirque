@@ -61,7 +61,7 @@
  * trabajadores, ni las actividades extras.** Los totales por menú son cuánto
  * hay que cocinar; quién lo pidió y cuánto pagó no es dato de un turno.
  */
-import { leerTrabajadores, leerTurnos, leerFechas, leerConfig, leerReservas,
+import { leerTrabajadores, leerTurnos, leerAjustesSueltos, leerFechas, leerConfig, leerReservas,
          leerMenus, leerPagosEquipo, leerColaboradores, leerExtras, leerVendedores, leerBoletas,
          leerPresupuestos, leerLineasPresupuesto, leerCobros, leerClientes } from '@/lib/datos';
 import { colaboradorPorToken } from '@/lib/extras';
@@ -73,7 +73,7 @@ import { HOJA_COBROS } from '@/lib/cobros';
 import { HOJA_CLIENTES } from '@/lib/clientes';
 import { conCliente } from '@/lib/cotizar';
 import { conLecturas } from '@/lib/sheets';
-import { HOJA_TRABAJADORES, HOJA_TURNOS } from '@/lib/equipo';
+import { HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_AJUSTES_SUELTOS, comoTurno } from '@/lib/equipo';
 import { HOJA_FECHAS, HOJA_RESERVAS } from '@/lib/columnas';
 import { HOJA_CONFIG } from '@/lib/config';
 import { HOJA_MENUS } from '@/lib/menus';
@@ -93,7 +93,7 @@ import { enPalabras, mesEnPalabras, rangoEnPalabras, hoy, diaSemana, semanaDe,
          sumarDias, type Fecha } from '@/lib/fechas';
 import { climaDe, urlPronostico, IDENTIFICACION, iconoDe, FUENTE,
          type Clima } from '@/lib/clima';
-import { estaCerrado } from '@/lib/columnas';
+import { estaCerrado, normalizar } from '@/lib/columnas';
 import { vistaPrevia } from '@/lib/vistaPrevia';
 
 /** El título al llegar el link: ver `lib/vistaPrevia.ts`. */
@@ -166,7 +166,7 @@ function Azulejo({ que, monto, color = 'oro', nota, grande = false }: {
   return (
     <div className={`min-w-0 rounded-lg border p-3 ${tono}`}>
       <p className={`font-bold leading-none tabular-nums ${
-        grande ? 'text-[34px]' : 'text-[24px]'}`}>{enPesos(monto)}</p>
+        grande ? 'text-[34px]' : 'text-[24px]'}`}>{monto < 0 ? '−' : ''}{enPesos(Math.abs(monto))}</p>
       <p className="mt-1.5 text-[13px] font-semibold text-hueso/70">{que}</p>
       {nota && <p className="text-[13px] text-hueso/60">{nota}</p>}
     </div>
@@ -370,9 +370,9 @@ export default async function Pagina({ params, searchParams }: {
 }) {
   // **Todo en una tanda** (2026-11-12): eran siete consultas a Google por
   // visita, una por pestaña; ahora es una sola, con los extras incluidos.
-  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras, fichasV, boletas] = await conLecturas(
+  const [gente, turnos, fechas, cfg, reservas, catalogo, pagos, clima, colaboradores, extras, fichasV, boletas, sueltos] = await conLecturas(
     [HOJA_TRABAJADORES, HOJA_TURNOS, HOJA_FECHAS, HOJA_CONFIG, HOJA_RESERVAS, HOJA_MENUS, HOJA_PAGOS,
-     HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_VENDEDORES, HOJA_BOLETAS],
+     HOJA_COLABORADORES, HOJA_ACTIVIDADES, HOJA_VENDEDORES, HOJA_BOLETAS, HOJA_AJUSTES_SUELTOS],
     async () => Promise.all([
     leerTrabajadores(), leerTurnos(),
     // Igual que las reservas: la hora de apertura y las notas del día son un
@@ -399,7 +399,10 @@ export default async function Pagina({ params, searchParams }: {
     leerVendedores().catch(() => []),
     // **La boleta** (2026-11-20): si llegó se ve en la caja de la boleta.
     // Sin poder leerlas, la caja dice cuánto boletear igual.
-    leerBoletas().catch(() => [])
+    leerBoletas().catch(() => []),
+    // **Los ajustes fuera de turno** (2026-11-21): un adelanto pedido un día
+    // que no trabajó. Sin poder leerlos, la página sale igual.
+    leerAjustesSueltos().catch(() => [])
   ]))();
 
   // La lista vacía no es "tu link no sirve": no existe el caso de un token
@@ -463,7 +466,13 @@ export default async function Pagina({ params, searchParams }: {
   // Solo lo ya trabajado entra en las cuentas. Un turno de hoy o de mañana
   // todavía no se pagó, y contarlo como "sin marcar" convertiría el aviso
   // —"hay un día que nadie cerró"— en algo que aparece siempre.
-  const trabajados = suyos.filter((t) => t.fecha < ahora);
+  const trabajados = [
+    ...suyos.filter((t) => t.fecha < ahora),
+    // **Un ajuste fuera de turno** (2026-11-21) suma desde el mismo día en
+    // que se anotó —un adelanto ya se entregó—, y no cuenta como día.
+    ...sueltos.filter((a) => a.fecha <= ahora
+      && normalizar(a.trabajador) === normalizar(quien.nombre)).map(comoTurno)
+  ];
 
   /**
    * El periodo que se está mirando. Llega en la URL y **se comprueba**:
@@ -888,7 +897,25 @@ export default async function Pagina({ params, searchParams }: {
                   contesta sola — y si queda algo que reclamar, se reclama
                   nombrando la línea. */}
               <ul className="mt-1.5 space-y-2">
-                {delPeriodo.map((t) => {
+                {delPeriodo.map((t) => t.suelto ? (
+                  // **Fuera de turno** (2026-11-21): un adelanto u otro
+                  // ajuste de un día que no trabajó. Dice qué fue y cuánto,
+                  // y no parece un día trabajado.
+                  <li key={t.suelto} className="rounded border border-hueso/15 bg-panel p-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <span className="text-sm font-semibold text-hueso/85 first-letter:uppercase">
+                        {enPalabras(t.fecha)}
+                      </span>
+                      <span className="text-[13px] text-hueso/70">fuera de turno</span>
+                    </div>
+                    <dl className="mt-2 space-y-1 text-[13px]">
+                      {t.ajustes.map((a, k) => (
+                        <Linea key={k} monto={a.monto} conSigno
+                          que={a.motivo || (a.monto < 0 ? 'Descuento' : 'Extra')} />
+                      ))}
+                    </dl>
+                  </li>
+                ) : (() => {
                   const jornada = esContratado(t.modalidad) ? 0 : (t.pagoJornada || 0);
                   const horasExtra = (t.horasExtra || 0) * (t.valorHora || 0);
                   const total = pagoDe(t);
@@ -942,7 +969,7 @@ export default async function Pagina({ params, searchParams }: {
                       )}
                     </li>
                   );
-                })}
+                })())}
               </ul>
             </>
           )}
