@@ -65,7 +65,10 @@ const ESCENAS = {
   'anf-recepcion': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
     puntos: [texto('personas llegaron'), campo(/Buscar por nombre/), boton(/Llegó/)] },
   'anf-llego': { rol: 'anfitrion', ruta: '/recepcion', pasos: [clic(boton(/Llegó/))], foco: texto(/¿Llegaron las/),
-    puntos: [boton(/Sí, las/), (p) => p.getByRole('button', { name: 'Una más', exact: true }), texto(/Si llegaron menos/)] },
+    // El tercer punto, *si llegaron menos*, va en el − (2026-11-21: la frase
+    // fija se sacó; ahora sale solo la que aplica al número elegido).
+    puntos: [boton(/Sí, las/), (p) => p.getByRole('button', { name: 'Una más', exact: true }),
+      (p) => p.getByRole('button', { name: 'Una menos', exact: true })] },
   // **La mesa** (2026-11-17): una reserva que ya llegó, abierta con su (+).
   'anf-mesa': { rol: 'anfitrion', ruta: '/recepcion', alto: 900,
     pasos: [clic((p) => p.locator('li > button[aria-expanded]').filter({ hasText: 'Valentina Castro' }))],
