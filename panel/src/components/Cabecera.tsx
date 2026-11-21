@@ -63,8 +63,17 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '',
   }
 
   return (
-    <header className="border-b border-hueso/10">
-      <div className="mx-auto max-w-7xl px-5 py-3">
+    // **El marco, más compacto en el computador** (2026-11-21, lo pidió el
+    // cliente: *"se puede compactar todas las vistas en el computador un poco
+    // más, sin perder la regla PlayStation"*). Desde 1024px la barra lleva
+    // menos aire arriba, abajo y entre sus dos filas (de 109 a 97px); los
+    // botones siguen en 36px y la letra no cambia. `data-marco="panel"` le
+    // avisa al `<main>` de `layout.tsx` que también suba: las páginas que se
+    // mandan afuera —el link personal, la planilla semanal, la cotización, el
+    // contrato— y la entrada no lo llevan, y quedan como estaban.
+    <header data-marco={esDeTrabajador || esEntrada ? undefined : 'panel'}
+      className="peer border-b border-hueso/10">
+      <div className={`mx-auto max-w-7xl px-5 py-3 ${esDeTrabajador || esEntrada ? '' : 'lg:py-2'}`}>
         {esDeTrabajador || esEntrada ? (
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-bold uppercase tracking-widest text-oro">
@@ -116,7 +125,7 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '',
               )}
             </div>
             {/* Fila 2: a dónde puedes ir. */}
-            <div className="mt-3">
+            <div className="mt-3 lg:mt-2">
               <Nav rol={rol} gerencia={gerencia} />
             </div>
             {soloMira && (

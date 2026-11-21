@@ -128,6 +128,71 @@ revisan antes de cada cambio en esta carpeta.
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
   Y si se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
 
+## El computador, más compacto: el marco común (2026-11-21)
+
+Lo pidió el cliente: *"se puede compactar todas las vistas en el computador
+un poco más, sin perder la regla PlayStation y… el aspecto jugable,
+intuitivo en el panel"*. Se midieron las 15 pantallas a 1280×650 en el panel
+de ejemplo: en todas, el título de la página aparecía recién a los 202–209px
+—casi un tercio de la pantalla de un notebook—, entre la barra (109px), la
+tira *¿Primera vez acá?* (61px) y el margen de arriba (32px). **El espacio
+que sobra es aire entre piezas, no tamaño de botones ni de letra.**
+
+Se propuso en **dos capas** y el cliente aprobó la primera (*"dale con la
+capa 1 y déjalo en preview"*):
+
+**Capa 1, hecha: el marco común, solo desde 1024px de ancho.**
+
+| | Antes | Ahora |
+|---|---|---|
+| La barra de arriba (`Cabecera`) | 109px | 97px |
+| La tira *¿Primera vez acá?* (`Recorrido`) | 61px | 49px |
+| El margen sobre la página (`layout.tsx`) | 32px | 16px |
+| Bajo el título con banda (`BandaSeccion`) | 16px y 8px | 12px y 6px |
+| El título de la página | a los 202–209px | a los 162–169px |
+| La primera tarjeta de un día en Calendario | a los 534px | a los 472px |
+
+- **Lo que no cambió**: los botones del menú y de la barra siguen en 36px, y
+  ninguna letra bajó. Los dos botones de la tira pasaron de 40 a 36px en el
+  computador (tamaño secundario); en el celular siguen en 40.
+- **El celular queda igual**: todo va con `lg:`. Comprobado a 393: la barra,
+  la tira y el margen miden lo mismo que antes.
+- **Las páginas que se mandan afuera no cambian**: el link personal, la
+  planilla semanal, la cotización, el contrato y la entrada. La barra entera
+  del panel lleva `data-marco="panel"` y es `peer`; el `<main>` —su hermano—
+  sube solo cuando la ve (`lg:peer-data-[marco=panel]:pt-4`). Comprobado en
+  `/login`, `/mi/…`, `/presupuesto/…` y `/contrato/…`: 32px, como antes.
+- **En Calendario**, el aire bajo la frase *Toca un día…* y bajo la fila de
+  botones pasó de 24 a 16px, que es lo que ya tenía Cotizaciones.
+  ***Agregar reserva* sigue en 48px**: es la misma pieza que *+ Cotizar* y la
+  fila de filtros de Cotizaciones, que van en 48, y se cambian juntas en la
+  capa 2 (en la propuesta se mostró en 44).
+- **Las fotos de la ayuda no cambian**: `capturas-ayuda.mjs` las saca a
+  400px de ancho, y este cambio rige desde 1024. Ningún texto de ayuda
+  describe estas medidas.
+- **Lecturas de Google**: ninguna. **Ningún permiso cambió.**
+- **Probado** en el panel de ejemplo, las 16 pantallas del administrador a
+  1280×650, 1024×650 y 393×740. `revisarPlayStation()` marca lo de siempre
+  (los `?` de 30px, y la letra de 12px heredada de Cuentas y Bitácora), nada
+  de la barra ni de la tira. Entre 1024 y 1279px el menú del administrador
+  sigue en dos filas (la barra mide 141px).
+
+**Capa 2, pendiente: pantalla por pantalla.** Es donde está la mayor
+ganancia, pero cada una es un cambio de distribución y se muestra con
+capturas antes de aplicar. Lo que se vio al medir:
+
+| Pantalla | Qué se puede juntar |
+|---|---|
+| Calendario | *Al día · Actualizar*, la frase *Toca un día…* y los botones son tres filas; pueden ser una. La frase explica: va a su `?` |
+| Página del día | *← Calendario*, el título, *Al día* y *6 reservas · 34 personas* son cuatro filas; pueden ser dos |
+| Configuración | Cada campo mide 77px; con la caja en 44px puede bajar a unos 56 |
+| Turnos, Extras, Cotizaciones | Los avisos fijos y las filas de filtros, con menos separación; el botón principal y los filtros de 48 a 44px, juntos |
+| Equipo, Clientes, Productos, Cuentas, Bitácora | El mismo criterio de separación |
+
+**El criterio, para seguir**: solo desde 1024px; se quita aire y se juntan
+filas, no se achican botones bajo 36px (44 lo que se usa seguido) ni letra
+bajo 13px; lo que es la misma pieza en dos pantallas cambia en las dos.
+
 ## El token de Shopify de la tienda real (2026-11-21)
 
 Desde el 1 de enero de 2026 **Shopify ya no deja crear apps propias desde

@@ -53,18 +53,21 @@ export default function Recorrido({ rol }: { rol: string }) {
   if (fuera || !ofrecer) return null;
 
   return (
+    // En el computador la tira va más baja (2026-11-21, el marco compacto:
+    // ver `Cabecera`): menos aire y los dos botones en 36px, que es el
+    // tamaño secundario. En el celular siguen en 40px.
     <div className="border-b border-oro/30 bg-oro/5">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-sm">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-sm lg:py-1.5">
         <span>
           <strong>¿Primera vez acá?</strong>{' '}
           <span className="text-hueso/70">Cuatro misiones cortas con tu panel de verdad.</span>
         </span>
         <span className="flex-1" />
-        <a href="/ayuda" onClick={() => anotar(llave, 'listo')} className="tecla boton boton-relleno min-h-[40px]">
+        <a href="/ayuda" onClick={() => anotar(llave, 'listo')} className="tecla boton boton-relleno min-h-[40px] lg:min-h-[36px]">
           ▶ Ver mis misiones
         </a>
         <button onClick={() => { anotar(llave, String(Number(leer(llave) || 0) + 1)); setOfrecer(false); }}
-          className="boton min-h-[40px] text-hueso/70 hover:text-hueso">
+          className="boton min-h-[40px] text-hueso/70 hover:text-hueso lg:min-h-[36px]">
           Ahora no
         </button>
       </div>

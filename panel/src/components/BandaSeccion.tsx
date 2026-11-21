@@ -76,7 +76,9 @@ export default function BandaSeccion({ tono, icono, seccion, titulo, ayuda, chil
   const t = TONO[tono];
   const mismo = seccion.trim().toLowerCase() === titulo.trim().toLowerCase();
   return (
-    <header className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 pb-2 ${t.banda}`}>
+    // Desde 1024px, un poco menos de aire bajo el título y bajo la banda
+    // (2026-11-21, el marco compacto: ver `Cabecera`).
+    <header className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 pb-2 lg:mb-3 lg:pb-1.5 ${t.banda}`}>
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[18px] ${t.icono}`}
         aria-hidden>{icono}</span>
       {/* El título se parte adentro y nunca se va debajo del ícono; el `?`

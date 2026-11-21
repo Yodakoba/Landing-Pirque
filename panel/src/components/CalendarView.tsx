@@ -330,7 +330,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
       {!conCupo && <AvisoSobrecupo dias={sobrecupo} />}
       <BandejaAprobaciones pendientes={pendientes} onCambio={() => void cargar()} />
       {conAvisos && <AvisosRecepcion reservas={reservas} />}
-      <p className="text-hueso/60 text-sm mb-6">
+      <p className="text-hueso/60 text-sm mb-6 lg:mb-4">
         Toca un día para ver quiénes vienen.{' '}
         {dias.length > 0 && (
           <span className="text-hueso/40">
@@ -343,7 +343,7 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
       {/* También está en la vista de cada día, pero ahí hay que entrar
           primero. Una reserva que llega por teléfono se anota sin saber
           todavía de qué día es: la fecha se elige en el formulario. */}
-      <div className="mb-6 flex flex-wrap gap-3">
+      <div className="mb-6 flex flex-wrap gap-3 lg:mb-4">
         {puede(rol as Rol, 'anotar') ? (
           <button onClick={() => setCreando(true)}
             className="boton boton-relleno min-h-[48px] text-[15px]">
