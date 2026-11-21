@@ -25,6 +25,7 @@
  * ese día. Se dice en pantalla porque es la duda razonable al usarlo.
  */
 import AvisoFijo from './AvisoFijo';
+import AyudaCorta from './AyudaCorta';
 import { useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
 import FechaDia, { MARCO_HOY } from './FechaDia';
@@ -152,17 +153,14 @@ export default function CalendarioEquipo({ dia }: { dia?: string } = {}) {
           decir quién vino a un sábado que no ha ocurrido. */}
       {porCerrar.length > 0 && (
         <div className="mb-5 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
+          {/* **El porqué, en su `?`** (2026-11-21, lo pidió el cliente: *"vamos
+              a capacitar a la gente y después molesta mucho texto
+              constante"*). A la vista queda cuántos son y cuáles. */}
+          <p className="flex items-center gap-2 text-sm font-semibold text-ambar-texto">
             {porCerrar.length === 1
               ? 'Hay un día por cerrar.'
               : `Hay ${porCerrar.length} días por cerrar.`}
-          </p>
-          <p className="mt-1 text-sm text-hueso/70">
-            Un día cerrado es uno donde alguien ya confirmó quién vino, anotó
-            la propina y revisó los montos. Mientras no se cierre, el informe
-            de ese periodo está incompleto. Después de cerrarlo, solo el
-            encargado de operaciones, quien hace los pagos o la gerencia lo
-            puede corregir.
+            <AyudaCorta tema="diasPorCerrar" />
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {porCerrar.map((f) => {
