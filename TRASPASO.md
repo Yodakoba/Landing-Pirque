@@ -35,9 +35,11 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   21-11-2026** con el OK del cliente, y el panel en producción quedó
   comprobado: `/login` 200, `/api/publico/fechas` 200 y el webhook sin firma
   401.
-- **PR #287 está abierto**, en la rama `claude/traspaso-md-resumen-1dc8d5`:
-  el cliente pidió ***"déjalo en preview"***, así que **se mergea solo cuando
-  diga *"mergea"***. Trae *el computador, más compacto* —las dos capas—, los
+- **El PR #287 se mergeó el 21-11-2026**, cuando el cliente dijo *"mergea"*
+  (había pedido *"déjalo en preview"*). El panel en producción quedó
+  comprobado después: `/login` 200, `/api/publico/fechas` 200 y el webhook
+  sin firma 401. **No hay ningún PR abierto.** Trajo *el computador, más
+  compacto* —las dos capas—, los
   formularios alineados en todo el panel, **las ventanas que caben en la
   pantalla del computador** (de 21 que no cabían quedan 2), **corregir un
   día cerrado con una casilla y la lista de cambios**, sin motivo escrito, y
@@ -47,8 +49,8 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   vez de cortarse** y **la casilla + lista también al editar o borrar una
   reserva de un día cerrado**.
   https://github.com/ayc-y-blp/aycyblp/pull/287
-- **El cliente lo está mirando en la versión de prueba, en su notebook, y
-  va mandando fotos** de lo que quiere más junto o más alineado. Preguntó
+- **El cliente mira el panel en su notebook y va mandando fotos** de lo
+  que quiere más junto o más alineado. Preguntó
   por qué tenía que pedir él cada revisión: desde ese día **`npm run
   ventanas` mide cada ficha y cada ventana y es parte de `npm run
   revisar`** (sección 8). Lo que queda está en el pendiente 2 (sección 7).
@@ -483,7 +485,7 @@ cambios en `InformeEquipo`, `CajaBoleta`, `EquipoDialogo`, `ExtrasDialogo`,
 `public/ayuda/`. **Ninguna columna nueva salvo la pestaña `Ajustes
 sueltos`; ningún permiso cambió.**
 
-### PR #287, abierto (el cliente pidió *"déjalo en preview"*)
+### PR #287, mergeado el 21-11-2026 (estuvo en preview hasta que el cliente dijo *"mergea"*)
 
 Lo pidió el cliente el 21-11-2026: *"se puede compactar todas las vistas en
 el computador un poco más, sin perder la regla PlayStation y… el aspecto
@@ -759,9 +761,11 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 - **Editar una cotización ganada cuya reserva está en un día cerrado** no
   tiene dónde confirmar la lista de cambios: el servidor la rechaza. Ya era
   así. **(Por confirmar)** si hace falta.
-- **(Por confirmar)** que el cliente quiso decir que sí a la casilla + lista
-  para la reserva de un día cerrado: su respuesta fue una línea dictada. Si
-  no, se revierte el commit `907619a` y los nombres doblados se quedan.
+- **La casilla + lista para la reserva de un día cerrado** salió de una
+  respuesta dictada (*"¿las listas? Sí…"*) que se leyó como un sí. Se le
+  dijo así al cliente, con las capturas, y después dijo *"mergea"*. Si al
+  usarla no era lo que quería, se revierte el commit `907619a` en un PR
+  aparte: los nombres doblados no dependen de él.
 - **Varias piezas se dibujan dos veces en el HTML** (una para el celular y
   otra para el computador): en una prueba se pide la que se ve
   (`button:visible`, `locator('visible=true')`).
@@ -779,8 +783,11 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 - **La tarea diaria del CRM sigue programada** con la conexión apagada:
   retira lo publicado y no hace nada más (según `panel/CLAUDE.md`).
 - **Desde el entorno de Claude Code no se abren** `brasas-sitio.vercel.app`,
-  `panel.`, `tienda.` ni `lo-pirque.myshopify.com`, y Drive no deja bajar
-  fotos. Se agregan en *Allowed domains* del entorno si hace falta.
+  `panel.` ni `tienda.`, y Drive no deja bajar fotos. Se agregan en *Allowed
+  domains* del entorno si hace falta. **La Storefront API de la tienda real
+  (`lo-pirque.myshopify.com`) sí responde desde acá** (comprobado el
+  21-11-2026 con `migracion-team/verificar.sh`, que desde ese día prueba las
+  dos tiendas).
 
 ### Lo que no hay que romper
 
@@ -834,8 +841,8 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 
 | # | Qué | Siguiente paso concreto | Quién |
 |---|---|---|---|
-| 1 | **PR #287** (el computador más compacto, las ventanas y la corrección) | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main`. La preview del panel se abre con la sesión de Vercel del equipo. **Va por el camino *con prueba***: toca cómo se corrige un día cerrado | Cliente decide; Claude mergea |
-| 2 | **Lo que quedó de las ventanas** | (a) **Hecho**: editar y borrar una reserva de un día cerrado ya van con casilla y lista; falta que el cliente lo vea en la versión de prueba. (b) Las dos de `NO_CABEN` (el ajuste abierto en la línea de una persona, y la cara de reservas): solo si el cliente las marca. (c) Cuentas entre 1024 y 1279px, con la columna del rol angosta. (d) Lo que siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "Las ventanas caben en la pantalla del computador" | Claude propone; cliente decide |
+| 1 | **Lo que el cliente siga marcando** | El PR #287 ya está mergeado y no hay ninguno abierto. Lo nuevo va en una rama desde `main`, en su propio PR, **con su camino dicho** (chico o con prueba). Si el cliente pide verlo antes, *"déjalo en preview"* lo deja abierto hasta su *"mergea"* | Cliente marca; Claude propone |
+| 2 | **Lo que quedó de las ventanas** | (a) **Hecho**: editar y borrar una reserva de un día cerrado ya van con casilla y lista; está en producción desde el merge del PR #287. (b) Las dos de `NO_CABEN` (el ajuste abierto en la línea de una persona, y la cara de reservas): solo si el cliente las marca. (c) Cuentas entre 1024 y 1279px, con la columna del rol angosta. (d) Lo que siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "Las ventanas caben en la pantalla del computador" | Claude propone; cliente decide |
 | 3 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
 | 4 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
 | 5 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
