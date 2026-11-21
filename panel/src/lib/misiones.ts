@@ -194,7 +194,7 @@ const OPERACIONES: Mision[] = [
     id: 'informe', emoji: '📊', titulo: 'El informe: lo que cuesta el equipo', escena: 'ope-informe',
     intro: 'Por persona: cuántos días vino, sus jornadas, ajustes y total, y cuánto tiene que boletear. El periodo se elige arriba: día, semana, mes u otro rango.',
     puntos: [
-      'Si falta cerrar un turno, el total está incompleto.',
+      'Sin marcar: quién tiene días sin cerrar. Esos días no suman: el total está incompleto.',
       'Trabajadores y extras, cada uno con lo que falta.',
       '🧾 Sin boleta: a quién le falta mandarla. Abre su línea y ves el bruto para el SII y el neto.'
     ],

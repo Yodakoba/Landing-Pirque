@@ -185,12 +185,13 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
   así que alguien con $16.500 por pagar quedaba debajo de dos en $0.
 - **Filtro *Sin marcar (N)***, al lado de *Todos · Por pagar · Sin boleta*:
   quien tiene algún día sin marcar en el periodo (equipo y extras; los
-  vendedores no tienen días). El aviso *Hay N turnos sin cerrar* trae **Ver
-  a quiénes les falta ↓**, que lo activa. **El aviso va justo arriba de la
-  lista**, bajo los filtros (lo pidió el cliente el mismo día: arriba de la
-  página, el botón filtraba una lista que quedaba fuera de la pantalla y
-  parecía que no hacía nada). Al apretarlo, la página baja hasta el aviso, y
-  con el filtro puesto el botón dice *Ver a todos*.
+  vendedores no tienen días). **Ya no hay aviso *Hay N turnos sin
+  cerrar***: lo decidió el cliente el mismo día (*"basta con el botón Sin
+  marcar"*). Tenía un botón *Ver a quiénes les falta →* que activaba este
+  mismo filtro y, arriba de la página, filtraba una lista que quedaba fuera
+  de la pantalla. Lo que el aviso decía lo dicen el filtro, con cuántos son,
+  y el *⚠ sin marcar: no suma* de cada tarjeta; el `?` del informe y su
+  misión dicen que esos días no suman.
 - **Dónde empieza y termina cada persona**: borde de **3px y oscuro**
   (`border-hueso/55`), más grueso que cualquier línea de adentro —que van de
   1 a 2px y claras—, una sombra y 12px entre una tarjeta y la otra; abierta,

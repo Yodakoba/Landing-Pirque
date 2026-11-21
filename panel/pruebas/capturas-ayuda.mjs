@@ -111,9 +111,10 @@ const ESCENAS = {
     puntos: [(p) => p.locator('[role=dialog]').getByText(/Día cerrado/).first(),
       enVentana(/Corregir este día/), enVentana(/Trabajadores/)], alto: 820 },
   // El foco va en lo que falta cerrar (2026-11-20): así entra el filtro
-  // 🧾 Sin boleta, que va debajo de las tres secciones.
-  'ope-informe': { rol: 'gerente', ruta: '/informe', foco: texto(/turnos? sin cerrar/),
-    alto: 900, puntos: [texto(/turnos? sin cerrar/), boton(/Trabajadores/), boton(/Sin boleta/)] },
+  // 🧾 Sin boleta, que va debajo de las tres secciones. Desde el 2026-11-21
+  // lo que falta cerrar es el filtro Sin marcar: el aviso se sacó.
+  'ope-informe': { rol: 'gerente', ruta: '/informe', foco: boton(/^Sin marcar/),
+    alto: 900, puntos: [boton(/^Sin marcar/), boton(/Trabajadores/), boton(/Sin boleta/)] },
 
   ...Object.fromEntries(['pag', 'ger'].flatMap((pre) => {
     const rol = pre === 'pag' ? 'pagos' : 'gerencia';
