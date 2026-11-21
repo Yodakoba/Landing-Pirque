@@ -26,6 +26,7 @@ import MostrarDesactivados from './MostrarDesactivados';
 import { estaCerrado, cierreDe, type Cierre } from '@/lib/cierres';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Ayuda from './Ayuda';
+import AyudaCorta from './AyudaCorta';
 import { Aviso } from './CalendarView';
 import ExtrasDialogo from './ExtrasDialogo';
 import { COLOR_TARJETA } from './TarjetaDia';
@@ -628,6 +629,9 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                     <span className="w-36 whitespace-nowrap text-[13px] font-semibold uppercase tracking-widest text-hueso/60">
                       Link personal
                     </span>
+                    {/* Qué abre el link, en su `?` (2026-11-21, regla *lo que
+                        explica va en su ?*). */}
+                    <AyudaCorta tema="linkColaborador" />
                     {!c.nombre.trim() || (nombreEscrito[i] !== undefined && nombreEscrito[i].trim() !== c.nombre) ? (
                       <span className="text-[13px] text-ambar-texto/85">Guarda el nombre para administrar su link.</span>
                     ) : (
@@ -645,9 +649,6 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                       </>
                     )}
                   </div>
-                  <p className="mt-1 text-[13px] text-hueso/65">
-                    Abre sus días, lo que ganó y lo que se le pagó, sin contraseña. Mándaselo por WhatsApp.
-                  </p>
                 </div>
               )}
 

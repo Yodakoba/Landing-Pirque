@@ -523,6 +523,22 @@ export interface AyudaCorta {
 }
 
 export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
+  // ---------- Actividades extras ----------
+  actividadesDia: {
+    titulo: 'Las actividades del día',
+    texto: [
+      'Lo que se contrata aparte del equipo: jinetes, pintacaritas, el castillo inflable.',
+      'Una actividad sin confirmar no suma: agendar no es pagar. Se marca Vino o No vino desde el mismo día.',
+      'El monto se propone de la ficha y se puede corregir: lo que queda es lo que se le pagó ese día. Una diferencia por un acuerdo aparte va como ajuste, con su motivo.'
+    ]
+  },
+  linkColaborador: {
+    titulo: 'El link personal',
+    texto: [
+      'Una dirección propia de esa persona, sin contraseña: ve sus días, lo que ganó y lo que se le pagó. Se la mandas por WhatsApp.',
+      'Renovar crea uno nuevo y el anterior deja de servir. Quitar link lo apaga.'
+    ]
+  },
   // ---------- Turnos ----------
   diasPorCerrar: {
     titulo: 'Días por cerrar',
@@ -1002,7 +1018,8 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Por turno o contratado',
     texto: [
       'Por turno: se le paga la jornada de cada día que viene.',
-      'Contratado: su sueldo va por liquidación, fuera del panel. Acá solo se le suman horas extra y ajustes del día.'
+      'Contratado: su sueldo va por liquidación, fuera del panel. Acá solo se le suman horas extra y ajustes del día.',
+      'Esto es lo que gana de costumbre. Lo de un día —cuántas horas extra hizo, un atraso, un adelanto, un feriado— se anota en ese día, con su motivo.'
     ]
   },
   propinaFicha: {

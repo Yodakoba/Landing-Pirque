@@ -275,12 +275,10 @@ export default function ReservasDelDia({
         </>
       )}
 
-      <p className="mt-4 text-[13px] text-hueso/60">
-        {modo === 'libre' && <><em>Vino / No vino</em> se guarda al apretarlo. </>}
-        {modo === 'corrigiendo' && <><em>Vino / No vino</em> se guarda junto con la
-          corrección. </>}
-        Para editar o borrar una reserva, o anotar una nueva, abre{' '}
-        <a href={`/dia/${fecha}`} className="text-oro hover:underline">la página del día</a>.
+      {/* Un enlace, no un párrafo (2026-11-21, regla *lo que explica va en
+          su ?*): editar, borrar o anotar una reserva es en la página del día. */}
+      <p className="mt-4 text-[13px]">
+        <a href={`/dia/${fecha}`} className="text-oro hover:underline">Editar o anotar reservas en la página del día →</a>
       </p>
     </div>
   );

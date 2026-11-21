@@ -81,14 +81,11 @@ export default function FichaTrabajador({
   return (
     <Dialogo titulo={creando ? 'Nuevo trabajador' : `Ficha de ${ficha!.nombre}`}
              onCerrar={onCancelar} ancho="max-w-3xl">
-      <p className="mt-3 text-sm text-hueso/60">
+      <p className="mt-3 text-sm text-hueso/60 empty:hidden">
         {creando ? (
           <>Queda en la lista del equipo{puesto && <>, y asignado a{' '}
             <strong>{puesto}</strong> en este día</>}.</>
-        ) : (
-          <>Lo que no cambia de un día a otro: cómo ubicarlo, cómo se le paga
-            y dónde se le transfiere.</>
-        )}
+        ) : null}
       </p>
 
       <div className="mt-4 flex flex-wrap items-start gap-3">
@@ -139,11 +136,8 @@ export default function FichaTrabajador({
               distintas: acá va cuánto vale una hora extra de esta persona;
               cuántas hizo un sábado, y cualquier suma o resta de ese día, se
               anota en su turno. */}
-          <p className="mb-3 text-xs text-hueso/45">
-            Lo que esta persona gana <strong>de costumbre</strong>. Lo de un
-            día —cuántas horas extra hizo, un atraso, un adelanto de la caja,
-            un feriado— se anota en ese día, con su motivo.
-          </p>
+          {/* Que esto es lo de costumbre y lo de un día va en el día, en el
+              `?` de Modalidad (2026-11-21, regla *lo que explica va en su ?*). */}
           <div className="flex flex-wrap items-start gap-3">
             <Campo etiqueta="Modalidad" ancho="w-52" ayuda="modalidad">
               <select value={modalidad} className={ENTRADA}
@@ -191,10 +185,6 @@ export default function FichaTrabajador({
             Transferencia
           </p>
           <DatosBancarios banco={banco} nombre={nombre} onCambio={setBanco} />
-          <p className="mt-2 text-xs text-hueso/45">
-            Es lo que sale en la planilla que descarga quien paga. Se puede
-            dejar para después, pero es justo lo que después cuesta juntar.
-          </p>
         </fieldset>
       )}
 

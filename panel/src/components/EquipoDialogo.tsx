@@ -511,10 +511,9 @@ export default function EquipoDialogo({
                 </button>
               ))}
             </span>
-          : <span className="text-hueso/50">
-              Las sugerencias salen de la columna <em>uno cada N personas</em> de{' '}
-              <a href="/equipo" className="text-oro hover:underline">Equipo</a>.
-            </span>}
+          : null}
+        {/* De dónde salen las sugerencias, en su `?` (2026-11-21, regla *lo
+            que explica va en su ?*). */}
         <Ayuda tema="asistencia" />
       </p>
 
@@ -792,12 +791,12 @@ export default function EquipoDialogo({
                 }} />
             </label>
             <AyudaCorta tema="propinaDia" />
-            <span className="text-xs text-hueso/50">
-              {propina > 0
-                ? <>se reparte entre {reciben} {reciben === 1 ? 'persona' : 'personas'},
-                    en partes iguales</>
-                : <>si hubo, se escribe el total y el panel la reparte</>}
-            </span>
+            {/* A cuántos se reparte es un dato; cómo funciona, su `?`. */}
+            {propina > 0 && (
+              <span className="text-[13px] text-hueso/60">
+                se reparte entre {reciben} {reciben === 1 ? 'persona' : 'personas'}, en partes iguales
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -846,8 +845,7 @@ export default function EquipoDialogo({
       {conCierre && !cerrado && !corrigiendo && !llego && !soloMira && (
         <p className="mt-3 rounded border border-cielo/40 bg-cielo/5
                       px-3 py-2 text-sm text-cielo-texto">
-          Este día <strong>todavía no llega</strong>. Se cierra desde el mismo
-          día en adelante, cuando ya se sabe quién vino.
+          Este día <strong>todavía no llega</strong>: se cierra desde ese día.
         </p>
       )}
       {((conCierre && !cerrado && llego && !soloMira) || corrigiendo) && !listo && (
@@ -858,28 +856,23 @@ export default function EquipoDialogo({
             : <>{puedeCerrar || corrigiendo ? 'Para cerrar el día falta' : 'Falta'} marcar si{' '}
                 <strong>{falta.sinMarcar === 1 ? 'una persona vino'
                        : `${falta.sinMarcar} personas vinieron`}</strong> o no.
-                {conAsistencia
-                  ? <>{' '}Son los botones <em>Vino</em> y <em>No vino</em> de arriba.</>
-                  : <>{' '}Eso se marca en{' '}
+                {!conAsistencia && <>{' '}Eso se marca en{' '}
                       <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}</>}
         </p>
       )}
 
-      {/* Sin botón de guardar hay que decirlo una vez, o quien lo busca
-          creería que lo escrito se pierde al cerrar. Y sin el botón de
-          cerrar hay que decir dónde está, o parecería que el día no se
-          puede cerrar en ninguna parte. */}
-      {plan.length > 0 && !cerrado && !soloMira && (
-        <p className="mt-2 text-xs text-hueso/45">
-          Lo que escribas acá <strong>se guarda solo</strong>.
+      {/* Sin el botón de cerrar hay que decir dónde está, o parecería que
+          el día no se puede cerrar en ninguna parte. Que se guarda solo ya lo
+          dice el aviso de guardado (2026-11-21, regla *lo que explica va en
+          su ?*). */}
+      {plan.length > 0 && !cerrado && !soloMira && (!puedeCerrar || !conCierre) && (
+        <p className="mt-2 text-[13px] text-hueso/60">
           {/* El encargado no cierra (2026-11-05): se le dice quién lo hace,
               en vez de dejar un botón ausente que parece un error. */}
           {!puedeCerrar
-            ? <> <strong>El día lo cierra quien hace los pagos</strong>, cuando
-                revisa que esté todo listo.</>
-            : !conCierre && <> <strong>El día se cierra en{' '}
-            <a href="/turnos" className="text-oro hover:underline">Turnos</a></strong>,
-            que es donde el panel va mostrando los días que quedaron pendientes.</>}
+            ? <>El día lo cierra quien hace los pagos.</>
+            : <>El día se cierra en{' '}
+                <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}
         </p>
       )}
 

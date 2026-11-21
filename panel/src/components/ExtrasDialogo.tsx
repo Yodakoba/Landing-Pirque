@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
 import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, ENTRADA_DIA, TotalDelDia } from './LineaDelDia';
 import AvisoGuardado from './AvisoGuardado';
+import AyudaCorta from './AyudaCorta';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
 import { VINO, porNombre } from '@/lib/equipo';
@@ -165,11 +166,6 @@ export default function ExtrasDialogo({
       {/* Todo lo editable va en un `fieldset disabled` mientras el día está
           cerrado: ver la ventana del equipo. */}
       <fieldset disabled={bloqueado} className="m-0 min-w-0 border-0 p-0">
-      <p className="mt-3 text-sm text-hueso/60">
-        Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
-        castillo inflable. <strong>Una actividad sin confirmar no suma</strong>:
-        agendar no es pagar.
-      </p>
 
       {/* **Un grupo, como un puesto de la ventana del equipo** (2026-11-21, lo
           pidió el cliente: *"este pop-up sigue completamente otra lógica de
@@ -180,7 +176,11 @@ export default function ExtrasDialogo({
       <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
       <div className={`min-w-0 p-2 sm:p-3 ${marcoGrupo()}`}>
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="px-1 text-[15px] font-semibold">Actividades del día</h3>
+          {/* Qué es, que sin confirmar no suma y dónde va una diferencia, en
+              su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
+          <h3 className="flex items-center gap-2 px-1 text-[15px] font-semibold">
+            Actividades del día <AyudaCorta tema="actividadesDia" />
+          </h3>
           <span className="px-1 text-[13px] font-semibold tabular-nums text-hueso/60">{lista.length}</span>
         </div>
       {lista.length === 0 ? (
@@ -317,22 +317,8 @@ export default function ExtrasDialogo({
 
       {error && <p className="mt-4 text-sm text-rojo-texto">{error}</p>}
 
-      <p className="mt-4 max-w-2xl text-xs text-hueso/45">
-        El monto se propone del que tiene puesto cada quien y se puede
-        corregir; lo que se guarda acá es lo que se le pagó <em>ese día</em>.
-        Si hay una diferencia por un acuerdo aparte,{' '}
-        <strong>déjala en el ajuste con su motivo</strong>, igual que en los
-        turnos: el total es el mismo y queda dicho por qué.
-      </p>
-
-      {/* Sin botón de guardar hay que decirlo una vez. */}
+      {/* Que se guarda solo lo dice el aviso de guardado del pie. */}
       </fieldset>
-
-      {!cerrado && !soloMira && (
-        <p className="mt-2 text-xs text-hueso/45">
-          Lo que escribas acá <strong>se guarda solo</strong>.
-        </p>
-      )}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {lista.length > 0 && (
