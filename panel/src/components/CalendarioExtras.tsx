@@ -564,8 +564,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
                                      text-[13px] font-semibold text-hueso/60">inactivo</span>
                   )}
                   {verSueldos && c.nombre.trim() && !sePuedeTransferir(c.banco) && (
-                    <span className="rounded-full border border-ambar/50 px-2 py-0.5
-                                     text-[13px] font-semibold text-ambar-texto">falta su cuenta</span>
+                    <Pastilla tipo="falta">falta su cuenta</Pastilla>
                   )}
                 </button>
                 {/* Quitar solo a quien no tiene días contratados, igual que

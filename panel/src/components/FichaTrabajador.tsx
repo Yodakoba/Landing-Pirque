@@ -18,6 +18,7 @@ import { useState } from 'react';
 import AyudaCorta from './AyudaCorta';
 import Dialogo from './Dialogo';
 import Campo from './Campo';
+import ElegirPuesto from './ElegirPuesto';
 import CampoTelefono from './CampoTelefono';
 import DatosBancarios from './DatosBancarios';
 import { usarSoloMira } from './SesionCliente';
@@ -29,8 +30,10 @@ const ENTRADA =
   'focus:border-oro focus:outline-none';
 
 export default function FichaTrabajador({
-  ficha, puesto = '', nombreSugerido = '', verSueldos, onListo, onCancelar
+  ficha, puesto = '', puestos, nombreSugerido = '', verSueldos, onListo, onCancelar
 }: {
+  /** Los puestos que existen, para elegir el habitual. */
+  puestos: string[];
   /** La ficha a editar, o `undefined` para crear una nueva. */
   ficha?: Trabajador;
   /** Con qué nombre nace, para la ficha que le falta a alguien ya asignado. */
@@ -109,10 +112,10 @@ export default function FichaTrabajador({
             onCambio={setTelefono} />
         </Campo>
         <Campo etiqueta="Puesto habitual">
-          <input type="text" value={habitual} className={ENTRADA}
-            placeholder="garzón, parrillero…"
-            aria-label={`Puesto habitual de ${nombre || 'esta persona'}`}
-            onChange={(e) => setHabitual(e.target.value)} />
+          {/* Se elige de los puestos que existen (2026-11-21): escrito a mano
+              podía no calzar con ninguno y no preseleccionar a nadie. */}
+          <ElegirPuesto valor={habitual} puestos={puestos} quien={nombre}
+            className={ENTRADA} onCambio={setHabitual} />
         </Campo>
         {!creando && (
           <label className="campo-todo flex min-h-[30px] items-center gap-2">

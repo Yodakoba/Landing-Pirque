@@ -12,7 +12,7 @@
  * reparte entre el equipo que atiende, no entre quien vino a hacer un show.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
+import { LISTA_TARJETAS, SignoAbrir, TITULO_GRUPO, marcoGrupo, marcoTarjeta } from './TarjetaLista';
 import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, ENTRADA_DIA, TotalDelDia } from './LineaDelDia';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
@@ -186,7 +186,7 @@ export default function ExtrasDialogo({
         <div className="flex items-baseline justify-between gap-2">
           {/* Qué es, que sin confirmar no suma y dónde va una diferencia, en
               su `?` (2026-11-21, regla *lo que explica va en su ?*). */}
-          <h3 className="flex items-center gap-2 px-1 text-[15px] font-semibold">
+          <h3 className={`flex items-center gap-2 px-1 ${TITULO_GRUPO}`}>
             Actividades del día <AyudaCorta tema="actividadesDia" />
           </h3>
           <span className="px-1 text-[13px] font-semibold tabular-nums text-hueso/60">{lista.length}</span>
@@ -200,7 +200,7 @@ export default function ExtrasDialogo({
             return (
               <li key={e.colaborador}
                 className={marcoTarjeta(abierta, e.estado === VINO.si ? 'verde'
-                  : e.estado === VINO.no ? 'rojo' : 'normal', true)}>
+                  : e.estado === VINO.no ? 'rojo' : 'normal', true, true)}>
                 <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
                   <button type="button" aria-expanded={abierta}
                     onClick={() => setAbierto(abierta ? '' : normalizar(e.colaborador))}

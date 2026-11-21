@@ -15,12 +15,14 @@
  * que el panel diera consejos que nadie dio.
  */
 import AvisoFijo from './AvisoFijo';
+import ElegirPuesto from './ElegirPuesto';
 import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 import BotonGuardar from './BotonGuardar';
 import AvisoGuardado from './AvisoGuardado';
 import { usarGuardadoPorFicha } from './usarGuardadoPorFicha';
 import { avisar } from './AvisoFlotante';
 import AyudaCorta from './AyudaCorta';
+import { Pastilla } from './Pastilla';
 import MostrarDesactivados from './MostrarDesactivados';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Ayuda from './Ayuda';
@@ -654,10 +656,7 @@ export default function EquipoEditor() {
                       cerrada**: adentro ya lo avisa `DatosBancarios`, pero
                       cerrada es donde se mira la lista antes de pagar. */}
                   {verSueldos && t.nombre.trim() && !sePuedeTransferir(t.banco) && (
-                    <span className="rounded-full border border-ambar/50 px-2 py-0.5
-                                     text-[13px] font-semibold text-ambar-texto">
-                      falta su cuenta
-                    </span>
+                    <Pastilla tipo="falta">falta su cuenta</Pastilla>
                   )}
                 </button>
 
@@ -733,22 +732,12 @@ export default function EquipoEditor() {
                       onCambio={(v) => cambiarPersona(i, 'telefono', v)} />
                   </Campo>
                   <Campo etiqueta="Puesto habitual">
-                    {/* Un select y no texto libre: el puesto habitual solo
+                    {/* Una lista y no texto libre: el puesto habitual solo
                         preselecciona en el planificador, y si está escrito de
-                        otra forma no preselecciona nada. */}
-                    <select value={t.puesto} className={ENTRADA}
-                      aria-label={`Puesto habitual de ${t.nombre || 'esta persona'}`}
-                      onChange={(e) => cambiarPersona(i, 'puesto', e.target.value)}>
-                      <option value="">—</option>
-                      {puestos.map((p) => (
-                        <option key={p.nombre} value={p.nombre}>{p.nombre}</option>
-                      ))}
-                      {/* Si tiene uno que ya no está en la lista, igual se
-                          muestra: si no, guardar lo borraría sin avisar. */}
-                      {t.puesto && !puestos.some((p) => p.nombre === t.puesto) && (
-                        <option value={t.puesto}>{t.puesto} (ya no existe)</option>
-                      )}
-                    </select>
+                        otra forma no preselecciona nada. Es la misma pieza de
+                        la ficha que se abre desde el equipo del día. */}
+                    <ElegirPuesto valor={t.puesto} puestos={puestos.map((p) => p.nombre)} quien={t.nombre}
+                      className={ENTRADA} onCambio={(v) => cambiarPersona(i, 'puesto', v)} />
                   </Campo>
                   {/* **La casilla "Activo" se sacó de acá adentro** (2026-10-30):
                       con el botón *Desactivar* en la línea de la persona eran

@@ -278,7 +278,8 @@ export default function ClientesEditor() {
       </div>
 
       {nuevo && (
-        <div className="mb-5 rounded border border-oro/50 bg-panel p-4">
+        // `data-ficha`: así la encuentra `npm run ventanas`, que mide si cabe.
+        <div data-ficha="nueva" className="mb-5 rounded border border-oro/50 bg-panel p-4">
           <h2 className="mb-3 text-[15px] font-bold uppercase tracking-wide">Nuevo cliente</h2>
           {formulario(nuevo, (k, v) => setNuevo({ ...nuevo, [k]: v }), 'el cliente nuevo')}
 

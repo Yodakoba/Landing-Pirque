@@ -102,6 +102,7 @@ revisan antes de cada cambio en esta carpeta.
   | El estado del día (público, privado, exclusivo, cerrado…) | `PuntoDia` / `PuntoYPalabra` y `COLOR_TARJETA` |
   | Lo cotizado (solo lo mandado) y la gente posible, ganadas, esperando, lo tuyo sin mandar | `Pastilla` / `PastillaCotizado` |
   | En las celdas de Turnos y Extras: el equipo del día (👥, dorado) y las actividades y su costo (🎠, añil) | `Pastilla` tipo `equipo` / `extras` |
+  | Lo que le falta a una ficha para poder pagarle: *falta su cuenta*, *falta su factura* | `Pastilla` tipo `falta`: un aviso fino, nunca con forma de botón (Informe, Vendedores, Equipo y Extras) |
   | Cómo va el pago de una reserva | `PastillaPago` |
   | Lo de la cuenta y lo de todos | `BotonMias` / `BotonTodos` |
   | Un texto fijo que explica la pantalla | `AvisoFijo` (con su ✕) |
@@ -110,7 +111,8 @@ revisan antes de cada cambio en esta carpeta.
   | Escribirle al cliente por WhatsApp | `BotonWhatsApp` (o `abrirWhatsApp()`), con el saludo de `saludoAlCliente()` |
   | Cuánto boletear: bruto, retención y neto | `CajaBoleta` (link personal e informe) |
   | Una tarjeta de una lista que se abre: el marco, el + / − y el pie *▴ Cerrar* | `marcoTarjeta`, `SignoAbrir`, `PieCerrar` y `LISTA_TARJETAS` de `TarjetaLista` (Informe, Equipo, Extras, Vendedores, Clientes, Productos, Recepción, las reservas del día y las ventanas del equipo y de extras del día) |
-  | Un grupo de tarjetas (un puesto en la ventana del equipo) | `marcoGrupo` de `TarjetaLista` |
+  | Un grupo de tarjetas (un puesto en la ventana del equipo, *Actividades del día* en la de extras): **el marco más marcado**, su título y las tarjetas de adentro | `marcoGrupo`, `TITULO_GRUPO` y `marcoTarjeta(…, dentro)` de `TarjetaLista` |
+  | Elegir el puesto habitual de una persona | `ElegirPuesto`: un desplegable con los puestos que existen (la ficha de `/equipo` y la ficha que se abre desde el día) |
   | Lo de adentro de la línea de una persona en un día: campos, ajustes, total, *Ficha / Sacar del día*, *+ Nuevo …* | `CampoAlLado`, `AjustesDelDia`, `TotalDelDia`, `BotonesDeLaLinea` y `BotonNuevaPersona` de `LineaDelDia` (ventana del equipo y de las actividades extras) |
   | El nombre de un campo, al lado de su valor y en columna | `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia` |
   | Varios campos de una ficha, en columnas que calzan | `rejilla-campos` dentro de una `caja-campos`, y `fila-ficha` con su `rotulo-ficha` (`globals.css`); los datos de la transferencia, `DatosBancarios` |
@@ -474,7 +476,7 @@ computador.
 
 | Qué | Mide | Por qué |
 |---|---|---|
-| El equipo del día con el formulario de un ajuste abierto | 846 | El ajuste —monto, motivo, cómo y nota— suma 225px dentro de la línea. Guardado se pliega y la ventana vuelve a caber |
+| El equipo del día con el formulario de un ajuste abierto | 839 | El ajuste —monto, motivo, cómo y nota— suma 225px dentro de la línea. Guardado se pliega y la ventana vuelve a caber |
 | El equipo del día, cara *Reservas* | 859 | Es una lista: crece con las reservas del día |
 
 Las dos ventanas crecen con lo que tenga el día. Con más gente o más
@@ -546,6 +548,126 @@ aplicaste. Y luego guardar. Eso tiene que ser."*
   casilla, y la bitácora queda con *cambios: Matías Pérez: se agregó un
   descuento de $4.000 (Adelanto · Transferencia); Felipe Cortés: de No vino
   a Vino*.
+
+## El marco del puesto manda, el puesto se elige y *falta su cuenta* es un aviso (2026-11-21)
+
+Cuatro cosas que el cliente marcó con fotos, mirando la versión de prueba
+en su notebook. Van en el PR #287.
+
+### El marco del puesto es el más marcado de su tarjeta
+
+*"En el pop-up de los trabajadores, donde se ven los distintos puestos, el
+título del puesto debería ser más grueso. También debería ser más grueso el
+marco de la tarjeta que los marcos de los botones e informaciones dentro de
+la tarjeta. Eso ya lo había pedido… para identificar bien a buena vista,
+aquí estoy dentro de una tarjeta. Entonces el marco principal y luego
+adentro los marcos son menos."*
+
+El marco de un puesto (`marcoGrupo`) tenía los 3px de siempre pero **más
+claro** que las tarjetas de las personas, que iban adentro con 3px oscuros:
+se leía al revés, la persona parecía la tarjeta y el puesto una línea fina.
+Ahora son **tres escalones, de afuera hacia adentro**:
+
+| Qué | Borde |
+|---|---|
+| El puesto (`marcoGrupo`) | 3px, oscuro (`hueso/60`), con sombra |
+| La persona, adentro (`marcoTarjeta(…, dentro)`) | 2px, medio (`hueso/35`) |
+| Botones y campos (*Vino / No vino*, *+ Agregar…*) | 2px, claros (`hueso/20`) |
+
+- **`marcoTarjeta` ganó un cuarto argumento, `dentro`**: la tarjeta vive
+  adentro de un grupo y su borde baja a 2px (abierta, dorado de 2px con un
+  anillo más fino). El verde de *vino* y el rojo de *no vino* se mantienen.
+  Sin `dentro` —todas las listas del panel— no cambió nada.
+- **El título va con `TITULO_GRUPO`**: 16px en negrita (era 15px
+  seminegrita). Es el nombre de la tarjeta.
+- **El puesto al que le falta gente** sigue en ámbar, ahora con el borde
+  entero (`ambar-fuerte`) y no al 70%.
+- **Se llevó a su parecido en el mismo PR**: *Actividades del día* en la
+  ventana de los extras usa las mismas tres piezas.
+- **Regla para lo que venga**: una caja que contiene tarjetas lleva el
+  borde más marcado de todo lo que tiene adentro. Si se dibuja un grupo
+  nuevo, usa `marcoGrupo` + `TITULO_GRUPO` y sus tarjetas van con `dentro`.
+- Cada tarjeta de persona mide 2px menos de alto, también en el celular. La
+  ventana del equipo a 1280×650 bajó de 621 a 614px, y con un ajuste
+  abierto, de 846 a 839 (anotado en `NO_CABEN`).
+
+### El puesto habitual se elige de los puestos que existen
+
+*"El puesto habitual se debería alimentar desde los posibles puestos
+existentes, como un drop-down."*
+
+En la ficha de `/equipo` ya era un desplegable; **en la ficha que se abre
+desde el día (`FichaTrabajador`) era un campo de texto libre**, y un puesto
+escrito a mano —*Parrillero* donde el puesto se llama *Parrilla*— no calza
+con ninguno: esa persona no aparece sugerida en su puesto.
+
+- **`ElegirPuesto`** es la pieza, en las dos fichas: los puestos de la
+  pestaña `Puestos`, en su orden, y *—* para dejarlo en blanco.
+- **Un puesto guardado que ya no existe no se pierde**: aparece al final
+  como *Parrillero (ya no existe)*, y queda elegido hasta que alguien lo
+  cambie. Así abrir y guardar una ficha no borra nada sin que se vea.
+- Se compara sin mayúsculas ni tildes (`normalizar`), igual que el resto del
+  panel: *garzon* muestra *Garzón*.
+- `FichaTrabajador` recibe `puestos`; la ventana del equipo ya los tenía
+  cargados, así que **no cuesta ninguna lectura de Google**.
+
+### *Falta su cuenta* es un aviso, el mismo en todas partes
+
+*"En informe el botón falta cuenta para transferir… se transformó en un
+diseño casi botón, mientras que en vendedores es aún como solo vista aviso.
+Y encuentro ya que no es un botón ni en informe. Esto debería estar en ambas
+vistas iguales y en ambas vistas como el vendedor."*
+
+En el Informe iba en el lugar de los botones de copiar, con borde de 2px,
+esquinas de botón y el texto largo *Falta su cuenta para transferir*; en
+Vendedores, Equipo y Extras, una pastilla fina que dice *falta su cuenta*.
+El mismo dato con dos formas, y una de ellas parecía algo que se aprieta.
+
+- **`Pastilla tipo="falta"`** es la pieza: borde de 1px en ámbar, sin
+  relleno, en minúscula. La usan el Informe, Vendedores (*falta su cuenta* y
+  *falta su factura*), Equipo y Extras.
+- **En el Informe va en el renglón del detalle**, al lado de *Por turno · 2
+  días que vino*, como en Vendedores. El lugar de los botones de copiar
+  queda vacío para esa persona: no hay a dónde transferir. Sale solo cuando
+  hay algo que pagarle, igual que antes.
+- **Adentro de la tarjeta abierta**, la misma pastilla ocupa el lugar del
+  botón *Copiar datos*.
+- En Vendedores, las pastillas vecinas (*desactivado*, *⚠ sin trato*)
+  quedaron del mismo alto que ésta.
+
+### *falta $119.883* ya no pisa el botón de propina
+
+*"Ten cuidado… donde sale falta tanto para pagar, choca con el botón de
+propina, la información de cuánto falta."*
+
+En la fila cerrada del Informe, la columna del total tenía **ancho fijo**
+(160px; 224 en el computador). El total y la pastilla *sin pagar* cabían;
+*falta $119.883* no, y como la columna va alineada a la derecha, lo que no
+cabía se salía por la izquierda, encima del botón de copiar.
+
+- **El ancho pasó a ser un mínimo** (`md:min-w-[10rem] lg:min-w-[16.5rem]`),
+  con aire a la izquierda. El mínimo del computador alcanza para *falta
+  $1.234.567*: los botones de copiar de todas las filas siguen partiendo en
+  la misma vertical. Con algo más largo, la columna crece y los empuja.
+- **La trampa, para no repetirla**: un ancho fijo en una columna alineada a
+  la derecha no corta lo que no cabe, lo saca por el otro lado. Donde el
+  contenido es un monto, va un mínimo.
+- Comprobado con un pago parcial en el panel de ejemplo, a 1280 y a 393px.
+
+### Una escena de `npm run ventanas` que no mide nada ya no pasa
+
+Al correr la prueba para estos cambios apareció una línea que nadie había
+mirado: `ok · ficha-cliente-nuevo: nada de 0px`. La escena abría el
+formulario de un cliente nuevo, pero ese formulario no es una tarjeta que se
+pliega ni una ventana, así que la prueba **no encontraba qué medir y lo daba
+por bueno**.
+
+- **Una escena sin nada que medir ahora falla**, con *"no quedó nada abierto
+  que medir: hay que arreglar la escena"*. Una prueba que pasa sin medir es
+  peor que no tenerla.
+- **Un formulario que se abre arriba de una lista se marca con
+  `data-ficha`** (hoy, el de cliente nuevo en `ClientesEditor`): la prueba lo
+  busca cuando no hay ventana ni tarjeta abierta. Mide 373px, cabe.
 
 ## El token de Shopify de la tienda real (2026-11-21)
 
@@ -769,9 +891,11 @@ regla *un cambio de diseño se lleva a sus parecidos* (arriba).
 - **Los puestos de la ventana del equipo del día son un grupo** (lo pidió el
   cliente el mismo día, con una foto: *"los bordes de las tarjetas de los
   distintos puestos aún no siguen esa regla… pueden ayudar a ordenar la
-  vista"*): `marcoGrupo()`, el mismo grosor de 3px pero más claro y con el
-  fondo apenas teñido, para que las tarjetas de adentro se lean encima; el
-  puesto al que le falta gente, en ámbar como antes. Es la misma ventana
+  vista"*): `marcoGrupo()`, con el fondo apenas teñido, para que las tarjetas
+  de adentro se lean encima; el puesto al que le falta gente, en ámbar como
+  antes. **Nació más claro que las tarjetas de adentro y ese mismo día se dio
+  vuelta**: el marco del puesto es el más marcado. Ver "El marco del puesto
+  manda" más arriba. Es la misma ventana
   desde Turnos, desde Reservas y desde la página del día, y su cara
   *Reservas* (`ReservasDelDia`) también usa la tarjeta, verde si vino y roja
   si no vino.

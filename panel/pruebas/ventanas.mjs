@@ -55,7 +55,7 @@ const SOLO_MEDIR = !!process.env.VENTANAS_ANCHO;
  */
 export const NO_CABEN = {
   // El formulario de un ajuste abierto dentro de la línea de una persona.
-  'v-equipo-del-dia-con-ajuste': 846,
+  'v-equipo-del-dia-con-ajuste': 839,
   // La cara de reservas es una lista: crece con las reservas del día.
   'v-equipo-del-dia-reservas': 859
 };
@@ -178,7 +178,10 @@ const medir = () => p.evaluate((alto) => {
   }
   // Una ficha abierta: la tarjeta que contiene el botón abierto.
   const abierta = [...document.querySelectorAll('main [aria-expanded="true"]')].at(-1);
-  const tarjeta = abierta?.closest('li, article') ?? abierta?.parentElement?.parentElement;
+  // O un formulario que se abre arriba de la lista, sin botón que lo pliegue
+  // (un cliente nuevo): se marca con `data-ficha`.
+  const tarjeta = abierta?.closest('li, article') ?? abierta?.parentElement?.parentElement
+    ?? [...document.querySelectorAll('main [data-ficha]')].at(-1);
   if (!tarjeta) return { que: 'nada', mide: 0, cabe: true };
   const r = tarjeta.getBoundingClientRect();
   return { que: 'ficha', mide: Math.round(r.height), cabe: r.height <= alto };
@@ -220,6 +223,9 @@ for (const [nombre, abrir] of Object.entries(ESCENAS)) {
   if (SOLO_MEDIR) { console.log(`  medida  ${nombre}: ${m.que} de ${m.mide}px`); continue; }
   const anotada = NO_CABEN[nombre];
   const problemas = [];
+  // **Una escena que no encontró qué medir no pasa** (2026-11-21): decía
+  // *ok · nada de 0px* y nadie lo veía. Así estuvo *ficha-cliente-nuevo*.
+  if (m.que === 'nada') problemas.push('no quedó nada abierto que medir: hay que arreglar la escena');
   if (!m.cabe && anotada === undefined) problemas.push(`no cabe en ${ANCHO}×${ALTO}: mide ${m.mide}px`);
   if (!m.cabe && anotada !== undefined && m.mide > anotada + 4) problemas.push(`creció: mide ${m.mide}px y estaba anotada en ${anotada}`);
   if (m.cabe && anotada !== undefined) bajaron.push(`${nombre}: ya cabe (${m.mide}px). Sácala de NO_CABEN.`);

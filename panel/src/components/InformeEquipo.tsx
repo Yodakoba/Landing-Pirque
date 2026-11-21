@@ -27,6 +27,7 @@
 import AvisoFijo from './AvisoFijo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AyudaCorta from './AyudaCorta';
+import { Pastilla } from './Pastilla';
 import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } from './TarjetaLista';
 
 /** Minúsculas y sin tildes, para buscar "jose" y encontrar a José. */
@@ -350,6 +351,8 @@ function LineaPersona({
   antes?: React.ReactNode;
 }) {
   const pendientes = partes.filter((o) => o.parte.falta > 0);
+  /** Hay algo que transferirle y no hay a dónde: se dice con la pastilla *falta su cuenta*. */
+  const faltaCuenta = puedePagar && sinCuenta && pendientes.length > 0;
   // Qué parte se está guardando con "Pagado completo": mientras tanto el
   // botón se apaga, para que dos toques seguidos no anoten dos pagos.
   const [enviando, setEnviando] = useState<Concepto | null>(null);
@@ -497,9 +500,17 @@ function LineaPersona({
         <SignoAbrir abierta={abierta} tamano="mt-0.5 h-6 w-6 text-[14px] sm:h-7 sm:w-7 lg:mt-0 lg:h-6 lg:w-6" />
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-bold leading-tight sm:text-[17px] lg:truncate lg:text-[15px]">{nombre}</span>
-          <span className="block text-[13px] text-hueso/65">
-            {detalle}
-            {fuera.noVino.length > 0 && <> · {fuera.noVino.length} no vino</>}
+          {/* **Falta su cuenta, como aviso y no como botón** (2026-11-21, lo
+              pidió el cliente): la misma pastilla fina de Vendedores, Equipo y
+              Extras, en el renglón del detalle. Antes iba en el lugar de los
+              botones de copiar, con borde grueso, y se leía como algo que se
+              aprieta. Solo cuando hay algo que transferirle. */}
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-hueso/65">
+            <span>
+              {detalle}
+              {fuera.noVino.length > 0 && <> · {fuera.noVino.length} no vino</>}
+            </span>
+            {faltaCuenta && <Pastilla tipo="falta">falta su cuenta</Pastilla>}
           </span>
         </span>
         <span className="flex shrink-0 flex-col items-end gap-1 md:hidden">
@@ -533,14 +544,9 @@ function LineaPersona({
       {/* La fila sigue a la vista cuando todo está pagado: dos pastillas
           verdes son la confirmación de un vistazo, y que la fila desapareciera
           se leía como que algo se había perdido. */}
-      {puedePagar && partes.some((o) => o.parte.debe > 0) && (
+      {puedePagar && !faltaCuenta && partes.some((o) => o.parte.debe > 0) && (
         <div className="order-2 flex flex-wrap gap-2 px-3 pb-2.5 sm:px-4 sm:pb-3 md:flex-nowrap md:py-2.5 md:pl-0 lg:py-1.5">
-          {sinCuenta && pendientes.length > 0 ? (
-            <span className="rounded-lg border-2 border-ambar/50 px-3 py-2 text-[13px]
-                             font-semibold text-ambar-texto">
-              Falta su cuenta para transferir
-            </span>
-          ) : partes.filter((o) => o.parte.debe > 0).map((o) => o.parte.falta <= 0 ? (
+          {partes.filter((o) => o.parte.debe > 0).map((o) => o.parte.falta <= 0 ? (
             // Ya pagada: se queda en la línea como pastilla verde, para que
             // cada persona muestre siempre sus dos partes y se vea de un
             // vistazo cuál falta.
@@ -563,9 +569,16 @@ function LineaPersona({
         </div>
       )}
 
-      <span className="hidden shrink-0 flex-col items-end gap-1 py-3 pr-4 md:order-3 md:flex
-                       md:w-40 lg:w-56 lg:flex-row-reverse lg:items-center lg:justify-start lg:gap-2 lg:py-1.5">
-        {/* Con ancho fijo, las pastillas de estado quedan en columna. */}
+      {/* **La columna del total crece con lo que trae** (2026-11-21, lo pidió
+          el cliente con una foto: *"donde sale falta tanto para pagar, choca
+          con el botón de propina"*). Tenía ancho fijo (160px, 224 en el
+          computador) y *falta $119.883* al lado del total no cabía: se salía
+          por la izquierda, encima del botón de copiar. Ahora el ancho es un
+          **mínimo**, y alcanza para *falta $1.234.567*: así los botones de
+          copiar de todas las filas siguen en la misma vertical. Con algo más
+          largo todavía, la columna se ensancha y los empuja en vez de pisarlos. */}
+      <span className="hidden shrink-0 flex-col items-end gap-1 py-3 pl-2 pr-4 md:order-3 md:flex
+                       md:min-w-[10rem] lg:min-w-[16.5rem] lg:flex-row-reverse lg:items-center lg:justify-start lg:gap-2 lg:py-1.5">
         <span className="text-[19px] font-bold tabular-nums lg:min-w-[6.5rem] lg:text-right lg:text-[17px]">
           {aTransferir > 0 ? enPesos(aTransferir) : '—'}
         </span>
@@ -724,9 +737,10 @@ function LineaPersona({
               {puedePagar && o.parte.falta > 0 && (
                 <div className="mt-2 grid gap-2 lg:mt-1.5 lg:grid-cols-[1.2fr_1fr_1fr]">
                   {sinCuenta ? (
-                    <p className="rounded-xl border-2 border-ambar/50 px-3 py-2 text-center
-                                  text-[14px] font-semibold text-ambar-texto">
-                      Falta su cuenta para transferir
+                    // El mismo aviso de la línea cerrada, en el lugar del botón
+                    // de copiar: dice por qué no está.
+                    <p className="flex items-center justify-center lg:justify-start">
+                      <Pastilla tipo="falta">falta su cuenta</Pastilla>
                     </p>
                   ) : (
                     <button type="button" onClick={() => onCopiar(o)}

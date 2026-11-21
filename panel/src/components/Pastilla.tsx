@@ -45,7 +45,17 @@ export const PASTILLA = {
    * mismo borde que lo cotizado: es un dato del día, no algo hecho.
    */
   extras: `${BASE} border border-anil-fuerte/60 text-anil-texto`,
-  equipo: `${BASE} border border-oro/60 text-oro`
+  equipo: `${BASE} border border-oro/60 text-oro`,
+  /**
+   * **Lo que le falta a una ficha para poder pagarle**: *falta su cuenta*,
+   * *falta su factura* (2026-11-21, lo pidió el cliente: en el Informe el
+   * aviso *"se transformó en un diseño casi botón, mientras que en vendedores
+   * es aún como solo vista aviso… debería estar en ambas vistas iguales y en
+   * ambas vistas como el vendedor"*). **Es un aviso, no algo que se aprieta**:
+   * borde fino, sin relleno y en minúscula, al lado del detalle de la
+   * persona. La misma en Informe, Vendedores, Equipo y Extras.
+   */
+  falta: `${BASE} border border-ambar/50 text-ambar-texto`
 } as const;
 
 export function Pastilla({ tipo, children, title, className = '' }: {

@@ -39,8 +39,11 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   el cliente pidió ***"déjalo en preview"***, así que **se mergea solo cuando
   diga *"mergea"***. Trae *el computador, más compacto* —las dos capas—, los
   formularios alineados en todo el panel, **las ventanas que caben en la
-  pantalla del computador** (de 21 que no cabían quedan 2) y **corregir un
-  día cerrado con una casilla y la lista de cambios**, sin motivo escrito.
+  pantalla del computador** (de 21 que no cabían quedan 2), **corregir un
+  día cerrado con una casilla y la lista de cambios**, sin motivo escrito, y
+  cuatro retoques que marcó con fotos (el marco del puesto, el puesto
+  habitual como desplegable, *falta su cuenta* como aviso y la pastilla
+  *falta $…* que pisaba el botón de propina).
   https://github.com/ayc-y-blp/aycyblp/pull/287
 - **El cliente lo está mirando en la versión de prueba, en su notebook, y
   va mandando fotos** de lo que quiere más junto o más alineado. Preguntó
@@ -528,7 +531,7 @@ piezas, no tamaño de botones ni de letra.**
   *Dejar la base en cero* y las fichas de cliente, producto y vendedor. La
   tabla con las medidas está en `panel/CLAUDE.md`, "Las ventanas caben en
   la pantalla del computador". **No cupieron dos**, las dos del equipo del
-  día: con el formulario de un ajuste abierto (846px) y la cara de
+  día: con el formulario de un ajuste abierto (839px) y la cara de
   reservas, que es una lista (859px).
 - **Corregir un día cerrado sin motivo escrito** (*"haz una casilla,
   confirmar, y luego la lista de los cambios… y luego guardar"*):
@@ -540,6 +543,23 @@ piezas, no tamaño de botones ni de letra.**
   pixeles a propósito (la ficha de un producto, el paso 5 de cotizar y la
   corrección). Sin lecturas de Google ni permisos. Las fotos de la ayuda se
   rehicieron todas.
+- **Cuatro retoques que el cliente marcó con fotos** (detalle en
+  `panel/CLAUDE.md`, "El marco del puesto manda…"):
+  - **El marco del puesto es el más marcado** de la ventana del equipo del
+    día: 3px oscuro y el título en negrita; las personas, adentro, con 2px
+    (`marcoGrupo`, `TITULO_GRUPO`, `marcoTarjeta(…, dentro)`). Lo mismo en
+    *Actividades del día* de los extras.
+  - **El puesto habitual se elige de los puestos que existen**
+    (`ElegirPuesto`), también en la ficha que se abre desde el día, que era
+    texto libre.
+  - ***Falta su cuenta* es un aviso, igual en todas partes**
+    (`Pastilla tipo="falta"`): en el Informe dejó de parecer un botón y va
+    en el renglón del detalle, como en Vendedores, Equipo y Extras.
+  - **La pastilla *falta $119.883* ya no pisa el botón de propina**: la
+    columna del total del Informe tenía ancho fijo y ahora es un mínimo.
+  - **`npm run ventanas` falla si una escena no encuentra qué medir** (antes
+    decía *ok · nada de 0px*, y así estuvo la del cliente nuevo). Un
+    formulario que no es ventana ni tarjeta se marca con `data-ficha`.
 
 ---
 
@@ -671,6 +691,15 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
   rechazando una corrección sin ese texto.
 - **El `?` chico se ve de 24px y se aprieta en 36**: a 30px agrandaba su
   renglón y corría el campo de al lado.
+- **El marco de afuera es el más marcado** (21-11-2026): el del puesto nació
+  más claro que las tarjetas de las personas y se leía al revés. Tres
+  escalones: el grupo 3px oscuro, la tarjeta de adentro 2px, botones y
+  campos 2px claros.
+- **Un ancho fijo en una columna alineada a la derecha no corta lo que no
+  cabe: lo saca por el otro lado**, encima del vecino. Donde va un monto, va
+  un mínimo (la columna del total del Informe).
+- **Un aviso no se dibuja como botón**: *falta su cuenta* es una pastilla
+  fina, una sola pieza para las cuatro pantallas que la muestran.
 - **El encargado de turno no ve cotizaciones; el vendedor ve todo y toca lo
   suyo; el contacto de los clientes se recorta por rol en el servidor**
   (`lib/privacidad.ts`).
@@ -950,6 +979,10 @@ misma pasada.
 - **Lo que explica va en su `?`**, no fijo en la pantalla. A la vista, el
   dato y la acción; un texto que se lee una vez puede ser `AvisoFijo` (con
   ✕).
+- **El marco de la tarjeta manda sobre lo de adentro** (21-11-2026): el
+  borde de afuera es el más grueso y oscuro y su título va en negrita; lo de
+  adentro —otra tarjeta, un botón, un campo— va con menos. Y un aviso no se
+  dibuja como botón.
 - **Los formularios van alineados** (21-11-2026): los nombres de los campos
   en una columna y los valores en otra, todos partiendo en la misma
   vertical; nunca un campo pegado a su nombre porque la palabra es más

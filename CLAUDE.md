@@ -141,6 +141,17 @@ más abajo; esto es la lista para revisar.
   —dentro de `npm run ventanas`— avisa de un campo que salta respecto de su
   vecino, de un nombre partido en dos renglones y de dos bordes que casi
   calzan.
+- **El marco de la tarjeta manda sobre lo de adentro** (regla del cliente,
+  2026-11-21: *"debería ser más grueso el marco de la tarjeta que los marcos
+  de los botones e informaciones dentro de la tarjeta… para identificar bien
+  a buena vista, aquí estoy dentro de una tarjeta. Entonces el marco
+  principal y luego adentro los marcos son menos"*). El borde de afuera es el
+  más grueso y el más oscuro, y **su título va en negrita**; lo de adentro
+  —otra tarjeta, un botón, un campo, un aviso— va siempre con menos. Una
+  caja que contiene tarjetas usa `marcoGrupo` y `TITULO_GRUPO`, y sus
+  tarjetas, `marcoTarjeta(…, dentro)` (`TarjetaLista`). Y **un aviso no se
+  dibuja como botón**: lo que no se aprieta va sin borde grueso ni esquinas
+  de botón (`Pastilla tipo="falta"` para *falta su cuenta*).
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos

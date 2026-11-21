@@ -16,7 +16,7 @@
  * llamada directa a la API tiene que obedecer la misma regla.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
+import { LISTA_TARJETAS, SignoAbrir, TITULO_GRUPO, marcoGrupo, marcoTarjeta } from './TarjetaLista';
 import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
@@ -705,7 +705,7 @@ export default function EquipoDialogo({
           <div key={l.puesto} id={`puesto-${encodeURIComponent(l.puesto)}`} style={{ order: lineas.indexOf(l) }}
             className={`min-w-0 scroll-mt-4 p-2 sm:p-3 lg:p-2 ${marcoGrupo(l.faltan > 0)}`}>
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="px-1 text-[15px] font-semibold">{l.puesto}</h3>
+              <h3 className={`px-1 ${TITULO_GRUPO}`}>{l.puesto}</h3>
               <span className="flex shrink-0 items-center gap-1.5">
                 {l.faltan > 0 && (
                   <span className="whitespace-nowrap rounded-full border-2 border-ambar-fuerte/60 bg-ambar/15
@@ -748,7 +748,7 @@ export default function EquipoDialogo({
                        lugar, se llame como se llame. */
                     <li key={nombre}
                       className={marcoTarjeta(abierta, t?.asistencia === VINO.si ? 'verde'
-                        : t?.asistencia === VINO.no ? 'rojo' : 'normal', true)}>
+                        : t?.asistencia === VINO.no ? 'rojo' : 'normal', true, true)}>
                       <div className="flex items-center gap-1.5 p-1 sm:gap-2 sm:p-1.5">
                         <button type="button" aria-expanded={abierta}
                           onClick={() => setAbierto(abierta ? '' : normalizar(nombre))}
@@ -920,7 +920,7 @@ export default function EquipoDialogo({
 
       {ficha && (
         <FichaTrabajador
-          ficha={ficha.t} puesto={ficha.puesto ?? ''}
+          ficha={ficha.t} puesto={ficha.puesto ?? ''} puestos={puestos.map((x) => x.nombre)}
           nombreSugerido={ficha.nombre ?? ''} verSueldos={verSueldos}
           onCancelar={() => setFicha(null)}
           onListo={(t, aviso) => {

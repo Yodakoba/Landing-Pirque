@@ -38,6 +38,7 @@ import { CUERPO_ABIERTO, LISTA_TARJETAS, PieCerrar, SignoAbrir, marcoTarjeta } f
 import { useEffect, useState } from 'react';
 import AvisoGuardado from './AvisoGuardado';
 import AyudaCorta from './AyudaCorta';
+import { Pastilla } from './Pastilla';
 import MostrarDesactivados from './MostrarDesactivados';
 import AgregarVendedor from './AgregarVendedor';
 import CamposDocumento, { type CambioDocumento } from './CamposDocumento';
@@ -821,18 +822,18 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                             {x.fijo > 0 && <> · fijo {enPesos(x.fijo)}</>}
                           </span>
                           {!x.activo && (
-                            <span className="rounded-full border border-hueso/25 px-2 font-semibold text-hueso/65">
+                            <span className="rounded-full border border-hueso/25 px-2 py-0.5 font-semibold text-hueso/65">
                               {x.tipo === 'socio' ? 'desactivado' : 'cuenta inactiva'}
                             </span>
                           )}
                           {!x.formaDePago && (
-                            <span className="rounded-full border-2 border-dashed border-ambar/60 px-2 font-semibold text-ambar-texto">⚠ sin trato</span>
+                            <span className="rounded-full border-2 border-dashed border-ambar/60 px-2 py-0.5 font-semibold text-ambar-texto">⚠ sin trato</span>
                           )}
                           {x.sinCuenta && (
-                            <span className="rounded-full border border-ambar/50 px-2 font-semibold text-ambar-texto">falta su cuenta</span>
+                            <Pastilla tipo="falta">falta su cuenta</Pastilla>
                           )}
                           {x.faltaFactura && (
-                            <span className="rounded-full border border-ambar/50 px-2 font-semibold text-ambar-texto">falta su factura</span>
+                            <Pastilla tipo="falta">falta su factura</Pastilla>
                           )}
                           {x.porConfirmar && (
                             <span className="rounded-full border-2 border-dashed border-ambar/60 px-2 font-semibold text-ambar-texto">⚠ trato por confirmar</span>
