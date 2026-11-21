@@ -264,6 +264,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       + 'formulario del banco —nombre y apellido, RUT, banco, tipo de cuenta, '
       + 'número de cuenta y e-mail— y después el monto y la glosa: cada línea '
       + 'se pega tal cual en su campo.',
+      'Para ver lo que costó el equipo por puesto, las propinas y cuánto fue '
+      + 'de las ventas, aprieta 📊 Estadísticas del equipo, arriba.',
       'Para descontar o sumar algo sin ir a Turnos, abre su línea: en lo que '
       + 'suma están − Descontar y + Sumar. Eliges el día que vino —u Hoy, para '
       + 'un adelanto pedido un día sin turno—, el monto y el motivo, y suma en el '
@@ -361,10 +363,14 @@ export const AYUDAS: Record<string, Ayuda> = {
   },
 
   estadisticas: {
-    titulo: 'Las estadísticas de reservas',
+    titulo: 'Las estadísticas',
     cuerpo: [
       'Los números de las reservas en grandes rasgos, para mirar: cuántas, '
       + 'si vinieron, cuánta plata y de dónde vienen. Acá no se cambia nada.',
+      'Quien ve el informe tiene además 👥 Equipo: lo que costó el equipo por '
+      + 'puesto, las propinas y su relación con las ventas, con el mismo '
+      + 'periodo. Hasta dos semanas va por día; más largo, por semana. Se llega '
+      + 'también desde el informe, con 📊 Estadísticas del equipo.',
       'Arriba eliges el periodo —un día, una semana, un mes o dos fechas— y '
       + 'por qué fecha se cuenta: la de la visita o la del día en que se '
       + 'reservó. Todo · Visitas · Eventos separa las reservas de Shopify y '
@@ -743,6 +749,48 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     texto: [
       'El valor final que anota la mesa (el total de la cuenta en Fudo, con lo prepagado) dividido por la gente de esas mesas.',
       'Debajo, cuánto más que lo reservado se consumió por persona: lo que se pidió de más en la mesa. Solo cuentan las mesas que anotaron su valor final.'
+    ]
+  },
+  estEqCosto: {
+    titulo: 'Costo del equipo',
+    texto: [
+      'Lo que costaron los turnos que vinieron —jornadas, horas extra y ajustes— y las actividades extras confirmadas. Son los mismos montos del informe.',
+      'No incluye el sueldo de los contratados, las comisiones de los vendedores, la retención de las boletas ni los adelantos fuera de turno.'
+    ]
+  },
+  estEqPropinas: {
+    titulo: 'Propinas',
+    texto: [
+      'La propina de los turnos del periodo. Va aparte del costo: es plata de los clientes que pasa por el negocio.',
+      'En el gráfico, toca una columna para ver cuánto fue por persona atendida.'
+    ]
+  },
+  estEqPorPersona: {
+    titulo: 'Por persona atendida',
+    texto: [
+      'El costo del equipo dividido por la gente de las reservas que siguieron en pie y ya pasaron (la rectificada, si se rectificó).',
+      'Sirve para comparar semanas con distinta cantidad de gente.'
+    ]
+  },
+  estEqPorcentaje: {
+    titulo: 'Equipo sobre ventas',
+    texto: [
+      'Qué parte de las ventas se llevó el equipo. Las ventas son el valor final que anotó la mesa y, si no se anotó, el monto de la reserva.',
+      'No es el dato de Fudo: faltan las ventas sin reserva y el detalle de la cuenta. Se compara en puntos.'
+    ]
+  },
+  estEqPuestos: {
+    titulo: 'Sueldos por puesto',
+    texto: [
+      'Cada columna es lo que costó el equipo ese día o esa semana; cada color, un puesto, y arriba el total en miles de pesos.',
+      'Un puesto tiene siempre el mismo color, en el orden de la lista de puestos. Toca una columna para ver los montos, o abre la tabla.'
+    ]
+  },
+  estEqVentas: {
+    titulo: 'Ventas y costo del equipo',
+    texto: [
+      'El fondo claro son las ventas y la barra azul, lo que costó el equipo; arriba, qué porcentaje fue.',
+      'Las ventas son el valor final de la mesa o, si no se anotó, el monto de la reserva.'
     ]
   },
   estSerie: {

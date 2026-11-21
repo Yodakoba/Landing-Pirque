@@ -46,7 +46,7 @@ export const PODER: Record<Accion, { icono: string; corto: string }> = {
   agregarVendedores: { icono: '➕', corto: 'Agregar vendedores' },
   agregarSocios: { icono: '🤝', corto: 'Agregar socios' },
   informe: { icono: '📊', corto: 'Ver el informe' },
-  estadisticas: { icono: '📊', corto: 'Estadísticas de reservas' },
+  estadisticas: { icono: '📊', corto: 'Estadísticas de reservas (y del equipo, con el informe)' },
   pagar: { icono: '💸', corto: 'Registrar pagos' },
   boleta: { icono: '🧾', corto: 'Marcar boletas' },
   configurar: { icono: '⚙️', corto: 'Precios y Configuración' },

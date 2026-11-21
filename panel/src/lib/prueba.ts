@@ -5789,5 +5789,61 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
   A.olvidarToken();
 }
 
+// ---------------------------------------------------------------------------
+console.log('\nLas estadísticas del equipo');
+{
+  const E = await import('./estadisticasEquipo.ts');
+  const tur = (fecha: string, puesto: string, asistencia: string, jornada: number, propina = 0, extra: Partial<Turno> = {}) => ({
+    fecha, trabajador: 'X', puesto, asistencia, modalidad: 'Por turno', pagoJornada: jornada, horasExtra: 0,
+    valorHora: 0, ajustes: [], propina, fila: 2, ...extra }) as Turno;
+  const res = (fecha: string, personas: number, monto: number | null, valorFinal: number | null, estado = 'paid') => ({
+    id: fecha + personas, fecha, nombre: 'C', email: '', telefono: '', menu: 'Tradiciones', personas, monto,
+    tipoPago: '', estadoPago: estado, asistencia: '', notaPago: '', valorFinal, fila: 2 }) as unknown as Reserva & { valorFinal: number | null };
+  const turnos = [
+    tur('2026-11-07', 'Parrilla', 'Sí', 45000, 10000), tur('2026-11-07', 'Garzón', 'Sí', 35000, 12000),
+    tur('2026-11-08', 'Garzón', 'Sí', 35000, 8000), tur('2026-11-08', 'Cocina', 'No', 40000),
+    tur('2026-11-08', 'Cocina', '', 40000),
+    tur('2026-11-08', '', 'Sí', 0, 0, { ajustes: [{ monto: -20000, motivo: 'Adelanto' }], suelto: 'AJ-1' }),
+    tur('2026-10-31', 'Parrilla', 'Sí', 45000)
+  ];
+  const extras = [{ fecha: '2026-11-08', colaborador: 'J', actividad: 'Show', estado: 'Sí', monto: 250000, ajuste: 0, motivo: '', fila: 2 },
+                  { fecha: '2026-11-07', colaborador: 'P', actividad: 'Pinta', estado: '', monto: 60000, ajuste: 0, motivo: '', fila: 3 }] as Extra[];
+  const reservas = [res('2026-11-07', 10, 440000, 520000), res('2026-11-08', 4, 176000, null),
+                    res('2026-11-08', 6, 264000, null, 'cancelled'), res('2026-11-20', 30, 1320000, null)];
+  const dias = E.estadisticasPorDia({ turnos, extras, reservas, desde: '2026-11-02', hasta: '2026-11-08', hoy: '2026-11-13' });
+  const sab = dias.find((d) => d.fecha === '2026-11-07')!;
+  const dom = dias.find((d) => d.fecha === '2026-11-08')!;
+  ok(dias.length === 2 && sab.porPuesto.Parrilla === 45000 && sab.porPuesto['Garzón'] === 35000 && sab.propina === 22000,
+     'estadísticas: el sueldo de cada turno que vino, por su puesto, y la propina aparte');
+  ok(!dom.porPuesto.Cocina && dom.porPuesto[E.EXTRAS] === 250000 && !sab.porPuesto[E.EXTRAS],
+     'estadísticas: no cuentan los que no vinieron ni los sin marcar; las actividades extras confirmadas son un puesto más');
+  ok(E.costoDelDia(dom) === 285000, 'estadísticas: un ajuste fuera de turno (un adelanto) no es costo del día');
+  ok(sab.ventas === 520000 && sab.ventasAnotadas === 520000 && dom.ventas === 176000 && dom.ventasAnotadas === 0
+     && dom.reservas === 1 && dom.personas === 4,
+     'estadísticas: ventas con el valor final si se anotó, si no el monto; una cancelada no cuenta');
+  ok(!E.estadisticasPorDia({ turnos, extras, reservas, desde: '2026-11-16', hasta: '2026-11-22', hoy: '2026-11-13' }).length,
+     'estadísticas: una reserva que todavía no llega no vendió nada');
+  const semanas = E.agrupar(dias, 'semana', '2026-10-26', '2026-11-08');
+  ok(semanas.length === 2 && semanas[0].desde === '2026-10-26' && E.costoDelDia(semanas[0]) === 0
+     && E.costoDelDia(semanas[1]) === 365000 && semanas[1].jornadas['Garzón'] === 2,
+     'estadísticas: por semana, de lunes a domingo, con las semanas vacías incluidas');
+  ok(E.agrupar(dias, 'dia', '2026-11-02', '2026-11-08').length === 7, 'estadísticas: por día, los siete aunque estén vacíos');
+  const nov = E.agrupar(dias, 'semana', '2026-11-01', '2026-11-30');
+  ok(nov[0].desde === '2026-11-01' && nov[0].hasta === '2026-11-01' && nov[1].desde === '2026-11-02'
+     && nov[nov.length - 1].hasta === '2026-11-30',
+     'estadísticas: una semana cortada por el periodo se nombra por su primer día adentro');
+  const r = E.resumenDe(semanas);
+  ok(r.costo === 365000 && r.propinas === 30000 && r.ventas === 696000 && r.personas === 14
+     && r.porPersona === Math.round(365000 / 14) && r.porcentaje === 52 && r.reservasConValor === 1 && r.reservas === 2,
+     'estadísticas: el resumen suma el costo, las propinas y las ventas, y saca costo por persona y % de las ventas');
+  ok(E.resumenDe([]).porPersona === null && E.resumenDe([]).porcentaje === null, 'estadísticas: sin gente ni ventas, sin división por cero');
+  const filas = E.porPuesto(semanas);
+  ok(filas[0].puesto === E.EXTRAS && filas.find((f) => f.puesto === 'Garzón')!.promedio === 35000
+     && filas.reduce((s, f) => s + f.costo, 0) === 365000,
+     'estadísticas: por puesto, del que más cuesta al que menos, con el promedio por jornada');
+  ok(E.ordenDePuestos(['Parrilla', 'Cocina', 'Garzón'], ['Garzón', 'Barra', E.EXTRAS, 'Parrilla']).join() === 'Parrilla,Cocina,Garzón,Barra,' + E.EXTRAS,
+     'estadísticas: el color sigue al puesto: el orden de la pestaña Puestos, los nuevos después y los extras al final');
+}
+
 console.log(fallos ? `\n${fallos} FALLAS` : '\nTodo bien: la lógica del panel pasa.');
 process.exit(fallos ? 1 : 0);

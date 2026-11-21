@@ -2927,6 +2927,8 @@ pueda ver también números en grandes rasgos"*. Aprobó la propuesta entera
 
 - **La tarjeta de un número es una pieza compartida** (`TarjetaNumero.tsx`):
   nació en la Lista de cotizaciones y ganó la línea de comparación.
+- **Desde el 2026-11-21 tiene una segunda vista, *👥 Equipo***, para quien
+  ve el informe: ver *Las estadísticas del equipo*, más abajo.
 - **Los gráficos van con un solo tono** (dorado) y barras finas con la
   punta redondeada; cada valor está también en texto o en la tabla, así que
   nada depende solo del color.
@@ -2943,6 +2945,74 @@ pueda ver también números en grandes rasgos"*. Aprobó la propuesta entera
   en que se reservó (la ocupación dice *solo por fecha de la visita*) y los
   tres tipos. `revisarPlayStation()` solo marca los `?` de 30px, la pieza de
   siempre.
+
+## Las estadísticas del equipo (2026-11-21)
+
+Lo pidió el cliente: *"agregar al informe un botón estadísticas… cuánto
+fueron los sueldos, las propinas, en gráficas de las últimas 4 semanas,
+filtrable de la semana pasada… relacionar al valor de reservas… no tenemos
+todos los datos que tiene Fudo… hay que anunciar que falta el detalle… si
+hay una gráfica con palos, mostrar el monto total en un palo, pero la
+relación entre los distintos puestos en distintos colores"*. Aprobó la
+propuesta; lo ven **los mismos que ven el informe**.
+
+- **No es una página nueva**: es la segunda vista de **`/estadisticas`**, la
+  de reservas del 2026-11-19, con un botón **📅 Reservas · 👥 Equipo** (regla
+  de coherencia: el mismo periodo —día, semana, mes o personalizado, con ◀
+  ▶—, las mismas `TarjetaNumero` con la comparación con el periodo
+  anterior, las mismas columnas finas con tooltip y *Ver en tabla*). El
+  informe tiene **📊 Estadísticas del equipo**, que abre
+  `/estadisticas?vista=equipo`; desde ahí, *← Volver al informe*. En la
+  vista Equipo se esconden los filtros que son solo de reservas (*por qué
+  fecha* y *Todo · Visitas · Eventos*).
+- **Quién**: el botón *👥 Equipo* y los datos llegan solo a quien puede ver
+  el informe (`puedeVer(rol, 'informe')`), que hoy son los mismos de
+  `estadisticas`: operaciones, pagos, gerencia y administrador.
+- **Los datos** (`lib/estadisticasEquipo.ts`, puro y con pruebas):
+  `/api/estadisticas` suma `equipo: { dias, puestos }`, **montos por día y
+  por puesto, sin un solo nombre**. Por día: el costo de cada turno que vino
+  (`pagoDe()`, el mismo del informe) por su puesto, las actividades extras
+  confirmadas como *Actividades extras*, la propina, la gente y las reservas
+  que siguieron en pie y ya pasaron, y las **ventas**: el valor final de la
+  mesa si se anotó y, si no, el monto de la reserva (y cuánto de eso es
+  valor final anotado). No entran los adelantos fuera de turno, las
+  comisiones ni la retención de las boletas.
+- **Cuatro números**: costo del equipo, propinas (aparte: no son costo del
+  negocio), costo por persona atendida y **equipo sobre ventas** (en %, y se
+  compara en puntos). Debajo, siempre, el aviso **Datos del panel, no de
+  Fudo**: en cuántas reservas se anotó el valor final, que faltan las ventas
+  sin reserva y el detalle de Fudo, y qué no incluye el costo.
+- **La columna apilada por puesto** (*Sueldos por semana / por día*): un
+  tramo por puesto con 2px de separación y la punta redondeada, el total
+  arriba en miles de pesos, leyenda con los nombres, tooltip con los montos
+  y *Ver en tabla*. **Hasta dos semanas va por día; más largo, por semana**
+  (el sueldo se paga por semana); una semana cortada por el periodo se
+  nombra por su primer día adentro (*1 nov*). Debajo, la tabla **Cada
+  puesto**: jornadas, costo, por jornada y qué parte del total.
+- **Ventas y costo**: las ventas de fondo, suaves, y el costo del equipo
+  angosto adelante (como el cupo y las personas de Reservas), con el % arriba
+  (no aparece si todavía no hay costo, como una semana sin cerrar).
+  **Propinas** en dorado, con cuánto fue por persona en el tooltip.
+- **Los colores de los puestos** (`--serie-1` a `--serie-8` en `globals.css`):
+  la paleta categórica de referencia de dataviz, **validada** en los dos
+  temas (diferencia para daltónicos entre vecinos ≥ 8,4; de lectura normal ≥
+  19). En orden fijo: el de la pestaña *Puestos*, los que no estén ahí
+  después, y las actividades extras al final (`ordenDePuestos()`), así **el
+  color sigue al puesto** mire uno el periodo que mire. En el tema claro tres
+  quedan bajo 3:1 sobre blanco, y por eso todo gráfico con ellos lleva
+  leyenda con nombres y tabla. El costo del equipo va en el celeste del
+  sueldo del informe y la propina en su dorado.
+- **Lecturas de Google**: ninguna más. `/api/estadisticas` sigue en una
+  tanda: sumó `Turnos`, `Actividades` y `Puestos` (`npm run lecturas`: 1 de
+  1). Cambiar el periodo no lee nada.
+- **Ayuda**: el `?` de Estadísticas explica la vista Equipo, cada número y
+  gráfico tiene su `?` (`estEq…`), y el `?` del informe nombra el botón.
+- **Probado en el panel de ejemplo** a 393 y 1280, claro y oscuro: desde el
+  informe se llega a la vista Equipo; noviembre va por semana y la semana
+  del 2 al 8 por día, con el tooltip de un día; *📅 Reservas* vuelve con sus
+  filtros. Operaciones y la gerencia la ven; el encargado y el vendedor
+  reciben 403 y no ven el botón. `revisarPlayStation()` sin hallazgos (salvo
+  los `?` de 30px).
 
 ## El paso a producción: dejar la base en cero (2026-11-18)
 

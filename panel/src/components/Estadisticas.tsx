@@ -20,6 +20,8 @@ import BandaSeccion from './BandaSeccion';
 import Ayuda from './Ayuda';
 import AyudaCorta from './AyudaCorta';
 import TarjetaNumero from './TarjetaNumero';
+import EstadisticasEquipo from './EstadisticasEquipo';
+import type { DiaEstadistica } from '@/lib/estadisticasEquipo';
 import { enPesos } from '@/lib/ocupacion';
 import { enCorto, enPalabras, mesEnPalabras, rangoEnPalabras, diaSemana, type Fecha } from '@/lib/fechas';
 import {
@@ -200,7 +202,20 @@ function Columnas({ r, base }: { r: Resumen; base: Base }) {
 }
 
 export default function Estadisticas() {
-  const [datos, setDatos] = useState<{ hoy: Fecha; filas: FilaEst[]; dias: DiaEst[] } | null>(null);
+  const [datos, setDatos] = useState<{ hoy: Fecha; filas: FilaEst[]; dias: DiaEst[];
+    equipo?: { dias: DiaEstadistica[]; puestos: string[] } | null } | null>(null);
+  /**
+   * **Reservas o Equipo** (2026-11-21): la segunda vista llega desde el
+   * informe con `?vista=equipo`, y queda en la dirección al cambiarla.
+   */
+  const [vista, setVista] = useState<'reservas' | 'equipo'>('reservas');
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('vista') === 'equipo') setVista('equipo');
+  }, []);
+  const elegirVista = (v: 'reservas' | 'equipo') => {
+    setVista(v);
+    try { window.history.replaceState(null, '', v === 'equipo' ? '?vista=equipo' : window.location.pathname); } catch { /* sin historia */ }
+  };
   const [error, setError] = useState('');
   const [modo, setModo] = useState<Modo>('mes');
   const [rango, setRango] = useState<Rango | null>(null);
@@ -233,11 +248,27 @@ export default function Estadisticas() {
 
   const cabecera = (
     <>
-      <BandaSeccion tono="oro" icono="📊" seccion="Reservas" titulo="Estadísticas"
+      <BandaSeccion tono="oro" icono="📊" seccion={vista === 'equipo' && datos?.equipo ? 'Equipo' : 'Reservas'} titulo="Estadísticas"
         ayuda={<Ayuda tema="estadisticas" />}>
         Solo para mirar
       </BandaSeccion>
-      <a href="/" className="boton mb-4 inline-flex min-h-[40px] items-center">← Volver al calendario</a>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {vista === 'equipo' && datos?.equipo
+          ? <a href="/informe" className="boton inline-flex min-h-[40px] items-center">← Volver al informe</a>
+          : <a href="/" className="boton inline-flex min-h-[40px] items-center">← Volver al calendario</a>}
+        {/* Las dos vistas, dos botones grandes: solo para quien también ve el informe. */}
+        {datos?.equipo && (
+          <div role="group" aria-label="Qué estadísticas" className="flex gap-2">
+            {([['reservas', '📅 Reservas'], ['equipo', '👥 Equipo']] as const).map(([v, t]) => (
+              <button key={v} type="button" aria-pressed={vista === v} onClick={() => elegirVista(v)}
+                className={`tecla min-h-[44px] rounded-xl border-2 px-4 text-[15px] font-bold ${
+                  vista === v ? 'border-oro bg-oro/15 text-hueso' : 'border-hueso/25 text-hueso/75 hover:border-oro/60'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </>
   );
   if (error) return <>{cabecera}<p className="rounded border border-rojo-fuerte/50 bg-rojo/10 p-3 text-[15px] text-rojo-texto">{error}</p></>;
@@ -286,6 +317,7 @@ export default function Estadisticas() {
               onClick={() => setRango(moverRango(modo, rango, 1))}>▶</button>
           </div>
         )}
+        {!(vista === 'equipo' && datos.equipo) && (<>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Por qué fecha">
           {([['visita', '📅 Fecha de la visita'], ['reservada', '✍ Fecha en que se reservó']] as const).map(([k, t]) => (
             <button key={k} type="button" aria-pressed={base === k} onClick={() => setBase(k)}
@@ -298,7 +330,17 @@ export default function Estadisticas() {
               className={`boton min-h-[44px] ${tipo === k ? ELEGIDO : ''}`}>{t}</button>
           ))}
         </div>
+        </>)}
       </div>
+      {vista === 'equipo' && datos.equipo ? (
+        <>
+          <p className="mt-2 text-[14px] text-hueso/70">
+            Mostrando: <b className="text-hueso first-letter:uppercase">{titulo}</b>, el equipo. Se compara con {contra}.
+          </p>
+          <EstadisticasEquipo equipo={datos.equipo} rango={rango} anterior={anterior} contra={contra} />
+          <p className="mt-6 text-[13px] text-hueso/60">Datos al {enPalabras(datos.hoy)}. Los mismos montos del informe del equipo.</p>
+        </>
+      ) : (<>
       <p className="mt-2 text-[14px] text-hueso/70">
         Mostrando: <b className="text-hueso first-letter:uppercase">{titulo}</b>, {por}, {que}. Se compara con {contra}.
       </p>
@@ -382,6 +424,7 @@ export default function Estadisticas() {
         </div>
       </Bloque>
       <p className="mt-6 text-[13px] text-hueso/60">Datos al {enPalabras(datos.hoy)}. Se cuentan con las mismas reglas del calendario.</p>
+      </>)}
     </div>
   );
 }

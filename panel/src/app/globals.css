@@ -438,3 +438,21 @@ fieldset:disabled :is(button, input, select, textarea) {
   opacity: .6;
 }
 fieldset:disabled :is(button, .tecla):active { transform: none; }
+
+/*
+ * **Los colores de las series de un gráfico** (2026-11-21, estadísticas del
+ * equipo: un color por puesto). La paleta categórica de referencia, validada
+ * con el validador de dataviz en los dos temas (diferencia para daltónicos y
+ * de lectura normal entre vecinos). **Se usan en orden fijo y el color sigue
+ * al puesto**, nunca a su lugar en el ranking. En el tema claro, el aguamarina,
+ * el amarillo y el rosado quedan bajo 3:1 sobre blanco: por eso cada gráfico
+ * que los usa lleva leyenda con nombres y una tabla.
+ */
+:root {
+  --serie-1: #3987e5; --serie-2: #d95926; --serie-3: #199e70; --serie-4: #c98500;
+  --serie-5: #d55181; --serie-6: #0ca30c; --serie-7: #9085e9; --serie-8: #e66767;
+}
+:root[data-tema='claro'] {
+  --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a; --serie-4: #eda100;
+  --serie-5: #e87ba4; --serie-6: #008300; --serie-7: #6250d6; --serie-8: #e34948;
+}

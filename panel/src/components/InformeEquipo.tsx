@@ -1749,9 +1749,18 @@ export default function InformeEquipo() {
       {/* Sin bajada (2026-11-05, lo pidió el cliente): explicaba cómo
           funciona el sistema por dentro —que lo pagado no se recalcula con
           los sueldos de hoy— y no ayudaba a hacer nada. */}
-      <h1 className="mb-5 text-xl font-bold uppercase tracking-wide">
-        Informe del equipo<Ayuda tema="informe" />
-      </h1>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold uppercase tracking-wide">
+          Informe del equipo<Ayuda tema="informe" />
+        </h1>
+        {/* **Las estadísticas del equipo** (2026-11-21): sueldos por puesto,
+            propinas y su relación con las ventas, en la página de
+            Estadísticas que ya existía, vista *👥 Equipo*. */}
+        <a href="/estadisticas?vista=equipo"
+          className="tecla boton min-h-[40px] !border-2 !border-oro/60 !font-semibold sm:min-h-[44px]">
+          📊 Estadísticas del equipo
+        </a>
+      </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         {/* **Día, semana, mes u otro rango** (el día, 2026-11-12). Botones
