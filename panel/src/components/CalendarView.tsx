@@ -5,6 +5,7 @@
  * El desglose online / en el local no es decoración: dice cuánta plata está
  * cobrada y cuánta hay que cobrar el mismo día.
  */
+import AyudaCorta from './AyudaCorta';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_APAGADO } from '@/lib/crm';
 import type { EventosDelDia } from '@/lib/crm';
@@ -384,14 +385,16 @@ export default function CalendarView({ rol, usuario = '', gerencia = false }: {
           creada —antes no hay nada que renovar— y en letra chica, porque es
           lo que casi nunca hay que apretar. */}
       {conPlanilla && cfg.tokenPlanilla && (
-        <p className="mb-5 text-xs text-hueso/35">
-          El link de la planilla semanal ya está creado.{' '}
-          <button onClick={renovarPlanilla} className="text-hueso/50 hover:text-oro"
+        <p className="mb-5 flex items-center text-[13px] text-hueso/50">
+          Link de la planilla semanal:{' '}
+          <button onClick={renovarPlanilla} className="ml-1 underline hover:text-oro"
             title="Las copias que andan dando vueltas dejan de servir al instante">
             Renovarlo
-          </button>{' '}
-          deja sin servir las copias que andan dando vueltas — es lo que hay
-          que hacer cuando alguien deja el equipo.
+          </button>
+          <AyudaCorta titulo="Renovar el link de la planilla">
+            Renovarlo deja sin servir las copias que andan dando vueltas — es lo que hay
+            que hacer cuando alguien deja el equipo.
+          </AyudaCorta>
         </p>
       )}
 

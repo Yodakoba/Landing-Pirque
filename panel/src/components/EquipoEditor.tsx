@@ -514,15 +514,15 @@ export default function EquipoEditor() {
 
       {sinFicha.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
+          <p className="flex items-center text-[15px] font-semibold text-ambar-texto">
             Hay {sinFicha.length === 1 ? 'alguien asignado' : 'gente asignada'} a
             turnos que no está en esta lista.
-          </p>
-          <p className="mt-1 text-sm text-hueso/70">
-            Pasa al renombrar a una persona que ya tenía turnos: los turnos
-            viejos siguen con el nombre anterior. Agrégala abajo con ese
-            nombre exacto, o corrige el nombre en la pestaña{' '}
-            <code>Turnos</code> de la planilla.
+            <AyudaCorta titulo="Un nombre que no está en la lista">
+              Pasa al renombrar a una persona que ya tenía turnos: los turnos
+              viejos siguen con el nombre anterior. Agrégala con ese
+              nombre exacto, o corrige el nombre en la pestaña{' '}
+              <code>Turnos</code> de la planilla.
+            </AyudaCorta>
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {sinFicha.map((n) => (
@@ -1002,23 +1002,19 @@ export default function EquipoEditor() {
       {verPuestos && (
         <Dialogo titulo="Puestos" ancho="max-w-3xl"
                  onCerrar={() => setVerPuestos(false)}>
-          {!editarPuestos && (
-            <p className="mt-3 max-w-2xl text-sm text-hueso/60">
-              Los puestos y su regla los cambian el administrador y quien
-              hace los pagos. Acá se ven para poder asignar turnos.
-            </p>
-          )}
-          <p className="mt-3 max-w-2xl text-sm text-hueso/60">
-            <strong>Uno cada N personas</strong> es cuánta gente hace falta en
-            ese puesto según cuántos comensales haya. Con 10 en garzón, un día
-            de 44 personas sugiere 5. <strong>En blanco el panel no opina</strong>,
-            que es lo correcto mientras el número no lo hayas puesto tú.
-          </p>
           {/* **El orden de esta lista es el orden del planificador**, así que
-              se puede acomodar al orden en que se arma un turno. */}
-          <p className="mt-2 max-w-2xl text-[13px] text-hueso/70">
-            El orden manda: así salen en la ventana de planificar un día.
-            Muévelos con las flechas.
+              se puede acomodar al orden en que se arma un turno. Lo que
+              explica la regla va en el `?` (regla del cliente, 2026-11-21). */}
+          <p className="mt-3 flex max-w-2xl items-center text-[14px] text-hueso/70">
+            El orden manda: así salen al planificar un día.{editarPuestos ? ' Muévelos con las flechas.' : ''}
+            <AyudaCorta titulo="Los puestos">
+              <p><strong>Uno cada N personas</strong> es cuánta gente hace falta en
+                ese puesto según cuántos comensales haya. Con 10 en garzón, un día
+                de 44 personas sugiere 5. <strong>En blanco el panel no opina</strong>,
+                que es lo correcto mientras el número no lo hayas puesto tú.</p>
+              <p>Los puestos y su regla los cambian el administrador y quien
+                hace los pagos. Los demás los ven para poder asignar turnos.</p>
+            </AyudaCorta>
           </p>
 
           <div className="mt-4 overflow-x-auto">

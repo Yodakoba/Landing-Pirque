@@ -180,6 +180,55 @@ entregan un Client ID y un Client secret, y con ellos se pide un token que
   responde *"Missing or invalid client secret"*. El secreto de una app de
   Shopify empieza con `shpss_` y tiene 38 caracteres.
 
+## Lo que explica, a su `?`: la pasada por todo el panel (2026-11-21)
+
+Lo pidió el cliente mirando Turnos: *"este texto… debería ser un botón de
+ayuda nomás también… revisa si hay otros lugares… vamos a capacitar a la
+gente y entonces después molesta mucho texto constante"*. De ahí salió la
+regla *lo que explica va en su `?`* (arriba). Se recorrió el panel entero en
+cuatro tandas, un commit cada una.
+
+**El criterio, para seguir aplicándolo**:
+
+- **Queda a la vista**: el dato, la acción, una advertencia de estado (*Hay
+  menús vendidos que no están en esta lista*, *el día queda sobrevendido*) y
+  la frase que dice qué pasa al apretar (*Se guarda con 120 y se le pide
+  150*).
+- **Va al `?`**: el porqué, el cómo funciona, los ejemplos, de dónde sale un
+  número y qué hacer si algo no calza. Con `AyudaCorta` y `tema` si el texto
+  se repite (va a `AYUDAS_CORTAS`), o con `titulo` + `children` si depende de
+  datos de la pantalla.
+- **Se borra**: lo que ya dice otra pieza (*se guarda solo* al lado de
+  `AvisoGuardado`), lo repetido y lo que solo sirve la primera vez sin un
+  `AvisoFijo` que lo pueda cerrar.
+- **No se tocó, a propósito**: las ventanas que preguntan antes de algo
+  manual —dicen qué va a pasar, que es lo que la regla del autoguardado
+  pide—, *Dejar la base en cero* (`PasoAProduccion`, se usa una vez y cada
+  línea es una advertencia) y los `AvisoFijo`, que ya tienen su ✕.
+
+**Dónde cambió**:
+
+| Tanda | Pantallas |
+|---|---|
+| 1 | Turnos (*Hay N días por cerrar*), la ventana del equipo y la de extras del día, las fichas de trabajador y colaborador, Extras (link del colaborador) |
+| 2 | Informe (avisos de sin marcar y extras sin confirmar, la nota de cada tarjeta, *Todavía no suma*, la ventana de deshacer un pago), la página del día (cotizado, día cerrado, contacto tapado), la recepción, el formulario de reserva, Clientes, Sobrecupo y Liberar el día, la mesa |
+| 3 | Cotizaciones (*Sin fecha*, pendientes) y la ventana de cotizar: las bajadas de los hitos, los avisos de cancelada, sujeta a espacio y ganada, invitados, comisión del socio, exclusivo, alternativas, contrato, liberar para ganar; *Agregar vendedor* y los campos del documento |
+| 4 | Configuración (la ayuda de cada campo y de cada sección, *Revisar Shopify ahora*), Cuentas (desactivar o quitar, la contraseña), *Ver como*, la franja *Vista gerencia*, el link de la planilla semanal, *Agregar fecha* (qué día es, la nota), los avisos de nombres que no están en la lista (Equipo, Extras, Productos), la ventana de Puestos, Productos (*Qué es*, *En una cotización*, el nombre que no se cambia), Vendedores (etapas, con socio, el documento), Estadísticas y la Bitácora |
+
+- **Estadísticas conserva a la vista *Datos del panel, no de Fudo***, en
+  negrita: el cliente pidió que se dijera; el detalle de qué suma y qué no,
+  en su `?`.
+- **De paso subió letra**: los rótulos de *Agregar fecha* y las opciones de
+  *Qué día es* pasaron de 12 a 13-15px, y el link de renovar la planilla
+  semanal de 12 a 13. `HABIA` de `letra-chica` bajó en CalendarView (1→0),
+  DiaEditor (9→1), UsuariosEditor (5→3), la bitácora (3→2), y antes en
+  EquipoDialogo, ExtrasDialogo y las fichas.
+- **Lecturas de Google**: ninguna. **Ningún permiso cambió.**
+- **Ayuda**: el `?` de Turnos, Extras e Informe y las misiones se
+  revisaron; las fotos se rehicieron en cada tanda (la última: `adm-cuentas`,
+  `adm-config`, `adm-bitacora`, `adm-vercomo`, `ven-resumen`,
+  `pag-vendedores`, `ger-vendedores`).
+
 ## El informe, ordenado y más compacto (2026-11-21)
 
 Lo pidió el cliente: en el celular *"los botones quedan un 15%, a veces un

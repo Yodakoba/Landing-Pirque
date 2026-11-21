@@ -258,12 +258,14 @@ export default function EstadisticasEquipo({ equipo, rango, anterior, contra }: 
         {/* **Lo que no es exacto, dicho** (lo pidió el cliente: *"hay que
             anunciar que falta el detalle completo, los datos exactos de
             Fudo"*). */}
-        <p className="mt-2 rounded-xl border-2 border-dashed border-hueso/25 px-3 py-2 text-[13px] leading-snug text-hueso/75">
-          <b className="text-hueso/90">Datos del panel, no de Fudo.</b>{' '}
+        <p className="mt-2 flex items-center rounded-xl border-2 border-dashed border-hueso/25 px-3 py-1 text-[13px] leading-snug text-hueso/75">
+          <b className="text-hueso/90">Datos del panel, no de Fudo.</b>
+          <AyudaCorta titulo="Datos del panel, no de Fudo">
           Las ventas son el valor final que anotó la mesa
           {r.reservas ? ` (en ${miles(r.reservasConValor)} de ${miles(r.reservas)} reservas)` : ''} y, si no se anotó, el
           monto de la reserva; faltan las ventas sin reserva y el detalle de Fudo. El costo es el de los turnos que
           vinieron y las actividades extras: no incluye el sueldo de los contratados, las comisiones ni las retenciones.
+          </AyudaCorta>
         </p>
       </Seccion>
 

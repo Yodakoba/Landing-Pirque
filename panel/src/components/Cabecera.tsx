@@ -21,6 +21,7 @@
  * dónde estás** —la marca, el tema, la cuenta y salir—; abajo, **a dónde
  * puedes ir**. Son dos preguntas distintas y ahora se ven distintas.
  */
+import AyudaCorta from './AyudaCorta';
 import { BotonVerComo, FranjaVerComo } from './VerComo';
 import { usePathname } from 'next/navigation';
 import Nav, { PAGINAS } from './Nav';
@@ -120,8 +121,10 @@ export default function Cabecera({ rol, usuario, gerencia = false, rolReal = '',
             </div>
             {soloMira && (
               <p className="mt-3 rounded-xl border-2 border-cielo-fuerte/60 bg-cielo/10 px-3 py-2 text-[14px]">
-                <strong className="text-cielo-texto">👁 Vista gerencia: acá solo miras.</strong>{' '}
-                Tu rol ({NOMBRE_ROL[rol] ?? rol}) no cambia esta pantalla; si algo hay que corregir, pídeselo a quien la tiene a cargo.
+                <strong className="text-cielo-texto">👁 Vista gerencia: acá solo miras.</strong>
+                <AyudaCorta titulo="Vista gerencia">
+                  Tu rol ({NOMBRE_ROL[rol] ?? rol}) no cambia esta pantalla; si algo hay que corregir, pídeselo a quien la tiene a cargo.
+                </AyudaCorta>
               </p>
             )}
           </>

@@ -548,7 +548,6 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
                 <div>
                   <p className="flex items-center gap-1.5 text-[15px] font-bold">Comisión por personas del evento <AyudaCorta tema="vendEtapas" /></p>
-                  <p className="text-[13px] text-hueso/70">Rige la etapa más alta que alcance. Bajo la etapa 1 no hay comisión (de partida, 22 personas).</p>
                   <div className="mt-2 space-y-2">
                     {([
                       { n: 1, desde: 'etapa1Desde', pct: 'comisionPct' },
@@ -575,9 +574,6 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                   {!esSocio && (
                     <div>
                       <p className="flex items-center gap-1.5 text-[15px] font-bold">¿Y si la venta viene con un socio comercial? <AyudaCorta tema="vendConSocio" /></p>
-                      <p className="mb-1 text-[13px] text-hueso/75">
-                        El socio cobra su comisión completa, aparte. El vendedor cobra este % de <b>su propia</b> comisión.
-                      </p>
                       <Paso etiqueta="Con socio cobra" valor={ficha.conSocio ?? CON_SOCIO_DEFECTO} paso={5} sufijo="% de su comisión"
                         onCambio={(v) => cambiar('conSocio', Math.min(100, v))} />
                     </div>
@@ -648,7 +644,12 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             <Dialogo titulo={`Documento · ${datos.nombre}`} onCerrar={() => { void fichas.forzar(); setVentana(''); }} ancho="max-w-xl">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[14px] text-hueso/75">Se guarda solo. Cambia lo que se le transfiere desde este periodo, también en el informe.</p>
+                  <p className="flex items-center text-[14px] text-hueso/75">
+                    Con qué cobra
+                    <AyudaCorta titulo="Con qué cobra">
+                      Cambia lo que se le transfiere desde este periodo, también en el informe.
+                    </AyudaCorta>
+                  </p>
                   <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(datos.usuario)} />
                 </div>
                 <CamposDocumento documento={ficha.documento} incluido={ficha.incluido} factura={ficha.factura} onCambio={cambiarDocumento} />

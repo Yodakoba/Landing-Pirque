@@ -168,14 +168,14 @@ export default function MenusEditor() {
 
       {sinRegistrar.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-[15px] font-semibold text-ambar-texto">
+          <p className="flex items-center text-[15px] font-semibold text-ambar-texto">
             Hay {sinRegistrar.length === 1 ? 'un menú vendido' : 'menús vendidos'} que
             no está{sinRegistrar.length === 1 ? '' : 'n'} en esta lista.
-          </p>
-          <p className="mt-1 text-[14px] text-hueso/70">
-            O Shopify está vendiendo algo que no está registrado acá, o alguien
-            renombró un producto en la tienda. Agrégalo abajo con ese nombre
-            exacto, o arregla el nombre en Shopify para que vuelvan a calzar.
+            <AyudaCorta titulo="Un menú que no está en la lista">
+              O Shopify está vendiendo algo que no está registrado acá, o alguien
+              renombró un producto en la tienda. Agrégalo con ese nombre
+              exacto, o arregla el nombre en Shopify para que vuelvan a calzar.
+            </AyudaCorta>
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {sinRegistrar.map((m) => (
@@ -269,21 +269,24 @@ export default function MenusEditor() {
                 {/* Renombrar uno usado sería quitarlo: lo vendido y lo
                     cotizado guardan el nombre que tenía. */}
                 {usados.has(normalizar(m.nombre)) && (
-                  <p className="-mt-3 text-[13px] text-hueso/70">
-                    Ya se vendió o se cotizó, así que el nombre no se cambia. Si
-                    cambió de nombre, agrega uno nuevo y desactiva éste.
+                  <p className="-mt-3 flex items-center text-[13px] text-hueso/70">
+                    🔒 Ya se vendió o se cotizó: el nombre no se cambia.
+                    <AyudaCorta titulo="El nombre no se cambia">
+                      Lo vendido y lo cotizado guardan el nombre que tenía. Si
+                      cambió de nombre, agrega uno nuevo y desactiva éste.
+                    </AyudaCorta>
                   </p>
                 )}
 
                 <div>
                   <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
                     Qué es
+                    <AyudaCorta titulo="Qué es">
+                      Solo los de tipo Menú suman invitados. La once o el show no son gente nueva.
+                    </AyudaCorta>
                   </p>
                   <Elegir etiqueta="Tipo de producto" valores={Object.values(TIPO_PRODUCTO)}
                     valor={m.tipo} onElegir={(v) => cambiar(i, { tipo: v })} />
-                  <p className="mt-1 text-[13px] text-hueso/60">
-                    Solo los de tipo Menú suman invitados. La once o el show no son gente nueva.
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -322,8 +325,12 @@ export default function MenusEditor() {
 
                 {m.cotizacion && (
                   <div className="space-y-4 rounded border border-rosa/30 p-3">
-                    <p className="text-[13px] font-semibold uppercase tracking-wide text-rosa-texto">
+                    <p className="flex items-center text-[13px] font-semibold uppercase tracking-wide text-rosa-texto">
                       En una cotización
+                      <AyudaCorta titulo="En una cotización">
+                        Es el precio que propone: en cada cotización se puede cambiar o
+                        aplicarle un descuento.
+                      </AyudaCorta>
                     </p>
                     <div>
                       <p className="mb-2 text-[13px] font-medium uppercase tracking-wide text-hueso/60">
@@ -355,10 +362,6 @@ export default function MenusEditor() {
                           valor={m.iva} onElegir={(v) => cambiar(i, { iva: v })} />
                       </div>
                     </div>
-                    <p className="text-[13px] text-hueso/60">
-                      Es el precio que propone: en cada cotización se puede cambiar o
-                      aplicarle un descuento.
-                    </p>
                   </div>
                 )}
 

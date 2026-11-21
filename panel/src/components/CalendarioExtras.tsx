@@ -463,14 +463,14 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
 
       {huerfanos.length > 0 && (
         <div className="mt-6 rounded border border-ambar/50 bg-ambar/5 p-4">
-          <p className="text-sm font-semibold text-ambar-texto">
+          <p className="flex items-center text-[15px] font-semibold text-ambar-texto">
             Hay actividades contratadas a nombre de alguien que no está en la lista.
-          </p>
-          <p className="mt-1 text-sm text-hueso/70">
-            Pasa al renombrar a alguien que ya tenía días: los días viejos
-            siguen con el nombre anterior. Agrégalo abajo con ese nombre
-            exacto, o corrige el nombre en la pestaña{' '}
-            <code className="text-hueso/90">Actividades</code> de la planilla.
+            <AyudaCorta titulo="Un nombre que no está en la lista">
+              Pasa al renombrar a alguien que ya tenía días: los días viejos
+              siguen con el nombre anterior. Agrégalo con ese nombre
+              exacto, o corrige el nombre en la pestaña{' '}
+              <code>Actividades</code> de la planilla.
+            </AyudaCorta>
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {huerfanos.map((n) => (
