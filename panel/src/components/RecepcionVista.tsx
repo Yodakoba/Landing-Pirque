@@ -156,11 +156,16 @@ export default function RecepcionVista() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      {/* En el computador, el título y el día en una línea, y los tres
+          números con el buscador en otra (2026-11-21, el computador más
+          compacto): eran cuatro filas. */}
+      <div className="lg:flex lg:items-baseline lg:gap-3">
       <h1 className="text-[20px] font-bold uppercase tracking-wide sm:text-[22px]">Recepción</h1>
-      <p className="mt-0.5 text-[16px] text-hueso/80 sm:text-[18px]">
+      <p className="mt-0.5 text-[16px] text-hueso/80 sm:text-[18px] lg:mt-0">
         <span className="inline-block first-letter:uppercase">{enPalabras(d.fecha)}</span>
         {d.apertura && <> · abre a las {d.apertura}</>}
       </p>
+      </div>
 
       {bloqueada && !soloMira && (
         <p className="mt-4 rounded-xl border-2 border-ambar/60 bg-ambar/10 p-4 text-[17px] font-semibold text-ambar-texto">
@@ -174,8 +179,8 @@ export default function RecepcionVista() {
           lista: en el celular, quien recibe busca un nombre tras otro y no
           puede volver a subir cada vez. Llevan su propio fondo para que la
           lista no se vea por debajo. */}
-      <div className="sticky top-0 z-10 -mx-5 mt-2 bg-tinta px-5 pb-2 pt-2 shadow-sm">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="sticky top-0 z-10 -mx-5 mt-2 bg-tinta px-5 pb-2 pt-2 shadow-sm lg:flex lg:items-stretch lg:gap-2">
+      <div className="grid grid-cols-3 gap-2 lg:flex-1">
         {([
           [`${llegaron}/${esperadas}`, 'personas llegaron', 'text-verde-texto'],
           [String(porLlegar), porLlegar === 1 ? 'reserva por llegar' : 'reservas por llegar', 'text-oro'],
@@ -195,7 +200,7 @@ export default function RecepcionVista() {
       <input value={busca} onChange={(e) => setBusca(e.target.value)} type="search"
         placeholder="Buscar por nombre…" aria-label="Buscar reserva por nombre"
         className="mt-2 w-full rounded-xl border-2 border-hueso/20 bg-panel px-4 py-2.5 text-[18px]
-                   outline-none focus:border-oro" />
+                   outline-none focus:border-oro lg:mt-0 lg:w-72 lg:py-1.5 lg:text-[16px]" />
       </div>
 
       {/* Una sola vez y no en cada tarjeta: repetida era ruido. */}

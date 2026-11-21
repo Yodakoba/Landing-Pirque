@@ -140,7 +140,15 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
  * angosta hace envolver más la lista), la tarjeta crece y `h-full` deja
  * pareja su fila igual.
  */
-const ALTO_ESTANDAR = 'min-h-[15.125rem] lg:min-h-[14.75rem]';
+const ALTO_ESTANDAR = 'min-h-[15.125rem]';
+/**
+ * **El piso en el computador** (2026-11-21, el computador más compacto): la
+ * tarjeta es más angosta y más baja, y el frente con gente mide 236px con el
+ * pie en dos filas (*Reservas · Editar* y *Equipo*). Quien no ve el equipo
+ * —el vendedor— tiene el pie en una fila, y su piso es 192px: con el de 236
+ * le quedaba un hueco en el medio de cada tarjeta.
+ */
+const ALTO_COMPUTADOR = { conEquipo: 'lg:min-h-[14.75rem]', sinEquipo: 'lg:min-h-[12rem]' };
 
 /** El tramo de las abonadas: el verde de las pagadas, rayado (falta el resto). */
 const RAYAS = 'repeating-linear-gradient(135deg, rgb(var(--verde-fuerte)) 0 4px, rgb(var(--verde-fuerte) / 0.4) 4px 7px)';
@@ -192,6 +200,7 @@ export default function TarjetaDia({
   onPlanificar: () => void;
 }) {
   const [volteada, setVolteada] = useState(false);
+  const alto = conEquipo ? ALTO_COMPUTADOR.conEquipo : ALTO_COMPUTADOR.sinEquipo;
   // Lo que no se ve no se puede tabular. Ver el comentario de arriba.
   const alFrente = { tabIndex: volteada ? -1 : 0 };
   const alDorso = { tabIndex: volteada ? 0 : -1 };
@@ -225,7 +234,7 @@ export default function TarjetaDia({
         style={{ transform: volteada ? 'rotateY(180deg)' : undefined }}>
 
         {/* ---------- el frente: la ocupación ---------- */}
-        <div className={`${CARA} ${COLOR_TARJETA(d)} ${d.fecha === hoy() ? MARCO_HOY : ''} ${volteada ? 'pointer-events-none' : ''}`}
+        <div className={`${CARA} ${alto} ${COLOR_TARJETA(d)} ${d.fecha === hoy() ? MARCO_HOY : ''} ${volteada ? 'pointer-events-none' : ''}`}
              aria-hidden={volteada}>
           <div className="flex items-start justify-between gap-2 lg:flex-wrap lg:items-center lg:gap-y-0.5">
             {/* **El pronóstico ya no va acá.** Estaba bajo la fecha a 10px,
@@ -394,7 +403,10 @@ export default function TarjetaDia({
 
           {/* `pie-tarjeta`: si los tres botones no caben en una línea, pasan
               a dos (ver `globals.css`). */}
-          <div className={`mt-3 lg:mt-1.5 ${PIE} pie-tarjeta`}><div className={`pie-botones${conDias ? '' : ' pie-sin-editar'}`}>
+          {/* En el computador el pie sigue pegado abajo (`lg:mt-auto`) y este
+              hueco le asegura 6px de aire sobre su línea. */}
+          <div aria-hidden className="hidden h-1.5 shrink-0 lg:block" />
+          <div className={`mt-3 lg:mt-auto ${PIE} pie-tarjeta`}><div className={`pie-botones${conDias ? '' : ' pie-sin-editar'}`}>
             {/* "Ver reservas" y no "Ver quiénes vienen": con tres acciones
                 en el pie, el texto largo se partía en dos líneas en una
                 tarjeta de cuatro columnas. La fecha de arriba lleva al mismo
@@ -455,7 +467,7 @@ export default function TarjetaDia({
         {/* ---------- el dorso: el equipo ---------- */}
         {conEquipo && (
         <div
-          className={`${CARA} border-hueso/15 bg-panel [transform:rotateY(180deg)] ${d.fecha === hoy() ? MARCO_HOY : ''} ${
+          className={`${CARA} ${alto} border-hueso/15 bg-panel [transform:rotateY(180deg)] ${d.fecha === hoy() ? MARCO_HOY : ''} ${
             volteada ? '' : 'pointer-events-none'}`}
           aria-hidden={!volteada}>
           <div className="flex items-start justify-between gap-2">
@@ -536,7 +548,8 @@ export default function TarjetaDia({
             </p>
           )}
 
-          <div className={`mt-3 lg:mt-1.5 ${PIE}`}>
+          <div aria-hidden className="hidden h-1.5 shrink-0 lg:block" />
+          <div className={`mt-3 lg:mt-auto ${PIE}`}>
             <button onClick={() => setVolteada(false)} {...alDorso}
               className={BOTON}>
               Volver

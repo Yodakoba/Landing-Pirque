@@ -116,6 +116,18 @@ más abajo; esto es la lista para revisar.
   el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
   Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
   frase que dice qué pasa al apretar un botón sí se queda.
+- **Los formularios van alineados** (regla del cliente, 2026-11-21: *"se
+  podría alinear los campos para que los títulos estén en un orden vertical
+  y los valores también, o los botones… esto también debería ser una regla
+  que se revise siempre, para que se vean de forma profesional todos estos
+  formularios"*). En una tarjeta, una ventana o una ficha con varios campos,
+  **los nombres van en una columna y los valores en otra**: todos los
+  nombres miden lo mismo, así que cada campo, cada valor y cada fila de
+  botones parte en la misma vertical. Nunca un campo pegado a su nombre solo
+  porque la palabra es más corta. Un segundo dato en la misma fila va a la
+  derecha. La pieza: `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia`.
+  **Antes de cerrar un cambio que toque un formulario**, se mira en una
+  captura que los bordes izquierdos calcen.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -152,7 +164,8 @@ más abajo; esto es la lista para revisar.
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **¿cambió
   algo que una ayuda describe?** Si sí, se actualiza en el mismo PR. Y si
-  se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
+  se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?** Y si
+  tiene campos, **¿parten todos en la misma vertical?**
 
 **Sitio público y landings: elegante y sobrio**
 - Fotografía real como protagonista, Fraunces y Work Sans, dorado sobre

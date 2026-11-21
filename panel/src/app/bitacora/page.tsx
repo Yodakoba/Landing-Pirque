@@ -45,7 +45,7 @@ export default async function Pagina() {
       <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
         Bitácora<Ayuda tema="bitacora" />
       </h1>
-      <AvisoFijo clave="bitacora-intro" className="mb-6 max-w-2xl">
+      <AvisoFijo clave="bitacora-intro" className="mb-6 max-w-2xl lg:mb-4">
         Lo último que se hizo en el panel, de lo más reciente a lo más
         antiguo. Las horas son de Chile.{' '}
         <strong>Queda el rastro, no el valor anterior</strong>: esto sirve

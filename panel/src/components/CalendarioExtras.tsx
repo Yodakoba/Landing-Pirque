@@ -310,7 +310,7 @@ export default function CalendarioExtras({ dia }: { dia?: string } = {}) {
           Ver `BandaSeccion.tsx`. */}
       <BandaSeccion tono="anil" icono="🎠" seccion="Extras" titulo="Actividades extras"
         ayuda={<Ayuda tema="extras" />} />
-      <AvisoFijo clave="extras-intro" className="mb-5 max-w-2xl">
+      <AvisoFijo clave="extras-intro" className="mb-5 max-w-2xl lg:mb-4">
         Lo que se contrata aparte del equipo: jinetes, pintacaritas, el
         castillo inflable. <strong>Apreta un día</strong> para agregar lo que
         venga, marcar si llegó y anotar cuánto se le paga. Va aparte del

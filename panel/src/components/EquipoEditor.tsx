@@ -487,7 +487,10 @@ export default function EquipoEditor() {
 
   return (
     <section>
-      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide">
+      {/* En el computador, el título y *Ver el mes completo* en una línea; el
+          aviso, debajo (2026-11-21, el computador más compacto). */}
+      <div className="lg:flex lg:flex-wrap lg:items-center lg:gap-x-3">
+      <h1 className="mb-1 text-xl font-bold uppercase tracking-wide lg:order-1">
         Equipo<Ayuda tema="equipo" />
       </h1>
       {/* **Dos frases y un link** (2026-11-01, lo pidió el cliente: *"los
@@ -504,13 +507,14 @@ export default function EquipoEditor() {
           quien de verdad tiene ese bloque: el administrador y quien paga
           (permiso `links`). Al encargado no se le muestra, porque
           prometerle algo que no va a encontrar es peor que no decir nada. */}
-      <AvisoFijo clave="equipo-intro" className="mb-4 max-w-2xl">
+      <AvisoFijo clave="equipo-intro" className="mb-4 max-w-2xl lg:order-3 lg:mb-3 lg:basis-full">
         Acá puedes agregar y editar trabajadores.
         {verLinks && <> Dentro de cada trabajador puedes copiar su <strong>link personal</strong>.</>}
       </AvisoFijo>
-      <p className="mb-6">
+      <p className="mb-6 lg:order-2 lg:mb-1 lg:ml-auto">
         <a href="/turnos" className="tecla boton">Ver el mes completo</a>
       </p>
+      </div>
 
       {sinFicha.length > 0 && (
         <div className="mb-6 rounded border border-ambar/50 bg-ambar/5 p-4">

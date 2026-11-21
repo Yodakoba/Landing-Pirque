@@ -34,6 +34,18 @@ revisan antes de cada cambio en esta carpeta.
   el porqué y el cómo funciona, en `AyudaCorta` o en el `?` de la pantalla.
   Un texto que se lee una vez puede ser `AvisoFijo`, que tiene su ✕. Una
   frase que dice qué pasa al apretar un botón sí se queda.
+- **Los formularios van alineados** (regla del cliente, 2026-11-21: *"se
+  podría alinear los campos para que los títulos estén en un orden vertical
+  y los valores también, o los botones… esto también debería ser una regla
+  que se revise siempre, para que se vean de forma profesional todos estos
+  formularios"*). En una tarjeta, una ventana o una ficha con varios campos,
+  **los nombres van en una columna y los valores en otra**: todos los
+  nombres miden lo mismo, así que cada campo, cada valor y cada fila de
+  botones parte en la misma vertical. Nunca un campo pegado a su nombre solo
+  porque la palabra es más corta. Un segundo dato en la misma fila va a la
+  derecha. La pieza: `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia`.
+  **Antes de cerrar un cambio que toque un formulario**, se mira en una
+  captura que los bordes izquierdos calcen.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -84,6 +96,7 @@ revisan antes de cada cambio en esta carpeta.
   | Una tarjeta de una lista que se abre: el marco, el + / − y el pie *▴ Cerrar* | `marcoTarjeta`, `SignoAbrir`, `PieCerrar` y `LISTA_TARJETAS` de `TarjetaLista` (Informe, Equipo, Extras, Vendedores, Clientes, Productos, Recepción, las reservas del día y las ventanas del equipo y de extras del día) |
   | Un grupo de tarjetas (un puesto en la ventana del equipo) | `marcoGrupo` de `TarjetaLista` |
   | Lo de adentro de la línea de una persona en un día: campos, ajustes, total, *Ficha / Sacar del día*, *+ Nuevo …* | `CampoAlLado`, `AjustesDelDia`, `TotalDelDia`, `BotonesDeLaLinea` y `BotonNuevaPersona` de `LineaDelDia` (ventana del equipo y de las actividades extras) |
+  | El nombre de un campo, al lado de su valor y en columna | `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia` |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -126,9 +139,10 @@ revisan antes de cada cambio en esta carpeta.
   lecturas y letra chica), una pasada con Playwright a 393 y 1280px con
   `revisarPlayStation()` de `panel/pruebas/playstation.mjs`, y **la
   pregunta de la regla de arriba: ¿cambió algo que una ayuda describe?**
-  Y si se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?**
+  Y si se tocó una tarjeta o una ventana, **¿cabe abierta en 1280×650?** Y
+  si tiene campos, **¿parten todos en la misma vertical?**
 
-## El computador, más compacto: el marco común (2026-11-21)
+## El computador, más compacto (2026-11-21)
 
 Lo pidió el cliente: *"se puede compactar todas las vistas en el computador
 un poco más, sin perder la regla PlayStation y… el aspecto jugable,
@@ -138,8 +152,8 @@ de ejemplo: en todas, el título de la página aparecía recién a los 202–209
 tira *¿Primera vez acá?* (61px) y el margen de arriba (32px). **El espacio
 que sobra es aire entre piezas, no tamaño de botones ni de letra.**
 
-Se propuso en **dos capas** y el cliente aprobó la primera (*"dale con la
-capa 1 y déjalo en preview"*):
+Se propuso en **dos capas** y el cliente aprobó primero la uno (*"dale con
+la capa 1 y déjalo en preview"*) y después la dos:
 
 **Capa 1, hecha: el marco común, solo desde 1024px de ancho.**
 
@@ -162,11 +176,8 @@ capa 1 y déjalo en preview"*):
   del panel lleva `data-marco="panel"` y es `peer`; el `<main>` —su hermano—
   sube solo cuando la ve (`lg:peer-data-[marco=panel]:pt-4`). Comprobado en
   `/login`, `/mi/…`, `/presupuesto/…` y `/contrato/…`: 32px, como antes.
-- **En Calendario**, el aire bajo la frase *Toca un día…* y bajo la fila de
-  botones pasó de 24 a 16px, que es lo que ya tenía Cotizaciones.
-  ***Agregar reserva* sigue en 48px**: es la misma pieza que *+ Cotizar* y la
-  fila de filtros de Cotizaciones, que van en 48, y se cambian juntas en la
-  capa 2 (en la propuesta se mostró en 44).
+- **En Calendario** se tocó solo el aire de su barra; la barra entera y el
+  botón *Agregar reserva* cambiaron en la capa 2, abajo.
 - **Las fotos de la ayuda no cambian**: `capturas-ayuda.mjs` las saca a
   400px de ancho, y este cambio rige desde 1024. Ningún texto de ayuda
   describe estas medidas.
@@ -177,21 +188,128 @@ capa 1 y déjalo en preview"*):
   de la barra ni de la tira. Entre 1024 y 1279px el menú del administrador
   sigue en dos filas (la barra mide 141px).
 
-**Capa 2, pendiente: pantalla por pantalla.** Es donde está la mayor
-ganancia, pero cada una es un cambio de distribución y se muestra con
-capturas antes de aplicar. Lo que se vio al medir:
+**Capa 2, hecha el mismo día: pantalla por pantalla.** El cliente la pidió
+(*"dale con la capa 2"*) y fue agregando sobre la marcha, mirando la
+versión de prueba en su notebook. Todo va con `lg:` (o `xl:` donde se
+indica): **en el celular las 15 pantallas miden lo mismo que antes**,
+comprobado una por una a 393px.
 
-| Pantalla | Qué se puede juntar |
-|---|---|
-| Calendario | *Al día · Actualizar*, la frase *Toca un día…* y los botones son tres filas; pueden ser una. La frase explica: va a su `?` |
-| Página del día | *← Calendario*, el título, *Al día* y *6 reservas · 34 personas* son cuatro filas; pueden ser dos |
-| Configuración | Cada campo mide 77px; con la caja en 44px puede bajar a unos 56 |
-| Turnos, Extras, Cotizaciones | Los avisos fijos y las filas de filtros, con menos separación; el botón principal y los filtros de 48 a 44px, juntos |
-| Equipo, Clientes, Productos, Cuentas, Bitácora | El mismo criterio de separación |
+**Los calendarios de Reservas y de Cotizaciones, con zoom.** Lo pidió así:
+*"esta página está demasiado ampliado todo… como hacer un zoom… no quiero
+que ninguna de las informaciones que mostramos hoy desaparezca, pero
+compactar todo"*, y *"no al nivel del calendario de turnos"*.
 
-**El criterio, para seguir**: solo desde 1024px; se quita aire y se juntan
-filas, no se achican botones bajo 36px (44 lo que se usa seguido) ni letra
-bajo 13px; lo que es la misma pieza en dos pantallas cambia en las dos.
+- **Cinco tarjetas por fila desde 1280px** (eran cuatro): 238px de ancho en
+  vez de 295. Entre 1024 y 1279 siguen cuatro, que ahí ya miden 236.
+- **La tarjeta del día** (`TarjetaDia`) bajó de 285 a **236px**: menos
+  relleno, la fecha y el número de personas a 22px (eran 28 y 30), el punto
+  del estado **al lado** de su palabra (`enLinea` de `PuntoDia`), la pastilla
+  del tiempo más baja, las pastillas del pago más juntas y el pie con menos
+  aire. **Los botones siguen en 36px y ninguna letra baja de 13.**
+- **Las tres pastillas del pago** (pagadas · abonadas · sin pagar): en la
+  tarjeta angosta *sin pagar* se partía en dos renglones. Desde 1024px cada
+  columna mide lo que pide su palabra (`.tramos-pago` en `globals.css`).
+- **El piso de la tarjeta** es 236px con el pie en dos filas, y **192px
+  para quien no ve el equipo** (el vendedor, con un solo botón): con el piso
+  de todos le quedaba un hueco en el medio.
+- **La tarjeta de Cotizaciones** bajó de 215 a **170px**, con el mismo
+  criterio y las mismas piezas.
+- **La caja de cada semana y la línea del mes**, con menos aire.
+- No cupieron seis por fila: *Reservas* y *Editar*, con su ícono, piden
+  182px y la tarjeta tendría 175.
+
+**Lo que ocupaba varias filas, en una.** Después de ver el día en su
+notebook: *"se gasta un montón de espacio… esto puede ser una fila en el
+computador, un campo bien organizado con el botón actualizar, y revisa si
+hay otros casos"*.
+
+| Pantalla | Antes | Ahora, en el computador |
+|---|---|---|
+| Página del día | Volver, el día, el tiempo, *Al día*, las reservas, *Qué preparar* y *Cómo viene el pago*: seis filas apiladas | **Un solo campo**: a la izquierda el día (volver, la fecha, el tiempo y las reservas, *Al día* con su botón) y a la derecha los dos grupos de azulejos, lado a lado. Los avisos de la recepción, arriba del campo |
+| El equipo del día | Los nombres, el botón y la propina: tres filas | Una: los nombres se doblan adentro, y el botón y la propina van a su derecha |
+| Calendario | *Al día*, la frase *Toca un día…* y los botones: tres filas | Una: los botones, el rango con *Cambiar el rango* y *Al día*. La frase queda en el `?`, que ya la decía |
+| Cotizaciones | *+ Cotizar* con los filtros, y debajo *Tus pendientes* | Una fila (`enFila` de `Pendientes`); la lista de un pendiente abierto y el aviso de sobrecupo, debajo a todo el ancho |
+| Recepción | Título, día, tres números y buscador: cuatro filas | Dos: el título con el día, y los números con el buscador |
+| Equipo | Título, aviso y *Ver el mes completo* | El título y el botón en una línea |
+| Configuración | Un campo por fila, a todo el ancho (77px cada uno) | **Dos columnas** de campos, 61px cada uno: la página bajó de 3.742 a 2.208px |
+| Cuentas | La columna del rol, angosta: cada cuenta medía hasta 190px | Desde 1280px el rol y *Vista gerencia* van en una fila y el resumen del rol debajo, a lo ancho: de 1.988 a 1.375px |
+| Turnos y Cuentas | Dos avisos fijos, uno bajo el otro | Lado a lado |
+
+- **El aviso fijo** (`AvisoFijo`) es más ancho en el computador —hasta
+  60rem— y con menos relleno: los que pedían `max-w-2xl` se partían en tres
+  o cuatro renglones con media pantalla libre al lado.
+- **El botón principal y los filtros**, de 48 a 44px, juntos: *Agregar
+  reserva*, *+ Cotizar*, *Sin fecha* y *📋 Lista*.
+- **Lo que se muestra dos veces en el HTML**: en Calendario, *Al día* y el
+  rango se dibujan una vez para el celular (`lg:hidden`) y otra para el
+  computador (`hidden lg:block`), porque van en otro lugar de la fila. Solo
+  una se ve cada vez.
+
+**Cuánto mide cada pantalla a 1280×650**, de punta a punta:
+
+| Pantalla | Antes | Ahora |
+|---|---|---|
+| Calendario | 2.558 | 2.085 |
+| Cotizaciones | 2.279 | 1.863 |
+| Página del día | 1.346 | 1.028 |
+| Configuración | 3.742 | 2.208 |
+| Cuentas | 1.988 | 1.375 |
+| Equipo | 1.496 | 1.328 |
+| Turnos | 1.714 | 1.563 |
+| Extras | 1.716 | 1.631 |
+| Recepción | 861 | 769 |
+| Informe | 1.881 | 1.818 |
+| Productos · Bitácora | 1.108 · 1.296 | 1.064 · 1.261 |
+
+En la página del día, la lista de reservas empieza a los 440px; antes, a
+los 880.
+
+**Los formularios, alineados** (regla nueva, arriba). La pidió con una foto
+de la línea de un extra: *Actividad* con su campo, *Monto* —más corto— con
+el campo pegado al nombre, y *Ajustes* con los botones al otro lado.
+
+- **`COLUMNA_ROTULO`** en `LineaDelDia`: todos los nombres de la línea
+  —Actividad, Monto, Jornada, Ajustes, Propina, Total del día— miden 6rem,
+  así que los campos, los botones *− Descontar / + Sumar* y los valores
+  parten en la misma vertical. **Vale también en el celular**: es el formato
+  de la línea, no una cosa del computador.
+- **El total del día** dejó de ser una franja con fondo y relleno propios,
+  que corría su nombre 10px: es una línea bajo una raya, como el total de una
+  cuenta.
+- **El segundo dato de una fila** —las horas extra al lado de la jornada, el
+  total al lado de la propina— va a la derecha, pegado a su valor
+  (`segundo` de `CampoAlLado`).
+- Es la misma pieza en la ventana del equipo y en la de las actividades, así
+  que cambió en las dos.
+- **Medido**: en las dos ventanas, a 1280 y a 393, todos los nombres parten
+  en la misma x y todos los valores también.
+
+**Lo de siempre**
+
+- **Lecturas de Google**: ninguna. **Ningún permiso cambió.**
+- **Ayuda**: el `?` del calendario ya decía *apreta la fecha de un día*.
+  Las fotos no cambian: se sacan a 400px y ninguna muestra una línea del día
+  abierta; se rehicieron `enc-dia`, `ope-dia`, `enc-cerrar` y `ope-corregir`
+  para comprobarlo y salieron idénticas.
+- `npm run revisar` pasa. `revisarPlayStation()` marca lo de siempre (los
+  `?` de 30px, la letra de 12px de Cuentas y Bitácora, y *MET Norway* a
+  10px), nada nuevo.
+
+**Lo que quedó sin tocar, para seguir**
+
+- **Vendedores** (*Ver*, el periodo y el buscador: tres filas) y
+  **Estadísticas** (volver y vista, el periodo, los filtros): se pueden
+  juntar, pero sus controles viven en bloques separados del código.
+- **La regla de los formularios alineados**, en lo que no es la línea del
+  día: las fichas de trabajador, colaborador, cliente y vendedor, la ventana
+  de cotizar, el formulario de reserva y la ventana del ajuste del informe.
+  Hay que mirarlos uno por uno con una captura.
+- **Entre 1024 y 1279px**, Cuentas sigue con la columna del rol angosta.
+
+**El criterio, para seguir**: solo desde 1024px; se quita aire y lo que cabe
+en una fila no se apila; no se achican botones bajo 36px (44 lo que se usa
+seguido) ni letra bajo 13px; lo que es la misma pieza en dos pantallas
+cambia en las dos; y se comprueba que el celular mida lo mismo.
 
 ## El token de Shopify de la tienda real (2026-11-21)
 

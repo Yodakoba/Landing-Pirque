@@ -37,13 +37,13 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   401.
 - **PR #287 está abierto**, en la rama `claude/traspaso-md-resumen-1dc8d5`:
   el cliente pidió ***"déjalo en preview"***, así que **se mergea solo cuando
-  diga *"mergea"***. Trae la capa 1 de *el computador, más compacto*.
+  diga *"mergea"***. Trae *el computador, más compacto* —las dos capas— y la
+  regla nueva de los formularios alineados.
   https://github.com/ayc-y-blp/aycyblp/pull/287
-- **En curso: compactar las vistas del panel en el computador**, en dos
-  capas. La 1 —el marco común— está en el PR #287. **La 2 —pantalla por
-  pantalla— está propuesta y sin empezar**: se parte cuando el cliente la
-  pida, con capturas de antes y después de cada tanda. El criterio y la
-  lista, en `panel/CLAUDE.md`, "El computador, más compacto".
+- **El cliente lo está mirando en la versión de prueba, en su notebook, y
+  va mandando fotos** de lo que quiere más junto o más alineado. Lo que quedó
+  sin tocar está en el pendiente 2 (sección 7) y en `panel/CLAUDE.md`, "El
+  computador, más compacto".
 - Lo que falta antes y después del lanzamiento está en la sección 7, en
   orden.
 
@@ -490,13 +490,27 @@ piezas, no tamaño de botones ni de letra.**
   celular y las páginas que se mandan afuera** (link personal, planilla
   semanal, cotización, contrato, entrada) **quedan igual**: la barra del
   panel lleva `data-marco="panel"` y el `<main>` sube solo cuando la ve.
-- Toca `layout.tsx`, `Cabecera`, `Recorrido`, `BandaSeccion` y dos márgenes
-  de `CalendarView`. Sin lecturas de Google, sin permisos, sin fotos de la
-  ayuda que rehacer (se sacan a 400px de ancho).
-- **Capa 2, pendiente**: juntar filas en Calendario y en la página del día,
-  los campos de Configuración (77px cada uno), los avisos y filtros de
-  Turnos, Extras y Cotizaciones, y el botón principal y los filtros de 48 a
-  44px —juntos, porque son la misma pieza—.
+- La capa 1 toca `layout.tsx`, `Cabecera`, `Recorrido` y `BandaSeccion`.
+  Sin lecturas de Google, sin permisos, sin fotos de la ayuda que rehacer
+  (se sacan a 400px de ancho).
+- **Capa 2, en el mismo PR** (*"dale con la capa 2"*), pantalla por
+  pantalla y también solo en el computador:
+  - **Los calendarios de Reservas y Cotizaciones, con zoom** (*"demasiado
+    ampliado todo… como hacer un zoom… que ninguna de las informaciones
+    desaparezca"*): cinco tarjetas por fila, la de Reservas de 285 a 236px
+    y la de Cotizaciones de 215 a 170, sin sacar ningún dato.
+  - **Lo que ocupaba varias filas, en una** (*"esto puede ser una fila en el
+    computador, un campo bien organizado… revisa si hay otros casos"*): el
+    encabezado de la página del día es un solo campo con el día, el tiempo,
+    *Al día*, *Qué preparar* y *Cómo viene el pago*; lo mismo en el equipo
+    del día, Calendario, Cotizaciones, Recepción y Equipo. Configuración va
+    en dos columnas y Cuentas con el rol en una fila.
+  - **Los formularios, alineados** (regla nueva): en la línea del día del
+    equipo y de los extras, todos los nombres miden lo mismo
+    (`COLUMNA_ROTULO`) y los valores parten en la misma vertical. Esto vale
+    también en el celular.
+- **El celular mide lo mismo que antes** en las 15 pantallas. Sin lecturas
+  de Google ni permisos; las fotos de la ayuda no cambian.
 
 ---
 
@@ -600,10 +614,15 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 - **Lo que explica va en su `?`** (21-11-2026): el equipo se capacita y el
   texto constante molesta.
 - **El computador se compacta quitando aire, no achicando** (21-11-2026):
-  solo desde 1024px, se junta lo que ocupa varias filas y se baja la
+  solo desde 1024px, lo que cabe en una fila no se apila y se baja la
   separación; los botones no bajan de 36px (44 lo que se usa seguido) ni la
-  letra de 13. En dos capas, para que el cliente vea cada pantalla antes de
-  seguir.
+  letra de 13, y el celular tiene que medir lo mismo. En dos capas.
+- **El zoom de los calendarios es con las tarjetas, no con la letra**
+  (21-11-2026): cinco por fila y los números grandes a 22px. Seis por fila
+  no cupieron: los botones del pie, con su ícono, piden más ancho.
+- **Los nombres de los campos, en una columna de ancho fijo**
+  (21-11-2026), en vez de que cada uno mida lo que su palabra: así los
+  valores y los botones quedan alineados sin calcular nada.
 - **El encargado de turno no ve cotizaciones; el vendedor ve todo y toca lo
   suyo; el contacto de los clientes se recorta por rol en el servidor**
   (`lib/privacidad.ts`).
@@ -700,7 +719,7 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 | # | Qué | Siguiente paso concreto | Quién |
 |---|---|---|---|
 | 1 | **PR #287** (el computador más compacto, capa 1) | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main`. La preview del panel se abre con la sesión de Vercel del equipo | Cliente decide; Claude mergea |
-| 2 | **El computador más compacto, capa 2** | Cuando el cliente la pida: una tanda por grupo de pantallas (Calendario y el día; Turnos, Extras y Cotizaciones; Configuración y las listas), probada primero en el panel de ejemplo y mostrada con capturas de antes y después a 1280×650. La lista y el criterio, en `panel/CLAUDE.md`, "El computador, más compacto" | Claude propone; cliente decide |
+| 2 | **El computador más compacto: lo que quedó** | (a) **Vendedores** y **Estadísticas**: juntar sus filas de controles (viven en bloques separados del código). (b) **La regla de los formularios alineados** en lo que no es la línea del día: fichas de trabajador, colaborador, cliente y vendedor, la ventana de cotizar, el formulario de reserva y el ajuste del informe; uno por uno, con captura. (c) Lo que el cliente siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "El computador, más compacto" | Claude propone; cliente decide |
 | 3 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
 | 4 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
 | 5 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
@@ -784,6 +803,12 @@ PR, documentación—, con tuteo y sin voseo.
 - **Antes de proponer un cambio de cómo se ve**, se puede probar en la copia
   que arma el panel de ejemplo (`<carpeta>/panel`), que no es el repo: sirve
   para mandar capturas de antes y después sin haber tocado nada.
+- **Un cambio "solo del computador" se comprueba en el celular**: el largo
+  de cada pantalla a 393px tiene que salir igual que antes del cambio. Es la
+  forma rápida de saber que ningún `lg:` se escapó.
+- **El panel de ejemplo se apaga solo** si se lanza en segundo plano sin un
+  tiempo largo. Las fotos de la ayuda se pueden sacar con el servidor de
+  pruebas andando si van por otro puerto (`AYUDA_PUERTO=3126`).
 - **El sitio**: `python3 -m http.server` y Playwright; `python3
   tools/traducir.py --revisar`.
 
@@ -849,6 +874,10 @@ misma pasada.
 - **Lo que explica va en su `?`**, no fijo en la pantalla. A la vista, el
   dato y la acción; un texto que se lee una vez puede ser `AvisoFijo` (con
   ✕).
+- **Los formularios van alineados** (21-11-2026): los nombres de los campos
+  en una columna y los valores en otra, todos partiendo en la misma
+  vertical; nunca un campo pegado a su nombre porque la palabra es más
+  corta. Se mira con una captura antes de cerrar el cambio.
 - **Elegir de una lista que crece se hace con buscador** (`BuscarEnLista`):
   el botón directo y otro que abre la lista. Nunca un botón por persona.
 - **Autoguardado por defecto**, con *Guardando… / ✓ Guardado /
@@ -866,8 +895,8 @@ misma pasada.
   permiso `pagar`, a su nombre. Sin frenar el trabajo de los demás. No se
   cambia un permiso de plata sin que el cliente lo diga.
 - **Antes del PR**: `npm run revisar`, Playwright a 393 y 1280 con
-  `revisarPlayStation()`, *¿cambió algo que una ayuda describe?* y *¿cabe
-  abierta en 1280×650?*
+  `revisarPlayStation()`, *¿cambió algo que una ayuda describe?*, *¿cabe
+  abierta en 1280×650?* y *¿parten los campos en la misma vertical?*
 
 ### Sitio y landings: elegante y sobrio
 

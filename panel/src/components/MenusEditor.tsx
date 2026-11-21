@@ -160,7 +160,7 @@ export default function MenusEditor() {
       <h1 className="text-xl font-bold uppercase tracking-wide mb-1">
         Productos<Ayuda tema="menus" />
       </h1>
-      <AvisoFijo clave="menus-intro" className="mb-6 max-w-2xl">
+      <AvisoFijo clave="menus-intro" className="mb-6 max-w-2xl lg:mb-4">
         Todo lo que se vende y se cotiza. <strong>El nombre de un menú tiene que
         ser exactamente el mismo acá y en Shopify</strong>: solo se perdonan
         mayúsculas, tildes y espacios de sobra.

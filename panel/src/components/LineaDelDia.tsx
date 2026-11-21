@@ -41,11 +41,35 @@ export const ENTRADA_DIA =
 const OPCION = 'boton boton-angosto min-h-[36px] !px-2 !py-0.5 !text-[13px]';
 const ELEGIDO = 'border-oro bg-oro/15 font-semibold';
 
-/** Un dato con su nombre al lado, en una fila. */
-export function CampoAlLado({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+/**
+ * **La columna de los nombres** (2026-11-21, regla del cliente: *los
+ * formularios van alineados*). Lo vio en la línea de un extra: *Actividad*
+ * con su campo, debajo *Monto* —más corto— con el campo pegado al nombre, y
+ * *Ajustes* con sus botones al otro lado: *"se podría alinear los campos para
+ * que los títulos estén en un orden vertical y los valores también, o los
+ * botones"*. Cada nombre medía lo que su palabra, y cada valor partía donde
+ * terminaba su nombre.
+ *
+ * Ahora todos los nombres de la línea —Actividad, Monto, Jornada, Ajustes,
+ * Propina, Total del día— ocupan esta misma columna, así que **los valores y
+ * los botones parten en la misma vertical**. 6rem: es lo que pide *Total del
+ * día* a 13px.
+ */
+export const COLUMNA_ROTULO = 'w-[6rem]';
+
+/**
+ * Un dato con su nombre al lado, en una fila. El nombre va en la columna de
+ * los nombres. `segundo` es para el dato que en el computador comparte la
+ * fila con otro (las horas extra, al lado de la jornada): ahí va pegado a su
+ * campo; cuando la pantalla es angosta y baja a su propia fila, vuelve a la
+ * columna.
+ */
+export function CampoAlLado({ rotulo, children, segundo = false }: {
+  rotulo: string; children: ReactNode; segundo?: boolean;
+}) {
   return (
     <label className="flex min-w-0 items-center gap-1.5">
-      <span className={ROTULO_LADO}>{rotulo}</span>
+      <span className={`${ROTULO_LADO} ${COLUMNA_ROTULO} ${segundo ? 'lg:w-auto' : ''}`}>{rotulo}</span>
       {children}
     </label>
   );
@@ -189,13 +213,10 @@ export function AjustesDelDia({ ajustes, quien, onCambio }: {
   return (
     <div>
       <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-        <span className={`${ROTULO_LADO} mr-auto`}>Ajustes</span>
-        {ajustes.length > 1 && (
-          /* El signo va adelante y aparte: "$-18.000" se lee como un error. */
-          <span className="text-[13px] tabular-nums text-hueso/65">
-            suman {total < 0 ? '−' : '+'}{enPesos(Math.abs(total))}
-          </span>
-        )}
+        {/* El nombre en su columna y los dos botones donde parten los campos
+            de arriba (regla *los formularios van alineados*). Lo que suman
+            va al final de la fila. */}
+        <span className={`${ROTULO_LADO} ${COLUMNA_ROTULO}`}>Ajustes</span>
         {/* Mientras se anota uno, no se abre otro: uno a la vez. */}
         <button type="button" disabled={editando !== null} onClick={() => abrir('nuevo', { monto: 0, motivo: '', tipo: 'resta' })}
           className="boton min-h-[36px] !border-rojo-fuerte/60 !px-2.5 !font-semibold text-rojo-texto disabled:opacity-40">
@@ -205,6 +226,12 @@ export function AjustesDelDia({ ajustes, quien, onCambio }: {
           className="boton min-h-[36px] !border-verde-fuerte/60 !px-2.5 !font-semibold text-verde-texto disabled:opacity-40">
           + Sumar
         </button>
+        {ajustes.length > 1 && (
+          /* El signo va adelante y aparte: "$-18.000" se lee como un error. */
+          <span className="ml-auto text-[13px] tabular-nums text-hueso/65">
+            suman {total < 0 ? '−' : '+'}{enPesos(Math.abs(total))}
+          </span>
+        )}
       </div>
       {ajustes.map((a, k) => {
         if (editando === k && borrador) return editor(borrador, k);
@@ -234,19 +261,27 @@ export function AjustesDelDia({ ajustes, quien, onCambio }: {
   );
 }
 
-/** La propina (si la hay) y el total del día, en una línea. */
+/**
+ * La propina (si la hay) y el total del día, en una línea, bajo una raya
+ * —como el total de una cuenta—. **Alineado con los campos de arriba**
+ * (2026-11-21): el primer nombre va en la columna de los nombres y su valor
+ * donde parten los campos. Con propina, el total es el segundo dato de la
+ * fila y va a la derecha, como las horas extra. Antes era una franja con
+ * fondo y relleno propios, que corría los nombres 10px.
+ */
 export function TotalDelDia({ propina, total }: { propina?: ReactNode; total: ReactNode }) {
+  const conPropina = propina !== undefined;
   return (
-    <dl className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 rounded-lg
-                   bg-hueso/[0.04] px-2.5 py-1.5 text-[14px] tabular-nums">
-      {propina !== undefined && (
+    <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-t-2 border-hueso/10 pt-1.5
+                   text-[14px] tabular-nums">
+      {conPropina && (
         <div className="flex items-baseline gap-1.5">
-          <dt className={ROTULO_LADO}>Propina</dt>
+          <dt className={`${ROTULO_LADO} ${COLUMNA_ROTULO}`}>Propina</dt>
           <dd>{propina}</dd>
         </div>
       )}
-      <div className="ml-auto flex items-baseline gap-1.5">
-        <dt className={ROTULO_LADO}>Total del día</dt>
+      <div className={`flex items-baseline gap-1.5 ${conPropina ? 'ml-auto' : ''}`}>
+        <dt className={`${ROTULO_LADO} ${conPropina ? '' : COLUMNA_ROTULO}`}>Total del día</dt>
         <dd>{total}</dd>
       </div>
     </dl>

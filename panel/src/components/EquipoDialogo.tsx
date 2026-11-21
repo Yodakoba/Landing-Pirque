@@ -20,7 +20,7 @@ import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaL
 import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
-import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, ENTRADA_DIA, ROTULO_LADO, TotalDelDia } from './LineaDelDia';
+import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, COLUMNA_ROTULO, ENTRADA_DIA, ROTULO_LADO, TotalDelDia } from './LineaDelDia';
 import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
 import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado,
          repartirPropina, propinaDelDia, porNombre, faltantesDe,
@@ -632,7 +632,7 @@ export default function EquipoDialogo({
                                 sueldo no sale de esta caja. */}
                             {esContratado(t.modalidad) ? (
                               <p className="flex items-center gap-1.5">
-                                <span className={ROTULO_LADO}>Jornada</span>
+                                <span className={`${ROTULO_LADO} ${COLUMNA_ROTULO}`}>Jornada</span>
                                 <span className="text-[13px] text-hueso/60">contratado · no aplica</span>
                               </p>
                             ) : (
@@ -643,7 +643,7 @@ export default function EquipoDialogo({
                                   onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
                               </CampoAlLado>
                             )}
-                            <CampoAlLado rotulo="Horas extra">
+                            <CampoAlLado rotulo="Horas extra" segundo>
                               <input type="number" min={0} step={1} className={`${ENTRADA_DIA} w-16`}
                                 value={t.horasExtra || ''} placeholder="0"
                                 aria-label={`Horas extra de ${t.trabajador}`}
