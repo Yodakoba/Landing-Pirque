@@ -1416,9 +1416,10 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   desarrollo, con aviso.
 - **Desde este entorno, la Storefront API de la real responde en
   `brasasdelopirque.cl`**, el dominio principal de esa tienda;
-  `lo-pirque.myshopify.com` está bloqueado. Desde el lanzamiento ese
-  dominio es Vercel: para volver a probar la real desde acá hay que agregar
-  `lo-pirque.myshopify.com` a *Allowed domains*.
+  `lo-pirque.myshopify.com` estaba bloqueado ese día. Desde el lanzamiento
+  ese dominio es Vercel, y la real se prueba por `lo-pirque.myshopify.com`,
+  **que desde este entorno ya responde** (comprobado el 2026-11-21 con
+  `migracion-team/verificar.sh`).
 - **El checkout sale en el dominio principal de la tienda**: hoy
   `brasasdelopirque.cl/cart/c/…`, desde el lanzamiento `tienda.`. Si el DNS
   se moviera antes que el principal, `tools/publicar_sitio.sh` igual manda
