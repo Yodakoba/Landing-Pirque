@@ -91,7 +91,7 @@ H['Fechas Hábiles'] = [encF, ...FECHAS.map((f) => fil.filaFecha(encF, f).map(St
 
 /* ---------- Clientes ---------- */
 const CLIENTES = [
-  { id: 'C-0001', nombre: 'Andrés Pino', empresa: 'Empresa Andes SpA', rut: '76.543.210-K', domicilio: 'Av. Los Leones 1200, Providencia',
+  { id: 'C-0001', nombre: 'Andrés Pino', empresa: 'Empresa Andes SpA', rut: '76.543.210-3', domicilio: 'Av. Los Leones 1200, Providencia',
     giro: 'Servicios de ingeniería', telefono: '+56 9 8123 4567', correo: 'andres.pino@ejemplo.cl', notas: 'Fin de año del equipo.', creadoPor: 'Jorge', creado: '2026-11-09 12:10' },
   { id: 'C-0002', nombre: 'Patricia Vidal', empresa: 'Colegio Santa Inés', rut: '', domicilio: '', giro: '',
     telefono: '+56 9 7234 5678', correo: 'patricia.vidal@ejemplo.cl', notas: 'Paseo de apoderados.', creadoPor: 'Jorge', creado: '2026-10-20 10:31' },

@@ -15,7 +15,7 @@
  * garantiza de verdad es `normalizarPlan()` en el servidor, porque una
  * llamada directa a la API tiene que obedecer la misma regla.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
 import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
@@ -40,9 +40,27 @@ import BuscarPersona from './BuscarPersona';
 import AvisoGuardado from './AvisoGuardado';
 import ReservasDelDia from './ReservasDelDia';
 import { AvisoCierre, PieCorreccion } from './Correccion';
+import { cambioDeReserva, cambiosDelEquipo, textoDeCambios } from '@/lib/correccion';
 import { usarAutoguardado } from './usarAutoguardado';
 import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 
+
+/**
+ * Reparte una lista en `n` columnas parejas: cada elemento va a la columna
+ * más corta hasta ese momento, según su `peso`. Dentro de cada columna se
+ * conserva el orden de la lista.
+ */
+function enColumnas<T>(lista: T[], peso: (x: T) => number, n: number): T[][] {
+  const columnas: T[][] = Array.from({ length: n }, () => []);
+  const alto = Array.from({ length: n }, () => 0);
+  for (const x of lista) {
+    let k = 0;
+    for (let i = 1; i < n; i++) if (alto[i] < alto[k]) k = i;
+    columnas[k].push(x);
+    alto[k] += peso(x);
+  }
+  return columnas;
+}
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
@@ -158,18 +176,36 @@ export default function EquipoDialogo({
    * corregir y volver a cerrar en tres pasos.
    */
   const [corrigiendo, setCorrigiendo] = useState(false);
-  const [motivo, setMotivo] = useState('');
+  /** La casilla que confirma la lista de cambios (ver `cambios`, más abajo). */
+  const [confirmado, setConfirmado] = useState(false);
   /** La asistencia de las reservas que se cambió durante la corrección. */
   const [pendientes, setPendientes] = useState<Record<number, string>>({});
+  /** De quién es cada una de esas reservas y cómo estaba, para decirlo en la lista. */
+  const [dePendientes, setDePendientes] = useState<Record<number, { quien: string; antes: string }>>({});
   /** Vista gerencia sin el permiso del equipo: se mira y no se toca. */
   const soloMira = usarSoloMira('equipo');
   const bloqueado = (cerrado && !corrigiendo) || soloMira;
+
+  /**
+   * **Lo que cambió en esta corrección, con palabras** (2026-11-21): el día
+   * como estaba cerrado contra el día como queda. Es lo que se muestra antes
+   * de guardar y lo que queda en la bitácora (`lib/correccion.ts`).
+   */
+  const cambios = useMemo(() => (!corrigiendo ? [] : [
+    ...cambiosDelEquipo(inicial.plan, plan, inicial.propina, propina),
+    ...Object.entries(pendientes).map(([fila, v]) => cambioDeReserva(
+      dePendientes[Number(fila)]?.quien ?? '', dePendientes[Number(fila)]?.antes ?? '', v))
+  ]), [corrigiendo, inicial, plan, propina, pendientes, dePendientes]);
+  // Lo confirmado era esa lista: si cambia, se confirma de nuevo.
+  const firmaDeCambios = cambios.join('\n');
+  useEffect(() => { setConfirmado(false); }, [firmaDeCambios]);
 
   function descartarCorreccion() {
     setPlan(inicial.plan);
     setPropina(inicial.propina);
     setPendientes({});
-    setMotivo('');
+    setDePendientes({});
+    setConfirmado(false);
     setCorrigiendo(false);
   }
 
@@ -406,8 +442,9 @@ export default function EquipoDialogo({
    * reintentar. Cada una queda en la bitácora con su motivo.
    */
   async function guardarCorreccion() {
-    const m = motivo.trim();
-    if (!m) return;
+    // Lo que queda en la bitácora es la lista de cambios, no un texto libre.
+    const m = textoDeCambios(cambios);
+    if (!m || !confirmado) return;
     setCerrando(true);
     setError('');
     try {
@@ -437,62 +474,12 @@ export default function EquipoDialogo({
     } finally { setCerrando(false); }
   }
 
-  return (
-    <Dialogo titulo={`${cara === 'reservas' ? 'Reservas' : 'Equipo'} · ${enPalabras(fecha)}`} onCerrar={() => void salir()} ancho="max-w-4xl">
-      {/* **El switch de las dos caras** (2026-11-03, lo pidió el cliente):
-          un lado son los trabajadores y el otro el resumen de reservas,
-          como la tarjeta del calendario de la portada. Son dos botones a la
-          vista y no uno que diga "Ver reservas", para que se lea en qué
-          cara se está y a cuál se vuelve sin adivinar. El elegido va con
-          tinte y borde dorado, no relleno: el relleno de esta ventana es
-          *Cerrar el día*. */}
-      {/* **El estado del cierre, arriba y a la vista de las dos caras.**
-          Un día cerrado se ve en solo lectura, y la ventana dice por qué y
-          qué se puede hacer: corregir, si se puede, o a quién pedírselo. */}
-      {cerrado && (
-        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir && !soloMira}
-          corrigiendo={corrigiendo} onCorregir={() => setCorrigiendo(true)} />
-      )}
-
-      {soloMira && <AvisoSoloMira que="este día" />}
-
-      {conReservas && (
-        <div role="tablist" aria-label="Qué mirar de este día"
-          className="mt-3 grid grid-cols-2 gap-2 sm:inline-grid">
-          {([['equipo', 'Trabajadores'], ['reservas', 'Reservas']] as const).map(([k, rotulo]) => (
-            <button key={k} role="tab" aria-selected={cara === k}
-              onClick={() => setCara(k)}
-              className={`boton justify-center ${cara === k
-                ? 'border-oro bg-oro/15 font-semibold text-hueso' : ''}`}>
-              {k === 'equipo' ? '↺ ' : '↻ '}{rotulo}
-              {k === 'equipo' && plan.length > 0 && (
-                <span className="ml-1.5 tabular-nums text-hueso/70">{plan.length}</span>
-              )}
-              {k === 'reservas' && nReservas !== null && (
-                <span className="ml-1.5 tabular-nums text-hueso/70">{nReservas}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* La cara se gira al cambiar: `key` la vuelve a montar y con eso
-          corre la animación de `.girar` (ver `globals.css`). */}
-      <div key={cara} className={conReservas ? 'girar' : undefined}>
-      {cara === 'reservas' ? (
-        <ReservasDelDia fecha={fecha} onCuantas={setNReservas}
-          modo={bloqueado ? 'bloqueado' : corrigiendo ? 'corrigiendo' : 'libre'}
-          pendientes={pendientes}
-          onPendiente={(fila, v) => setPendientes((p) => ({ ...p, [fila]: v }))} />
-      ) : (
-      /* `fieldset disabled` apaga de una vez todo lo que se escribe o se
-         aprieta adentro —campos, selectores y botones—, sin tener que
-         acordarse de cada uno. Es lo que deja un día cerrado en solo
-         lectura en la pantalla; el servidor lo comprueba por su cuenta. */
-      <fieldset disabled={bloqueado} className="m-0 min-w-0 border-0 p-0">
-      {/* El `?` de esta ventana explica lo único que de verdad se aprende
-          acá: qué significa dejar a alguien sin marcar. */}
-      <p className="mt-3 text-sm text-hueso/60">
+  /**
+   * Cuánta gente hay reservada y qué puestos faltan: bajo el título en el
+   * celular, en su misma línea en el computador.
+   */
+  const resumenDelDia = (clase: string) => (
+    <p className={clase}>
         {personas > 0
           ? <>Hay <strong className="text-hueso">{personas}</strong>{' '}
               {personas === 1 ? 'persona' : 'personas'} reservada{personas === 1 ? '' : 's'}{' '}
@@ -516,15 +503,207 @@ export default function EquipoDialogo({
             que explica va en su ?*). */}
         <Ayuda tema="asistencia" />
       </p>
+  );
 
-      <div className="mt-5 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-        {lineas.map((l) => (
+  /**
+   * La propina del día. En el celular va bajo los puestos; en el computador,
+   * en el pie: junto al resumen y a los botones, o en una fila sobre la lista
+   * de cambios mientras se corrige un día cerrado.
+   */
+  const cajaPropina = (clase: string) => (
+    <div className={`flex flex-wrap items-center gap-3 rounded border border-hueso/15 bg-panel px-3 py-2 ${clase}`}>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="shrink-0 whitespace-nowrap text-hueso/70">Propina del día</span>
+              <input type="number" min={0} step={1000}
+                className={`${ENTRADA} w-32`} value={propina || ''} placeholder="0"
+                autoFocus={enfocarPropina} disabled={bloqueado}
+                aria-label="Propina del día, en total"
+                onChange={(e) => {
+                  const n = Number(String(e.target.value).replace(/[^\d]/g, ''));
+                  setPropina(Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
+                }} />
+            </label>
+            <AyudaCorta tema="propinaDia" />
+            {/* A cuántos se reparte es un dato; cómo funciona, su `?`. */}
+            {propina > 0 && (
+              <span className="text-[13px] text-hueso/60">
+                se reparte entre {reciben} {reciben === 1 ? 'persona' : 'personas'}, en partes iguales
+              </span>
+            )}
+          </div>
+  );
+
+  /** Cuántos hay en el equipo y cuántos vinieron: bajo los puestos, o en el pie del computador. */
+  const cuantosVinieron = (clase: string) => (
+    <p className={`text-xs text-hueso/50 ${clase}`}>
+        {plan.length} {plan.length === 1 ? 'persona' : 'personas'} en el equipo de este día.
+        {(vinieron > 0 || faltaron > 0) && (
+          <>
+            {' '}<strong className="text-hueso/70">
+              {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
+            </strong>
+            {faltaron > 0 && (
+              <span className="text-rojo-texto">
+                {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
+              </span>
+            )}.
+          </>
+        )}
+        {' '}¿Falta alguien en la lista?{' '}
+        <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
+        {falta.extrasSinConfirmar > 0 && (
+          <>
+            {' '}
+            <span className="text-ambar-texto">
+              {falta.extrasSinConfirmar === 1
+                ? 'Queda 1 actividad extra sin confirmar'
+                : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
+            </span>
+            {' '}—{' '}
+            <a href="/extras" className="text-oro hover:underline">míralas acá</a>.
+          </>
+        )}
+      </p>
+  );
+
+  /**
+   * Los avisos de por qué el día no se puede cerrar todavía, o de quién lo
+   * cierra. `enCaja` es como van bajo los puestos; sin caja, una línea para
+   * el pie del computador.
+   */
+  const avisosDeCierre = (enCaja: boolean) => (
+    <>
+      {/* **Por qué no se puede cerrar, en pantalla.** El motivo vivía en el
+          `title` del botón apagado, o sea en un globito que aparece al pasar
+          el mouse: en un teléfono eso no existe, y lo que queda es un botón
+          muerto sin explicación. */}
+      {conCierre && !cerrado && !corrigiendo && !llego && !soloMira && (
+        <p className={enCaja ? 'mt-3 rounded border border-cielo/40 bg-cielo/5 px-3 py-2 text-sm text-cielo-texto'
+          : 'text-[13px] font-semibold text-cielo-texto'}>
+          Este día <strong>todavía no llega</strong>: se cierra desde ese día.
+        </p>
+      )}
+      {((conCierre && !cerrado && llego && !soloMira) || corrigiendo) && !listo && (
+        <p className={enCaja ? 'mt-3 rounded border border-ambar/40 bg-ambar/5 px-3 py-2 text-sm text-ambar-texto/90'
+          : 'text-[13px] font-semibold text-ambar-texto'}>
+          {falta.conEquipo === 0
+            ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
+            : <>{puedeCerrar || corrigiendo ? 'Para cerrar el día falta' : 'Falta'} marcar si{' '}
+                <strong>{falta.sinMarcar === 1 ? 'una persona vino'
+                       : `${falta.sinMarcar} personas vinieron`}</strong> o no.
+                {!conAsistencia && <>{' '}Eso se marca en{' '}
+                      <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}</>}
+        </p>
+      )}
+
+      {/* Sin el botón de cerrar hay que decir dónde está, o parecería que
+          el día no se puede cerrar en ninguna parte. Que se guarda solo ya lo
+          dice el aviso de guardado (2026-11-21, regla *lo que explica va en
+          su ?*). */}
+      {plan.length > 0 && !cerrado && !soloMira && (!puedeCerrar || !conCierre) && (
+        <p className={enCaja ? 'mt-2 text-[13px] text-hueso/60' : 'text-[13px] text-hueso/60'}>
+          {/* El encargado no cierra (2026-11-05): se le dice quién lo hace,
+              en vez de dejar un botón ausente que parece un error. */}
+          {!puedeCerrar
+            ? <>El día lo cierra quien hace los pagos.</>
+            : <>El día se cierra en{' '}
+                <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}
+        </p>
+      )}
+    </>
+  );
+
+  /** Los dos botones de las caras: bajo el título en el celular, en su línea en el computador. */
+  const caras = (clase: string) => (
+    <div role="tablist" aria-label="Qué mirar de este día" className={clase}>
+      {([['equipo', 'Trabajadores'], ['reservas', 'Reservas']] as const).map(([k, rotulo]) => (
+        <button key={k} role="tab" aria-selected={cara === k}
+          onClick={() => setCara(k)}
+          className={`boton justify-center ${cara === k
+            ? 'border-oro bg-oro/15 font-semibold text-hueso' : ''}`}>
+          {k === 'equipo' ? '↺ ' : '↻ '}{rotulo}
+          {k === 'equipo' && plan.length > 0 && (
+            <span className="ml-1.5 tabular-nums text-hueso/70">{plan.length}</span>
+          )}
+          {k === 'reservas' && nReservas !== null && (
+            <span className="ml-1.5 tabular-nums text-hueso/70">{nReservas}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <Dialogo titulo={`${cara === 'reservas' ? 'Reservas' : 'Equipo'} · ${enPalabras(fecha)}`} onCerrar={() => void salir()}
+      ancho="max-w-4xl lg:max-w-[78rem]"
+      alLado={<div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        {conReservas && caras('flex gap-2')}
+        {cara === 'equipo' && resumenDelDia('text-sm text-hueso/60')}
+      </div>}>
+      {/* **El switch de las dos caras** (2026-11-03, lo pidió el cliente):
+          un lado son los trabajadores y el otro el resumen de reservas,
+          como la tarjeta del calendario de la portada. Son dos botones a la
+          vista y no uno que diga "Ver reservas", para que se lea en qué
+          cara se está y a cuál se vuelve sin adivinar. El elegido va con
+          tinte y borde dorado, no relleno: el relleno de esta ventana es
+          *Cerrar el día*. */}
+      {/* **El estado del cierre, arriba y a la vista de las dos caras.**
+          Un día cerrado se ve en solo lectura, y la ventana dice por qué y
+          qué se puede hacer: corregir, si se puede, o a quién pedírselo. */}
+      {cerrado && (
+        <AvisoCierre cierre={cierre} puedeCorregir={puedeCorregir && !soloMira}
+          corrigiendo={corrigiendo} onCorregir={() => setCorrigiendo(true)} />
+      )}
+
+      {soloMira && <AvisoSoloMira que="este día" />}
+
+      {/* En el computador las dos caras van arriba, en la línea del título
+          (`alLado`): una fila menos. */}
+      {conReservas && caras('mt-3 grid grid-cols-2 gap-2 sm:inline-grid lg:hidden')}
+
+      {/* La cara se gira al cambiar: `key` la vuelve a montar y con eso
+          corre la animación de `.girar` (ver `globals.css`). */}
+      <div key={cara} className={conReservas ? 'girar' : undefined}>
+      {cara === 'reservas' ? (
+        <ReservasDelDia fecha={fecha} onCuantas={setNReservas}
+          modo={bloqueado ? 'bloqueado' : corrigiendo ? 'corrigiendo' : 'libre'}
+          pendientes={pendientes}
+          onPendiente={(fila, v, quien, antes) => {
+            // Volver a dejarla como estaba no es un cambio: sale de la lista.
+            setPendientes((p) => {
+              const q = { ...p };
+              if (v === antes) delete q[fila]; else q[fila] = v;
+              return q;
+            });
+            setDePendientes((p) => ({ ...p, [fila]: { quien, antes } }));
+          }} />
+      ) : (
+      /* `fieldset disabled` apaga de una vez todo lo que se escribe o se
+         aprieta adentro —campos, selectores y botones—, sin tener que
+         acordarse de cada uno. Es lo que deja un día cerrado en solo
+         lectura en la pantalla; el servidor lo comprueba por su cuenta. */
+      <fieldset disabled={bloqueado} className="m-0 min-w-0 border-0 p-0">
+      {/* El `?` de esta ventana explica lo único que de verdad se aprende
+          acá: qué significa dejar a alguien sin marcar. */}
+      {resumenDelDia('mt-3 text-sm text-hueso/60 lg:hidden')}
+
+      {/* **En el computador, tres columnas parejas** (2026-11-21, regla *una
+          tarjeta abierta cabe en una pantalla*): con dos, cuatro puestos
+          medían dos filas completas y la ventana pasaba de 1.200px. Cada
+          puesto va a la columna más corta (`enColumnas()`), así que al abrir
+          una línea nada salta de lugar. Más angosto, la grilla de siempre:
+          las columnas se deshacen (`contents`) y cada puesto conserva su
+          orden. */}
+      <div className="mt-5 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:mt-2 lg:grid-cols-3 lg:gap-3">
+        {enColumnas(lineas, (l) => 1.75 + l.asignados.length, 3).map((columna, c) => (
+        <div key={c} className="contents lg:block lg:space-y-3">
+        {columna.map((l) => (
           /* **El puesto que no alcanza se ve desde lejos** (2026-11-12, lo
              pidió el cliente): borde ámbar grueso, fondo ámbar suave, una
              pastilla *Faltan N* y el *+ Agregar…* en ámbar. Los completos
              quedan como estaban. */
-          <div key={l.puesto} id={`puesto-${encodeURIComponent(l.puesto)}`}
-            className={`min-w-0 scroll-mt-4 p-2 sm:p-3 ${marcoGrupo(l.faltan > 0)}`}>
+          <div key={l.puesto} id={`puesto-${encodeURIComponent(l.puesto)}`} style={{ order: lineas.indexOf(l) }}
+            className={`min-w-0 scroll-mt-4 p-2 sm:p-3 lg:p-2 ${marcoGrupo(l.faltan > 0)}`}>
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="px-1 text-[15px] font-semibold">{l.puesto}</h3>
               <span className="flex shrink-0 items-center gap-1.5">
@@ -578,7 +757,7 @@ export default function EquipoDialogo({
                                      rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
                           <SignoAbrir abierta={abierta} tamano="h-6 w-6 text-[14px]" />
                           <span className="min-w-0">
-                            <span className={`block truncate text-[15px] font-semibold ${
+                            <span className={`block truncate text-[15px] font-semibold lg:whitespace-normal lg:leading-tight ${
                               t?.asistencia === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                               {nombre}
                             </span>
@@ -604,9 +783,13 @@ export default function EquipoDialogo({
                               if (repartida[i]?.propina) partes.push(`propina ${enPesos(repartida[i].propina)}`);
                               if (!partes.length) return null;
                               return (
-                                <span className={`block truncate text-[13px] ${
+                                <span className={`block truncate text-[13px] lg:whitespace-normal lg:leading-tight ${
                                   !conAsistencia && !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
-                                  {partes.join(' · ')}
+                                  {/* Se dobla solo entre un dato y el otro: *propina
+                                      $14.438* nunca queda con el monto abajo. */}
+                                  {partes.map((x, k) => (
+                                    <span key={k}><span className="whitespace-nowrap">{x}{k < partes.length - 1 ? ' ·' : ''}</span>{' '}</span>
+                                  ))}
                                 </span>
                               );
                             })()}
@@ -644,7 +827,7 @@ export default function EquipoDialogo({
                               </CampoAlLado>
                             )}
                             <CampoAlLado rotulo="Horas extra" segundo>
-                              <input type="number" min={0} step={1} className={`${ENTRADA_DIA} w-16`}
+                              <input type="number" min={0} step={1} className={`${ENTRADA_DIA} w-16 lg:w-12`}
                                 value={t.horasExtra || ''} placeholder="0"
                                 aria-label={`Horas extra de ${t.trabajador}`}
                                 onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
@@ -699,7 +882,10 @@ export default function EquipoDialogo({
 
             {/* Se busca escribiendo el nombre: con veinte personas, un
                 desplegable obliga a recorrerlas todas. Ver `BuscarPersona`. */}
-            <div className="mt-2">
+            {/* En el computador, *+ Agregar…* y *+ Nuevo trabajador* van lado
+                a lado; al abrir el buscador, ocupa la fila entera. */}
+            <div className="lg:flex lg:flex-wrap lg:gap-x-2">
+            <div className="mt-2 lg:min-w-0 lg:flex-1 lg:basis-[45%] lg:[&:has(input)]:basis-full">
               <BuscarPersona etiqueta={`Agregar alguien a ${l.puesto}`}
                 destacar={l.faltan > 0}
                 abrir={abrirEn.puesto === l.puesto ? abrirEn.n : 0}
@@ -722,8 +908,13 @@ export default function EquipoDialogo({
             {/* Crear a alguien sin salir de acá. Es lo que destraba el caso
                 en que la lista está vacía: sin esto hay que irse a /equipo,
                 agregarlo, volver y empezar la planificación de nuevo. */}
+            <div className="lg:min-w-0 lg:flex-1 lg:basis-[45%]">
             <BotonNuevaPersona texto="+ Nuevo trabajador" onClick={() => setFicha({ puesto: l.puesto })} />
+            </div>
+            </div>
           </div>
+        ))}
+        </div>
         ))}
       </div>
 
@@ -768,7 +959,7 @@ export default function EquipoDialogo({
           Aparece recién cuando hay alguien asignado: antes de eso no hay
           nada que cerrar y sería una tabla vacía pidiendo atención. */}
       {plan.length > 0 && (
-        <div className="mt-6 border-t border-hueso/10 pt-4">
+        <div className="mt-6 border-t border-hueso/10 pt-4 lg:hidden">
           {/* **Los montos de cada persona viven en su línea**, arriba
               (2026-11-05): se abre con el `+` de su nombre. Antes iban en
               una segunda lista con la misma gente, que alargaba la ventana
@@ -777,27 +968,7 @@ export default function EquipoDialogo({
           {/* La propina se escribe UNA vez, como total del día, y el panel
               la reparte en partes iguales entre quienes vinieron y
               participan. Lo que se guarda es la parte de cada uno. */}
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded border
-                          border-hueso/15 bg-panel px-3 py-2">
-            <label className="flex items-center gap-2 text-sm">
-              <span className="shrink-0 whitespace-nowrap text-hueso/70">Propina del día</span>
-              <input type="number" min={0} step={1000}
-                className={`${ENTRADA} w-32`} value={propina || ''} placeholder="0"
-                autoFocus={enfocarPropina}
-                aria-label="Propina del día, en total"
-                onChange={(e) => {
-                  const n = Number(String(e.target.value).replace(/[^\d]/g, ''));
-                  setPropina(Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
-                }} />
-            </label>
-            <AyudaCorta tema="propinaDia" />
-            {/* A cuántos se reparte es un dato; cómo funciona, su `?`. */}
-            {propina > 0 && (
-              <span className="text-[13px] text-hueso/60">
-                se reparte entre {reciben} {reciben === 1 ? 'persona' : 'personas'}, en partes iguales
-              </span>
-            )}
-          </div>
+          {cajaPropina('mt-4')}
         </div>
       )}
 
@@ -808,73 +979,11 @@ export default function EquipoDialogo({
           en el siguiente. La diferencia entre anotar un cambio y declarar
           el día cerrado tiene que leerse de un vistazo, y dos renglones la
           esconden: lo que se ve es un botón, y el otro parece otra cosa. */}
-      <p className="mt-6 text-xs text-hueso/50">
-        {plan.length} {plan.length === 1 ? 'persona' : 'personas'} en el equipo de este día.
-        {(vinieron > 0 || faltaron > 0) && (
-          <>
-            {' '}<strong className="text-hueso/70">
-              {vinieron} {vinieron === 1 ? 'vino' : 'vinieron'}
-            </strong>
-            {faltaron > 0 && (
-              <span className="text-rojo-texto">
-                {' '}· {faltaron} no {faltaron === 1 ? 'llegó' : 'llegaron'}
-              </span>
-            )}.
-          </>
-        )}
-        {' '}¿Falta alguien en la lista?{' '}
-        <a href="/equipo" className="text-oro hover:underline">Agrégalo en Equipo</a>.
-        {falta.extrasSinConfirmar > 0 && (
-          <>
-            {' '}
-            <span className="text-ambar-texto">
-              {falta.extrasSinConfirmar === 1
-                ? 'Queda 1 actividad extra sin confirmar'
-                : `Quedan ${falta.extrasSinConfirmar} actividades extras sin confirmar`}
-            </span>
-            {' '}—{' '}
-            <a href="/extras" className="text-oro hover:underline">míralas acá</a>.
-          </>
-        )}
-      </p>
+      {cuantosVinieron('mt-6 lg:hidden')}
 
-      {/* **Por qué no se puede cerrar, en pantalla.** El motivo vivía en el
-          `title` del botón apagado, o sea en un globito que aparece al pasar
-          el mouse: en un teléfono eso no existe, y lo que queda es un botón
-          muerto sin explicación. */}
-      {conCierre && !cerrado && !corrigiendo && !llego && !soloMira && (
-        <p className="mt-3 rounded border border-cielo/40 bg-cielo/5
-                      px-3 py-2 text-sm text-cielo-texto">
-          Este día <strong>todavía no llega</strong>: se cierra desde ese día.
-        </p>
-      )}
-      {((conCierre && !cerrado && llego && !soloMira) || corrigiendo) && !listo && (
-        <p className="mt-3 rounded border border-ambar/40 bg-ambar/5
-                      px-3 py-2 text-sm text-ambar-texto/90">
-          {falta.conEquipo === 0
-            ? <>Para cerrar el día, primero <strong>asigna a alguien</strong>.</>
-            : <>{puedeCerrar || corrigiendo ? 'Para cerrar el día falta' : 'Falta'} marcar si{' '}
-                <strong>{falta.sinMarcar === 1 ? 'una persona vino'
-                       : `${falta.sinMarcar} personas vinieron`}</strong> o no.
-                {!conAsistencia && <>{' '}Eso se marca en{' '}
-                      <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}</>}
-        </p>
-      )}
-
-      {/* Sin el botón de cerrar hay que decir dónde está, o parecería que
-          el día no se puede cerrar en ninguna parte. Que se guarda solo ya lo
-          dice el aviso de guardado (2026-11-21, regla *lo que explica va en
-          su ?*). */}
-      {plan.length > 0 && !cerrado && !soloMira && (!puedeCerrar || !conCierre) && (
-        <p className="mt-2 text-[13px] text-hueso/60">
-          {/* El encargado no cierra (2026-11-05): se le dice quién lo hace,
-              en vez de dejar un botón ausente que parece un error. */}
-          {!puedeCerrar
-            ? <>El día lo cierra quien hace los pagos.</>
-            : <>El día se cierra en{' '}
-                <a href="/turnos" className="text-oro hover:underline">Turnos</a>.</>}
-        </p>
-      )}
+      {/* Por qué no se puede cerrar todavía: bajo los puestos en el celular
+          (y mientras se corrige); en el computador, en el pie. */}
+      <div className="lg:hidden">{avisosDeCierre(true)}</div>
 
       </fieldset>
       )}
@@ -895,8 +1004,17 @@ export default function EquipoDialogo({
       {/* **Mientras se corrige, el pie es otro**: el motivo —obligatorio,
           porque es lo que se va a preguntar un mes después— y dos botones,
           descartar o guardar. *Guardar corrección* es el único relleno. */}
+      {/* En el computador, la propina del día y el resumen van en el pie: en
+          la fila de los botones, o —mientras se corrige— en una fila sobre la
+          lista de cambios. */}
+      {corrigiendo && cara === 'equipo' && (
+        <div className="mt-2 hidden items-center gap-3 lg:flex">
+          {plan.length > 0 && <div className="shrink-0">{cajaPropina('lg:py-1')}</div>}
+          <div className="min-w-0">{avisosDeCierre(false)}{cuantosVinieron('')}</div>
+        </div>
+      )}
       {corrigiendo ? (
-        <PieCorreccion motivo={motivo} onMotivo={setMotivo}
+        <PieCorreccion cambios={cambios} confirmado={confirmado} onConfirmado={setConfirmado}
           onCancelar={descartarCorreccion} onGuardar={() => void guardarCorreccion()}
           guardando={cerrando}
           porQueNo={listo ? undefined
@@ -913,7 +1031,11 @@ export default function EquipoDialogo({
          `flex-nowrap`: se quedan en la línea pase lo que pase. En un
          teléfono el día se recorta a "Cerrar", que dice lo mismo en menos
          espacio. */
-      <div className="mt-3 flex flex-nowrap items-center gap-2">
+      <div className="mt-3 flex flex-nowrap items-center gap-2 lg:mt-2 lg:gap-3">
+        {/* En el computador, la propina del día y el resumen van acá, en la
+            fila de los botones: tres filas menos. */}
+        {cara === 'equipo' && plan.length > 0 && <div className="hidden shrink-0 lg:block">{cajaPropina('lg:py-1')}</div>}
+        {cara === 'equipo' && <div className="hidden min-w-0 lg:block">{avisosDeCierre(false)}{cuantosVinieron('')}</div>}
         {!cerrado && !soloMira && (
           <AvisoGuardado estado={guardado.estado} error={guardado.error}
             onReintentar={() => void guardado.reintentar()} />

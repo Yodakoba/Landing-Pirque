@@ -65,7 +65,7 @@ function soltarElFondo(id: string) {
 }
 
 export default function Dialogo({
-  titulo, onCerrar, children, ancho = 'max-w-lg', arriba = 'mt-10'
+  titulo, onCerrar, children, ancho = 'max-w-lg', arriba = 'mt-10', alLado
 }: {
   titulo: string;
   onCerrar: () => void;
@@ -83,6 +83,12 @@ export default function Dialogo({
    * celular chico —la del ajuste del informe— sube un poco ahí.
    */
   arriba?: string;
+  /**
+   * Lo que va en la misma línea del título, **solo en el computador**
+   * (2026-11-21): en la ventana de cotizar, para quién es y por cuánto. En
+   * el celular no se dibuja; ahí cada ventana lo muestra donde ya lo tenía.
+   */
+  alLado?: React.ReactNode;
 }) {
   const fondo = useRef<HTMLDivElement>(null);
   const empezoEnElFondo = useRef(false);
@@ -134,7 +140,7 @@ export default function Dialogo({
         if (empezoEnElFondo.current && e.target === fondo.current) onCerrar();
         empezoEnElFondo.current = false;
       }}
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4 lg:py-2"
       style={{ zIndex: 50 + abiertas.length }}
       role="dialog" aria-modal="true" aria-label={titulo}>
       {/* El clic de adentro no llega al fondo, así que no cierra nada.
@@ -147,9 +153,18 @@ export default function Dialogo({
           NEGRITA, que además de feo es ilegible en tres párrafos. Se arregla
           acá y no sacando el `?` del título, porque cualquier ventana que se
           abra mañana desde otro lugar tendría el mismo problema. */}
+      {/* **En el computador la ventana parte arriba** (2026-11-21, regla *una
+          tarjeta abierta cabe en una pantalla*): de los 650px de alto que deja
+          un notebook, el aire de arriba (56px), el de abajo y el relleno se
+          llevaban 110. Desde 1024px quedan 8px arriba y abajo y 16 de
+          relleno: 48px más para el contenido, en todas las ventanas de una
+          vez. En el celular, lo de siempre. */}
       <div className={`mx-auto ${arriba} ${ancho} rounded border border-hueso/15
-                       bg-panel p-5 font-normal normal-case tracking-normal`}>
-        <h2 className="text-sm font-bold uppercase tracking-widest text-oro">{titulo}</h2>
+                       bg-panel p-5 font-normal normal-case tracking-normal lg:mt-0 lg:p-4`}>
+        <div className={alLado ? 'lg:flex lg:flex-wrap lg:items-baseline lg:gap-x-4' : undefined}>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-oro">{titulo}</h2>
+          {alLado && <div className="hidden min-w-0 lg:block">{alLado}</div>}
+        </div>
         {children}
       </div>
     </div>

@@ -55,7 +55,7 @@ function Azulejo({ n, titulo, nota, color, borde }: {
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
     <p className="mt-5 text-[13px] font-semibold uppercase tracking-widest
-                  text-hueso/60">{children}</p>
+                  text-hueso/60 lg:mt-3">{children}</p>
   );
 }
 
@@ -81,7 +81,8 @@ export default function ReservasDelDia({
   modo?: 'libre' | 'bloqueado' | 'corrigiendo';
   /** La asistencia cambiada durante una corrección, por fila. */
   pendientes?: Record<number, string>;
-  onPendiente?: (fila: number, asistencia: string) => void;
+  /** Con quién es la reserva y cómo estaba, para decir el cambio con palabras. */
+  onPendiente?: (fila: number, asistencia: string, quien: string, antes: string) => void;
 }) {
   const [todas, setTodas] = useState<Reserva[] | null>(null);
   const [catalogo, setCatalogo] = useState<Menu[]>(POR_DEFECTO_MENUS);
@@ -113,7 +114,12 @@ export default function ReservasDelDia({
   /** Igual que en la página del día: guarda al instante, sin confirmar. */
   async function marcar(r: Reserva, asistencia: string) {
     if (modo === 'bloqueado') return;
-    if (modo === 'corrigiendo') { onPendiente?.(r.fila, asistencia); return; }
+    if (modo === 'corrigiendo') {
+      // Cómo estaba de verdad, no lo que ya se cambió en esta corrección.
+      const antes = (todas ?? []).find((x) => x.fila === r.fila)?.asistencia ?? '';
+      onPendiente?.(r.fila, asistencia, r.nombre || String(r.id ?? ''), antes);
+      return;
+    }
     // Se pinta antes de que vuelva el servidor: es un botón que se aprieta
     // con gente esperando en el mesón, y un segundo sin respuesta se lee
     // como que no funcionó. Si falla, la recarga deja lo que de verdad hay.
@@ -163,9 +169,12 @@ export default function ReservasDelDia({
       </p>
 
       {cuentan.length > 0 && (
-        <>
+        // En el computador, los tres grupos de azulejos van lado a lado
+        // (2026-11-21): apilados se llevaban 370px antes de la primera reserva.
+        <div className="lg:grid lg:grid-cols-3 lg:gap-x-6">
           {/* **Quién llegó, lo primero.** Es la pregunta por la que se da
               vuelta la ventana con el local andando; lo demás es contexto. */}
+          <div>
           <Rotulo>Quién vino</Rotulo>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Azulejo n={gente(vinieron)} titulo="vinieron" nota={reservas(vinieron.length)}
@@ -179,12 +188,16 @@ export default function ReservasDelDia({
               color={sinMarcar.length > 0 ? 'text-ambar-texto' : 'text-hueso/60'}
               borde={sinMarcar.length > 0 ? 'border-ambar/40' : undefined} />
           </div>
+          </div>
 
+          <div>
           <Rotulo>Qué preparar</Rotulo>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {menus.map((m) => <Azulejo key={m.menu} n={m.cantidad} titulo={m.menu} />)}
           </div>
+          </div>
 
+          <div>
           <Rotulo>Cómo viene el pago</Rotulo>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Azulejo n={gente(pagadas)} titulo="ya pagaron" nota={reservas(pagadas.length)}
@@ -196,7 +209,8 @@ export default function ReservasDelDia({
             <Azulejo n={gente(sinPagar)} titulo="sin pagar" nota={reservas(sinPagar.length)}
               color="text-ambar-texto" borde="border-ambar/40" />
           </div>
-        </>
+          </div>
+        </div>
       )}
 
       {delDia.length > 0 && (

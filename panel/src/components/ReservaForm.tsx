@@ -203,7 +203,7 @@ export default function ReservaForm({
     <Dialogo
       titulo={desdeCRM ? 'Anotar el evento del CRM'
                        : reserva ? 'Editar reserva' : 'Agregar reserva'}
-      onCerrar={onCancelar}>
+      onCerrar={onCancelar} ancho="max-w-lg lg:max-w-4xl">
       <>
         {/* Lo que el socio sabe, dicho una vez y arriba: el nombre ya está
             puesto abajo, y la gente es el número que hay que repartir en los
@@ -219,6 +219,11 @@ export default function ReservaForm({
           </p>
         )}
 
+        {/* **En el computador, dos columnas** (2026-11-21, regla *una tarjeta
+            abierta cabe en una pantalla*): a la izquierda quién, cuándo y cómo
+            viene el pago; a la derecha los menús y el monto. En una columna
+            medía 910px. */}
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Campo etiqueta="Fecha" ancho><input type="date" {...campo('fecha')} className={ENTRADA} /></Campo>
           <Campo etiqueta="Nombre" ancho>
@@ -375,9 +380,10 @@ export default function ReservaForm({
           )}
         </div>
 
+        <div className="lg:mt-4">
         {/* Los menús, con un contador cada uno. Las personas salen de acá:
             no hay un campo aparte que pueda no calzar. */}
-        <div className="mt-5 border-t border-hueso/10 pt-4">
+        <div className="mt-5 border-t border-hueso/10 pt-4 lg:mt-0 lg:border-t-0 lg:pt-0">
           <div className="flex items-baseline justify-between">
             <span className="text-xs uppercase tracking-wide text-hueso/60">Menús</span>
             <span className="text-sm">
@@ -445,6 +451,8 @@ export default function ReservaForm({
               así que el monto queda en blanco salvo que lo escribas.</>
             )}
           </p>
+        </div>
+        </div>
         </div>
         {pideMotivo && (
           <label className="mt-4 block rounded border border-ambar/50 p-3 text-[13px]

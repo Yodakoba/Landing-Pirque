@@ -50,7 +50,7 @@ export function BotonVerComo() {
     <>
       <button type="button" onClick={() => setAbierto(true)} className="tecla boton">👁 Ver como…</button>
       {abierto && (
-        <Dialogo titulo="Ver el panel como otro rol" onCerrar={() => setAbierto(false)}>
+        <Dialogo titulo="Ver el panel como otro rol" onCerrar={() => setAbierto(false)} ancho="max-w-lg lg:max-w-4xl">
           <p className="mt-3 text-[15px] text-hueso/85">
             Mira el panel tal como lo ve esa cuenta: su menú, sus pantallas y sus botones. Vuelves con
             un toque a administrador.
@@ -65,7 +65,8 @@ export function BotonVerComo() {
               </AyudaCorta>
             </p>
           </div>
-          <div className="mt-4 grid gap-2">
+          {/* En el computador, los roles en dos columnas: en una medía 903px. */}
+          <div className="mt-4 grid gap-2 lg:grid-cols-2">
             {ROLES.map(({ rol, icono }) => (
               <button key={rol} type="button" disabled={!!cambiando}
                 onClick={() => { setCambiando(rol); void cambiar(rol).finally(() => setCambiando('')); }}

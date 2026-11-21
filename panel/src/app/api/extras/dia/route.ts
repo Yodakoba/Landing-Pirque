@@ -71,7 +71,9 @@ export const PUT = conLecturas([], async function PUT(req: Request) {
     await anotar({ ...(await quienEs(req)),
       accion: guarda.motivo ? 'Corrigió las actividades de un día cerrado'
                             : 'Cambió las actividades de un día',
-      detalle: `${fecha} · ` + (guarda.motivo ? `motivo: ${guarda.motivo} · ` : '') +
+      // Desde el 2026-11-21 lo que llega de la ventana del día es la lista de
+      // cambios que arma el panel (`lib/correccion.ts`), no un motivo escrito.
+      detalle: `${fecha} · ` + (guarda.motivo ? `cambios: ${guarda.motivo} · ` : '') +
                `${delDia.length} actividades · ` +
                delDia.map((e) => `${e.colaborador} (${e.actividad || 'sin actividad'})`)
                  .join(', ') });

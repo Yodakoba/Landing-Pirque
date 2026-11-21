@@ -333,11 +333,15 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
   /** El detalle de la persona abierta: lo que antes era toda la página. */
   const detalle = hay ? (
-    <div className="space-y-5">
+    // **En el computador ancho, dos columnas** (2026-11-21, regla *una tarjeta
+    // abierta cabe en una pantalla*): a la izquierda cuánto le toca, el botón
+    // de pagarle y el detalle; a la derecha, cómo se le paga. Apilada, la
+    // ficha medía 740px y la página dejaba un tercio de la pantalla vacío.
+    <div className="space-y-5 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start xl:gap-x-5 xl:gap-y-3 xl:space-y-0">
           {/* **El trato de un socio que agregó un vendedor** (2026-11-20):
               ya rige con el de partida; pagos lo mira y lo confirma. */}
           {datos.ficha?.porConfirmar && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed border-ambar-fuerte/70 bg-ambar/10 p-3">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-dashed border-ambar-fuerte/70 bg-ambar/10 p-3 xl:col-span-2">
               <p className="min-w-[12rem] flex-1 text-[15px]">
                 <b className="text-ambar-texto">⚠ Trato por confirmar.</b>{' '}
                 Lo agregó {datos.ficha.porConfirmar.split(' · ')[1] || 'un vendedor'} con el trato de partida.
@@ -350,12 +354,13 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             </div>
           )}
           {!datos.formaDePago && (
-            <p className="rounded-xl border-2 border-ambar-fuerte/70 bg-ambar/10 p-3 text-[15px]">
+            <p className="rounded-xl border-2 border-ambar-fuerte/70 bg-ambar/10 p-3 text-[15px] xl:col-span-2">
               <b className="text-ambar-texto">Todavía no está escrito cómo se le paga.</b>{' '}
               {datos.puedeEditar ? 'Apreta Cambiar el trato, abajo: sin eso no hay montos.' : 'Pídeselo a quien hace los pagos: sin eso no hay montos.'}
             </p>
           )}
 
+          <div className="space-y-5 xl:min-w-0 xl:space-y-3">
           {/* 3. Cuánto: tres azulejos; el desglose va en una línea. */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Azulejo grande ayuda="vendLeToca" que={tu ? 'Te toca' : 'Le toca'} monto={r.total} tono="border-oro/40 bg-oro/[0.07] text-oro"
@@ -452,8 +457,9 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
             </div>
           </div>
 
+          </div>
           {/* 6. Cómo se le paga: se lee en una frase; se cambia en su ventana. */}
-          <section className="space-y-3 rounded-2xl border-2 border-hueso/15 bg-panel p-4">
+          <section className="space-y-3 rounded-2xl border-2 border-hueso/15 bg-panel p-4 xl:min-w-0 xl:p-3">
             <div>
               <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-widest text-hueso/65">
                 {tu ? 'Cómo se te paga' : 'Cómo se le paga'}<AyudaCorta tema="vendEtapas" />
@@ -539,14 +545,19 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
           {/* La ventana del trato: filas de − y +, se guarda solo. */}
           {ventana === 'trato' && ficha && (
-            <Dialogo titulo={`El trato de ${datos.nombre}`} onCerrar={() => { void fichas.forzar(); setVentana(''); }} ancho="max-w-xl">
-              <div className="space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+            <Dialogo titulo={`El trato de ${datos.nombre}`} onCerrar={() => { void fichas.forzar(); setVentana(''); }}
+              ancho="max-w-xl lg:max-w-6xl">
+              {/* **En el computador, dos columnas** (2026-11-21, regla *una
+                  tarjeta abierta cabe en una pantalla*): las etapas a la
+                  izquierda, cada una en una fila, y el bono y el socio a la
+                  derecha; debajo, los montos y la base. Apilado medía 979px. */}
+              <div className="space-y-5 lg:grid lg:grid-cols-[7fr_5fr] lg:items-start lg:gap-x-10 lg:gap-y-3 lg:space-y-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 lg:col-span-2">
                   <p className="text-[14px] text-hueso/75">Se guarda solo. Vale para lo que se pague desde hoy.</p>
                   <AvisoGuardado estado={estado} error={falla} onReintentar={() => fichas.reintentar(datos.usuario)} />
                 </div>
 
-                <div>
+                <div className="lg:row-span-2">
                   <p className="flex items-center gap-1.5 text-[15px] font-bold">Comisión por personas del evento <AyudaCorta tema="vendEtapas" /></p>
                   <div className="mt-2 space-y-2">
                     {([
@@ -564,7 +575,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 lg:contents lg:space-y-0">
                   <div>
                     <p className="flex items-center gap-1.5 text-[15px] font-bold">Bono en menús premium <AyudaCorta tema="vendBono" /></p>
                     {/* En la misma caja y la misma columna que las etapas
@@ -617,7 +628,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
 
                 {/* Lo del socio que se confirma: el nombre y desactivarlo (reglas 6 y 8). */}
                 {esSocio && (
-                  <div className="space-y-3 border-t border-hueso/15 pt-4">
+                  <div className="space-y-3 border-t border-hueso/15 pt-4 lg:col-span-2 lg:pt-3">
                     <label className="block text-[15px] font-bold">
                       Nombre del socio
                       <input className={ENTRADA} value={nombreEscrito ?? datos.nombre} onChange={(e) => setNombreEscrito(e.target.value)} />
@@ -643,7 +654,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
                   </div>
                 )}
 
-                <div className="flex justify-end">
+                <div className="flex justify-end lg:col-span-2">
                   <button type="button" className="boton !min-h-[44px] !text-[15px]" onClick={() => { void fichas.forzar(); setVentana(''); }}>Listo</button>
                 </div>
               </div>
@@ -699,7 +710,7 @@ export default function ResumenVendedor({ esVendedor }: { esVendedor: boolean })
   const cuantos = { vendedores: datos.vendedores?.length ?? 0, socios: datos.socios?.length ?? 0 };
 
   return (
-    <div className="max-w-4xl space-y-5 lg:space-y-3">
+    <div className="max-w-4xl space-y-5 lg:space-y-3 xl:max-w-none">
       <div>
         <h1 className="text-xl font-bold uppercase tracking-wide">{esVendedor ? 'Mi resumen' : 'Vendedores y socios'}</h1>
         <AvisoFijo clave="vendedores-comision" className="mt-1">La comisión cuenta cuando el cliente terminó de pagar y el encargado de pagos lo revisó.</AvisoFijo>

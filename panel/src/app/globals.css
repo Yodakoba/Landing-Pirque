@@ -412,6 +412,12 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
  * mide lo mismo en todas las filas, así que los campos y los botones de
  * todas parten en la misma vertical. En un teléfono, el nombre va arriba.
  */
+/* Los cuatro tipos de un comentario (`FormularioComentario`): en una fila
+   cuando su caja da el ancho, para que la ventana entre en la pantalla del
+   computador. Va por el ancho de la caja y no de la pantalla, porque el
+   mismo formulario se abre desde la ayuda en una ventana angosta. */
+@container (min-width: 40rem) { .tipos-en-fila { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
 .fila-ficha { display: grid; gap: .5rem .75rem; align-items: start; }
 @media (min-width: 640px) {
   .fila-ficha { grid-template-columns: 11rem minmax(0, 1fr); }

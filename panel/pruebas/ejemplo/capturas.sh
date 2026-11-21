@@ -87,7 +87,7 @@ fi
 # notebook de 1280×650 (`pruebas/ventanas.mjs`, `npm run ventanas`).
 if [ "${1:-}" = "--ventanas" ]; then
   shift
-  AYUDA_URL="http://localhost:$PUERTO" AYUDA_SESIONES="$W/sesiones.json" \
+  AYUDA_URL="http://localhost:$PUERTO" AYUDA_SESIONES="$W/sesiones.json" AYUDA_RELOJ="$RELOJ" \
     node pruebas/ventanas.mjs "$@"
   exit $?
 fi

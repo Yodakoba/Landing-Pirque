@@ -37,38 +37,27 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { revisarAlineacion } from './alineacion.mjs';
+import { revisarPlayStation } from './playstation.mjs';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
 const URL_PANEL = process.env.AYUDA_URL ?? 'http://localhost:3125';
 const SESIONES = JSON.parse(fs.readFileSync(process.env.AYUDA_SESIONES ?? 'sesiones.json', 'utf8'));
-const ANCHO = 1280, ALTO = 650;
+// `VENTANAS_ANCHO` y `VENTANAS_ALTO` sirven para medir en otra pantalla —un
+// teléfono, por ejemplo, para comprobar que un cambio "solo del computador" no
+// movió nada ahí—. Las reglas de la prueba se miran siempre a 1280×650.
+const ANCHO = Number(process.env.VENTANAS_ANCHO) || 1280, ALTO = Number(process.env.VENTANAS_ALTO) || 650;
+const SOLO_MEDIR = !!process.env.VENTANAS_ANCHO;
 
 /**
  * Lo que hoy no cabe en 1280×650, con cuánto mide. **Solo puede bajar.**
- * (La ventana de cotizar y las fichas largas son las que quedan.)
+ * El 2026-11-21 partió con 21 y quedaron dos, las dos de la ventana del
+ * equipo del día, que crece con lo que tenga abierto o con las reservas.
  */
 export const NO_CABEN = {
-  'ficha-cliente': 692,
-  'ficha-producto': 788,
-  'ficha-vendedor': 740,
-  'v-reserva-nueva': 918,
-  'v-fecha-nueva': 625,
-  'v-equipo-del-dia': 1280,
-  'v-equipo-del-dia-con-ajuste': 1506,
-  'v-equipo-del-dia-reservas': 1178,
-  'v-dia-cerrado': 1100,
-  'v-ficha-trabajador': 619,
-  'v-trabajador-nuevo': 613,
-  'v-propina': 1014,
-  'v-cotizar-2-evento': 815,
-  'v-cotizar-3-productos': 1425,
-  'v-cotizar-4-envio': 1978,
-  'v-cotizar-5-contrato': 1573,
-  'v-pago': 629,
-  'v-vendedor-nuevo': 878,
-  'v-trato': 987,
-  'v-ver-como': 911,
-  'v-comentar': 670,
+  // El formulario de un ajuste abierto dentro de la línea de una persona.
+  'v-equipo-del-dia-con-ajuste': 846,
+  // La cara de reservas es una lista: crece con las reservas del día.
+  'v-equipo-del-dia-reservas': 859
 };
 
 /** Hallazgos de alineación que se aceptan, con el porqué. Hoy, ninguno. */
@@ -76,8 +65,12 @@ export const ALINEACION_ACEPTADA = {
 };
 
 const b = await chromium.launch();
-const ctx = await b.newContext({ viewport: { width: ANCHO, height: ALTO } });
+const ctx = await b.newContext({ viewport: { width: ANCHO, height: ALTO },
+  timezoneId: 'America/Santiago', locale: 'es-CL' });
 await ctx.addCookies([{ name: 'sesion', value: SESIONES.admin, url: URL_PANEL }]);
+// El reloj del navegador, a la misma hora que el servidor de ejemplo: si no,
+// "hoy" es un día para el servidor y otro para la página, y React avisa.
+await ctx.clock.install({ time: new Date(process.env.AYUDA_RELOJ ?? '2026-11-13T17:25:00Z') });
 const p = await ctx.newPage();
 p.setDefaultTimeout(8000);
 
@@ -129,8 +122,12 @@ export const ESCENAS = {
     await diaDe('/turnos', /11 de noviembre/); await lineaDelDia();
     await clic(ventana().getByRole('button', { name: /Descontar/ }));
   },
-  'v-equipo-del-dia-reservas': async () => { await diaDe('/turnos', /11 de noviembre/); await clic(ventana().locator('button', { hasText: 'Reservas' })); },
+  'v-equipo-del-dia-reservas': async () => { await diaDe('/turnos', /11 de noviembre/); await clic(ventana().locator('button:visible', { hasText: 'Reservas' })); },
   'v-dia-cerrado': async () => { await diaDe('/turnos', /(^|\D)7 de noviembre/); },
+  'v-dia-cerrado-corrigiendo': async () => {
+    await diaDe('/turnos', /(^|\D)7 de noviembre/);
+    await clic(ventana().getByRole('button', { name: 'Corregir este día' }));
+  },
   'v-ficha-trabajador': async () => { await diaDe('/turnos', /11 de noviembre/); await lineaDelDia(); await clic(ventana().getByRole('button', { name: 'Ficha' })); },
   'v-trabajador-nuevo': async () => { await diaDe('/turnos', /11 de noviembre/); await clic(ventana().getByRole('button', { name: /Nuevo trabajador/ })); },
   'v-propina': async () => { await ir('/dia/2026-11-14'); await clic(boton(/propina/i)); },
@@ -146,6 +143,10 @@ export const ESCENAS = {
   'v-cotizar-2-evento': () => cotizacion(/Evento/),
   'v-cotizar-3-productos': () => cotizacion(/Productos/),
   'v-cotizar-4-envio': () => cotizacion(/Envío/),
+  'v-cotizar-4-factura': async () => {
+    await cotizacion(/Envío/);
+    await clic(ventana().getByRole('button', { name: /datos de facturación/ }));
+  },
   'v-cotizar-5-contrato': () => cotizacion(/Contrato/),
   // Informe.
   'v-pago': async () => { await personaDelInforme(); await clic(boton(/Pago parcial/)); },
@@ -158,7 +159,11 @@ export const ESCENAS = {
   // Administración.
   'v-clave': async () => { await ir('/usuarios'); await clic(boton('Cambiar', true)); },
   'v-ver-como': async () => { await ir('/usuarios'); await clic(boton(/Ver como/)); },
-  'v-base-en-cero': async () => { await ir('/config'); await clic(boton(/Ver qué se borra/)); },
+  'v-base-en-cero': async () => {
+    await ir('/config'); await clic(boton(/Ver qué se borra/));
+    // Cuenta las filas de la planilla antes de mostrar la lista: se espera a que llegue.
+    await ventana().getByText('Se borra').waitFor({ timeout: 15000 });
+  },
   'v-comentar': async () => { await ir('/'); await clic(boton(/Coméntame/)); }
 };
 
@@ -189,9 +194,28 @@ for (const [nombre, abrir] of Object.entries(ESCENAS)) {
     console.log(`  ?      ${nombre}: no se pudo abrir (${String(e.message).split('\n')[0].slice(0, 90)})`);
     continue;
   }
+  // Lo que se carga al abrir (las reservas de un día) tiene que haber llegado:
+  // medir un "Cargando…" daría una ventana corta que no es.
+  await p.locator('[role=dialog]').last().getByText(/^Cargando/).first()
+    .waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
   const m = await medir();
+  // Con `VENTANAS_FOTOS=<carpeta>` deja una foto de cada escena. Una ventana
+  // que no cabe se fotografía entera: se alarga la pantalla lo que haga falta
+  // para la foto y se devuelve a su alto (el ancho, que es el que decide el
+  // diseño, no cambia).
+  if (process.env.VENTANAS_FOTOS) {
+    fs.mkdirSync(process.env.VENTANAS_FOTOS, { recursive: true });
+    const foto = `${process.env.VENTANAS_FOTOS}/${nombre}.png`;
+    if (m.que === 'ventana') {
+      await p.setViewportSize({ width: ANCHO, height: Math.max(ALTO, m.mide + 24) });
+      await p.waitForTimeout(150);
+      await p.screenshot({ path: foto });
+      await p.setViewportSize({ width: ANCHO, height: ALTO });
+    } else await p.screenshot({ path: foto, fullPage: true });
+  }
   const corridos = (await revisarAlineacion(p)).filter((x) => !(ALINEACION_ACEPTADA[nombre] ?? []).some((a) => x.includes(a)));
   medidas[nombre] = m.mide;
+  if (SOLO_MEDIR) { console.log(`  medida  ${nombre}: ${m.que} de ${m.mide}px`); continue; }
   const anotada = NO_CABEN[nombre];
   const problemas = [];
   if (!m.cabe && anotada === undefined) problemas.push(`no cabe en ${ANCHO}×${ALTO}: mide ${m.mide}px`);
@@ -199,8 +223,15 @@ for (const [nombre, abrir] of Object.entries(ESCENAS)) {
   if (m.cabe && anotada !== undefined) bajaron.push(`${nombre}: ya cabe (${m.mide}px). Sácala de NO_CABEN.`);
   if (!m.cabe && anotada !== undefined && m.mide < anotada - 4) bajaron.push(`${nombre}: bajó de ${anotada} a ${m.mide}px. Anótalo en NO_CABEN.`);
   for (const c of corridos) problemas.push(c);
+  // Con `VENTANAS_PLAYSTATION=1` dice además lo que `revisarPlayStation()`
+  // encuentra en esa escena (letra bajo 13px, botones bajo 34px, desborde).
+  // No hace fallar: es para mirarlo al cerrar un cambio. El `?` chico no se
+  // lista: se ve de 24px y se aprieta en 36.
+  const ps = process.env.VENTANAS_PLAYSTATION
+    ? (await revisarPlayStation(p)).filter((x) => !/: "\?"$/.test(x)) : [];
   const marca = problemas.length ? 'FALLA ' : !m.cabe ? 'anotada' : 'ok     ';
   console.log(`  ${marca} ${nombre}: ${m.que} de ${m.mide}px${m.cabe ? '' : ' · no cabe'}${problemas.length ? '\n           · ' + problemas.join('\n           · ') : ''}`);
+  for (const x of ps) console.log(`           (PlayStation) ${x}`);
   if (problemas.length) fallas.push(nombre);
 }
 await b.close();
@@ -214,6 +245,6 @@ if (sinAbrir.length) {
 if (fallas.length) {
   console.log(`\n${fallas.length} con fallas: ${fallas.join(', ')}.`);
   process.exitCode = 1;
-} else if (!sinAbrir.length) {
+} else if (!sinAbrir.length && !SOLO_MEDIR) {
   console.log('\nTodo bien: lo que cabía sigue cabiendo y los campos están alineados.');
 }
