@@ -1322,9 +1322,11 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   nada**: el panel acepta la firma y descarta los pedidos del sitio viejo
   porque no traen `_booking_date`, sin escribir en la planilla. Desde ahí
   los webhooks de la tienda de desarrollo reciben 401 en producción, que es
-  lo correcto. **Un aviso descartado no escribe nada en los registros de
-  Vercel**: el 200 solo se ve abriendo la fila, y la primera después de un
-  despliegue aparece por el aviso `DEP0169` de Node al arrancar.
+  lo correcto. **Hasta el merge, un aviso descartado no escribe nada en los
+  registros de Vercel**: el 200 se ve en Observability → Functions →
+  `/api/shopify/webhook`, o abriendo la fila de Logs. **Desde el merge**
+  deja la línea `descartado, sin fecha de reserva` con el número del pedido,
+  y ya no lee la planilla para descartarlo (ver `panel/CLAUDE.md`).
 - **Mergear ese PR es del camino *con prueba***: desde el merge,
   `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
   El orden: primero las variables de Production del panel —`SHOPIFY_CLIENT_ID`

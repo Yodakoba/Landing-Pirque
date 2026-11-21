@@ -125,6 +125,14 @@ entregan un Client ID y un Client secret, y con ellos se pide un token que
 - **Un 401 olvida el token pedido**, para que la próxima llamada pida otro.
   **`shop_not_permitted`** —la app y la tienda no son de la misma
   organización de Shopify— se dice con palabras en el error.
+- **El webhook mira la fecha antes de leer la planilla** (mismo PR): un
+  pedido sin `_booking_date` —los del sitio viejo— se descarta sin gastar
+  lecturas de Google, y deja en los registros de Vercel `[webhook]
+  orders/create pedido #1234: descartado, sin fecha de reserva`, con el
+  número y nunca datos del cliente. Antes leía *Menús* primero (se vio en
+  Observability: lecturas de Google en una ruta que descartaba todo) y no
+  dejaba rastro: un pedido del sitio que llegara sin fecha habría
+  desaparecido en silencio. Lo fija `npm run webhook`.
 - **Lo usan la revisión diaria y *Revisar Shopify ahora***
   (`/api/shopify/sincronizar`). **Los webhooks no**: se firman con el
   secreto de Notificaciones y no dependen de ninguna app.
@@ -256,7 +264,8 @@ prueba**, y falla antes del PR:
 |---|---|
 | `npm run lecturas` | **Cuántas lecturas de Google gasta cada ruta** que abre una pantalla (`pruebas/lecturas/`). Cada ruta se llama en Node contra un Google falso que cuenta las consultas, y tiene su tope en `TOPE`: hoy todas caben en **una** tanda (Productos, dos). Si un cambio se pasa, se junta la lectura nueva en la tanda de la ruta, o se sube el tope a propósito y el PR lo dice. Comprobado rompiéndolo: con tope 0 la ruta falla y nombra lo que leyó |
 | `npm run letra-chica` | **Que nadie sume letra bajo 13px** (`text-xs`, `text-[9px]` a `text-[12px]`). Lo que ya había —80 en 22 archivos— quedó anotado en `HABIA` como punto de partida: solo puede bajar, y cuando baja la prueba pide anotarlo |
-| `npm run revisar` | Las dos de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
+| `npm run webhook` | **El webhook de Shopify** (`pruebas/webhook.mjs`, 2026-11-21): sin firma o con la de otra tienda, 401; un pedido sin `_booking_date` se descarta **sin gastar lecturas** y deja la línea `descartado` con su número y sin datos del cliente; uno con fecha se anota. Comprobado rompiéndolo: contra la ruta de antes falla (gastaba 2 lecturas y no dejaba línea) |
+| `npm run revisar` | Las de arriba más los tipos y las pruebas de lógica: **lo que se corre antes de cada PR** |
 
 Y para la pasada con Playwright, **`revisarPlayStation(page)`** de
 `pruebas/playstation.mjs`: devuelve la letra bajo 13px, los botones bajo
