@@ -499,7 +499,7 @@ function LineaPersona({
                    lg:py-1.5">
         <SignoAbrir abierta={abierta} tamano="mt-0.5 h-6 w-6 text-[14px] sm:h-7 sm:w-7 lg:mt-0 lg:h-6 lg:w-6" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[16px] font-bold leading-tight sm:text-[17px] lg:truncate lg:text-[15px]">{nombre}</span>
+          <span className="block break-words text-[16px] font-bold leading-tight sm:text-[17px] lg:text-[15px]">{nombre}</span>
           {/* **Falta su cuenta, como aviso y no como botón** (2026-11-21, lo
               pidió el cliente): la misma pastilla fina de Vendedores, Equipo y
               Extras, en el renglón del detalle. Antes iba en el lugar de los
@@ -922,7 +922,7 @@ function ConfirmarTodos({ cual, periodo, entran, fuera, total, onGuardar, onCanc
       <ul className="divide-y-2 divide-hueso/10 rounded-xl border-2 border-hueso/15">
         {entran.map(({ nombre, o }) => (
           <li key={nombre} className="flex items-center justify-between gap-3 px-3 py-2 text-[15px]">
-            <span className="min-w-0 truncate">{nombre}
+            <span className="min-w-0 break-words">{nombre}
               {o.concepto === CONCEPTO.servicio && (
                 <span className="text-[13px] text-hueso/60"> · servicio</span>
               )}

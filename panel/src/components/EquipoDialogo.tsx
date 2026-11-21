@@ -743,9 +743,12 @@ export default function EquipoDialogo({
                        propina, total, ficha y sacar—, **una a la vez**,
                        igual que las fichas de `/equipo`.
 
-                       El nombre se recorta (`truncate`) en vez de envolver,
-                       así que los dos botones quedan siempre en el mismo
-                       lugar, se llame como se llame. */
+                       **El nombre se dobla en vez de cortarse** (2026-11-21,
+                       lo decidió el cliente: *"se doblan en vez de
+                       cortarse"*). Se recortaba con "…" para que los dos
+                       botones no se movieran: *Matías P…* no dice quién es.
+                       Los botones siguen en su lugar —el nombre ocupa lo que
+                       sobra— y la línea crece un renglón si hace falta. */
                     <li key={nombre}
                       className={marcoTarjeta(abierta, t?.asistencia === VINO.si ? 'verde'
                         : t?.asistencia === VINO.no ? 'rojo' : 'normal', true, true)}>
@@ -757,7 +760,7 @@ export default function EquipoDialogo({
                                      rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
                           <SignoAbrir abierta={abierta} tamano="h-6 w-6 text-[14px]" />
                           <span className="min-w-0">
-                            <span className={`block truncate text-[15px] font-semibold lg:whitespace-normal lg:leading-tight ${
+                            <span className={`block break-words text-[15px] font-semibold leading-tight ${
                               t?.asistencia === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                               {nombre}
                             </span>
@@ -783,7 +786,7 @@ export default function EquipoDialogo({
                               if (repartida[i]?.propina) partes.push(`propina ${enPesos(repartida[i].propina)}`);
                               if (!partes.length) return null;
                               return (
-                                <span className={`block truncate text-[13px] lg:whitespace-normal lg:leading-tight ${
+                                <span className={`block text-[13px] leading-tight ${
                                   !conAsistencia && !t?.asistencia ? 'text-ambar-texto' : 'text-hueso/65'}`}>
                                   {/* Se dobla solo entre un dato y el otro: *propina
                                       $14.438* nunca queda con el monto abajo. */}

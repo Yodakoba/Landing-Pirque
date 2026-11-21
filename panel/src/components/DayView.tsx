@@ -1141,7 +1141,7 @@ export default function DayView(
                               ${abierta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
                   <SignoAbrir abierta={abierta} />
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-[16px] font-bold ${libera ? 'line-through' : ''}`}>
+                    <span className={`block break-words text-[16px] font-bold leading-tight ${libera ? 'line-through' : ''}`}>
                       {r.nombre || <span className="text-hueso/50">sin nombre</span>}
                     </span>
                     {/* **≠ Acordado** (2026-11-20): viene de una cotización con

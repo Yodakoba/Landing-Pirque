@@ -180,7 +180,7 @@ export default function RectificarReserva({
               {opciones.map((nombre) => (
                 <li key={nombre} className={`flex items-center gap-2 rounded-xl border-2 px-2 py-1 ${
                   (cuenta[nombre] ?? 0) > 0 ? 'border-oro/50 bg-oro/5' : 'border-hueso/15'}`}>
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{nombre}</span>
+                  <span className="min-w-0 flex-1 break-words text-[15px] font-semibold leading-tight">{nombre}</span>
                   <button type="button" aria-label={`Uno menos de ${nombre}`} className="boton h-10 w-10 justify-center text-[18px]"
                     onClick={() => mover(nombre, -1)}>−</button>
                   <span className="w-8 text-center text-[17px] font-bold tabular-nums">{cuenta[nombre] ?? 0}</span>

@@ -251,9 +251,9 @@ export function AjustesDelDia({ ajustes, quien, onCambio }: {
               {resta ? 'Descuento' : 'Suma'}
             </span>
             <span className="shrink-0 text-[15px] font-bold tabular-nums">{enPesos(Math.abs(a.monto))}</span>
-            {/* En el computador la tarjeta es más angosta (tres columnas): el
-                motivo se dobla en vez de cortarse. */}
-            <span className="min-w-0 flex-1 truncate text-[13px] text-hueso/70 lg:whitespace-normal lg:leading-tight">{texto && `· ${texto}`}</span>
+            {/* El motivo se dobla en vez de cortarse, en el computador y en el
+                celular (2026-11-21). */}
+            <span className="min-w-0 flex-1 break-words text-[13px] leading-tight text-hueso/70">{texto && `· ${texto}`}</span>
             <span aria-hidden className="shrink-0 text-[13px] font-semibold text-hueso/55">✎</span>
           </button>
         );

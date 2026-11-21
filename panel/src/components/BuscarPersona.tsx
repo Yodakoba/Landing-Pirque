@@ -107,7 +107,7 @@ export default function BuscarPersona({ opciones, onElegir, etiqueta, ancho = 'w
             <button type="button" onClick={() => elegir(o.nombre)}
               className="tecla flex min-h-[44px] w-full items-center justify-between gap-2
                          rounded-lg px-2.5 text-left hover:bg-oro/10">
-              <span className="truncate text-[15px] font-semibold">{o.nombre}</span>
+              <span className="min-w-0 break-words py-1 text-[15px] font-semibold leading-tight">{o.nombre}</span>
               {o.detalle && (
                 <span className="shrink-0 text-[13px] text-hueso/60">{o.detalle}</span>
               )}

@@ -242,12 +242,12 @@ export default function RecepcionVista() {
                             ${abiertaEsta ? 'bg-oro/10' : 'hover:bg-hueso/5'}`}>
                 <SignoAbrir abierta={abiertaEsta} tamano="h-8 w-8 text-[17px]" />
                 <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-[18px] font-bold ${noVino ? 'line-through opacity-70' : ''}`}>
+                  <span className={`block break-words text-[18px] font-bold leading-tight ${noVino ? 'line-through opacity-70' : ''}`}>
                     {r.nombre || 'Sin nombre'}
                   </span>
                   {(r.menu || r.ingreso?.acordado) && (
                     <span className="flex min-w-0 items-center gap-1.5 text-[14px] text-hueso/70">
-                      {r.menu && <span className="truncate">{r.menu}</span>}
+                      {r.menu && <span className="min-w-0 break-words">{r.menu}</span>}
                       {/* Precios negociados en su cotización (2026-11-20). La
                           anfitriona no recibe lo acordado, así que no la ve. */}
                       <MarcaAcordado ingreso={r.ingreso} />

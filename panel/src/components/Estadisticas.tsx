@@ -73,7 +73,7 @@ function ListaBarras({ titulo, ayuda, bajada, filas }: {
           {filas.map((f) => (
             <li key={f.nombre}>
               <div className="flex items-baseline justify-between gap-3 text-[14px]">
-                <span className="min-w-0 truncate">{f.nombre}</span>
+                <span className="min-w-0 break-words">{f.nombre}</span>
                 <span className="shrink-0 font-semibold tabular-nums">{f.texto}</span>
               </div>
               <div className="mt-1 h-2 w-full rounded-full bg-hueso/10" aria-hidden>

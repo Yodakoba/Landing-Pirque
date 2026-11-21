@@ -209,13 +209,13 @@ export default function ExtrasDialogo({
                                rounded-lg px-1 text-left hover:bg-hueso/5 sm:gap-2 sm:px-1.5">
                     <SignoAbrir abierta={abierta} tamano="h-6 w-6 text-[14px]" />
                     <span className="min-w-0">
-                      <span className={`block truncate text-[15px] font-semibold ${
+                      <span className={`block break-words text-[15px] font-semibold leading-tight ${
                         e.estado === VINO.no ? 'text-hueso/45 line-through' : ''}`}>
                         {e.colaborador}
                       </span>
                       {/* Qué hace y, si vino, cuánto: el estado ya lo dicen
                           los botones de al lado (ver la ventana del equipo). */}
-                      <span className="block truncate text-[13px] text-hueso/65">
+                      <span className="block break-words text-[13px] leading-tight text-hueso/65">
                         {e.actividad || 'sin actividad'}
                         {e.estado === VINO.si && <> · {enPesos(costoDeExtra(e))}</>}
                         {ajustesDe(e).length > 0 && <> · {ajustesDe(e).length} {ajustesDe(e).length === 1 ? 'ajuste' : 'ajustes'}</>}
