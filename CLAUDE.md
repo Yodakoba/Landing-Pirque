@@ -1311,7 +1311,9 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   `SHOPIFY_CLIENT_SECRET` pide el token solo, lo guarda hasta cinco minutos
   antes de que venza, y esas dos mandan sobre `SHOPIFY_ADMIN_TOKEN`. Van
   **solo en Production**: Preview sigue con el token fijo de la tienda de
-  desarrollo.
+  desarrollo. **Comprobado el 2026-11-21** con las credenciales de verdad,
+  desde el computador del cliente: el token sale y un pedido real responde
+  con nombre, apellido, correo y teléfono.
 - **Mergear ese PR es del camino *con prueba***: desde el merge,
   `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
   El orden: primero las variables de Production del panel —`SHOPIFY_DOMINIO`

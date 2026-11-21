@@ -139,6 +139,15 @@ entregan un Client ID y un Client secret, y con ellos se pide un token que
   secreto. **Contra la tienda real se comprueba en Production** con *Revisar
   Shopify ahora*: desde este entorno `lo-pirque.myshopify.com` está
   bloqueado, y el secreto no pasa por el chat.
+- **Comprobado contra la tienda real el 2026-11-21**, desde el computador
+  del cliente con `curl` y las mismas credenciales: el token sale, y un
+  pedido real del sitio viejo responde 200 con nombre, apellido, correo y
+  teléfono. O sea: la app es de la organización de la tienda, tiene
+  `read_orders` y el permiso de datos protegidos.
+- **La trampa de ese día**: un secreto pegado en un campo que no muestra lo
+  que se escribe se pega dos o cuatro veces sin que se note, y Shopify
+  responde *"Missing or invalid client secret"*. El secreto de una app de
+  Shopify empieza con `shpss_` y tiene 38 caracteres.
 
 ## Los ajustes del día: Descontar y Sumar (2026-11-20)
 
