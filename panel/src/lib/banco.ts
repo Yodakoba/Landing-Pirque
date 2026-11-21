@@ -187,3 +187,31 @@ export function rutLimpio(rut: string): string {
   const m = crudo.match(/^(\d{7,8})-?([\dK])$/);
   return m ? `${m[1]}-${m[2]}` : String(rut ?? '').trim();
 }
+
+/**
+ * **El RUT como lo pide el formulario del banco**: con puntos y guion,
+ * `12.345.678-9` (2026-11-21, lo pidió el cliente con una captura del
+ * formulario de *nuevo destinatario*, que muestra `00.000.000-0`).
+ *
+ * Se guarda sin puntos (`rutLimpio()`), que es lo que sirve para comparar;
+ * los puntos se ponen solo al copiar y en las planillas. Lo que no parece un
+ * RUT sale tal cual: mejor ver lo escrito que una celda vacía.
+ */
+export function rutConPuntos(rut: string): string {
+  const limpio = rutLimpio(rut);
+  const m = limpio.match(/^(\d{7,8})-([\dK])$/);
+  if (!m) return limpio;
+  return `${m[1].replace(/\B(?=(\d{3})+$)/g, '.')}-${m[2]}`;
+}
+
+/**
+ * **El número de cuenta, solo con dígitos** (`0000000000` en el formulario
+ * del banco): sin guiones, puntos ni espacios, que es como se escribe a
+ * veces copiándolo de una cartola. **Los ceros de adelante se quedan**:
+ * son parte del número. Si no trae ningún dígito sale tal cual.
+ */
+export function numeroDeCuenta(numero: string): string {
+  const s = String(numero ?? '').trim();
+  const digitos = s.replace(/\D/g, '');
+  return digitos || s;
+}

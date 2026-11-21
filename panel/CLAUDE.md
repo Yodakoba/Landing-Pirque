@@ -4211,8 +4211,8 @@ para quien paga.
 - **Quien no tiene la cuenta completa queda fuera y el aviso lo nombra**,
   en ámbar: una fila a medias suele hacer rechazar el archivo entero.
 - **Las columnas salen del mismo `ORDEN_TRANSFERENCIA` que el botón de
-  copiar** (`filaTransferencia()`): cuando se confirme lo que pide el banco
-  se cambia una vez y vale para los dos.
+  copiar** (`filaTransferencia()`): el orden y los rótulos del formulario
+  del banco (ver *Los datos, como los pide el banco*).
 
 El aviso flotante ganó un segundo tono para esto: **ámbar con "!"** cuando
 no pasó lo esperado —no se descargó nada, quedó alguien fuera—. Un ✓ verde
@@ -4302,19 +4302,50 @@ siguen aparte.
   Lo pagado de cada parte sale de `desglosePago()`, la misma cuenta de la
   pantalla. Sin filas, avisa en vez de bajar un archivo vacío.
 
-#### El orden de los datos copiados todavía no está confirmado
+#### Los datos, como los pide el banco (2026-11-21)
 
-Hoy es **titular, RUT, banco, tipo, número, monto, correo, glosa**, y vive
-en una sola lista, `ORDEN_TRANSFERENCIA` en `remuneraciones.ts`: **cambiarlo
-es mover una línea ahí**. Falta probarlo con el panel del banco del cliente,
-que es lo que dirá el orden en que pega bien campo por campo.
+Lo pidió el cliente con una captura del formulario de *nuevo destinatario*
+que usa el encargado de pagos: *"en las descargas de las planillas de pago
+y en los botones cuando se copian los datos para la transferencia… que los
+recibe en este formato, en este orden"*. Hasta ese día el orden estaba sin
+confirmar —titular, RUT, banco, tipo, número, **monto, correo**, glosa—,
+copiado como una fila separada por tabs y con rótulos propios.
 
-- **El monto va pelado** —`60000`, sin puntos ni signo peso—, que es lo que
-  un formulario de banco acepta pegar.
+| Formulario del banco | Sale como |
+|---|---|
+| Nombre y apellido | el titular de la cuenta, o la persona si está en blanco (`titularDe()`) |
+| RUT | **con puntos y guion**, `12.345.678-9` (`rutConPuntos()`) |
+| Banco | tal cual |
+| Tipo de cuenta | tal cual |
+| Número de cuenta | **solo dígitos**, con sus ceros de adelante (`numeroDeCuenta()`) |
+| E-mail (opcional) | el correo para el comprobante |
+
+Después van **Monto** (pelado, `60000`) y **Glosa**, que el banco pide en el
+paso de transferir. Todo vive en `ORDEN_TRANSFERENCIA`,
+`NOMBRE_COLUMNA_TRANSFERENCIA` y `filaTransferencia()` de
+`remuneraciones.ts`, **que formatea el RUT y el número en un solo lugar**.
+
+- **Copiar** da un dato por línea con el rótulo del banco, y el monto y la
+  glosa aparte, después de una línea en blanco. Sin correo no va su línea.
+  **Es el formato en que se mandan los datos de transferencia en Chile**, el
+  que las apps de los bancos reconocen al *pegar datos*. La fila con tabs
+  suponía que un formulario web pasa de campo con cada tab al pegar, y no lo
+  hace: todo caía en el primer campo.
+- **La planilla para la transferencia masiva** lleva esas ocho columnas,
+  con esos nombres y en ese orden.
+- **Las planillas del informe** (*Solo sueldos*, *Solo propinas*,
+  *Completa*) llevan los seis datos del banco con los mismos rótulos y el
+  mismo formato, y después la *Nota de pago*.
+- **Lo que se guarda no cambió**: el RUT sigue sin puntos en la planilla
+  (`rutLimpio()`), que es lo que sirve para comparar; los puntos se ponen
+  al copiar y al descargar.
 - **La glosa es corta y sin símbolos**: *"Sueldo 26/10 al 01/11"*. La
   primera versión decía *"26 de octubre – 1 de noviembre"*, y los bancos
   cortan la glosa a unos 30 caracteres y varios rechazan el guion largo y
   las tildes.
+- **Ojo con Excel**: al abrir el CSV, un número de cuenta que empieza con
+  cero pierde los ceros de adelante en la celda. El archivo los trae; es
+  Excel el que los saca al mostrarlo como número.
 
 #### La boleta
 

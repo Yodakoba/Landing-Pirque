@@ -260,7 +260,9 @@ export const AYUDAS: Record<string, Ayuda> = {
       'Mira arriba si quedan turnos sin cerrar: mientras los haya, el total '
       + 'está incompleto.',
       'En la línea de cada persona están los botones para copiar su sueldo y '
-      + 'su propina: copian la cuenta y el monto para pegarlos en el banco.',
+      + 'su propina. Copian los datos en el orden del formulario del banco '
+      + '—nombre y apellido, RUT, banco, tipo de cuenta, número de cuenta y '
+      + 'e-mail— y abajo el monto y la glosa.',
       'Si una línea dice ⚠ Por confirmar, alguien que no hace los pagos cambió '
       + 'su cuenta o su tarifa: revísala antes de transferir y aprieta ✓ '
       + 'Confirmar.',
@@ -975,6 +977,7 @@ export const AYUDAS_CORTAS: Record<string, AyudaCorta> = {
     titulo: 'Transferencia masiva',
     texto: [
       'La planilla trae a quien le falta pago y tiene su cuenta completa. "Todos pagados" marca exactamente a esa misma gente.',
+      'Las columnas van con los nombres y en el orden del formulario del banco, con el RUT con puntos, y al final el monto y la glosa.',
       'Sueldos y propinas van por separado: son dos pagos.'
     ]
   },

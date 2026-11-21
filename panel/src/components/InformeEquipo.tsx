@@ -48,11 +48,11 @@ import { normalizar } from '@/lib/columnas';
 import { mesEnPalabras, rangoEnPalabras, enPalabras, enCorto, sumarDias, semanaDe, hoy } from '@/lib/fechas';
 import { aCSV } from '@/lib/csv';
 import { totalAjustes, motivosDe, diasQueNoSuman } from '@/lib/equipo';
-import { bancoVacio, sePuedeTransferir, titularDe, rutLimpio,
+import { bancoVacio, sePuedeTransferir, titularDe,
          type Banco } from '@/lib/banco';
 import { aTransferirDe, desglosePago, CONCEPTO, pideBoleta, pagosEnPeriodo,
          boletaEnPlanilla, textoTransferencia, glosaDe, filaTransferencia,
-         ORDEN_TRANSFERENCIA, NOMBRE_COLUMNA_TRANSFERENCIA,
+         ORDEN_TRANSFERENCIA, NOMBRE_COLUMNA_TRANSFERENCIA, DATOS_DESTINATARIO,
          type PagoEquipo, type Boleta, type Concepto, type Parte,
          type EstadoPago } from '@/lib/remuneraciones';
 import Dialogo from './Dialogo';
@@ -1186,7 +1186,7 @@ export default function InformeEquipo() {
   function copiarTransferencia(quien: string, o: Opcion) {
     const b = cuentaDe(quien);
     const texto = textoTransferencia({
-      titular: titularDe(b, quien), rut: rutLimpio(b.rut), banco: b.banco,
+      titular: titularDe(b, quien), rut: b.rut, banco: b.banco,
       tipo: b.tipo, numero: b.numero, monto: o.parte.falta, correo: b.correo,
       glosa: glosaDe(o.concepto, desde, hasta)
     });
@@ -1208,9 +1208,8 @@ export default function InformeEquipo() {
    * - **Quien no tiene la cuenta completa queda fuera**, y el aviso lo
    *   nombra: una fila con datos a medias suele hacer rechazar el archivo
    *   entero en la carga masiva.
-   * - **Las columnas salen de `ORDEN_TRANSFERENCIA`**, el mismo orden del
-   *   botón de copiar. El orden exacto que pide el banco todavía no está
-   *   confirmado: cuando lo esté, se cambia ahí una vez.
+   * - **Las columnas salen de `ORDEN_TRANSFERENCIA`**, el mismo orden y
+   *   formato del botón de copiar: el del formulario del banco (2026-11-21).
    */
   /**
    * Lo pendiente de un concepto en el periodo, persona por persona: quiénes
@@ -1250,7 +1249,7 @@ export default function InformeEquipo() {
     const filas = entran.map(({ nombre, o }) => {
       const b = cuentaDe(nombre);
       return filaTransferencia({
-        titular: titularDe(b, nombre), rut: rutLimpio(b.rut), banco: b.banco,
+        titular: titularDe(b, nombre), rut: b.rut, banco: b.banco,
         tipo: b.tipo, numero: b.numero, monto: o.parte.falta, correo: b.correo,
         glosa: glosaDe(o.concepto, desde, hasta)
       });
@@ -1385,8 +1384,11 @@ export default function InformeEquipo() {
   const columnasBanco = (nombre: string) => {
     if (!puedePagar) return [];
     const b = cuentaDe(nombre);
-    return [titularDe(b, nombre), rutLimpio(b.rut), b.banco, b.tipo,
-            b.numero, b.correo, b.nota];
+    // El mismo formato del botón de copiar y del formulario del banco:
+    // RUT con puntos y el número de cuenta solo con dígitos.
+    const f = filaTransferencia({ titular: titularDe(b, nombre), rut: b.rut, banco: b.banco,
+      tipo: b.tipo, numero: b.numero, correo: b.correo, monto: 0, glosa: '' });
+    return [...DATOS_DESTINATARIO.map((k) => f[ORDEN_TRANSFERENCIA.indexOf(k)]), b.nota];
   };
 
   /**
@@ -1436,8 +1438,9 @@ export default function InformeEquipo() {
     const lineaDe = (nombre: string) => lineas.find((l) => normalizar(l.trabajador) === normalizar(nombre));
     const totalExtraDe = (nombre: string) =>
       lineasExtras.find((l) => normalizar(l.colaborador) === normalizar(nombre))?.total ?? 0;
-    const banco = !puedePagar ? [] : ['Titular', 'RUT', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
-                   'Correo del comprobante', 'Nota de pago'];
+    // Los rótulos del formulario de nuevo destinatario del banco (2026-11-21).
+    const banco = !puedePagar ? [] : [...DATOS_DESTINATARIO.map((k) => NOMBRE_COLUMNA_TRANSFERENCIA[k]),
+                   'Nota de pago'];
     // La primera fila de cada persona: las filas vienen ordenadas por nombre.
     const primeraDe = <T,>(lista: T[], i: number, nombre: (x: T) => string) =>
       i === 0 || normalizar(nombre(lista[i - 1])) !== normalizar(nombre(lista[i]));

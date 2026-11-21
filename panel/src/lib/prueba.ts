@@ -130,7 +130,7 @@ import { tieneArriendo, esExclusivo, marcaExclusividad, exclusividadDe, plazoPar
 import { firmaDe, personasPorDia, diferencias, siguienteIntervalo, REVISAR_CADA,
          REVISAR_COMO_MAXIMO } from './cambios.ts';
 import { bancoVacio, limpiarBanco, leerBanco, filaBanco, faltaParaTransferir,
-         sePuedeTransferir, titularDe, rutLimpio, TIPOS_CUENTA, COL_BANCO,
+         sePuedeTransferir, titularDe, rutLimpio, rutConPuntos, numeroDeCuenta, TIPOS_CUENTA, COL_BANCO,
          type Banco, rutValido, avisoRut } from './banco.ts';
 
 let fallos = 0;
@@ -2678,6 +2678,13 @@ ok(rutLimpio('  7.654.321-0 ') === '7654321-0', 'los espacios de los bordes no c
 ok(rutLimpio('no es un rut') === 'no es un rut',
    'lo que no parece un RUT se devuelve tal cual, sin inventar');
 ok(rutLimpio('') === '', 'y un RUT vacío sigue vacío');
+ok(rutConPuntos('12345678-9') === '12.345.678-9' && rutConPuntos('9876543k') === '9.876.543-K',
+   'para el banco, el RUT va con puntos y guion (00.000.000-0)');
+ok(rutConPuntos('no es un rut') === 'no es un rut' && rutConPuntos('') === '',
+   'y lo que no parece un RUT sale tal cual');
+ok(numeroDeCuenta(' 00-123 456.78 ') === '0012345678' && numeroDeCuenta('') === '',
+   'el número de cuenta va solo con dígitos, sin perder los ceros de adelante');
+
 
 // **El tipo de cuenta es una lista cerrada.** Un valor inventado llegaría
 // hasta la planilla del banco, así que se descarta en el servidor.
@@ -3411,25 +3418,32 @@ console.log('\nPagos al equipo');
      && boletaEnPlanilla(false, false) === 'No aplica',
      'en la planilla: Sí, en blanco si no llegó, y No aplica para un contratado');
 
-  /* --- Copiar los datos de la transferencia --- */
-  const texto = textoTransferencia({ titular: 'Ana Soto', rut: '11111111-1',
+  /* --- Copiar los datos de la transferencia: el formulario del banco (2026-11-21) --- */
+  const ana = { titular: 'Ana Soto', rut: '11111111-1',
     banco: 'BancoEstado', tipo: 'Cuenta RUT', numero: '11111111', monto: 120000,
-    correo: 'ana@correo.cl', glosa: glosaDe('Sueldo', '2026-11-09', '2026-11-15') });
-  ok(texto.split('\t').length === ORDEN_TRANSFERENCIA.length,
-     'un campo por tabulación, en el orden de ORDEN_TRANSFERENCIA');
-  ok(texto.split('\t')[ORDEN_TRANSFERENCIA.indexOf('monto')] === '120000',
+    correo: 'ana@correo.cl', glosa: glosaDe('Sueldo', '2026-11-09', '2026-11-15') };
+  const texto = textoTransferencia(ana);
+  ok(texto === ['Nombre y apellido: Ana Soto', 'RUT: 11.111.111-1', 'Banco: BancoEstado',
+       'Tipo de cuenta: Cuenta RUT', 'Número de cuenta: 11111111', 'E-mail: ana@correo.cl',
+       '', 'Monto: 120000', 'Glosa: Sueldo 09/11 al 15/11'].join('\n'),
+     'un dato por línea, con el rótulo y en el orden del formulario del banco; el monto y la glosa aparte');
+  ok(!textoTransferencia({ ...ana, correo: '' }).includes('E-mail'),
+     'sin correo no va la línea: en el banco es opcional');
+  ok(JSON.stringify(ORDEN_TRANSFERENCIA.slice(0, 6).map((k) => NOMBRE_COLUMNA_TRANSFERENCIA[k]))
+     === JSON.stringify(['Nombre y apellido', 'RUT', 'Banco', 'Tipo de cuenta', 'Número de cuenta', 'E-mail']),
+     'las columnas de la planilla para el banco: los mismos rótulos, en el mismo orden');
+  ok(texto.includes('Monto: 120000\n'),
      'el monto va sin puntos ni signo peso: es lo que un banco acepta pegar');
-  ok(texto.endsWith('Sueldo 09/11 al 15/11'),
-     'y la glosa dice qué es y de qué semana, corta y sin guiones largos ni tildes');
   ok(glosaDe('Propina', '2026-11-09', '2026-11-15').length <= 30,
-     'y cabe en los 30 caracteres que dejan los bancos');
+     'y la glosa cabe en los 30 caracteres que dejan los bancos');
   ok(ORDEN_TRANSFERENCIA.every((k) => !!NOMBRE_COLUMNA_TRANSFERENCIA[k]),
      'cada columna de la planilla para el banco tiene su nombre');
-  ok(textoTransferencia({ titular: 'A', rut: '1-9', banco: 'B', tipo: 'T', numero: '7',
-       monto: 5, correo: 'c', glosa: 'G' })
-     === filaTransferencia({ titular: 'A', rut: '1-9', banco: 'B', tipo: 'T', numero: '7',
-       monto: 5, correo: 'c', glosa: 'G' }).join('\t'),
-     'copiar y la planilla para el banco salen del mismo orden: se cambia una vez y vale para los dos');
+  const filaAna = filaTransferencia({ ...ana, rut: '9.876.543-k', numero: '00-123-45678-09' });
+  ok(filaAna[ORDEN_TRANSFERENCIA.indexOf('rut')] === '9.876.543-K'
+     && filaAna[ORDEN_TRANSFERENCIA.indexOf('numero')] === '001234567809',
+     'la planilla lleva el RUT con puntos y la cuenta solo con dígitos, con sus ceros de adelante');
+  ok(ORDEN_TRANSFERENCIA.every((k, i) => texto.includes(`${NOMBRE_COLUMNA_TRANSFERENCIA[k]}: ${filaTransferencia(ana)[i]}`)),
+     'copiar y la planilla para el banco dicen lo mismo: salen de la misma fila');
   ok(CONCEPTO.propina === 'Propina', 'el concepto propina se llama así en la planilla');
 
   ok(leerPagosDe([ENCABEZADO_PAGOS]).length === 0, 'una pestaña vacía no inventa pagos');
