@@ -217,6 +217,30 @@ ejemplo, con capturas de antes y después, y el cliente dijo que sí. Todo en
   - **Sueldo y Propina en dos filas**: el monto al lado del concepto, y
     *Copiar datos · Pagado completo · Pago parcial* en una fila de 48px.
   - La tarjeta abierta bajó de 606 a 552px de alto.
+- **En el computador, una línea por persona** (lo pidió el cliente el mismo
+  día, con una foto de su notebook: *"se ven solo 3 trabajadores en una
+  pantalla… es mucho"*). Lo que alargaba cada tarjeta era la fila aparte
+  de *⚠ 1 sin marcar*. Desde 1024px la fila cerrada tiene menos aire, el
+  nombre a 15px, el total a 17px con su estado al lado (en columna, con
+  ancho fijo) y 8px entre tarjetas; **desde 1280px el aviso de los sin
+  marcar sube a la línea del nombre**, a 36px (tamaño secundario). Los
+  botones de copiar siguen en 44px: son lo que se usa seguido. Cada tarjeta
+  cerrada mide **62px** (antes unos 90, y 140 con el aviso): en una pantalla
+  de 1440×780 caben 9 personas enteras, y 8 en una de 1280×720. Entre 1024 y
+  1279px el aviso sigue en su línea, bajo el nombre (106px). En el celular,
+  igual que antes.
+- **Abierta, cabe entera en la pantalla del computador** (lo pidió el
+  cliente el mismo día, con otra foto: *"que una tarjeta cabe completamente
+  en la pantalla… con los espacios vacíos"*). Desde 1024px: 8px entre cajas
+  y menos aire adentro, *○ Todavía no suma* con su botón *Marcar el …* al
+  lado del texto, la boleta con menos relleno, los botones de pagar y de la
+  boleta en 44px (eran 48) y el pie *▴ Cerrar* en 36px. Con un día sin
+  marcar, la tarjeta abierta bajó de 658 a **555px**: entra en una pantalla
+  de 1280×650, que es lo que deja un notebook con la barra del navegador y
+  los marcadores. **Al abrirla, la página se mueve lo justo para verla
+  entera** (`scrollIntoView` con `block: 'nearest'`, solo desde 1024px): si
+  ya se veía no se mueve, y si quedó cortada abajo sube hasta su pie. En el
+  celular no, porque ahí la tarjeta es más larga que la pantalla.
 - **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
 - **Ayuda**: el `?` del informe explica el orden y *Sin marcar*, y que la
   transferencia masiva se abre; la misión del informe también; las fotos del

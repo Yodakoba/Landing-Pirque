@@ -356,6 +356,21 @@ function LineaPersona({
   /** El ajuste fuera de turno que pregunta si se quita, y el que se está quitando. */
   const [quitando, setQuitando] = useState<string | null>(null);
   const [borrando, setBorrando] = useState<string | null>(null);
+  /**
+   * **Al abrirla, que se vea entera** (2026-11-21, lo pidió el cliente: *"que
+   * una tarjeta cabe completamente en la pantalla"*). En el computador la
+   * tarjeta abierta entra en la pantalla, y la página se mueve lo justo para
+   * mostrarla: nada si ya se ve, hasta su pie si quedó cortada abajo. En el
+   * celular no: ahí es más larga que la pantalla y moverla solo desorienta.
+   */
+  const tarjeta = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (!abierta || !tarjeta.current) return;
+    if (!window.matchMedia('(min-width: 1024px)').matches) return;
+    const el = tarjeta.current;
+    const id = requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    return () => cancelAnimationFrame(id);
+  }, [abierta]);
   const estadoPill = (e: EstadoPago, falta: number) => (
     <span className={`whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-[13px] font-bold ${
       e === 'pagado' ? 'border-verde/60 text-verde-texto'
@@ -434,7 +449,7 @@ function LineaPersona({
         marcado"*). Borde de 3px y oscuro, más grueso que cualquier línea de
         adentro (que van de 1 a 2px y claras), y una sombra; abierta, borde
         dorado entero con un anillo ancho y un pie para cerrarla. */}
-    <li className={`rounded-2xl border-[3px] bg-panel shadow-md ${
+    <li ref={tarjeta} className={`scroll-my-2 rounded-2xl border-[3px] bg-panel shadow-md ${
       abierta ? 'border-oro shadow-lg ring-4 ring-oro/25' : estado === 'pagado' && aTransferir > 0
         ? 'border-verde-fuerte/80' : 'border-hueso/55'}`}>
       {/* **En el celular son dos filas**: arriba quién es y cuánto, abajo
@@ -463,21 +478,28 @@ function LineaPersona({
           )}
         </div>
       )}
-      <div className="md:flex md:items-center">
+      {/* **En el computador, una línea por persona** (2026-11-21, lo pidió el
+          cliente: *"se ven solo 3 trabajadores en una pantalla"*). Desde 1024px
+          la fila cerrada tiene menos aire y letra un punto más chica, el monto
+          va al lado de su estado, y desde 1280px el aviso de los días sin
+          marcar sube a la línea del nombre en vez de ocupar una fila propia.
+          En el celular, el orden de siempre: nombre, copiar, aviso. */}
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center xl:flex-nowrap">
       {/* El anillo del foco va **adentro** del botón (`ring-inset`) y solo con
           el teclado: el de siempre del navegador se montaba sobre los botones
           de copiar de al lado (2026-11-12). */}
       <button type="button" onClick={onAbrir} aria-expanded={abierta}
         className="tecla flex w-full items-start gap-2.5 rounded-2xl px-3 pb-1.5 pt-2.5 text-left
                    focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oro
-                   sm:gap-3 sm:px-4 sm:pb-2 sm:pt-3 md:order-1 md:min-w-0 md:flex-1 md:items-center md:pb-2.5 md:pt-2.5">
+                   sm:gap-3 sm:px-4 sm:pb-2 sm:pt-3 order-1 md:min-w-0 md:flex-1 md:items-center md:pb-2.5 md:pt-2.5
+                   lg:py-1.5">
         <span aria-hidden className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center
-                                     rounded-full border-2 text-[14px] font-bold sm:h-7 sm:w-7 ${
+                                     rounded-full border-2 text-[14px] font-bold sm:h-7 sm:w-7 lg:mt-0 lg:h-6 lg:w-6 ${
           abierta ? 'border-oro bg-oro text-tinta' : 'border-hueso/30 text-hueso/70'}`}>
           {abierta ? '−' : '+'}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[16px] font-bold leading-tight sm:text-[17px]">{nombre}</span>
+          <span className="block text-[16px] font-bold leading-tight sm:text-[17px] lg:truncate lg:text-[15px]">{nombre}</span>
           <span className="block text-[13px] text-hueso/65">
             {detalle}
             {fuera.noVino.length > 0 && <> · {fuera.noVino.length} no vino</>}
@@ -492,13 +514,30 @@ function LineaPersona({
         </span>
       </button>
 
+      {/* **Los sin marcar, a la vista y con su camino** (2026-11-12, lo
+          pidió el cliente): no suman al total hasta que el encargado de turno
+          marque si vino, y el botón lleva al primero de esos días. Va fuera
+          del botón que abre la línea: un enlace dentro de un botón no es
+          HTML válido. En el celular va al final de la fila; de 768 a 1279px,
+          en una línea propia bajo el nombre; desde 1280px, al lado del nombre. */}
+      {!abierta && fuera.sinMarcar.length > 0 && (
+        <div className="order-3 px-3 pb-2.5 sm:px-4 sm:pb-3 md:order-4 md:basis-full md:pl-14 lg:pb-2 lg:pl-[52px]
+                        xl:order-1 xl:basis-auto xl:shrink-0 xl:p-0 xl:pr-3">
+          <a href={`${marcarEn}?dia=${fuera.sinMarcar[0]}`}
+            className="tecla boton min-h-[40px] border-2 border-ambar/60 bg-ambar/10 font-semibold text-ambar-texto
+                       lg:min-h-[36px] lg:text-[13px]">
+            ⚠ {fuera.sinMarcar.length} {palabraSinMarcar}: no {fuera.sinMarcar.length === 1 ? 'suma' : 'suman'} · Marcar →
+          </a>
+        </div>
+      )}
+
       {/* Los de copiar, a la vista con la línea cerrada: es lo que se hace
           el lunes, persona tras persona. Solo lo que falta pagar. */}
       {/* La fila sigue a la vista cuando todo está pagado: dos pastillas
           verdes son la confirmación de un vistazo, y que la fila desapareciera
           se leía como que algo se había perdido. */}
       {puedePagar && partes.some((o) => o.parte.debe > 0) && (
-        <div className="flex flex-wrap gap-2 px-3 pb-2.5 sm:px-4 sm:pb-3 md:order-2 md:flex-nowrap md:py-2.5 md:pl-0">
+        <div className="order-2 flex flex-wrap gap-2 px-3 pb-2.5 sm:px-4 sm:pb-3 md:flex-nowrap md:py-2.5 md:pl-0 lg:py-1.5">
           {sinCuenta && pendientes.length > 0 ? (
             <span className="rounded-lg border-2 border-ambar/50 px-3 py-2 text-[13px]
                              font-semibold text-ambar-texto">
@@ -528,40 +567,33 @@ function LineaPersona({
       )}
 
       <span className="hidden shrink-0 flex-col items-end gap-1 py-3 pr-4 md:order-3 md:flex
-                       md:w-40">
-        <span className="text-[19px] font-bold tabular-nums">
+                       md:w-40 lg:w-56 lg:flex-row-reverse lg:items-center lg:justify-start lg:gap-2 lg:py-1.5">
+        {/* Con ancho fijo, las pastillas de estado quedan en columna. */}
+        <span className="text-[19px] font-bold tabular-nums lg:min-w-[6.5rem] lg:text-right lg:text-[17px]">
           {aTransferir > 0 ? enPesos(aTransferir) : '—'}
         </span>
         {aTransferir > 0 && estadoPill(estado, partes.reduce((s, o) => s + o.parte.falta, 0))}
       </span>
       </div>
 
-      {/* **Los sin marcar, a la vista y con su camino** (2026-11-12, lo
-          pidió el cliente): no suman al total hasta que el encargado de turno
-          marque si vino, y el botón lleva al primero de esos días. Va fuera
-          del botón que abre la línea: un enlace dentro de un botón no es
-          HTML válido. */}
-      {!abierta && fuera.sinMarcar.length > 0 && (
-        <div className="px-3 pb-2.5 sm:px-4 sm:pb-3">
-          <a href={`${marcarEn}?dia=${fuera.sinMarcar[0]}`}
-            className="tecla boton min-h-[40px] border-2 border-ambar/60 bg-ambar/10 font-semibold text-ambar-texto">
-            ⚠ {fuera.sinMarcar.length} {palabraSinMarcar}: no {fuera.sinMarcar.length === 1 ? 'suma' : 'suman'} · Marcar →
-          </a>
-        </div>
-      )}
-
       {abierta && (
-        <div className="border-t-2 border-oro/30 px-3 pb-2 pt-2.5 sm:px-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
-        <div className="space-y-2.5 sm:space-y-3">
+        // **En el computador cabe entera en la pantalla** (2026-11-21, lo
+        // pidió el cliente con una foto de su notebook): desde 1024px menos
+        // aire entre cajas y adentro de ellas, *Todavía no suma* con su botón
+        // al lado y el pie más bajo. Medida con Playwright: entra en
+        // 1280×650 con un día sin marcar. Al abrirla, la página se mueve lo
+        // justo para verla entera (`useEffect` de arriba).
+        <div className="border-t-2 border-oro/30 px-3 pb-2 pt-2.5 sm:px-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:pb-1 lg:pt-2">
+        <div className="space-y-2.5 sm:space-y-3 lg:space-y-2">
           {/* **Qué se paga, como un recibo** (2026-11-12): lo que suma con su
               cuenta, y después lo que no suma y por qué. Antes era una grilla
               de tres columnas donde los valores quedaban lejos de su nombre. */}
-          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-xl border-2 border-verde/40 bg-verde/[0.05] p-2.5 sm:p-3">
-              <p className="text-[14px] font-bold text-verde-texto sm:text-[15px]">
+          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-1 lg:gap-2">
+            <div className="rounded-xl border-2 border-verde/40 bg-verde/[0.05] p-2.5 sm:p-3 lg:px-3 lg:py-2">
+              <p className="text-[14px] font-bold text-verde-texto sm:text-[15px] lg:text-[14px]">
                 ✓ Suma: {cuentan} {cuentan === 1 ? 'día' : 'días'} que vino
               </p>
-              <dl className="mt-2 space-y-1 text-[14px]">
+              <dl className="mt-2 space-y-1 text-[14px] lg:mt-1 lg:space-y-0.5">
                 {datos.map((d) => (
                   <div key={d.que} className={`flex items-baseline justify-between gap-3 ${
                     d.tono === 'fuerte' ? 'border-t border-hueso/15 pt-1' : ''}`}>
@@ -572,26 +604,28 @@ function LineaPersona({
                   </div>
                 ))}
               </dl>
-              {nota && <p className="mt-2 text-[13px] text-hueso/70">{nota}</p>}
+              {nota && <p className="mt-2 text-[13px] text-hueso/70 lg:mt-1">{nota}</p>}
               {/* **El ajuste, en la caja verde en el celular**; en el computador
                   va arriba de la columna del pago (2026-11-21, lo pidió el
                   cliente). Es el mismo bloque, dibujado en uno de los dos lados. */}
               <div className="lg:hidden">{bloqueAjuste(true)}</div>
             </div>
             {(fuera.sinMarcar.length > 0 || fuera.noVino.length > 0) && (
-              <div className="space-y-3">
+              <div className="space-y-3 lg:space-y-2">
                 {fuera.sinMarcar.length > 0 && (
-                  <div className="rounded-xl border-2 border-ambar/60 bg-ambar/[0.07] p-3">
-                    <p className="text-[15px] font-bold text-ambar-texto">
+                  // En el computador, el botón al lado del texto: una fila menos.
+                  <div className="rounded-xl border-2 border-ambar/60 bg-ambar/[0.07] p-3
+                                  lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-3 lg:px-3 lg:py-2">
+                    <p className="text-[15px] font-bold text-ambar-texto lg:text-[14px]">
                       ○ Todavía no suma: {fuera.sinMarcar.length} {fuera.sinMarcar.length === 1 ? 'día' : 'días'} {palabraSinMarcar}
                     </p>
-                    <p className="mt-1 text-[13px] text-hueso/75">
+                    <p className="mt-1 text-[13px] text-hueso/75 lg:col-start-1 lg:mt-0.5">
                       Hasta que el encargado de turno marque si vino, esos días no se pagan. Márcalos y vuelve.
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:justify-end">
                       {fuera.sinMarcar.map((f) => (
                         <a key={f} href={`${marcarEn}?dia=${f}`}
-                          className="tecla boton min-h-[40px] border-2 border-ambar/60 font-semibold">
+                          className="tecla boton min-h-[40px] border-2 border-ambar/60 font-semibold lg:whitespace-nowrap">
                           Marcar el {enCorto(f)} →
                         </a>
                       ))}
@@ -599,8 +633,8 @@ function LineaPersona({
                   </div>
                 )}
                 {fuera.noVino.length > 0 && (
-                  <div className="rounded-xl border-2 border-hueso/15 p-3">
-                    <p className="text-[15px] font-bold text-hueso/80">
+                  <div className="rounded-xl border-2 border-hueso/15 p-3 lg:px-3 lg:py-2">
+                    <p className="text-[15px] font-bold text-hueso/80 lg:text-[14px]">
                       ✕ No se paga: {fuera.noVino.length} {fuera.noVino.length === 1 ? 'día' : 'días'} que no vino
                     </p>
                     <p className="mt-1 text-[13px] text-hueso/70">{fuera.noVino.map(enCorto).join(' · ')}</p>
@@ -625,7 +659,7 @@ function LineaPersona({
                 {marcable && (
                   <button type="button" aria-pressed={recibida} onClick={() => onBoleta(!recibida)}
                     className={`tecla flex min-h-[48px] min-w-0 flex-1 items-center gap-3 rounded-xl border-2
-                                px-4 text-[15px] font-bold sm:flex-none ${recibida
+                                px-4 text-[15px] font-bold sm:flex-none lg:min-h-[44px] ${recibida
                       ? 'border-verde-fuerte bg-verde/10 text-verde-texto'
                       : 'border-ambar/60 text-ambar-texto hover:border-ambar-fuerte'}`}>
                     <span aria-hidden className={`flex h-6 w-6 items-center justify-center rounded-md
@@ -659,13 +693,13 @@ function LineaPersona({
           })()}
 
         </div>
-        <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3 lg:mt-0">
+        <div className="mt-2.5 space-y-2.5 sm:mt-3 sm:space-y-3 lg:mt-0 lg:space-y-2">
           {(onAjustar || sueltos.length > 0) && (
-            <div className="hidden rounded-xl border-2 border-hueso/20 px-3 py-2 lg:block">{bloqueAjuste(false)}</div>
+            <div className="hidden rounded-xl border-2 border-hueso/20 px-3 py-1.5 lg:block">{bloqueAjuste(false)}</div>
           )}
-          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-1">
+          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-1 lg:gap-2">
           {partes.filter((o) => o.parte.debe > 0).map((o) => (
-            <div key={o.concepto} className={`rounded-xl border-2 p-2.5 sm:p-3 ${tinteDe(o.concepto).caja}`}>
+            <div key={o.concepto} className={`rounded-xl border-2 p-2.5 sm:p-3 lg:px-3 lg:py-2 ${tinteDe(o.concepto).caja}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className={`flex items-center gap-2 text-[14px] font-black uppercase
                                   tracking-widest ${tinteDe(o.concepto).texto}`}>
@@ -692,7 +726,7 @@ function LineaPersona({
                   que se pagó. Copiar va primero y delineado; registrar,
                   relleno, porque es lo que cierra. */}
               {puedePagar && o.parte.falta > 0 && (
-                <div className="mt-2 grid gap-2 lg:grid-cols-[1.2fr_1fr_1fr]">
+                <div className="mt-2 grid gap-2 lg:mt-1.5 lg:grid-cols-[1.2fr_1fr_1fr]">
                   {sinCuenta ? (
                     <p className="rounded-xl border-2 border-ambar/50 px-3 py-2 text-center
                                   text-[14px] font-semibold text-ambar-texto">
@@ -702,7 +736,7 @@ function LineaPersona({
                     <button type="button" onClick={() => onCopiar(o)}
                       className="tecla flex min-h-[42px] w-full items-center justify-center gap-2
                                  rounded-xl border-2 border-oro/70 bg-panel text-[14px]
-                                 font-bold hover:border-oro sm:min-h-[48px] sm:text-[15px] lg:text-[14px]">
+                                 font-bold hover:border-oro sm:min-h-[48px] sm:text-[15px] lg:min-h-[44px] lg:text-[14px]">
                       <span aria-hidden>📋</span>
                       <span className="lg:hidden">Copiar datos de transferencia</span>
                       <span className="hidden lg:inline">Copiar datos</span>
@@ -720,7 +754,7 @@ function LineaPersona({
                         void onPagarCompleto(o).finally(() => setEnviando(null));
                       }}
                       className="tecla flex min-h-[48px] flex-col items-center justify-center
-                                 rounded-xl border-2 border-oro bg-oro px-1 text-tinta sm:min-h-[56px] lg:min-h-[48px]">
+                                 rounded-xl border-2 border-oro bg-oro px-1 text-tinta sm:min-h-[56px] lg:min-h-[44px]">
                       <span className="whitespace-nowrap text-[14px] font-bold">
                         {enviando === o.concepto ? 'Guardando…' : '✓ Pagado completo'}
                       </span>
@@ -730,7 +764,7 @@ function LineaPersona({
                     </button>
                     <button type="button" onClick={() => onPagar(o.concepto)}
                       className="tecla flex min-h-[48px] flex-col items-center justify-center
-                                 rounded-xl border-2 border-oro/70 px-2 hover:border-oro sm:min-h-[56px] lg:min-h-[48px]">
+                                 rounded-xl border-2 border-oro/70 px-2 hover:border-oro sm:min-h-[56px] lg:min-h-[44px]">
                       <span className="text-[14px] font-bold sm:text-[15px]">Pago parcial</span>
                       <span className="text-[13px] text-hueso/65">escribes cuánto</span>
                     </button>
@@ -762,7 +796,7 @@ function LineaPersona({
           {/* El pie: dónde termina esta persona, y cerrarla sin subir. */}
           <button type="button" onClick={onAbrir}
             className="mt-2 flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border-t-2
-                       border-oro/30 text-[14px] font-semibold text-oro lg:col-span-2">
+                       border-oro/30 text-[14px] font-semibold text-oro lg:col-span-2 lg:mt-1 lg:min-h-[36px]">
             ▴ Cerrar · {nombre}
           </button>
         </div>
@@ -2004,7 +2038,7 @@ export default function InformeEquipo() {
             <p className="mb-8 text-[14px] text-hueso/60">Sin turnos anotados en este periodo.</p>
           ) : visiblesEquipo.length === 0 ? null : (
             <>
-              <ul className="space-y-3">
+              <ul className="space-y-3 lg:space-y-2">
                 {ordenEquipo.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.trabajador, l.total, l.propina);
                   const aplica = pideBoleta('equipo', esContratado(l.modalidad));
@@ -2091,7 +2125,7 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 Actividades extras
               </h2>
-              <ul className="space-y-3">
+              <ul className="space-y-3 lg:space-y-2">
                 {ordenExtras.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.colaborador, l.total, 0);
                   return (
@@ -2155,7 +2189,7 @@ export default function InformeEquipo() {
               <h2 className="mb-2 text-[14px] font-bold uppercase tracking-widest text-hueso/70">
                 {haySocios ? 'Vendedores y socios comerciales' : 'Vendedores'}
               </h2>
-              <ul className="space-y-3">
+              <ul className="space-y-3 lg:space-y-2">
                 {ordenVendedores.map(({ x: l, g, primero }) => {
                   const pago = pagoDeFila(l.nombre, l.aTransferir, 0);
                   const clave = 'v-' + l.nombre;

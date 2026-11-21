@@ -57,7 +57,7 @@ export default function CajaBoleta({ titulo, cuenta, tu = false, estado = true, 
   return (
     <section className={`rounded-xl border-2 p-3 ${lista
       ? 'border-verde/50 bg-verde/[0.05]' : 'border-dashed border-ambar/70 bg-ambar/[0.05]'} ${compacta
-      ? 'lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-3' : ''}`}>
+      ? 'lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-3 lg:px-3 lg:py-2' : ''}`}>
       <div className={`flex flex-wrap items-center justify-between gap-2 ${compacta ? 'lg:col-start-1 lg:row-start-1' : ''}`}>
         <h3 className="text-[15px] font-bold first-letter:uppercase">
           <span aria-hidden>🧾</span> {titulo}
@@ -77,7 +77,7 @@ export default function CajaBoleta({ titulo, cuenta, tu = false, estado = true, 
         </p>
       )}
 
-      <dl className={`mt-2 space-y-1.5 ${compacta ? 'lg:col-span-2 lg:flex lg:items-start lg:gap-6 lg:space-y-0' : ''}`}>
+      <dl className={`mt-2 space-y-1.5 ${compacta ? 'lg:col-span-2 lg:mt-1 lg:flex lg:items-start lg:gap-6 lg:space-y-0' : ''}`}>
         <div className={`flex items-baseline justify-between gap-3 ${compacta ? 'lg:block' : ''}`}>
           <dt className="min-w-0">
             <span className="text-[15px] font-bold">{factura ? 'Total' : 'Bruto'}</span>
