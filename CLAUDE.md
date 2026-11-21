@@ -1,5 +1,12 @@
 # Brasas de Lo Pirque — sitio web
 
+> **Empieza por `TRASPASO.md`**: el mapa del proyecto entero —qué es, cómo
+> está armado, los flujos, el estado, los pendientes en orden y las reglas—
+> para retomarlo en una sesión nueva. Se carga junto con este archivo, y se
+> actualiza al terminar cada etapa.
+
+@TRASPASO.md
+
 Dos entregables para **Brasas de Lo Pirque** (brasasdelopirque.cl), un
 restaurante campestre y centro de eventos en Chile:
 
@@ -653,9 +660,9 @@ only*)**: con la naranja, Vercel no puede sacar el certificado.
   `tienda.` pasa a ser el dominio principal; en Cloudflare, se borra el A de
   la raíz y se crea el CNAME `@`, y se cambia el de `www`. **La tienda real
   va aparte y antes**: los productos con sus dos modalidades ya están allá y
-  `CONFIG.tiendas.real` está lleno desde el 2026-11-20, en un PR que se
-  mergea con el OK del cliente (ver "La tienda real, conectada"); sin ese
-  merge el sitio nuevo sigue contra la tienda de prueba y no cobra. **La vuelta atrás** es devolver los
+  `CONFIG.tiendas.real` está lleno desde el 2026-11-20 y **se mergeó esa
+  misma noche** (PR #283, ver "La tienda real, conectada"): desde ahí
+  `brasas-sitio.vercel.app` cobra de verdad. **La vuelta atrás** es devolver los
   dos registros a los valores de la columna *Hoy* y volver a dejar
   `brasasdelopirque.cl` como principal en Shopify; el TTL está en Auto (5
   minutos).
@@ -1394,7 +1401,8 @@ token público del canal **Brasas De Lo Pirque Headless** y los ocho IDs.
   `/api/shopify/webhook`, o abriendo la fila de Logs. **Desde el merge**
   deja la línea `descartado, sin fecha de reserva` con el número del pedido,
   y ya no lee la planilla para descartarlo (ver `panel/CLAUDE.md`).
-- **Mergear ese PR es del camino *con prueba***: desde el merge,
+- **Mergear ese PR era del camino *con prueba*, y se mergeó el 2026-11-20
+  a las 23:16** (PR #283), con el OK del cliente. Desde el merge,
   `brasas-sitio.vercel.app` cobra de verdad y el panel lee la tienda real.
   El orden: primero las variables de Production del panel —`SHOPIFY_CLIENT_ID`
   y `SHOPIFY_CLIENT_SECRET`, cargadas el 2026-11-20, y **`SHOPIFY_DOMINIO`
