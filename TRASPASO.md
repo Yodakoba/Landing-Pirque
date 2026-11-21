@@ -43,7 +43,9 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   día cerrado con una casilla y la lista de cambios**, sin motivo escrito, y
   cuatro retoques que marcó con fotos (el marco del puesto, el puesto
   habitual como desplegable, *falta su cuenta* como aviso y la pastilla
-  *falta $…* que pisaba el botón de propina).
+  *falta $…* que pisaba el botón de propina), **los nombres que se doblan en
+  vez de cortarse** y **la casilla + lista también al editar o borrar una
+  reserva de un día cerrado**.
   https://github.com/ayc-y-blp/aycyblp/pull/287
 - **El cliente lo está mirando en la versión de prueba, en su notebook, y
   va mandando fotos** de lo que quiere más junto o más alineado. Preguntó
@@ -560,6 +562,22 @@ piezas, no tamaño de botones ni de letra.**
   - **`npm run ventanas` falla si una escena no encuentra qué medir** (antes
     decía *ok · nada de 0px*, y así estuvo la del cliente nuevo). Un
     formulario que no es ventana ni tarjeta se marca con `data-ficha`.
+- **Las dos preguntas que quedaban**, contestadas por el cliente en una línea
+  dictada: *"¿las listas? Sí, se doblan en vez de cortarse"*. **Se leyó como
+  dos sí y van en dos commits separados** (`61a4b69` y `907619a`), por si lo
+  de la reserva no era lo que quiso decir. Detalle en `panel/CLAUDE.md`, "Los
+  nombres se doblan, y la reserva de un día cerrado se corrige con casilla":
+  - **Los nombres se doblan en vez de cortarse con "…"**, en la ventana del
+    equipo y en las demás listas (extras, reservas del día, recepción,
+    buscadores, informe, estadísticas). `revisarPlayStation()` avisa de un
+    texto cortado.
+  - **Editar o borrar una reserva de un día cerrado** muestra la lista de lo
+    que cambia y una casilla, en vez de pedir un motivo escrito
+    (`cambiosDeLaReserva()`, `PieCorreccion` con `modo`). El teléfono y el
+    correo se nombran sin su valor. La bitácora dice *cambios: …*.
+  - **El formulario de una reserva no estaba en la prueba de ventanas** (la
+    escena abría *Editar actividades*). Medido, el más largo daba 760px; en
+    el computador ahora mide 589.
 
 ---
 
@@ -700,6 +718,14 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
   un mínimo (la columna del total del Informe).
 - **Un aviso no se dibuja como botón**: *falta su cuenta* es una pastilla
   fina, una sola pieza para las cuatro pantallas que la muestran.
+- **Un nombre se dobla, no se corta** (21-11-2026): *Matías P…* no dice quién
+  es. La fila crece un renglón y los botones no se mueven.
+- **La lista de cambios de una reserva no lleva el teléfono ni el correo**,
+  solo que cambiaron: queda en la bitácora, y el contacto se recorta por rol.
+- **Una escena de la prueba tiene que apretar el botón que dice, no el
+  primero que se le parece**: dos escenas de `ventanas` midieron por semanas
+  otra cosa (*nada*, y la ventana de los extras). Si una escena deja de medir
+  lo suyo, ahora falla o se nota en su medida.
 - **El encargado de turno no ve cotizaciones; el vendedor ve todo y toca lo
   suyo; el contacto de los clientes se recorta por rol en el servidor**
   (`lib/privacidad.ts`).
@@ -730,9 +756,12 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
   equipo del día con el formulario de un ajuste abierto, y su cara de
   reservas. Las dos crecen con lo que tenga el día; con más gente o más
   puestos que el ejemplo, la de trabajadores también pasa de una pantalla.
-- **Editar o borrar una reserva de un día cerrado sigue pidiendo un motivo
-  escrito**: no se cambió con la corrección del equipo. **(Por confirmar)**
-  con el cliente si también pasa a casilla y lista.
+- **Editar una cotización ganada cuya reserva está en un día cerrado** no
+  tiene dónde confirmar la lista de cambios: el servidor la rechaza. Ya era
+  así. **(Por confirmar)** si hace falta.
+- **(Por confirmar)** que el cliente quiso decir que sí a la casilla + lista
+  para la reserva de un día cerrado: su respuesta fue una línea dictada. Si
+  no, se revierte el commit `907619a` y los nombres doblados se quedan.
 - **Varias piezas se dibujan dos veces en el HTML** (una para el celular y
   otra para el computador): en una prueba se pide la que se ve
   (`button:visible`, `locator('visible=true')`).
@@ -806,7 +835,7 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 | # | Qué | Siguiente paso concreto | Quién |
 |---|---|---|---|
 | 1 | **PR #287** (el computador más compacto, las ventanas y la corrección) | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main`. La preview del panel se abre con la sesión de Vercel del equipo. **Va por el camino *con prueba***: toca cómo se corrige un día cerrado | Cliente decide; Claude mergea |
-| 2 | **Lo que quedó de las ventanas** | (a) Preguntarle al cliente si **editar y borrar una reserva de un día cerrado** también pasan de motivo escrito a casilla y lista. (b) Las dos de `NO_CABEN` (el ajuste abierto en la línea de una persona, y la cara de reservas): solo si el cliente las marca. (c) Cuentas entre 1024 y 1279px, con la columna del rol angosta. (d) Lo que siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "Las ventanas caben en la pantalla del computador" | Claude propone; cliente decide |
+| 2 | **Lo que quedó de las ventanas** | (a) **Hecho**: editar y borrar una reserva de un día cerrado ya van con casilla y lista; falta que el cliente lo vea en la versión de prueba. (b) Las dos de `NO_CABEN` (el ajuste abierto en la línea de una persona, y la cara de reservas): solo si el cliente las marca. (c) Cuentas entre 1024 y 1279px, con la columna del rol angosta. (d) Lo que siga marcando con fotos desde la versión de prueba. Detalle en `panel/CLAUDE.md`, "Las ventanas caben en la pantalla del computador" | Claude propone; cliente decide |
 | 3 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
 | 4 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
 | 5 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
@@ -983,6 +1012,8 @@ misma pasada.
   borde de afuera es el más grueso y oscuro y su título va en negrita; lo de
   adentro —otra tarjeta, un botón, un campo— va con menos. Y un aviso no se
   dibuja como botón.
+- **Un nombre se dobla, no se corta con "…"** (21-11-2026): en una lista, el
+  nombre ocupa los renglones que necesite.
 - **Los formularios van alineados** (21-11-2026): los nombres de los campos
   en una columna y los valores en otra, todos partiendo en la misma
   vertical; nunca un campo pegado a su nombre porque la palabra es más

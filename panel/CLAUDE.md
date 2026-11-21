@@ -59,6 +59,19 @@ revisan antes de cada cambio en esta carpeta.
   —dentro de `npm run ventanas`— avisa de un campo que salta respecto de su
   vecino, de un nombre partido en dos renglones y de dos bordes que casi
   calzan.
+- **El marco de la tarjeta manda sobre lo de adentro** (regla del cliente,
+  2026-11-21). El borde de afuera es el más grueso y el más oscuro, y su
+  título va en negrita; lo de adentro —otra tarjeta, un botón, un campo, un
+  aviso— va siempre con menos (`marcoGrupo`, `TITULO_GRUPO` y
+  `marcoTarjeta(…, dentro)` de `TarjetaLista`). Y **un aviso no se dibuja
+  como botón** (`Pastilla tipo="falta"`). Ver "El marco del puesto manda".
+- **Un nombre se dobla, no se corta con "…"** (lo decidió el cliente,
+  2026-11-21: *"se doblan en vez de cortarse"*). En una lista, el nombre de
+  una persona, de un cliente o de un producto ocupa los renglones que
+  necesite: *Matías P…* no dice quién es. Los botones de la fila no se
+  mueven —el nombre ocupa lo que sobra— y la fila crece. Con "…" quedan solo
+  un título entre flechas, un código y el texto de un botón.
+  `revisarPlayStation()` avisa de un texto cortado.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -78,7 +91,8 @@ revisan antes de cada cambio en esta carpeta.
   qué va a pasar; si pide motivo, queda en la bitácora. **Corregir un día
   cerrado no pide un motivo escrito** (2026-11-21): el panel arma la lista
   de lo que cambió, se confirma con una casilla y esa lista es lo que queda
-  en la bitácora (ver "Corregir un día cerrado: la lista de cambios").
+  en la bitácora (ver "Corregir un día cerrado: la lista de cambios"). Vale
+  para el equipo, los extras y **editar o borrar una reserva** de ese día.
 - **Las lecturas de Google son un presupuesto**: 60 por minuto para todo el
   panel. Nada nuevo lee la planilla por su cuenta: se suma a la tanda que la
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
@@ -117,7 +131,7 @@ revisan antes de cada cambio en esta carpeta.
   | El nombre de un campo, al lado de su valor y en columna | `CampoAlLado` y `COLUMNA_ROTULO` de `LineaDelDia` |
   | Varios campos de una ficha, en columnas que calzan | `rejilla-campos` dentro de una `caja-campos`, y `fila-ficha` con su `rotulo-ficha` (`globals.css`); los datos de la transferencia, `DatosBancarios` |
   | Una ventana | `Dialogo`: en el computador parte arriba y admite algo en la línea del título (`alLado`) |
-  | Corregir un día cerrado: el aviso de arriba y el pie con la lista de cambios y la casilla | `AvisoCierre` y `PieCorreccion` de `Correccion`, con `lib/correccion.ts` |
+  | Corregir un día cerrado: el aviso de arriba y el pie con la lista de cambios y la casilla | `AvisoCierre` y `PieCorreccion` de `Correccion`, con `lib/correccion.ts`. El pie se acomoda con `modo`: `fila` (la ventana del equipo), `dosFilas` (el formulario de una reserva) y `apilado` (borrar una reserva) |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -531,11 +545,10 @@ aplicaste. Y luego guardar. Eso tiene que ser."*
 - **Volver una reserva a como estaba no es un cambio**: sale de la lista.
 - **Es la misma pieza en la ventana del equipo y en la de las actividades
   extras**, así que cambió en las dos.
-- **Lo que sigue pidiendo un motivo escrito**, y hay que preguntárselo al
-  cliente antes de tocarlo (regla *un cambio de diseño se lleva a sus
-  parecidos*): **editar una reserva de un día cerrado** (`ReservaForm`) y
-  **borrar una reserva de un día cerrado** (página del día). En el borrado,
-  el porqué no sale del cambio mismo.
+- **Editar y borrar una reserva de un día cerrado** seguían pidiendo un
+  motivo escrito; se le preguntó al cliente y pasaron a lo mismo ese día. Ver
+  "Los nombres se doblan, y la reserva de un día cerrado se corrige con
+  casilla", más abajo.
 - **En el computador** el pie es una fila —la lista a la izquierda, la
   casilla y los botones a la derecha— y dice ahí *Estás corrigiendo un día
   cerrado*, así que el aviso de arriba no se dibuja.
@@ -668,6 +681,127 @@ por bueno**.
 - **Un formulario que se abre arriba de una lista se marca con
   `data-ficha`** (hoy, el de cliente nuevo en `ClientesEditor`): la prueba lo
   busca cuando no hay ventana ni tarjeta abierta. Mide 373px, cabe.
+
+## Los nombres se doblan, y la reserva de un día cerrado se corrige con casilla (2026-11-21)
+
+Las dos preguntas que quedaban abiertas del PR #287. El cliente las contestó
+por voz, en una línea: *"¿las listas? Sí, se doblan en vez de cortarse"*. **Se
+leyó como dos sí** —la casilla + lista también para la reserva, y los nombres
+que se doblan— y **van en dos commits separados**, por si lo primero no era lo
+que quiso decir: sacar uno no toca el otro.
+
+### Los nombres se doblan en vez de cortarse
+
+En el celular, la ventana del equipo cortaba el nombre con "…" (*Matías P…*)
+para que *Vino / No vino* no se movieran. Ahora el nombre **se dobla en dos
+renglones**; los botones siguen en su lugar, porque el nombre ocupa lo que
+sobra, y la fila crece si hace falta. Quedó como regla fija (arriba).
+
+**Se llevó a las demás listas que cortaban un nombre**, en el mismo commit:
+
+| Dónde | Qué se dobla |
+|---|---|
+| Ventana del equipo y de las actividades extras | El nombre y el renglón de la plata; el ajuste plegado (`LineaDelDia`) |
+| Reservas de la página del día | El nombre de la reserva |
+| Recepción | El nombre y el menú |
+| Buscadores (`BuscarPersona`, `BuscarEnLista`) | El nombre de cada opción |
+| Rectificar una reserva | El nombre del producto |
+| Informe | El nombre de la persona (en el computador se cortaba) y la lista de la transferencia masiva |
+| Estadísticas | El nombre en las listas con barra |
+
+- **Lo que sigue con "…", a propósito**: el título del periodo entre sus dos
+  flechas (Estadísticas, Vendedores, la lista de cotizaciones), el id de un
+  pedido en la reserva y el correo dentro de su botón.
+- **El renglón de la plata se dobla solo entre un dato y el otro**, como ya
+  hacía en el computador: *propina $14.438* nunca queda con el monto abajo.
+- **`revisarPlayStation()` avisa de un texto cortado con "…"**: algo con
+  `truncate` al que de verdad no le cabe su texto en ese ancho. Pasado por
+  nueve pantallas a 393 y a 1280: ninguno.
+- **Lo que cambia de medida**: en el celular la ventana del equipo crece 10px
+  con el ejemplo (un nombre con *contratado* debajo ocupa tres renglones), y
+  la recepción y la reserva del día bajan 4px, por el interlineado.
+
+### Editar o borrar una reserva de un día cerrado: la lista y la casilla
+
+Es lo mismo que la corrección del equipo (sección anterior), llevado a las
+dos cosas que seguían pidiendo un motivo escrito.
+
+- **`cambiosDeLaReserva(antes, después)`** en `lib/correccion.ts` (pura, con
+  pruebas) dice cada cambio: *Reserva de Familia Toro: menús de 8 ×
+  Tradiciones + 3 × Niños a 9 × Tradiciones + 3 × Niños (de 11 personas a 12
+  personas)* · *monto de $98.000 a $151.000* · *pago de Por pagar a Pagada* ·
+  *se mueve del sábado 7 de noviembre al domingo 8 de noviembre* · *el nombre
+  pasa a …*. Una reserva nueva en un día cerrado es un solo cambio: *Se agrega
+  la reserva de …: 2 personas · 2 × Tradiciones · $98.000 · Por pagar*.
+- **El teléfono y el correo se nombran sin su valor** (*cambió el teléfono*):
+  la lista queda en la bitácora, y el contacto de un cliente no lo ve
+  cualquier cuenta (`privacidad.ts`). Hay una prueba que lo fija.
+- **Se compara lo guardado con lo que el formulario va a escribir**, con los
+  menús compuestos igual en los dos lados (`componerMenu()`): la lista dice lo
+  que de verdad queda en la planilla, sin cambios de puro formato.
+- **El formulario** (`ReservaForm`, con `diaCerrado`; antes `pideMotivo`)
+  termina en `PieCorreccion`: la lista, la casilla y *Guardar corrección*,
+  apagado hasta que haya un cambio y la casilla esté marcada. Si se cambia
+  algo más, la casilla se suelta sola.
+- **Borrar** (`DayView`): en un día cerrado ya no hay `confirm` ni `prompt`
+  del navegador. Se abre una ventana con *Se borra la reserva de Mónica
+  Lillo: 6 personas · 6 × Tradiciones · $264.000 · Pagada*, la casilla y
+  ***Borrar la reserva***. En un día abierto sigue igual: pregunta y borra.
+- **`PieCorreccion` se acomoda según el ancho de su ventana** (`modo`): `fila`
+  —la del equipo, ancha: la lista a la izquierda y los botones a la derecha—,
+  `dosFilas` —el formulario de la reserva: la lista arriba y debajo la casilla
+  con los botones en una fila— y `apilado` —la de borrar, angosta: como en el
+  celular—. En una fila, dentro del formulario, la lista quedaba en una
+  columna de doscientos pixeles. Con un solo cambio la lista no se parte en
+  dos columnas.
+- **La bitácora** dice *Corrigió una reserva de un día cerrado · … · cambios:
+  …*, *Borró una reserva de un día cerrado · … · cambios: Se borra la reserva
+  de …* y *Anotó una reserva en un día cerrado · … · cambios: Se agrega …*
+  (antes, *motivo: …*).
+- **El servidor no cambió su regla**: pide el permiso `corregir` y rechaza
+  una corrección sin ese texto; el error ahora dice *hay que confirmar la
+  lista de cambios*.
+- **Lo que queda con su propio motivo, y está bien**: rectificar una reserva
+  y soltarla ya piden el suyo —es el dato de esa acción— y con él corrigen el
+  día. **Lo que no tiene dónde confirmarse**: editar una cotización ganada
+  cuya reserva está en un día cerrado; el servidor la rechaza y la ventana de
+  cotizar no muestra la lista. Ya era así antes de este cambio.
+- **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
+- **Ayuda**: el `?` de la página del día dice que con el día cerrado editar o
+  borrar es corregirlo, con la lista y la casilla.
+- **Probado en el panel de ejemplo**, en el sábado 7, cerrado: a una reserva
+  se le cambia el nombre y se le suma un menú —la lista dice los dos,
+  *Guardar corrección* está apagado sin cambios y sin la casilla— y otra se
+  borra. La bitácora queda con *cambios: Reserva de Familia Toro: el nombre
+  pasa a Familia Toro Soto; … menús de 8 × Tradiciones + 3 × Niños a 9 × …* y
+  *cambios: Se borra la reserva de Mónica Lillo: 6 personas · 6 × Tradiciones
+  · $264.000 · Pagada*.
+
+### El formulario de una reserva nunca se había medido
+
+Al agregar las escenas nuevas a `npm run ventanas` apareció otra escena que
+medía lo que no era: **`v-reserva-editar` apretaba el primer botón que
+empezaba con *Editar*, que es *Editar actividades***, y medía la ventana de
+los extras. El formulario de editar una reserva no estaba en la prueba.
+
+- **La escena aprieta ahora *✎ Editar***, el de la reserva. Y hay dos nuevas:
+  `v-reserva-editar-dia-cerrado` —la más larga: anotada a mano y pagada, con
+  un cambio ya hecho— y `v-reserva-borrar-dia-cerrado`. Son 43.
+- **Medido de verdad, el formulario no cabía**: 760px con el pie de la
+  corrección. Solo en el computador, ahora:
+  - la fecha comparte la fila con el nombre, y el teléfono con el correo, en
+    una grilla de 9,5rem + el resto;
+  - *La reserva se cayó…* sube a la línea de *¿Cómo viene el pago?*, a la
+    derecha (36px, es lo raro);
+  - *¿Cómo pagó?* lleva sus tres botones en su misma línea;
+  - la columna de la izquierda es un poco más ancha que la de los menús.
+- **Las medidas a 1280×650**: reserva nueva 505px, editar una de Shopify 489,
+  editar una a mano en un día cerrado con un cambio **589** (era 760), borrar
+  en un día cerrado 340.
+- **En el celular** el formulario de un día abierto mide lo mismo que antes
+  (1.003px la reserva nueva). *La reserva se cayó…* se dibuja dos veces en el
+  HTML —al pie en el celular, en la línea del pago en el computador—: en una
+  prueba se pide el que se ve.
 
 ## El token de Shopify de la tienda real (2026-11-21)
 
@@ -1195,7 +1329,8 @@ prueba**, y falla antes del PR:
 
 Y para la pasada con Playwright, **`revisarPlayStation(page)`** de
 `pruebas/playstation.mjs`: devuelve la letra bajo 13px, los botones bajo
-34px y si la página se corre de lado, en lo que se ve en ese momento. La
+34px, si la página se corre de lado y —desde el 2026-11-21— **un texto
+cortado con "…"**, en lo que se ve en ese momento. La
 primera vez que se probó encontró lo que ya se sabía de la entrada (letra de
 12px en los rótulos y el botón del tema de 26px).
 

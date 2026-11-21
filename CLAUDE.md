@@ -152,6 +152,13 @@ más abajo; esto es la lista para revisar.
   tarjetas, `marcoTarjeta(…, dentro)` (`TarjetaLista`). Y **un aviso no se
   dibuja como botón**: lo que no se aprieta va sin borde grueso ni esquinas
   de botón (`Pastilla tipo="falta"` para *falta su cuenta*).
+- **Un nombre se dobla, no se corta con "…"** (lo decidió el cliente,
+  2026-11-21: *"se doblan en vez de cortarse"*). En una lista, el nombre de
+  una persona, de un cliente o de un producto ocupa los renglones que
+  necesite: *Matías P…* no dice quién es. Los botones de la fila no se
+  mueven —el nombre ocupa lo que sobra— y la fila crece. Con "…" quedan solo
+  un título entre flechas, un código y el texto de un botón.
+  `revisarPlayStation()` avisa de un texto cortado.
 - **Elegir de una lista que crece se hace con buscador** (regla del
   cliente, 2026-11-12). Los botones a la vista son para opciones fijas y
   pocas; para personas o empresas —vendedores, socios, clientes— van **dos
@@ -171,7 +178,8 @@ más abajo; esto es la lista para revisar.
   qué va a pasar; si pide motivo, queda en la bitácora. **Corregir un día
   cerrado no pide un motivo escrito** (2026-11-21): el panel arma la lista
   de lo que cambió, se confirma con una casilla y esa lista es lo que queda
-  en la bitácora.
+  en la bitácora. Vale para el equipo, los extras y **editar o borrar una
+  reserva** de ese día.
 - **Las lecturas de Google son un presupuesto**: 60 por minuto para todo el
   panel. Nada nuevo lee la planilla por su cuenta: se suma a la tanda que la
   ruta ya precarga (`conLecturas()`), y el PR dice cuántas lecturas cuesta.
