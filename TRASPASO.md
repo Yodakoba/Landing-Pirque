@@ -31,10 +31,10 @@ conversación: hay que preguntarlo o mirarlo antes de darlo por hecho.
   lanzamiento, `brasasdelopirque.cl` **cobran de verdad**. Las versiones de
   prueba de un PR, GitHub Pages y `localhost` siguen contra la tienda de
   desarrollo, que no cobra.
-- **PR #285 está abierto**, en la rama `claude/sleepy-rubin-i2mhm1`, camino
-  *con prueba*: se mergea solo cuando el cliente diga *"mergea"*. Trae todo
-  lo de las últimas horas (sección 4).
-  https://github.com/ayc-y-blp/aycyblp/pull/285
+- **No hay PR abierto.** El último, el #285 (todo lo de las últimas horas,
+  sección 4), se mergeó el 21-11-2026 con el OK del cliente, y el panel en
+  producción quedó comprobado: `/login` 200, `/api/publico/fechas` 200 y el
+  webhook sin firma 401.
 - Lo que falta antes y después del lanzamiento está en la sección 7, en
   orden.
 
@@ -430,7 +430,7 @@ comisión = % de la etapa × base del evento
 | #283 | **Tienda real conectada**; token por credenciales del Dev Dashboard; el webhook descarta sin leer la planilla; fuera los formularios de novedades (no guardaban nada); `robots.txt` y `sitemap.xml` |
 | #284 | A la tienda solo lo que Shopify muestra sin su tema (pedidos, checkout, carrito con código) |
 
-### PR #285, abierto (camino *con prueba*)
+### PR #285, mergeado el 21-11-2026 (camino *con prueba*, con el OK del cliente)
 
 | Commit | Qué |
 |---|---|
@@ -662,19 +662,18 @@ Cada una tiene su sección con fecha en `CLAUDE.md` o `panel/CLAUDE.md`.
 
 | # | Qué | Siguiente paso concreto | Quién |
 |---|---|---|---|
-| 1 | **PR #285** | Esperar *"mergea"*. Entonces: los dos chequeos de Vercel en `success` para el último commit, mergear con el SHA completo, comprobar el panel (`/login` 200, `/api/publico/fechas` 200, webhook sin firma 401) y poner la rama al día con `main` | Cliente decide; Claude mergea |
-| 2 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
-| 3 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
-| 4 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
-| 5 | **Base en cero** | Copiar la planilla real como respaldo; después *Configuración → Mantención → Dejar la base en cero*, cuando terminen las pruebas | Cliente |
-| 6 | **Pedidos del sitio viejo** | Anotar a mano en el panel los de fechas posteriores al lanzamiento (el producto viejo vendía hasta el 27-12) | Cliente |
-| 7 | **Lanzamiento** (domingo 22-11, en la noche) | En orden: (1) en Shopify, `tienda.` como dominio principal; (2) en Cloudflare, borrar el A de `@`, crear el CNAME a Vercel y cambiar `www`; (3) Vercel muestra *Valid Configuration*; (4) publicar el *Hydrogen Redirect Theme* con Hostname `brasasdelopirque.cl`, sin redirects ni cuentas (**recién después del DNS**); (5) comprobar: `tienda.` lleva al sitio nuevo, el link viejo del producto a reservas, una compra abre el checkout en `tienda.`, *ver pedido* abre; (6) sacar *Menú Tradiciones* de Tienda online; (7) borrar los webhooks de la tienda de desarrollo. **Vuelta atrás**: los registros a sus valores de antes y `brasasdelopirque.cl` de nuevo como principal | Cliente, con Claude |
-| 8 | **Después del lanzamiento** | Links en Maps, Instagram y WhatsApp; enviar el sitemap en Google Search Console; productos en Fudo; mirar en Vercel → Logs que las tres tareas diarias corran en 200 | Cliente |
-| 9 | **Importar el CRM** | El cliente sube el Excel **al chat** (nunca al repo); se diseña un importador en el panel, en un PR *con prueba*, que corre después de la base en cero | Cliente sube; Claude propone |
-| 10 | **Política de privacidad y condiciones de reserva** | No existen; son del negocio y conviene que las vea un abogado. Anotado en la guía *Traspaso a producción* (documento fuera del repo) | Cliente |
-| 11 | **Migración, pasos que quedan** | Pruebas a mano de punta a punta, respaldo de claves en la bóveda y apagar lo de la cuenta personal (`migracion-team/README.md`) | Cliente |
-| 12 | **Decisiones abiertas** | Si un contrato firmado sin pago da preferencia (gerencia); el recargo de pequeños; el mínimo de 25 en venta directa; el nombre del negocio en Maps; el desayuno y la once a $8.000 + IVA | Cliente |
-| 13 | **En pausa por datos** | Video del hero (sigue vivo en el CDN de Shopify, 63 MB); logo en SVG recoloreable; fotos de cabalgatas y de la cancha de beach tenis; Calicanto y el contrato de matrimonio (Fase 5) | Cliente |
+| 1 | **Compras de prueba en la tienda real** | En `brasas-sitio.vercel.app`, una compra de cada modalidad (con Mercado Pago, según lo conversado): ver que llegue al panel con fecha, nombre, correo, teléfono y la modalidad; que la regla de medios de pago por SKU oculte el que no corresponde; después devolver | Cliente |
+| 2 | **`SHOPIFY_DOMINIO` de Production** | **(Por confirmar)** que diga `lo-pirque.myshopify.com`; si no, ponerlo y hacer Redeploy; comprobar con *Revisar Shopify ahora* | Cliente |
+| 3 | **El link de estado de un pedido viejo** | Abrir uno `brasasdelopirque.cl/<id>/orders/…?key=…` después del lanzamiento y ver que llegue a `tienda.` con su `?key=` | Cliente |
+| 4 | **Base en cero** | Copiar la planilla real como respaldo; después *Configuración → Mantención → Dejar la base en cero*, cuando terminen las pruebas | Cliente |
+| 5 | **Pedidos del sitio viejo** | Anotar a mano en el panel los de fechas posteriores al lanzamiento (el producto viejo vendía hasta el 27-12) | Cliente |
+| 6 | **Lanzamiento** (domingo 22-11, en la noche) | En orden: (1) en Shopify, `tienda.` como dominio principal; (2) en Cloudflare, borrar el A de `@`, crear el CNAME a Vercel y cambiar `www`; (3) Vercel muestra *Valid Configuration*; (4) publicar el *Hydrogen Redirect Theme* con Hostname `brasasdelopirque.cl`, sin redirects ni cuentas (**recién después del DNS**); (5) comprobar: `tienda.` lleva al sitio nuevo, el link viejo del producto a reservas, una compra abre el checkout en `tienda.`, *ver pedido* abre; (6) sacar *Menú Tradiciones* de Tienda online; (7) borrar los webhooks de la tienda de desarrollo. **Vuelta atrás**: los registros a sus valores de antes y `brasasdelopirque.cl` de nuevo como principal | Cliente, con Claude |
+| 7 | **Después del lanzamiento** | Links en Maps, Instagram y WhatsApp; enviar el sitemap en Google Search Console; productos en Fudo; mirar en Vercel → Logs que las tres tareas diarias corran en 200 | Cliente |
+| 8 | **Importar el CRM** | El cliente sube el Excel **al chat** (nunca al repo); se diseña un importador en el panel, en un PR *con prueba*, que corre después de la base en cero | Cliente sube; Claude propone |
+| 9 | **Política de privacidad y condiciones de reserva** | No existen; son del negocio y conviene que las vea un abogado. Anotado en la guía *Traspaso a producción* (documento fuera del repo) | Cliente |
+| 10 | **Migración, pasos que quedan** | Pruebas a mano de punta a punta, respaldo de claves en la bóveda y apagar lo de la cuenta personal (`migracion-team/README.md`) | Cliente |
+| 11 | **Decisiones abiertas** | Si un contrato firmado sin pago da preferencia (gerencia); el recargo de pequeños; el mínimo de 25 en venta directa; el nombre del negocio en Maps; el desayuno y la once a $8.000 + IVA | Cliente |
+| 12 | **En pausa por datos** | Video del hero (sigue vivo en el CDN de Shopify, 63 MB); logo en SVG recoloreable; fotos de cabalgatas y de la cancha de beach tenis; Calicanto y el contrato de matrimonio (Fase 5) | Cliente |
 
 ---
 
