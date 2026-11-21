@@ -30,7 +30,7 @@
  */
 import { PastillaCotizado } from './Pastilla';
 import { MarcaCambio } from './AlDia';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { LineaCRM } from './EventosCRM';
 import type { EventosDelDia } from '@/lib/crm';
 import type { Ocupacion } from '@/lib/tipos';
@@ -140,15 +140,15 @@ export const PUNTO_TARJETA = (d: Ocupacion) => {
  * angosta hace envolver más la lista), la tarjeta crece y `h-full` deja
  * pareja su fila igual.
  */
-const ALTO_ESTANDAR = 'min-h-[15.125rem]';
+const ALTO_ESTANDAR = 'min-h-[15.125rem] lg:min-h-[14.75rem]';
 
 /** El tramo de las abonadas: el verde de las pagadas, rayado (falta el resto). */
 const RAYAS = 'repeating-linear-gradient(135deg, rgb(var(--verde-fuerte)) 0 4px, rgb(var(--verde-fuerte) / 0.4) 4px 7px)';
 
-const CARA = `col-start-1 row-start-1 flex h-full flex-col rounded border p-4 ` +
+const CARA = `col-start-1 row-start-1 flex h-full flex-col rounded border p-4 lg:p-2.5 ` +
              `${ALTO_ESTANDAR} [backface-visibility:hidden]`;
 
-const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3';
+const PIE = 'mt-auto flex items-center gap-2 border-t border-hueso/10 pt-3 lg:pt-1.5';
 
 /**
  * **La regla PlayStation, aplicada al pie de la tarjeta** (2026-11-01).
@@ -227,7 +227,7 @@ export default function TarjetaDia({
         {/* ---------- el frente: la ocupación ---------- */}
         <div className={`${CARA} ${COLOR_TARJETA(d)} ${d.fecha === hoy() ? MARCO_HOY : ''} ${volteada ? 'pointer-events-none' : ''}`}
              aria-hidden={volteada}>
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2 lg:flex-wrap lg:items-center lg:gap-y-0.5">
             {/* **El pronóstico ya no va acá.** Estaba bajo la fecha a 10px,
                 donde no lo veía nadie; ahora es una pastilla al lado del
                 número, que es lo que se mira. Ver el bloque de abajo. */}
@@ -241,7 +241,7 @@ export default function TarjetaDia({
                 de más cambia el alto de la tarjeta — o sea que los días de
                 una misma semana dejaban de medir lo mismo según su estado.
                 Acá el aire ya estaba. */}
-            <PuntoDia d={d} />
+            <PuntoDia d={d} enLinea />
           </div>
 
           {sinConfigurar(d) ? (
@@ -250,8 +250,8 @@ export default function TarjetaDia({
                   pero nadie le puso cupo. Se muestran las personas igual
                   —si no, una reserva quedaría invisible otra vez— y se
                   dice qué falta. */}
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-3xl font-bold leading-none">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 lg:mt-1.5 lg:gap-x-2">
+                <p className="text-3xl font-bold leading-none lg:text-[22px]">
                   {d.tomadas}
                   <span className="ml-1.5 text-[13px] font-medium text-hueso/70">
                     {d.tomadas === 1 ? 'persona' : 'personas'}
@@ -272,8 +272,8 @@ export default function TarjetaDia({
             </>
           ) : (
             <>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-3xl font-bold leading-none">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 lg:mt-1.5 lg:gap-x-2">
+                <p className="text-3xl font-bold leading-none lg:text-[22px]">
                   {d.tomadas}<span className="text-hueso/45">/{d.capacidad}</span>
                   <span className="ml-1.5 text-[13px] font-medium text-hueso/70">personas</span>
                 </p>
@@ -287,7 +287,7 @@ export default function TarjetaDia({
                   antes iban en ámbar con las que no han pagado nada, y un
                   día con 80 personas abonadas se veía casi sin plata.
                   Ámbar: no han pagado nada. El resto es lo libre. */}
-              <BarraDia d={d} className="mt-4" />
+              <BarraDia d={d} className="mt-4 lg:mt-2" />
 
               {/* **Las dos pastillas aparecen solo si hay alguien**
                   (2026-11-02, lo notó el cliente mirando un miércoles y un
@@ -308,15 +308,15 @@ export default function TarjetaDia({
                   línea no caben en la tarjeta (piden 333px de 261) y al
                   envolver la estiraban; en dos líneas siempre miden igual. */}
               {tramos.length > 0 && (
-                <div className="mt-3 grid gap-1.5"
-                     style={{ gridTemplateColumns: `repeat(${tramos.length}, minmax(0, 1fr))` }}>
+                <div className="tramos-pago mt-3 grid gap-1.5 lg:mt-2 lg:gap-1"
+                     style={{ '--tramos': tramos.length } as CSSProperties}>
                   {tramos.map((t) => (
                     <span key={t.palabra}
-                      className={`rounded-md border px-2 py-1 leading-tight ${t.clase}`}>
+                      className={`rounded-md border px-2 py-1 leading-tight lg:py-0.5 ${tramos.length > 2 ? 'lg:px-1' : 'lg:px-1.5'} ${t.clase}`}>
                       <span className="block text-[15px] font-bold tabular-nums">
                         <span aria-hidden>{t.icono} </span>{t.n}
                       </span>
-                      <span className="block text-[13px]">{t.palabra}</span>
+                      <span className="block text-[13px] lg:whitespace-nowrap">{t.palabra}</span>
                     </span>
                   ))}
                 </div>
@@ -394,7 +394,7 @@ export default function TarjetaDia({
 
           {/* `pie-tarjeta`: si los tres botones no caben en una línea, pasan
               a dos (ver `globals.css`). */}
-          <div className={`mt-3 ${PIE} pie-tarjeta`}><div className={`pie-botones${conDias ? '' : ' pie-sin-editar'}`}>
+          <div className={`mt-3 lg:mt-1.5 ${PIE} pie-tarjeta`}><div className={`pie-botones${conDias ? '' : ' pie-sin-editar'}`}>
             {/* "Ver reservas" y no "Ver quiénes vienen": con tres acciones
                 en el pie, el texto largo se partía en dos líneas en una
                 tarjeta de cuatro columnas. La fecha de arriba lleva al mismo
@@ -493,7 +493,7 @@ export default function TarjetaDia({
             </p>
           ) : (
             <>
-              <p className="mt-3 text-3xl font-bold leading-none">
+              <p className="mt-3 text-3xl font-bold leading-none lg:mt-1.5 lg:text-[22px]">
                 {resumen.total}
                 <span className="ml-1.5 text-[13px] font-medium text-hueso/70">
                   {resumen.total === 1 ? 'persona' : 'personas'}
@@ -512,7 +512,7 @@ export default function TarjetaDia({
                   sin inventar reglas del español —"asistente de bar" no se
                   pluraliza como "garzón"—. El `×` es además la misma
                   convención que los menús del día: "5 × Tradiciones". */}
-              <p className="mt-3 text-[13px] leading-snug text-hueso/75">
+              <p className="mt-3 text-[13px] leading-snug text-hueso/75 lg:mt-1.5">
                 {resumen.porPuesto.map((p, k) => (
                   <span key={p.puesto}>
                     {k > 0 && ', '}
@@ -530,13 +530,13 @@ export default function TarjetaDia({
           )}
 
           {resumen && resumen.faltan > 0 && (
-            <p className="mt-3 text-[13px] font-medium text-ambar-texto">
+            <p className="mt-3 text-[13px] font-medium text-ambar-texto lg:mt-1.5">
               {resumen.faltan === 1 ? 'Falta' : 'Faltan'} {resumen.faltan}:{' '}
               {textoFaltantes(resumen.faltantes ?? [])}
             </p>
           )}
 
-          <div className={`mt-3 ${PIE}`}>
+          <div className={`mt-3 lg:mt-1.5 ${PIE}`}>
             <button onClick={() => setVolteada(false)} {...alDorso}
               className={BOTON}>
               Volver

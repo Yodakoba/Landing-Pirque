@@ -128,10 +128,14 @@ export function usarAlDia(firma: string, recargar: () => Promise<unknown>) {
 }
 
 /** La línea con la hora y el botón ↻ Actualizar. */
-export function BarraAlDia({ actualizado, recargando, esperando, actualizar }:
-  ReturnType<typeof usarAlDia>) {
+export function BarraAlDia({ actualizado, recargando, esperando, actualizar, className = 'mb-4' }:
+  ReturnType<typeof usarAlDia> & {
+    /** El margen. En el computador va dentro de la fila de botones de la
+     * pantalla (2026-11-21, el computador más compacto), sin margen propio. */
+    className?: string;
+  }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2" aria-live="polite">
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${className}`} aria-live="polite">
       <span className="text-[14px] text-hueso/70">
         {recargando ? 'Actualizando…'
           : esperando ? <span className="font-semibold text-ambar-texto">Hay cambios: se actualiza al cerrar la ventana</span>

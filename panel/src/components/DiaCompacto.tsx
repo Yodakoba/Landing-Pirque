@@ -37,9 +37,9 @@ export default function DiaCompacto({ d, onAbrir, cambio }: {
       {cambio && <MarcaCambio {...cambio} />}
       {/* Arriba la fecha y el estado; abajo la barra y cuánta gente. En
           dos líneas para que la fecha no se corte en una columna angosta. */}
-      <span className="flex w-full items-start justify-between gap-2">
+      <span className="flex w-full items-start justify-between gap-2 lg:items-center">
         <FechaDia fecha={d.fecha} chica />
-        <PuntoDia d={d} />
+        <PuntoDia d={d} enLinea />
       </span>
       <span className="flex w-full items-center gap-3">
         <span className="h-2 flex-1 overflow-hidden rounded-full bg-hueso/15">

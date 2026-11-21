@@ -304,6 +304,18 @@ button:active:not(:disabled), .tecla:active:not(:disabled) {
  */
 .pie-tarjeta { container-type: inline-size; }
 .pie-botones { display: flex; align-items: center; gap: .5rem; width: 100%; }
+/*
+ * **Las tres pastillas del pago de la tarjeta del día** (pagadas · abonadas ·
+ * sin pagar). Columnas parejas, como siempre. Desde 1024px la tarjeta es más
+ * angosta (2026-11-21, el computador más compacto) y con tres tramos *sin
+ * pagar* se partía en dos renglones: ahí cada columna mide lo que pide su
+ * palabra y se reparten lo que sobra.
+ */
+.tramos-pago { grid-template-columns: repeat(var(--tramos, 1), minmax(0, 1fr)); }
+@media (min-width: 1024px) {
+  .tramos-pago { grid-template-columns: repeat(var(--tramos, 1), auto); }
+  .pie-botones { gap: .375rem; }
+}
 .pie-botones > .pie-hueco { flex: 1; }
 @container (max-width: 21rem) {
   .pie-botones { display: grid; grid-template-columns: 1fr 1fr; }

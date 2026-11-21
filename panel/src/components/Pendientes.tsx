@@ -50,7 +50,7 @@ export default function Pendientes({ items, titulo = 'Pendientes' }: { items: Pe
   if (!items.length) return null;
   const abiertaItem = items.find((x) => x.clave === abierta);
   return (
-    <div className="mb-4">
+    <div className="mb-4 lg:mb-3">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={titulo}>
         <span className="text-[13px] font-semibold uppercase tracking-widest text-hueso/65">{titulo}</span>
         {items.map((x) => (
