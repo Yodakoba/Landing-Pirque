@@ -20,10 +20,9 @@ import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaL
 import AyudaCorta from './AyudaCorta';
 import Ayuda from './Ayuda';
 import Dialogo from './Dialogo';
+import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, ENTRADA_DIA, ROTULO_LADO, TotalDelDia } from './LineaDelDia';
 import ConfirmarCierre, { type PuntoDeCierre } from './ConfirmarCierre';
-import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado, totalAjustes,
-         MOTIVOS_AJUSTE, MEDIOS_AJUSTE, partesDeMotivo, motivoDePartes, tipoDeAjuste, montoConSigno,
-         type PartesAjuste, type TipoAjuste,
+import { planDelDia, VINO, MODALIDAD, pagoDe, esContratado,
          repartirPropina, propinaDelDia, porNombre, faltantesDe,
          type Puesto, type Trabajador, type Turno } from '@/lib/equipo';
 import { faltaParaCerrar, type Cierre, yaLlego } from '@/lib/cierres';
@@ -44,12 +43,6 @@ import { AvisoCierre, PieCorreccion } from './Correccion';
 import { usarAutoguardado } from './usarAutoguardado';
 import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 
-/** El rótulo encima de cada campo de la línea abierta de una persona. */
-const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
-/** Los campos de plata de la línea abierta: 40px, para el dedo. */
-const ENTRADA_GRANDE =
-  'rounded-lg border-2 border-hueso/20 bg-tinta px-2.5 py-1.5 text-[15px] ' +
-  'tabular-nums focus:border-oro focus:outline-none';
 
 export default function EquipoDialogo({
   fecha, personas, puestos, trabajadores, turnos, extras = [], cerrado = false,
@@ -232,51 +225,8 @@ export default function EquipoDialogo({
     setPlan(copia);
   };
 
-  /**
-   * **El monto de un ajuste se escribe sin signo** (2026-11-20): lo pone su
-   * tipo, *Descontar* o *Sumar* (`montoConSigno()`). Antes había que escribir
-   * −4000, y era fácil olvidar el menos.
-   */
-  const cambiarMontoAjuste = (i: number, k: number, valor: string) => {
-    const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
-    const a = copia[i].ajustes[k];
-    const n = Number(String(valor).replace(/[^\d]/g, ''));
-    a.tipo = tipoDeAjuste(a);
-    a.monto = montoConSigno(Number.isFinite(n) ? n : 0, a.tipo);
-    setPlan(copia);
-  };
-
-  /** El motivo: la razón y el medio con botones, y la nota escrita. */
-  const cambiarPartesAjuste = (i: number, k: number, cambio: Partial<PartesAjuste>) => {
-    const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
-    const a = copia[i].ajustes[k];
-    a.tipo = tipoDeAjuste(a);
-    a.motivo = motivoDePartes({ ...partesDeMotivo(a.motivo), ...cambio });
-    setPlan(copia);
-  };
-
-  /**
-   * Cuál es el ajuste recién agregado, para llevar el cursor hasta él.
-   *
-   * Se agrega desde la línea de la persona, arriba, y el campo está en la
-   * tabla de abajo: sin esto el botón parecería no hacer nada. La llave es
-   * `nombre#posición` y se limpia al enfocar, así que no vuelve a saltar.
-   */
-  const [recienAjuste, setRecienAjuste] = useState('');
   /** La persona cuya línea está abierta, normalizada; una a la vez. */
   const [abierto, setAbierto] = useState('');
-
-  const agregarAjuste = (i: number, tipo: TipoAjuste) => {
-    const copia = plan.map((t) => ({ ...t, ajustes: t.ajustes.map((a) => ({ ...a })) }));
-    setRecienAjuste(`${copia[i].trabajador}#${copia[i].ajustes.length}`);
-    copia[i].ajustes.push({ monto: 0, motivo: '', tipo });
-    setPlan(copia);
-  };
-
-  const quitarAjuste = (i: number, k: number) => {
-    setPlan(plan.map((t, j) => (j === i
-      ? { ...t, ajustes: t.ajustes.filter((_, x) => x !== k) } : t)));
-  };
 
   const marcar = (nombre: string, asistencia: string) => setPlan(plan.map(
     (t) => (normalizar(t.trabajador) === normalizar(nombre)
@@ -670,184 +620,74 @@ export default function EquipoDialogo({
                       </div>
 
                       {abierta && t && (
-                        <div className="space-y-3 border-t-2 border-hueso/10 px-3 pb-3 pt-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <label className="block">
-                              <span className={ROTULO}>Jornada</span>
-                              {/* A un contratado no se le paga jornada: su
-                                  sueldo no sale de esta caja. */}
-                              {esContratado(t.modalidad) ? (
-                                <span className="block py-2 text-[14px] text-hueso/60">
-                                  contratado · no aplica
-                                </span>
-                              ) : (
-                                <input type="number" min={0} step={1000} className={`${ENTRADA_GRANDE} w-full`}
+                        // **La misma línea que la de los extras** (`LineaDelDia`,
+                        // 2026-11-21): compacta, cada dato con su nombre al lado,
+                        // el ajuste en pocas filas y el total en una línea.
+                        <div className="space-y-2 border-t-2 border-hueso/10 px-2.5 pb-2.5 pt-2 sm:px-3">
+                          {/* La jornada y las horas extra en una fila desde
+                              1024px; más angosto, una debajo de la otra, para
+                              que la jornada se lea entera. Las horas extra son
+                              una o dos cifras: campo chico. */}
+                          <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+                            {/* A un contratado no se le paga jornada: su
+                                sueldo no sale de esta caja. */}
+                            {esContratado(t.modalidad) ? (
+                              <p className="flex items-center gap-1.5">
+                                <span className={ROTULO_LADO}>Jornada</span>
+                                <span className="text-[13px] text-hueso/60">contratado · no aplica</span>
+                              </p>
+                            ) : (
+                              <CampoAlLado rotulo="Jornada">
+                                <input type="number" min={0} step={1000} className={`${ENTRADA_DIA} w-full min-w-0 max-w-[10rem] lg:max-w-none`}
                                   value={t.pagoJornada || ''} placeholder="—"
                                   aria-label={`Jornada de ${t.trabajador}`}
                                   onChange={(e) => cambiarMonto(i, 'pagoJornada', e.target.value)} />
-                              )}
-                            </label>
-                            <label className="block">
-                              <span className={ROTULO}>Horas extra</span>
-                              <input type="number" min={0} step={1} className={`${ENTRADA_GRANDE} w-full`}
+                              </CampoAlLado>
+                            )}
+                            <CampoAlLado rotulo="Horas extra">
+                              <input type="number" min={0} step={1} className={`${ENTRADA_DIA} w-16`}
                                 value={t.horasExtra || ''} placeholder="0"
                                 aria-label={`Horas extra de ${t.trabajador}`}
                                 onChange={(e) => cambiarMonto(i, 'horasExtra', e.target.value)} />
-                            </label>
+                            </CampoAlLado>
                           </div>
 
                           {/* **Sumar o restar plata de ese día** (2026-11-20, lo pidió
                               el cliente: *"para que no tenga que jugar con menos
-                              4.000 y más 4.000"*). Dos botones, *− Descontar* y
-                              *+ Sumar*; el monto va sin signo, el motivo con
-                              botones y cómo se pagó. Va como ajuste con su motivo,
+                              4.000 y más 4.000"*). Va como ajuste con su motivo,
                               no editando la jornada, para que quede el porqué. */}
-                          <div>
-                            <span className={ROTULO}>Ajustes</span>
-                            {t.ajustes.map((a, k) => {
-                              const tipo = tipoDeAjuste(a);
-                              const resta = tipo === 'resta';
-                              const partes = partesDeMotivo(a.motivo);
-                              const elegido = 'border-oro bg-oro/15 font-semibold';
-                              return (
-                                <div key={k} className={`mb-2 rounded-lg border-2 p-2.5 ${resta
-                                  ? 'border-rojo-fuerte/50 bg-rojo/[0.04]' : 'border-verde-fuerte/50 bg-verde/[0.04]'}`}>
-                                  {/* Arriba qué es —el signo grande y su palabra— y la ✕;
-                                      abajo el monto. En dos renglones porque en un
-                                      teléfono, todo en uno, la ✕ se salía de la tarjeta. */}
-                                  <div className="flex items-center gap-2">
-                                    {/* El signo va adelante, grande y de su color:
-                                        se distingue por forma, no solo por color. */}
-                                    <span aria-hidden className={`w-5 shrink-0 text-center text-[22px] font-bold ${resta
-                                      ? 'text-rojo-texto' : 'text-verde-texto'}`}>{resta ? '−' : '+'}</span>
-                                    <span className={`text-[15px] font-bold ${resta ? 'text-rojo-texto' : 'text-verde-texto'}`}>
-                                      {resta ? 'Descuento' : 'Suma'}
-                                    </span>
-                                    <span className="flex-1" />
-                                    <button type="button" onClick={() => quitarAjuste(i, k)}
-                                      className="boton shrink-0 hover:border-rojo/60 hover:text-rojo-texto"
-                                      aria-label={`Quitar el ajuste ${k + 1} de ${t.trabajador}`}
-                                      title="Quitar este ajuste">✕</button>
-                                  </div>
-                                  <div className="mt-1.5 flex items-center gap-2">
-                                    <span className="w-5 shrink-0 text-center text-[17px] font-bold">$</span>
-                                    <input type="number" min={0} step={1000} inputMode="numeric"
-                                      className={`${ENTRADA_GRANDE} w-32 min-w-0`}
-                                      value={Math.abs(a.monto) || ''} placeholder="4000"
-                                      aria-label={`${resta ? 'Descuento' : 'Suma'} ${k + 1} de ${t.trabajador}`}
-                                      /* El que se acaba de agregar se trae el
-                                         cursor; la llave se limpia para que no
-                                         vuelva a saltar en cada dibujado. */
-                                      ref={(el) => {
-                                        if (!el || recienAjuste !== `${t.trabajador}#${k}`) return;
-                                        setRecienAjuste('');
-                                        el.focus();
-                                      }}
-                                      onChange={(e) => cambiarMontoAjuste(i, k, e.target.value)} />
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Por qué">
-                                    {MOTIVOS_AJUSTE[tipo].map((m) => (
-                                      <button key={m} type="button" aria-pressed={partes.razon === m}
-                                        onClick={() => cambiarPartesAjuste(i, k, { razon: partes.razon === m ? '' : m })}
-                                        className={`boton boton-angosto min-h-[40px] ${partes.razon === m ? elegido : ''}`}>
-                                        {partes.razon === m && '✓ '}{m}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5" role="group" aria-label="Cómo">
-                                    <span className="text-[13px] font-semibold text-hueso/65">Cómo:</span>
-                                    {MEDIOS_AJUSTE.map((m) => (
-                                      <button key={m} type="button" aria-pressed={partes.medio === m}
-                                        onClick={() => cambiarPartesAjuste(i, k, { medio: partes.medio === m ? '' : m })}
-                                        className={`boton boton-angosto min-h-[40px] ${partes.medio === m ? elegido : ''}`}>
-                                        {partes.medio === m && '✓ '}{m}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <input type="text" className={`${ENTRADA_GRANDE} mt-1.5 w-full`}
-                                    value={partes.nota}
-                                    placeholder={partes.razon === 'Otro' ? 'qué fue' : 'nota (opcional)'}
-                                    aria-label={`Nota del ajuste ${k + 1} de ${t.trabajador}`}
-                                    onChange={(e) => cambiarPartesAjuste(i, k, { nota: e.target.value })} />
-                                </div>
-                              );
+                          <AjustesDelDia ajustes={t.ajustes} quien={t.trabajador}
+                            onCambio={(ajustes) => setPlan(plan.map((x, j) => (j === i ? { ...x, ajustes } : x)))} />
+
+                          <TotalDelDia
+                            propina={repartida[i]?.propina
+                              ? enPesos(repartida[i].propina)
+                              : t.asistencia === VINO.si && !participa(t.trabajador)
+                                ? <span className="text-hueso/60">no participa</span>
+                                : <span className="text-hueso/45">—</span>}
+                            total={t.asistencia === VINO.si
+                              ? <strong className="text-[17px]">{enPesos(total)}</strong>
+                              : <span className="text-hueso/60">
+                                  {t.asistencia === VINO.no ? 'no llegó' : 'falta marcar'}
+                                </span>} />
+
+                          {/* La ficha, desde acá: teléfono, sueldo habitual y
+                              cuenta. Si no tiene ficha —pasa al renombrar a
+                              alguien con turnos— se abre para crearla con su
+                              nombre. Sacar dice lo que hace y pregunta antes. */}
+                          <BotonesDeLaLinea quien={nombre} que="Teléfono, pago y datos bancarios"
+                            onFicha={() => setFicha({
+                              t: gente.find((x) => normalizar(x.nombre) === normalizar(nombre)),
+                              nombre
                             })}
-                            <div className="flex flex-wrap items-center gap-2">
-                              <button type="button" onClick={() => agregarAjuste(i, 'resta')}
-                                className="boton min-h-[44px] !border-rojo-fuerte/60 !font-semibold text-rojo-texto">
-                                − Descontar
-                              </button>
-                              <button type="button" onClick={() => agregarAjuste(i, 'suma')}
-                                className="boton min-h-[44px] !border-verde-fuerte/60 !font-semibold text-verde-texto">
-                                + Sumar
-                              </button>
-                              {t.ajustes.length > 1 && (
-                                /* El signo va adelante y aparte: "$-18.000" se
-                                   lee como un error de tipeo. */
-                                <span className="text-[13px] tabular-nums text-hueso/65">
-                                  suman {totalAjustes(t.ajustes) < 0 ? '−' : '+'}
-                                  {enPesos(Math.abs(totalAjustes(t.ajustes)))}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <dl className="grid grid-cols-2 gap-3 rounded-lg bg-hueso/[0.04]
-                                         px-3 py-2 text-[14px] tabular-nums">
-                            <div>
-                              <dt className={ROTULO}>Propina</dt>
-                              <dd>
-                                {repartida[i]?.propina
-                                  ? enPesos(repartida[i].propina)
-                                  : t.asistencia === VINO.si && !participa(t.trabajador)
-                                    ? <span className="text-hueso/60">no participa</span>
-                                    : <span className="text-hueso/45">—</span>}
-                              </dd>
-                            </div>
-                            <div className="text-right">
-                              <dt className={ROTULO}>Total del día</dt>
-                              <dd>
-                                {t.asistencia === VINO.si
-                                  ? <strong className="text-[17px]">{enPesos(total)}</strong>
-                                  : <span className="text-hueso/60">
-                                      {t.asistencia === VINO.no ? 'no llegó' : 'falta marcar'}
-                                    </span>}
-                              </dd>
-                            </div>
-                          </dl>
-
-                          <div className="flex items-center gap-2">
-                            {/* La ficha, desde acá: teléfono, sueldo
-                                habitual y cuenta. Si no tiene ficha —pasa al
-                                renombrar a alguien con turnos— se abre para
-                                crearla con su nombre. */}
-                            <button type="button"
-                              onClick={() => setFicha({
-                                t: gente.find(
-                                  (x) => normalizar(x.nombre) === normalizar(nombre)),
-                                nombre
-                              })}
-                              className="boton flex-1 justify-center"
-                              title={`Teléfono, pago y datos bancarios de ${nombre}`}>
-                              Ficha
-                            </button>
-                            {/* Dice lo que hace y pregunta antes: es lo único
-                                de esta ventana que deshace algo. */}
-                            <button type="button"
-                              onClick={() => {
-                                if (!confirm(`¿Sacar a ${nombre} de este día?\n\n`
-                                           + 'Se va de la planificación de esta fecha. '
-                                           + 'Su ficha y sus otros días no se tocan.')) return;
-                                setAbierto('');
-                                setPlan(plan.filter(
-                                  (x) => normalizar(x.trabajador) !== normalizar(nombre)));
-                              }}
-                              className="boton flex-1 justify-center hover:border-rojo/60
-                                         hover:text-rojo-texto"
-                              title={`Sacar a ${nombre} de este día`}>
-                              Sacar del día
-                            </button>
-                          </div>
+                            onSacar={() => {
+                              if (!confirm(`¿Sacar a ${nombre} de este día?\n\n`
+                                         + 'Se va de la planificación de esta fecha. '
+                                         + 'Su ficha y sus otros días no se tocan.')) return;
+                              setAbierto('');
+                              setPlan(plan.filter(
+                                (x) => normalizar(x.trabajador) !== normalizar(nombre)));
+                            }} />
                         </div>
                       )}
                     </li>
@@ -883,11 +723,7 @@ export default function EquipoDialogo({
             {/* Crear a alguien sin salir de acá. Es lo que destraba el caso
                 en que la lista está vacía: sin esto hay que irse a /equipo,
                 agregarlo, volver y empezar la planificación de nuevo. */}
-            <button onClick={() => setFicha({ puesto: l.puesto })}
-              className="tecla mt-2 min-h-[40px] w-full rounded-lg border-2 border-dashed border-hueso/25
-                         px-2 text-[14px] font-semibold text-hueso/70 hover:border-oro hover:text-oro">
-              + Nuevo trabajador
-            </button>
+            <BotonNuevaPersona texto="+ Nuevo trabajador" onClick={() => setFicha({ puesto: l.puesto })} />
           </div>
         ))}
       </div>

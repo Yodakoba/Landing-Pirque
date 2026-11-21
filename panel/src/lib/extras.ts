@@ -25,7 +25,7 @@
  * es lo que después obliga a traducir en cada pantalla.
  */
 import { normalizar, indices } from './columnas.ts';
-import { aEntero, esSi, VINO } from './equipo.ts';
+import { aEntero, esSi, VINO, leerAjustes, escribirAjustes, totalAjustes, motivosDe, type Ajuste } from './equipo.ts';
 import type { Fecha } from './fechas.ts';
 import { bancoVacio, leerBanco, filaBanco, COL_BANCO,
          type Banco } from './banco.ts';
@@ -123,8 +123,19 @@ export interface Extra {
   estado: string;
   /** Lo que se le paga por ese día, **congelado al confirmar**. */
   monto: number;
-  /** Suma o resta suelta, en pesos. Negativa para un descuento. */
+  /**
+   * **Los ajustes de ese día, uno por uno** (2026-11-21, lo pidió el cliente:
+   * *"para los extras también hay que agregar la función de ajustes"*, con
+   * la misma tarjeta del equipo). Se guardan como los del turno: `Ajuste`
+   * con los montos con signo separados por `|` y `Motivo del ajuste` con sus
+   * motivos (`leerAjustes()` / `escribirAjustes()`). Con uno solo, la celda
+   * se lee como siempre. **Opcional** para lo armado a mano (pruebas, una
+   * línea vieja): sin ella vale `ajuste` con su `motivo`, como uno solo.
+   */
+  ajustes?: Ajuste[];
+  /** Lo que suman los ajustes, en pesos. Negativo para un descuento. Sale de `ajustes`. */
   ajuste: number;
+  /** Los motivos juntos, para mostrarlos. Sale de `ajustes`. */
   motivo: string;
   /** Fila en la planilla, para poder borrarla. */
   fila: number;
@@ -237,13 +248,25 @@ export function leerExtrasDe(filas: string[][]): Extra[] {
       actividad: en(f, i.actividad).trim(),
       estado: en(f, i.estado).trim(),
       monto: aEntero(en(f, i.monto)),
-      ajuste: aEntero(en(f, i.ajuste), true),
-      motivo: en(f, i.motivo).trim(),
+      ...conAjustes(leerAjustes(en(f, i.ajuste), en(f, i.motivo))),
       fila: n + 1
     });
   }
   return salida;
 }
+
+/** La lista de ajustes de una línea, aunque venga a la antigua (un número y un motivo). */
+export const ajustesDe = (e: Pick<Extra, 'ajustes' | 'ajuste' | 'motivo'>): Ajuste[] =>
+  e.ajustes ?? (e.ajuste || e.motivo ? [{ monto: e.ajuste || 0, motivo: e.motivo || '' }] : []);
+
+/**
+ * Los tres campos de los ajustes juntos: la lista, lo que suma y los motivos.
+ * Lo usa la planilla al leer y la ventana al editar, para que `ajuste` y
+ * `motivo` nunca digan otra cosa que la lista.
+ */
+export const conAjustes = (ajustes: Ajuste[]) => ({
+  ajustes, ajuste: totalAjustes(ajustes), motivo: motivosDe(ajustes)
+});
 
 export function filaExtra(encabezado: string[], e: Omit<Extra, 'fila'>): string[] {
   const i = indices(encabezado, COL_ACTIVIDADES);
@@ -257,8 +280,10 @@ export function filaExtra(encabezado: string[], e: Omit<Extra, 'fila'>): string[
   poner(i.actividad, e.actividad);
   poner(i.estado, e.estado);
   poner(i.monto, monto(e.monto));
-  poner(i.ajuste, monto(e.ajuste));
-  poner(i.motivo, e.motivo);
+  // Manda la lista; uno escrito antes de ella (un número y un motivo) va como uno.
+  const [montos, motivos] = escribirAjustes(ajustesDe(e));
+  poner(i.ajuste, montos);
+  poner(i.motivo, motivos);
   return fila;
 }
 

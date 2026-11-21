@@ -67,6 +67,7 @@ revisan antes de cada cambio en esta carpeta.
   | Cuánto boletear: bruto, retención y neto | `CajaBoleta` (link personal e informe) |
   | Una tarjeta de una lista que se abre: el marco, el + / − y el pie *▴ Cerrar* | `marcoTarjeta`, `SignoAbrir`, `PieCerrar` y `LISTA_TARJETAS` de `TarjetaLista` (Informe, Equipo, Extras, Vendedores, Clientes, Productos, Recepción, las reservas del día y las ventanas del equipo y de extras del día) |
   | Un grupo de tarjetas (un puesto en la ventana del equipo) | `marcoGrupo` de `TarjetaLista` |
+  | Lo de adentro de la línea de una persona en un día: campos, ajustes, total, *Ficha / Sacar del día*, *+ Nuevo …* | `CampoAlLado`, `AjustesDelDia`, `TotalDelDia`, `BotonesDeLaLinea` y `BotonNuevaPersona` de `LineaDelDia` (ventana del equipo y de las actividades extras) |
 - **La ayuda siempre al día** (regla del cliente, 2026-11-13; está también
   en la raíz). Un cambio que altera algo que una ayuda describe la
   actualiza **en el mismo PR**. Cuenta como ayuda:
@@ -299,6 +300,61 @@ regla *un cambio de diseño se lleva a sus parecidos* (arriba).
 - **Ninguna lectura de Google más, ningún permiso cambió.** Las fotos de la
   ayuda de la Recepción, el día, cerrar y corregir un día y Vendedores se
   rehicieron.
+
+## La línea del día, una sola pieza para el equipo y los extras (2026-11-21)
+
+Lo pidió el cliente en dos pasos el mismo día. Primero, con una foto de la
+ventana del equipo: *"esta sección la tienes que compactar… se gasta mucho
+espacio en espacio libre… los botones son muy grandes"*. Después, con una de
+la ventana de las actividades: *"este pop-up sigue completamente otra lógica
+de diseño y de distribución… la tarjeta adentro del extra tiene
+completamente otro diseño… donde mostramos cosas parecidas usamos diseños
+parecidos"*, y que los extras también tengan los ajustes.
+
+- **`LineaDelDia.tsx`**: lo de adentro de la línea abierta de una persona,
+  igual en las dos ventanas (`EquipoDialogo` y `ExtrasDialogo`):
+  - `CampoAlLado`: cada dato con su nombre a la izquierda, en una fila. Los
+    rótulos en mayúsculas encima de cada campo se fueron.
+  - `AjustesDelDia`: *Ajustes* con **− Descontar** y **+ Sumar** en la misma
+    fila; cada ajuste es una tarjeta con el signo, la palabra, el monto y la
+    ✕ en una fila, el motivo y *Cómo* con botones de 36px y letra de 13px
+    (los cuatro motivos caben en una fila), y la nota.
+  - `TotalDelDia`: propina (en el equipo) y total del día, en una línea.
+  - `BotonesDeLaLinea`: *Ficha* y *Sacar del día* (pregunta antes).
+  - `BotonNuevaPersona`: *+ Nuevo trabajador* / *+ Nuevo colaborador*.
+- **Compacta**: la línea abierta del equipo bajó de 350 a 246px, y con un
+  ajuste de 601 a 427px en el computador (643 a 506 en el celular). La
+  jornada y las horas extra van en una fila desde 1024px; más angosto, una
+  debajo de la otra, porque en una fila la jornada no se leía entera.
+- **La ventana de las actividades se arma como la del equipo**: un grupo
+  *Actividades del día* con el marco de un puesto (`marcoGrupo`), del ancho
+  de una columna, con las tarjetas adentro y al pie *+ Agregar…* y *+ Nuevo
+  colaborador* a todo el ancho. En la línea abierta, la actividad va en su
+  fila y el monto debajo, donde el equipo tiene la jornada.
+- **Los extras tienen varios ajustes, como un turno**: `Extra.ajustes`, que
+  se guarda en las mismas dos columnas de `Actividades` con el formato de
+  `Turnos` —`-20000|5000` · `Adelanto · Transferencia|Feriado`—
+  (`leerAjustes()` / `escribirAjustes()`). **Ninguna columna nueva**, y una
+  celda con un solo ajuste se lee y se escribe como siempre.
+  - `ajuste` (lo que suman) y `motivo` (los motivos juntos) siguen
+    existiendo y salen de la lista (`conAjustes()`): el costo del día, el
+    informe, la planilla y el link personal los leen igual que antes.
+  - **La boleta** cuenta cada ajuste por separado, como en un turno: un
+    *Adelanto* no la baja y lo demás sí (`paraBoletaDeExtra()`).
+  - `/api/extras/dia` recibe `ajustes` y los limpia como la ruta de los
+    turnos; uno mandado a la antigua —un número y un motivo— cuenta como uno.
+  - Una línea armada sin la lista (pruebas, código viejo) vale como un ajuste
+    (`ajustesDe()`).
+- **Lecturas de Google**: ninguna más. **Ningún permiso cambió.**
+- **Ayuda**: el `?` de Extras dice cómo se ajusta; las fotos de cerrar y
+  corregir un día se rehicieron.
+- **Probado** en el panel de ejemplo a 1280 y 393: con un ajuste, la del
+  equipo mide 427px y la de un extra 470 en el computador (la actividad va
+  en su fila), y las dos 506 en el celular. Dos ajustes en un extra quedan
+  en la planilla como `-20000|5000` · `Adelanto · Transferencia|Feriado`. Las pruebas de lógica fijan la
+  lectura y escritura de dos ajustes en un extra, el costo, la línea a la
+  antigua y la boleta con un adelanto. `revisarPlayStation()` no marca nada
+  nuevo.
 
 ## El ajuste desde el informe (2026-11-21)
 

@@ -12,12 +12,13 @@
  * reparte entre el equipo que atiende, no entre quien vino a hacer un show.
  */
 import { useState } from 'react';
-import { LISTA_TARJETAS, SignoAbrir, marcoTarjeta } from './TarjetaLista';
+import { LISTA_TARJETAS, SignoAbrir, marcoGrupo, marcoTarjeta } from './TarjetaLista';
+import { AjustesDelDia, BotonNuevaPersona, BotonesDeLaLinea, CampoAlLado, ENTRADA_DIA, TotalDelDia } from './LineaDelDia';
 import AvisoGuardado from './AvisoGuardado';
 import { usarAutoguardado } from './usarAutoguardado';
 import Dialogo from './Dialogo';
 import { VINO, porNombre } from '@/lib/equipo';
-import { costoDeExtra, actividadesConocidas,
+import { costoDeExtra, actividadesConocidas, ajustesDe, conAjustes,
          type Colaborador, type Extra } from '@/lib/extras';
 import { normalizar } from '@/lib/columnas';
 import { enPesos } from '@/lib/ocupacion';
@@ -27,12 +28,6 @@ import FichaColaborador from './FichaColaborador';
 import Asistencia from './Asistencia';
 import BuscarPersona from './BuscarPersona';
 
-/** El rótulo encima de cada campo de la línea abierta. */
-const ROTULO = 'mb-1 block text-[13px] font-semibold uppercase tracking-wide text-hueso/60';
-/** Los campos de la línea abierta: 40px, para el dedo. */
-const ENTRADA_GRANDE =
-  'rounded-lg border-2 border-hueso/20 bg-tinta px-2.5 py-1.5 text-[15px] ' +
-  'focus:border-oro focus:outline-none';
 import { AvisoCierre, PieCorreccion } from './Correccion';
 import { usarSoloMira, AvisoSoloMira } from './SesionCliente';
 import type { Cierre } from '@/lib/cierres';
@@ -98,12 +93,9 @@ export default function ExtrasDialogo({
 
   const cambiar = (i: number, campo: keyof Omit<Extra, 'fila'>, valor: string) => {
     const copia = lista.map((e) => ({ ...e }));
-    if (campo === 'monto' || campo === 'ajuste') {
-      // El ajuste admite negativos; el monto no.
-      const n = Number(String(valor).replace(/[^\d.-]/g, ''));
-      const limpio = Number.isFinite(n) ? Math.round(n) : 0;
-      (copia[i] as Record<string, unknown>)[campo] =
-        campo === 'ajuste' ? limpio : Math.max(0, limpio);
+    if (campo === 'monto') {
+      const n = Number(String(valor).replace(/[^\d]/g, ''));
+      copia[i].monto = Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
     } else {
       (copia[i] as Record<string, unknown>)[campo] = valor;
     }
@@ -117,7 +109,7 @@ export default function ExtrasDialogo({
       estado: VINO.sinMarcar,
       // El monto se propone de la ficha y se congela al confirmar. Un
       // encargado recibe cero acá: lo completa el servidor al guardar.
-      monto: c.monto ?? 0, ajuste: 0, motivo: ''
+      monto: c.monto ?? 0, ...conAjustes([])
     }]);
   };
 
@@ -179,18 +171,22 @@ export default function ExtrasDialogo({
         agendar no es pagar.
       </p>
 
+      {/* **Un grupo, como un puesto de la ventana del equipo** (2026-11-21, lo
+          pidió el cliente: *"este pop-up sigue completamente otra lógica de
+          diseño y de distribución de espacios"*): el mismo marco
+          (`marcoGrupo`), las tarjetas adentro, y al pie *+ Agregar…* y
+          *+ Nuevo colaborador* a todo el ancho, con el ancho de una columna
+          de la ventana del equipo. */}
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+      <div className={`min-w-0 p-2 sm:p-3 ${marcoGrupo()}`}>
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="px-1 text-[15px] font-semibold">Actividades del día</h3>
+          <span className="px-1 text-[13px] font-semibold tabular-nums text-hueso/60">{lista.length}</span>
+        </div>
       {lista.length === 0 ? (
-        <p className="mt-4 text-sm text-hueso/50">
-          Todavía no hay actividades este día.
-        </p>
+        <p className="mt-2 text-[13px] text-hueso/60">Nadie agendado.</p>
       ) : (
-        /* **Una línea por persona: quién, qué hace, y Vino / No vino**
-           (2026-11-05, lo pidió el cliente, igual que en el equipo). Era una
-           tabla de ocho columnas que en un teléfono se desplazaba de lado;
-           ahora la línea cerrada es lo que se hace en el día —marcar si
-           vino— y apretando el nombre se abre lo demás: actividad, monto,
-           ajuste con su motivo, total, ficha y sacar. Una a la vez. */
-        <ul className={`mt-4 ${LISTA_TARJETAS}`}>
+        <ul className={`mt-2 ${LISTA_TARJETAS}`}>
           {lista.map((e, i) => {
             const abierta = abierto === normalizar(e.colaborador);
             return (
@@ -214,7 +210,7 @@ export default function ExtrasDialogo({
                       <span className="block truncate text-[13px] text-hueso/65">
                         {e.actividad || 'sin actividad'}
                         {e.estado === VINO.si && <> · {enPesos(costoDeExtra(e))}</>}
-                        {!!e.ajuste && <> · 1 ajuste</>}
+                        {ajustesDe(e).length > 0 && <> · {ajustesDe(e).length} {ajustesDe(e).length === 1 ? 'ajuste' : 'ajustes'}</>}
                       </span>
                     </span>
                   </button>
@@ -226,76 +222,51 @@ export default function ExtrasDialogo({
                 </div>
 
                 {abierta && (
-                  <div className="space-y-3 border-t-2 border-hueso/10 px-3 pb-3 pt-3">
-                    <label className="block">
-                      <span className={ROTULO}>Actividad</span>
-                      <input type="text" list="actividades-conocidas"
-                        value={e.actividad} className={`${ENTRADA_GRANDE} w-full`}
-                        aria-label={`Qué hace ${e.colaborador}`}
-                        placeholder="show ecuestre…"
-                        onChange={(ev) => cambiar(i, 'actividad', ev.target.value)} />
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="block">
-                        <span className={ROTULO}>Monto</span>
+                  // **La misma línea que la del equipo** (`LineaDelDia`,
+                  // 2026-11-21, lo pidió el cliente: *"la tarjeta adentro del
+                  // extra tiene completamente otro diseño"*): los mismos
+                  // campos, los mismos ajustes con *− Descontar / + Sumar* y
+                  // el mismo total y botones.
+                  <div className="space-y-2 border-t-2 border-hueso/10 px-2.5 pb-2.5 pt-2 sm:px-3">
+                    {/* La actividad es texto: va en su fila, y el monto
+                        debajo, donde el equipo tiene la jornada. */}
+                    <CampoAlLado rotulo="Actividad">
+                        <input type="text" list="actividades-conocidas"
+                          value={e.actividad} className={`${ENTRADA_DIA} w-full min-w-0`}
+                          aria-label={`Qué hace ${e.colaborador}`}
+                          placeholder="show ecuestre…"
+                          onChange={(ev) => cambiar(i, 'actividad', ev.target.value)} />
+                    </CampoAlLado>
+                    <div>
+                      <CampoAlLado rotulo="Monto">
                         <input type="number" min={0} step={1000}
-                          className={`${ENTRADA_GRANDE} w-full`}
+                          className={`${ENTRADA_DIA} w-full min-w-0 max-w-[10rem]`}
                           value={e.monto || ''} placeholder="—"
                           aria-label={`Cuánto cobra ${e.colaborador}`}
                           onChange={(ev) => cambiar(i, 'monto', ev.target.value)} />
-                      </label>
-                      <label className="block">
-                        <span className={ROTULO}>Ajuste</span>
-                        <input type="number" step={1000}
-                          className={`${ENTRADA_GRANDE} w-full`}
-                          value={e.ajuste || ''} placeholder="0"
-                          aria-label={`Ajuste para ${e.colaborador}`}
-                          onChange={(ev) => cambiar(i, 'ajuste', ev.target.value)} />
-                      </label>
+                      </CampoAlLado>
                     </div>
-                    <label className="block">
-                      <span className={ROTULO}>Motivo del ajuste</span>
-                      <input type="text" className={`${ENTRADA_GRANDE} w-full`}
-                        value={e.motivo}
-                        aria-label={`Motivo del ajuste de ${e.colaborador}`}
-                        placeholder={e.ajuste ? 'por qué' : ''}
-                        onChange={(ev) => cambiar(i, 'motivo', ev.target.value)} />
-                    </label>
-                    <div className="flex items-baseline justify-between rounded-lg
-                                    bg-hueso/[0.04] px-3 py-2 tabular-nums">
-                      <span className={ROTULO}>Total del día</span>
-                      {e.estado === VINO.si
+                    <AjustesDelDia ajustes={ajustesDe(e)} quien={e.colaborador}
+                      onCambio={(ajustes) => setLista(lista.map((x, k) => (k === i ? { ...x, ...conAjustes(ajustes) } : x)))} />
+                    <TotalDelDia
+                      total={e.estado === VINO.si
                         ? <strong className="text-[17px]">{enPesos(costoDeExtra(e))}</strong>
-                        : <span className="text-[14px] text-hueso/60">
+                        : <span className="text-hueso/60">
                             {e.estado === VINO.no ? 'no llegó' : 'falta confirmar'}
-                          </span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* La ficha, desde acá: teléfono, correo y cuenta. */}
-                      <button type="button"
-                        onClick={() => {
-                          const c = gente.find(
-                            (x) => normalizar(x.nombre) === normalizar(e.colaborador));
-                          setFicha(c ? { c } : { nombre: e.colaborador });
-                        }}
-                        className="boton flex-1 justify-center"
-                        title={`Teléfono, correo y datos de pago de ${e.colaborador}`}>
-                        Ficha
-                      </button>
-                      <button type="button"
-                        onClick={() => {
-                          if (!confirm(`¿Sacar a ${e.colaborador} de este día?\n\n`
-                                     + 'Se va de las actividades de esta fecha. '
-                                     + 'Su ficha y sus otros días no se tocan.')) return;
-                          setAbierto('');
-                          setLista(lista.filter((_, k) => k !== i));
-                        }}
-                        className="boton flex-1 justify-center hover:border-rojo/60
-                                   hover:text-rojo-texto"
-                        title={`Sacar a ${e.colaborador} de este día`}>
-                        Sacar del día
-                      </button>
-                    </div>
+                          </span>} />
+                    {/* La ficha, desde acá: teléfono, correo y cuenta. */}
+                    <BotonesDeLaLinea quien={e.colaborador} que="Teléfono, correo y datos de pago"
+                      onFicha={() => {
+                        const c = gente.find((x) => normalizar(x.nombre) === normalizar(e.colaborador));
+                        setFicha(c ? { c } : { nombre: e.colaborador });
+                      }}
+                      onSacar={() => {
+                        if (!confirm(`¿Sacar a ${e.colaborador} de este día?\n\n`
+                                   + 'Se va de las actividades de esta fecha. '
+                                   + 'Su ficha y sus otros días no se tocan.')) return;
+                        setAbierto('');
+                        setLista(lista.filter((_, k) => k !== i));
+                      }} />
                   </div>
                 )}
               </li>
@@ -304,26 +275,25 @@ export default function ExtrasDialogo({
         </ul>
       )}
 
+        {/* Se busca escribiendo el nombre, como en el equipo. */}
+        <div className="mt-2">
+          <BuscarPersona etiqueta="Agregar una actividad a este día"
+            opciones={libres.map((c) => ({ nombre: c.nombre, detalle: c.actividad }))}
+            onElegir={(nombre) => {
+              const c = gente.find((x) => x.nombre === nombre);
+              if (c) agregar(c);
+            }} />
+        </div>
+        <BotonNuevaPersona texto="+ Nuevo colaborador" onClick={() => setFicha({})} />
+      </div>
+      </div>
+
       {/* Las actividades que alguien ya hace, para no escribirlas distinto
           cada vez. Es una ayuda, no una lista cerrada: el campo sigue
           aceptando una que no esté. */}
       <datalist id="actividades-conocidas">
         {actividadesConocidas(gente).map((a) => <option key={a} value={a} />)}
       </datalist>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <BuscarPersona etiqueta="Agregar una actividad a este día" ancho="w-full sm:w-80"
-          opciones={libres.map((c) => ({ nombre: c.nombre, detalle: c.actividad }))}
-          onElegir={(nombre) => {
-            const c = gente.find((x) => x.nombre === nombre);
-            if (c) agregar(c);
-          }} />
-        <button onClick={() => setFicha({})}
-          className="rounded border border-dashed border-hueso/20 px-3 py-1.5
-                     text-sm text-hueso/60 hover:border-oro hover:text-oro">
-          + Nuevo colaborador
-        </button>
-      </div>
 
       {ficha && (
         <FichaColaborador

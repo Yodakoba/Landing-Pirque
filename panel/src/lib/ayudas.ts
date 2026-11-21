@@ -199,6 +199,9 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       'Apreta un día del mes para agendar a quien venga.',
       'Marca Vino o No vino cuando ya pasó el día.',
+      'Con el + de su línea cambias la actividad o el monto, y con − Descontar '
+      + 'o + Sumar anotas un ajuste con su motivo y cómo se pagó, igual que en '
+      + 'el equipo.',
       'Abajo, la lista de colaboradores guarda a los que se repiten, con su '
       + 'monto habitual y su cuenta. Si cambias una cuenta o un monto y no '
       + 'haces los pagos, queda por confirmar hasta que el encargado de pagos '

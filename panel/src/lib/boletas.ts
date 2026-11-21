@@ -200,9 +200,13 @@ export function montosDeTurnos(turnos: Turno[], nombre: string): MontoDelDia[] {
 }
 
 /** Lo mismo para una actividad extra: monto y ajuste, sin restar un adelanto. */
-export function paraBoletaDeExtra(e: { estado: string; monto: number; ajuste: number; motivo: string }): number {
+export function paraBoletaDeExtra(e: { estado: string; monto: number; ajuste: number; motivo: string; ajustes?: Ajuste[] }): number {
   if (e.estado !== VINO.si) return 0;
-  const ajuste = esAdelanto({ monto: e.ajuste || 0, motivo: e.motivo }) ? 0 : (e.ajuste || 0);
+  // Con la lista (2026-11-21), cada ajuste por separado, como en un turno: un
+  // *Adelanto* no baja la boleta y lo demás sí. Sin ella, el ajuste de siempre.
+  const ajuste = e.ajustes
+    ? e.ajustes.reduce((n, a) => n + (esAdelanto(a) ? 0 : (a.monto || 0)), 0)
+    : esAdelanto({ monto: e.ajuste || 0, motivo: e.motivo }) ? 0 : (e.ajuste || 0);
   return Math.max(0, Math.round((e.monto || 0) + ajuste));
 }
 

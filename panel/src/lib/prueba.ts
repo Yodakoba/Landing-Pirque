@@ -111,7 +111,7 @@ import { leerPuestosDe, aFilasPuestos, leerTrabajadoresDe, aFilasTrabajadores,
          type Puesto, type Trabajador, type Turno } from './equipo.ts';
 import { leerColaboradoresDe, aFilasColaboradores, actividadesConocidas,
          leerExtrasDe, filaExtra, normalizarExtras, extrasDelDia,
-         costoExtrasDelDia, costoDeExtra, informeDeExtras,
+         costoExtrasDelDia, costoDeExtra, informeDeExtras, ajustesDe, conAjustes as ajustesJuntos,
          COL_COLABORADORES, COL_ACTIVIDADES, ENCABEZADO_ACTIVIDADES,
          type Colaborador, type Extra } from './extras.ts';
 import { telefonoNormal, telefonoParaEnlace, celularChileno, enlaceWhatsApp,
@@ -2598,6 +2598,30 @@ ok(fila.length === filasDias[0].length && fila[2] === '2026-11-21'
    'y al escribir, cada valor va en la columna que le toca, no en la primera libre');
 ok(fila[4] === '' && fila[5] === '',
    'una columna que el panel no conoce se deja en blanco, no se pisa');
+
+// **Varios ajustes por actividad, como en un turno** (2026-11-21): las mismas
+// dos celdas, con los montos y los motivos separados por `|`.
+{
+  const conDos = leerExtrasDe([filasDias[0],
+    ['Pedro Soto', '50000', '2026-11-14', 'Sí', '', '-20000|5000', 'Adelanto · Transferencia|Feriado', 'Show ecuestre']]);
+  ok(conDos[0].ajustes?.length === 2 && conDos[0].ajuste === -15000
+     && conDos[0].motivo === 'Adelanto · Transferencia · Feriado',
+     'extras: dos ajustes en una celda se leen uno por uno, y suman');
+  ok(costoDeExtra(conDos[0]) === 35000, 'extras: el costo del día suma los dos');
+  const vuelta = filaExtra(filasDias[0], { ...conDos[0] });
+  ok(vuelta[5] === '-20000|5000' && vuelta[6] === 'Adelanto · Transferencia|Feriado',
+     'extras: y se escriben igual que se leyeron');
+  ok(dias[0].ajustes?.length === 1 && dias[0].ajustes[0].monto === 10000,
+     'extras: uno solo, escrito antes, se lee como siempre');
+  const aMano = { ajuste: -4000, motivo: 'llegó tarde' };
+  ok(ajustesDe(aMano).length === 1 && ajustesDe({ ajuste: 0, motivo: '' }).length === 0,
+     'extras: una línea a la antigua, sin lista, vale como un ajuste');
+  const viejo = filaExtra(filasDias[0], { fecha: '2026-11-21', colaborador: 'X', actividad: '',
+    estado: '', monto: 0, ...aMano });
+  ok(viejo[5] === '-4000' && viejo[6] === 'llegó tarde', 'extras: y se escribe como siempre');
+  const c = ajustesJuntos([{ monto: -3000, motivo: 'Rompió algo' }, { monto: 0, motivo: '' }]);
+  ok(c.ajuste === -3000 && c.motivo === 'Rompió algo', 'extras: lo que suma y los motivos salen de la lista');
+}
 
 ok(extrasDelDia(dias, '2026-11-14').length === 2, 'el día trae sus dos actividades');
 ok(costoExtrasDelDia(dias, '2026-11-14') === 60000,
@@ -5656,6 +5680,9 @@ console.log('\nLa boleta: bruto, neto y lo que falta boletear');
   ok(B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -20000, motivo: 'Adelanto' }) === 60000
      && B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -5000, motivo: 'Rompió algo' }) === 55000,
      'en una actividad extra, lo mismo: el adelanto no baja la boleta');
+  ok(B.paraBoletaDeExtra({ estado: 'Sí', monto: 60000, ajuste: -25000, motivo: '',
+    ajustes: [{ monto: -20000, motivo: 'Adelanto · Efectivo' }, { monto: -5000, motivo: 'Rompió algo' }] }) === 55000,
+     'y con varios ajustes, cada uno por separado: solo el adelanto queda fuera');
 
   const montos = ['2026-11-07', '2026-11-08', '2026-11-14', '2026-11-15', '2026-11-21', '2026-11-22', '2026-11-28', '2026-11-29']
     .map((fecha) => ({ fecha, monto: 40000 }));
